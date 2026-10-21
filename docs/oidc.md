@@ -44,12 +44,12 @@ Registration, forgot password, OTP sign-in and change password belong to the pro
 
 ### Redirect URIs
 
-With the default scheme `com.example.flutterblocadvance` (`OIDC_REDIRECT_SCHEME`), the app uses these URIs:
+With the default scheme `org.libredb.mobile` (`OIDC_REDIRECT_SCHEME`), the app uses these URIs:
 
 | Platform | Sign-in surface | Redirect URI | Post-logout redirect URI |
 | --- | --- | --- | --- |
-| Android | Custom Tab | `com.example.flutterblocadvance:/oauth2redirect` | `com.example.flutterblocadvance:/oauth2redirect` |
-| iOS, macOS | `ASWebAuthenticationSession`, shared browser session | `com.example.flutterblocadvance:/oauth2redirect` | `com.example.flutterblocadvance:/oauth2redirect` |
+| Android | Custom Tab | `org.libredb.mobile:/oauth2redirect` | `org.libredb.mobile:/oauth2redirect` |
+| iOS, macOS | `ASWebAuthenticationSession`, shared browser session | `org.libredb.mobile:/oauth2redirect` | `org.libredb.mobile:/oauth2redirect` |
 | Web | The same tab, which reloads on return | `<origin><base href>redirect.html` | `<origin><base href>` |
 | Linux, Windows | The system browser and a loopback listener | `http://127.0.0.1:<port>/oauth2redirect` | `http://127.0.0.1:<port>/logout` |
 
@@ -117,8 +117,8 @@ The demo is unfit for production on purpose: `start-dev` with the embedded H2 st
    - Client authentication: Off, which makes it a public client.
    - Authentication flow: Standard flow only; switch Direct access grants off.
 2. In the client's settings:
-   - **Valid redirect URIs:** `com.example.flutterblocadvance:/oauth2redirect` for Android, iOS and macOS, `https://app.example.com/redirect.html` for web, and `http://127.0.0.1/*` for Linux and Windows.
-   - **Valid post logout redirect URIs:** `com.example.flutterblocadvance:/oauth2redirect`, `https://app.example.com/` and `http://127.0.0.1/*`.
+   - **Valid redirect URIs:** `org.libredb.mobile:/oauth2redirect` for Android, iOS and macOS, `https://app.example.com/redirect.html` for web, and `http://127.0.0.1/*` for Linux and Windows.
+   - **Valid post logout redirect URIs:** `org.libredb.mobile:/oauth2redirect`, `https://app.example.com/` and `http://127.0.0.1/*`.
    - **Web origins:** `+`, which allows the origins of the redirect URIs.
 3. Under **Advanced**, set **Proof Key for Code Exchange Code Challenge Method** to `S256`.
 4. Roles: the realm-role mapper writes `realm_access.roles` to the access token by default, but not to the ID token.
@@ -151,7 +151,7 @@ Not yet run against a live tenant; this section follows Zitadel's documentation.
 
    Web and native need separate applications in Zitadel, so a web build and a native build get different `OIDC_CLIENT_ID` values.
 2. Redirect URIs:
-   - Native application: `com.example.flutterblocadvance:/oauth2redirect`, and `http://127.0.0.1:<port>/oauth2redirect` for Linux and Windows; post logout URIs `com.example.flutterblocadvance:/oauth2redirect` and `http://127.0.0.1:<port>/logout`.
+   - Native application: `org.libredb.mobile:/oauth2redirect`, and `http://127.0.0.1:<port>/oauth2redirect` for Linux and Windows; post logout URIs `org.libredb.mobile:/oauth2redirect` and `http://127.0.0.1:<port>/logout`.
    - User Agent application: `https://app.example.com/redirect.html`, with the post logout URI `https://app.example.com/`.
    - If Zitadel refuses an `http` redirect URI, switch **Development Mode** on for that application, and use it for local runs only.
    - Use a fixed `OIDC_LOOPBACK_PORT` unless your Zitadel version documents that it ignores the loopback port.
@@ -186,8 +186,8 @@ Not yet run against a live tenant; this section follows Auth0's documentation.
    Web and native need separate applications in Auth0, so a web build and a native build get different `OIDC_CLIENT_ID` values.
    Both are public clients: their token endpoint authentication method is **None**.
 2. Settings of each application:
-   - **Allowed Callback URLs:** `com.example.flutterblocadvance:/oauth2redirect` and `http://127.0.0.1:<port>/oauth2redirect` (Native), or `https://app.example.com/redirect.html` (Single Page Application).
-   - **Allowed Logout URLs:** `com.example.flutterblocadvance:/oauth2redirect` and `http://127.0.0.1:<port>/logout`, or `https://app.example.com/`.
+   - **Allowed Callback URLs:** `org.libredb.mobile:/oauth2redirect` and `http://127.0.0.1:<port>/oauth2redirect` (Native), or `https://app.example.com/redirect.html` (Single Page Application).
+   - **Allowed Logout URLs:** `org.libredb.mobile:/oauth2redirect` and `http://127.0.0.1:<port>/logout`, or `https://app.example.com/`.
    - **Allowed Web Origins** and **Allowed Origins (CORS)** of the Single Page Application: `https://app.example.com`.
    - Set a fixed `OIDC_LOOPBACK_PORT` for Linux and Windows and use that port in both lists, since Auth0 does not document a loopback match that ignores the port.
    - Under **Advanced Settings**, **OAuth**, keep the JSON Web Token signature algorithm at **RS256**: an HS256 ID token needs the client secret to verify, and the app fails closed on it.
@@ -230,10 +230,10 @@ Not yet run against a live tenant; this section follows Microsoft's documentatio
 1. Register one application under **App registrations**, **New registration**.
    One registration serves every platform, so web and native builds share one `OIDC_CLIENT_ID`; add a platform configuration for each surface under **Authentication**.
 2. Platforms and redirect URIs:
-   - **Mobile and desktop applications:** `com.example.flutterblocadvance:/oauth2redirect` and `http://127.0.0.1/oauth2redirect`; Entra ID ignores the port of a loopback redirect URI, so `OIDC_LOOPBACK_PORT=0` works.
+   - **Mobile and desktop applications:** `org.libredb.mobile:/oauth2redirect` and `http://127.0.0.1/oauth2redirect`; Entra ID ignores the port of a loopback redirect URI, so `OIDC_LOOPBACK_PORT=0` works.
    - **Single-page application:** `https://app.example.com/redirect.html`.
      This platform type enables CORS on the token endpoint and PKCE for the web build.
-   - Register the post-logout URIs (`com.example.flutterblocadvance:/oauth2redirect`, `http://127.0.0.1/logout` and `https://app.example.com/`) as redirect URIs of the same platforms too, so Entra ID accepts them as `post_logout_redirect_uri`.
+   - Register the post-logout URIs (`org.libredb.mobile:/oauth2redirect`, `http://127.0.0.1/logout` and `https://app.example.com/`) as redirect URIs of the same platforms too, so Entra ID accepts them as `post_logout_redirect_uri`.
 3. Audience: under **Expose an API**, set the application ID URI (`api://<application id>`) and add a scope, for example `access_as_user`.
    Put `api://<application id>/access_as_user` in `OIDC_SCOPE`.
    Without a scope of your own API, the access token is for Microsoft Graph, and your backend cannot verify it.
@@ -274,7 +274,7 @@ Strings are trimmed; flags and `OIDC_PROMPT` are also lower-cased.
 | `OIDC_PROMPT` | No | `login` | `login`, `consent`, `select_account`, or `omit` to send none. Any other value, `none` included, is a configuration error |
 | `OIDC_AUTO_REDIRECT` | No | off | `true`, `1`, `on` or `yes` turn it on; `false`, `0`, `off`, `no` or empty leave it off. Any other value is a configuration error |
 | `OIDC_LOGOUT_HINT` | No | on | The same spellings. Off sends no `id_token_hint` at logout |
-| `OIDC_REDIRECT_SCHEME` | No | `com.example.flutterblocadvance` | Custom URI scheme for Android, iOS and macOS: a lower-case letter, then lower-case letters, digits, `+`, `-` or `.`. It must equal the Android manifest placeholder |
+| `OIDC_REDIRECT_SCHEME` | No | `org.libredb.mobile` | Custom URI scheme for Android, iOS and macOS: a lower-case letter, then lower-case letters, digits, `+`, `-` or `.`. It must equal the Android manifest placeholder |
 | `OIDC_LOOPBACK_PORT` | No | `0` (any free port) | Port of the loopback redirect on Linux and Windows, from 0 to 65535 |
 
 An empty role list, or one made only of commas, counts as unset.

@@ -8,7 +8,7 @@
          decrypted. Device-to-device transfers can ignore allowBackup on Android 12 and higher, so the rules in
          res/xml keep shared preferences out of them, and out of backups if backup is ever turned on. -->
     <application
-        android:label="flutter_bloc_advance"
+        android:label="LibreDB"
         android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"

@@ -1,4 +1,4 @@
-package com.cevheri.flutter.flutter_bloc_advance
+package org.libredb.mobile
 
 import com.google.gson.Gson
 import io.sentry.Breadcrumb

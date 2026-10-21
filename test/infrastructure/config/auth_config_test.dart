@@ -276,7 +276,7 @@ void main() {
       final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.redirectScheme, OidcSettings.defaultRedirectScheme);
-      expect(settings.redirectScheme, 'com.example.flutterblocadvance');
+      expect(settings.redirectScheme, 'org.libredb.mobile');
       expect(settings.loopbackPort, 0);
     });
 
