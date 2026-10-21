@@ -1,0 +1,286 @@
+import 'package:flutter_bloc_advance/core/errors/app_error.dart';
+import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:flutter_bloc_advance/core/result/result.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/cache/shared_prefs_cache_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/session_end_signal.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+
+/// Persistence-layer implementation of [IAuthSessionRepository].
+///
+/// Routes sensitive fields (idToken, refreshToken) to [ISecureStorage]
+/// (Keychain / EncryptedSharedPreferences) and non-secret fields
+/// (username, roles) to [AppLocalStorage] (SharedPreferences).
+///
+/// Neither backend supports transactions, so atomicity is emulated
+/// across both: writes happen in order, and on any failure every key
+/// that was successfully written during this call is restored to its
+/// pre-call value (or deleted if there was none) — across both
+/// backends — before the failure is reported. Callers therefore never
+/// observe a half-written session.
+///
+/// [clear] removes what belongs to the session: both tokens, every [StorageKeys] value of [StorageScope.session]
+/// and the HTTP responses cached in [ICacheStorage]. Device preferences such as the language and theme stay.
+///
+/// On web, `sessionEndSignal` tells the other browser tabs of the app that [clear] ends the stored session, which they
+/// share, so a token refresh on its way in one of them takes back what it stores after the wipe; null elsewhere.
+///
+/// With `oidcKeys` on, as in an `oidc` build, the session also owns [SecureStorageKeys.oidcIdToken] and
+/// [SecureStorageKeys.accessTokenExpiresAt]: [persist] writes them after the refresh token, and the rollback and
+/// [clear] cover them. With it off, as in a `jwt` build, those keys are never read, written or deleted.
+class AuthSessionRepository implements IAuthSessionRepository {
+  AuthSessionRepository({
+    required ISecureStorage secureStorage,
+    AppLocalStorage? storage,
+    ICacheStorage? cacheStorage,
+    this._oidcKeys = false,
+    this._sessionEndSignal,
+  })
+    // ignore: prefer_initializing_formals
+    : _secureStorage = secureStorage,
+       _storage = storage ?? AppLocalStorage(),
+       _cacheStorage = cacheStorage ?? SharedPrefsCacheStorage();
+
+  static final _log = AppLogger.getLogger('AuthSessionRepository');
+
+  final ISecureStorage _secureStorage;
+  final AppLocalStorage _storage;
+  final ICacheStorage _cacheStorage;
+  final bool _oidcKeys;
+  final ISessionEndSignal? _sessionEndSignal;
+
+  @override
+  Future<Result<void>> persist(AuthSession session) async {
+    final mutatedSecure = <SecureStorageKeys>{};
+    final mutatedLocal = <StorageKeys>{};
+    // Snapshot pre-persist values on BOTH backends so rollback restores
+    // them — including the "delete stale refreshToken when the new
+    // session has none" path, where the delete itself is the mutation
+    // we need to be able to undo. The snapshot itself must live inside
+    // the try block: ISecureStorage.read can throw on platform /
+    // decryption failure, and the contract is that persist always
+    // returns a Result — never propagates a raw exception.
+    String? priorJwt;
+    String? priorRefresh;
+    String? priorOidcIdToken;
+    String? priorExpiry;
+    dynamic priorUsername;
+    dynamic priorRoles;
+    try {
+      priorJwt = await _secureStorage.read(SecureStorageKeys.jwtToken.key);
+      priorRefresh = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
+      if (_oidcKeys) {
+        priorOidcIdToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
+        priorExpiry = await _secureStorage.read(SecureStorageKeys.accessTokenExpiresAt.key);
+      }
+      priorUsername = await _storage.read(StorageKeys.username.key);
+      priorRoles = await _storage.read(StorageKeys.roles.key);
+
+      // Record the key as mutated BEFORE the await so that if the
+      // adapter throws after partially mutating platform state, the
+      // rollback path still knows to restore it. If the write throws
+      // cleanly (state unchanged), the rollback is a no-op against
+      // the snapshot (write same value back, or delete an absent key).
+      mutatedSecure.add(SecureStorageKeys.jwtToken);
+      await _secureStorage.write(SecureStorageKeys.jwtToken.key, session.idToken);
+      // Owner-of-keys contract: a session without a refresh token must
+      // not inherit one from a previous login. Treat null AND empty
+      // string equivalently — TokenRefreshInterceptor reads
+      // `refreshToken.isEmpty` as "absent", so persisting an empty
+      // string here would leave the key present but unusable.
+      mutatedSecure.add(SecureStorageKeys.refreshToken);
+      final hasRefresh = session.refreshToken != null && session.refreshToken!.isNotEmpty;
+      if (hasRefresh) {
+        await _secureStorage.write(SecureStorageKeys.refreshToken.key, session.refreshToken!);
+      } else {
+        await _secureStorage.delete(SecureStorageKeys.refreshToken.key);
+      }
+      if (_oidcKeys) {
+        // Same owner-of-keys contract: a session without an ID token or an expiry must not inherit the previous one.
+        final expiresAt = session.accessTokenExpiresAt;
+        await _writeOrDelete(SecureStorageKeys.oidcIdToken, session.oidcIdToken, mutatedSecure);
+        await _writeOrDelete(
+          SecureStorageKeys.accessTokenExpiresAt,
+          expiresAt == null ? null : encodeAccessTokenExpiry(expiresAt),
+          mutatedSecure,
+        );
+      }
+      await _writeLocal(StorageKeys.username, session.username, mutatedLocal);
+      await _writeLocal(StorageKeys.roles, session.roles, mutatedLocal);
+      _log.info('persist: session written ({} secure + {} local)', [mutatedSecure.length, mutatedLocal.length]);
+      return const Success(null);
+    } catch (e) {
+      _log.error('persist failed after {} secure + {} local mutations; rolling back: {}', [
+        mutatedSecure.length,
+        mutatedLocal.length,
+        e,
+      ]);
+      await _rollback(
+        mutatedSecure: mutatedSecure,
+        mutatedLocal: mutatedLocal,
+        priorJwt: priorJwt,
+        priorRefresh: priorRefresh,
+        priorOidcIdToken: priorOidcIdToken,
+        priorExpiry: priorExpiry,
+        priorUsername: priorUsername,
+        priorRoles: priorRoles,
+      );
+      return Failure(UnknownError('Session persistence failed: $e'));
+    }
+  }
+
+  /// The whole wipe runs inside [SessionGeneration.wipe], so a token refresh on its way when the session ends does not
+  /// leave the rotated tokens stored: it drops them, or takes back what it stored when the wipe ran meanwhile.
+  @override
+  Future<Result<void>> clear() => SessionGeneration.wipe(_clear);
+
+  Future<Result<void>> _clear() async {
+    // Best-effort across BOTH backends: a throw on the first secure
+    // delete must not skip the second key or the local clear. Any
+    // leftover token would let AuthInterceptor re-attach it on the
+    // next request and silently defeat a clear/logout.
+    final errors = <String>[];
+    // Before the first storage call: the other browser tabs count their own generation, and a refresh on its way in
+    // one of them takes back what it stores after this wipe only when it hears of the end.
+    try {
+      _sessionEndSignal?.notifyEnded();
+    } catch (e) {
+      errors.add('signal: $e');
+    }
+    try {
+      await _secureStorage.delete(SecureStorageKeys.jwtToken.key);
+    } catch (e) {
+      errors.add('jwt: $e');
+    }
+    try {
+      await _secureStorage.delete(SecureStorageKeys.refreshToken.key);
+    } catch (e) {
+      errors.add('refresh: $e');
+    }
+    if (_oidcKeys) {
+      try {
+        await _secureStorage.delete(SecureStorageKeys.oidcIdToken.key);
+      } catch (e) {
+        errors.add('oidcIdToken: $e');
+      }
+      try {
+        await _secureStorage.delete(SecureStorageKeys.accessTokenExpiresAt.key);
+      } catch (e) {
+        errors.add('accessTokenExpiresAt: $e');
+      }
+    }
+    // Only the session keys: the device preferences, such as the language and theme, stay for whoever signs in next.
+    final sessionKeys = StorageKeys.values.where((key) => key.scope == StorageScope.session).toList();
+    for (final key in sessionKeys) {
+      try {
+        if (!await _storage.remove(key.key)) errors.add('${key.key}: remove refused');
+      } catch (e) {
+        errors.add('${key.key}: $e');
+      }
+    }
+    // Cached GET responses, such as /account and /admin/users, are this user's data too.
+    try {
+      await _cacheStorage.clear();
+    } catch (e) {
+      errors.add('cache: $e');
+    }
+    if (errors.isNotEmpty) {
+      final msg = errors.join('; ');
+      _log.error('clear: partial failures: {}', [msg]);
+      return Failure(UnknownError('Session clear failed: $msg'));
+    }
+    _log.info('clear: tokens, {} session keys and cached responses removed', [sessionKeys.length]);
+    return const Success(null);
+  }
+
+  /// Writes [value] under [key], or deletes [key] when [value] is null. The key is recorded as mutated before the
+  /// call, as for the tokens, so a call that fails after changing the platform store is still rolled back.
+  Future<void> _writeOrDelete(SecureStorageKeys key, String? value, Set<SecureStorageKeys> mutated) async {
+    mutated.add(key);
+    if (value != null) {
+      await _secureStorage.write(key.key, value);
+    } else {
+      await _secureStorage.delete(key.key);
+    }
+  }
+
+  Future<void> _writeLocal(StorageKeys key, dynamic value, Set<StorageKeys> mutated) async {
+    final ok = await _storage.save(key.key, value);
+    if (!ok) {
+      throw StateError('save returned false for ${key.key}');
+    }
+    mutated.add(key);
+  }
+
+  Future<void> _rollback({
+    required Set<SecureStorageKeys> mutatedSecure,
+    required Set<StorageKeys> mutatedLocal,
+    required String? priorJwt,
+    required String? priorRefresh,
+    required String? priorOidcIdToken,
+    required String? priorExpiry,
+    required dynamic priorUsername,
+    required dynamic priorRoles,
+  }) async {
+    for (final key in mutatedSecure) {
+      try {
+        final prior = switch (key) {
+          SecureStorageKeys.jwtToken => priorJwt,
+          SecureStorageKeys.refreshToken => priorRefresh,
+          SecureStorageKeys.oidcIdToken => priorOidcIdToken,
+          SecureStorageKeys.accessTokenExpiresAt => priorExpiry,
+        };
+        if (prior == null) {
+          await _secureStorage.delete(key.key);
+        } else {
+          await _secureStorage.write(key.key, prior);
+        }
+      } catch (e) {
+        _log.warn('secure rollback failed for {}: {}', [key.key, e]);
+      }
+    }
+    for (final key in mutatedLocal) {
+      try {
+        // Compile-time exhaustive over the full StorageKeys enum so a
+        // new variant added here without snapshotting its prior value
+        // surfaces as a missing case at build time, not as a silent
+        // rollback-to-null (== delete).
+        //
+        // [persist] only ever adds [StorageKeys.username] and
+        // [StorageKeys.roles] to `mutatedLocal`, so the
+        // language/theme/brightness/sidebarCollapsed branches are unreachable in
+        // practice — but they MUST stay in the switch to enforce
+        // exhaustiveness. The `null` they return is safe because
+        // [persist] never inserts those keys into `mutatedLocal`,
+        // so they cannot iterate here. Any future field this
+        // repository persists must extend the snapshot/restore
+        // signature, not silently land in the unreachable branches.
+        // The same holds for the legacy plaintext token keys.
+        final prior = switch (key) {
+          StorageKeys.username => priorUsername,
+          StorageKeys.roles => priorRoles,
+          StorageKeys.language => null,
+          StorageKeys.theme => null,
+          StorageKeys.brightness => null,
+          StorageKeys.sidebarCollapsed => null,
+          StorageKeys.legacyJwtToken => null,
+          StorageKeys.legacyRefreshToken => null,
+        };
+        // AppLocalStorage.save/remove can refuse a mutation by returning
+        // false without throwing. Honor that signal so a rollback that
+        // silently no-ops doesn't leave storage in a partially-mutated
+        // state — symmetric with how _writeLocal treats save == false.
+        final ok = prior == null ? await _storage.remove(key.key) : await _storage.save(key.key, prior);
+        if (!ok) {
+          _log.warn('local rollback refused for {} (storage returned false)', [key.key]);
+        }
+      } catch (e) {
+        _log.warn('local rollback failed for {}: {}', [key.key, e]);
+      }
+    }
+  }
+}

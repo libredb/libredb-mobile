@@ -1,0 +1,106 @@
+name: Build & Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web
+        # lib/infrastructure/config/template_config.dart keeps placeholders for the repository, docs and sponsor links
+        # the app shows. Only this repository builds with the hosted demo's values for them; a copy of the template
+        # gives its own, or the check below fails on the placeholders compiled into main.dart.js.
+        run: >-
+          flutter build web --release --base-href /flutter-bloc-advanced/ --target lib/main/main_local.dart
+          ${{ github.repository == 'cevheri/flutter-bloc-advanced' && '--dart-define-from-file=.github/pages/demo-values.env' || '' }}
+
+      - name: Prepare deployment assets
+        # flutter build web already copies web/ into build/web, dotfiles included (.nojekyll, .well-known/).
+        # Drop Flutter's incremental-build marker so include-hidden-files does not publish it.
+        run: rm -f build/web/.last_build_id
+
+      - name: Fill demo values
+        # web/ keeps the template placeholders. Only this repository fills them with the hosted demo's values, so a
+        # copy of the template never publishes the demo's name, URLs, author or security contact. The llms.txt files
+        # describe the template project itself, so only this repository publishes them too. web/icons/og-image.png
+        # names no author; the demo's link preview uses the branded image.
+        if: github.repository == 'cevheri/flutter-bloc-advanced'
+        run: |
+          scripts/fill_web_placeholders.sh .github/pages/demo-values.env build/web
+          cp .github/pages/llms.txt .github/pages/llms-full.txt build/web/
+          cp .github/pages/og-image.png build/web/icons/og-image.png
+
+      - name: Check for template placeholders
+        # Runs in copies of the template too: until web/ and the build have their own values, the deploy fails and
+        # names each one.
+        run: scripts/check_web_placeholders.sh build/web
+
+      - name: Verify web assets
+        run: |
+          echo "Checking required web assets..."
+          files=(robots.txt sitemap.xml 404.html browserconfig.xml .nojekyll .well-known/security.txt humans.txt)
+          # Only this repository publishes the llms.txt files (see "Fill demo values").
+          if [ "$GITHUB_REPOSITORY" = cevheri/flutter-bloc-advanced ]; then files+=(llms.txt llms-full.txt); fi
+          missing=0
+          for f in "${files[@]}"; do
+            if test -f "build/web/$f"; then echo "OK: $f"; else echo "::error::$f missing"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/web
+          # Dotfiles are skipped by default; .nojekyll and .well-known/security.txt need to be published.
+          include-hidden-files: true
+
+      - name: Verify published dotfiles
+        # Checks the archive that is deployed, so dropping include-hidden-files fails the build.
+        run: |
+          for f in ./.nojekyll ./.well-known/security.txt; do
+            if ! tar -tf "$RUNNER_TEMP/artifact.tar" | grep -x "$f" > /dev/null; then
+              echo "::error::$f is not in the Pages artifact"
+              exit 1
+            fi
+          done
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,378 @@
+# Flutter BLoC Advance Template
+
+> A production-ready, open-source Flutter starter template using BLoC pattern for state management with Feature-First Clean Architecture. Supports Android, iOS, Web, macOS, Linux, and Windows. Built with Flutter 3.47.7, Dart 3.13.5, flutter_bloc 9.1.1, and go_router 18.1.0.
+
+This project provides a complete foundation for building enterprise-grade Flutter applications. It includes authentication (login, register, forgot password, OTP verification), user management (CRUD operations), role-based access control (Admin/User roles), a responsive design system, dark/light theming, English/Turkish localization, and multi-environment support (local mock data and production API).
+
+## Architecture
+
+Source: https://github.com/cevheri/flutter-bloc-advanced/blob/main/docs/feature-first-clean-boundaries.md
+
+### Overview
+
+The project follows Feature-First Clean Boundaries architecture. The goal is to keep the codebase feature-oriented, make dependency direction explicit and enforceable, preserve the Flutter stack (flutter_bloc, go_router, manual JSON models), and support incremental migration.
+
+### Top-Level Ownership
+
+```
+lib/
+  app/               # Composition root, app shell, router, bootstrap
+  core/              # Cross-cutting primitives, errors, logging abstractions
+  infrastructure/    # Storage, HTTP, environment, external adapters
+  shared/            # Business-free reusable UI and helpers
+  features/          # Business capabilities
+  generated/         # Generated localization files
+  l10n/              # ARB files
+  main/              # Entry points (main_local.dart, main_prod.dart)
+```
+
+### Dependency Rules
+
+Allowed imports:
+
+- `app` → features, shared, infrastructure, core
+- `features` → shared, infrastructure, core
+- `shared` → core only
+- `infrastructure` → core only
+
+Forbidden imports:
+
+- `feature_a` → `feature_b/presentation` or `feature_b/data`
+- `shared` → `features`
+- `core` → `shared` or `features`
+- `infrastructure` → `features/presentation`
+
+### Feature Structure
+
+Each feature owns its navigation, state, and data contracts:
+
+```
+features/<feature>/
+  application/       # BLoC/Cubit + use case orchestration
+    <feature>_bloc.dart
+    <feature>_event.dart
+    <feature>_state.dart
+    usecases/
+      <action>_usecase.dart
+  data/
+    models/           # Data models (fromJson/toJson)
+    mappers/          # Entity ↔ Model conversions
+    repositories/     # Repository implementations
+  domain/
+    entities/         # Domain entities (Flutter-free)
+    repositories/     # Repository interfaces (abstract class)
+  navigation/
+    <feature>_routes.dart
+  presentation/
+    pages/            # Screens
+    widgets/          # Feature-local widgets
+```
+
+### Use Case Pattern
+
+BLoCs depend on use cases, not repositories directly:
+
+```dart
+// BLoC → UseCase → Repository Interface
+class LoginBloc extends Bloc<LoginEvent, LoginState> {
+  LoginBloc({
+    required AuthenticateUserUseCase authenticateUserUseCase,
+    required SendOtpUseCase sendOtpUseCase,
+    required VerifyOtpUseCase verifyOtpUseCase,
+    required GetAccountUseCase getAccountUseCase,
+  });
+}
+```
+
+### App Responsibilities
+
+`app/` is the only place that may compose concrete implementations: router composition, global providers, session bootstrap, shell layout, theme and localization bootstrap. It must not contain feature business rules.
+
+### Shared vs Core
+
+Use `shared/` for business-free reusable UI: design system components, dialogs, generic widgets, generic UI helpers. Use `core/` only for primitives that should not depend on Flutter UI concerns: error types, result wrappers, logging contracts, small common types.
+
+### State Management Rules
+
+- UI should never instantiate repositories directly
+- Feature pages depend on feature application state only
+- Session/auth state is app-level
+- Shell state is app-level
+- Feature state remains inside the feature module
+- BLoCs use Equatable for state equality
+- States default to sealed class hierarchies that the UI renders with exhaustive switch expressions; a few keep a single state with a status enum where CLAUDE.md allows it
+
+### Routing Rules
+
+- `app/router` owns route composition
+- Each feature exposes its own routes from `features/<feature>/navigation/`
+- Redirect functions must stay pure and free of data loading side effects
+- Route builders must not create repositories directly
+
+## Features
+
+### Account
+
+- `application/`: AccountBloc + use cases for profile management
+- `data/models/`: ChangePassword model
+- `data/repositories/`: AccountRepository implementation
+- `domain/repositories/`: IAccountRepository interface
+- `navigation/`: AccountFeatureRoutes
+- `presentation/pages/`: AccountPage
+
+### Auth
+
+- `application/`: LoginBloc, RegisterBloc, ForgotPasswordBloc, ChangePasswordBloc + use cases
+- `data/models/`: JWTToken, UserJwt, SendOtpRequest, VerifyOtpRequest
+- `data/mappers/`: AuthMapper
+- `data/repositories/`: LoginRepository (AuthRepositoryImpl)
+- `domain/entities/`: AuthEntity
+- `domain/repositories/`: IAuthRepository
+- `navigation/`: AuthFeatureRoutes
+- `presentation/pages/`: LoginPage, RegisterPage, ForgotPasswordPage, ChangePasswordPage
+
+### Dashboard
+
+- `application/`: DashboardCubit + use cases
+- `data/models/`: DashboardModel
+- `data/repositories/`: DashboardMockRepository, DashboardApiRepository
+- `domain/entities/`: DashboardEntity
+- `domain/repositories/`: IDashboardRepository
+- `navigation/`: DashboardFeatureRoutes
+- `presentation/pages/`: DashboardPage, DashboardHomePage
+
+### Lifecycle
+
+- `application/`: LifecycleBloc, which checks the remote app configuration for a required update or maintenance mode
+- `data/models/`: AppConfigModel
+- `data/repositories/`: LifecycleRepository
+- `domain/entities/`: AppConfigEntity
+- `domain/repositories/`: ILifecycleRepository
+- `presentation/pages/`: LifecycleGate, ForceUpdateScreen, MaintenanceScreen
+
+### Settings
+
+- `application/`: SettingsBloc + use cases
+- `navigation/`: SettingsFeatureRoutes
+- `presentation/pages/`: SettingsPage, SettingsScreen
+
+### Users
+
+- `application/`: UserBloc, AuthorityBloc + use cases
+- `data/models/`: User, Authority
+- `data/repositories/`: UserRepository, AuthorityRepository
+- `domain/repositories/`: IUserRepository, IAuthorityRepository
+- `navigation/`: UsersFeatureRoutes
+- `presentation/`: UserListPage, UserEditorPage + widgets
+
+## Infrastructure
+
+### HTTP (infrastructure/http/)
+
+- `api_client.dart`: Dio-based HTTP client with interceptor chain
+- `interceptors/auth_interceptor.dart`: Automatic JWT token injection from secure storage
+- `interceptors/logging_interceptor.dart`: Structured request/response logging via AppLogger
+- `interceptors/mock_interceptor.dart`: Dev/test mode mock data from assets
+- `public_endpoint.dart`: API endpoints that serve requests without a session, by method and path
+
+### Configuration (infrastructure/config/)
+
+- `environment.dart`: Environment-driven configuration for local and production modes
+- `template_config.dart`: Customizable template settings (app name, API URL, and the repository, docs and sponsor links given at build time)
+
+### Storage (infrastructure/storage/)
+
+- `local_storage.dart`: Local storage abstraction using shared_preferences
+
+## Core
+
+### Result Type (core/result/)
+
+- `result.dart`: Dart 3 sealed `Result<T>` type — `Success<T>` and `Failure<T>` with typed `AppError`
+
+### Errors (core/errors/)
+
+- `app_error.dart`: Sealed error hierarchy — `NetworkError`, `AuthError`, `ValidationError`, `ServerError`, `NotFoundError`, `TimeoutError`, `UnknownError`
+- `app_api_exception.dart`: Legacy API exception types (used by HTTP layer)
+
+### Logging (core/logging/)
+
+- `app_logger.dart`: Application logging abstraction
+
+### Security (core/security/)
+
+- `security_utils.dart`: Security utility functions
+
+## Shared
+
+### Design System (shared/design_system/)
+
+13 composable components: AppButton, AppCard, AppBadge, AppAvatar, AppInput, AppForm, AppSkeleton, AppDivider, AppEmptyState, AppErrorState, AppPageTransition, AppResponsiveBuilder, AppStatusBadge.
+
+4 theme files: AppTheme, AppThemePalette, SemanticColors, ThemeColors.
+
+6 token files: AppSpacing, AppBreakpoints, AppDurations, AppSizes, AppRadius, AppTypography.
+
+### Shared Widgets (shared/widgets/)
+
+- ConfirmationDialogWidget
+- ResponsiveFormWidget
+- SubmitButtonWidget
+- ThemeSelectionDialog
+- LanguageSelectionDialog
+- EditorFormMode
+- UserFormFields
+
+## Dependency Injection
+
+### Repository Registration (app/di/app_dependencies.dart)
+
+All repository implementations are registered here with their interfaces.
+
+### BLoC Registration (app/di/app_scope.dart)
+
+All BLoCs and Cubits are provided to the widget tree from here.
+
+## App Shell
+
+### Responsive Layout (app/shell/)
+
+- `app_shell.dart`: Main shell wrapper
+- `responsive_scaffold.dart`: Adaptive layout for mobile/tablet/desktop
+- `sidebar/`: Collapsible sidebar with menu items
+- `top_bar/`: Top navigation bar with breadcrumb
+- `bottom_nav/`: Mobile bottom navigation
+- `command_palette/`: Ctrl+K command palette for quick navigation
+- `drawer/`: Drawer BLoC for mobile menu
+
+## Tech Stack
+
+| Category | Technology |
+|----------|-----------|
+| Flutter | 3.47.7 |
+| Dart SDK | 3.13.5 |
+| State Management | flutter_bloc 9.1.1 |
+| Routing | go_router 18.1.0 |
+| HTTP | dio 5.11.1 (interceptor chain: connectivity, auth, token-refresh, idempotency, resilience, cache, dev-console, logging, mock (dev/test only)) |
+| Error Handling | Dart 3 sealed Result<T> type with typed AppError hierarchy |
+| Forms | flutter_form_builder 10.3.0+2 |
+| Form Validation | form_builder_validators 11.3.0 |
+| Localization | intl 0.20.3, intl_utils 2.8.17 |
+| Storage | shared_preferences 2.5.6, flutter_secure_storage 11.2.0 |
+| Loading Effects | shimmer 4.0.0 |
+| Logging | logger 2.8.0 |
+| Testing | flutter_test, bloc_test 10.0.0, mocktail |
+
+## Quick Start
+
+### Prerequisites
+
+- Flutter 3.47.7 and Dart 3.13.5
+- FVM (Flutter Version Management) recommended
+- Android SDK for Android builds
+- Xcode for iOS and macOS builds
+
+### Setup
+
+```bash
+git clone https://github.com/cevheri/flutter-bloc-advanced.git
+cd flutter-bloc-advanced
+fvm install 3.47.7
+fvm use 3.47.7
+fvm flutter pub get
+```
+
+### Run Locally With Mock Data
+
+```bash
+fvm flutter run --target lib/main/main_local.dart           # Mobile
+fvm flutter run -d chrome --target lib/main/main_local.dart  # Web
+```
+
+Demo credentials: admin/admin (full access), user/user (limited access).
+
+### Run Against Real API
+
+```bash
+fvm flutter run --target lib/main/main_prod.dart
+```
+
+### Build
+
+```bash
+fvm flutter build apk --release --target lib/main/main_prod.dart  # Android
+fvm flutter build ios --target lib/main/main_prod.dart              # iOS
+fvm flutter build web --target lib/main/main_prod.dart              # Web
+```
+
+### Test
+
+```bash
+fvm flutter test                    # Run all tests
+fvm flutter test --coverage         # With coverage
+fvm dart analyze                    # Static analysis
+fvm dart format . --line-length=120 # Format code
+```
+
+## Testing Structure
+
+Tests are organized by feature:
+
+```
+test/
+  architecture/  # Import guard tests enforcing dependency rules
+  app/           # Router, shell, DI tests
+  core/          # Error, logging, security tests
+  features/      # Feature-specific tests
+    <feature>/
+      application/
+        usecases/      # Use case unit tests
+        *_bloc_test.dart  # BLoC/Cubit tests
+      data/
+        models/        # Model serialization tests
+        mappers/       # Mapper tests
+        repositories/  # Repository tests
+      domain/
+        entities/      # Entity tests
+      presentation/
+        pages/         # Widget/page tests
+        widgets/       # Component tests
+      navigation/      # Route tests
+  infrastructure/      # HTTP (ApiClient), storage tests
+  shared/              # Design system, widget, model tests
+  mocks/               # Mock classes and fake data
+```
+
+## Adding a New Feature
+
+1. Create directory: `lib/features/<feature>/`
+2. Define domain: entities in `domain/entities/`, repository interface in `domain/repositories/`
+3. Implement data: models in `data/models/`, repository in `data/repositories/` (return `Result<T>`, mappers only when API shape differs from domain)
+4. Add business logic: use cases in `application/usecases/`, BLoC in `application/`
+5. Build UI: pages in `presentation/pages/`, widgets in `presentation/widgets/`
+6. Define routes: `navigation/<feature>_routes.dart`
+7. Register DI: `app/di/app_dependencies.dart` (repos) + `app/di/app_scope.dart` (BLoCs)
+8. Register routes: `app/router/app_router.dart`
+9. Add translations: `l10n/` ARB files, then run `fvm dart run intl_utils:generate` and `fvm dart format lib/generated --line-length=120`
+10. Write tests: `test/features/<feature>/` mirroring the feature structure
+
+## Environments
+
+- **Local/Dev**: Mock data from `assets/mock/*.json`, no backend required
+- **Production**: Real API at configured endpoint, set in `infrastructure/config/environment.dart`
+- Entry points: `main/main_local.dart` (dev), `main/main_prod.dart` (production)
+
+## CI/CD
+
+GitHub Actions workflows:
+- `build_and_test.yml`: Build and test automation
+- `build-web.yml`: Web build and GitHub Pages deployment
+- `sonar_scanner.yml`: SonarQube code quality analysis
+
+## License
+
+MIT License - https://github.com/cevheri/flutter-bloc-advanced/blob/main/LICENSE
+
+## Author
+
+cevheri - https://github.com/cevheri

@@ -1,0 +1,488 @@
+import 'dart:io' show HttpException;
+
+import 'package:dio/dio.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/interceptors/dev_console_interceptor.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/sensitive_keys.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  late DevConsoleInterceptor interceptor;
+
+  setUp(() {
+    interceptor = DevConsoleInterceptor();
+    DevConsoleStore.instance.clearAll();
+  });
+
+  tearDown(() {
+    DevConsoleStore.instance.clearAll();
+  });
+
+  group('DevConsoleInterceptor', () {
+    group('onRequest', () {
+      test('should record a network entry in DevConsoleStore', () {
+        final options = RequestOptions(
+          path: '/api/users',
+          method: 'GET',
+          baseUrl: 'https://example.com',
+          headers: {'Authorization': 'Bearer token'},
+        );
+
+        final handler = _TestRequestHandler();
+        interceptor.onRequest(options, handler);
+
+        expect(handler.nextCalled, isTrue);
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries, isNotEmpty);
+        expect(entries.first.method, 'GET');
+        expect(entries.first.url, contains('/api/users'));
+        expect(entries.first.requestHeaders, containsPair('Authorization', '[REDACTED]'));
+      });
+
+      test('should set _devConsoleId in options.extra', () {
+        final options = RequestOptions(path: '/api/test', method: 'POST');
+
+        final handler = _TestRequestHandler();
+        interceptor.onRequest(options, handler);
+
+        expect(options.extra['_devConsoleId'], isNotNull);
+        expect(options.extra['_devConsoleId'], isA<String>());
+      });
+
+      test('should record requestBody when present', () {
+        final options = RequestOptions(path: '/api/users', method: 'POST', data: '{"name": "John"}');
+
+        final handler = _TestRequestHandler();
+        interceptor.onRequest(options, handler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.requestBody, '{"name": "John"}');
+      });
+
+      test('should set startTime on entry', () {
+        final before = DateTime.now();
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+
+        final handler = _TestRequestHandler();
+        interceptor.onRequest(options, handler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.startTime.isAfter(before.subtract(const Duration(seconds: 1))), isTrue);
+      });
+
+      test('should always call handler.next', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        final handler = _TestRequestHandler();
+        interceptor.onRequest(options, handler);
+
+        expect(handler.nextCalled, isTrue);
+      });
+    });
+
+    group('onResponse', () {
+      test('should update network entry with response data', () {
+        // First create a request entry
+        final options = RequestOptions(path: '/api/users', method: 'GET', baseUrl: 'https://example.com');
+
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        // Then process response
+        final response = Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: '{"users": []}',
+          headers: Headers.fromMap({
+            'content-type': ['application/json'],
+          }),
+        );
+
+        final responseHandler = _TestResponseHandler();
+        interceptor.onResponse(response, responseHandler);
+
+        expect(responseHandler.nextCalled, isTrue);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.statusCode, 200);
+        expect(entries.first.responseBody, '{"users": []}');
+        expect(entries.first.endTime, isNotNull);
+        expect(entries.first.isComplete, isTrue);
+      });
+
+      test('should update response headers', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        final response = Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: 'ok',
+          headers: Headers.fromMap({
+            'x-custom': ['value1'],
+          }),
+        );
+
+        final responseHandler = _TestResponseHandler();
+        interceptor.onResponse(response, responseHandler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.responseHeaders, containsPair('x-custom', 'value1'));
+      });
+
+      // A server-driven form chooses the keys of its fields, so the key of a password field may name no credential.
+      test('should mask the values of the keys the request names as sensitive in both bodies', () {
+        final options = RequestOptions(
+          path: '/api/pins',
+          method: 'PUT',
+          data: {'login': 'admin', 'pin': 'S3cret!pw'},
+          extra: {
+            sensitiveKeysExtra: {'pin'},
+          },
+        );
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        interceptor.onResponse(
+          Response(requestOptions: options, statusCode: 200, data: '{"login":"admin","pin":"S3cret!pw"}'),
+          _TestResponseHandler(),
+        );
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.requestBody, '{login: admin, pin: [REDACTED]}');
+        expect(entry.responseBody, '{"login":"admin","pin":"[REDACTED]"}');
+      });
+
+      test('should handle response without prior request entry gracefully', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        // No onRequest was called, so no _devConsoleId in extra
+
+        final response = Response(requestOptions: options, statusCode: 200, data: 'ok');
+        final responseHandler = _TestResponseHandler();
+
+        // Should not throw
+        interceptor.onResponse(response, responseHandler);
+        expect(responseHandler.nextCalled, isTrue);
+      });
+
+      test('should always call handler.next', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        final response = Response(requestOptions: options, statusCode: 200, data: 'ok');
+        final handler = _TestResponseHandler();
+
+        interceptor.onResponse(response, handler);
+        expect(handler.nextCalled, isTrue);
+      });
+    });
+
+    group('onError', () {
+      test('should update network entry with error information', () {
+        final options = RequestOptions(path: '/api/users', method: 'GET', baseUrl: 'https://example.com');
+
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        final dioError = DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionTimeout,
+          message: 'Connection timed out',
+        );
+
+        final errorHandler = _TestErrorHandler();
+        interceptor.onError(dioError, errorHandler);
+
+        expect(errorHandler.nextCalled, isTrue);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.error, isNotNull);
+        expect(entries.first.error, contains('connectionTimeout'));
+        expect(entries.first.error, contains('Connection timed out'));
+        expect(entries.first.endTime, isNotNull);
+      });
+
+      test('should update statusCode from error response', () {
+        final options = RequestOptions(path: '/api/users', method: 'GET');
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        final errorResponse = Response(requestOptions: options, statusCode: 500, data: 'Server Error');
+        final dioError = DioException(
+          requestOptions: options,
+          type: DioExceptionType.badResponse,
+          response: errorResponse,
+          message: 'Internal Server Error',
+        );
+
+        final errorHandler = _TestErrorHandler();
+        interceptor.onError(dioError, errorHandler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.statusCode, 500);
+        expect(entries.first.responseBody, 'Server Error');
+      });
+
+      // Regression: the error body was kept as the server sent it, and a validation error can repeat the password the
+      // request sent.
+      test('should keep the credentials of the request out of the recorded error', () {
+        final options = RequestOptions(
+          path: '/api/account/change-password',
+          method: 'POST',
+          data: {'currentPassword': 'OldPass#1', 'newPassword': 'NewPass#2'},
+        );
+        interceptor.onRequest(options, _TestRequestHandler());
+        final dioError = DioException(
+          requestOptions: options,
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: options,
+            statusCode: 400,
+            data: '{"errors":[{"field":"newPassword","rejectedValue":"NewPass#2"}],"detail":"NewPass#2 is too short"}',
+          ),
+        );
+
+        interceptor.onError(dioError, _TestErrorHandler());
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.responseBody, allOf(isNot(contains('NewPass#2')), contains('is too short')));
+        expect(entry.requestBody, allOf(isNot(contains('OldPass#1')), isNot(contains('NewPass#2'))));
+      });
+
+      test('should keep a value of a key the request names as sensitive out of the recorded error', () {
+        final options = RequestOptions(
+          path: '/api/pins',
+          method: 'PUT',
+          data: {'login': 'admin', 'pin': 'S3cret!pw'},
+          extra: {
+            sensitiveKeysExtra: {'pin'},
+          },
+        );
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        interceptor.onError(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: options,
+              statusCode: 400,
+              data: '{"detail":"PIN S3cret!pw was used before"}',
+            ),
+          ),
+          _TestErrorHandler(),
+        );
+
+        expect(
+          DevConsoleStore.instance.networkEntries.single.responseBody,
+          '{"detail":"PIN [REDACTED] was used before"}',
+        );
+      });
+
+      test('should handle error with null message', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        final dioError = DioException(requestOptions: options, type: DioExceptionType.unknown);
+
+        final errorHandler = _TestErrorHandler();
+        interceptor.onError(dioError, errorHandler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.first.error, contains('Unknown error'));
+      });
+
+      // ConnectivityInterceptor rejects a request while the device is offline before this interceptor's onRequest
+      // runs, so the error is the first this interceptor sees of the request.
+      test('should record an error for a request that never reached onRequest', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET', baseUrl: 'https://example.com');
+        final dioError = DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          message: 'Failed',
+        );
+
+        final errorHandler = _TestErrorHandler();
+        interceptor.onError(dioError, errorHandler);
+
+        expect(errorHandler.nextCalled, isTrue);
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.method, 'GET');
+        expect(entry.url, 'https://example.com/api/test');
+        expect(entry.error, 'connectionError: Failed');
+        expect(entry.isComplete, isTrue);
+      });
+
+      test('should always call handler.next', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        final dioError = DioException(requestOptions: options, type: DioExceptionType.cancel);
+        final handler = _TestErrorHandler();
+
+        interceptor.onError(dioError, handler);
+        expect(handler.nextCalled, isTrue);
+      });
+
+      // dio wraps an error it does not map itself, such as a connection closed while the body is read, without a
+      // message.
+      test('should name the wrapped error when the exception has no message', () {
+        final options = RequestOptions(path: '/api/test', method: 'GET');
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        interceptor.onError(
+          DioException(requestOptions: options, error: const HttpException('Connection closed while receiving data')),
+          _TestErrorHandler(),
+        );
+
+        expect(
+          DevConsoleStore.instance.networkEntries.first.error,
+          'unknown: HttpException: Connection closed while receiving data',
+        );
+      });
+    });
+
+    // CacheInterceptor answers a GET that cannot reach the server in its onError, which ends the error chain before
+    // this interceptor's onError runs.
+    group('recordAnswer', () {
+      test('should complete the entry with the answer and keep the error it answers', () {
+        final options = RequestOptions(path: '/api/users', method: 'GET', baseUrl: 'https://example.com');
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        DevConsoleInterceptor.recordAnswer(
+          DioException(requestOptions: options, type: DioExceptionType.connectionError, message: 'Failed'),
+          Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: '{"users": []}',
+            headers: Headers.fromMap({
+              'x-cache': ['stale'],
+            }),
+          ),
+        );
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.isComplete, isTrue);
+        expect(entry.statusCode, 200);
+        expect(entry.responseHeaders, containsPair('x-cache', 'stale'));
+        expect(entry.responseBody, '{"users": []}');
+        expect(entry.error, 'connectionError: Failed');
+      });
+
+      // A cached answer is a response like any other, so the Network tab masks its credentials as onResponse does.
+      test('should mask the credentials of the cached answer', () {
+        final options = RequestOptions(path: '/api/session', method: 'GET');
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        DevConsoleInterceptor.recordAnswer(
+          DioException(requestOptions: options, type: DioExceptionType.connectionError),
+          Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: '{"login":"admin","accessToken":"cached-access-token"}',
+            headers: Headers.fromMap({
+              'set-cookie': ['session=cached-session-id'],
+              'x-cache': ['stale'],
+            }),
+          ),
+        );
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.responseBody, '{"login":"admin","accessToken":"[REDACTED]"}');
+        expect(entry.responseHeaders, containsPair('set-cookie', '[REDACTED]'));
+        expect(entry.responseHeaders, containsPair('x-cache', 'stale'));
+      });
+
+      // Such a request was never sent, like a cache hit.
+      test('should add no entry for a request that never reached onRequest', () {
+        final options = RequestOptions(path: '/api/users', method: 'GET');
+
+        DevConsoleInterceptor.recordAnswer(
+          DioException(requestOptions: options, type: DioExceptionType.connectionError),
+          Response(requestOptions: options, statusCode: 200, data: 'cached'),
+        );
+
+        expect(DevConsoleStore.instance.networkEntries, isEmpty);
+      });
+    });
+
+    group('full request lifecycle', () {
+      test('should track request through success response', () {
+        final options = RequestOptions(
+          path: '/api/data',
+          method: 'POST',
+          baseUrl: 'https://api.example.com',
+          data: '{"payload": true}',
+        );
+
+        // Request phase
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        var entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.length, 1);
+        expect(entries.first.isComplete, isFalse);
+
+        // Response phase
+        final response = Response(requestOptions: options, statusCode: 201, data: '{"id": 123}');
+        final responseHandler = _TestResponseHandler();
+        interceptor.onResponse(response, responseHandler);
+
+        entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.length, 1);
+        expect(entries.first.isComplete, isTrue);
+        expect(entries.first.statusCode, 201);
+        expect(entries.first.duration, isNotNull);
+      });
+
+      test('should track request through error', () {
+        final options = RequestOptions(path: '/api/data', method: 'GET', baseUrl: 'https://api.example.com');
+
+        // Request phase
+        final requestHandler = _TestRequestHandler();
+        interceptor.onRequest(options, requestHandler);
+
+        // Error phase
+        final dioError = DioException(
+          requestOptions: options,
+          type: DioExceptionType.receiveTimeout,
+          message: 'Timeout',
+        );
+        final errorHandler = _TestErrorHandler();
+        interceptor.onError(dioError, errorHandler);
+
+        final entries = DevConsoleStore.instance.networkEntries;
+        expect(entries.length, 1);
+        expect(entries.first.isComplete, isTrue);
+        expect(entries.first.isError, isTrue);
+      });
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test handler implementations
+// ---------------------------------------------------------------------------
+
+class _TestRequestHandler extends RequestInterceptorHandler {
+  bool nextCalled = false;
+
+  @override
+  void next(RequestOptions requestOptions) {
+    nextCalled = true;
+  }
+}
+
+class _TestResponseHandler extends ResponseInterceptorHandler {
+  bool nextCalled = false;
+
+  @override
+  void next(Response response) {
+    nextCalled = true;
+  }
+}
+
+class _TestErrorHandler extends ErrorInterceptorHandler {
+  bool nextCalled = false;
+
+  @override
+  void next(DioException error) {
+    nextCalled = true;
+  }
+}

@@ -1,0 +1,763 @@
+@Tags(['widget'])
+library;
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart'
+    show Headers, HttpClientAdapter, Interceptor, RequestInterceptorHandler, RequestOptions, Response, ResponseBody;
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc_advance/app/app.dart';
+import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
+import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
+import 'package:flutter_bloc_advance/features/account/presentation/pages/account_page.dart';
+import 'package:flutter_bloc_advance/features/users/data/models/user.dart';
+import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
+import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:flutter_bloc_advance/shared/widgets/submit_button_widget.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
+
+import '../../../../mocks/mock_classes.dart';
+import '../../../../support/test_env.dart';
+
+import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
+
+import '../../../../support/unsaved_changes_host.dart';
+
+void main() {
+  late MockAccountBloc mockAccountBloc;
+  late StreamController<AccountState> accountStateController;
+
+  // Mock user data for testing
+  const mockUser = User(
+    id: 'test-1',
+    login: 'testuser',
+    firstName: 'Test',
+    lastName: 'User',
+    email: 'test@example.com',
+    activated: true,
+  );
+
+  setUp(() async {
+    // Initialize mock blocs and controllers
+    mockAccountBloc = MockAccountBloc();
+
+    accountStateController = StreamController<AccountState>.broadcast();
+
+    // Setup stream responses
+    when(() => mockAccountBloc.stream).thenAnswer((_) => accountStateController.stream);
+  });
+
+  tearDown(() async {
+    await accountStateController.close();
+  });
+
+  // Helper method to build the widget under test
+  Widget buildTestableWidget() {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/account',
+          onExit: confirmLeavingUnsavedChanges,
+          builder: (context, state) => Scaffold(body: AccountScreen()),
+        ),
+      ],
+      initialLocation: '/account',
+    );
+
+    return BlocProvider<AccountBloc>.value(
+      value: mockAccountBloc,
+      child: withUnsavedChangesRegistry(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+        ),
+      ),
+    );
+  }
+
+  group('AccountScreen Basic UI Tests', () {
+    testWidgets('Should render back button and title correctly', (tester) async {
+      // ARRANGE
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      // ACT
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      // ASSERT - AccountScreen now uses a Row with IconButton + Text instead of AppBar
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.text(S.current.account), findsOneWidget);
+      expect(find.byKey(const Key('accountScreenAppBarBackButtonKey')), findsOneWidget);
+    });
+
+    testWidgets('names the back button for screen readers', (tester) async {
+      final semantics = tester.ensureSemantics();
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(find.byKey(const Key('accountScreenAppBarBackButtonKey'))),
+        isSemantics(tooltip: 'Back', isButton: true),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('fits the title on a 320 px wide phone with large text', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(S.current.account), findsOneWidget);
+    });
+
+    testWidgets('Should render form fields correctly', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FormBuilder), findsOneWidget);
+      expect(find.byKey(const Key('userEditorFirstNameFieldKey')), findsOneWidget);
+      expect(find.byKey(const Key('userEditorLastNameFieldKey')), findsOneWidget);
+      expect(find.byKey(const Key('userEditorEmailFieldKey')), findsOneWidget);
+      expect(find.byKey(const Key('userEditorActivatedFieldKey')), findsNothing);
+    });
+  });
+
+  group('AccountScreen State Tests', () {
+    testWidgets('Should display loading indicator when in loading state', (tester) async {
+      // ARRANGE
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.loading));
+
+      // Make sure the stream also emits the loading state
+      accountStateController.add(const AccountState(status: AccountStatus.loading));
+
+      // ACT
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pump();
+
+      // ASSERT
+    });
+
+    // Add a test to verify state transitions
+    testWidgets('Should handle loading to success state transition', (tester) async {
+      // ARRANGE
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.loading));
+
+      // ACT
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pump();
+
+      // Success durumuna geçiş
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpAndSettle();
+
+      // Success durumunu kontrol et
+      expect(find.byType(FormBuilder), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+  });
+
+  group('AccountScreen Form Operations', () {
+    testWidgets('Should show warning when save button is pressed without changes', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(data: mockUser, status: AccountStatus.success));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+
+      expect(find.text(S.current.no_changes_made), findsOneWidget);
+    });
+
+    testWidgets('Should not submit when form validation fails', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(data: mockUser, status: AccountStatus.success));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), '');
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+
+      // Account submit with empty input should not reach AccountBloc.
+      verifyNever(() => mockAccountBloc.add(any()));
+    });
+  });
+
+  group('AccountScreen Navigation Tests', () {
+    testWidgets('Should exit directly when back button is pressed without changes', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(data: mockUser, status: AccountStatus.success));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+    });
+  });
+
+  group('AccountScreen Form Operations', () {
+    testWidgets('Given form with changes When submit button is pressed Then should handle submission successfully', (
+      tester,
+    ) async {
+      // ARRANGE
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      // Modify form fields
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+      await tester.enterText(find.byKey(const Key('userEditorLastNameFieldKey')), 'Updated Last');
+
+      // Tap submit button
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+
+      // Verify AccountSubmitEvent was called with correct data
+      verify(() => mockAccountBloc.add(any(that: isA<AccountSubmitEvent>()))).called(1);
+    });
+
+    testWidgets('Given form submission When server returns error Then should display failure message', (tester) async {
+      // ARRANGE - Set up initial successful state
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      // ACT - Make form changes
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+
+      // Submit the form
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+
+      // Trigger failure state
+      accountStateController.add(const AccountState(status: AccountStatus.failure, data: mockUser));
+
+      // Wait for SnackBar animation
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // ASSERT - Verify SnackBar is visible with error message
+      expect(
+        find.descendant(of: find.byType(SnackBar), matching: find.text(S.current.failed)),
+        findsOneWidget,
+        reason: 'SnackBar should be visible with failure message',
+      );
+    });
+
+    // Alternative approach using ScaffoldMessenger
+    testWidgets('Given form submission When server returns error Then should show error in SnackBar', (tester) async {
+      // ARRANGE - Initialize widget with success state
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      // ACT - Simulate form changes and submission
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+
+      // Trigger form submission
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+
+      // Emit failure state
+      accountStateController.add(const AccountState(status: AccountStatus.failure, data: mockUser));
+
+      // Wait for SnackBar animation
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // ASSERT - Verify SnackBar is visible with error message
+      expect(find.byType(SnackBar), findsOneWidget, reason: 'SnackBar should be visible');
+
+      expect(
+        find.descendant(of: find.byType(SnackBar), matching: find.text(S.current.failed)),
+        findsOneWidget,
+        reason: 'SnackBar should display failure message',
+      );
+
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final snackBarText = (snackBar.content as Text).data;
+      expect(snackBarText, equals(S.current.failed));
+    });
+  });
+
+  group('AccountScreen after a save', () {
+    const saved = User(
+      id: 'test-1',
+      login: 'testuser',
+      firstName: 'Updated First',
+      lastName: 'User',
+      email: 'test@example.com',
+      activated: true,
+    );
+
+    testWidgets('fetches the account once the save succeeds and then leaves without asking', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+      verifyNever(() => mockAccountBloc.add(any(that: isA<AccountFetchEvent>())));
+
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: mockUser));
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: saved));
+      await tester.pumpAndSettle();
+      verify(() => mockAccountBloc.add(any(that: isA<AccountFetchEvent>()))).called(1);
+
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: saved));
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: saved));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.text(S.current.unsaved_changes), findsNothing);
+    });
+
+    testWidgets('still asks before leaving when the save fails', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: mockUser));
+      accountStateController.add(const AccountState(status: AccountStatus.failure, data: mockUser));
+      await tester.pumpAndSettle();
+      verifyNever(() => mockAccountBloc.add(any(that: isA<AccountFetchEvent>())));
+      expect(find.text('Updated First'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.text(S.current.unsaved_changes), findsOneWidget);
+    });
+
+    testWidgets('keeps what the user types while the save runs and still asks before leaving', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: mockUser));
+      await tester.pump();
+      // The fields stay editable while the save runs.
+      await tester.enterText(find.byKey(const Key('userEditorLastNameFieldKey')), 'Typed Last');
+      await tester.pump();
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: saved));
+      await tester.pumpAndSettle();
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: saved));
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: saved));
+      await tester.pumpAndSettle();
+      expect(find.text('Typed Last'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.text(S.current.unsaved_changes), findsOneWidget);
+    });
+
+    testWidgets('keeps the saved values when the fetch after the save returns older ones', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Updated First');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(S.current.save));
+      await tester.pumpAndSettle();
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: mockUser));
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: saved));
+      await tester.pumpAndSettle();
+      // A fetch that the HTTP cache answers when the network fails holds the account from before the save.
+      accountStateController.add(const AccountState(status: AccountStatus.loading, data: saved));
+      accountStateController.add(const AccountState(status: AccountStatus.success, data: mockUser));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Updated First'), findsOneWidget);
+    });
+  });
+
+  group('AccountScreen Navigation Tests', () {
+    testWidgets('Should show confirmation dialog when back button is pressed with changes', (tester) async {
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Changed Name');
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text(S.current.warning), findsOneWidget);
+    });
+  });
+
+  group('AccountScreen State Management Tests', () {
+    testWidgets('Should show snackbar messages for different states', (tester) async {
+      // ARRANGE - Set up initial state
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pump();
+
+      // ACT & ASSERT - Test loading state
+      accountStateController.add(const AccountState(status: AccountStatus.loading));
+
+      // Wait for state change to be processed
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify loading indicator in button using more specific finder
+      expect(
+        find.descendant(of: find.byType(ResponsiveSubmitButton), matching: find.byType(CircularProgressIndicator)),
+        findsOneWidget,
+        reason: 'Should show loading indicator in submit button',
+      );
+
+      // Verify loading message
+      expect(find.text(S.current.loading), findsOneWidget, reason: 'Should show loading message');
+
+      // Test success state
+      accountStateController.add(const AccountState(status: AccountStatus.success));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify success state
+      expect(
+        find.descendant(of: find.byType(ResponsiveSubmitButton), matching: find.byType(CircularProgressIndicator)),
+        findsNothing,
+        reason: 'Should not show loading indicator',
+      );
+
+      // Test failure state
+      accountStateController.add(const AccountState(status: AccountStatus.failure));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify failure state
+      expect(
+        find.descendant(of: find.byType(ResponsiveSubmitButton), matching: find.byType(CircularProgressIndicator)),
+        findsNothing,
+        reason: 'Should not show loading indicator',
+      );
+    });
+
+    testWidgets('Should show snackbar messages for different states2', (tester) async {
+      // ARRANGE - Set up initial state
+      when(() => mockAccountBloc.state).thenReturn(const AccountState(status: AccountStatus.success, data: mockUser));
+
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pump();
+
+      // ACT & ASSERT - Test loading state
+      accountStateController.add(const AccountState(status: AccountStatus.loading));
+
+      // Wait for state change and animations
+      await tester.pump(); // Build frame
+      await tester.pump(); // Start SnackBar animation
+      await tester.pump(const Duration(milliseconds: 750)); // Animation midpoint
+
+      // Verify loading state
+      expect(
+        find.descendant(of: find.byType(ResponsiveSubmitButton), matching: find.byType(CircularProgressIndicator)),
+        findsOneWidget,
+        reason: 'Should show loading indicator in submit button',
+      );
+
+      expect(
+        find.descendant(of: find.byType(ScaffoldMessenger), matching: find.text(S.current.loading)),
+        findsOneWidget,
+        reason: 'Should show loading message in SnackBar',
+      );
+
+      // Test success state
+      accountStateController.add(const AccountState(status: AccountStatus.success));
+      await tester.pump(); // Build frame
+      await tester.pump(); // Start SnackBar animation
+      await tester.pump(const Duration(milliseconds: 750)); // Animation midpoint
+
+      var snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      var snackBarText = (snackBar.content as Text).data;
+      expect(snackBarText, equals(S.current.loading));
+
+      // Test failure state
+      accountStateController.add(const AccountState(status: AccountStatus.failure));
+      await tester.pump(); // Build frame
+      await tester.pump(); // Start SnackBar animation
+      await tester.pump(const Duration(milliseconds: 750)); // Animation midpoint
+
+      snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      snackBarText = (snackBar.content as Text).data;
+      expect(snackBarText, equals(S.current.loading));
+    });
+  });
+
+  group('AccountScreen in the app', () {
+    late List<RequestOptions> requests;
+
+    setUp(() {
+      requests = [];
+      TestEnv.authenticate();
+    });
+
+    testWidgets('saving the account keeps its language, with the save button in it', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      const turkishAccount = {
+        'id': 'user-9',
+        'login': 'ayse.yilmaz',
+        'firstName': 'Ayşe',
+        'lastName': 'Yılmaz',
+        'email': 'ayse.yilmaz@example.com',
+        'activated': true,
+        'langKey': 'tr',
+        'authorities': ['ROLE_USER'],
+      };
+
+      await tester.pumpWidget(
+        App(
+          language: 'tr',
+          dependencies: _RecordingDependencies(requests, answers: {'/account': turkishAccount}),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
+      router.go(ApplicationRoutesConstants.account);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byType(ResponsiveSubmitButton), matching: find.text('Kaydet')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Ayşe Nur');
+      await tester.tap(find.byType(ResponsiveSubmitButton));
+      await tester.pumpAndSettle();
+
+      final saved = requests.singleWhere((request) => request.method == 'POST' && request.path == '/account');
+      expect(saved.data, containsPair('firstName', 'Ayşe Nur'));
+      expect(saved.data, containsPair('langKey', 'tr'));
+    });
+  });
+
+  // Regression: saving the account on a network whose certificate matches no pin said "Failed", as if the input were
+  // wrong.
+  testWidgets('tells the user the connection was blocked when the certificate matches no pin', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+    await AppLocalStorage().save(StorageKeys.roles.key, ['ROLE_USER']);
+    // The account loads once, on the dashboard; every later request, the save among them, meets a certificate that
+    // matches no pin.
+    final adapter = _PinnedServerAdapter({
+      'GET /account': [
+        {
+          'id': 'user-1',
+          'login': 'admin',
+          'firstName': 'Admin',
+          'lastName': 'User',
+          'email': 'admin@sample.tech',
+          'activated': true,
+          'authorities': ['ROLE_USER'],
+        },
+      ],
+    });
+    await tester.pumpWidget(App(language: 'en', dependencies: _PinnedDependencies(adapter)));
+    await tester.pumpAndSettle();
+    final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
+    router.go(ApplicationRoutesConstants.account);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Jane');
+    await tester.tap(find.byType(ResponsiveSubmitButton));
+
+    // The reason is a sentence, so it stays for the default 4 s, while the loading notice keeps its second.
+    expect(await _snackBars(tester), {
+      S.current.loading: const Duration(seconds: 1),
+      S.current.error_network_cert_invalid: const Duration(seconds: 4),
+    });
+    expect(adapter.requests, contains('POST /account'));
+  });
+}
+
+/// A JWT whose `exp` lies far in the future, so a production session restores it as signed in.
+String _unexpiredJwt() {
+  String part(Map<String, Object> json) => base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+  return '${part({'alg': 'HS256', 'typ': 'JWT'})}.${part({'sub': 'admin', 'exp': 4102444800})}.signature';
+}
+
+/// Sits in the slot of the certificate-pinning adapter. Answers a request in [_routes], by method and path, with the
+/// next JSON body queued for it, and fails every other one the way the pinning adapter fails a server whose certificate
+/// matches no pin.
+class _PinnedServerAdapter implements HttpClientAdapter {
+  _PinnedServerAdapter([this._routes = const {}]);
+
+  final Map<String, List<Object>> _routes;
+  final requests = <String>[];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final route = '${options.method} ${options.path}';
+    requests.add(route);
+    final bodies = _routes[route];
+    if (bodies == null || bodies.isEmpty) throw const CertificatePinningException('api.example.test', 443);
+    return ResponseBody.fromString(
+      jsonEncode(bodies.removeAt(0)),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Production dependencies with certificate pinning configured and [adapter] in the slot of the pinning adapter.
+class _PinnedDependencies extends AppDependencies {
+  _PinnedDependencies(this.adapter)
+    : super(
+        appConfig: const AppConfig(
+          environment: Environment.prod,
+          apiBaseUrl: 'https://api.example.test',
+          certificatePins: ['test-pin'],
+          idleTimeout: null,
+        ),
+      );
+
+  final HttpClientAdapter adapter;
+
+  @override
+  ApiClient createApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    required ITokenRefreshLock? tokenRefreshLock,
+    required RotatedTokensTakeBack? rotatedTokensTakeBack,
+  }) => super.createApiClient(
+    secureStorage,
+    onSessionExpired: onSessionExpired,
+    tokenRefreshLock: tokenRefreshLock,
+    rotatedTokensTakeBack: rotatedTokensTakeBack,
+  )..instance.httpClientAdapter = adapter;
+}
+
+/// Pumps for [duration] and collects the text and the display duration of every snack bar shown meanwhile. The page
+/// queues its snack bars, so one only shows once the one before it has gone.
+Future<Map<String, Duration>> _snackBars(WidgetTester tester, {Duration duration = const Duration(seconds: 5)}) async {
+  final snackBars = <String, Duration>{};
+  for (var elapsed = Duration.zero; elapsed < duration; elapsed += const Duration(milliseconds: 100)) {
+    await tester.pump(const Duration(milliseconds: 100));
+    for (final snackBar in tester.widgetList<SnackBar>(find.byType(SnackBar))) {
+      snackBars[(snackBar.content as Text).data!] = snackBar.duration;
+    }
+  }
+  return snackBars;
+}
+
+/// Test-mode app dependencies whose API client records each request the mock API answers in [requests]. A GET of a
+/// path in [answers] gets its body in place of the mock API's.
+class _RecordingDependencies extends AppDependencies {
+  const _RecordingDependencies(this.requests, {this.answers = const {}}) : super(appConfig: const AppConfig.test());
+
+  final List<RequestOptions> requests;
+  final Map<String, Object> answers;
+
+  @override
+  ApiClient createApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    required ITokenRefreshLock? tokenRefreshLock,
+    required RotatedTokensTakeBack? rotatedTokensTakeBack,
+  }) {
+    final apiClient = super.createApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      tokenRefreshLock: tokenRefreshLock,
+      rotatedTokensTakeBack: rotatedTokensTakeBack,
+    );
+    // MockInterceptor comes last and answers in place of the server, so the recorder and the stub go right before it.
+    final interceptors = apiClient.instance.interceptors;
+    interceptors.insert(interceptors.length - 1, _RequestRecorder(requests));
+    interceptors.insert(interceptors.length - 1, _StubInterceptor(answers));
+    return apiClient;
+  }
+}
+
+class _RequestRecorder extends Interceptor {
+  _RequestRecorder(this.requests);
+
+  final List<RequestOptions> requests;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    requests.add(options);
+    handler.next(options);
+  }
+}
+
+/// Answers a GET of a path in [answers] with that body as JSON, as a server holding other data than the mock would.
+class _StubInterceptor extends Interceptor {
+  _StubInterceptor(this.answers);
+
+  final Map<String, Object> answers;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final answer = answers[options.path];
+    if (options.method == 'GET' && answer != null) {
+      handler.resolve(Response(requestOptions: options, statusCode: 200, data: jsonEncode(answer)), true);
+    } else {
+      handler.next(options);
+    }
+  }
+}

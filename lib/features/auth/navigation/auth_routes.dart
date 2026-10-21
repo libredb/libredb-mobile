@@ -1,0 +1,94 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc_advance/features/account/application/usecases/change_password_usecase.dart';
+import 'package:flutter_bloc_advance/features/account/application/usecases/register_account_usecase.dart';
+import 'package:flutter_bloc_advance/features/account/application/usecases/reset_password_usecase.dart';
+import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/application/change_password_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/forgot_password_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/register_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/presentation/pages/change_password_page.dart';
+import 'package:flutter_bloc_advance/features/auth/presentation/pages/forgot_password_page.dart';
+import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
+import 'package:flutter_bloc_advance/features/auth/presentation/pages/register_page.dart';
+import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
+import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:go_router/go_router.dart';
+
+class AuthFeatureRoutes {
+  /// Public routes (login, register, forgot-password) — outside ShellRoute.
+  /// [loginBuilder] lets the router inject app-level bindings (e.g. ThemeBloc)
+  /// without making this file import `app/`. With [ssoOnly], as in an `oidc`
+  /// build where the identity provider owns the password, only the login route
+  /// is returned.
+  static List<GoRoute> publicRoutes({Widget Function(BuildContext context)? loginBuilder, bool ssoOnly = false}) => [
+    GoRoute(
+      name: 'login',
+      path: ApplicationRoutesConstants.login,
+      pageBuilder: (context, state) =>
+          appPlatformPage(state: state, child: loginBuilder?.call(context) ?? const LoginScreen()),
+    ),
+    // The password routes, which a single sign-on build leaves out.
+    if (!ssoOnly) ...[
+      GoRoute(
+        name: 'login-otp',
+        path: ApplicationRoutesConstants.loginOtp,
+        pageBuilder: (context, state) => appPlatformPage(state: state, child: OtpEmailScreen()),
+      ),
+      GoRoute(
+        name: 'login-otp-verify',
+        path: '/login-otp-verify/:email',
+        pageBuilder: (context, state) => appPlatformPage(
+          state: state,
+          child: OtpVerifyScreen(email: state.pathParameters['email']!),
+        ),
+      ),
+      GoRoute(
+        name: 'forgot-password',
+        path: ApplicationRoutesConstants.forgotPassword,
+        onExit: confirmLeavingUnsavedChanges,
+        pageBuilder: (context, state) => appPlatformPage(
+          state: state,
+          child: BlocProvider(
+            create: (_) =>
+                ForgotPasswordBloc(resetPasswordUseCase: ResetPasswordUseCase(context.read<IAccountRepository>())),
+            child: ForgotPasswordScreen(),
+          ),
+        ),
+      ),
+      GoRoute(
+        name: 'register',
+        path: ApplicationRoutesConstants.register,
+        onExit: confirmLeavingUnsavedChanges,
+        pageBuilder: (context, state) => appPlatformPage(
+          state: state,
+          child: BlocProvider(
+            create: (_) =>
+                RegisterBloc(registerAccountUseCase: RegisterAccountUseCase(context.read<IAccountRepository>())),
+            child: RegisterScreen(),
+          ),
+        ),
+      ),
+    ],
+  ];
+
+  /// Authenticated routes (change-password), inside ShellRoute. A single
+  /// sign-on build leaves them out.
+  static final List<GoRoute> authenticatedRoutes = [
+    GoRoute(
+      name: 'change-password',
+      path: ApplicationRoutesConstants.changePassword,
+      onExit: confirmLeavingUnsavedChanges,
+      pageBuilder: (context, state) => appTransitionPage(
+        state: state,
+        type: AppPageTransitionType.slideRight,
+        child: BlocProvider(
+          create: (_) =>
+              ChangePasswordBloc(changePasswordUseCase: ChangePasswordUseCase(context.read<IAccountRepository>())),
+          child: ChangePasswordScreen(),
+        ),
+      ),
+    ),
+  ];
+}

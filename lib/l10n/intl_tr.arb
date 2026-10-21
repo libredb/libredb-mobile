@@ -1,0 +1,529 @@
+{
+  "@@locale": "tr",
+  "admin": "Admin",
+  "guest": "Kullanıcı",
+  "role": "Rol",
+  "login": "Kullanıcı Adı",
+  "first_name": "İsim",
+  "last_name": "Soyisim",
+  "email": "E-posta",
+  "active": "Aktif",
+  "authorities": "Roller",
+  "name": "İsim",
+  "success": "Başarılı",
+  "failed": "Başarısız",
+  "required_field": "Zorunlu Alan",
+  "required_range": "Aralık gereklidir",
+  "min_length_2": "Minimum 2 karakter uzunluğunda olmalıdır",
+  "min_length_4": "Minimum 4 karakter uzunluğunda olmalıdır",
+  "max_length_20": "Maksimum 20 karakter uzunluğunda olmalıdır",
+  "max_length_100": "Maksimum 100 karakter uzunluğunda olmalıdır",
+  "list": "Listele",
+  "list_user": "Kullanıcılar",
+  "new_user": "Yeni Kullanıcı Ekle",
+  "edit_user": "Kullanıcı Düzenle",
+  "view_user": "Kullanıcı Görüntüle",
+  "delete_user": "Kullanıcı Sil",
+  "email_pattern": "E-posta adresi geçerli değil",
+  "turkish": "Türkçe",
+  "english": "İngilizce",
+  "create_user": "Kullanıcı Oluştur",
+  "save": "Kaydet",
+  "back": "Geri",
+  "delete_confirmation": "Silmek istediğinize emin misiniz?",
+  "settings": "Ayarlar",
+  "account": "Hesabım",
+  "change_password": "Şifre Değiştir",
+  "change_password_description": "Hesabınızın güvende kalması için uzun ve rastgele bir şifre kullandığınızdan emin olun.",
+  "language_select": "Dil Seçimi",
+  "logout": "Çıkış Yap",
+  "logout_sure": "Çıkış yapmak istediğinize emin misiniz?",
+  "yes": "Evet",
+  "no": "Hayır",
+  "warning": "Uyarı",
+  "unsaved_changes": "Kaydedilmemiş değişiklikleriniz var. Çıkmak istediğinize emin misiniz?",
+  "no_changes_made": "Değişiklik yapılmadı",
+  "no_data": "Veri Yok",
+  "login_user_name": "Kullanıcı adı",
+  "login_password": "Şifre",
+  "current_password": "Mevcut Şifre",
+  "new_password": "Yeni Şifre",
+  "password_forgot": "Şifremi unuttum",
+  "register": "Kayıt Ol",
+  "password_max_length": "Şifre en fazla {max} karakter uzunluğunda olmalıdır",
+  "@password_max_length": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "password_min_length": "Şifre en az {min} karakter uzunluğunda olmalıdır",
+  "@password_min_length": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "login_button": "Giriş Yap",
+  "loading": "Yükleniyor...",
+  "email_send": "E-posta Gönder",
+  "translate_menu_title": "{translate, select, account{Hesabım}  userManagement{Kullanıcı Yönetimi} settings{Ayarlar}  logout{Çıkış}  info{Bilgiler}  language{Diller}  theme{Tema}  new_user{Yeni Kullanıcı Ekle}  list_user{Kullanıcılar} other{Diğer}}",
+  "@translate_menu_title": {
+    "placeholders": {
+      "translate": {
+        "type": "String"
+      }
+    }
+  },
+  "login_with_email": "E-posta ile Giriş",
+  "send_otp_code": "OTP Kodu Gönder",
+  "invalid_email": "Geçersiz e-posta adresi",
+  "resend_otp_code": "OTP Kodu Tekrar Gönder",
+  "verify_otp_code": "OTP Kodu Doğrula",
+  "only_numbers": "Sadece sayılar kullanılabilir",
+  "otp_length": "OTP 6 haneli olmalıdır",
+  "otp_code": "OTP Kodu",
+  "theme": "Tema",
+  "language": "Dil",
+  "dashboard": "Panel",
+  "refresh": "Yenile",
+  "quick_actions": "Hızlı İşlemler",
+  "community_title": "Topluluğa Katılın",
+  "community_subtitle": "Bu proje açık kaynaktır. Katkılarınız onu daha iyi yapar!",
+  "community_star": "Yıldız & Fork",
+  "community_issue": "Sorun Bildir",
+  "community_discussions": "Tartışmalar",
+  "community_contribute": "Katkıda Bulun",
+  "community_translate": "Çeviriye Yardım Et",
+  "community_sponsor": "Sponsor Ol",
+  "community_docs": "Dokümantasyon",
+  "help_resources": "Yardım ve Kaynaklar",
+  "help_resources_subtitle": "Dokümantasyon ve rehberler için web sitemizi ziyaret edin",
+  "website": "Web Sitesi",
+  "error_auth_invalid_access_token": "Geçersiz erişim belirteci",
+  "error_auth_login_failed": "Giriş başarısız",
+  "error_auth_send_otp_failed": "OTP kodu gönderilemedi",
+  "error_auth_otp_validation": "OTP doğrulaması başarısız",
+  "error_auth_session_persist_failed": "Oturum kaydedilemedi",
+  "error_user_cannot_delete_admin": "Yönetici kullanıcı silinemez",
+  "error_user_no_authorities": "Yetki bulunamadı",
+  "error_account_password_required": "Mevcut ve yeni şifre alanları zorunludur",
+  "error_account_passwords_same": "Yeni şifre mevcut şifreden farklı olmalıdır",
+  "error_settings_change_language_failed": "Dil değiştirilemedi",
+  "error_generic": "Bir şeyler ters gitti",
+  "user_extended_info_title": "Genişletilmiş Bilgi",
+  "user_extended_info_button": "Detaylar",
+  "user_extended_info_saved": "Kaydedildi",
+  "user_extended_info_save_failed": "Kaydedilemedi: {error}",
+  "@user_extended_info_save_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forbidden_title": "Erişim engellendi",
+  "@forbidden_title": {},
+  "forbidden_message": "Bu sayfayı görüntüleme yetkiniz yok.",
+  "@forbidden_message": {},
+  "forbidden_back_home": "Ana sayfaya dön",
+  "@forbidden_back_home": {},
+  "error_network_cert_invalid": "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
+  "@error_network_cert_invalid": {},
+  "idle_timeout_signed_out": "Hareketsizlik nedeniyle oturumunuz kapatıldı.",
+  "@idle_timeout_signed_out": {},
+  "error_link_open_failed": "{url} açılamadı",
+  "@error_link_open_failed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "force_update_title": "Güncelleme Gerekli",
+  "@force_update_title": {},
+  "force_update_message": "Yeni bir sürüm mevcut. Uygulamayı kullanmaya devam etmek için lütfen güncelleyin.",
+  "@force_update_message": {},
+  "force_update_versions": "Mevcut: {currentVersion}  •  Gerekli: {minimumVersion}",
+  "@force_update_versions": {
+    "placeholders": {
+      "currentVersion": {
+        "type": "String"
+      },
+      "minimumVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "force_update_button": "Şimdi Güncelle",
+  "@force_update_button": {},
+  "force_update_no_store_link": "En son sürümü yüklemek için uygulama mağazanızı açın.",
+  "@force_update_no_store_link": {},
+  "force_update_store_link_invalid": "Güncelleme bağlantısı geçersiz. En son sürümü yüklemek için uygulama mağazanızı açın.",
+  "@force_update_store_link_invalid": {},
+  "maintenance_title": "Bakım Yapılıyor",
+  "@maintenance_title": {},
+  "maintenance_message": "Planlı bir bakım çalışması yapıyoruz. Lütfen kısa bir süre sonra tekrar deneyin.",
+  "@maintenance_message": {},
+  "maintenance_estimated_end": "Tahmini bitiş: {time}",
+  "@maintenance_estimated_end": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "maintenance_retry": "Tekrar Dene",
+  "@maintenance_retry": {},
+  "user_list_load_failed": "Kullanıcılar yüklenemedi",
+  "@user_list_load_failed": {},
+  "user_delete_failed": "Kullanıcı silinemedi",
+  "@user_delete_failed": {},
+  "user_load_failed": "Kullanıcı yüklenemedi",
+  "@user_load_failed": {},
+  "authorities_load_failed": "Roller alınamadı",
+  "@authorities_load_failed": {},
+  "logout_stored_data_left": "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
+  "@logout_stored_data_left": {},
+  "home": "Ana Sayfa",
+  "@home": {},
+  "users": "Kullanıcılar",
+  "@users": {},
+  "new_item": "Yeni",
+  "@new_item": {},
+  "edit": "Düzenle",
+  "@edit": {},
+  "connectivity_offline": "İnternet bağlantısı yok",
+  "@connectivity_offline": {},
+  "not_found_title": "Sayfa Bulunamadı",
+  "@not_found_title": {},
+  "not_found_message": "İstediğiniz sayfa bulunamadı.",
+  "@not_found_message": {},
+  "dynamic_forms": "Dinamik Formlar",
+  "@dynamic_forms": {},
+  "theme_mode_dark": "Koyu",
+  "@theme_mode_dark": {},
+  "theme_mode_light": "Açık",
+  "@theme_mode_light": {},
+  "sidebar_expand": "Genişlet",
+  "@sidebar_expand": {},
+  "sidebar_collapse": "Daralt",
+  "@sidebar_collapse": {},
+  "command_palette_hint": "Bir komut yazın veya arayın...",
+  "@command_palette_hint": {},
+  "command_palette_no_results": "Sonuç bulunamadı",
+  "@command_palette_no_results": {},
+  "command_palette_home_description": "Ana sayfaya git",
+  "@command_palette_home_description": {},
+  "command_palette_users_description": "Kullanıcıları yönetin",
+  "@command_palette_users_description": {},
+  "command_palette_new_user_description": "Yeni bir kullanıcı oluşturun",
+  "@command_palette_new_user_description": {},
+  "command_palette_account_description": "Profiliniz",
+  "@command_palette_account_description": {},
+  "command_palette_settings_description": "Uygulama tercihleri",
+  "@command_palette_settings_description": {},
+  "command_palette_change_password_description": "Şifrenizi güncelleyin",
+  "@command_palette_change_password_description": {},
+  "login_brand_headline": "Prototipten\nüretime ölçeklenin.",
+  "@login_brand_headline": {},
+  "login_brand_description": "Kimlik doğrulama, rol tabanlı erişim, kullanıcı yönetimi,\ntema ve çoklu ortam desteği tek bir sağlam başlangıç projesinde.",
+  "@login_brand_description": {},
+  "login_brand_stat_platforms": "Platform",
+  "@login_brand_stat_platforms": {},
+  "login_brand_stat_layers": "Temel Katman",
+  "@login_brand_stat_layers": {},
+  "login_brand_stat_bloc_ready": "BLoC Hazır",
+  "@login_brand_stat_bloc_ready": {},
+  "login_feature_auth_title": "Kimlik Doğrulama ve Erişim Kontrolü",
+  "@login_feature_auth_title": {},
+  "login_feature_auth_description": "Rol tabanlı yönlendirme korumalarıyla şifre ve OTP ile giriş akışları.",
+  "@login_feature_auth_description": {},
+  "login_feature_architecture_title": "Temiz Mimari",
+  "@login_feature_architecture_title": {},
+  "login_feature_architecture_description": "Sorumlulukları net biçimde ayıran BLoC + Repository deseni.",
+  "@login_feature_architecture_description": {},
+  "login_feature_mock_api_title": "Sahte Veriden Gerçek API'ye",
+  "@login_feature_mock_api_title": {},
+  "login_feature_mock_api_description": "Yerelde sahte verilerle geliştirin, ardından üretim uç noktalarına geçin.",
+  "@login_feature_mock_api_description": {},
+  "login_welcome_title": "Tekrar hoş geldiniz",
+  "@login_welcome_title": {},
+  "login_welcome_subtitle": "Hesabınıza erişmek için bilgilerinizi girin",
+  "@login_welcome_subtitle": {},
+  "login_or": "veya",
+  "@login_or": {},
+  "login_no_account": "Hesabınız yok mu? ",
+  "@login_no_account": {},
+  "login_switch_to_light_mode": "Açık temaya geç",
+  "@login_switch_to_light_mode": {},
+  "login_switch_to_dark_mode": "Koyu temaya geç",
+  "@login_switch_to_dark_mode": {},
+  "login_otp_email_instructions": "OTP kodunu almak için e-posta adresinizi girin",
+  "@login_otp_email_instructions": {},
+  "otp_sent_to_email": "OTP kodu {email} adresine gönderildi",
+  "@otp_sent_to_email": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "community_open_source": "Açık Kaynak",
+  "@community_open_source": {},
+  "register_subtitle": "Hesabınızı oluşturun",
+  "@register_subtitle": {},
+  "forgot_password_description": "E-posta adresinizi girin, şifrenizi sıfırlamanız için size bir bağlantı gönderelim.",
+  "@forgot_password_description": {},
+  "settings_subtitle": "Hesap tercihlerinizi yönetin",
+  "@settings_subtitle": {},
+  "settings_account_subtitle": "Profil bilgilerinizi görüntüleyin veya düzenleyin",
+  "@settings_account_subtitle": {},
+  "settings_change_password_subtitle": "Şifrenizi güvenle güncelleyin",
+  "@settings_change_password_subtitle": {},
+  "settings_appearance": "Görünüm",
+  "@settings_appearance": {},
+  "settings_theme_subtitle": "Tercih ettiğiniz tema stilini seçin",
+  "@settings_theme_subtitle": {},
+  "retry": "Tekrar Dene",
+  "@retry": {},
+  "dashboard_error_title": "Panel Hatası",
+  "@dashboard_error_title": {},
+  "dashboard_title": "Sistem Paneli",
+  "@dashboard_title": {},
+  "dashboard_connectivity": "Bağlantı",
+  "@dashboard_connectivity": {},
+  "dashboard_online": "Çevrimiçi",
+  "@dashboard_online": {},
+  "dashboard_offline": "Çevrimdışı",
+  "@dashboard_offline": {},
+  "dashboard_circuit_breaker": "Devre Kesici",
+  "@dashboard_circuit_breaker": {},
+  "dashboard_endpoint_count": "{count, plural, other{{count} uç nokta}}",
+  "@dashboard_endpoint_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_open_count": "{count} açık",
+  "@dashboard_open_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_cache": "Önbellek",
+  "@dashboard_cache": {},
+  "dashboard_cached_item_count": "{count, plural, other{Önbellekte {count} öğe}}",
+  "@dashboard_cached_item_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_feature_flags": "Özellik Bayrakları",
+  "@dashboard_feature_flags": {},
+  "dashboard_feature_flags_enabled": "{enabled}/{total} etkin",
+  "@dashboard_feature_flags_enabled": {
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_circuit_breaker_health": "Devre Kesici Durumu",
+  "@dashboard_circuit_breaker_health": {},
+  "dashboard_no_endpoints": "Henüz izlenen uç nokta yok",
+  "@dashboard_no_endpoints": {},
+  "dashboard_failure_count": "Hata: {count}",
+  "@dashboard_failure_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_no_feature_flags": "Yapılandırılmış özellik bayrağı yok",
+  "@dashboard_no_feature_flags": {},
+  "dashboard_app_configuration": "Uygulama Yapılandırması",
+  "@dashboard_app_configuration": {},
+  "dashboard_current_version": "Mevcut Sürüm",
+  "@dashboard_current_version": {},
+  "dashboard_minimum_version": "En Düşük Sürüm",
+  "@dashboard_minimum_version": {},
+  "dashboard_maintenance_mode": "Bakım Modu",
+  "@dashboard_maintenance_mode": {},
+  "dashboard_on": "AÇIK",
+  "@dashboard_on": {},
+  "dashboard_off": "KAPALI",
+  "@dashboard_off": {},
+  "dashboard_environment": "Ortam",
+  "@dashboard_environment": {},
+  "dashboard_interceptor_chain": "Interceptor Zinciri",
+  "@dashboard_interceptor_chain": {},
+  "dashboard_clear_cache": "Önbelleği Temizle",
+  "@dashboard_clear_cache": {},
+  "dashboard_reset_circuit_breakers": "Devre Kesicileri Sıfırla",
+  "@dashboard_reset_circuit_breakers": {},
+  "dashboard_open_dynamic_forms": "Dinamik Formları Aç",
+  "@dashboard_open_dynamic_forms": {},
+  "cancel": "İptal",
+  "@cancel": {},
+  "inactive": "Pasif",
+  "@inactive": {},
+  "user_list_subtitle": "Kullanıcılara tablo görünümünde göz atın ve onları yönetin.",
+  "@user_list_subtitle": {},
+  "user_list_actions": "İşlemler",
+  "@user_list_actions": {},
+  "user_list_role_filter": "Rol filtresi",
+  "@user_list_role_filter": {},
+  "user_list_search_hint": "Kullanıcıları filtrele...",
+  "@user_list_search_hint": {},
+  "user_editor_info_title": "Kullanıcı Bilgileri",
+  "@user_editor_info_title": {},
+  "user_editor_info_description": "Kimlik, iletişim ve erişim ayarlarını yönetin.",
+  "@user_editor_info_description": {},
+  "user_editor_identity": "Kimlik",
+  "@user_editor_identity": {},
+  "user_editor_identity_description": "Temel hesap kimlik bilgileri.",
+  "@user_editor_identity_description": {},
+  "user_editor_contact": "İletişim",
+  "@user_editor_contact": {},
+  "user_editor_contact_description": "Birincil iletişim bilgileri.",
+  "@user_editor_contact_description": {},
+  "user_editor_access": "Erişim",
+  "@user_editor_access": {},
+  "user_editor_access_description": "Hesap durumu ve rol yetkileri.",
+  "@user_editor_access_description": {},
+  "user_editor_create_subtitle": "Yeni bir kullanıcı oluşturmak için bilgileri doldurun.",
+  "@user_editor_create_subtitle": {},
+  "user_editor_edit_subtitle": "Kullanıcı bilgilerini aşağıda güncelleyin.",
+  "@user_editor_edit_subtitle": {},
+  "user_editor_view_subtitle": "Kullanıcı ayrıntılarını görüntüleyin.",
+  "@user_editor_view_subtitle": {},
+  "submit": "Gönder",
+  "@submit": {},
+  "error_title": "Hata",
+  "@error_title": {},
+  "dynamic_form_submitted": "Form başarıyla gönderildi",
+  "@dynamic_form_submitted": {},
+  "dynamic_form_field_required": "{field} zorunludur",
+  "@dynamic_form_field_required": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "dynamic_form_field_min_length": "{field} en az {count} karakter olmalıdır",
+  "@dynamic_form_field_min_length": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dynamic_form_field_max_length": "{field} en fazla {count} karakter olmalıdır",
+  "@dynamic_form_field_max_length": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dynamic_form_field_numeric": "Sayı olmalıdır",
+  "@dynamic_form_field_numeric": {},
+  "apply": "Uygula",
+  "@apply": {},
+  "previous": "Önceki",
+  "@previous": {},
+  "next": "Sonraki",
+  "@next": {},
+  "table_rows_listed": "{count, plural, other{{count} satır listelendi.}}",
+  "@table_rows_listed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "theme_dialog_title": "Tema Seçin",
+  "@theme_dialog_title": {},
+  "theme_dialog_subtitle": "Tercih ettiğiniz tema stilini seçin",
+  "@theme_dialog_subtitle": {},
+  "theme_palette_classic": "Klasik",
+  "@theme_palette_classic": {},
+  "theme_palette_classic_description": "Nötr çinko, sade ve minimal",
+  "@theme_palette_classic_description": {},
+  "theme_palette_nature": "Doğa",
+  "@theme_palette_nature": {},
+  "theme_palette_nature_description": "Adaçayı yeşili, sakin ve doğal",
+  "@theme_palette_nature_description": {},
+  "theme_palette_sunset": "Gün Batımı",
+  "@theme_palette_sunset": {},
+  "theme_palette_sunset_description": "Sıcak taş, zengin ve davetkâr",
+  "@theme_palette_sunset_description": {},
+  "password_show": "Şifreyi göster",
+  "@password_show": {},
+  "password_hide": "Şifreyi gizle",
+  "@password_hide": {},
+  "user_list_empty": "Gösterilecek kullanıcı yok",
+  "@user_list_empty": {},
+  "app_title": "Flutter BLoC Advance Şablonu",
+  "@app_title": {},
+  "dashboard_circuit_state_closed": "Kapalı",
+  "@dashboard_circuit_state_closed": {},
+  "dashboard_circuit_state_half_open": "Yarı açık",
+  "@dashboard_circuit_state_half_open": {},
+  "dashboard_circuit_state_open": "Açık",
+  "@dashboard_circuit_state_open": {},
+  "dashboard_interceptor_connectivity": "Çevrimdışıyken istekleri reddeder",
+  "@dashboard_interceptor_connectivity": {},
+  "dashboard_interceptor_auth": "İsteklere JWT belirtecini ekler",
+  "@dashboard_interceptor_auth": {},
+  "dashboard_interceptor_token_refresh": "Süresi dolan erişim belirteçlerini yeniler",
+  "@dashboard_interceptor_token_refresh": {},
+  "dashboard_interceptor_idempotency": "POST/PUT/PATCH için isteğe bağlı Idempotency-Key",
+  "@dashboard_interceptor_idempotency": {},
+  "dashboard_interceptor_resilience": "Yeniden deneme ve devre kesici",
+  "@dashboard_interceptor_resilience": {},
+  "dashboard_interceptor_cache": "GET yanıtlarını süreli önbelleğe alır",
+  "@dashboard_interceptor_cache": {},
+  "dashboard_interceptor_dev_console": "İstekleri geliştirici konsoluna kaydeder",
+  "@dashboard_interceptor_dev_console": {},
+  "dashboard_interceptor_logging": "Yapılandırılmış istek ve yanıt günlüğü",
+  "@dashboard_interceptor_logging": {},
+  "dashboard_interceptor_mock": "Geliştirme ve testte sahte veri sunar",
+  "@dashboard_interceptor_mock": {},
+  "error_auth_oidc_config": "Bu uygulamada tek oturum açma doğru yapılandırılmamış. Yöneticinize başvurun.",
+  "@error_auth_oidc_config": {},
+  "error_auth_oidc_discovery": "Kimlik sağlayıcıya ulaşılamadı. Daha sonra yeniden deneyin; sorun sürerse yöneticinize başvurun.",
+  "@error_auth_oidc_discovery": {},
+  "error_auth_oidc_no_role": "Hesabınızın bu uygulamaya erişim veren bir rolü yok. Yöneticinize başvurun.",
+  "@error_auth_oidc_no_role": {},
+  "error_auth_oidc_failed": "Giriş başarısız oldu. Lütfen yeniden deneyin.",
+  "@error_auth_oidc_failed": {},
+  "error_auth_oidc_logout_incomplete": "Bu uygulamadan çıkış yaptınız, ancak kimlik sağlayıcıdaki oturumunuz hâlâ açık olabilir.",
+  "@error_auth_oidc_logout_incomplete": {},
+  "login_sso_button": "SSO ile giriş yap",
+  "@login_sso_button": {},
+  "login_sso_subtitle": "Kurumsal hesabınızla giriş yapın.",
+  "@login_sso_subtitle": {},
+  "login_sso_browser_done": "Giriş tamamlandı. Bu sekmeyi kapatıp uygulamaya dönebilirsiniz.",
+  "@login_sso_browser_done": {}
+}

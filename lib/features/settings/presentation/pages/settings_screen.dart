@@ -1,0 +1,192 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
+import 'package:flutter_bloc_advance/shared/design_system/components/app_card.dart';
+import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
+import 'package:flutter_bloc_advance/shared/l10n/locale_l10n.dart';
+import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
+import 'package:flutter_bloc_advance/shared/widgets/language_selection_dialog.dart';
+import 'package:flutter_bloc_advance/shared/widgets/theme_selection_dialog.dart';
+import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../generated/l10n.dart';
+import '../../../../infrastructure/config/auth_config.dart';
+import '../../../../infrastructure/config/project_links.dart';
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                S.of(context).settings,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                S.of(context).settings_subtitle,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Account section
+              _SettingsSection(
+                title: S.of(context).account,
+                children: [
+                  _SettingsTile(
+                    icon: Icons.person_outline,
+                    title: S.of(context).account,
+                    subtitle: S.of(context).settings_account_subtitle,
+                    onTap: () => context.push(ApplicationRoutesConstants.account),
+                  ),
+                ],
+              ),
+              // Change password, unless the identity provider of an oidc build owns the password
+              if (context.read<AuthMode>() is JwtAuthMode) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _SettingsSection(
+                  title: S.of(context).change_password,
+                  children: [
+                    _SettingsTile(
+                      key: settingsChangePasswordButtonKey,
+                      icon: Icons.lock_outline,
+                      title: S.of(context).change_password,
+                      subtitle: S.of(context).settings_change_password_subtitle,
+                      onTap: () => context.push(ApplicationRoutesConstants.changePassword),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+
+              // Appearance section
+              _SettingsSection(
+                title: S.of(context).settings_appearance,
+                children: [
+                  _SettingsTile(
+                    icon: Icons.palette_outlined,
+                    title: S.of(context).theme,
+                    subtitle: S.of(context).settings_theme_subtitle,
+                    onTap: () => ThemeSelectionDialog.show(context),
+                  ),
+                  _SettingsTile(
+                    key: settingsChangeLanguageButtonKey,
+                    icon: Icons.translate,
+                    title: S.of(context).language,
+                    subtitle: Localizations.localeOf(context).displayName(context),
+                    onTap: () => LanguageSelectionDialog.show(context),
+                  ),
+                ],
+              ),
+
+              // Help & Resources section, when the project has a documentation website
+              if (context.read<ProjectLinks>().docsUrl case final docsUrl?) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _SettingsSection(
+                  title: S.of(context).help_resources,
+                  children: [
+                    _SettingsTile(
+                      key: settingsWebsiteButtonKey,
+                      icon: Icons.language,
+                      title: S.of(context).website,
+                      subtitle: S.of(context).help_resources_subtitle,
+                      onTap: () => openExternalLink(context, Uri.parse(docsUrl)),
+                    ),
+                  ],
+                ),
+              ],
+              // Logout intentionally lives only in the sidebar / topbar
+              // shell, not here. Settings is feature-scoped and an
+              // auth-session lifecycle action would cross feature
+              // boundaries (architecture guard rejects features/settings
+              // → features/auth imports). Sidebar's MenuBloc.Logout
+              // flow handles it correctly.
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A grouped settings section with a title and list of tiles.
+class _SettingsSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SettingsSection({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.xs, bottom: AppSpacing.sm),
+          child: Text(
+            title,
+            style: textTheme.labelLarge?.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+          ),
+        ),
+        AppCard(
+          variant: AppCardVariant.outlined,
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (int i = 0; i < children.length; i++) ...[
+                children[i],
+                if (i < children.length - 1)
+                  Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                    color: colorScheme.outlineVariant,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Individual settings tile with icon, title, subtitle, and navigation.
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  const _SettingsTile({super.key, required this.icon, required this.title, required this.subtitle, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      leading: Icon(icon, color: colorScheme.onSurfaceVariant),
+      title: Text(title),
+      subtitle: Text(
+        subtitle,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
+      onTap: onTap,
+    );
+  }
+}

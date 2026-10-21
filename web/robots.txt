@@ -1,0 +1,34 @@
+User-agent: *
+Allow: __WEB_BASE_PATH__
+Disallow: __WEB_BASE_PATH__assets/
+Disallow: __WEB_BASE_PATH__canvaskit/
+
+# AI Crawlers - Allow all for open-source discoverability
+User-agent: GPTBot
+Allow: __WEB_BASE_PATH__
+
+User-agent: ChatGPT-User
+Allow: __WEB_BASE_PATH__
+
+User-agent: ClaudeBot
+Allow: __WEB_BASE_PATH__
+
+User-agent: Claude-Web
+Allow: __WEB_BASE_PATH__
+
+User-agent: Claude-SearchBot
+Allow: __WEB_BASE_PATH__
+
+User-agent: PerplexityBot
+Allow: __WEB_BASE_PATH__
+
+User-agent: Google-Extended
+Allow: __WEB_BASE_PATH__
+
+User-agent: Bytespider
+Allow: __WEB_BASE_PATH__
+
+User-agent: CCBot
+Allow: __WEB_BASE_PATH__
+
+Sitemap: __WEB_BASE_URL__sitemap.xml

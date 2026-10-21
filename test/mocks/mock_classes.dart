@@ -1,0 +1,139 @@
+import 'package:bloc_test/bloc_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Service imports
+import 'package:flutter_bloc_advance/core/analytics/analytics_service.dart';
+
+// Infrastructure imports
+import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
+import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+
+// BLoC imports
+import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/change_password_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/forgot_password_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/login_bloc.dart';
+import 'package:flutter_bloc_advance/features/auth/application/register_bloc.dart';
+import 'package:flutter_bloc_advance/features/dashboard/application/dashboard_cubit.dart';
+import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_event.dart';
+import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:flutter_bloc_advance/features/users/application/authority_bloc.dart';
+import 'package:flutter_bloc_advance/features/users/application/user_editor_bloc.dart';
+import 'package:flutter_bloc_advance/features/users/application/user_list_bloc.dart';
+
+// Repository imports (concrete)
+import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
+import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
+import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
+
+// Repository imports (interfaces)
+import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
+// Entity/model imports for fallback values
+import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+
+// Concrete repository mocks (for BLoC tests that depend on concrete types)
+class MockAccountRepository extends Mock implements AccountRepository {}
+
+class MockAuthorityRepository extends Mock implements IAuthorityRepository {}
+
+class MockMenuRepository extends Mock implements MenuRepository {}
+
+// Interface repository mocks (for use case tests)
+class MockIAccountRepository extends Mock implements IAccountRepository {}
+
+class MockIAuthRepository extends Mock implements IAuthRepository {}
+
+class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository {}
+
+class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
+
+class MockIUserRepository extends Mock implements IUserRepository {}
+
+class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
+
+// BLoC mocks (using MockBloc from bloc_test)
+class MockAccountBloc extends MockBloc<AccountEvent, AccountState> implements AccountBloc {}
+
+class MockUserListBloc extends MockBloc<UserListEvent, UserListState> implements UserListBloc {}
+
+class MockUserEditorBloc extends MockBloc<UserEditorEvent, UserEditorState> implements UserEditorBloc {}
+
+class MockAuthorityBloc extends MockBloc<AuthorityEvent, AuthorityState> implements AuthorityBloc {}
+
+class MockChangePasswordBloc extends MockBloc<ChangePasswordEvent, ChangePasswordState> implements ChangePasswordBloc {}
+
+class MockForgotPasswordBloc extends MockBloc<ForgotPasswordEvent, ForgotPasswordState> implements ForgotPasswordBloc {}
+
+class MockRegisterBloc extends MockBloc<RegisterEvent, RegisterState> implements RegisterBloc {}
+
+class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
+
+class MockDynamicFormBloc extends MockBloc<DynamicFormEvent, DynamicFormState> implements DynamicFormBloc {}
+
+class MockSystemDashboardCubit extends MockCubit<SystemDashboardState> implements SystemDashboardCubit {}
+
+// Service mocks
+class MockAnalyticsService extends Mock implements IAnalyticsService {}
+
+// Infrastructure mocks
+class MockSharedPreferences extends Mock implements SharedPreferences {}
+
+class MockISecureStorage extends Mock implements ISecureStorage {}
+
+class MockTokenRotation extends Mock implements TokenRotation {}
+
+// Fake classes for fallback values
+class FakeUserEntity extends Fake implements UserEntity {}
+
+class FakePasswordChangeDTO extends Fake implements PasswordChangeDTO {}
+
+class FakeAuthCredentialsEntity extends Fake implements AuthCredentialsEntity {}
+
+class FakeSendOtpEntity extends Fake implements SendOtpEntity {}
+
+class FakeVerifyOtpEntity extends Fake implements VerifyOtpEntity {}
+
+class FakeAccountEvent extends Fake implements AccountEvent {}
+
+// UserListEvent / UserEditorEvent are sealed (Dart 3); we use concrete
+// variants directly as fallback values instead of Fakes.
+
+class FakeForgotPasswordEvent extends Fake implements ForgotPasswordEvent {}
+
+class FakeChangePasswordEvent extends Fake implements ChangePasswordEvent {}
+
+class FakeRegisterEvent extends Fake implements RegisterEvent {}
+
+class FakeLoginEvent extends Fake implements LoginEvent {}
+
+class FakeDynamicFormEvent extends Fake implements DynamicFormEvent {}
+
+class FakeUri extends Fake implements Uri {}
+
+/// Register all fallback values needed for mocktail's any() matcher.
+/// Call this in setUpAll() for tests that use any() with non-nullable types.
+void registerAllFallbackValues() {
+  registerFallbackValue(FakeAccountEvent());
+  registerFallbackValue(const UserListSearch());
+  registerFallbackValue(const UserEditorReset());
+  registerFallbackValue(FakeForgotPasswordEvent());
+  registerFallbackValue(FakeChangePasswordEvent());
+  registerFallbackValue(FakeRegisterEvent());
+  registerFallbackValue(FakeLoginEvent());
+  registerFallbackValue(FakeDynamicFormEvent());
+  registerFallbackValue(FakeUri());
+  registerFallbackValue(FakeUserEntity());
+  registerFallbackValue(FakePasswordChangeDTO());
+  registerFallbackValue(FakeAuthCredentialsEntity());
+  registerFallbackValue(FakeSendOtpEntity());
+  registerFallbackValue(FakeVerifyOtpEntity());
+}

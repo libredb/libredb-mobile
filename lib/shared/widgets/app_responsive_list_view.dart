@@ -1,0 +1,203 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:flutter_bloc_advance/shared/design_system/components/app_skeleton.dart';
+import 'package:flutter_bloc_advance/shared/design_system/tokens/app_breakpoints.dart';
+import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
+import 'package:flutter_bloc_advance/shared/widgets/app_data_table.dart';
+import 'package:flutter_bloc_advance/shared/widgets/app_mobile_card_list.dart';
+
+/// A high-level responsive list view that automatically switches between
+/// a desktop [AppDataTable] and a mobile [AppMobileCardList] based on screen width.
+///
+/// Desktop (>= 768px): scrollable layout with title, search widget, and data table.
+/// Mobile (< 768px): column layout with title, search widget, and card list.
+///
+/// ```dart
+/// AppResponsiveListView<UserEntity>(
+///   title: 'Users',
+///   items: users,
+///   columns: [
+///     AppTableColumn(label: 'Name', flex: 3, builder: (ctx, u) => Text(u.name)),
+///   ],
+///   mobileCardBuilder: (ctx, u) => UserCard(user: u),
+///   onCreateNew: () => navigateToCreate(),
+/// )
+/// ```
+class AppResponsiveListView<T> extends StatelessWidget {
+  const AppResponsiveListView({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.items,
+    this.isLoading = false,
+    this.onCreateNew,
+    this.createNewKey,
+    this.createLabel,
+    this.emptyIcon = Icons.inbox_outlined,
+    this.emptyText,
+    this.errorWidget,
+    required this.columns,
+    this.desktopSearchWidget,
+    this.onPrevious,
+    this.onNext,
+    this.showCheckbox = false,
+    required this.mobileCardBuilder,
+    this.mobileSearchWidget,
+  });
+
+  // Common
+  final String title;
+  final String? subtitle;
+  final List<T>? items;
+
+  /// While a request runs: placeholder rows in place of the table (desktop) or a progress indicator in place
+  /// of the card list (mobile), so it does not look like an empty list.
+  final bool isLoading;
+  final VoidCallback? onCreateNew;
+  final Key? createNewKey;
+  final String? createLabel;
+  final IconData emptyIcon;
+  final String? emptyText;
+
+  /// Shown in place of the table (desktop) or the card list (mobile), so a
+  /// failed request does not look like an empty list.
+  final Widget? errorWidget;
+
+  // Desktop
+  final List<AppTableColumn<T>> columns;
+  final Widget? desktopSearchWidget;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool showCheckbox;
+
+  // Mobile
+  final Widget Function(BuildContext context, T item) mobileCardBuilder;
+  final Widget? mobileSearchWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (AppBreakpoints.isMobile(constraints.maxWidth)) {
+          return _buildMobileView(context);
+        }
+        return _buildDesktopView(context);
+      },
+    );
+  }
+
+  Widget _buildDesktopView(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(subtitle!, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (onCreateNew != null)
+                  FilledButton.icon(
+                    key: createNewKey,
+                    onPressed: onCreateNew,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: Text(createLabel ?? S.of(context).new_item),
+                  ),
+              ],
+            ),
+            if (desktopSearchWidget != null) ...[const SizedBox(height: 20), desktopSearchWidget!],
+            const SizedBox(height: 16),
+            errorWidget ??
+                (isLoading
+                    ? const _LoadingRows()
+                    : AppDataTable<T>(
+                        columns: columns,
+                        items: items ?? [],
+                        showCheckbox: showCheckbox,
+                        onPrevious: onPrevious,
+                        onNext: onNext,
+                      )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileView(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          // The title and the create button each get at most half the row and wrap beyond it, so a long label on a
+          // phone neither overflows nor squeezes the title out.
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(title, style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+              ),
+              if (onCreateNew != null)
+                Flexible(
+                  child: FilledButton.icon(
+                    key: createNewKey,
+                    onPressed: onCreateNew,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: Text(createLabel ?? S.of(context).new_item),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (mobileSearchWidget != null)
+          Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: mobileSearchWidget!),
+        Expanded(
+          child:
+              errorWidget ??
+              AppMobileCardList<T>(
+                items: items,
+                cardBuilder: mobileCardBuilder,
+                isLoading: isLoading,
+                emptyIcon: emptyIcon,
+                emptyText: emptyText,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder rows shown in place of the desktop table while a request runs.
+class _LoadingRows extends StatelessWidget {
+  const _LoadingRows();
+
+  static const _rowCount = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < _rowCount; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.sm),
+          const AppSkeleton(height: 40),
+        ],
+      ],
+    );
+  }
+}

@@ -1,0 +1,529 @@
+{
+  "@@locale": "en",
+  "admin": "Admin",
+  "guest": "Guest",
+  "role": "Role",
+  "login": "Login",
+  "first_name": "First Name",
+  "last_name": "Last Name",
+  "email": "Email",
+  "active": "Active",
+  "authorities": "Authorities",
+  "name": "Name",
+  "success": "Success",
+  "failed": "Failed",
+  "required_field": "Required Field",
+  "min_length_2": "Field must be at least 2 characters long",
+  "min_length_4": "Field must be at least 4 characters long",
+  "max_length_20": "Field cannot be more than 20 characters long",
+  "max_length_100": "Field cannot be more than 100 characters long",
+  "required_range": "Range is required",
+  "list": "List",
+  "list_user": "List User",
+  "new_user": "New User",
+  "edit_user": "Edit User",
+  "view_user": "View User",
+  "delete_user": "Delete User",
+  "email_pattern": "Email must be a valid email address",
+  "turkish": "Turkish",
+  "english": "English",
+  "create_user": "Create User",
+  "save": "Save",
+  "back": "Back",
+  "delete_confirmation": "Are you sure you want to delete?",
+  "settings": "Settings",
+  "account": "Account",
+  "change_password": "Change Password",
+  "change_password_description": "Ensure your account is using a long, random password to stay secure.",
+  "language_select": "Select Language",
+  "logout": "Logout",
+  "logout_sure": "Are you sure you want to logout?",
+  "yes": "Yes",
+  "no": "No",
+  "warning": "Warning",
+  "unsaved_changes": "You have unsaved changes. Are you sure you want to leave?",
+  "no_changes_made": "No changes made",
+  "no_data": "No Data",
+  "login_user_name": "Username",
+  "login_password": "Password",
+  "current_password": "Current Password",
+  "new_password": "New Password",
+  "password_forgot": "Forgot Password",
+  "register": "Register",
+  "password_max_length": "Password cannot be more than {max} characters long",
+  "@password_max_length": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "password_min_length": "Password must be at least {min} characters long",
+  "@password_min_length": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "login_button": "Login",
+  "loading": "Loading...",
+  "email_send": "Send Email",
+  "translate_menu_title": "{translate, select, account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}",
+  "@translate_menu_title": {
+    "placeholders": {
+      "translate": {
+        "type": "String"
+      }
+    }
+  },
+  "login_with_email": "Login with Email",
+  "send_otp_code": "Send OTP Code",
+  "invalid_email": "Invalid email address",
+  "resend_otp_code": "Resend OTP Code",
+  "verify_otp_code": "Verify OTP Code",
+  "only_numbers": "Only numbers are allowed",
+  "otp_length": "OTP must be 6 characters long",
+  "otp_code": "OTP Code",
+  "theme": "Theme",
+  "language": "Language",
+  "dashboard": "Dashboard",
+  "refresh": "Refresh",
+  "quick_actions": "Quick Actions",
+  "community_title": "Join the Community",
+  "community_subtitle": "This project is open source. Your contributions make it better!",
+  "community_star": "Star & Fork",
+  "community_issue": "Open an Issue",
+  "community_discussions": "Discussions",
+  "community_contribute": "Contribute",
+  "community_translate": "Translate",
+  "community_sponsor": "Sponsor",
+  "community_docs": "Documentation",
+  "help_resources": "Help & Resources",
+  "help_resources_subtitle": "Visit our website for documentation and guides",
+  "website": "Website",
+  "error_auth_invalid_access_token": "Invalid access token",
+  "error_auth_login_failed": "Login failed",
+  "error_auth_send_otp_failed": "Could not send the OTP code",
+  "error_auth_otp_validation": "OTP validation failed",
+  "error_auth_session_persist_failed": "Could not save the session",
+  "error_user_cannot_delete_admin": "Admin user cannot be deleted",
+  "error_user_no_authorities": "No authorities found",
+  "error_account_password_required": "Both current and new password are required",
+  "error_account_passwords_same": "New password must be different from current password",
+  "error_settings_change_language_failed": "Could not change the language",
+  "error_generic": "Something went wrong",
+  "user_extended_info_title": "Extended Information",
+  "user_extended_info_button": "Extended Info",
+  "user_extended_info_saved": "Saved",
+  "user_extended_info_save_failed": "Save failed: {error}",
+  "@user_extended_info_save_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forbidden_title": "Access denied",
+  "@forbidden_title": {},
+  "forbidden_message": "You do not have permission to view this page.",
+  "@forbidden_message": {},
+  "forbidden_back_home": "Back to home",
+  "@forbidden_back_home": {},
+  "error_network_cert_invalid": "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
+  "@error_network_cert_invalid": {},
+  "idle_timeout_signed_out": "You were signed out due to inactivity.",
+  "@idle_timeout_signed_out": {},
+  "error_link_open_failed": "Could not open {url}",
+  "@error_link_open_failed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "force_update_title": "Update Required",
+  "@force_update_title": {},
+  "force_update_message": "A new version is available. Please update to continue using the app.",
+  "@force_update_message": {},
+  "force_update_versions": "Current: {currentVersion}  •  Required: {minimumVersion}",
+  "@force_update_versions": {
+    "placeholders": {
+      "currentVersion": {
+        "type": "String"
+      },
+      "minimumVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "force_update_button": "Update Now",
+  "@force_update_button": {},
+  "force_update_no_store_link": "Open your app store to install the latest version.",
+  "@force_update_no_store_link": {},
+  "force_update_store_link_invalid": "The update link is not valid. Open your app store to install the latest version.",
+  "@force_update_store_link_invalid": {},
+  "maintenance_title": "Under Maintenance",
+  "@maintenance_title": {},
+  "maintenance_message": "We are performing scheduled maintenance. Please check back soon.",
+  "@maintenance_message": {},
+  "maintenance_estimated_end": "Estimated end: {time}",
+  "@maintenance_estimated_end": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "maintenance_retry": "Try Again",
+  "@maintenance_retry": {},
+  "user_list_load_failed": "Could not load the users",
+  "@user_list_load_failed": {},
+  "user_delete_failed": "Could not delete the user",
+  "@user_delete_failed": {},
+  "user_load_failed": "Could not load the user",
+  "@user_load_failed": {},
+  "authorities_load_failed": "Roles unavailable",
+  "@authorities_load_failed": {},
+  "logout_stored_data_left": "You were signed out, but some stored data could not be removed from this device.",
+  "@logout_stored_data_left": {},
+  "home": "Home",
+  "@home": {},
+  "users": "Users",
+  "@users": {},
+  "new_item": "New",
+  "@new_item": {},
+  "edit": "Edit",
+  "@edit": {},
+  "connectivity_offline": "No internet connection",
+  "@connectivity_offline": {},
+  "not_found_title": "Page Not Found",
+  "@not_found_title": {},
+  "not_found_message": "The page you requested could not be found.",
+  "@not_found_message": {},
+  "dynamic_forms": "Dynamic Forms",
+  "@dynamic_forms": {},
+  "theme_mode_dark": "Dark",
+  "@theme_mode_dark": {},
+  "theme_mode_light": "Light",
+  "@theme_mode_light": {},
+  "sidebar_expand": "Expand",
+  "@sidebar_expand": {},
+  "sidebar_collapse": "Collapse",
+  "@sidebar_collapse": {},
+  "command_palette_hint": "Type a command or search...",
+  "@command_palette_hint": {},
+  "command_palette_no_results": "No results found",
+  "@command_palette_no_results": {},
+  "command_palette_home_description": "Go to home",
+  "@command_palette_home_description": {},
+  "command_palette_users_description": "Manage users",
+  "@command_palette_users_description": {},
+  "command_palette_new_user_description": "Create a new user",
+  "@command_palette_new_user_description": {},
+  "command_palette_account_description": "Your profile",
+  "@command_palette_account_description": {},
+  "command_palette_settings_description": "App preferences",
+  "@command_palette_settings_description": {},
+  "command_palette_change_password_description": "Update password",
+  "@command_palette_change_password_description": {},
+  "login_brand_headline": "Scale from prototype\nto production.",
+  "@login_brand_headline": {},
+  "login_brand_description": "Authentication, role-based access, user management,\ntheming, and multi-environment support in one robust starter.",
+  "@login_brand_description": {},
+  "login_brand_stat_platforms": "Platforms",
+  "@login_brand_stat_platforms": {},
+  "login_brand_stat_layers": "Core Layers",
+  "@login_brand_stat_layers": {},
+  "login_brand_stat_bloc_ready": "BLoC Ready",
+  "@login_brand_stat_bloc_ready": {},
+  "login_feature_auth_title": "Authentication & Access Control",
+  "@login_feature_auth_title": {},
+  "login_feature_auth_description": "Password and OTP login flows with role-based routing guards.",
+  "@login_feature_auth_description": {},
+  "login_feature_architecture_title": "Clean Architecture",
+  "@login_feature_architecture_title": {},
+  "login_feature_architecture_description": "BLoC + Repository pattern with clear separation of concerns.",
+  "@login_feature_architecture_description": {},
+  "login_feature_mock_api_title": "Mock to Real API",
+  "@login_feature_mock_api_title": {},
+  "login_feature_mock_api_description": "Develop locally with mock data and switch to production endpoints.",
+  "@login_feature_mock_api_description": {},
+  "login_welcome_title": "Welcome back",
+  "@login_welcome_title": {},
+  "login_welcome_subtitle": "Enter your credentials to access your account",
+  "@login_welcome_subtitle": {},
+  "login_or": "or",
+  "@login_or": {},
+  "login_no_account": "Don't have an account? ",
+  "@login_no_account": {},
+  "login_switch_to_light_mode": "Switch to light mode",
+  "@login_switch_to_light_mode": {},
+  "login_switch_to_dark_mode": "Switch to dark mode",
+  "@login_switch_to_dark_mode": {},
+  "login_otp_email_instructions": "Enter your email to receive OTP code",
+  "@login_otp_email_instructions": {},
+  "otp_sent_to_email": "OTP sent to {email}",
+  "@otp_sent_to_email": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "community_open_source": "Open Source",
+  "@community_open_source": {},
+  "register_subtitle": "Create your account",
+  "@register_subtitle": {},
+  "forgot_password_description": "Enter your email address and we'll send you a link to reset your password.",
+  "@forgot_password_description": {},
+  "settings_subtitle": "Manage your account preferences",
+  "@settings_subtitle": {},
+  "settings_account_subtitle": "View or edit your profile information",
+  "@settings_account_subtitle": {},
+  "settings_change_password_subtitle": "Update your password securely",
+  "@settings_change_password_subtitle": {},
+  "settings_appearance": "Appearance",
+  "@settings_appearance": {},
+  "settings_theme_subtitle": "Choose your preferred theme style",
+  "@settings_theme_subtitle": {},
+  "retry": "Retry",
+  "@retry": {},
+  "dashboard_error_title": "Dashboard Error",
+  "@dashboard_error_title": {},
+  "dashboard_title": "System Dashboard",
+  "@dashboard_title": {},
+  "dashboard_connectivity": "Connectivity",
+  "@dashboard_connectivity": {},
+  "dashboard_online": "Online",
+  "@dashboard_online": {},
+  "dashboard_offline": "Offline",
+  "@dashboard_offline": {},
+  "dashboard_circuit_breaker": "Circuit Breaker",
+  "@dashboard_circuit_breaker": {},
+  "dashboard_endpoint_count": "{count, plural, =1{1 endpoint} other{{count} endpoints}}",
+  "@dashboard_endpoint_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_open_count": "{count} open",
+  "@dashboard_open_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_cache": "Cache",
+  "@dashboard_cache": {},
+  "dashboard_cached_item_count": "{count, plural, =1{1 item cached} other{{count} items cached}}",
+  "@dashboard_cached_item_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_feature_flags": "Feature Flags",
+  "@dashboard_feature_flags": {},
+  "dashboard_feature_flags_enabled": "{enabled}/{total} enabled",
+  "@dashboard_feature_flags_enabled": {
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_circuit_breaker_health": "Circuit Breaker Health",
+  "@dashboard_circuit_breaker_health": {},
+  "dashboard_no_endpoints": "No endpoints tracked yet",
+  "@dashboard_no_endpoints": {},
+  "dashboard_failure_count": "Failures: {count}",
+  "@dashboard_failure_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboard_no_feature_flags": "No feature flags configured",
+  "@dashboard_no_feature_flags": {},
+  "dashboard_app_configuration": "App Configuration",
+  "@dashboard_app_configuration": {},
+  "dashboard_current_version": "Current Version",
+  "@dashboard_current_version": {},
+  "dashboard_minimum_version": "Minimum Version",
+  "@dashboard_minimum_version": {},
+  "dashboard_maintenance_mode": "Maintenance Mode",
+  "@dashboard_maintenance_mode": {},
+  "dashboard_on": "ON",
+  "@dashboard_on": {},
+  "dashboard_off": "OFF",
+  "@dashboard_off": {},
+  "dashboard_environment": "Environment",
+  "@dashboard_environment": {},
+  "dashboard_interceptor_chain": "Interceptor Chain",
+  "@dashboard_interceptor_chain": {},
+  "dashboard_clear_cache": "Clear Cache",
+  "@dashboard_clear_cache": {},
+  "dashboard_reset_circuit_breakers": "Reset Circuit Breakers",
+  "@dashboard_reset_circuit_breakers": {},
+  "dashboard_open_dynamic_forms": "Open Dynamic Forms",
+  "@dashboard_open_dynamic_forms": {},
+  "cancel": "Cancel",
+  "@cancel": {},
+  "inactive": "Inactive",
+  "@inactive": {},
+  "user_list_subtitle": "Browse and manage users in a table view.",
+  "@user_list_subtitle": {},
+  "user_list_actions": "Actions",
+  "@user_list_actions": {},
+  "user_list_role_filter": "Role filter",
+  "@user_list_role_filter": {},
+  "user_list_search_hint": "Filter users...",
+  "@user_list_search_hint": {},
+  "user_editor_info_title": "User Information",
+  "@user_editor_info_title": {},
+  "user_editor_info_description": "Manage identity, contact, and access settings.",
+  "@user_editor_info_description": {},
+  "user_editor_identity": "Identity",
+  "@user_editor_identity": {},
+  "user_editor_identity_description": "Basic account identity details.",
+  "@user_editor_identity_description": {},
+  "user_editor_contact": "Contact",
+  "@user_editor_contact": {},
+  "user_editor_contact_description": "Primary contact information.",
+  "@user_editor_contact_description": {},
+  "user_editor_access": "Access",
+  "@user_editor_access": {},
+  "user_editor_access_description": "Account status and role permissions.",
+  "@user_editor_access_description": {},
+  "user_editor_create_subtitle": "Fill in the details to create a new user.",
+  "@user_editor_create_subtitle": {},
+  "user_editor_edit_subtitle": "Update user information below.",
+  "@user_editor_edit_subtitle": {},
+  "user_editor_view_subtitle": "View user details.",
+  "@user_editor_view_subtitle": {},
+  "submit": "Submit",
+  "@submit": {},
+  "error_title": "Error",
+  "@error_title": {},
+  "dynamic_form_submitted": "Form submitted successfully",
+  "@dynamic_form_submitted": {},
+  "dynamic_form_field_required": "{field} is required",
+  "@dynamic_form_field_required": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "dynamic_form_field_min_length": "{field} must be at least {count, plural, =1{1 character} other{{count} characters}}",
+  "@dynamic_form_field_min_length": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dynamic_form_field_max_length": "{field} must be at most {count, plural, =1{1 character} other{{count} characters}}",
+  "@dynamic_form_field_max_length": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dynamic_form_field_numeric": "Must be a number",
+  "@dynamic_form_field_numeric": {},
+  "apply": "Apply",
+  "@apply": {},
+  "previous": "Previous",
+  "@previous": {},
+  "next": "Next",
+  "@next": {},
+  "table_rows_listed": "{count, plural, =1{1 row listed.} other{{count} rows listed.}}",
+  "@table_rows_listed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "theme_dialog_title": "Choose Theme",
+  "@theme_dialog_title": {},
+  "theme_dialog_subtitle": "Select your preferred theme style",
+  "@theme_dialog_subtitle": {},
+  "theme_palette_classic": "Classic",
+  "@theme_palette_classic": {},
+  "theme_palette_classic_description": "Neutral zinc, clean and minimal",
+  "@theme_palette_classic_description": {},
+  "theme_palette_nature": "Nature",
+  "@theme_palette_nature": {},
+  "theme_palette_nature_description": "Sage green, calm and organic",
+  "@theme_palette_nature_description": {},
+  "theme_palette_sunset": "Sunset",
+  "@theme_palette_sunset": {},
+  "theme_palette_sunset_description": "Warm stone, rich and inviting",
+  "@theme_palette_sunset_description": {},
+  "password_show": "Show password",
+  "@password_show": {},
+  "password_hide": "Hide password",
+  "@password_hide": {},
+  "user_list_empty": "No users to show",
+  "@user_list_empty": {},
+  "app_title": "Flutter BLoC Advance Template",
+  "@app_title": {},
+  "dashboard_circuit_state_closed": "Closed",
+  "@dashboard_circuit_state_closed": {},
+  "dashboard_circuit_state_half_open": "Half-open",
+  "@dashboard_circuit_state_half_open": {},
+  "dashboard_circuit_state_open": "Open",
+  "@dashboard_circuit_state_open": {},
+  "dashboard_interceptor_connectivity": "Rejects requests when offline",
+  "@dashboard_interceptor_connectivity": {},
+  "dashboard_interceptor_auth": "Attaches JWT token to requests",
+  "@dashboard_interceptor_auth": {},
+  "dashboard_interceptor_token_refresh": "Refreshes expired access tokens",
+  "@dashboard_interceptor_token_refresh": {},
+  "dashboard_interceptor_idempotency": "Opt-in Idempotency-Key for POST/PUT/PATCH",
+  "@dashboard_interceptor_idempotency": {},
+  "dashboard_interceptor_resilience": "Retry + circuit breaker",
+  "@dashboard_interceptor_resilience": {},
+  "dashboard_interceptor_cache": "GET response caching with TTL",
+  "@dashboard_interceptor_cache": {},
+  "dashboard_interceptor_dev_console": "Records requests in dev console",
+  "@dashboard_interceptor_dev_console": {},
+  "dashboard_interceptor_logging": "Structured request/response logging",
+  "@dashboard_interceptor_logging": {},
+  "dashboard_interceptor_mock": "Serves mock data in dev/test",
+  "@dashboard_interceptor_mock": {},
+  "error_auth_oidc_config": "Single sign-on is not configured correctly in this app. Contact your administrator.",
+  "@error_auth_oidc_config": {},
+  "error_auth_oidc_discovery": "The identity provider could not be reached. Try again later, or contact your administrator if this continues.",
+  "@error_auth_oidc_discovery": {},
+  "error_auth_oidc_no_role": "Your account has no role that allows access to this app. Ask your administrator.",
+  "@error_auth_oidc_no_role": {},
+  "error_auth_oidc_failed": "Sign-in failed. Please try again.",
+  "@error_auth_oidc_failed": {},
+  "error_auth_oidc_logout_incomplete": "You are signed out of this app, but your session at the identity provider may still be active.",
+  "@error_auth_oidc_logout_incomplete": {},
+  "login_sso_button": "Sign in with SSO",
+  "@login_sso_button": {},
+  "login_sso_subtitle": "Sign in with your organization account.",
+  "@login_sso_subtitle": {},
+  "login_sso_browser_done": "Sign-in is complete. You can close this tab and return to the app.",
+  "@login_sso_browser_done": {}
+}

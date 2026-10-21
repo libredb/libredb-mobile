@@ -1,0 +1,536 @@
+# Mock Data Architecture
+
+This document explains how the project handles real API calls vs. local mock data, how mock JSON files are structured and resolved, and which tests use the mock data and which bypass it with test doubles.
+
+## Overview
+
+The project supports three runtime modes through a single interceptor-based design:
+
+| Mode | Entry Point | Mock Data | Network | Latency |
+| --- | --- | --- | --- | --- |
+| **Development** | `main_local.dart` | Yes (interceptor) | None | 500 ms simulated |
+| **Test** | `Environment.test` | Yes (interceptor) | None | 0 ms |
+| **Production** | `main_prod.dart` | No | Real API | Real |
+
+Switching between modes requires **zero code changes** in repositories or BLoCs — only the entry point differs.
+
+## Architecture Diagram
+
+```mermaid
+flowchart TB
+    subgraph Entry["Entry Point"]
+        LOCAL["main_local.dart<br/><i>Environment.dev</i>"]
+        PROD["main_prod.dart<br/><i>Environment.prod</i>"]
+    end
+
+    LOCAL --> ENV
+    PROD --> ENV
+
+    ENV["AppConfig.fromEnvironment()"]
+    ENV --> REPO
+
+    subgraph REPO["Repository Layer"]
+        direction LR
+        UR["UserRepository"]
+        AR["LoginRepository"]
+        ACR["AccountRepository"]
+    end
+
+    REPO --> API
+
+    subgraph API["ApiClient — Dio Instance"]
+        direction TB
+        CHAIN["1. ConnectivityInterceptor<br/>2. AuthInterceptor<br/>3. TokenRefreshInterceptor<br/>4. IdempotencyInterceptor<br/>5. ResilienceInterceptor<br/>6. CacheInterceptor<br/>7. DevConsoleInterceptor<br/>8. LoggingInterceptor<br/><i>Added in every mode</i>"]
+        CHAIN --> DECISION
+
+        DECISION{isProduction?}
+
+        DECISION -- "No (dev / test)" --> MOCK_INT
+        DECISION -- "Yes (prod)" --> NETWORK
+
+        MOCK_INT["9. MockInterceptor<br/><i>Intercepts request</i>"]
+        MOCK_INT --> RESOLVE
+
+        RESOLVE["Resolve mock file name<br/><code>assets/mock/{METHOD}_{path}.json</code>"]
+        RESOLVE --> ASSET
+
+        ASSET[("assets/mock/*.json<br/><i>22 JSON files</i>")]
+        ASSET --> RESPONSE
+
+        NETWORK["Real HTTP Request"]
+        NETWORK --> REAL_API
+
+        REAL_API[("Production API<br/><code>__PROD_API_URL__</code>")]
+        REAL_API --> RESPONSE
+    end
+
+    RESPONSE["Response&lt;String&gt;"]
+    RESPONSE --> RESULT
+
+    RESULT["Repository maps to Result&lt;T&gt;<br/><i>Success(entity) or Failure(AppError)</i>"]
+    RESULT --> BLOC
+
+    BLOC["BLoC / Cubit<br/><i>State management</i>"]
+    BLOC --> UI["UI Layer"]
+
+    style LOCAL fill:#2d6a4f,color:#fff
+    style PROD fill:#9d4edd,color:#fff
+    style MOCK_INT fill:#2d6a4f,color:#fff
+    style ASSET fill:#2d6a4f,color:#fff
+    style NETWORK fill:#9d4edd,color:#fff
+    style REAL_API fill:#9d4edd,color:#fff
+    style DECISION fill:#e9c46a,color:#000
+```
+
+### Test Layer (Test Doubles)
+
+```mermaid
+flowchart LR
+    subgraph Tests
+        UC_TEST["Use Case Tests"]
+        BLOC_TEST["BLoC Tests"]
+        API_TEST["ApiClient Tests"]
+        WIDGET_TEST["Widget Tests"]
+    end
+
+    UC_TEST -- "mocktail" --> MOCK_REPO["MockIUserRepository<br/>MockIAuthRepository<br/>MockIAccountRepository"]
+    BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockAccountRepository"]
+    API_TEST -- "StubInterceptor" --> STUB_DIO["Test Dio Instance<br/><i>No network, no assets</i>"]
+    WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockUserListBloc<br/>MockLoginBloc"]
+
+    MOCK_REPO --> RESULT_T["Result&lt;T&gt;"]
+    MOCK_REPO_C --> RESULT_T
+    STUB_DIO --> RESPONSE_T["Response&lt;String&gt;"]
+    MOCK_BLOC --> STATE_T["BLoC State"]
+
+    style Tests fill:#264653,color:#fff
+    style MOCK_REPO fill:#2a9d8f,color:#fff
+    style MOCK_REPO_C fill:#2a9d8f,color:#fff
+    style STUB_DIO fill:#e76f51,color:#fff
+    style MOCK_BLOC fill:#f4a261,color:#000
+```
+
+## Interceptor Chain
+
+The Dio HTTP client is created in `lib/infrastructure/http/api_client.dart`.
+`ApiClient._createDio()` pairs each interceptor with the metadata the system dashboard shows; without that metadata, the chain is:
+
+```dart
+dio.interceptors.addAll([
+  ConnectivityInterceptor(),                      // rejects requests while offline
+  AuthInterceptor(secureStorage: _secureStorage), // attaches the JWT
+  TokenRefreshInterceptor(                        // refreshes expired access tokens
+    dio: dio,
+    onSessionExpired: _onSessionExpired,
+    secureStorage: _secureStorage,
+    refreshDioFactory: _appConfig.isProduction ? null : _mockRefreshDio, // see "Token refresh" below
+  ),
+  IdempotencyInterceptor(),                       // opt-in Idempotency-Key for POST/PUT/PATCH
+  ResilienceInterceptor.instance.forDio(dio),     // retry + circuit breaker
+  CacheInterceptor(),                             // GET response caching with TTL
+  DevConsoleInterceptor(),                        // records requests in debug builds
+  LoggingInterceptor(),                           // request/response logging
+  if (!_appConfig.isProduction) MockInterceptor(appConfig: _appConfig), // dev + test only
+]);
+```
+
+Only `MockInterceptor` depends on the environment: it is added outside production, as the last entry, and to the Dio that sends the token refresh.
+It sits last because it stands in for the server: it resolves with `callFollowingResponseInterceptor: true`, so its response still runs through the `onResponse` handlers of the interceptors above it (cache, dev console, logging), as a real response would.
+When it answers a protected request without a token with 401, it rejects with `callFollowingErrorInterceptor: true`, so the `onError` handlers run as they do for a server 401: `TokenRefreshInterceptor` refreshes the token, or ends the session when the token cannot be refreshed, and the dev console and logging record the failure.
+
+`ConnectivityInterceptor` rejects with `callFollowingErrorInterceptor: true` as well when `ConnectivityService` reports the device offline, so the `onError` handlers run as they do for a request that cannot connect: `CacheInterceptor` answers a GET from its cache with an `x-cache: stale` header (`x-cache: hit` for a fresh `cacheFirst` entry, as online), and the dev console and logging record a request it cannot answer.
+The error of that rejection is a `ConnectivityException`, so `ResilienceInterceptor` neither retries it nor counts it against the endpoint's circuit breaker: the request was never sent.
+`ResilienceInterceptor` rejects a request to an endpoint whose circuit is open with `callFollowingErrorInterceptor: true` too, so the dev console and logging record it; `CacheInterceptor` does not answer it, so a GET fails with `CircuitBreakerOpenException` even when a response is cached.
+A GET with `CachePolicy.cacheOnly` never reaches the network, so neither the offline check nor an open circuit stops it, and `CacheInterceptor` answers it from the cache.
+When `CacheInterceptor` answers a GET that went out and failed, it ends the error chain before the dev console sees the failure, so it completes the dev console entry itself (`DevConsoleInterceptor.recordAnswer`): the entry shows the cached answer and the error it answers.
+
+### AuthInterceptor
+
+Reads the JWT from `ISecureStorage` on every request to a private path on the API origin and adds it as a Bearer token when one is stored.
+A request to a public endpoint (see [Public vs. Private Endpoints](#public-vs-private-endpoints)) never gets a token.
+Dio sends a request whose path is an absolute URL to that URL instead of to the base URL, so a path a server supplies, such as the submit endpoint of a dynamic form, can name any host.
+`isApiOriginRequest` in `lib/infrastructure/http/api_origin.dart` compares the scheme, host and port of the request with those of the base URL, and a request to another origin never gets a token either: `AuthInterceptor` removes an `Authorization` header already on it and records no session generation for it.
+A relative path with an empty base URL, as in dev/test mode, counts as the API origin, so `MockInterceptor` still sees the token:
+
+```dart
+if (isPublicEndpoint(options)) {
+  handler.next(options);
+  return;
+}
+if (!isApiOriginRequest(options)) {
+  options.headers.remove('Authorization');
+  handler.next(options);
+  return;
+}
+options.extra[sessionGenerationKey] = SessionGeneration.current;
+String? jwtToken;
+try {
+  jwtToken = await _secureStorage.read(SecureStorageKeys.jwtToken.key);
+} catch (e) {
+  _log.warn('secure read failed for {}; sending request without Authorization: {}', [options.path, e]);
+}
+final hasAuth = jwtToken != null && jwtToken.isNotEmpty;
+if (hasAuth) {
+  options.headers['Authorization'] = 'Bearer $jwtToken';
+}
+```
+
+This runs **before** MockInterceptor so that mock auth checks see the token.
+
+### MockInterceptor
+
+This is the core of the mock system.
+In dev/test mode it answers every request that reaches the end of the chain with a response loaded from a local JSON file, so the request never leaves the device.
+
+**Step-by-step flow:**
+
+1. **Simulated latency** — 500 ms delay in dev mode, skipped in test mode
+2. **Auth check**: for a request to an endpoint that is not public, rejects with 401 if no `Authorization` header
+3. **Status code** — POST → 201, DELETE → 204 (early return), everything else → 200
+4. **File resolution** — Builds a file name from the request metadata (see next section)
+5. **Asset loading** — Reads the JSON file via `rootBundle.loadString()`
+6. **Missing file**: if the file cannot be loaded, rejects with 501 Not Implemented and `callFollowingErrorInterceptor: true`, with an error that names the file, so the dev console, the log and the caller's error all show which file to add
+
+A GET, POST, PUT or PATCH the mock has no file for fails instead of getting a made-up success; DELETE needs no file and always answers 204.
+
+### LoggingInterceptor
+
+Logs the method and URI of each request, and the status code and body length of each response, via `AppLogger`.
+Always runs, in every mode.
+
+### Token refresh
+
+`TokenRefreshInterceptor` sends the refresh, `POST /token/refresh`, through a Dio of its own, so a 401 on the refresh cannot come back into the chain.
+That Dio skips the `MockInterceptor` at the end of the chain, so outside production `ApiClient` gives it a `MockInterceptor` of its own (`_mockRefreshDio`).
+The mock answers the refresh from `POST_token_refresh.json`, the request that got the 401 is sent again with the new token, and the session continues, as it does against the server.
+In production the refresh Dio has no interceptors and uses the adapter of the client's Dio, so the refresh token keeps the certificate pinning.
+
+`AuthInterceptor` records on each request the session generation it goes out under, before it reads the token (`SessionGeneration` in `lib/infrastructure/storage/session_generation.dart`).
+A logout or the end of the session wipes the stored session inside `SessionGeneration.wipe`.
+So within one app process, which on web is one browser tab, a 401 for a request whose session has been wiped since, or is being wiped, is neither sent again nor refreshed: the token stored now may be that of another user who signed in since.
+A refresh still on its way drops the rotated tokens instead of storing a session that a relaunch would restore.
+On web every browser tab shares the stored session but counts its own session generation, so before it acts on the answer of a refresh, success or failure, `TokenRefreshInterceptor` also reads the stored refresh token again.
+When another tab has signed out meanwhile, the answer is dropped; when another tab has refreshed the session, its tokens stay and the request is sent again with its JWT.
+Each tab reads its own copy of the browser's storage, which takes another tab's change a moment later, so a sign-out in another tab just before or while a refresh stores its tokens can reach the storage before them.
+So a tab that ends the session first tells the other tabs over a `BroadcastChannel` (`ISessionEndSignal`, from `AuthSessionRepository.clear`).
+A tab that hears it ends its own session generation, so a refresh on its way drops its answer, and takes back the tokens its last refresh stored just then, where they are still stored (`RotatedTokensTakeBack`).
+The message usually arrives before the other tab's deletes reach this tab's copy of localStorage, so that wipe lasts until the copy shows the end: until its refresh token is gone, for at most 5 seconds.
+A refresh token that merely differs from the one the copy held when the message arrived does not end the wait.
+The browser applies the changes of all tabs to the shared storage in one order and reports them to every tab in that order, so a copy shows the deletes of a sign-out before any later sign-in, and a refresh token it shows before them is one the ending tab stored just before its deletes, such as its last rotation, and deletes a moment later.
+While it lasts no 401 in the tab is refreshed or sent again, so no refresh reads the refresh token the other tab deleted and stores a session that tab ended.
+When the copy does not show the end within the 5 seconds, such as when the other tab's deletes failed, the wipe ends, and a refresh may again read that copy.
+The take-back fails closed: a message that arrives after the copy already shows a session signed in to since may take back that session's rotated tokens, which signs it out in every tab, but it never brings back a session that was ended.
+A message that is not a whole number of milliseconds, which no tab of the app sends, is ignored with a warning.
+The refreshes of all tabs also take turns at one Web Lock (`ITokenRefreshLock`), so a server that accepts each refresh token once never sees it twice.
+A lock grant can reach a tab before the previous holder's writes do, so each turn commits a random stamp to IndexedDB before its refresh and writes it to localStorage after its token writes, and the next holder waits until its copy of localStorage shows that stamp.
+A turn whose commit fails, or does not complete within 5 seconds, sends nothing, and the request fails with the session kept.
+When its copy does not show the stamp within 5 seconds, the request fails, the session is kept, and the stamp stays as it was, so the next turn of that tab waits for it again.
+A stamp that no copy has shown 30 seconds after its commit is taken for an abandoned one, such as after the user cleared localStorage alone or a tab closed during its refresh: the next holder still waits up to 5 seconds for its copy, then runs.
+Until then the turns of the other tabs fail, a request each, with the session kept.
+A record in IndexedDB that is not a hand-over is logged as an error and taken for none, and the next turn replaces it.
+Off web there is no signal, and the lock runs each refresh at once.
+A sign-out in one tab ends the session generation of the other tabs only once its message arrives, so a request one of them sent before the sign-out can still be sent again with the JWT of a different user who signed in since: when its 401 comes after that sign-in and before the message, and when that sign-in comes while the tab's refresh is on its way or waits for the lock, which makes this window longer.
+`CacheInterceptor` checks the same generation before it stores a response, so a GET still on its way when the session ends does not put the data of the user who signed out back into the cache the wipe cleared.
+
+## Mock File Naming Convention
+
+Mock JSON files served by `MockInterceptor` live in `assets/mock/` and follow a strict naming pattern:
+
+```
+{HTTP_METHOD}{path_with_underscores}[_pathParams|_queryParams].json
+```
+
+**Path transformation rules:**
+- `/` → `_`
+- `-` → `_`
+
+**Examples:**
+
+| Request | Mock File |
+| --- | --- |
+| `GET /account` | `GET_account.json` |
+| `POST /authenticate` | `POST_authenticate.json` |
+| `GET /admin/users/{id}` | `GET_admin_users_pathParams.json` |
+| `GET /admin/users?page=0&size=10` | `GET_admin_users_queryParams.json` |
+| `GET /admin/users/filter?name=John` | `GET_admin_users_filter_queryParams.json` |
+| `PUT /admin/users` | `PUT_admin_users.json` |
+| `POST /account/change-password` | `POST_account_change_password.json` |
+| `DELETE /admin/users/{id}` | *(no file needed — returns 204 directly)* |
+
+**How the file name is resolved** (from `MockInterceptor`):
+
+```dart
+final basePath = options.extra['_basePath'] ?? options.path;
+final hasPathParams = options.extra['_pathParams'] != null;
+final hasQueryParams = options.extra['_queryParams'] != null;
+final filePath = basePath.replaceAll('/', '_').replaceAll('-', '_');
+
+if (hasPathParams) {
+  mockFileName = '${options.method}${filePath}_pathParams.json';
+} else if (hasQueryParams) {
+  mockFileName = '${options.method}${filePath}_queryParams.json';
+} else {
+  mockFileName = '${options.method}$filePath.json';
+}
+```
+
+The `_basePath`, `_pathParams`, and `_queryParams` metadata are injected by `ApiClient` into `options.extra` so the interceptor can distinguish between `/admin/users` (list) and `/admin/users/123` (single item).
+
+## Mock JSON File Structure
+
+Each file contains the exact JSON the real API would return.
+
+**Single object** (`GET_account.json`):
+```json
+{
+  "id": "user-1",
+  "login": "admin",
+  "email": "admin@sample.tech",
+  "firstName": "Admin",
+  "lastName": "User",
+  "activated": true,
+  "langKey": "en",
+  "createdBy": "system",
+  "createdDate": "2024-01-04T06:02:47.757Z",
+  "lastModifiedBy": "admin",
+  "lastModifiedDate": "2024-01-04T06:02:47.757Z",
+  "authorities": ["ROLE_ADMIN", "ROLE_USER"]
+}
+```
+
+**Array** (`GET_admin_users_queryParams.json`):
+```json
+[
+  { "id": "user-1", "login": "admin", "firstName": "Admin", ... },
+  { "id": "user-2", "login": "new_user-2", "firstName": "Mock new user First Name", ... },
+  ...
+]
+```
+
+**Auth token** (`POST_authenticate.json`):
+```json
+{
+  "id_token": "MOCK_TOKEN",
+  "refresh_token": "MOCK_REFRESH_TOKEN"
+}
+```
+
+**Refreshed token** (`POST_token_refresh.json`) has the same shape.
+`TokenRefreshInterceptor` stores `id_token` as the new JWT and, when present, `refresh_token` as the new refresh token:
+```json
+{
+  "id_token": "MOCK_REFRESHED_TOKEN",
+  "refresh_token": "MOCK_REFRESH_TOKEN_NEW"
+}
+```
+
+## Public vs. Private Endpoints
+
+`publicEndpoints` in `lib/infrastructure/http/public_endpoint.dart` lists the API endpoints that serve requests without a session, each by HTTP method and path:
+
+| Method | Path | Sent by |
+| --- | --- | --- |
+| `POST` | `/authenticate` | Sign-in, `LoginRepository.authenticate` |
+| `POST` | `/authenticate/send-otp` | OTP sign-in, `LoginRepository.sendOtp` |
+| `POST` | `/authenticate/verify-otp` | OTP sign-in, `LoginRepository.verifyOtp` |
+| `POST` | `/register` | Registration, `AccountRepository.register` |
+| `POST` | `/account/reset-password/init` | Password reset, `AccountRepository.resetPassword` |
+| `POST` | `/token/refresh` | Token refresh, `TokenRefreshInterceptor` |
+| `GET` | `/app/config` | Lifecycle checks before sign-in, `LifecycleRepository.fetchAppConfig` |
+
+The path is the one the `ApiClient` method is called with, before any path parameters.
+Another method on the same path, such as `GET /authenticate`, is private, and the app's own routes, such as `/forgot-password`, are not API endpoints, so the list leaves them out.
+All other endpoints require a valid `Authorization` header.
+In dev/test mode the `MockInterceptor` enforces this check; in production the real API does.
+
+`AuthInterceptor`, `TokenRefreshInterceptor` and `MockInterceptor` all ask `isPublicEndpoint`, so they cannot disagree about an endpoint:
+
+- In every environment `AuthInterceptor` sends no token to a public endpoint, so a stale token left by an expired session never reaches the sign-in endpoints.
+- `TokenRefreshInterceptor` passes a 401 from any other public endpoint than the refresh endpoint on without a token refresh and without ending the session, because it is not about a session: on the sign-in endpoints it rejects the credentials in the request; a 401 from the refresh endpoint still ends the session.
+- `MockInterceptor` answers a public endpoint without a token, as the server does.
+
+`TokenRefreshInterceptor` also asks `isApiOriginRequest`: a 401 from another origin than the API's is passed on with no token refresh, no retry and no session end, because `AuthInterceptor` sent no token there and sending the request again would carry the refreshed one.
+
+## How Repositories Use ApiClient
+
+Repositories are **completely unaware** of whether they are running against mock data or a real API.
+They receive the shared `ApiClient` through their constructor and always call it:
+
+```dart
+class UserRepository implements IUserRepository {
+  UserRepository(this._apiClient);
+
+  final ApiClient _apiClient;
+
+  static const String _resource = 'users';
+
+  @override
+  Future<Result<UserEntity>> retrieve(String id) async {
+    try {
+      final response = await _apiClient.get('/admin/$_resource', pathParams: id);
+      final result = User.fromJsonString(response.data!)!;
+      return Success(result);
+    } on UnauthorizedException catch (e) {
+      return Failure(AuthError(e.toString()));
+    } on FetchDataException catch (e) {
+      return Failure(_mapFetchDataException(e)); // TimeoutError or NetworkError
+    }
+  }
+}
+```
+
+The `pathParams: id` argument causes `ApiClient` to:
+1. Build the URL as `/admin/users/{id}`
+2. Store `_basePath: '/admin/users'` and `_pathParams: id` in `options.extra`
+3. In dev mode, `MockInterceptor` reads `_pathParams`, resolves `GET_admin_users_pathParams.json`
+
+## Menu: Direct Asset Read
+
+The shell menu is the one exception where mock data is read outside the interceptor:
+
+```dart
+// lib/app/shell/repositories/menu_repository.dart
+Future<List<Menu>> list() async {
+  final json = await rootBundle.loadString('assets/mock/menus.json');
+  final result = Menu.fromJsonStringList(json);
+  return result;
+}
+```
+
+`AppDependencies.createMenuRepository()` returns this repository in every environment, so the menu comes from the bundled `menus.json` in production too.
+Because the file never goes through `ApiClient`, its name does not follow the `{METHOD}_{path}` convention.
+
+## Test Layer
+
+Most tests do **not** use the mock interceptor.
+They replace a layer with a test double instead:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        Test Layer                                 │
+│                                                                   │
+│  Use Case Tests:   MockIUserRepository (interface mock)          │
+│  BLoC Tests:       MockAccountRepository (concrete mock)         │
+│  ApiClient Tests:  _StubInterceptor (Dio-level stub)             │
+│  Widget Tests:     MockBloc (bloc_test)                          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Two common setups do run the mock interceptor.
+`TestEnv.apiClient()`, which repository tests use, builds an `ApiClient` with `AppConfig.test()`, so `MockInterceptor` serves `assets/mock/*.json` without the simulated latency.
+Passing a stub `dio` to it replaces the whole chain, `MockInterceptor` included.
+A test that pumps the whole `App` with its default `AppDependencies`, such as `test/integration/app_smoke_test.dart`, runs with `AppConfig.dev()`, the same `AppConfig` as `main_local.dart`.
+
+### Use Case Tests
+
+Mock the repository interface directly. No HTTP involved:
+
+```dart
+class MockIUserRepository extends Mock implements IUserRepository {}
+
+test('fetches user by id', () async {
+  when(() => mockRepo.retrieve('1'))
+      .thenAnswer((_) async => const Success(user));
+
+  final result = await useCase.call('1');
+  expect(result, isA<Success<UserEntity>>());
+});
+```
+
+### BLoC Tests
+
+Mock the repository (or use case) and verify state transitions:
+
+```dart
+blocTest<UserEditorBloc, UserEditorState>(
+  'emits [loading, loaded] when fetch succeeds',
+  build: () {
+    when(() => mockRepo.retrieve('1'))
+        .thenAnswer((_) async => const Success(user));
+    return UserEditorBloc(
+      fetchUserUseCase: FetchUserUseCase(mockRepo),
+      saveUserUseCase: SaveUserUseCase(mockRepo),
+    );
+  },
+  act: (bloc) => bloc.add(const UserEditorFetch('1')),
+  expect: () => [
+    const UserEditorLoading(),
+    const UserEditorLoaded(data: user),
+  ],
+);
+```
+
+### ApiClient Tests
+
+`ApiClient` is constructed via dependency injection — there is no global
+singleton or `setTestInstance`. Inject a custom `_StubInterceptor` through the
+`dio` parameter to simulate transport errors:
+
+```dart
+setUp(() {
+  stub = _StubInterceptor();
+  final testDio = Dio(BaseOptions(baseUrl: 'https://test.api', responseType: ResponseType.plain));
+  testDio.interceptors.add(stub);
+  client = ApiClient(appConfig: const AppConfig.prod(), dio: testDio);
+});
+
+test('maps 401 to UnauthorizedException', () async {
+  stub.stubDioError(DioExceptionType.badResponse, statusCode: 401);
+  expect(() => client.get('/endpoint'), throwsA(isA<UnauthorizedException>()));
+});
+```
+
+### Test Bootstrap
+
+Cross-cutting test setup is centralized in `test/flutter_test_config.dart`
+(auto-discovered by `flutter test`), which runs once-per-isolate config and an
+automatic per-test environment reset via `TestEnv` (`test/support/test_env.dart`).
+Individual test files need no manual storage/router/secure-storage setup; use
+`TestEnv.authenticate()` (in `setUp`/test body) for auth-dependent tests and
+`TestEnv.apiClient({Dio? dio})` for the mock-backed client.
+
+See [`testing-architecture.md`](testing-architecture.md) for the full test
+structure, bootstrap, opt-out mechanism, and per-layer test patterns.
+
+## Adding a New Mock Endpoint
+
+When you add a new API endpoint, follow these steps:
+
+1. **Create the mock JSON file** in `assets/mock/` following the naming convention:
+   ```
+   GET_your_endpoint.json              — for GET without params
+   GET_your_endpoint_pathParams.json   — for GET with path params
+   GET_your_endpoint_queryParams.json  — for GET with query params
+   POST_your_endpoint.json             — for POST
+   PUT_your_endpoint.json              — for PUT
+   ```
+
+2. **Register the asset** in `pubspec.yaml` (already covered by `assets/mock/` glob).
+
+3. **If the endpoint is public**, add its method and path to `publicEndpoints` in `lib/infrastructure/http/public_endpoint.dart`.
+
+4. **Call `ApiClient`** from your repository — the mock interceptor handles the rest automatically.
+
+5. **Drive the new repository method** in `test/architecture/mock_asset_coverage_test.dart`.
+   That test sends every repository method through the mock-backed client and fails when a method is not listed or its file is missing.
+
+No changes to `MockInterceptor` or `ApiClient` are needed.
+A GET, POST, PUT or PATCH whose file is missing fails with 501 and the name of the file, instead of getting a made-up success.
+
+## File Reference
+
+| Purpose | Path |
+| --- | --- |
+| Environment config | `lib/infrastructure/config/environment.dart` |
+| API client + Dio factory | `lib/infrastructure/http/api_client.dart` |
+| Auth interceptor | `lib/infrastructure/http/interceptors/auth_interceptor.dart` |
+| Mock interceptor | `lib/infrastructure/http/interceptors/mock_interceptor.dart` |
+| Logging interceptor | `lib/infrastructure/http/interceptors/logging_interceptor.dart` |
+| Public endpoints | `lib/infrastructure/http/public_endpoint.dart` |
+| Template config (API URL) | `lib/infrastructure/config/template_config.dart` |
+| Mock JSON files | `assets/mock/*.json` (22 files) |
+| DI (ApiClient + repository factories) | `lib/app/di/app_dependencies.dart` |
+| Test utilities | `test/support/test_env.dart` |
+| Mock classes | `test/mocks/mock_classes.dart` |
+| ApiClient tests | `test/infrastructure/http/api_client_test.dart` |
+| Mock asset coverage guard | `test/architecture/mock_asset_coverage_test.dart` |

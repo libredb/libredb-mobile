@@ -1,0 +1,987 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
+import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
+// Uncomment to block screenshots / blur task-switcher snapshot on the login screen.
+// See lib/core/security/screen_capture_protection.dart for Android/iOS asymmetry.
+// import 'package:flutter_bloc_advance/core/security/screen_capture_protected.dart';
+import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
+import 'package:flutter_bloc_advance/shared/widgets/password_validator.dart';
+import 'package:flutter_bloc_advance/shared/widgets/responsive_form_widget.dart';
+import 'package:flutter_bloc_advance/shared/widgets/submit_button_widget.dart';
+import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:flutter_bloc_advance/core/security/safe_redirect.dart';
+import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' show NumberFormat;
+import 'package:form_builder_validators/form_builder_validators.dart';
+
+import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+
+import '../../application/login_bloc.dart';
+import '../../domain/services/sso_auto_redirect_gate.dart';
+import '../../../../generated/l10n.dart';
+import '../widgets/community_section_widget.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, this.onToggleTheme, this.startupSignInError});
+
+  /// Wired by the router; null = non-interactive badge (features cannot import app/theme).
+  final VoidCallback? onToggleTheme;
+
+  /// Why the web sign-in that the app completed at startup failed, or null. Passed in by the router, which reads the
+  /// session (features cannot import app/session). The single sign-on page shows it until the first tap.
+  final AppErrorCode? startupSignInError;
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+// To opt in to screen capture protection on this screen, also add
+// `ScreenCaptureProtected<LoginScreen>,` to the `with` clause below.
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  final GlobalKey<FormBuilderState> _loginFormKey = GlobalKey<FormBuilderState>(debugLabel: '__loginFormKey__');
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>(debugLabel: '__loginScaffoldKey__');
+  late AnimationController _animController;
+  final FocusNode _forgotPwFocus = FocusNode(skipTraversal: true);
+
+  /// Whether the user has tapped the single sign-on button on this visit of the page, which hides
+  /// [LoginScreen.startupSignInError].
+  bool _ssoTapped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _animController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _redirectAutomatically());
+  }
+
+  @override
+  void dispose() {
+    _forgotPwFocus.dispose();
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Widget body = BlocListener<LoginBloc, LoginState>(
+      listener: _onLoginStateChange,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 1024;
+            return isDesktop ? _desktopLayout(context, isDark) : _mobileLayout(context, isDark);
+          },
+        ),
+      ),
+    );
+    return Scaffold(
+      key: _scaffoldKey,
+      body: switch (context.read<AuthMode>()) {
+        // A sign-in that ends without a session closes the gate, so the page never sends the user back on its own.
+        OidcAuthMode(:final settings) when settings.autoRedirect => BlocListener<LoginBloc, LoginState>(
+          listenWhen: (previous, current) =>
+              (previous is LoginLoadingState && current is LoginInitialState) || current is LoginErrorState,
+          listener: (context, _) => context.read<SsoAutoRedirectGate>().close(),
+          child: body,
+        ),
+        OidcAuthMode() || JwtAuthMode() || OidcMisconfiguredAuthMode() => body,
+      },
+    );
+  }
+
+  /// Sends the user to the identity provider without a tap, at most once per run: only in an [OidcAuthMode] with
+  /// `autoRedirect` on, while [SsoAutoRedirectGate] is open and no error shows on the page. The gate closes first.
+  void _redirectAutomatically() {
+    if (!mounted) return;
+    final mode = context.read<AuthMode>();
+    if (mode is! OidcAuthMode || !mode.settings.autoRedirect) return;
+    final gate = context.read<SsoAutoRedirectGate>();
+    if (!gate.isOpen || _ssoErrorCode(mode, context.read<LoginBloc>().state) != null) return;
+    gate.close();
+    _requestSso(context);
+  }
+
+  Widget _desktopLayout(BuildContext context, bool isDark) {
+    return Row(
+      children: [
+        Expanded(flex: 55, child: _brandPanel(context, isDark)),
+        Expanded(flex: 45, child: _formPanel(context, isDark)),
+      ],
+    );
+  }
+
+  Widget _mobileLayout(BuildContext context, bool isDark) {
+    final cs = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        Container(color: cs.surface),
+        SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 56, 24, 40),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: FadeTransition(
+                opacity: _animController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _brandIcon(isDark),
+                    const SizedBox(height: 32),
+                    _formHeading(context),
+                    const SizedBox(height: 32),
+                    _formBody(context, isDark, showCommunity: true),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(top: 12, right: 12, child: _themeBadge(isDark)),
+      ],
+    );
+  }
+
+  Widget _brandPanel(BuildContext context, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [const Color(0xFF020617), const Color(0xFF0C1222), const Color(0xFF020617)]
+              : [const Color(0xFF0f172a), const Color(0xFF1B2B4B), const Color(0xFF0f172a)],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(top: -120, left: -80, child: _gradientOrb(420, const Color(0xFF6366F1), isDark ? 0.25 : 0.3)),
+          Positioned(bottom: -180, right: -120, child: _gradientOrb(480, const Color(0xFF8B5CF6), isDark ? 0.2 : 0.25)),
+          Positioned(top: 180, right: -60, child: _gradientOrb(280, const Color(0xFF06B6D4), isDark ? 0.15 : 0.18)),
+          Positioned(bottom: 100, left: -40, child: _gradientOrb(200, const Color(0xFF3B82F6), isDark ? 0.12 : 0.15)),
+          Padding(
+            padding: const EdgeInsets.all(48),
+            child: FadeTransition(
+              opacity: _animController,
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _brandBadges(),
+                      const SizedBox(height: 40),
+                      _heroText(),
+                      const SizedBox(height: 16),
+                      _heroSubtext(),
+                      const SizedBox(height: 20),
+                      _statsRow(),
+                      const SizedBox(height: 40),
+                      _featureCards(),
+                      if (_communityUrls(context) case final urls?) ...[
+                        const SizedBox(height: 10),
+                        CommunitySectionWidget(isDesktop: true, urls: urls),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gradientOrb(double size, Color color, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color.withValues(alpha: opacity),
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _brandBadges() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 8,
+      children: [
+        _glassPill('Advanced Flutter BLoC Template', const Color(0xFFA5B4FC)),
+        _glassPill('Flutter 3.47.7', const Color(0xFF94A3B8)),
+      ],
+    );
+  }
+
+  Widget _glassPill(String text, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.2),
+      ),
+    );
+  }
+
+  Widget _heroText() {
+    return Text(
+      S.of(context).login_brand_headline,
+      style: const TextStyle(
+        fontSize: 44,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+        height: 1.1,
+        letterSpacing: -1.5,
+      ),
+    );
+  }
+
+  Widget _heroSubtext() {
+    return Text(
+      S.of(context).login_brand_description,
+      style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.55), height: 1.65),
+    );
+  }
+
+  Widget _statsRow() {
+    final l10n = S.of(context);
+    final percent = NumberFormat.percentPattern(Localizations.localeOf(context).toString()).format(1);
+    // Wraps instead of overflowing when the brand panel is narrow or the text is scaled up.
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: 8,
+      children: [
+        _statItem('7+', l10n.login_brand_stat_platforms),
+        _statDot(),
+        _statItem('5', l10n.login_brand_stat_layers),
+        _statDot(),
+        _statItem(percent, l10n.login_brand_stat_bloc_ready),
+      ],
+    );
+  }
+
+  Widget _statItem(String value, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45))),
+      ],
+    );
+  }
+
+  Widget _statDot() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: 4,
+        height: 4,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.25)),
+      ),
+    );
+  }
+
+  Widget _featureCards() {
+    final l10n = S.of(context);
+    return Column(
+      children: [
+        _glassFeatureCard(Icons.shield_outlined, l10n.login_feature_auth_title, l10n.login_feature_auth_description),
+        const SizedBox(height: 10),
+        _glassFeatureCard(
+          Icons.layers_outlined,
+          l10n.login_feature_architecture_title,
+          l10n.login_feature_architecture_description,
+        ),
+        const SizedBox(height: 10),
+        _glassFeatureCard(
+          Icons.swap_horiz_outlined,
+          l10n.login_feature_mock_api_title,
+          l10n.login_feature_mock_api_description,
+        ),
+      ],
+    );
+  }
+
+  Widget _glassFeatureCard(IconData icon, String title, String subtitle) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 20, color: const Color(0xFFA5B4FC)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45), height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _formPanel(BuildContext context, bool isDark) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      color: cs.surface,
+      child: Stack(
+        children: [
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: FadeTransition(
+                  opacity: _animController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _brandIcon(isDark),
+                      const SizedBox(height: 36),
+                      _formHeading(context),
+                      const SizedBox(height: 32),
+                      // The brand panel already shows the desktop community section.
+                      _formBody(context, isDark, showCommunity: false),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(top: 16, right: 16, child: _themeBadge(isDark)),
+        ],
+      ),
+    );
+  }
+
+  Widget _brandIcon(bool isDark) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: isDark ? cs.surfaceContainerHighest : cs.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Icon(Icons.bolt_rounded, size: 24, color: cs.onSurface),
+    );
+  }
+
+  Widget _formHeading(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          S.of(context).login_welcome_title,
+          style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.8, color: cs.onSurface),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          context.read<AuthMode>().usesOidc ? S.of(context).login_sso_subtitle : S.of(context).login_welcome_subtitle,
+          style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+
+  Widget _formBody(BuildContext context, bool isDark, {required bool showCommunity}) {
+    return switch (context.read<AuthMode>()) {
+      JwtAuthMode() => _passwordFormBody(context, isDark, showCommunity: showCommunity),
+      final OidcAuthMode mode => _ssoFormBody(context, mode, showCommunity: showCommunity),
+      final OidcMisconfiguredAuthMode mode => _ssoFormBody(context, mode, showCommunity: showCommunity),
+    };
+  }
+
+  Widget _passwordFormBody(BuildContext context, bool isDark, {required bool showCommunity}) {
+    final communityUrls = showCommunity ? _communityUrls(context) : null;
+    return FormBuilder(
+      key: _loginFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _fieldLabel(context, S.of(context).login_user_name),
+          const SizedBox(height: 8),
+          _usernameField(context),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: _fieldLabel(context, S.of(context).login_password)),
+              _forgotPasswordLink(context),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _passwordField(context),
+          const SizedBox(height: 8),
+          _validationZone(),
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, child: _submitButton(context)),
+          const SizedBox(height: 16),
+          _dividerWithOr(context),
+          const SizedBox(height: 16),
+          SizedBox(width: double.infinity, child: _otpLoginButton(context)),
+          const SizedBox(height: 28),
+          _registerLink(context),
+          if (communityUrls != null) ...[
+            const SizedBox(height: 4),
+            CommunitySectionWidget(isDesktop: false, urls: communityUrls),
+          ],
+          const SizedBox(height: 16),
+          _versionText(context),
+        ],
+      ),
+    );
+  }
+
+  /// The sign-in of an `oidc` build: the error line and the single sign-on button, which a misconfigured build leaves
+  /// out.
+  Widget _ssoFormBody(BuildContext context, AuthMode mode, {required bool showCommunity}) {
+    final communityUrls = showCommunity ? _communityUrls(context) : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ssoErrorLine(mode),
+        if (mode is OidcAuthMode) ...[
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, child: _ssoButton(context)),
+        ],
+        const SizedBox(height: 28),
+        if (communityUrls != null) ...[
+          const SizedBox(height: 4),
+          CommunitySectionWidget(isDesktop: false, urls: communityUrls),
+        ],
+        const SizedBox(height: 16),
+        _versionText(context),
+      ],
+    );
+  }
+
+  /// The error that the single sign-on page shows in [state], or null: the sign-in's own error, else the startup
+  /// sign-in error until the first tap, else the configuration error of a misconfigured build. Nothing shows while a
+  /// sign-in runs or once it has succeeded.
+  AppErrorCode? _ssoErrorCode(AuthMode mode, LoginState state) => switch (state) {
+    LoginErrorState(:final errorCode) => errorCode,
+    LoginLoadingState() || LoginLoadedState() => null,
+    LoginInitialState() || LoginOtpSentState() || LoginOtpVerifiedState() =>
+      (_ssoTapped ? null : widget.startupSignInError) ??
+          (mode is OidcMisconfiguredAuthMode ? AppErrorCode.authOidcConfig : null),
+  };
+
+  Widget _ssoErrorLine(AuthMode mode) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      builder: (context, state) => switch (_ssoErrorCode(mode, state)) {
+        final errorCode? => Center(
+          child: Text(
+            errorCode.resolve(context),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        null => const SizedBox.shrink(),
+      },
+    );
+  }
+
+  Widget _ssoButton(BuildContext context) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      builder: (context, state) {
+        final isLoading = state is LoginLoadingState;
+        return FilledButton(
+          key: loginButtonSsoKey,
+          onPressed: isLoading ? null : () => _onSsoTapped(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
+                  )
+                : Text(S.of(context).login_sso_button),
+          ),
+        );
+      },
+    );
+  }
+
+  void _onSsoTapped(BuildContext context) {
+    setState(() => _ssoTapped = true);
+    _requestSso(context);
+  }
+
+  /// Starts the single sign-on. On web the tab comes back to the route's `returnUrl`, which the client checks before
+  /// it builds the entry URI; elsewhere the page reads it on the way out, as the password sign-in does.
+  void _requestSso(BuildContext context) {
+    final returnUrl = GoRouterState.of(context).uri.queryParameters['returnUrl'];
+    context.read<LoginBloc>().add(
+      SsoSignInRequested(
+        webReturnPath: kIsWeb ? returnUrl : null,
+        browserDoneMessage: S.of(context).login_sso_browser_done,
+      ),
+    );
+  }
+
+  /// The links of the community section, or null when the project has no repository to link to.
+  CommunityUrls? _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
+
+  Widget _versionText(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Text(
+        'v${AppConstants.appVersion}+${AppConstants.appBuildNumber}',
+        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+      ),
+    );
+  }
+
+  Widget _dividerWithOr(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: cs.outlineVariant)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(S.of(context).login_or, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+        ),
+        Expanded(child: Divider(color: cs.outlineVariant)),
+      ],
+    );
+  }
+
+  Widget _registerLink(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(S.of(context).login_no_account, style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant)),
+          TextButton(
+            key: loginButtonRegisterKey,
+            onPressed: () => context.push(ApplicationRoutesConstants.register),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              S.of(context).register,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.onSurface),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _themeBadge(bool isDark) {
+    final cs = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(8);
+    final badge = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: radius,
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, size: 18, color: cs.onSurfaceVariant),
+    );
+
+    final onToggle = widget.onToggleTheme;
+    if (onToggle == null) return badge;
+
+    return Tooltip(
+      message: isDark ? S.of(context).login_switch_to_light_mode : S.of(context).login_switch_to_dark_mode,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(onTap: onToggle, borderRadius: radius, child: badge),
+      ),
+    );
+  }
+
+  Widget _fieldLabel(BuildContext context, String text) {
+    return Text(text, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500));
+  }
+
+  Widget _usernameField(BuildContext context) {
+    return FormBuilderTextField(
+      key: loginTextFieldUsernameKey,
+      name: 'username',
+      decoration: const InputDecoration(hintText: 'm@example.com'),
+      textInputAction: TextInputAction.next,
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(errorText: S.of(context).required_field),
+        FormBuilderValidators.minLength(4, errorText: S.of(context).min_length_4),
+        FormBuilderValidators.maxLength(20, errorText: S.of(context).max_length_20),
+      ]),
+    );
+  }
+
+  Widget _passwordField(BuildContext context) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      builder: (context, state) {
+        return FormBuilderTextField(
+          key: loginTextFieldPasswordKey,
+          name: 'password',
+          decoration: InputDecoration(
+            hintText: '********',
+            suffixIcon: IconButton(
+              key: loginButtonPasswordVisibilityKey,
+              tooltip: state.passwordVisible ? S.of(context).password_hide : S.of(context).password_show,
+              icon: Icon(state.passwordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
+              onPressed: () => context.read<LoginBloc>().add(const TogglePasswordVisibility()),
+            ),
+          ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _trySubmit(context),
+          obscureText: !state.passwordVisible,
+          validator: passwordValidator(context),
+        );
+      },
+    );
+  }
+
+  Widget _submitButton(BuildContext context) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      builder: (context, state) {
+        final isLoading = state is LoginLoadingState;
+        return FilledButton(
+          key: loginButtonSubmitKey,
+          onPressed: isLoading ? null : () => _trySubmit(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
+                  )
+                : Text(S.of(context).login_button),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _forgotPasswordLink(BuildContext context) {
+    return TextButton(
+      key: loginButtonForgotPasswordKey,
+      focusNode: _forgotPwFocus,
+      onPressed: () => context.push(ApplicationRoutesConstants.forgotPassword),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(S.of(context).password_forgot, style: const TextStyle(fontSize: 13)),
+    );
+  }
+
+  /// Keeps saying what went wrong, in the words of the error snack bar, after the snack bar has gone.
+  Widget _validationZone() {
+    return BlocBuilder<LoginBloc, LoginState>(
+      buildWhen: (previous, current) => current is LoginErrorState,
+      builder: (context, state) => switch (state) {
+        LoginErrorState(:final errorCode) => Center(
+          child: Text(
+            errorCode.resolve(context),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        LoginInitialState() ||
+        LoginLoadingState() ||
+        LoginLoadedState() ||
+        LoginOtpSentState() ||
+        LoginOtpVerifiedState() => const SizedBox.shrink(),
+      },
+    );
+  }
+
+  void _trySubmit(BuildContext context) {
+    if (_loginFormKey.currentState?.saveAndValidate() ?? false) {
+      final username = _loginFormKey.currentState!.value['username'] as String;
+      final password = _loginFormKey.currentState!.value['password'] as String;
+      context.read<LoginBloc>().add(LoginFormSubmitted(username: username, password: password));
+    }
+  }
+
+  void _onLoginStateChange(BuildContext context, LoginState state) {
+    if (state is LoginLoadingState) {
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(S.of(context).loading),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          width: MediaQuery.of(context).size.width * 0.8,
+        ),
+      );
+    } else if (state is LoginLoadedState) {
+      // Honor `?returnUrl=` from the redirect-to-login flow so deep
+      // links survive the auth bounce. Open-redirect guard rejects
+      // off-origin candidates; falls back to home.
+      // An `oidc` build also drops a returnUrl that is too long, holds a control character or is the login page.
+      final returnUrl = GoRouterState.of(context).uri.queryParameters['returnUrl'];
+      final destination = switch (context.read<AuthMode>()) {
+        JwtAuthMode() => safeRedirectTarget(returnUrl, fallback: ApplicationRoutesConstants.home),
+        OidcAuthMode() || OidcMisconfiguredAuthMode() =>
+          safeReturnPath(returnUrl, loginPath: ApplicationRoutesConstants.login) ?? ApplicationRoutesConstants.home,
+      };
+      context.go(destination);
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).hideCurrentSnackBar();
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(S.of(context).success),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          width: MediaQuery.of(context).size.width * 0.8,
+        ),
+      );
+    } else if (state is LoginErrorState) {
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).hideCurrentSnackBar();
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(state.errorCode.resolve(context)),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          width: MediaQuery.of(context).size.width * 0.8,
+        ),
+      );
+    }
+  }
+}
+
+Widget _otpLoginButton(BuildContext context) {
+  return OutlinedButton(
+    key: const Key('loginButtonOtpKey'),
+    onPressed: () => context.push(ApplicationRoutesConstants.loginOtp),
+    child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(S.of(context).login_with_email)),
+  );
+}
+
+class OtpEmailScreen extends StatelessWidget {
+  OtpEmailScreen({super.key});
+
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+        title: Text(S.of(context).login_with_email),
+        leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => _popOrFallback(context, ApplicationRoutesConstants.login),
+        ),
+      ),
+      body: BlocListener<LoginBloc, LoginState>(
+        listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+        listener: (context, state) {
+          if (state is LoginOtpSentState) {
+            context.go('${ApplicationRoutesConstants.loginOtpVerify}/${state.email}');
+          } else if (state is LoginErrorState) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.errorCode.resolve(context))));
+          }
+        },
+        child: ResponsiveFormBuilder(
+          formKey: _formKey,
+          children: [
+            Text(
+              S.of(context).login_otp_email_instructions,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            Divider(color: Theme.of(context).colorScheme.outlineVariant),
+            const SizedBox(height: 8),
+            _emailField(context),
+            _submitOtpButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _emailField(BuildContext context) {
+    return FormBuilderTextField(
+      name: 'email',
+      decoration: InputDecoration(labelText: S.of(context).email, prefixIcon: const Icon(Icons.email)),
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(errorText: S.of(context).required_field),
+        FormBuilderValidators.email(errorText: S.of(context).invalid_email),
+      ]),
+    );
+  }
+
+  Widget _submitOtpButton(BuildContext context) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      builder: (context, state) {
+        return ResponsiveSubmitButton(
+          buttonText: S.of(context).send_otp_code,
+          isLoading: state is LoginLoadingState,
+          onPressed: () {
+            if (_formKey.currentState?.saveAndValidate() ?? false) {
+              final email = _formKey.currentState!.value['email'] as String;
+              context.read<LoginBloc>().add(SendOtpRequested(email: email));
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+class OtpVerifyScreen extends StatelessWidget {
+  OtpVerifyScreen({super.key, required this.email});
+
+  final String email;
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+        title: Text(S.of(context).verify_otp_code),
+        leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => _popOrFallback(context, ApplicationRoutesConstants.loginOtp),
+        ),
+      ),
+      body: BlocListener<LoginBloc, LoginState>(
+        listener: (context, state) {
+          switch (state) {
+            case LoginLoadedState():
+              context.go(ApplicationRoutesConstants.home);
+            // A failed verification or resend reports why, as the email screen does.
+            case LoginErrorState(:final errorCode):
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorCode.resolve(context))));
+            case LoginInitialState() || LoginLoadingState() || LoginOtpSentState() || LoginOtpVerifiedState():
+              break;
+          }
+        },
+        child: ResponsiveFormBuilder(
+          formKey: _formKey,
+          children: [
+            Text(S.of(context).otp_sent_to_email(email)),
+            _otpField(context),
+            _submitVerifyButton(context),
+            _resendButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _otpField(BuildContext context) {
+    return FormBuilderTextField(
+      name: 'otpCode',
+      decoration: InputDecoration(labelText: S.of(context).otp_code, prefixIcon: const Icon(Icons.lock_clock)),
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(errorText: S.of(context).required_field),
+        FormBuilderValidators.numeric(errorText: S.of(context).only_numbers),
+        FormBuilderValidators.minLength(6, errorText: S.of(context).otp_length),
+        FormBuilderValidators.maxLength(6, errorText: S.of(context).otp_length),
+      ]),
+    );
+  }
+
+  Widget _submitVerifyButton(BuildContext context) {
+    return BlocBuilder<LoginBloc, LoginState>(
+      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      builder: (context, state) {
+        return ResponsiveSubmitButton(
+          buttonText: S.of(context).verify_otp_code,
+          isLoading: state is LoginLoadingState,
+          onPressed: () {
+            if (_formKey.currentState?.saveAndValidate() ?? false) {
+              final otpCode = _formKey.currentState!.value['otpCode'] as String;
+              context.read<LoginBloc>().add(VerifyOtpSubmitted(email: email, otpCode: otpCode));
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _resendButton(BuildContext context) {
+    return TextButton(
+      onPressed: () => context.read<LoginBloc>().add(SendOtpRequested(email: email)),
+      child: Text(S.of(context).resend_otp_code),
+    );
+  }
+}
+
+void _popOrFallback(BuildContext context, String fallbackRoute) {
+  if (GoRouter.of(context).canPop()) {
+    context.pop();
+  } else {
+    context.go(fallbackRoute);
+  }
+}
