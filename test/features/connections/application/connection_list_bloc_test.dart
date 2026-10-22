@@ -1,0 +1,54 @@
+import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter_bloc_advance/core/errors/app_error.dart';
+import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
+import 'package:flutter_bloc_advance/core/result/result.dart';
+import 'package:flutter_bloc_advance/features/connections/application/connection_list_bloc.dart';
+import 'package:flutter_bloc_advance/features/connections/application/usecases/list_managed_connections_usecase.dart';
+import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import '../../../mocks/mock_classes.dart';
+
+void main() {
+  late MockIConnectionRepository repository;
+
+  const connections = [StudioConnection(id: 'seed:a', name: 'A', type: 'postgres')];
+
+  setUp(() {
+    repository = MockIConnectionRepository();
+  });
+
+  ConnectionListBloc build() =>
+      ConnectionListBloc(listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository));
+
+  test('starts in ConnectionListInitial', () {
+    expect(build().state, const ConnectionListInitial());
+  });
+
+  blocTest<ConnectionListBloc, ConnectionListState>(
+    'loads the connections',
+    setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(connections)),
+    build: build,
+    act: (bloc) => bloc.add(const ConnectionListRequested()),
+    expect: () => const [ConnectionListLoading(), ConnectionListLoaded(connections: connections)],
+  );
+
+  blocTest<ConnectionListBloc, ConnectionListState>(
+    'carries the error code of a failed load',
+    setUp: () =>
+        when(() => repository.listManaged())
+            .thenAnswer((_) async => Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key))),
+    build: build,
+    act: (bloc) => bloc.add(const ConnectionListRequested()),
+    expect: () => const [ConnectionListLoading(), ConnectionListFailure(errorCode: AppErrorCode.networkCertInvalid)],
+  );
+
+  blocTest<ConnectionListBloc, ConnectionListState>(
+    'falls back to the generic code for an error without a known code',
+    setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Failure(UnknownError('boom'))),
+    build: build,
+    act: (bloc) => bloc.add(const ConnectionListRequested()),
+    expect: () => const [ConnectionListLoading(), ConnectionListFailure(errorCode: AppErrorCode.generic)],
+  );
+}

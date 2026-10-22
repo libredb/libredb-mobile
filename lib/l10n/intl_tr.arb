@@ -69,7 +69,7 @@
   "login_button": "Giriş Yap",
   "loading": "Yükleniyor...",
   "email_send": "E-posta Gönder",
-  "translate_menu_title": "{translate, select, account{Hesabım}  userManagement{Kullanıcı Yönetimi} settings{Ayarlar}  logout{Çıkış}  info{Bilgiler}  language{Diller}  theme{Tema}  new_user{Yeni Kullanıcı Ekle}  list_user{Kullanıcılar} other{Diğer}}",
+  "translate_menu_title": "{translate, select, connections{Bağlantılar} account{Hesabım}  userManagement{Kullanıcı Yönetimi} settings{Ayarlar}  logout{Çıkış}  info{Bilgiler}  language{Diller}  theme{Tema}  new_user{Yeni Kullanıcı Ekle}  list_user{Kullanıcılar} other{Diğer}}",
   "@translate_menu_title": {
     "placeholders": {
       "translate": {
@@ -525,5 +525,13 @@
   "login_sso_subtitle": "Kurumsal hesabınızla giriş yapın.",
   "@login_sso_subtitle": {},
   "login_sso_browser_done": "Giriş tamamlandı. Bu sekmeyi kapatıp uygulamaya dönebilirsiniz.",
-  "@login_sso_browser_done": {}
+  "@login_sso_browser_done": {},
+  "connections": "Bağlantılar",
+  "connection_list_subtitle": "Studio'nun size sunduğu veritabanları",
+  "connection_list_empty": "Studio size henüz bir bağlantı sunmuyor",
+  "connection_list_load_failed": "Bağlantılar yüklenemedi",
+  "connection_name": "Ad",
+  "connection_type": "Motor",
+  "connection_environment": "Ortam",
+  "connection_target": "Hedef"
 }

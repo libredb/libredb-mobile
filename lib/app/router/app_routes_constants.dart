@@ -21,6 +21,9 @@ class ApplicationRoutesConstants {
   static const userEdit = '/user/:id/edit';
   static const userNew = '/user/new';
 
+  // Connection routes
+  static const connectionList = '/connections';
+
   // Settings routes
   static const settings = '/settings';
 

@@ -6,6 +6,7 @@ import 'package:flutter_bloc_advance/features/account/data/models/change_passwor
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/authority_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/user_repository.dart';
@@ -54,6 +55,7 @@ void main() {
     'IAuthRepository.verifyOtp': (client) =>
         LoginRepository(apiClient: client).verifyOtp(const VerifyOtpEntity(email: 'admin@sample.tech', otp: '123456')),
     'IAuthorityRepository.list': (client) => AuthorityRepositoryImpl(client).list(),
+    'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
     'IUserRepository.retrieve': (client) => UserRepository(client).retrieve('user-1'),
     'IUserRepository.create': (client) =>
         UserRepository(client).create(const UserEntity(login: 'new_user', email: 'new_user@sample.tech')),

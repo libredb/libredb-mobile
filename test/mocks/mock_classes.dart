@@ -36,6 +36,7 @@ import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_
 import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
 // Entity/model imports for fallback values
+import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
 import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
@@ -57,6 +58,8 @@ class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository 
 class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
 
 class MockIUserRepository extends Mock implements IUserRepository {}
+
+class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 

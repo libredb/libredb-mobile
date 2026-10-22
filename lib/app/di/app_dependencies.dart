@@ -6,6 +6,8 @@ import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_sessio
 import 'package:flutter_bloc_advance/features/auth/data/repositories/sso_auth_repository_impl.dart';
 import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
+import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
+import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
@@ -143,6 +145,9 @@ class AppDependencies {
       OidcTokenRotation(client: client, secureStorage: secureStorage);
 
   IAuthorityRepository createAuthorityRepository(ApiClient apiClient) => AuthorityRepositoryImpl(apiClient);
+
+  /// Studio's connection API.
+  IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
 
   IDynamicFormRepository createDynamicFormRepository(ApiClient apiClient) => DynamicFormRepository(apiClient);
 
