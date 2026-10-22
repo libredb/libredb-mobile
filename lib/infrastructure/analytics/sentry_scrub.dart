@@ -7,8 +7,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// sanitized before leaving the device. Its breadcrumbs were already
 /// scrubbed by [sentryBeforeBreadcrumb] when each was added.
 ///
-/// **Default-on, conservative.** Forks with looser privacy posture can
-/// either disable the hook or relax the rules below. The conservative
+/// **Default-on, conservative.** Relaxing the rules below, or disabling
+/// the hook, is a deliberate privacy decision. The conservative
 /// default exists because the alternative — a single forgotten log
 /// statement leaking a JWT to Sentry — is much worse than dropping a
 /// few extra fields you wanted to keep.
@@ -24,7 +24,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// masked, and every other header value and every env value is masked like
 /// the text of the event. A tag named like a credential has its whole value
 /// masked and every other tag value is masked as text, and the text fields
-/// and the data of the user are masked like the rest of the event, so a fork
+/// and the data of the user are masked like the rest of the event, so code
 /// that sets an email as the user id or as a tag does not send it.
 ///
 /// Deterministic and free of external side effects, but **mutates the
@@ -85,9 +85,9 @@ SentryEvent sentryBeforeSend(SentryEvent event) {
 /// PII / token scrubber for Sentry breadcrumbs. Runs as the SDK's
 /// `beforeBreadcrumb` hook (see [installSentryScrubbers]) on every
 /// breadcrumb: those of `SentryAnalyticsService` and the navigation
-/// breadcrumbs. It also covers the http and ui breadcrumbs a fork adds
-/// through `sentry_dio` or `SentryUserInteractionWidget`, and a printed line
-/// if a fork turns print breadcrumbs back on. Masks emails, JWTs and the
+/// breadcrumbs. It also covers the http and ui breadcrumbs that adding
+/// `sentry_dio` or `SentryUserInteractionWidget` would bring, and a printed
+/// line if print breadcrumbs are turned back on. Masks emails, JWTs and the
 /// other secrets [maskSecrets] finds in the message and in every string of
 /// the data, at any depth, and the value of every credential key of the
 /// data.

@@ -43,11 +43,11 @@ void configureNativeSdkStart(SentryFlutterOptions options, {bool? hostStarts}) {
 /// every event while it looks configured. The host starts it only for a
 /// `lib/main/main_prod.dart` build with a `SENTRY_DSN` (the gate in
 /// `android/app/build.gradle.kts`), the Dart side for the prod environment
-/// with one (`AppConfig.sentryDsn`), and the two gates disagree when a fork
-/// changes one of them. A debug or profile build then throws a [StateError]
+/// with one (`AppConfig.sentryDsn`), and the two gates disagree when a change
+/// touches only one of them. A debug or profile build then throws a [StateError]
 /// that names the mismatch; a release build logs it and returns false, so the
 /// app runs without Sentry. A host app that does not answer on
-/// [nativeSentryChannelName], such as a fork without the handler, or whose
+/// [nativeSentryChannelName], such as a host without the handler, or whose
 /// handler fails, is treated the same way.
 Future<bool> nativeSdkReady({
   bool? hostStarts,

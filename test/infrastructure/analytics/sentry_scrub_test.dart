@@ -120,7 +120,7 @@ void main() {
     expect(result.tags, {'otp': '[REDACTED]', 'login': '[REDACTED_EMAIL]', 'event.origin': 'flutter'});
   });
 
-  // Regression: the user was sent as it was, so a fork that calls setUserId with an email sent the address.
+  // Regression: the user was sent as it was, so code that calls setUserId with an email sent the address.
   test('sentryBeforeSend masks the user like the text and the data of the event', () {
     final event = SentryEvent(
       user: SentryUser(
@@ -265,8 +265,8 @@ void main() {
   // Regression: the exception values were masked for JWTs only, so an email in one reached Sentry. ApiClient puts the
   // error response body into the exception it throws, and a Spring error body names the request path, such as
   // /api/admin/users/{login}, where the login is the email the user registered with. The message was masked for JWTs
-  // only too and the request body only lost its secret keys, but nothing in the app fills either. A fork can fill the
-  // message through Sentry.captureMessage and the body through an HTTP integration such as sentry_dio.
+  // only too and the request body only lost its secret keys, but nothing in the app fills either. A later change can
+  // fill the message through Sentry.captureMessage and the body through an HTTP integration such as sentry_dio.
   group('sentryBeforeSend - emails', () {
     const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart';
 
@@ -366,7 +366,7 @@ void main() {
   // Regression: no beforeBreadcrumb was installed, so a breadcrumb that did not come from AppLogger output reached
   // Sentry as it was: the breadcrumbs of SentryAnalyticsService, the navigation breadcrumbs and debugPrint lines. The
   // http and ui breadcrumbs below
-  // stand for the ones a fork adds through sentry_dio or SentryUserInteractionWidget.
+  // stand for the ones that adding sentry_dio or SentryUserInteractionWidget would bring.
   group('sentryBeforeBreadcrumb', () {
     const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart';
 

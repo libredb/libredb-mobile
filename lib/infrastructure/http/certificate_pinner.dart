@@ -11,11 +11,10 @@ import 'package:crypto/crypto.dart';
 /// survives certificate rotation as long as the keypair is reused.
 /// Extracting SPKI bytes from an X.509 cert requires ASN.1 parsing
 /// (e.g. via `asn1lib`). We start with the full-cert hash to keep the
-/// dep surface small and the implementation auditable. Forks needing
-/// rotation-resilient pinning should swap to SPKI in a follow-up — the
-/// pin storage shape (base64 SHA-256 string in
-/// `Environment.certificatePins`) stays identical; only this
-/// computation changes.
+/// dep surface small and the implementation auditable. Rotation-resilient
+/// pinning needs a follow-up that swaps to SPKI; the pin storage shape
+/// (base64 SHA-256 string in `Environment.certificatePins`) stays
+/// identical; only this computation changes.
 ///
 /// **Comparison is constant-time-equivalent.** Both inputs are base64
 /// strings of the same length; Dart's String `==` is non-secret-safe
@@ -37,8 +36,8 @@ class CertificatePinner {
     return false;
   }
 
-  /// Compute the base64-encoded SHA-256 of `certDer`. The canonical
-  /// pin format used by the OpenSSL one-liner in docs/template.md.
+  /// Compute the base64-encoded SHA-256 of `certDer`, the pin format of
+  /// `openssl x509 -outform der | openssl dgst -sha256 -binary | base64`.
   static String computePin(Uint8List certDer) {
     return base64.encode(sha256.convert(certDer).bytes);
   }
