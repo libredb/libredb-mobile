@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:clock/clock.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -69,6 +71,53 @@ void main() {
       });
       await bloc.close();
     });
+  });
+
+  // The second refresh restarts the first while it shows the spinner, so the rows must not depend on the state it saw.
+  test('keeps the loaded connections when two refreshes overlap while the device is offline', () async {
+    when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed));
+    await withClock(Clock.fixed(loadedAt), () async {
+      final bloc = build();
+      bloc.add(const ConnectionListRequested());
+      await bloc.stream.firstWhere((state) => state is ConnectionListLoaded);
+      const offline = Failure<ManagedConnections>(NetworkError('No Internet connection', code: 'network.offline'));
+      final firstAnswer = Completer<Result<ManagedConnections>>();
+      var calls = 0;
+      when(() => repository.listManaged()).thenAnswer((_) => ++calls == 1 ? firstAnswer.future : Future.value(offline));
+
+      final settled = bloc.stream.firstWhere((state) => state is! ConnectionListLoading);
+      bloc.add(const ConnectionListRequested());
+      await bloc.stream.firstWhere((state) => state is ConnectionListLoading);
+      bloc.add(const ConnectionListRequested());
+
+      expect(
+        await settled,
+        ConnectionListLoaded(connections: connections, cacheHint: const Duration(seconds: 10), loadedAt: loadedAt),
+      );
+      await bloc.close();
+    });
+  });
+
+  test('does not bring back connections that a failed refresh took off the screen', () async {
+    when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed));
+    final bloc = build();
+    bloc.add(const ConnectionListRequested());
+    await bloc.stream.firstWhere((state) => state is ConnectionListLoaded);
+    when(() => repository.listManaged()).thenAnswer((_) async => const Failure(NetworkError('reset')));
+    bloc.add(const ConnectionListRequested());
+    await bloc.stream.firstWhere((state) => state is ConnectionListFailure);
+    when(
+      () => repository.listManaged(),
+    ).thenAnswer((_) async => Failure(NetworkError('No Internet connection', code: AppErrorCode.networkOffline.key)));
+
+    final states = bloc.stream.take(2).toList();
+    bloc.add(const ConnectionListRequested());
+
+    expect(await states, const [
+      ConnectionListLoading(),
+      ConnectionListFailure(errorCode: AppErrorCode.networkOffline),
+    ]);
+    await bloc.close();
   });
 
   test('fails a refresh for any other reason even with connections loaded', () async {
