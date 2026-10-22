@@ -59,23 +59,50 @@ void main() {
       expect(sent.receiveTimeout, studioProbeTimeout);
     });
 
-    test('liveness fails with a network error when Studio cannot be reached', () async {
-      adapter.replies.addAll([for (var i = 0; i < 4; i++) const SocketException('Network is unreachable')]);
+    test('liveness fails with a network error after one request when Studio cannot be reached', () async {
+      adapter.replies.add(const SocketException('Network is unreachable'));
 
       final result = await repository.liveness();
 
       expect(result, isA<Failure<void>>().having((f) => f.error, 'error', isA<NetworkError>()));
+      expect(adapter.requests, hasLength(1), reason: 'the probe is not retried');
     });
 
-    test('liveness fails with a timeout error when Studio does not answer in time', () async {
-      adapter.replies.addAll([
-        for (var i = 0; i < 4; i++)
-          DioException(requestOptions: RequestOptions(), type: DioExceptionType.connectionTimeout),
-      ]);
+    // The probe timeout is the whole wait: a Studio that accepts the connection and hangs shows the page after it.
+    test('liveness fails with a timeout error after one request when Studio does not answer in time', () async {
+      adapter.replies.add(DioExceptionType.receiveTimeout);
 
       final result = await repository.liveness();
 
       expect(result, isA<Failure<void>>().having((f) => f.error, 'error', isA<TimeoutError>()));
+      expect(adapter.requests, hasLength(1), reason: 'the probe is not retried');
+    });
+
+    // Regression: the failed checks of a starting Studio opened the /health circuit, so Retry kept failing with
+    // CircuitBreakerOpenException for 30 seconds after Studio was up, without sending a request.
+    test('liveness reaches Studio as soon as it answers after earlier checks failed', () async {
+      adapter.replies.addAll([for (var i = 0; i < 8; i++) const SocketException('Connection refused')]);
+      for (var i = 0; i < 8; i++) {
+        expect(await repository.liveness(), isA<Failure<void>>());
+      }
+      adapter.replies.add((
+        200,
+        '{"status":"healthy","timestamp":"2026-10-22T15:00:55.811Z","service":"libredb-studio"}',
+      ));
+
+      expect(await repository.liveness(), isA<Success<void>>());
+      expect(adapter.requests, hasLength(9));
+      expect(ResilienceInterceptor.instance.circuitBreakers['/health']?.failureCount ?? 0, 0);
+    });
+
+    test('readiness is sent once and not counted when Studio cannot be reached', () async {
+      adapter.replies.addAll([for (var i = 0; i < 6; i++) const SocketException('Connection refused')]);
+      for (var i = 0; i < 6; i++) {
+        expect(await repository.readiness(), isA<Failure<StudioReadiness>>());
+      }
+
+      expect(adapter.requests, hasLength(6));
+      expect(ResilienceInterceptor.instance.circuitBreakers['/ready']?.failureCount ?? 0, 0);
     });
 
     // A captive portal or another server at the configured address answers 200 too.
@@ -174,8 +201,8 @@ const _prodConfig = AppConfig(
   idleTimeout: null,
 );
 
-/// Answers each request with the next queued status code and JSON body, or throws the next queued error, and keeps
-/// the requests it was sent.
+/// Answers each request with the next queued status code and JSON body, or throws the next queued error (a
+/// [DioExceptionType] for a [DioException] on the request), and keeps the requests it was sent.
 class _QueuedAdapter implements HttpClientAdapter {
   final List<Object> replies = [];
   final List<RequestOptions> requests = [];
@@ -195,6 +222,8 @@ class _QueuedAdapter implements HttpClientAdapter {
           Headers.contentTypeHeader: [Headers.jsonContentType],
         },
       ),
+      // Dio reports a timeout with the options of the request it sent.
+      final DioExceptionType type => throw DioException(requestOptions: options, type: type),
       final Object error => throw error,
     };
   }

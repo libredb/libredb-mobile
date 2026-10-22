@@ -51,6 +51,11 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 ///   `GOVERNANCE_UNAVAILABLE` on every poll therefore never opens the circuit: the user keeps seeing Studio's
 ///   'temporarily unavailable' instead of a circuit-open error.
 ///
+/// **Bypass:** a request whose extra holds [bypassExtraKey] set to true is sent once, is never rejected by an open
+/// circuit, and records neither a success nor a failure. Studio's health probes use it: their failure is the answer the
+/// user must see, and a user's Retry must reach Studio as soon as it is back, not wait out a circuit the failed probes
+/// opened.
+///
 /// Must be added to the interceptor chain AFTER [AuthInterceptor] so that
 /// the auth token is present, and BEFORE [MockInterceptor] so that
 /// resilience logic wraps the actual network call.
@@ -60,6 +65,12 @@ class ResilienceInterceptor extends Interceptor {
 
   static final ResilienceInterceptor _instance = ResilienceInterceptor();
   static ResilienceInterceptor get instance => _instance;
+
+  /// The extra key that sends a request past retries and the circuit breaker; see the class documentation.
+  static const String bypassExtraKey = 'resilience.bypass';
+
+  /// Whether [options] bypasses retries and the circuit breaker ([bypassExtraKey]).
+  static bool isBypassed(RequestOptions options) => options.extra[bypassExtraKey] == true;
 
   /// Maximum number of retry attempts for retryable errors.
   final int maxRetries;
@@ -122,7 +133,7 @@ class ResilienceInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (CacheInterceptor.isCacheOnly(options)) {
+    if (CacheInterceptor.isCacheOnly(options) || isBypassed(options)) {
       handler.next(options);
       return;
     }
@@ -162,6 +173,11 @@ class ResilienceInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+    if (isBypassed(response.requestOptions)) {
+      handler.next(response);
+      return;
+    }
+
     final endpointKey = _extractEndpointKey(response.requestOptions.path);
     final breaker = _getBreaker(endpointKey);
     breaker.recordSuccess();
@@ -172,6 +188,12 @@ class ResilienceInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    // A bypassing request is sent once and its failure is not counted: see [bypassExtraKey].
+    if (isBypassed(err.requestOptions)) {
+      handler.next(err);
+      return;
+    }
+
     // ConnectivityInterceptor rejected the request because the device is offline, so it was never sent: a retry would
     // only delay the cached answer, and the endpoint did not fail. The request interceptors after it never ran either,
     // so a retry would also go out without the Authorization header.

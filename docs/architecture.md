@@ -84,7 +84,8 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
 
 - `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, and when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`).
 - A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, in place of the session restore and the router.
-  It fails on no connection (an offline device fails at once), a timeout of 10 seconds (`studioProbeTimeout`) after the usual retries, an untrusted certificate (the page adds why), or an answer that is not Studio's.
+  It fails on no connection (an offline device fails at once), a timeout of 10 seconds (`studioProbeTimeout`), an untrusted certificate (the page adds why), or an answer that is not Studio's.
+  Both probes bypass the client's retries and circuit breaker (`bypassResilience`): one check sends one request, so 10 seconds is the whole wait, and a Retry reaches Studio as soon as it answers again.
 - The check never touches the session: a Retry that reaches Studio mounts the router again, signed in as before.
   The app is not held back while the check runs.
 - Both endpoints need no session and spend no rate-limit slot, so the app sends them without a token (`publicEndpoints`).

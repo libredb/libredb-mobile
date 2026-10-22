@@ -644,6 +644,34 @@ void main() {
       });
     });
 
+    // Studio's health probes: the user's Retry must reach Studio as soon as it is back.
+    group('a request that bypasses resilience', () {
+      final bypass = Options(extra: {ResilienceInterceptor.bypassExtraKey: true});
+
+      test('is sent once on a refused connection and not counted', () async {
+        final adapter = _FakeHttpClientAdapter([const SocketException('Connection refused'), 200]);
+        final (dio, interceptor) = _studioDio(adapter, failureThreshold: 1);
+
+        await expectLater(dio.get<String>('/health', options: bypass), throwsA(isA<DioException>()));
+
+        expect(adapter.requestCount, 1);
+        expect(interceptor.circuitBreakers['/health']?.failureCount ?? 0, 0);
+      });
+
+      test('is sent while the circuit of its endpoint is open', () async {
+        final adapter = _FakeHttpClientAdapter([const SocketException('Connection refused'), 200]);
+        final (dio, interceptor) = _studioDio(adapter, maxRetries: 0, failureThreshold: 1);
+        await expectLater(dio.get<String>('/health'), throwsA(isA<DioException>()));
+        expect(interceptor.circuitBreakers['/health']!.state, CircuitBreakerState.open);
+
+        final response = await dio.get<String>('/health', options: bypass);
+
+        expect(response.statusCode, 200);
+        expect(adapter.requestCount, 2);
+        expect(interceptor.circuitBreakers['/health']!.state, CircuitBreakerState.open, reason: 'not recorded');
+      });
+    });
+
     group('per-endpoint circuit breakers', () {
       test('should maintain separate breakers for different endpoints', () async {
         final interceptor = ResilienceInterceptor(

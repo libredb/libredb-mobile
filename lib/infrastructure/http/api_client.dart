@@ -233,12 +233,15 @@ class ApiClient {
   /// [acceptedStatuses] are statuses outside 2xx that answer this request with the response instead of an
   /// [AppException], for an endpoint whose error status carries a body the caller reads, such as Studio's 503
   /// readiness answers. Such a response is neither retried nor counted against the circuit breaker.
+  /// [bypassResilience] sends the request once, past an open circuit, and leaves the circuit breaker untouched
+  /// ([ResilienceInterceptor.bypassExtraKey]), for a probe whose failure is itself the answer, such as Studio's health.
   Future<Response<String>> get(
     String path, {
     String? pathParams,
     Map<String, dynamic>? queryParams,
     Duration? timeout,
     Set<int> acceptedStatuses = const {},
+    bool bypassResilience = false,
   }) async {
     final fullPath = pathParams != null ? '$path/$pathParams' : path;
     try {
@@ -251,7 +254,12 @@ class ApiClient {
           validateStatus: acceptedStatuses.isEmpty
               ? null
               : (status) => status != null && ((status >= 200 && status < 300) || acceptedStatuses.contains(status)),
-          extra: {'_basePath': path, '_pathParams': pathParams, '_queryParams': queryParams},
+          extra: {
+            '_basePath': path,
+            '_pathParams': pathParams,
+            '_queryParams': queryParams,
+            if (bypassResilience) ResilienceInterceptor.bypassExtraKey: true,
+          },
         ),
       );
     } on DioException catch (e) {

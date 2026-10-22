@@ -8,6 +8,10 @@ import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 
 /// Studio's liveness and readiness endpoints. The paths are relative to `PROD_API_URL`, which ends in Studio's `/api`.
+///
+/// Both probes bypass the client's retries and circuit breaker: each check sends one request, so [studioProbeTimeout]
+/// is the whole wait, and a Retry reaches Studio as soon as it answers again instead of failing on a circuit that the
+/// checks of a starting Studio opened.
 class StudioStatusRepository implements IStudioStatusRepository {
   StudioStatusRepository(this._apiClient);
 
@@ -18,7 +22,7 @@ class StudioStatusRepository implements IStudioStatusRepository {
   @override
   Future<Result<void>> liveness() async {
     try {
-      final response = await _apiClient.get('/health', timeout: studioProbeTimeout);
+      final response = await _apiClient.get('/health', timeout: studioProbeTimeout, bypassResilience: true);
       StudioStatusJson.liveness(ApiClient.decodeUTF8(response.data!));
       _log.debug('liveness: Studio answers');
       return const Success(null);
@@ -33,7 +37,12 @@ class StudioStatusRepository implements IStudioStatusRepository {
   @override
   Future<Result<StudioReadiness>> readiness() async {
     try {
-      final response = await _apiClient.get('/ready', timeout: studioProbeTimeout, acceptedStatuses: const {503});
+      final response = await _apiClient.get(
+        '/ready',
+        timeout: studioProbeTimeout,
+        acceptedStatuses: const {503},
+        bypassResilience: true,
+      );
       final readiness = StudioStatusJson.readiness(ApiClient.decodeUTF8(response.data!));
       _log.debug('readiness: {}', [readiness.runtimeType]);
       return Success(readiness);

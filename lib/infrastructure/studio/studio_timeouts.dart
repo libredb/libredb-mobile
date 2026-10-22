@@ -11,5 +11,6 @@ const Duration studioStatementReceiveTimeout = Duration(seconds: 60 + 15);
 /// How long the app waits to connect to Studio and for the answer of `GET /api/health` and `GET /api/ready`.
 ///
 /// Both answer from Studio's memory and touch no database, so a Studio that has not answered in 10 seconds is treated
-/// as unreachable rather than kept waiting for the 30 seconds of an ordinary request.
+/// as unreachable rather than kept waiting for the 30 seconds of an ordinary request. The probes are sent once, without
+/// the client's retries, so this is the whole wait of one check.
 const Duration studioProbeTimeout = Duration(seconds: 10);
