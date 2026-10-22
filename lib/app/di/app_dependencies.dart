@@ -11,6 +11,8 @@ import 'package:flutter_bloc_advance/features/connections/data/repositories/conn
 import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:flutter_bloc_advance/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
@@ -159,6 +161,9 @@ class AppDependencies {
 
   /// Studio's read-only object routes.
   IObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) => ObjectBrowserRepository(apiClient);
+
+  /// Studio's statement routes.
+  ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient) => SqlEditorRepository(apiClient);
 
   IDynamicFormRepository createDynamicFormRepository(ApiClient apiClient) => DynamicFormRepository(apiClient);
 

@@ -9,6 +9,7 @@ import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_iden
 import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/authority_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/user_repository.dart';
@@ -74,6 +75,17 @@ void main() {
     'IObjectBrowserRepository.search': (client) =>
         ObjectBrowserRepository(client).search('seed:sales-db', term: 'order'),
     'IObjectBrowserRepository.scanKeys': (client) => ObjectBrowserRepository(client).scanKeys('seed:cache'),
+    'ISqlEditorRepository.run': (client) => SqlEditorRepository(client).run('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.runScript': (client) =>
+        SqlEditorRepository(client).runScript('seed:sales-db', 'select 1; select 2'),
+    'ISqlEditorRepository.cancel': (client) => SqlEditorRepository(client).cancel('seed:sales-db', 'q-1'),
+    'ISqlEditorRepository.beginTransaction': (client) => SqlEditorRepository(client).beginTransaction('seed:sales-db'),
+    'ISqlEditorRepository.runInTransaction': (client) =>
+        SqlEditorRepository(client).runInTransaction('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.commit': (client) => SqlEditorRepository(client).commit('seed:sales-db'),
+    'ISqlEditorRepository.rollback': (client) => SqlEditorRepository(client).rollback('seed:sales-db'),
+    'ISqlEditorRepository.transactionStatus': (client) =>
+        SqlEditorRepository(client).transactionStatus('seed:sales-db'),
     'IUserRepository.retrieve': (client) => UserRepository(client).retrieve('user-1'),
     'IUserRepository.create': (client) =>
         UserRepository(client).create(const UserEntity(login: 'new_user', email: 'new_user@sample.tech')),

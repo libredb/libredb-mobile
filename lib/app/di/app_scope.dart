@@ -15,6 +15,7 @@ import 'package:flutter_bloc_advance/app/theme/theme_bloc.dart';
 import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
 import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
 import 'package:flutter_bloc_advance/features/account/application/usecases/get_account_usecase.dart';
@@ -208,6 +209,9 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IObjectBrowserRepository>(
           create: (context) => dependencies.createObjectBrowserRepository(context.read<ApiClient>()),
+        ),
+        RepositoryProvider<ISqlEditorRepository>(
+          create: (context) => dependencies.createSqlEditorRepository(context.read<ApiClient>()),
         ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(

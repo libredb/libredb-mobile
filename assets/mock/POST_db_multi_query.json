@@ -1,0 +1,15 @@
+{
+  "rows": [{ "count": 2 }],
+  "fields": ["count"],
+  "rowCount": 1,
+  "executionTime": 21,
+  "multiStatement": true,
+  "statementCount": 3,
+  "executedCount": 3,
+  "hasError": true,
+  "statements": [
+    { "index": 0, "sql": "UPDATE orders SET status = 'paid' WHERE id = 2", "startLine": 1, "status": "success", "rowCount": 1, "executionTime": 6 },
+    { "index": 1, "sql": "SELECT count(*) FROM orders WHERE status = 'paid'", "startLine": 2, "status": "success", "rows": [{ "count": 2 }], "fields": ["count"], "rowCount": 1, "executionTime": 4 },
+    { "index": 2, "sql": "SELECT * FORM orders", "startLine": 3, "status": "error", "executionTime": 11, "error": "syntax error at or near \"FORM\"" }
+  ]
+}
