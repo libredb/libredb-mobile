@@ -101,7 +101,7 @@ For licensing, write to [info@libredb.org](mailto:info@libredb.org).
 ## License
 
 LibreDB Mobile is source-available under the [Elastic License 2.0](LICENSE), with SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ as the licensor.
-You may use, copy and modify it.
+You may use, copy, distribute and modify it.
 You may not provide it to third parties as a hosted or managed service, or alter, remove or obscure any licensing, copyright or other notices of the licensor.
 This is a summary: the [LICENSE](LICENSE) file holds the full terms.
 
