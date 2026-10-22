@@ -193,4 +193,5 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
 - Whether a dropped mobile connection cancels the statement on the server is not verified; the editor cancels explicitly.
 - Granting a connection needs an API in Platform that does not exist yet (milestone M5).
+- Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
 - Studio has no `/api/app/config`, so maintenance mode, forced updates and remote feature flags work only against the mock (milestone M6).
