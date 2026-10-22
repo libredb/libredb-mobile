@@ -2,7 +2,7 @@
 #
 # Fails if a template placeholder is left in a web build, and names each file and placeholder.
 #
-# web/ keeps __KEY__ placeholders for template users (README, "Customizing for Your Project"), and flutter build web
+# web/ keeps __KEY__ placeholders for template users (docs/template.md, "Customizing for Your Project"), and flutter build web
 # copies them into the build unchanged. lib/infrastructure/config/template_config.dart keeps them for the links the
 # app shows, and a build that gives no --dart-define value for one compiles its placeholder into main.dart.js. Run this
 # after scripts/fill_web_placeholders.sh and before publishing, so a placeholder without a value fails the deploy
@@ -44,7 +44,7 @@ if [ -n "$left" ]; then
     echo "error: template placeholders left in $build_dir:"
     printf '%s\n' "$left"
     echo "Give each one a value: in web/ for the web files, and with --dart-define or in" \
-      "lib/infrastructure/config/template_config.dart for main.dart.js (README, \"Customizing for Your Project\")." \
+      "lib/infrastructure/config/template_config.dart for main.dart.js (docs/template.md, \"Customizing for Your Project\")." \
       "The hosted demo takes its values from .github/pages/demo-values.env."
   } >&2
   exit 1

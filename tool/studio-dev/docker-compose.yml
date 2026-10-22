@@ -16,8 +16,8 @@
 # Sign in as admin / admin (realm role admin) or user / user (realm role user).
 # The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
 #
-# The Studio image needs the bearer channel of libredb/libredb-studio#1914. Until a release contains it, build the
-# image from that branch and point STUDIO_IMAGE at it (see docs/studio.md).
+# The Studio image needs the bearer channel of libredb/libredb-studio#1914, which no release has yet (1.0.0 does not).
+# Until one does, build the image from Studio's main branch and point STUDIO_IMAGE at it (see docs/studio.md).
 #
 # Unfit for production on purpose: start-dev with the embedded H2 store (all state is lost when the containers are
 # removed), a short-lived self-signed CA, and the client secret, the user passwords and the Keycloak admin account

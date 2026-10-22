@@ -38,7 +38,7 @@ class CertificatePinner {
   }
 
   /// Compute the base64-encoded SHA-256 of `certDer`. The canonical
-  /// pin format used by the OpenSSL one-liner in the README.
+  /// pin format used by the OpenSSL one-liner in docs/template.md.
   static String computePin(Uint8List certDer) {
     return base64.encode(sha256.convert(certDer).bytes);
   }
