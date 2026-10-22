@@ -50,6 +50,7 @@ import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.d
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 
 class AppScope extends StatelessWidget {
   const AppScope({
@@ -266,6 +267,11 @@ class AppScope extends StatelessWidget {
           // tells it whose they are from StudioIdentityCubit.
           BlocProvider<FavoriteConnectionsBloc>(
             create: (context) => FavoriteConnectionsBloc(repository: context.read<IFavoriteConnectionsRepository>()),
+          ),
+          // Above the router, so the shell, the connection list and every page that works on a connection share one;
+          // AppSessionListeners tells it who signed in and closes it at the session's end.
+          BlocProvider<ActiveConnectionCubit>(
+            create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

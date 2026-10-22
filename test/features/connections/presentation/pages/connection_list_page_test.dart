@@ -11,9 +11,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -35,6 +37,7 @@ import 'package:libredb_mobile/features/studio_status/application/studio_status_
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -72,10 +75,17 @@ void main() {
   late StreamController<ConnectivityState> connectivityChanges;
   late int outagesReported;
   late int recoveriesReported;
+  late MockIActiveConnectionStore activeStore;
+  late ActiveConnectionCubit active;
 
   setUp(() {
     outagesReported = 0;
     recoveriesReported = 0;
+    activeStore = MockIActiveConnectionStore();
+    when(() => activeStore.read(any())).thenAnswer((_) async => null);
+    when(() => activeStore.write(any(), any())).thenAnswer((_) async {});
+    active = ActiveConnectionCubit(store: activeStore);
+    addTearDown(active.close);
     repository = MockIConnectionRepository();
     providerMeta = MockIProviderMetaRepository();
     when(() => repository.fetchPolicy()).thenAnswer((_) async => const Success(_ungoverned));
@@ -105,7 +115,11 @@ void main() {
   void answer(ManagedConnections managed) =>
       when(() => repository.listManaged()).thenAnswer((_) async => Success(managed));
 
-  /// The page under the offline banner, as the shell shows it, fed by a fake ConnectivityCubit.
+  /// The router of the page [pumpPage] showed last.
+  late GoRouter router;
+
+  /// The page under the offline banner, as the shell shows it, fed by a fake ConnectivityCubit, with the favorites of
+  /// [subject] above the router as the app has them. A tap on a connection goes to a Browse placeholder.
   Future<void> pumpPage(
     WidgetTester tester, {
     Size size = const Size(400, 900),
@@ -116,6 +130,48 @@ void main() {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    router = GoRouter(
+      initialLocation: ApplicationRoutesConstants.connectionList,
+      routes: [
+        GoRoute(
+          path: ApplicationRoutesConstants.connectionList,
+          builder: (context, state) => Scaffold(
+            body: Column(
+              children: [
+                const ConnectivityBanner(),
+                Expanded(
+                  child: MultiBlocProvider(
+                    providers: [
+                      // The shell asks for the policy when it opens.
+                      BlocProvider(create: (_) => ConnectionPolicyCubit(repository: repository)..load()),
+                      BlocProvider(
+                        create: (_) => ConnectionListBloc(
+                          listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository),
+                        ),
+                      ),
+                      BlocProvider(
+                        create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
+                      ),
+                    ],
+                    child: GovernanceStatus(
+                      reportOutage: () => outagesReported++,
+                      reportRecovered: () => recoveriesReported++,
+                      noticeBuilder: (_) => const Text(_outageNotice),
+                      child: const ConnectionListPage(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        GoRoute(
+          path: ApplicationRoutesConstants.browse,
+          builder: (context, state) => const Scaffold(body: Text('browse placeholder')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
@@ -126,9 +182,16 @@ void main() {
           providers: [
             BlocProvider<ConnectivityCubit>.value(value: connectivity),
             BlocProvider<StudioStatusBloc>.value(value: studioStatus),
+            BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider(
+              create: (_) =>
+                  FavoriteConnectionsBloc(repository: FavoriteConnectionsRepository())
+                    ..add(FavoriteConnectionsSubjectChanged(subject)),
+            ),
           ],
           child: AppConnectivityScope(
-            child: MaterialApp(
+            child: MaterialApp.router(
+              routerConfig: router,
               theme: theme ?? AppTheme.light(),
               localizationsDelegates: const [
                 S.delegate,
@@ -141,40 +204,6 @@ void main() {
                 data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
                 child: child!,
               ),
-              home: Scaffold(
-                body: Column(
-                  children: [
-                    const ConnectivityBanner(),
-                    Expanded(
-                      child: MultiBlocProvider(
-                        providers: [
-                          // The shell asks for the policy when it opens.
-                          BlocProvider(create: (_) => ConnectionPolicyCubit(repository: repository)..load()),
-                          BlocProvider(
-                            create: (_) => ConnectionListBloc(
-                              listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository),
-                            ),
-                          ),
-                          BlocProvider(
-                            create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
-                          ),
-                          BlocProvider(
-                            create: (_) =>
-                                FavoriteConnectionsBloc(repository: FavoriteConnectionsRepository())
-                                  ..add(FavoriteConnectionsSubjectChanged(subject)),
-                          ),
-                        ],
-                        child: GovernanceStatus(
-                          reportOutage: () => outagesReported++,
-                          reportRecovered: () => recoveriesReported++,
-                          noticeBuilder: (_) => const Text(_outageNotice),
-                          child: const ConnectionListPage(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
         ),
@@ -182,6 +211,15 @@ void main() {
     );
     await tester.pump();
     await tester.pump();
+  }
+
+  /// Taps [target], which opens its connection in the Browse tab, and comes back to the connection list.
+  Future<void> openAndComeBack(WidgetTester tester, Finder target) async {
+    await tester.tap(target);
+    await tester.pumpAndSettle();
+    expect(find.text('browse placeholder'), findsOneWidget);
+    router.go(ApplicationRoutesConstants.connectionList);
+    await tester.pumpAndSettle();
   }
 
   Finder row(String id) => find.byKey(ValueKey('connection-row-$id'));
@@ -296,7 +334,7 @@ void main() {
     expect(find.descendant(of: row('seed:sales-prod'), matching: find.byType(ReadOnlyChip)), findsOneWidget);
     expect(find.byType(ReadOnlyChip), findsOneWidget);
 
-    await tester.tap(row('seed:sales-prod'));
+    await tester.longPress(row('seed:sales-prod'));
     await tester.pumpAndSettle();
 
     expect(find.descendant(of: find.byType(BottomSheet), matching: find.byType(ReadOnlyChip)), findsOneWidget);
@@ -465,14 +503,6 @@ void main() {
     verifyZeroInteractions(providerMeta);
   }
 
-  testWidgets('tapping a row opens its details, without checking the connection', (tester) async {
-    answer(_mockAnswer());
-    await pumpPage(tester);
-
-    await tester.tap(row('seed:billing-mysql'));
-    await expectBillingDetails(tester);
-  });
-
   testWidgets('a long press on a row opens its details', (tester) async {
     answer(_mockAnswer());
     await pumpPage(tester);
@@ -566,10 +596,7 @@ void main() {
       await pumpPage(tester, subject: _alice);
       await tester.tap(star('seed:sales-postgres'));
       await tester.pump();
-      await tester.tap(row('seed:erp-oracle'));
-      await tester.pumpAndSettle();
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
+      await openAndComeBack(tester, row('seed:erp-oracle'));
       expect(favoritesHeader, findsOneWidget);
       expect(recent('seed:erp-oracle'), findsOneWidget);
 
@@ -592,10 +619,9 @@ void main() {
       expect(find.byKey(const ValueKey('connection-recent')), findsNothing);
 
       for (final id in ['seed:sales-postgres', 'seed:billing-mysql', 'seed:erp-oracle', 'seed:catalog-mongo']) {
-        await tester.tap(row(id));
+        await tester.ensureVisible(row(id));
         await tester.pumpAndSettle();
-        await tester.tapAt(const Offset(10, 10));
-        await tester.pumpAndSettle();
+        await openAndComeBack(tester, row(id));
       }
 
       final strip = find.byKey(const ValueKey('connection-recent'));
@@ -611,8 +637,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(recent('seed:billing-mysql'));
       await tester.pumpAndSettle();
-      expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('Billing (MySQL)')), findsOneWidget);
-      await tester.tapAt(const Offset(10, 10));
+      expect(find.text('browse placeholder'), findsOneWidget);
+      expect(active.state.connection?.id, 'seed:billing-mysql');
+      router.go(ApplicationRoutesConstants.connectionList);
       await tester.pumpAndSettle();
       expect(
         tester.getTopLeft(recent('seed:billing-mysql')).dx,
@@ -668,7 +695,7 @@ void main() {
       answer(_mockAnswer());
       await pumpPage(tester);
 
-      await tester.tap(row('seed:erp-oracle'));
+      await tester.longPress(row('seed:erp-oracle'));
       await tester.pumpAndSettle();
       final sheetStar = find.descendant(
         of: find.byType(BottomSheet),
@@ -685,6 +712,28 @@ void main() {
       expect(favoritesHeader, findsOneWidget);
       expect(rowIds(tester).first, 'seed:erp-oracle');
     });
+  });
+
+  testWidgets('marks the active connection with a dot', (tester) async {
+    answer(_mockAnswer());
+    active.select(_mockAnswer().connections.firstWhere((c) => c.id == 'seed:catalog-mongo'));
+    await pumpPage(tester);
+
+    expect(tester.getSemantics(row('seed:catalog-mongo')).label, contains(S.current.connection_active));
+    expect(tester.getSemantics(row('seed:billing-mysql')).label, isNot(contains(S.current.connection_active)));
+  });
+
+  testWidgets('hands each list Studio answers to the active connection, which vanishes when it is gone', (
+    tester,
+  ) async {
+    active.select(const StudioConnection(id: 'seed:revoked', name: 'Revoked', type: 'pg'));
+    answer(_mockAnswer());
+    await pumpPage(tester);
+
+    expect(
+      active.state,
+      const ActiveConnectionVanished(StudioConnection(id: 'seed:revoked', name: 'Revoked', type: 'pg')),
+    );
   });
 
   testWidgets('never offers to add a connection', (tester) async {
@@ -913,10 +962,7 @@ void main() {
       await pumpPage(tester);
       await tester.tap(star('seed:sales'));
       await tester.pump();
-      await tester.tap(row('seed:ledger'));
-      await tester.pumpAndSettle();
-      Navigator.of(tester.element(find.byKey(const ValueKey('connection-check')))).pop();
-      await tester.pumpAndSettle();
+      await openAndComeBack(tester, row('seed:ledger'));
       expect(recent('seed:ledger'), findsOneWidget);
       when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
 
@@ -928,9 +974,10 @@ void main() {
       await tester.tap(star('seed:sales'), warnIfMissed: false);
       await tester.pump();
       expect(header('favorites'), findsOneWidget);
-      await tester.tap(row('seed:ledger'), warnIfMissed: false);
+      await tester.tap(row('seed:sales'), warnIfMissed: false);
       await tester.pump(const Duration(seconds: 1));
-      expect(find.byKey(const ValueKey('connection-check')), findsNothing);
+      expect(find.text('browse placeholder'), findsNothing);
+      expect(active.state.connection?.id, 'seed:ledger');
     });
 
     testWidgets('the first list of a page clears an outage that a page closed during it left behind', (tester) async {

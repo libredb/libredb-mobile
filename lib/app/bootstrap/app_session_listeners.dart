@@ -16,6 +16,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 
 class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
@@ -149,6 +150,28 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             }
           },
         ),
+        // Studio's answer names the subject the active connection is remembered for.
+        BlocListener<StudioIdentityCubit, StudioIdentityState>(
+          listenWhen: (previous, current) => current is StudioIdentityLoaded,
+          listener: (context, state) =>
+              context.read<ActiveConnectionCubit>().signedIn((state as StudioIdentityLoaded).identity.subject),
+        ),
+        // A switch drops the cached object answers past their time and keeps the fresh ones, so going back to a
+        // connection soon sends no request.
+        BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
+          listenWhen: (previous, current) =>
+              current.connection != null && previous.connection?.id != current.connection!.id,
+          listener: (context, state) => context.read<CachedObjectBrowserRepository>().evictExpired(),
+        ),
+        // A vanished connection loses every cached answer, so a grant given back later is read afresh.
+        BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
+          listenWhen: (previous, current) => current is ActiveConnectionVanished,
+          listener: (context, state) {
+            final id = (state as ActiveConnectionVanished).vanished.id;
+            context.read<CachedObjectBrowserRepository>().invalidate(id);
+            context.read<CachedProviderMetaRepository>().invalidate(id);
+          },
+        ),
         BlocListener<SessionCubit, SessionState>(
           listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
           listener: (context, state) {
@@ -186,13 +209,14 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
 
   /// The app-scoped blocs and caches outlive the session, so the next user to sign in would see what they hold about
   /// the one who signed out: the sign-in form state, a password shown in plain text among it, who Studio said the user
-  /// was, with the role, what it allowed them, whether it refused their account, and the provider-meta and object
-  /// browser answers kept in memory.
+  /// was, with the role, what it allowed them, whether it refused their account, the connection they had open, and
+  /// the provider-meta and object browser answers kept in memory.
   void _forgetSignedOutUser(BuildContext context) {
     context.read<LoginBloc>().add(const LoginReset());
     context.read<StudioIdentityCubit>().clear();
     context.read<ConnectionPolicyCubit>().clear();
     context.read<StudioAccountRefusalCubit>().clear();
+    context.read<ActiveConnectionCubit>().clear();
     context.read<CachedObjectBrowserRepository>().clear();
     context.read<CachedProviderMetaRepository>().clear();
   }

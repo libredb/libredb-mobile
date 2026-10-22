@@ -365,5 +365,17 @@
   "pick_connection_first_description": "Open a connection from the Connections tab to use this tab.",
   "@pick_connection_first_description": {},
   "account_refusal_title": "Your account has no access to Studio",
-  "@account_refusal_title": {}
+  "@account_refusal_title": {},
+  "connection_vanished": "{name} is no longer available",
+  "@connection_vanished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "connection_switcher_title": "Switch connection",
+  "@connection_switcher_title": {},
+  "connection_active": "Active connection",
+  "@connection_active": {}
 }

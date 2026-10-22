@@ -14,7 +14,10 @@ class TopBarWidget extends StatelessWidget {
   /// Returns from a page that is no tab; null on a tab, which has no back arrow.
   final VoidCallback? onBack;
 
-  const TopBarWidget({super.key, required this.title, this.onBack});
+  /// Shown in place of [title] when set, such as the active connection on a tab that works on it.
+  final Widget? titleWidget;
+
+  const TopBarWidget({super.key, required this.title, this.onBack, this.titleWidget});
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +36,14 @@ class TopBarWidget extends StatelessWidget {
           if (back != null) BackButton(onPressed: back) else const SizedBox(width: 8),
           // Takes the width that the avatar leaves, and is shortened when that is too little.
           Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child:
+                titleWidget ??
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
           ),
           IconButton(
             key: profileButtonKey,

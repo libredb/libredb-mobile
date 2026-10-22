@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/bottom_nav/bottom_nav_widget.dart';
+import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 
 /// The frame around every signed-in page, at every screen width: the one top bar with the page title above it, and
 /// below it the bottom navigation bar on a tab, or a back arrow in the top bar on any other page, such as the settings.
+/// On the Browse tab the title is the active connection, which opens the connection switcher.
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({super.key, required this.child, required this.activeRoute});
 
@@ -16,14 +18,17 @@ class ResponsiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tab = _tabOf(activeRoute);
+    final title = _routeToTitle(activeRoute, S.of(context));
     return Scaffold(
       // The Scaffold already keeps the body above the bottom navigation bar, which keeps clear of the bottom inset.
       body: SafeArea(
         child: Column(
           children: [
             TopBarWidget(
-              title: _routeToTitle(activeRoute, S.of(context)),
+              title: title,
               onBack: tab == null ? () => _back(context) : null,
+              // Only the Browse tab works on the active connection for now; the SQL tab follows in M5.
+              titleWidget: tab == ApplicationRoutesConstants.browse ? ActiveConnectionTitle(fallback: title) : null,
             ),
             Expanded(child: child),
           ],

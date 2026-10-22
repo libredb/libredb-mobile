@@ -1209,6 +1209,21 @@ class S {
   String get account_refusal_title {
     return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);
   }
+
+  /// `{name} is no longer available`
+  String connection_vanished(String name) {
+    return Intl.message('$name is no longer available', name: 'connection_vanished', desc: '', args: [name]);
+  }
+
+  /// `Switch connection`
+  String get connection_switcher_title {
+    return Intl.message('Switch connection', name: 'connection_switcher_title', desc: '', args: []);
+  }
+
+  /// `Active connection`
+  String get connection_active {
+    return Intl.message('Active connection', name: 'connection_active', desc: '', args: []);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

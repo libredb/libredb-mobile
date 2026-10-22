@@ -41,7 +41,10 @@ enum StorageKeys {
 
   /// The starred and recently opened connections of each subject that signed in on this device, as one JSON object
   /// keyed by the identity provider's subject; see `FavoriteConnectionsRepository`.
-  connectionFavorites('connection_favorites');
+  connectionFavorites('connection_favorites'),
+
+  /// The connection each signed-in user had open last, by a hash of the identity provider's subject.
+  activeConnection('active_connection');
 
   const StorageKeys(this.key);
 
@@ -57,6 +60,7 @@ enum StorageKeys {
     // Kept per subject, so a sign-out keeps them for the next sign-in of the same account and another account never
     // reads them; the user's 'Remove my data' clears them.
     StorageKeys.connectionFavorites => StorageScope.device,
+    StorageKeys.activeConnection => StorageScope.device,
   };
 }
 
