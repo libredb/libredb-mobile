@@ -53,8 +53,7 @@ SentryEvent sentryBeforeSend(SentryEvent event) {
     );
   }
 
-  // On web the SDK names an unnamed event after the page path, which
-  // carries the route parameters under the path URL strategy.
+  // The transaction can name the route, which carries its parameters.
   event.transaction = _scrubUrlPart(event.transaction);
 
   final tags = event.tags;
@@ -102,8 +101,7 @@ SentryEvent sentryBeforeSend(SentryEvent event) {
 /// The breadcrumbs and events the native SDK records itself never pass
 /// through this hook. On Android the host app starts the native SDK and
 /// scrubs them with a Kotlin copy of these rules (`NativeSentryScrubber.kt`,
-/// see `configureNativeSdkStart`); on iOS and macOS they are not scrubbed
-/// yet.
+/// see `configureNativeSdkStart`); on iOS they are not scrubbed yet.
 ///
 /// The key `state` is masked as an OIDC value, except in a navigation
 /// breadcrumb whose `state` is one of [sentryNavigationTypes]: there
@@ -135,12 +133,10 @@ const Set<String> sentryNavigationTypes = {'didPush', 'didPop', 'didReplace'};
 /// error event takes its breadcrumbs from the scope, and only
 /// `beforeBreadcrumb` scrubs them there.
 ///
-/// It also turns print breadcrumbs off. On web the SDK runs the app in a
-/// zone that made a breadcrumb of every printed line, so every line
-/// `AppLogger` logged, and a scrubber cannot find a password or a code in
-/// free text. Native builds never turned `AppLogger` lines into breadcrumbs,
-/// so web now matches them. In a release build this also stops recording
-/// `debugPrint` lines.
+/// It also turns print breadcrumbs off, so no printed line, such as one
+/// `AppLogger` logged, becomes a breadcrumb: a scrubber cannot find a
+/// password or a code in free text. In a release build this also stops
+/// recording `debugPrint` lines.
 void installSentryScrubbers(SentryOptions options) {
   options.beforeSend = (event, hint) => sentryBeforeSend(event);
   options.beforeBreadcrumb = (breadcrumb, hint) => sentryBeforeBreadcrumb(breadcrumb);
@@ -148,9 +144,9 @@ void installSentryScrubbers(SentryOptions options) {
 }
 
 /// Masks emails and JWTs in a URL or in one of its parts. Route and query
-/// parameters travel there: on web the SDK copies the page location into
-/// the request, so the email in `/login-otp-verify/:email` would reach
-/// Sentry, and a link such as `?token=` or `#access_token=` holds a JWT.
+/// parameters travel there: the email in `/login-otp-verify/:email` would
+/// reach Sentry, and a link such as `?token=` or `#access_token=` holds a
+/// JWT.
 String? _scrubUrlPart(String? value) => value == null ? null : _maskText(value);
 
 /// Returns [headers] without the [sensitiveHeaderNames], with the whole value

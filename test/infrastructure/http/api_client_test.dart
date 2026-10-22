@@ -1260,8 +1260,7 @@ void main() {
 
   // Regression: an email in a request path, such as the login the user list fetches a user by, was printed as it
   // was by every logger on the way, also on lines that production prints: the retry and give-up lines, the line that
-  // rejects a request while the circuit is open, and the HTTP error line. On web with a Sentry DSN each printed line
-  // also becomes a breadcrumb.
+  // rejects a request while the circuit is open, and the HTTP error line.
   group('ApiClient log output', () {
     test('masks an email in the request path on every line while the server answers 503', () {
       fakeAsync((async) {
@@ -1309,7 +1308,7 @@ void main() {
   // Regression: ApiClient put the raw body of an error response into the exception it threw, and an AppException
   // logged its text at error level when it was created, which every build of main_prod printed. A validation error can
   // repeat what the request sent, so the password of a sign-in or a change and the code of an OTP check reached the
-  // console, the repository and BLoC lines that log the exception, and on web with a Sentry DSN the breadcrumbs. The
+  // console and the repository and BLoC lines that log the exception. The
   // repositories now log the exception text, so `text` keeps that line free of the credential, and `lines` keeps the
   // lines that ApiClient and its interceptors print free of it.
   group('ApiClient error responses that repeat a credential', () {
@@ -1605,7 +1604,7 @@ void main() {
     });
   });
 
-  // On web the cache shares the localStorage quota of the origin with the stored session and the preferences.
+  // A platform store can refuse a write, such as on a full disk.
   group('ApiClient when the platform store refuses to cache a response', () {
     test('answers the GET and logs the key and the size of the entry as an error', () async {
       SharedPreferencesStorePlatform.instance = _FullCacheStore();

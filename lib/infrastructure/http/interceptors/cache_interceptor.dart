@@ -39,8 +39,7 @@ import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.d
 /// certificate pin mismatch, a handshake closed before it completed) means
 /// the connection may be intercepted, so it fails instead of showing earlier
 /// data. A handshake reset before it completed is a connection error, so it
-/// is answered. On web the browser reports a TLS failure as a connection
-/// error, which cannot be told apart from a lost connection.
+/// is answered.
 ///
 /// An entry is fresh for its TTL, 5 minutes unless `options.extra['cacheTtl']`
 /// sets another: cacheFirst and cacheOnly answer from a fresh entry only.
@@ -191,9 +190,6 @@ class CacheInterceptor extends Interceptor {
   /// An open circuit is not one either: once requests to an endpoint failed repeatedly, lost connections and timeouts
   /// included, `ResilienceInterceptor` refuses its requests with a `CircuitBreakerOpenException`, and a GET fails with
   /// it even when a response is cached.
-  ///
-  /// On web the browser reports a TLS failure as a connection error without saying why the connection failed, so
-  /// there it cannot be told apart from a lost connection and is answered from the cache.
   bool _couldNotReachServer(DioException err) => switch (err.type) {
     DioExceptionType.connectionError ||
     DioExceptionType.connectionTimeout ||

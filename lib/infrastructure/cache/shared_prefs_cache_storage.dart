@@ -10,16 +10,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Key prefix: `_cache_` to avoid conflicts with other storage.
 ///
 /// An entry outlives its TTL until it is [CacheEntry.maxStaleAge] old, so
-/// that it can answer a GET that cannot reach the server. On web the entries
-/// live in localStorage, whose per-origin quota the stored session and the
-/// preferences share, so the storage evicts: when it starts, on its first
-/// use, and before each write it deletes the entries past that age, and
-/// before each write it deletes the oldest entries until the new one fits
-/// in [maxEntries] and [maxTotalLength]. [read] deletes an entry past that
+/// that it can answer a GET that cannot reach the server. The entries share
+/// SharedPreferences with the preferences, so the storage evicts: when it
+/// starts, on its first use, and before each write it deletes the entries
+/// past that age, and before each write it deletes the oldest entries until
+/// the new one fits in [maxEntries] and [maxTotalLength]. [read] deletes an entry past that
 /// age too, and [clear], which ending the session runs, deletes them all.
 ///
 /// A write that fails, because the platform store cannot be loaded or
-/// refuses the entry, such as one past the quota, is logged as an error and
+/// refuses the entry, is logged as an error and
 /// the entry is not cached: the request it belongs to still succeeds.
 class SharedPrefsCacheStorage implements ICacheStorage {
   SharedPrefsCacheStorage({this.maxEntries = defaultMaxEntries, this.maxTotalLength = defaultMaxTotalLength});
@@ -30,8 +29,7 @@ class SharedPrefsCacheStorage implements ICacheStorage {
   /// The default of [maxEntries].
   static const int defaultMaxEntries = 200;
 
-  /// The default of [maxTotalLength]: 2 MB as the UTF-16 that localStorage stores, well under the 5 MB quota that
-  /// browsers give an origin.
+  /// The default of [maxTotalLength], in UTF-16 code units: 2 MB of text.
   static const int defaultMaxTotalLength = 1000000;
 
   static final SharedPrefsCacheStorage _singleton = SharedPrefsCacheStorage();
@@ -200,8 +198,8 @@ class SharedPrefsCacheStorage implements ICacheStorage {
   @override
   Future<void> clear() async {
     final prefs = await _instance;
-    // The keys come from the platform store, not from the copy SharedPreferences keeps in memory: on web another tab
-    // may have cached entries since this tab loaded, and SharedPreferences forgets a key whose remove was refused.
+    // The keys come from the platform store, not from the copy SharedPreferences keeps in memory, which forgets a key
+    // whose remove was refused.
     await prefs.reload();
     final keys = prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
     _stored.clear();

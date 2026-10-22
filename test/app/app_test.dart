@@ -127,7 +127,6 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 
-    // On macOS a read waits while the login keychain asks for its password, which the user may enter after the limit.
     testWidgets('opens the app when secure storage answers with a stored session after the restore time limit', (
       tester,
     ) async {
@@ -208,7 +207,7 @@ void main() {
       expect(find.text('Forgot Password'), findsNothing);
     });
 
-    // The task switcher and the browser tab show this title.
+    // The task switcher shows this title.
     for (final (language, title) in [('en', 'LibreDB'), ('tr', 'LibreDB')]) {
       testWidgets('names the app in the task switcher in the app language ($language)', (tester) async {
         await tester.pumpWidget(App(language: language));

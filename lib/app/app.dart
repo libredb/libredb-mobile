@@ -124,7 +124,7 @@ class _AppViewState extends State<_AppView> {
         builder: (context, themeState) {
           return MaterialApp.router(
             scaffoldMessengerKey: widget.scaffoldMessengerKey,
-            // The name the task switcher and the browser tab show, in the app language.
+            // The name the task switcher shows, in the app language.
             onGenerateTitle: (context) => S.of(context).app_title,
             theme: AppTheme.light(themeState.palette),
             darkTheme: AppTheme.dark(themeState.palette),
@@ -169,9 +169,8 @@ class _AppViewState extends State<_AppView> {
   }
 }
 
-/// Shown while [SessionCubit.restore] reads the stored session and [LocaleCubit.restore] the stored language.
-/// Continues the web startup screen (`#loading` in web/index.html): a 56 px ring spinner with a 4 px stroke, centered
-/// on the theme background.
+/// Shown while [SessionCubit.restore] reads the stored session and [LocaleCubit.restore] the stored language: a 56 px
+/// ring spinner with a 4 px stroke, centered on the theme background.
 class _RestoreView extends StatelessWidget {
   const _RestoreView();
 

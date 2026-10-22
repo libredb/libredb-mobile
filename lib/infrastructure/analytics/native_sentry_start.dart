@@ -16,16 +16,9 @@ final _log = AppLogger.getLogger('NativeSentryStart');
 ///
 /// It reads `options.platform`, by which sentry_flutter picks its Java
 /// binding, and not the Flutter target platform, which a test or a debug
-/// session can override. iOS and macOS keep the start by sentry_flutter, and
-/// their native events and breadcrumbs are not scrubbed yet.
-bool hostStartsNativeSdk(SentryOptions options) =>
-    hostStartsNativeSdkOn(isWeb: options.platform.isWeb, isAndroid: options.platform.isAndroid);
-
-/// The rule of [hostStartsNativeSdk]. On web the options report the
-/// operating system of the browser, which is Android in a phone browser, and
-/// sentry_flutter starts the JavaScript SDK there.
-@visibleForTesting
-bool hostStartsNativeSdkOn({required bool isWeb, required bool isAndroid}) => isAndroid && !isWeb;
+/// session can override. iOS keeps the start by sentry_flutter, and its
+/// native events and breadcrumbs are not scrubbed yet.
+bool hostStartsNativeSdk(SentryOptions options) => options.platform.isAndroid;
 
 /// Turns [SentryFlutterOptions.autoInitializeNativeSdk] off where
 /// [hostStartsNativeSdk], or where [hostStarts] says so, and leaves it on

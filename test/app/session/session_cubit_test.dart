@@ -293,7 +293,6 @@ void main() {
       });
     });
 
-    // On macOS a read waits while the login keychain asks for its password, which the user may enter after the limit.
     test('opens a stored session that secure storage answers after the time limit, and logs it', () {
       final infos = _recordLogs(Level.info);
       fakeAsync((async) {

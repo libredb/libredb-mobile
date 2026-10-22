@@ -97,8 +97,8 @@ class _FakeOidcClient implements IOidcClient {
   }) => throw UnimplementedError('a logout never refreshes');
 }
 
-/// Ends the provider session when the test completes [logout], as a desktop browser flow does once the loopback
-/// redirect arrives; records each call in [calls].
+/// Ends the provider session when the test completes [logout], as a browser flow does once the provider answers;
+/// records each call in [calls].
 class _PendingLogoutClient extends _FakeOidcClient {
   _PendingLogoutClient(super.calls);
 
@@ -227,7 +227,7 @@ void main() {
     });
   });
 
-  // On Linux and Windows the provider logout waits for the browser for up to five minutes.
+  // The provider logout waits for the browser and for the provider.
   group('SsoSignOutAuthRepository.signOut', () {
     late _PendingLogoutClient pending;
 

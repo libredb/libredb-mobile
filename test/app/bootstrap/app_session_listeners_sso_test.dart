@@ -35,8 +35,8 @@ const _providerSessionLeft =
 const _storedDataLeft = 'You were signed out, but some stored data could not be removed from this device.';
 
 /// The identity provider of an oidc build. A provider logout ends when the test completes [logout], so a test can
-/// hold it open as a desktop browser flow does while it waits for the loopback redirect; [signIns] counts the sign-ins
-/// the app starts.
+/// hold it open as the browser flow does while the user is still at the provider; [signIns] counts the sign-ins the
+/// app starts.
 class _FakeOidcClient implements IOidcClient {
   final logout = Completer<OidcLogoutOutcome>();
   var logouts = 0;
@@ -134,8 +134,7 @@ Future<void> _startSignedIn(WidgetTester tester, _FakeOidcClient client) async {
 BuildContext _app(WidgetTester tester) => tester.element(find.byType(MaterialApp));
 
 void main() {
-  // On Linux and Windows the provider logout waits for the browser's loopback redirect for up to five minutes, and on
-  // every platform for as long as the discovery request hangs.
+  // The provider logout waits for the browser, and for as long as the discovery request hangs.
   group('in an oidc build, a logout the user starts', () {
     testWidgets('opens the login page while the provider logout has not ended', (tester) async {
       final client = _FakeOidcClient();

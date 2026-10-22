@@ -1,14 +1,12 @@
 /// Recognizes the dart:io error behind a failed request.
 ///
 /// dio reports an error it does not map itself as a `DioExceptionType.unknown` whose `error` is the original
-/// exception. Telling those apart needs their dart:io types, which web builds cannot import, so this library imports
-/// the `dart:io` implementation only when `dart:io` is available and a web implementation otherwise, both with the
-/// same signatures, as `certificate_pinning_adapter.dart` does. Web builds (JS and WASM) never compile `dart:io`.
+/// exception, which these checks tell apart by its dart:io type.
 library;
 
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
+import 'dart:io';
 
-import 'transport_errors_web.dart' if (dart.library.io) 'transport_errors_io.dart' as platform;
+import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
 
 /// Whether [error], the `error` of a `DioException`, means that the connection was closed or reset before the whole
 /// response arrived, or that dart:io could not parse the response.
@@ -30,11 +28,8 @@ import 'transport_errors_web.dart' if (dart.library.io) 'transport_errors_io.dar
 /// between it and the device closed before it completed. A dropped network can close a handshake that way too, but so
 /// can a middlebox, so it fails closed like any other TLS failure. A handshake reset instead of closed is not a TLS
 /// failure: dio reports it as a connection error, like a connection that cannot be opened.
-///
-/// Always false on web: the browser reports every failure to reach the server as an XMLHttpRequest error, which dio
-/// turns into a connection error without an error object. That includes a TLS failure, so on web an untrusted or
-/// expired certificate cannot be told apart from a lost connection.
-bool isLostConnection(Object? error) => platform.isLostConnection(error);
+bool isLostConnection(Object? error) =>
+    error is SocketException || error is OSError || (error is HttpException && error is! RedirectException);
 
 /// Whether [error], the `error` of a `DioException`, is a TLS failure: the connection could not be verified as
 /// secure, so it may be intercepted.
@@ -47,6 +42,4 @@ bool isLostConnection(Object? error) => platform.isLostConnection(error);
 /// one that way too: a middlebox can close it the same way, so it fails closed. A handshake reset before it completed
 /// does not count: dio reports it as a connection error. A certificate that `IOHttpClientAdapter.validateCertificate`
 /// rejects is a TLS failure too, but dio reports it as `DioExceptionType.badCertificate`, which callers check by type.
-///
-/// On web the browser reports a TLS failure as a connection error, so there it is never recognized.
-bool isTlsError(Object? error) => error is CertificatePinningException || platform.isTlsException(error);
+bool isTlsError(Object? error) => error is CertificatePinningException || error is TlsException;

@@ -10,7 +10,7 @@ import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
 /// Maintained alongside [ApplicationRoutesConstants] so policy review
 /// is a single grep. Route guards are belt-and-braces — UI also hides
 /// admin entries — but you cannot rely on UI hiding alone (URL
-/// guesses, deep links, stale browser tabs all bypass it).
+/// guesses and deep links bypass it).
 const _adminRole = 'ROLE_ADMIN';
 
 /// Prefix-keyed lookup. The router redirect picks the longest matching

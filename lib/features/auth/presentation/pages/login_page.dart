@@ -33,7 +33,7 @@ class LoginScreen extends StatefulWidget {
   /// Wired by the router; null = non-interactive badge (features cannot import app/theme).
   final VoidCallback? onToggleTheme;
 
-  /// Why the web sign-in that the app completed at startup failed, or null. Passed in by the router, which reads the
+  /// Why single sign-on cannot run, as the startup step found, or null. Passed in by the router, which reads the
   /// session (features cannot import app/session). The single sign-on page shows it until the first tap.
   final AppErrorCode? startupSignInError;
 

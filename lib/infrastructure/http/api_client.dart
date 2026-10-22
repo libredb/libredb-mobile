@@ -125,8 +125,7 @@ class ApiClient {
 
     // Certificate pinning. Empty pin list (default) keeps the system
     // adapter; populating appConfig.certificatePins swaps in a
-    // pinning adapter that fails closed on any non-matching cert. Web
-    // is a hard no-op — see buildPinnedAdapter docs.
+    // pinning adapter that fails closed on any non-matching cert.
     // Retries and the token refresh are sent through this same adapter
     // (ResilienceInterceptor.forDio, TokenRefreshInterceptor), so the
     // pins cover every request the client sends.
@@ -342,7 +341,7 @@ class ApiClient {
     if (e.error is AppException) return e.error as AppException;
     // A TLS failure gets its own type, so repositories can report AppErrorCode.networkCertInvalid instead of a
     // generic communication error: a pin mismatch, or a certificate the device does not trust. dio reports both as
-    // unknown, with the exception as its error. On web the browser reports them as connection errors.
+    // unknown, with the exception as its error.
     if (isTlsError(e.error)) return _untrustedCertificate(e);
 
     switch (e.type) {

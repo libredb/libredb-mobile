@@ -97,8 +97,7 @@ typedef RefreshDioFactory = Dio Function(Dio sourceDio);
 ///
 /// It hands the body over as text, so [decodeCredentialJson] decodes it
 /// whatever its content type. The error dio's own decoder throws for a
-/// malformed body is the parser's, whose message on the web repeats the
-/// characters around the error, tokens included.
+/// malformed body is the parser's, which carries the body, tokens included.
 Dio defaultRefreshDio(Dio source) => Dio(
   BaseOptions(
     baseUrl: source.options.baseUrl,

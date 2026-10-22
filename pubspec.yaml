@@ -39,7 +39,6 @@ dependencies:
   screen_protector: 1.5.3
   sentry_flutter: 10.1.0
   oidc: 5.0.2
-  web: 1.1.1
   http: 1.6.0
 
 dev_dependencies:
