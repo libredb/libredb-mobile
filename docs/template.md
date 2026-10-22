@@ -9,7 +9,7 @@
 This document describes the Flutter template LibreDB Mobile grew from: a starter built with BLoC, the repository pattern, responsive UI, role-based access control, internationalization and multi-environment support.
 The template targeted mobile, web and desktop; LibreDB Mobile keeps only its Android and iOS builds, and this document describes the building blocks as they work there.
 
-**Useful links:** [Wiki](https://deepwiki.com/cevheri/flutter-bloc-advanced) · [Transformation Log](archived/clean-modernize-strengthen.md) · [Template issues](https://github.com/cevheri/flutter-bloc-advanced/issues)
+**Useful links:** [Wiki](https://deepwiki.com/cevheri/flutter-bloc-advanced) · [Template issues](https://github.com/cevheri/flutter-bloc-advanced/issues)
 
 ## Why This Template?
 
@@ -597,10 +597,7 @@ If you are unsure where to start, documentation improvements, screenshot refresh
 
 | Document | Description |
 | --- | --- |
-| [Transformation Log](archived/clean-modernize-strengthen.md) | What changed, why, before/after comparison |
-| [Architecture Migration](archived/architecture-migration_en.md) | Feature-first migration guide |
 | [Feature-First Boundaries](feature-first-clean-boundaries.md) | Clean architecture design document |
-| [Upgrade Guide - Flutter 3.44.0](upgrade_flutter_3.44.0.md) | Flutter 3.41.8 → 3.44.0 upgrade notes (v0.21.0) |
 | [Upgrade Guide - Flutter 3.47.7](upgrade_flutter_3.47.7.md) | Flutter 3.44.3 → 3.47.7 upgrade notes |
 | [Single Sign-On (OIDC)](oidc.md) | `AUTH_PROVIDER=oidc` setup per provider, the backend contract and the internals |
 
