@@ -7,6 +7,8 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -125,13 +127,22 @@ class AppScope extends StatelessWidget {
             return session..restore();
           },
         ),
+        // Provided above ApiClient, which tells it when Studio refuses the signed-in account.
+        BlocProvider<StudioAccountRefusalCubit>(create: (_) => StudioAccountRefusalCubit()),
         RepositoryProvider<ApiClient>(
           create: (context) {
             final session = context.read<SessionCubit>();
+            final refusal = context.read<StudioAccountRefusalCubit>();
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
+            // A refusal during the sign-in is the login page's to tell, so only a signed-in account is refused here.
+            void onAccountRefused(AppErrorCode code) {
+              if (session.state is SessionAuthenticated) refusal.refuse(code);
+            }
+
             return dependencies.createApiClient(
               context.read<ISecureStorage>(),
               onSessionExpired: onSessionExpired,
+              onAccountRefused: onAccountRefused,
               tokenRotation: switch (dependencies.authMode) {
                 OidcAuthMode() => context.read<TokenRotation>(),
                 // A misconfigured build cannot reach the provider, so a stored session is never refreshed.

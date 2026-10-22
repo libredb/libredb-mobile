@@ -43,6 +43,7 @@ class MessageLookup extends MessageLookupByLibrary {
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
     "account": MessageLookupByLibrary.simpleMessage("Account"),
+    "account_refusal_title": MessageLookupByLibrary.simpleMessage("Your account has no access to Studio"),
     "active": MessageLookupByLibrary.simpleMessage("Active"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
     "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
+import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
 import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
 import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -31,6 +34,41 @@ class _AppShellState extends State<AppShell> {
     if (policy.state is ConnectionPolicyInitial) policy.load();
   }
 
+  /// [screen], covered by the refusal page while Studio refuses the signed-in account, decided here only and never by
+  /// a screen. The screen stays mounted under the page, hidden and with its tickers off, because it holds the shell's
+  /// navigator; Studio accepting `/api/auth/me` again on Retry uncovers it.
+  Widget _accountRefusalOr(Widget screen) {
+    return BlocListener<StudioIdentityCubit, StudioIdentityState>(
+      listenWhen: (previous, current) => current is StudioIdentityLoaded,
+      listener: (context, state) => context.read<StudioAccountRefusalCubit>().clear(),
+      child: BlocBuilder<StudioAccountRefusalCubit, StudioAccountRefusalState>(
+        builder: (context, refusal) {
+          final refused = refusal is StudioAccountRefused;
+          return Stack(
+            children: [
+              Offstage(
+                offstage: refused,
+                child: TickerMode(enabled: !refused, child: screen),
+              ),
+              switch (refusal) {
+                StudioAccountAccepted() => const SizedBox.shrink(),
+                StudioAccountRefused(:final errorCode) => BlocSelector<StudioIdentityCubit, StudioIdentityState, bool>(
+                  selector: (state) => state is StudioIdentityLoading,
+                  builder: (context, retrying) => StudioAccountRefusalPage(
+                    errorCode: errorCode,
+                    retrying: retrying,
+                    onRetry: () => context.read<StudioIdentityCubit>().load(),
+                    onSignOut: () => confirmAndSignOut(context),
+                  ),
+                ),
+              },
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DevConsoleShortcut(
@@ -45,7 +83,7 @@ class _AppShellState extends State<AppShell> {
                 builder: (context, isOffline) => MediaQuery.removePadding(
                   context: context,
                   removeTop: isOffline,
-                  child: ResponsiveScaffold(activeRoute: widget.state.uri.path, child: widget.child),
+                  child: _accountRefusalOr(ResponsiveScaffold(activeRoute: widget.state.uri.path, child: widget.child)),
                 ),
               ),
             ),

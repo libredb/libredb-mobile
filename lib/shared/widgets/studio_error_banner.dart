@@ -22,7 +22,11 @@ String? _fixStatementOf(AppError error) => switch (error) {
   _ => null,
 };
 
-bool _isGovernanceUnavailable(AppError error) => error.code == AppErrorCode.studioGovernanceUnavailable.key;
+/// An outage that passes on its own: governance unavailable, or Studio unable to reach the identity provider to check
+/// the access token.
+bool _isTransientOutage(AppError error) =>
+    error.code == AppErrorCode.studioGovernanceUnavailable.key ||
+    error.code == AppErrorCode.studioIdentityProviderUnavailable.key;
 
 /// Copies [statement] to the clipboard and confirms it with [confirmation] through [messenger].
 ///
@@ -38,8 +42,8 @@ Future<void> _copyStatement(ScaffoldMessengerState? messenger, String confirmati
 /// - A rate limit counts down from [RateLimitedError.retryAfter]: the retry action stays disabled until zero, and
 ///   [onRetryAvailable] is called once when it reaches zero. Without a delay the retry action is available at once and
 ///   [onRetryAvailable] is not called. The banner never retries by itself, so it never runs a statement again.
-/// - Governance unavailable is shown as transient and asks the user to try again; nothing retries on its own, so the
-///   banner never claims a retry.
+/// - Governance unavailable and an identity provider Studio cannot reach are shown as transient and ask the user to try
+///   again; nothing retries on its own, so the banner never claims a retry.
 /// - A refused database credential shows its `fixStatement`, when Studio sent one, as copyable monospace text.
 /// - Any other error shows the translated message of its code.
 ///
@@ -101,7 +105,7 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final error = widget.error;
-    final transient = error is RateLimitedError || _isGovernanceUnavailable(error);
+    final transient = error is RateLimitedError || _isTransientOutage(error);
     final background = transient ? colorScheme.secondaryContainer : colorScheme.errorContainer;
     final foreground = transient ? colorScheme.onSecondaryContainer : colorScheme.onErrorContainer;
     final message = _messageOf(context, error);
@@ -180,7 +184,7 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
 
   static IconData _iconOf(AppError error) {
     if (error is RateLimitedError) return Icons.hourglass_bottom;
-    if (_isGovernanceUnavailable(error)) return Icons.sync_problem;
+    if (_isTransientOutage(error)) return Icons.sync_problem;
     return Icons.error_outline;
   }
 }

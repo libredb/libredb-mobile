@@ -1094,6 +1094,11 @@ class S {
       args: [],
     );
   }
+
+  /// `Your account has no access to Studio`
+  String get account_refusal_title {
+    return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

@@ -9,6 +9,7 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -48,10 +49,16 @@ class _OidcDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
-    return super.createApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
+    return super.createApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      onAccountRefused: onAccountRefused,
+      tokenRotation: tokenRotation,
+    );
   }
 }
 
@@ -69,10 +76,16 @@ class _MisconfiguredDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
-    return super.createApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
+    return super.createApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      onAccountRefused: onAccountRefused,
+      tokenRotation: tokenRotation,
+    );
   }
 }
 

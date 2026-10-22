@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 
@@ -24,3 +25,17 @@ bool isStudioSessionRefused(DioException error) =>
 
 /// The only error code by which Studio says that the session ended.
 const studioSessionEndedCode = 'AUTH_REQUIRED';
+
+/// The [AccountRefusal] of LibreDB Studio: a 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY`, which Studio answers from
+/// libredb-studio#1922 on, on every route that reads the bearer, for a verified token whose account it does not accept.
+///
+/// A fresh token is refused the same way until an administrator changes the account, so neither starts a refresh or
+/// ends the session; the shell shows the refusal page instead.
+AppErrorCode? studioAccountRefusal(DioException error) {
+  if (error.response?.statusCode != 403) return null;
+  return switch (ApiClient.errorCodeOf(error.response?.data)) {
+    'BEARER_NO_ROLE' => AppErrorCode.studioAccountHasNoRole,
+    'BEARER_NO_IDENTITY' => AppErrorCode.studioAccountHasNoIdentity,
+    _ => null,
+  };
+}

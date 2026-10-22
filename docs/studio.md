@@ -108,6 +108,7 @@ How far this was verified:
 | --- | --- |
 | Android emulator, API 30 Google APIs image | Walked through as above with Studio built from libredb/libredb-studio#1914 at `d8d1b4970`: sign-in, the connection list, the refresh after expiry and the logout all worked |
 | Android emulator, API 30 Google APIs image, Studio main `dbfea26` | The Keycloak-only sign-in of #11: `admin` and `user` land on the connection list, `norole` is refused at sign-in with `studio.account_refused` and a relaunch finds no session, and the logout ends the Keycloak session |
+| Android emulator, API 30 Google APIs image, Studio main `c9989a6b5` (with libredb-studio#1922) | The refusals of #29: `norole` is refused at sign-in with `studio.account_has_no_role`; once the realm role of `user` is removed and the access token refreshed, a relaunch shows the refusal page after one 403 `BEARER_NO_ROLE` per route and no further request; Retry after the role is back and the token has expired refreshes once and opens the app; with Keycloak stopped and Studio restarted, the connection list shows `studio.identity_provider_unavailable` and the session stays |
 | iOS simulator | Not run |
 
 ## Postgres seeds
@@ -329,5 +330,18 @@ record txbegin /db/transaction '{"connectionId":"seed:dev-postgres-server","acti
 record txquery /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"query","sql":"UPDATE public.orders SET status = '"'"'paid'"'"' WHERE id = 2","options":{"limit":50,"offset":0},"catalog":"app"}'
 record txcommit /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"commit","catalog":"app"}'
 ```
+
+The refusals of `GET /api/auth/me` come from the same Studio, which has libredb/libredb-studio#1922:
+
+```shell
+token=$(tool/studio-dev/access-token.sh norole) && record me_norole /auth/me     # 403 BEARER_NO_ROLE
+token=$(tool/studio-dev/access-token.sh user) && sleep 100 && record me_expired /auth/me
+docker compose -f tool/studio-dev/docker-compose.yml stop keycloak
+docker compose -f tool/studio-dev/docker-compose.yml restart libredb-studio
+record me_idp_unavailable /auth/me                                                # with a token fetched before the stop
+```
+
+`me_expired.json` is the 401 `AUTH_REQUIRED` of a token past its 60 seconds and Studio's 30 second clock tolerance, sent with `WWW-Authenticate: Bearer error="invalid_token"`.
+`me_idp_unavailable.json` is the 503 `IDENTITY_PROVIDER_UNAVAILABLE` of a Studio restarted while Keycloak is stopped, so it has no signing keys cached to check the token with.
 
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads every one of them.

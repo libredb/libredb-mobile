@@ -1740,6 +1740,62 @@ void main() {
       expect(sessionExpiredCalls, 1);
     });
   });
+  // From libredb-studio#1922 on, Studio refuses a verified token whose account it does not accept with 403
+  // BEARER_NO_ROLE or BEARER_NO_IDENTITY, and answers 503 IDENTITY_PROVIDER_UNAVAILABLE when it cannot reach the identity
+  // provider to check a token (src/proxy.ts). A new token is refused the same way and an outage is not the token's
+  // fault, so none of them starts a refresh, ends the session or touches the stored tokens.
+  group('TokenRefreshInterceptor - Studio refuses the account or cannot reach the identity provider', () {
+    late int sessionExpiredCalls;
+
+    setUp(() async {
+      await secureStorage.write(SecureStorageKeys.jwtToken.key, 'old-access');
+      await secureStorage.write(SecureStorageKeys.refreshToken.key, 'valid-refresh');
+      sessionExpiredCalls = 0;
+    });
+
+    const answers = [
+      (403, '{"error":"This account has no role in Studio. Ask an administrator for access.","code":"BEARER_NO_ROLE"}'),
+      (403, '{"error":"The access token carries no user name Studio can use.","code":"BEARER_NO_IDENTITY"}'),
+      (
+        503,
+        '{"error":"The identity provider could not be reached to verify the access token. Try again.",'
+            '"code":"IDENTITY_PROVIDER_UNAVAILABLE"}',
+      ),
+    ];
+
+    for (final (status, body) in answers) {
+      for (final path in ['/auth/me', '/connections/managed']) {
+        test('passes $status ${jsonDecode(body)['code']} on $path with no refresh and no end of the session', () async {
+          final server = _UnauthorizedServerStub(body, null, status);
+          final rotation = _FakeRotation(const TokensRotated(accessToken: 'new-access'));
+          dio.interceptors.addAll([
+            AuthInterceptor(secureStorage: secureStorage),
+            TokenRefreshInterceptor(
+              dio: dio,
+              secureStorage: secureStorage,
+              onSessionExpired: () => sessionExpiredCalls++,
+              rotation: rotation,
+              isSessionExpired: isStudioSessionExpired,
+              isSessionRefused: isStudioSessionRefused,
+            ),
+            server,
+          ]);
+
+          await expectLater(
+            dio.get<String>(path).timeout(const Duration(seconds: 5)),
+            throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', status)),
+          );
+
+          expect(rotation.sent, isEmpty, reason: 'no refresh');
+          expect(server.authorizations, ['Bearer old-access'], reason: 'sent once, never again');
+          expect(secureStorage.refreshTokenReadCount, 0, reason: 'the refresh-token read is the proxy for a refresh');
+          expect(sessionExpiredCalls, 0);
+          expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), 'old-access');
+          expect(await secureStorage.read(SecureStorageKeys.refreshToken.key), 'valid-refresh');
+        });
+      }
+    }
+  });
 }
 
 /// In-memory ISecureStorage that records its writes as `key=value` and runs [onWrite], once, after it applies a write
@@ -1846,10 +1902,13 @@ class _CapturingSuccessStub extends Interceptor {
 /// Answers every request with 401 the way a server response does: the rejection runs the error
 /// interceptors, so the 401 reaches [TokenRefreshInterceptor.onError]. Records each Authorization header.
 class _UnauthorizedServerStub extends Interceptor {
-  _UnauthorizedServerStub([this.body, this.beforeFirstAnswer]);
+  _UnauthorizedServerStub([this.body, this.beforeFirstAnswer, this.statusCode = 401]);
 
-  /// The body of every 401.
+  /// The body of every answer.
   final String? body;
+
+  /// The status of every answer, 401 unless a test asks for another refusal.
+  final int statusCode;
 
   /// Runs once, after the first request is recorded and before it is answered.
   final Future<void> Function()? beforeFirstAnswer;
@@ -1864,7 +1923,7 @@ class _UnauthorizedServerStub extends Interceptor {
       DioException(
         requestOptions: options,
         type: DioExceptionType.badResponse,
-        response: Response(requestOptions: options, statusCode: 401, data: body),
+        response: Response(requestOptions: options, statusCode: statusCode, data: body),
       ),
       true,
     );
