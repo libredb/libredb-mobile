@@ -40,7 +40,7 @@ class InterceptorChainEntry {
 /// 1. [ConnectivityInterceptor] — rejects requests immediately when offline
 /// 2. [AuthInterceptor] — injects JWT token
 /// 3. [TokenRefreshInterceptor] — handles 401 responses with token refresh
-///    then [AccountRefusalInterceptor] — reports an answer that refuses the signed-in account (only with
+///    then [AccountRefusalInterceptor]: reports an answer that refuses the signed-in account (only with
 ///    `onAccountRefused`)
 /// 4. [IdempotencyInterceptor] — opt-in Idempotency-Key header for mutating
 ///    verbs (default off; a resend after a token refresh reuses the same key)

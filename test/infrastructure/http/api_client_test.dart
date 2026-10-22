@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
@@ -1279,6 +1280,44 @@ void main() {
       expect(responses.map((r) => r.statusCode), [200, 200, 200]);
       expect(rotation.rotations, 1);
       expect(routing.requests.where((r) => r.endsWith('Bearer NEW_JWT')), hasLength(3));
+      expect(sessionExpiredCalls, 0);
+    });
+
+    // The resend after a refresh runs the client's whole chain, so the refusal it meets is reported there, once: the
+    // rejected resend skips the AccountRefusalInterceptor of the first request's chain.
+    test('reports once, and keeps the session, when the resend after a refresh is refused for the account', () async {
+      final refusals = <AppErrorCode>[];
+      final studioClient = ApiClient(
+        tokenRotation: rotation,
+        appConfig: const AppConfig(
+          environment: Environment.prod,
+          apiBaseUrl: 'https://api.example.test',
+          certificatePins: ['test-pin'],
+          idleTimeout: null,
+        ),
+        secureStorage: FlutterSecureStorageAdapter(),
+        onSessionExpired: () => sessionExpiredCalls++,
+        isSessionExpired: isStudioSessionExpired,
+        isSessionRefused: isStudioSessionRefused,
+        onAccountRefused: refusals.add,
+        accountRefusal: studioAccountRefusal,
+      );
+      studioClient.instance.httpClientAdapter = adapter;
+      adapter
+        ..reply(401, '{"error":"Authentication required","code":"AUTH_REQUIRED"}')
+        ..reply(403, '{"error":"refused","code":"BEARER_NO_ROLE"}');
+
+      await expectLater(
+        studioClient.get('/api/connections/managed').timeout(bound),
+        throwsA(isA<UnauthorizedException>().having((e) => e.statusCode, 'statusCode', 403)),
+      );
+
+      expect(adapter.requests.map((r) => '${r.method} ${r.path} ${r.authorization}'), [
+        'GET /api/connections/managed Bearer MOCK_TOKEN',
+        'GET /api/connections/managed Bearer NEW_JWT',
+      ]);
+      expect(rotation.rotations, 1);
+      expect(refusals, [AppErrorCode.studioAccountHasNoRole]);
       expect(sessionExpiredCalls, 0);
     });
   });

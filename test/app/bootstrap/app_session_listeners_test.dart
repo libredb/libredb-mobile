@@ -385,7 +385,7 @@ void main() {
       });
     }
 
-    // The logout from the refusal page is tested with the page, in app_shell_test.dart.
+    // The logout from the refusal page is tested with the page, in studio_account_refusal_shell_test.dart.
     testWidgets('after an idle timeout, the refusal of the signed-out account is forgotten', (tester) async {
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
