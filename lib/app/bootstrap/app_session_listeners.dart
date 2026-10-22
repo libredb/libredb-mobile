@@ -9,6 +9,7 @@ import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -132,6 +133,21 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
         BlocListener<SignOutBloc, SignOutState>(
           listenWhen: (previous, current) => previous is SignedOut && current is SignedOutWithProviderSessionLeft,
           listener: (context, state) => _showNotice((strings) => strings.error_auth_oidc_logout_incomplete),
+        ),
+        // The favorites are kept per subject: Studio's answer names whose to show, and the sign-out, which clears the
+        // answer, hides them until the next user is known.
+        BlocListener<StudioIdentityCubit, StudioIdentityState>(
+          listener: (context, state) {
+            final favorites = context.read<FavoriteConnectionsBloc>();
+            switch (state) {
+              case StudioIdentityLoaded(:final identity):
+                favorites.add(FavoriteConnectionsSubjectChanged(identity.subject));
+              case StudioIdentityInitial():
+                favorites.add(const FavoriteConnectionsSubjectChanged(null));
+              case StudioIdentityLoading() || StudioIdentityFailure():
+                break;
+            }
+          },
         ),
         BlocListener<SessionCubit, SessionState>(
           listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,

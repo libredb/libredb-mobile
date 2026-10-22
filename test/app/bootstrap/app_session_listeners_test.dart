@@ -21,6 +21,8 @@ import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
@@ -193,6 +195,34 @@ void main() {
 
         expect(find.byKey(loginButtonSsoKey), findsOneWidget);
         expect((browser.entryCount, providerMeta.entryCount), (0, 0));
+      });
+    }
+
+    for (final MapEntry(key: ending, value: end) in _sessionEndings.entries) {
+      testWidgets('the favorites follow the subject Studio names, and $ending drops them from the screen', (
+        tester,
+      ) async {
+        await AppLocalStorage().save(
+          StorageKeys.connectionFavorites.key,
+          '{"6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10": {"starred": ["seed:sales-db"], "recent": []}}',
+        );
+        await tester.pumpWidget(_app);
+        await tester.pumpAndSettle();
+        final favorites = tester.element(find.byType(MaterialApp)).read<FavoriteConnectionsBloc>();
+        expect(favorites.state, const FavoriteConnectionsNone());
+
+        await _signIn(tester);
+
+        expect(
+          favorites.state,
+          const FavoriteConnectionsReady(ConnectionFavorites(starred: {'seed:sales-db'}, recent: [])),
+        );
+
+        await end(tester);
+
+        expect(favorites.state, const FavoriteConnectionsNone());
+        // The stars stay on the device for the next sign-in of the same account.
+        expect(await AppLocalStorage().read(StorageKeys.connectionFavorites.key), contains('seed:sales-db'));
       });
     }
 

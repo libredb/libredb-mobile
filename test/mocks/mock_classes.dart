@@ -30,6 +30,8 @@ import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 
@@ -45,6 +47,8 @@ class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepos
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
 class MockICollapsedSectionsRepository extends Mock implements ICollapsedSectionsRepository {}
+
+class MockIFavoriteConnectionsRepository extends Mock implements IFavoriteConnectionsRepository {}
 
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 
@@ -87,4 +91,5 @@ void registerAllFallbackValues() {
   registerFallbackValue(FakeLoginEvent());
   registerFallbackValue(FakeUri());
   registerFallbackValue(<String>{});
+  registerFallbackValue(ConnectionFavorites.empty);
 }

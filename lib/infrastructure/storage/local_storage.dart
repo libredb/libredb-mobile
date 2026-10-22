@@ -37,7 +37,11 @@ enum StorageKeys {
   brightness('brightness'),
 
   /// The sections of the connection list the user collapsed, by `ConnectionSection.key`.
-  connectionSectionsCollapsed('connection_sections_collapsed');
+  connectionSectionsCollapsed('connection_sections_collapsed'),
+
+  /// The starred and recently opened connections of each subject that signed in on this device, as one JSON object
+  /// keyed by the identity provider's subject; see `FavoriteConnectionsRepository`.
+  connectionFavorites('connection_favorites');
 
   const StorageKeys(this.key);
 
@@ -50,6 +54,9 @@ enum StorageKeys {
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
     StorageKeys.connectionSectionsCollapsed => StorageScope.device,
+    // Kept per subject, so a sign-out keeps them for the next sign-in of the same account and another account never
+    // reads them; the user's 'Remove my data' clears them.
+    StorageKeys.connectionFavorites => StorageScope.device,
   };
 }
 

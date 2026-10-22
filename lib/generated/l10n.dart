@@ -790,6 +790,26 @@ class S {
     return Intl.message('No connections match', name: 'connection_search_no_match', desc: '', args: []);
   }
 
+  /// `Favorites`
+  String get connection_favorites {
+    return Intl.message('Favorites', name: 'connection_favorites', desc: '', args: []);
+  }
+
+  /// `Recent`
+  String get connection_recent {
+    return Intl.message('Recent', name: 'connection_recent', desc: '', args: []);
+  }
+
+  /// `Add to favorites`
+  String get connection_star {
+    return Intl.message('Add to favorites', name: 'connection_star', desc: '', args: []);
+  }
+
+  /// `Remove from favorites`
+  String get connection_unstar {
+    return Intl.message('Remove from favorites', name: 'connection_unstar', desc: '', args: []);
+  }
+
   /// `The database refused the connection's credentials. Ask your administrator to check them.`
   String get error_studio_database_auth {
     return Intl.message(

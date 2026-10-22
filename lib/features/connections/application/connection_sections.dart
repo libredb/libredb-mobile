@@ -55,6 +55,35 @@ List<String> environmentsOf(Iterable<StudioConnection> connections) {
   return [...StudioEnvironment.ordered.where(present.contains), ...unknown];
 }
 
+/// Moves the rows of [sections] whose id is in [starred] into the Favorites rows, sorted like the rows of a section,
+/// and leaves out each section that has no row left. A starred id the list does not have shows nowhere.
+({List<StudioConnection> favorites, List<ConnectionSection> sections}) withFavorites(
+  List<ConnectionSection> sections,
+  Set<String> starred,
+) {
+  if (starred.isEmpty) return (favorites: const [], sections: sections);
+  final favorites = <StudioConnection>[];
+  final rest = <ConnectionSection>[];
+  for (final section in sections) {
+    final others = <StudioConnection>[];
+    for (final connection in section.connections) {
+      (starred.contains(connection.id) ? favorites : others).add(connection);
+    }
+    if (others.isNotEmpty) rest.add(ConnectionSection(group: section.group, connections: others));
+  }
+  return (favorites: favorites..sort(_compareConnections), sections: rest);
+}
+
+/// How many recently opened connections the list shows.
+const recentConnectionsShown = 3;
+
+/// The connections of [connections] whose id is in [recent], in the order of [recent], at most
+/// [recentConnectionsShown]; an id the list does not have is skipped.
+List<StudioConnection> recentConnections(List<StudioConnection> connections, List<String> recent) {
+  final byId = {for (final connection in connections) connection.id: connection};
+  return recent.map((id) => byId[id]).whereType<StudioConnection>().take(recentConnectionsShown).toList();
+}
+
 /// Studio sorts with `localeCompare` (libredb-studio `src/lib/governance/visible.ts`), which places a Turkish letter
 /// next to its base letter, so `Çanakkale` comes before `Denizli`; the folded code units alone would put it after `z`.
 /// Other accented letters keep their code-unit order.

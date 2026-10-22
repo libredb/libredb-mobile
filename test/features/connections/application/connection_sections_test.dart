@@ -150,4 +150,42 @@ void main() {
       expect(environments, ['production', 'local', 'other', 'qa']);
     });
   });
+
+  group('withFavorites', () {
+    test('moves the starred rows out of their sections into Favorites, sorted by name, and drops empty sections', () {
+      final sections = groupConnections([
+        _c('seed:1', 'Orders', group: 'Sales'),
+        _c('seed:2', 'Scratch'),
+        _c('seed:3', 'Ledger', group: 'Finance'),
+        _c('seed:4', 'Leads', group: 'Sales'),
+      ]);
+
+      final split = withFavorites(sections, {'seed:3', 'seed:1', 'seed:gone'});
+
+      expect(split.favorites.map((c) => c.id), ['seed:3', 'seed:1']);
+      expect(split.sections.map((s) => s.group), ['Sales', null]);
+      expect(split.sections.first.connections.map((c) => c.id), ['seed:4']);
+    });
+
+    test('keeps the sections as they are without a star', () {
+      final sections = groupConnections([_c('seed:1', 'Orders', group: 'Sales')]);
+
+      final split = withFavorites(sections, const {});
+
+      expect(split.favorites, isEmpty);
+      expect(split.sections, sections);
+    });
+  });
+
+  group('recentConnections', () {
+    test('lists the opened connections still in the list, last opened first, at most three', () {
+      final rows = [
+        for (final id in ['a', 'b', 'c', 'd', 'e']) _c('seed:$id', id.toUpperCase()),
+      ];
+
+      final recent = recentConnections(rows, ['seed:gone', 'seed:d', 'seed:a', 'seed:e', 'seed:b']);
+
+      expect(recent.map((c) => c.id), ['seed:d', 'seed:a', 'seed:e']);
+    });
+  });
 }
