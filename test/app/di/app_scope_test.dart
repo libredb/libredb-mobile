@@ -24,6 +24,8 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
+import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart';
@@ -33,8 +35,10 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -834,6 +838,30 @@ void main() {
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
+    });
+
+    testWidgets('features get the one cached object browser and provider-meta that the app clears', (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<IObjectBrowserRepository>(), same(scope.read<CachedObjectBrowserRepository>()));
+      expect(scope.read<IProviderMetaRepository>(), same(scope.read<CachedProviderMetaRepository>()));
+    });
+
+    testWidgets('a statement that changes the schema drops the provided browser cache of its connection', (
+      tester,
+    ) async {
+      TestEnv.authenticate();
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final browser = scope.read<CachedObjectBrowserRepository>();
+      await tester.runAsync(() => browser.containers('seed:sales-db'));
+      expect(browser.entryCount, 1);
+
+      final result = await tester.runAsync(
+        () => scope.read<SchemaChangeNotifier>().statementSucceeded('seed:sales-db', 'drop table orders'),
+      );
+
+      expect(result, const Success(true));
+      expect(browser.entryCount, 0);
     });
 
     testWidgets('records the sign-out at Studio', (tester) async {

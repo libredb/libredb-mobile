@@ -24,6 +24,7 @@ import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 
 // Interface repository mocks (for use case tests)
 class MockIAuthRepository extends Mock implements IAuthRepository {}
@@ -39,6 +40,8 @@ class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 
 class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
+
+class MockIProviderMetaRepository extends Mock implements IProviderMetaRepository {}
 
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}

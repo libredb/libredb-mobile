@@ -9,6 +9,7 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
@@ -24,6 +25,8 @@ import 'package:libredb_mobile/features/auth/data/services/misconfigured_sso_ses
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
 import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
@@ -142,11 +145,24 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<IStudioIdentityRepository>(
           create: (context) => dependencies.createStudioIdentityRepository(context.read<ApiClient>()),
         ),
-        RepositoryProvider<IProviderMetaRepository>(
+        // The caches are provided by their own type too, so the app clears them when the session ends and the
+        // features read them through their interfaces.
+        RepositoryProvider<CachedProviderMetaRepository>(
           create: (context) => dependencies.createProviderMetaRepository(context.read<ApiClient>()),
         ),
-        RepositoryProvider<IObjectBrowserRepository>(
+        RepositoryProvider<IProviderMetaRepository>(create: (context) => context.read<CachedProviderMetaRepository>()),
+        RepositoryProvider<CachedObjectBrowserRepository>(
           create: (context) => dependencies.createObjectBrowserRepository(context.read<ApiClient>()),
+        ),
+        RepositoryProvider<IObjectBrowserRepository>(
+          create: (context) => context.read<CachedObjectBrowserRepository>(),
+        ),
+        RepositoryProvider<SchemaChangeNotifier>(
+          create: (context) => SchemaChangeNotifier(
+            providerMeta: context.read<IProviderMetaRepository>(),
+            invalidateConnection: context.read<CachedObjectBrowserRepository>().invalidate,
+          ),
+          dispose: (notifier) => notifier.dispose(),
         ),
         RepositoryProvider<ISqlEditorRepository>(
           create: (context) => dependencies.createSqlEditorRepository(context.read<ApiClient>()),

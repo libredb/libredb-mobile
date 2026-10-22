@@ -170,7 +170,15 @@ Studio counts requests per user in buckets, per Studio process (`src/lib/api/rat
 
 - These spend no slot: `GET /api/connections/managed`, `GET /api/connections/policy`, `GET /api/auth/me`, `POST /api/auth/logout`, `GET /api/health`, `GET /api/ready` and `GET /api/db/health`.
 - `POST /api/db/health`, `POST /api/db/provider-meta`, every other `/api/db/*` route, the object routes under `/api/db/objects` and the storage routes spend the shared `query` bucket.
-  S-13, drafted for Studio and not filed yet, asks Studio to stop charging `provider-meta`.
+  Studio declined S-13, which asked it to stop charging `provider-meta`, so the session-long `CachedProviderMetaRepository` is what keeps that cost down.
+- `CachedProviderMetaRepository` keeps each connection's provider-meta in memory for the session, and `CachedObjectBrowserRepository` keeps the containers, counts, lists and describe answers for 10 minutes; source, search and key pages are always read afresh.
+  `app_dependencies.dart` hands every feature the cached ones.
+  Two callers asking for the same answer while its request is in flight share it, and a failure, a 429 included, is returned without touching the entry that was there.
+  A pull to refresh passes `refresh: true`, which reads afresh and replaces the entry.
+- `SchemaChangeNotifier.statementSucceeded` drops a connection's browser answers after a statement that matches the engine's `schemaRefreshPattern`, then tells the open screens on `changes`.
+  `invalidate` and `invalidateContainer` drop answers on demand, and `evictExpired` drops the answers past their time when the user switches connection.
+- Both caches are emptied when the session ends, and an answer still on its way is stored only while the session generation it was sent under has not ended and no invalidation covering it ran since it was sent, so it never refills a cache after a sign-out or brings back a dropped table.
+  Nothing is written to disk.
 - A refused request answers 429 with `Retry-After`, which reaches the caller as `studio.rate_limited`.
 
 ### The object tree

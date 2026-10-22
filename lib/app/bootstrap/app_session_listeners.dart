@@ -9,9 +9,11 @@ import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 
 class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
@@ -165,13 +167,15 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
     );
   }
 
-  /// The app-scoped blocs outlive the session, so the next user to sign in would see what they hold about the one
-  /// who signed out: the sign-in form state, a password shown in plain text among it, and who Studio said the user
-  /// was, with the role, and what it allowed them.
+  /// The app-scoped blocs and caches outlive the session, so the next user to sign in would see what they hold about
+  /// the one who signed out: the sign-in form state, a password shown in plain text among it, who Studio said the user
+  /// was, with the role, and what it allowed them, and the provider-meta and object browser answers kept in memory.
   void _forgetSignedOutUser(BuildContext context) {
     context.read<LoginBloc>().add(const LoginReset());
     context.read<StudioIdentityCubit>().clear();
     context.read<ConnectionPolicyCubit>().clear();
+    context.read<CachedObjectBrowserRepository>().clear();
+    context.read<CachedProviderMetaRepository>().clear();
   }
 
   /// Stops the login page of an `oidc` build from sending the user to the identity provider on its own for the rest of
