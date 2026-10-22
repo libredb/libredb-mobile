@@ -4,8 +4,8 @@
 -- written here.
 --
 -- app_owner owns every object, so Studio, signed in as it, sees the primary and foreign keys, which it reads from
--- information_schema views that hide them from a role that does not own the table. studio_reader may only read, and
--- seed:dev-postgres-readonly shows what Studio answers such a role.
+-- information_schema views that show foreign keys only to the owner, and primary keys only to the owner or a role with
+-- a non-SELECT privilege. studio_reader may only read, and seed:dev-postgres-readonly shows what Studio answers it.
 
 CREATE ROLE app_owner LOGIN;
 CREATE ROLE studio_reader LOGIN;

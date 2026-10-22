@@ -21,7 +21,12 @@ page=$(curl -skf -c "$jar" -b "$jar" -G "$kc/auth" \
   --data-urlencode client_id=libredb-mobile --data-urlencode response_type=code --data-urlencode scope=openid \
   --data-urlencode "redirect_uri=$redirect" --data-urlencode state=recording \
   --data-urlencode code_challenge_method=S256 --data-urlencode "code_challenge=$challenge")
-action=$(printf '%s' "$page" | grep -o 'id="kc-form-login"[^>]*action="[^"]*"' | sed 's/.*action="//;s/"$//;s/&amp;/\&/g')
+action=$(printf '%s' "$page" | { grep -o 'id="kc-form-login"[^>]*action="[^"]*"' || true; } |
+  sed 's/.*action="//;s/"$//;s/&amp;/\&/g')
+if [ -z "$action" ]; then
+  echo "Keycloak's sign-in page has no login form (kc-form-login)" >&2
+  exit 1
+fi
 
 location=$(curl -sk -c "$jar" -b "$jar" -o /dev/null -w '%{redirect_url}' "$action" \
   --data-urlencode "username=$user" --data-urlencode "password=$user" --data-urlencode credentialId=)

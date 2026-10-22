@@ -129,7 +129,7 @@ The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/p
 
 `archive` holds one table, so the server-level seed lists more than one database.
 The first two seeds sign in as `app_owner`, which owns every object, and the third as `studio_reader`, which may only read and owns nothing.
-Studio reads a table's primary and foreign keys from `information_schema` views that show them only to a role that owns the table, so its describe of `public.orders` names them through the first seed and not through the third.
+Studio reads a table's keys from `information_schema` views, which show foreign keys only to the owner, and primary keys only to the owner or a role with a non-SELECT privilege on the table, so its describe of `public.orders` names them through the first seed and not through the third.
 Both passwords are only in the compose file, and every seed is managed, so `GET /api/connections/managed` sends neither.
 A server-level seed exists only without governance: a governed Studio refuses it at admission with `SERVER_LEVEL_NOT_ALLOWED`.
 

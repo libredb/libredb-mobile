@@ -374,7 +374,8 @@ void main() {
       expect(detail.indexes!.map((i) => i.name), contains('orders_customer_id_idx'));
     });
 
-    // Studio reads the keys from information_schema views, which hide them from a role that does not own the table.
+    // Studio reads the keys from information_schema views, which show foreign keys only to the owner, and primary keys
+    // only to the owner or a role with a non-SELECT privilege.
     test('POST /api/db/objects/describe of public.orders as a role that may only read has no keys', () {
       final detail = ObjectBrowserJson.detail(fixture('describe_postgres_orders_readonly'));
 
