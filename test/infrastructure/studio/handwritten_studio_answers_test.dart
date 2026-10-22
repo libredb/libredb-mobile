@@ -5,6 +5,7 @@ import 'package:libredb_mobile/features/object_browser/data/models/object_browse
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Reads the hand-written Studio answers in test/fixtures/studio/handwritten, the container shapes and edge answers
@@ -24,6 +25,34 @@ void main() {
       expect(meta.objectKinds.map((k) => k.hasSource), [false, true]);
       expect(meta.objectKinds.every((k) => k.hasColumns && k.role == 'relation'), isTrue);
       expect(meta.keyScan, isNull);
+    });
+
+    test('provider-meta carries the JSON words, the refresh pattern and the kinds that take writes', () {
+      final meta = ProviderMetaJson.read(answer('mongodb/meta'));
+      final collection = meta.objectKinds.singleWhere((k) => k.id == 'collection');
+      final view = meta.objectKinds.singleWhere((k) => k.id == 'view');
+
+      expect(meta.queryDialect, isNull, reason: 'MongoDB is the plain json language');
+      expect(meta.explainFormat, isNull);
+      expect(meta.containerPathShapes, 'exact');
+      expect(meta.supportsResultPagination, isFalse);
+      expect(meta.schemaRefreshPattern, r'"operation"\s*:\s*"(insert|delete|update)');
+      expect(meta.refreshesSchema('{"collection": "orders", "operation": "insertOne", "document": {}}'), isTrue);
+      expect(meta.refreshesSchema('{"collection": "orders", "operation": "find", "filter": {}}'), isFalse);
+      expect((collection.acceptsRowWrites, view.acceptsRowWrites), (true, false));
+      expect((collection.sourceLanguage, view.sourceLanguage), (null, 'json'));
+      expect(
+        meta.labels,
+        const ProviderLabels(
+          entityName: 'Collection',
+          entityNamePlural: 'Collections',
+          rowName: 'document',
+          rowNamePlural: 'documents',
+          selectAction: 'Find Documents',
+          generateAction: 'Generate Find',
+          searchPlaceholder: 'Search collections or fields...',
+        ),
+      );
     });
 
     test('containers are the databases, one level deep', () {
@@ -70,6 +99,13 @@ void main() {
       expect(package.role, 'group');
       expect(package.hasSource, isTrue);
       expect(meta.objectKinds.singleWhere((k) => k.id == 'trigger').attachedTo, 'table');
+      expect(package.childKinds, ['procedure', 'function']);
+      expect(package.sourceLanguage, 'sql');
+      expect(meta.objectKinds.where((k) => k.childKinds.isNotEmpty).map((k) => k.id), ['package']);
+      expect(meta.objectKinds.where((k) => k.acceptsRowWrites).map((k) => k.id), ['table']);
+      expect(meta.containerPathShapes, 'exact');
+      expect(meta.schemaRefreshPattern, r'(CREATE|DROP|ALTER|TRUNCATE)\b');
+      expect(meta.labels.selectAction, 'Select Top 50');
     });
 
     test('a package list holds an INVALID package and a valid one without a status', () {
@@ -101,6 +137,9 @@ void main() {
         ('schema', 'Schema', 'Schemas'),
       ]);
       expect(meta.supportsTransactions, isTrue);
+      expect(meta.containerPathShapes, 'prefixes', reason: 'a database alone and a database and schema both address');
+      expect(meta.objectKinds.map((k) => k.sourceLanguage), [null, 'sql', 'sql', 'sql', 'sql', null, null]);
+      expect(meta.labels.searchPlaceholder, 'Search tables or columns...');
     });
 
     test('the first level lists the databases', () {
@@ -191,21 +230,8 @@ void main() {
   // That issue asserts the field in a reader test above and removes its line here.
   group('known gaps', () {
     dynamic json(String name) => jsonDecode(answer(name));
-    dynamic kind(dynamic meta, String id) =>
-        (meta['capabilities']['objectKinds'] as List).singleWhere((k) => (k as Map)['id'] == id);
 
     final gaps = <(String issue, String answer, String field, Object? Function(dynamic json) sent)>[
-      ('#52', 'mongodb/meta', 'capabilities.schemaRefreshPattern', (j) => j['capabilities']['schemaRefreshPattern']),
-      ('#52', 'mongodb/meta', 'labels.searchPlaceholder', (j) => j['labels']['searchPlaceholder']),
-      ('#52', 'mongodb/meta', 'objectKinds[view].sourceLanguage', (j) => kind(j, 'view')['sourceLanguage']),
-      (
-        '#52',
-        'mongodb/meta',
-        'objectKinds[collection].acceptsRowWrites',
-        (j) => kind(j, 'collection')['acceptsRowWrites'],
-      ),
-      ('#52', 'oracle/meta', 'objectKinds[package].childKinds', (j) => kind(j, 'package')['childKinds']),
-      ('#52', 'mssql/meta', 'capabilities.containerPathShapes', (j) => j['capabilities']['containerPathShapes']),
       ('#56', 'postgres/describe_exclusion', 'columns[].declaredType', (j) => j['columns'][2]['declaredType']),
       ('#56', 'postgres/describe_exclusion', 'exclusionConstraints', (j) => j['exclusionConstraints']),
       ('#57', 'oracle/source_package', 'parts[].origin', (j) => j['parts'][0]['origin']),

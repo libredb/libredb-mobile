@@ -135,6 +135,14 @@ void main() {
     expect(meta.containerLevels, isEmpty, reason: 'SQLite has no container level');
     expect(meta.supportsTransactions, isFalse);
     expect(meta.objectKinds.map((k) => k.id), containsAll(['table', 'view']));
+    expect(meta.schemaRefreshPattern, r'(CREATE|DROP|ALTER|TRUNCATE)\b');
+    expect(meta.explainFormat, 'sqlite-queryplan');
+    expect(meta.containerPathShapes, 'exact');
+    expect(meta.supportsResultPagination, isTrue);
+    expect(meta.objectKinds.where((k) => k.acceptsRowWrites).map((k) => k.id), ['table']);
+    expect(meta.objectKinds.every((k) => k.sourceLanguage == 'sql'), isTrue);
+    expect(meta.labels.entityNamePlural, 'Tables');
+    expect(meta.labels.searchPlaceholder, 'Search tables or columns...');
   });
 
   test('POST /api/db/objects/containers of an engine without containers', () {
