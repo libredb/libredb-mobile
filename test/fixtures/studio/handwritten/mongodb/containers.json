@@ -1,0 +1,18 @@
+[
+  {
+    "path": [
+      "app"
+    ],
+    "name": "app",
+    "level": 0,
+    "isSessionDefault": true
+  },
+  {
+    "path": [
+      "reporting"
+    ],
+    "name": "reporting",
+    "level": 0,
+    "isSessionDefault": false
+  }
+]

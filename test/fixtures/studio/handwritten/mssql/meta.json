@@ -1,0 +1,151 @@
+{
+  "capabilities": {
+    "queryLanguage": "sql",
+    "supportsExplain": false,
+    "supportsExternalQueryLimiting": true,
+    "supportsInlineRowEdit": true,
+    "supportsResultPagination": true,
+    "supportsTransactions": true,
+    "supportsTestDataGeneration": true,
+    "declaresForeignKeys": true,
+    "supportsMaintenance": true,
+    "maintenanceOperations": [
+      "analyze",
+      "check",
+      "optimize",
+      "kill"
+    ],
+    "supportsConnectionString": true,
+    "defaultPort": 1433,
+    "schemaRefreshPattern": "(CREATE|DROP|ALTER|TRUNCATE)\\b",
+    "createTable": {
+      "autoIncrement": {
+        "clause": "INT IDENTITY(1,1) PRIMARY KEY"
+      },
+      "columnConstraints": true,
+      "keyType": "INT",
+      "types": [
+        "VARCHAR(255)",
+        "NVARCHAR(MAX)",
+        "INT",
+        "BIGINT",
+        "BIT",
+        "DATETIME2",
+        "DATE",
+        "UNIQUEIDENTIFIER",
+        "DECIMAL(10,2)"
+      ]
+    },
+    "maintenanceOperationSpecs": {
+      "analyze": {
+        "label": "Update Statistics",
+        "perEntity": true,
+        "global": true
+      },
+      "check": {
+        "label": "Check Database",
+        "perEntity": false,
+        "global": true
+      },
+      "optimize": {
+        "label": "Rebuild Indexes",
+        "perEntity": true,
+        "global": true
+      },
+      "kill": {
+        "label": "Kill Session",
+        "perEntity": false,
+        "global": false
+      }
+    },
+    "containerLevels": [
+      {
+        "id": "catalog",
+        "label": "Database",
+        "labelPlural": "Databases"
+      },
+      {
+        "id": "schema",
+        "label": "Schema",
+        "labelPlural": "Schemas"
+      }
+    ],
+    "containerPathShapes": "prefixes",
+    "objectKinds": [
+      {
+        "id": "table",
+        "role": "relation",
+        "label": "Table",
+        "labelPlural": "Tables",
+        "acceptsRowWrites": true,
+        "hasColumns": true
+      },
+      {
+        "id": "view",
+        "role": "relation",
+        "label": "View",
+        "labelPlural": "Views",
+        "hasColumns": true,
+        "hasSource": true,
+        "sourceLanguage": "sql"
+      },
+      {
+        "id": "procedure",
+        "role": "routine",
+        "label": "Stored Procedure",
+        "labelPlural": "Stored Procedures",
+        "hasSource": true,
+        "sourceLanguage": "sql"
+      },
+      {
+        "id": "function",
+        "role": "routine",
+        "label": "Function",
+        "labelPlural": "Functions",
+        "hasSource": true,
+        "sourceLanguage": "sql"
+      },
+      {
+        "id": "trigger",
+        "role": "attached",
+        "label": "Trigger",
+        "labelPlural": "Triggers",
+        "attachedTo": "table",
+        "hasSource": true,
+        "sourceLanguage": "sql"
+      },
+      {
+        "id": "synonym",
+        "role": "config",
+        "label": "Synonym",
+        "labelPlural": "Synonyms"
+      },
+      {
+        "id": "sequence",
+        "role": "config",
+        "label": "Sequence",
+        "labelPlural": "Sequences"
+      }
+    ],
+    "supportsQueryCancel": true
+  },
+  "labels": {
+    "entityName": "Table",
+    "entityNamePlural": "Tables",
+    "rowName": "row",
+    "rowNamePlural": "rows",
+    "selectAction": "Select Top 50",
+    "generateAction": "Generate Query",
+    "analyzeAction": "Update Statistics",
+    "vacuumAction": "Rebuild Indexes",
+    "searchPlaceholder": "Search tables or columns...",
+    "analyzeGlobalLabel": "Update Stats",
+    "analyzeGlobalTitle": "Update Statistics",
+    "analyzeGlobalDesc": "Updates query optimizer statistics for all tables to improve query performance.",
+    "vacuumGlobalLabel": "Rebuild Indexes",
+    "vacuumGlobalTitle": "Rebuild All Indexes",
+    "vacuumGlobalDesc": "Rebuilds all indexes to reclaim space and reduce fragmentation.",
+    "vacuumActionOperation": "optimize",
+    "slowQueriesEmptyState": "Query stats come from sys.dm_exec_query_stats, which needs the VIEW SERVER STATE permission."
+  }
+}

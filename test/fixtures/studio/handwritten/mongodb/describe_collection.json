@@ -1,0 +1,55 @@
+{
+  "path": [
+    "app",
+    "customers"
+  ],
+  "columns": [
+    {
+      "name": "_id",
+      "type": "objectId",
+      "nullable": false,
+      "isPrimary": true
+    },
+    {
+      "name": "createdAt",
+      "type": "date",
+      "nullable": false,
+      "isPrimary": false
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "nullable": false,
+      "isPrimary": false
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "nullable": false,
+      "isPrimary": false
+    },
+    {
+      "name": "tier",
+      "type": "string",
+      "nullable": true,
+      "isPrimary": false
+    }
+  ],
+  "indexes": [
+    {
+      "name": "_id_",
+      "columns": [
+        "_id"
+      ],
+      "unique": false
+    },
+    {
+      "name": "email_1",
+      "columns": [
+        "email"
+      ],
+      "unique": true
+    }
+  ],
+  "foreignKeys": []
+}

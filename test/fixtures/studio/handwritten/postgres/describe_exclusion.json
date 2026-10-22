@@ -1,0 +1,68 @@
+{
+  "path": [
+    "public",
+    "reservations"
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "integer",
+      "declaredType": "integer",
+      "nullable": false,
+      "isPrimary": true,
+      "defaultValue": "nextval('reservations_id_seq'::regclass)"
+    },
+    {
+      "name": "table_id",
+      "type": "integer",
+      "declaredType": "integer",
+      "nullable": true,
+      "isPrimary": false
+    },
+    {
+      "name": "starts_at",
+      "type": "timestamp without time zone",
+      "declaredType": "timestamp without time zone",
+      "nullable": false,
+      "isPrimary": false
+    },
+    {
+      "name": "ends_at",
+      "type": "timestamp without time zone",
+      "declaredType": "timestamp without time zone",
+      "nullable": false,
+      "isPrimary": false
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "declaredType": "text",
+      "nullable": false,
+      "isPrimary": false,
+      "defaultValue": "'PENDING'::text"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "reservations_no_overlapping_active",
+      "columns": [
+        "table_id"
+      ],
+      "unique": false
+    },
+    {
+      "name": "reservations_pkey",
+      "columns": [
+        "id"
+      ],
+      "unique": true
+    }
+  ],
+  "exclusionConstraints": [
+    {
+      "name": "reservations_no_overlapping_active",
+      "definition": "EXCLUDE USING gist (table_id WITH =, tsrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE (table_id IS NOT NULL AND status = ANY (ARRAY['PENDING'::text, 'CONFIRMED'::text]))"
+    }
+  ],
+  "foreignKeys": []
+}

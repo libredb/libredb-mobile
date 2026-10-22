@@ -1,0 +1,18 @@
+[
+  {
+    "path": [
+      "app",
+      "customers"
+    ],
+    "name": "customers",
+    "kind": "collection"
+  },
+  {
+    "path": [
+      "app",
+      "orders"
+    ],
+    "name": "orders",
+    "kind": "collection"
+  }
+]

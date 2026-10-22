@@ -1,0 +1,19 @@
+[
+  {
+    "path": [
+      "APP",
+      "APP_BROKEN_PKG"
+    ],
+    "name": "APP_BROKEN_PKG",
+    "kind": "package",
+    "status": "INVALID"
+  },
+  {
+    "path": [
+      "APP",
+      "APP_ORDERS_PKG"
+    ],
+    "name": "APP_ORDERS_PKG",
+    "kind": "package"
+  }
+]

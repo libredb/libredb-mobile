@@ -1,0 +1,30 @@
+{
+  "path": [
+    "reports/2026:Q3"
+  ],
+  "kind": "document",
+  "parts": [
+    {
+      "id": "data",
+      "label": "Data",
+      "text": "{\n  \"title\": \"Third quarter\",\n  \"closed\": true\n}",
+      "language": "json",
+      "form": "complete",
+      "origin": "rendered"
+    },
+    {
+      "id": "document",
+      "label": "Document",
+      "text": "{\n  \"name\": \"projects/demo-shop/databases/(default)/documents/reports/2026:Q3\",\n  \"fields\": {\n    \"title\": {\n      \"stringValue\": \"Third quarter\"\n    },\n    \"closed\": {\n      \"booleanValue\": true\n    }\n  },\n  \"createTime\": \"2026-10-01T00:00:00.000000Z\",\n  \"updateTime\": \"2026-10-01T00:00:00.000000Z\"\n}",
+      "language": "json",
+      "form": "complete",
+      "origin": "rendered"
+    },
+    {
+      "id": "subcollections",
+      "label": "Subcollections",
+      "unavailable": "Studio cannot list the subcollections of a document whose id contains a colon; query them with db.collection(\"reports/2026:Q3/<subcollection>\")",
+      "statement": true
+    }
+  ]
+}
