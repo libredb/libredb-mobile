@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -260,6 +261,32 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(row('seed:sales-postgres'), findsOneWidget);
+    final context = tester.element(find.byType(ConnectionListPage));
+    expect(find.text(AppErrorCode.networkCertInvalid.resolve(context)), findsOneWidget);
+  });
+
+  testWidgets('a search typed during a refresh that then fails keeps the pull indicator, the query and the message', (
+    tester,
+  ) async {
+    answer(_mockAnswer());
+    await pumpPage(tester);
+    final pending = Completer<Result<ManagedConnections>>();
+    when(() => repository.listManaged()).thenAnswer((_) => pending.future);
+
+    await tester.fling(find.byKey(const ValueKey('connection-sections')), const Offset(0, 400), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await search(tester, 'billing');
+
+    expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+
+    pending.complete(Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key)));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(row('seed:billing-mysql'), findsOneWidget);
+    expect(row('seed:sales-postgres'), findsNothing);
     final context = tester.element(find.byType(ConnectionListPage));
     expect(find.text(AppErrorCode.networkCertInvalid.resolve(context)), findsOneWidget);
   });

@@ -228,6 +228,61 @@ void main() {
         ConnectionListLoaded(connections: fresh, query: 'b', environment: 'production'),
       ],
     );
+
+    group('while a refresh is running', () {
+      late Completer<Result<ManagedConnections>> answer;
+
+      setUp(() {
+        answer = Completer<Result<ManagedConnections>>();
+        when(() => repository.listManaged()).thenAnswer((_) => answer.future);
+      });
+
+      void failRefresh() => answer.complete(Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key)));
+
+      blocTest<ConnectionListBloc, ConnectionListState>(
+        'a search keeps the refresh running and the failure keeps the new query',
+        build: build,
+        seed: () => const ConnectionListLoaded(connections: connections),
+        act: (bloc) async {
+          bloc.add(const ConnectionListRefreshed());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const ConnectionListSearchChanged('ledger'));
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+          failRefresh();
+        },
+        expect: () => const [
+          ConnectionListLoaded(connections: connections, isRefreshing: true),
+          ConnectionListLoaded(connections: connections, query: 'ledger', isRefreshing: true),
+          ConnectionListLoaded(
+            connections: connections,
+            query: 'ledger',
+            refreshErrorCode: AppErrorCode.networkCertInvalid,
+          ),
+        ],
+      );
+
+      blocTest<ConnectionListBloc, ConnectionListState>(
+        'a filter change keeps the refresh running and the failure keeps the new filter',
+        build: build,
+        seed: () => const ConnectionListLoaded(connections: connections),
+        act: (bloc) async {
+          bloc.add(const ConnectionListRefreshed());
+          await Future<void>.delayed(Duration.zero);
+          bloc.add(const ConnectionListEnvironmentFilterChanged('production'));
+          await Future<void>.delayed(Duration.zero);
+          failRefresh();
+        },
+        expect: () => const [
+          ConnectionListLoaded(connections: connections, isRefreshing: true),
+          ConnectionListLoaded(connections: connections, environment: 'production', isRefreshing: true),
+          ConnectionListLoaded(
+            connections: connections,
+            environment: 'production',
+            refreshErrorCode: AppErrorCode.networkCertInvalid,
+          ),
+        ],
+      );
+    });
   });
 
   group('search', () {

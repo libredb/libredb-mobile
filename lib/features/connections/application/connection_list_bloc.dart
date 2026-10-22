@@ -54,8 +54,12 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
         _log.debug('END: onLoad connections: {}', [data.connections.length]);
       case Failure(:final error):
         final errorCode = AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic;
+        // A failed refresh starts from the current state, not from [previous], so a search or a filter chosen while
+        // Studio was answering stays applied.
         emit(
-          previous == null ? ConnectionListFailure(errorCode: errorCode) : previous._with(refreshErrorCode: errorCode),
+          previous == null
+              ? ConnectionListFailure(errorCode: errorCode)
+              : (state as ConnectionListLoaded)._with(refreshErrorCode: errorCode),
         );
         _log.error('END: onLoad error: {}', [error.message]);
     }
@@ -63,11 +67,15 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
 
   void _onSearchChanged(ConnectionListSearchChanged event, Emitter<ConnectionListState> emit) {
     _query = event.query;
-    if (state case final ConnectionListLoaded loaded) emit(loaded._with(query: event.query));
+    if (state case final ConnectionListLoaded loaded) {
+      emit(loaded._with(query: event.query, isRefreshing: loaded.isRefreshing));
+    }
   }
 
   void _onEnvironmentFilterChanged(ConnectionListEnvironmentFilterChanged event, Emitter<ConnectionListState> emit) {
     _environment = event.environment;
-    if (state case final ConnectionListLoaded loaded) emit(loaded._with(environment: () => event.environment));
+    if (state case final ConnectionListLoaded loaded) {
+      emit(loaded._with(environment: () => event.environment, isRefreshing: loaded.isRefreshing));
+    }
   }
 }
