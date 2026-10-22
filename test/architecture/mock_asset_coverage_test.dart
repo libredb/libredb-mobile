@@ -5,6 +5,7 @@ import 'package:flutter_bloc_advance/core/result/result.dart';
 import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
@@ -56,6 +57,9 @@ void main() {
         LoginRepository(apiClient: client).verifyOtp(const VerifyOtpEntity(email: 'admin@sample.tech', otp: '123456')),
     'IAuthorityRepository.list': (client) => AuthorityRepositoryImpl(client).list(),
     'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
+    'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
+    'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
+    'IStudioIdentityRepository.fetch': (client) => StudioIdentityRepository(client).fetch(),
     'IUserRepository.retrieve': (client) => UserRepository(client).retrieve('user-1'),
     'IUserRepository.create': (client) =>
         UserRepository(client).create(const UserEntity(login: 'new_user', email: 'new_user@sample.tech')),
