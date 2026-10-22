@@ -20,6 +20,7 @@ import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_re
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
 import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/features/users/data/repositories/user_repository.dart';
 import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
 import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
@@ -35,6 +36,7 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -127,6 +129,9 @@ class AppDependencies {
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);
+
+  /// What the engine of a connection can do, which several features read.
+  IProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) => ProviderMetaRepository(apiClient);
 
   /// Studio's read-only object routes.
   IObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) => ObjectBrowserRepository(apiClient);

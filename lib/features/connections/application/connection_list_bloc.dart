@@ -6,7 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
-import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'connection_list_event.dart';

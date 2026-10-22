@@ -5,7 +5,7 @@ import 'package:libredb_mobile/features/connections/data/models/connection_test_
 import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
-import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';

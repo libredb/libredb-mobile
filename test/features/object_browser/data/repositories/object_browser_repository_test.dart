@@ -7,7 +7,6 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/kind_coun
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';
@@ -25,18 +24,6 @@ void main() {
 
   group('with a session', () {
     setUp(TestEnv.authenticate);
-
-    test('providerMeta reads the capabilities and the tree shape', () async {
-      final meta = data(await repository.providerMeta(connection));
-
-      expect(meta.queryLanguage, 'sql');
-      expect(meta.isSql, isTrue);
-      expect(meta.supportsQueryCancel, isTrue);
-      expect(meta.containerLevels, const [ContainerLevel(id: 'schema', label: 'Schema', labelPlural: 'Schemas')]);
-      expect(meta.objectKinds.map((k) => k.id), ['table', 'view', 'function', 'trigger']);
-      expect(meta.objectKinds.last.attachedTo, 'table');
-      expect(meta.keyScan, isNull);
-    });
 
     test('containers reads the top level', () async {
       expect(data(await repository.containers(connection)), const [

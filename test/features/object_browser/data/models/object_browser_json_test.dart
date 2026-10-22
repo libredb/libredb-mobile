@@ -1,38 +1,8 @@
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('providerMeta', () {
-    test('an engine without containers or kinds, with a key browser', () {
-      final meta = ObjectBrowserJson.providerMeta(
-        '{"capabilities":{"queryLanguage":"json","keyScan":{"defaultCount":500,"maxCount":1000,"pattern":"glob"}}}',
-      );
-
-      expect(meta.isSql, isFalse);
-      expect(meta.containerLevels, isEmpty);
-      expect(meta.objectKinds, isEmpty);
-      expect(meta.keyScan, const KeyScanSpec(defaultCount: 500, maxCount: 1000));
-      expect(meta.supportsTransactions, isFalse);
-    });
-
-    test('a kind listed only by the key browser', () {
-      final meta = ObjectBrowserJson.providerMeta(
-        '{"capabilities":{"queryLanguage":"json","objectKinds":[{"id":"key","role":"relation","label":"Key",'
-        '"labelPlural":"Keys","enumeratedBy":"key-browser"}]}}',
-      );
-
-      expect(meta.objectKinds.single.keyBrowserOnly, isTrue);
-    });
-
-    test('refuses an answer without capabilities or a query language', () {
-      for (final body in ['{}', '{"capabilities":{}}', '[]']) {
-        expect(() => ObjectBrowserJson.providerMeta(body), throwsFormatException, reason: body);
-      }
-    });
-  });
-
   group('containers', () {
     test('keeps the kinds a container holds', () {
       final containers = ObjectBrowserJson.containers(

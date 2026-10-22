@@ -43,15 +43,23 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | --- | --- |
 | `lib/features/auth/` | Sign-in through Keycloak (the `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
-| `lib/features/object_browser/` | Capabilities, containers, counts, objects, details, source, search and key scan |
+| `lib/features/object_browser/` | Containers, counts, objects, details, source, search and key scan |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
 | `lib/features/lifecycle/` | The maintenance and forced update check at start ([below](#maintenance-and-forced-updates)) |
 | `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role, used across features |
-| `lib/infrastructure/studio/` | What every Studio request shares: the error mapping and the session rule |
+| `lib/shared/models/studio_connection.dart` | A connection Studio offers, read by the connection list, the active connection, the object browser and the SQL editor |
+| `lib/shared/models/provider_meta.dart` | What the engine of a connection can do (`ProviderMeta`, `ContainerLevel`, `ObjectKind`, `KeyScanSpec`), read by the connections, the object browser, the SQL editor and the result view |
+| `lib/shared/models/provider_meta_repository.dart` | `IProviderMetaRepository`, the one way a feature asks for `ProviderMeta` |
+| `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser |
+| `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, and `ProviderMetaRepository` with its reader |
 | `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
 
+A model that more than one feature reads lives in `lib/shared/models/`, never in one feature's `domain/`, because a feature must not import another feature's internals (`test/architecture/import_guard_test.dart`).
+A repository that answers with such a model has its interface beside the model and its implementation in `lib/infrastructure/studio/`.
+A widget that more than one feature shows lives in `lib/shared/widgets/`.
+
 Each repository returns a `Result`: the entity, or an `AppError` with a translated `AppErrorCode`.
-The readers in each feature's `data/models/` turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
+The readers in each feature's `data/models/` (and in `lib/infrastructure/studio/` for a shared model) turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
 
 In mock mode (`main_local.dart`) `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
 
@@ -117,7 +125,7 @@ Every request follows these rules:
 | `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `List<StudioConnection>` |
 | `GET /api/connections/policy` | `IConnectionRepository.fetchPolicy` | `ConnectionPolicy` |
 | `POST /api/db/test-connection` | `IConnectionRepository.test` | `ConnectionTestResult` |
-| `POST /api/db/provider-meta` | `IObjectBrowserRepository.providerMeta` | `ProviderMeta` |
+| `POST /api/db/provider-meta` | `IProviderMetaRepository.providerMeta` | `ProviderMeta` |
 | `POST /api/db/objects/containers` | `IObjectBrowserRepository.containers` | `List<ObjectContainer>` |
 | `POST /api/db/objects/counts` | `IObjectBrowserRepository.counts` | `Map<String, KindCount>` |
 | `POST /api/db/objects/list` | `IObjectBrowserRepository.list` | `List<DatabaseObject>` |

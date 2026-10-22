@@ -5,15 +5,12 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/kind_coun
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 
 /// Read-only browsing of a managed connection, named by its id (`seed:<id>`).
 ///
-/// Every request but [providerMeta] opens the connection, and every one of them spends a slot of the user's Studio
-/// request budget, which the user's Studio sessions in the browser share: cache the answers.
+/// Every request opens the connection and spends a slot of the user's Studio request budget, which the user's Studio
+/// sessions in the browser share: cache the answers. What the engine can do comes from `IProviderMetaRepository`.
 abstract class IObjectBrowserRepository {
-  Future<Result<ProviderMeta>> providerMeta(String connectionId);
-
   /// The containers at the top, or the ones under [parent].
   Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent});
 

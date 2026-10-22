@@ -13,6 +13,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -232,6 +233,10 @@ void main() {
 
   test('app dependencies expose lifecycle repository contract', () {
     expect(dependencies.createLifecycleRepository(TestEnv.apiClient()), isA<ILifecycleRepository>());
+  });
+
+  test('app dependencies expose provider meta repository contract', () {
+    expect(dependencies.createProviderMetaRepository(TestEnv.apiClient()), isA<IProviderMetaRepository>());
   });
 
   test('app dependencies expose user repository contract', () {

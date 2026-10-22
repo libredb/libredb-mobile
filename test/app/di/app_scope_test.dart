@@ -29,6 +29,7 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_in
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -754,6 +755,12 @@ void main() {
       expect(scope.read<LoginBloc>().state, const LoginInitialState());
 
       expect(dependencies.oidcClientsCreated, 0);
+    });
+
+    testWidgets('provides the provider meta repository that several features read', (tester) async {
+      final scope = await _pumpScope(tester, const AppDependencies(appConfig: AppConfig.test()));
+
+      expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
     });
 
     testWidgets('a jwt build provides no OIDC client', (tester) async {

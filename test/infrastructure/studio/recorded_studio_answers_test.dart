@@ -9,6 +9,7 @@ import 'package:libredb_mobile/features/connections/data/models/managed_connecti
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,7 +49,7 @@ void main() {
   });
 
   test('POST /api/db/provider-meta of SQLite', () {
-    final meta = ObjectBrowserJson.providerMeta(fixture('meta'));
+    final meta = ProviderMetaJson.read(fixture('meta'));
 
     expect(meta.isSql, isTrue);
     expect(meta.containerLevels, isEmpty, reason: 'SQLite has no container level');

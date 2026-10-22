@@ -1,7 +1,7 @@
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
-import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 abstract class IConnectionRepository {
   /// The connections Studio manages for the signed-in user: seed connections, or the granted ones under governance.
