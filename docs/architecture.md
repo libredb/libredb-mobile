@@ -267,6 +267,8 @@ The connection list follows grant changes while it is open (`ConnectionListBloc`
   Neither request spends a rate-limit slot.
 - A 503 `GOVERNANCE_UNAVAILABLE` is `ConnectionListUnavailable`: the rows loaded before stay greyed under the outage notice, or the notice covers the page with a Retry on a cold start, and the list asks again every 10 seconds until Studio answers.
   The page reports the outage and its end through the shared `GovernanceStatus`, which `AppShell` backs with `StudioStatusBloc`, so readiness words the notice.
+  A retry that fails before it reaches governance, such as a 429, a 503 `IDENTITY_PROVIDER_UNAVAILABLE` or a 500, keeps the rows greyed and the outage, and a 429 makes the next retry wait as long as Studio asked.
+  Each page's first list reports governance as answering, so an outage left by a page closed during it ends there.
 - Another failure of a refresh, such as a 429 or a 503 `IDENTITY_PROVIDER_UNAVAILABLE`, keeps the rows with `StudioErrorBanner` and the timer running; on a cold start it is the failure page with a Retry.
 - An `AuthError`, such as the 403 `BEARER_NO_ROLE`, drops the rows and stops the timer until the user retries, because Studio would refuse and audit every tick the same way.
 - While `statementCapture` is `full`, a line under the app bar says that statements are recorded in full in the server's query log.

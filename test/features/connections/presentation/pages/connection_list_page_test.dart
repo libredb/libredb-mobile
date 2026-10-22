@@ -878,6 +878,7 @@ void main() {
     ) async {
       answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
       await pumpPage(tester);
+      expect(recoveriesReported, 1);
       when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
 
       await tester.pump(const Duration(seconds: 10));
@@ -902,7 +903,43 @@ void main() {
       expect(find.text(_outageNotice), findsNothing);
       expect(row('seed:ledger'), findsOneWidget);
       expect(find.descendant(of: row('seed:sales'), matching: find.byType(Opacity)), findsNothing);
+      expect(recoveriesReported, 2);
+    });
+
+    testWidgets('the first list of a page clears an outage that a page closed during it left behind', (tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+
+      await pumpPage(tester);
+
+      expect(row('seed:sales'), findsOneWidget);
       expect(recoveriesReported, 1);
+
+      // Later answers on this page report nothing more, since this page reported no outage.
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+      expect(recoveriesReported, 1);
+    });
+
+    testWidgets('an identity provider 503 while unavailable keeps the rows greyed under the notice', (tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+      final recoveriesBefore = recoveriesReported;
+      when(() => repository.listManaged()).thenAnswer(
+        (_) async => Failure(
+          ServerError('Identity provider unavailable', code: AppErrorCode.studioIdentityProviderUnavailable.key),
+        ),
+      );
+
+      await tester.pump(ConnectionListBloc.unavailableRetryInterval);
+      await tester.pump();
+
+      expect(find.descendant(of: row('seed:sales'), matching: find.byType(Opacity)), findsOneWidget);
+      expect(find.text(_outageNotice), findsOneWidget);
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(recoveriesReported, recoveriesBefore);
     });
 
     testWidgets('a 503 on a cold start covers the page with the notice and a retry, never the empty-grants text', (

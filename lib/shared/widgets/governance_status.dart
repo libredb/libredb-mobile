@@ -3,8 +3,9 @@ import 'package:flutter/widgets.dart';
 /// How a connection screen reports a governance outage and words it, for every screen below it.
 ///
 /// A connection route's own 503 `GOVERNANCE_UNAVAILABLE` is the outage. The screen calls [reportOutage] when it starts
-/// showing one and [reportRecovered] when the route answers anything else again, and shows [noticeBuilder]'s wording,
-/// which Studio's readiness and the user's role choose. `AppShell` in `lib/app/shell/` provides it from the app's
+/// showing one and [reportRecovered] when governance answers again, and shows [noticeBuilder]'s wording, which Studio's
+/// readiness and the user's role choose. A failure that never reached governance, such as an identity provider outage,
+/// a 429 or a 500, says nothing about it either way. `AppShell` in `lib/app/shell/` provides it from the app's
 /// Studio status and identity, so a feature reads it without importing the app layer or another feature.
 class GovernanceStatus extends InheritedWidget {
   const GovernanceStatus({

@@ -60,6 +60,11 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
   /// Whether the page shows a governance outage it has reported.
   bool _inOutage = false;
 
+  /// Whether a list Studio answered has reported governance as answering since the page opened. The first one does
+  /// even without an outage of its own, because a page closed during an outage, by a tab switch for example, leaves
+  /// the outage in the app's status.
+  bool _answerReported = false;
+
   /// Whether a list arrived since the page opened; the shell asks for the policy on its own before the first one.
   bool _listShown = false;
 
@@ -137,10 +142,15 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
         if (_inOutage) return;
         _inOutage = true;
         status.reportOutage();
-      case ConnectionListLoaded() || ConnectionListFailure():
+      case ConnectionListLoaded(:final refreshError):
+        // A failed refresh never reached governance, so it says nothing about it.
+        if (refreshError != null || (!_inOutage && _answerReported)) return;
+        _inOutage = false;
+        _answerReported = true;
+        status.reportRecovered();
+      case ConnectionListFailure(:final errorCode):
         // An offline failure never reached Studio, so it says nothing about governance.
-        final offline = state is ConnectionListFailure && state.errorCode == AppErrorCode.networkOffline;
-        if (!_inOutage || offline) return;
+        if (!_inOutage || errorCode == AppErrorCode.networkOffline) return;
         _inOutage = false;
         status.reportRecovered();
       case ConnectionListInitial() || ConnectionListLoading():

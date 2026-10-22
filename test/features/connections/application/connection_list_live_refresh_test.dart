@@ -292,6 +292,70 @@ void main() {
         );
       });
     });
+
+    for (final (reason, failure) in [
+      ('an identity provider outage', identityProviderUnavailable),
+      ('a 500 without a code', const Failure<ManagedConnections>(ServerError('Internal error'))),
+    ]) {
+      test('a retry failed by $reason never reached governance, so the rows stay greyed and it retries in 10 s', () {
+        answer(Success(managed(connections, cacheHint: const Duration(minutes: 1))));
+        run((async, bloc, states) {
+          open(async, bloc);
+          final loaded = bloc.state as ConnectionListLoaded;
+          answer(governanceUnavailable);
+          async.elapse(const Duration(minutes: 1));
+          answer(failure);
+
+          async.elapse(const Duration(seconds: 10));
+          expect(
+            bloc.state,
+            ConnectionListUnavailable(
+              errorCode: AppErrorCode.studioGovernanceUnavailable,
+              previous: loaded,
+              retryError: failure.error,
+            ),
+          );
+          clearInteractions(repository);
+
+          answer(Success(managed(fresh, cacheHint: const Duration(minutes: 1))));
+          async.elapse(const Duration(seconds: 10));
+          verify(() => repository.listManaged()).called(1);
+          expect(bloc.state, isA<ConnectionListLoaded>().having((s) => s.connections, 'connections', fresh));
+        });
+      });
+    }
+
+    test('a 429 on a retry keeps the rows greyed and waits as long as Studio asked', () {
+      answer(Success(managed(connections, cacheHint: const Duration(minutes: 1))));
+      run((async, bloc, states) {
+        open(async, bloc);
+        final loaded = bloc.state as ConnectionListLoaded;
+        answer(governanceUnavailable);
+        async.elapse(const Duration(minutes: 1));
+        const limited = RateLimitedError(
+          'Too many requests',
+          code: 'studio.rate_limited',
+          retryAfter: Duration(seconds: 30),
+        );
+        answer(const Failure(limited));
+
+        async.elapse(const Duration(seconds: 10));
+        expect(
+          bloc.state,
+          ConnectionListUnavailable(
+            errorCode: AppErrorCode.studioGovernanceUnavailable,
+            previous: loaded,
+            retryError: limited,
+          ),
+        );
+        clearInteractions(repository);
+
+        async.elapse(const Duration(seconds: 29));
+        verifyNever(() => repository.listManaged());
+        async.elapse(const Duration(seconds: 1));
+        verify(() => repository.listManaged()).called(1);
+      });
+    });
   });
 
   group('identity provider unavailable', () {

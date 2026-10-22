@@ -89,9 +89,11 @@ final class ConnectionListLoaded extends ConnectionListState {
 ///
 /// [previous] is the list shown before the outage, which the page keeps greyed under the outage notice; without one
 /// the outage covers the page. The bloc asks again every [ConnectionListBloc.unavailableRetryInterval] while the list
-/// is in the foreground, and [isRetrying] is true while a retry the user asked for runs.
+/// is in the foreground, and [isRetrying] is true while a retry the user asked for runs. A retry that fails before it
+/// reaches governance, such as an identity provider outage, a 429 or a 500, says nothing about whether governance is
+/// back, so the outage stays and [retryError] says why that retry failed.
 final class ConnectionListUnavailable extends ConnectionListState {
-  const ConnectionListUnavailable({required this.errorCode, this.previous, this.isRetrying = false});
+  const ConnectionListUnavailable({required this.errorCode, this.previous, this.isRetrying = false, this.retryError});
 
   /// The code of Studio's answer, `studio.governance_unavailable`; the raw message only goes to the log.
   final AppErrorCode errorCode;
@@ -100,8 +102,11 @@ final class ConnectionListUnavailable extends ConnectionListState {
 
   final bool isRetrying;
 
+  /// Why the last retry failed without an answer from governance; a 429 makes the next retry wait as Studio asked.
+  final AppError? retryError;
+
   @override
-  List<Object?> get props => [errorCode, previous, isRetrying];
+  List<Object?> get props => [errorCode, previous, isRetrying, retryError];
 }
 
 final class ConnectionListFailure extends ConnectionListState {

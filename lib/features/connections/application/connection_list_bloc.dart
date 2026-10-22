@@ -21,9 +21,9 @@ part 'connection_list_state.dart';
 ///
 /// While the page says the list is in the foreground ([ConnectionListAutoRefreshChanged]), the bloc asks Studio again
 /// every `cacheHint`, clamped to [minRefreshInterval] and [maxRefreshInterval] as Studio's web client does, and every
-/// [unavailableRetryInterval] while governance is unavailable; a return of the app to the foreground asks at once. A
-/// failure screen stops it: an account Studio refuses would be refused, and audited, on every tick, so only the user's
-/// retry asks again.
+/// [unavailableRetryInterval] while governance is unavailable, longer when a 429 asked for it; a return of the app to
+/// the foreground asks at once. A failure screen stops it: an account Studio refuses would be refused, and audited, on
+/// every tick, so only the user's retry asks again.
 class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> {
   ConnectionListBloc({required this._listManagedConnectionsUseCase}) : super(const ConnectionListInitial()) {
     on<ConnectionListLoadEvent>(_onLoad, transformer: EventTransformers.restart());
@@ -131,6 +131,15 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
           _log.warn('END: onLoad governance unavailable, keeping {} connections', [onScreen?.connections.length ?? 0]);
           return;
         }
+        if (state case ConnectionListUnavailable(:final errorCode, :final previous?) when error is! AuthError) {
+          // A retry that failed before it reached governance says nothing about whether governance is back, so the
+          // rows stay greyed and the outage keeps its retry.
+          emit(ConnectionListUnavailable(errorCode: errorCode, previous: previous, retryError: error));
+          _log.warn('END: onLoad governance still unavailable, the retry failed: {}', [
+            error.code ?? error.runtimeType,
+          ]);
+          return;
+        }
         if (error is AuthError || onScreen == null) {
           // Studio refused the account or failed the list, so the rows loaded before are no longer shown and are not
           // brought back.
@@ -165,7 +174,10 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
       _clamp(cacheHint ?? Duration.zero),
       refreshError is RateLimitedError ? refreshError.retryAfter : null,
     ),
-    ConnectionListUnavailable() => unavailableRetryInterval,
+    ConnectionListUnavailable(:final retryError) => _longer(
+      unavailableRetryInterval,
+      retryError is RateLimitedError ? retryError.retryAfter : null,
+    ),
     ConnectionListInitial() || ConnectionListLoading() || ConnectionListFailure() => null,
   };
 
@@ -205,12 +217,13 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
     switch (state) {
       case final ConnectionListLoaded loaded:
         emit(loaded._with(query: event.query, isRefreshing: loaded.isRefreshing, refreshError: loaded.refreshError));
-      case ConnectionListUnavailable(:final errorCode, :final previous?, :final isRetrying):
+      case ConnectionListUnavailable(:final errorCode, :final previous?, :final isRetrying, :final retryError):
         emit(
           ConnectionListUnavailable(
             errorCode: errorCode,
             previous: previous._with(query: event.query),
             isRetrying: isRetrying,
+            retryError: retryError,
           ),
         );
       case ConnectionListInitial() || ConnectionListLoading() || ConnectionListUnavailable() || ConnectionListFailure():
@@ -229,12 +242,13 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
             refreshError: loaded.refreshError,
           ),
         );
-      case ConnectionListUnavailable(:final errorCode, :final previous?, :final isRetrying):
+      case ConnectionListUnavailable(:final errorCode, :final previous?, :final isRetrying, :final retryError):
         emit(
           ConnectionListUnavailable(
             errorCode: errorCode,
             previous: previous._with(environment: () => event.environment),
             isRetrying: isRetrying,
+            retryError: retryError,
           ),
         );
       case ConnectionListInitial() || ConnectionListLoading() || ConnectionListUnavailable() || ConnectionListFailure():
