@@ -31,8 +31,8 @@ flowchart TB
 
     subgraph REPO["Repository Layer"]
         direction LR
-        UR["UserRepository"]
-        AR["LoginRepository"]
+        CR["ConnectionRepository"]
+        AR["AuthRepository"]
         ACR["AccountRepository"]
     end
 
@@ -54,7 +54,7 @@ flowchart TB
         RESOLVE["Resolve mock file name<br/><code>assets/mock/{METHOD}_{path}.json</code>"]
         RESOLVE --> ASSET
 
-        ASSET[("assets/mock/*.json<br/><i>22 JSON files</i>")]
+        ASSET[("assets/mock/*.json<br/><i>one JSON file per answer</i>")]
         ASSET --> RESPONSE
 
         NETWORK["Real HTTP Request"]
@@ -93,10 +93,10 @@ flowchart LR
         WIDGET_TEST["Widget Tests"]
     end
 
-    UC_TEST -- "mocktail" --> MOCK_REPO["MockIUserRepository<br/>MockIAuthRepository<br/>MockIAccountRepository"]
+    UC_TEST -- "mocktail" --> MOCK_REPO["MockIConnectionRepository<br/>MockIAuthRepository<br/>MockIAccountRepository"]
     BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockAccountRepository"]
     API_TEST -- "StubInterceptor" --> STUB_DIO["Test Dio Instance<br/><i>No network, no assets</i>"]
-    WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockUserListBloc<br/>MockLoginBloc"]
+    WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockChangePasswordBloc<br/>MockLoginBloc"]
 
     MOCK_REPO --> RESULT_T["Result&lt;T&gt;"]
     MOCK_REPO_C --> RESULT_T
@@ -234,7 +234,7 @@ Mock JSON files served by `MockInterceptor` live in `assets/mock/` and follow a 
 | `GET /connections/managed` | `GET_connections_managed.json` |
 | `POST /db/query` | `POST_db_query.json` |
 | `POST /account/change-password` | `POST_account_change_password.json` |
-| `DELETE /items/{id}` | *(no file needed — returns 204 directly)* |
+| `DELETE /items/{id}` | *(no file needed, returns 204 directly)* |
 
 **How the file name is resolved** (from `MockInterceptor`):
 
@@ -277,13 +277,14 @@ Each file contains the exact JSON the real API would return.
 }
 ```
 
-**Array** (`GET_admin_users_queryParams.json`):
+**List** (`GET_connections_managed.json`):
 ```json
-[
-  { "id": "user-1", "login": "admin", "firstName": "Admin", ... },
-  { "id": "user-2", "login": "new_user-2", "firstName": "Mock new user First Name", ... },
-  ...
-]
+{
+  "connections": [
+    { "id": "seed:sales-postgres", "name": "Sales (PostgreSQL)", "type": "postgres", ... },
+    ...
+  ]
+}
 ```
 
 **Auth token** (`POST_authenticate.json`):
@@ -336,32 +337,26 @@ Repositories are **completely unaware** of whether they are running against mock
 They receive the shared `ApiClient` through their constructor and always call it:
 
 ```dart
-class UserRepository implements IUserRepository {
-  UserRepository(this._apiClient);
+class ConnectionRepository implements IConnectionRepository {
+  ConnectionRepository(this._apiClient);
 
   final ApiClient _apiClient;
 
-  static const String _resource = 'users';
-
   @override
-  Future<Result<UserEntity>> retrieve(String id) async {
+  Future<Result<List<StudioConnection>>> listManaged() async {
     try {
-      final response = await _apiClient.get('/admin/$_resource', pathParams: id);
-      final result = User.fromJsonString(response.data!)!;
-      return Success(result);
-    } on UnauthorizedException catch (e) {
-      return Failure(AuthError(e.toString()));
-    } on FetchDataException catch (e) {
-      return Failure(_mapFetchDataException(e)); // TimeoutError or NetworkError
+      final response = await _apiClient.get('/connections/managed');
+      return Success(ManagedConnections.fromJsonString(ApiClient.decodeUTF8(response.data!)));
+    } catch (e) {
+      return Failure(studioError(e));
     }
   }
 }
 ```
 
-The `pathParams: id` argument causes `ApiClient` to:
-1. Build the URL as `/admin/users/{id}`
-2. Store `_basePath: '/admin/users'` and `_pathParams: id` in `options.extra`
-3. In dev mode, `MockInterceptor` reads `_pathParams`, resolves `GET_admin_users_pathParams.json`
+In dev mode `MockInterceptor` answers `GET /connections/managed` with `GET_connections_managed.json`.
+A `pathParams` argument makes `ApiClient` append the value to the URL and store `_basePath` and `_pathParams` in `options.extra`, so `MockInterceptor` resolves `{METHOD}_{basePath}_pathParams.json`.
+A `queryParams` argument resolves `{METHOD}_{basePath}_queryParams.json` the same way.
 
 ## Test Layer
 
@@ -372,7 +367,7 @@ They replace a layer with a test double instead:
 ┌──────────────────────────────────────────────────────────────────┐
 │                        Test Layer                                 │
 │                                                                   │
-│  Use Case Tests:   MockIUserRepository (interface mock)          │
+│  Use Case Tests:   MockIConnectionRepository (interface mock)    │
 │  BLoC Tests:       MockAccountRepository (concrete mock)         │
 │  ApiClient Tests:  _StubInterceptor (Dio-level stub)             │
 │  Widget Tests:     MockBloc (bloc_test)                          │
@@ -389,14 +384,13 @@ A test that pumps the whole `App` with its default `AppDependencies`, such as `t
 Mock the repository interface directly. No HTTP involved:
 
 ```dart
-class MockIUserRepository extends Mock implements IUserRepository {}
+class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
-test('fetches user by id', () async {
-  when(() => mockRepo.retrieve('1'))
-      .thenAnswer((_) async => const Success(user));
+test('returns the managed connections', () async {
+  when(() => mockRepo.listManaged()).thenAnswer((_) async => const Success(connections));
 
-  final result = await useCase.call('1');
-  expect(result, isA<Success<UserEntity>>());
+  final result = await ListManagedConnectionsUseCase(mockRepo).call();
+  expect(result, isA<Success<List<StudioConnection>>>());
 });
 ```
 
@@ -405,21 +399,12 @@ test('fetches user by id', () async {
 Mock the repository (or use case) and verify state transitions:
 
 ```dart
-blocTest<UserEditorBloc, UserEditorState>(
-  'emits [loading, loaded] when fetch succeeds',
-  build: () {
-    when(() => mockRepo.retrieve('1'))
-        .thenAnswer((_) async => const Success(user));
-    return UserEditorBloc(
-      fetchUserUseCase: FetchUserUseCase(mockRepo),
-      saveUserUseCase: SaveUserUseCase(mockRepo),
-    );
-  },
-  act: (bloc) => bloc.add(const UserEditorFetch('1')),
-  expect: () => [
-    const UserEditorLoading(),
-    const UserEditorLoaded(data: user),
-  ],
+blocTest<ConnectionListBloc, ConnectionListState>(
+  'emits [loading, loaded] when the list loads',
+  setUp: () => when(() => mockRepo.listManaged()).thenAnswer((_) async => const Success(connections)),
+  build: () => ConnectionListBloc(listManagedConnectionsUseCase: ListManagedConnectionsUseCase(mockRepo)),
+  act: (bloc) => bloc.add(const ConnectionListRequested()),
+  expect: () => const [ConnectionListLoading(), ConnectionListLoaded(connections: connections)],
 );
 ```
 

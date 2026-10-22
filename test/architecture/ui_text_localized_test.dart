@@ -37,20 +37,13 @@ void main() {
   });
 }
 
-const _roots = [
-  'lib/app/',
-  'lib/features/',
-  'lib/shared/widgets/',
-  'lib/shared/design_system/components/',
-  'lib/shared/dynamic_forms/presentation/',
-];
+const _roots = ['lib/app/', 'lib/features/', 'lib/shared/widgets/', 'lib/shared/design_system/components/'];
 
 const _skippedRoots = ['lib/app/dev_console/'];
 
 /// Literals that read the same in every language.
 const _sameInEveryLanguage = {
   "'LibreDB'", // the product name
-  "'ESC'", // the name of a key on the keyboard
   "'en'", // a language code
   "'m@example.com'", // an example address in an input hint
   "'name@example.com'", // an example address in an input hint

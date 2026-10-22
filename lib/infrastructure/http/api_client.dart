@@ -95,7 +95,7 @@ class ApiClient {
   /// Snapshot of the active interceptor chain, in order. Populated the
   /// first time [instance] is read (i.e. when Dio is built).
   ///
-  /// Consumers should read this instead of hard-coding names — keeps
+  /// Consumers should read this instead of hard-coding names, which keeps
   /// them in sync with the chain even when interceptors are added,
   /// removed, or conditionally included (e.g. [MockInterceptor]
   /// outside production).

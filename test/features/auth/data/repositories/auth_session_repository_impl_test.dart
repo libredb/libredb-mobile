@@ -297,7 +297,6 @@ void main() {
       await storage.save(StorageKeys.language.key, 'tr');
       await storage.save(StorageKeys.theme.key, 'nature');
       await storage.save(StorageKeys.brightness.key, 'dark');
-      await storage.save(StorageKeys.sidebarCollapsed.key, 'true');
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
       await repo.persist(const AuthSession(idToken: 'TOKEN', username: 'alice', roles: ['ROLE_USER']));
 
@@ -307,7 +306,6 @@ void main() {
       expect(await storage.read(StorageKeys.language.key), 'tr');
       expect(await storage.read(StorageKeys.theme.key), 'nature');
       expect(await storage.read(StorageKeys.brightness.key), 'dark');
-      expect(await storage.read(StorageKeys.sidebarCollapsed.key), 'true');
     });
 
     test('clear removes the session keys', () async {

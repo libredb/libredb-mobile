@@ -129,7 +129,7 @@ void main() {
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
       expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
-      // Logout intentionally lives only in the top bar of the shell —
+      // Logout intentionally lives only in the top bar of the shell:
       // settings does not own auth-session lifecycle (cross-feature).
     });
 

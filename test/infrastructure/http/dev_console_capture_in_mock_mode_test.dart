@@ -5,6 +5,7 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/mock_interceptor
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/mock_asset_stub.dart';
 import '../../support/test_env.dart';
 
 /// Records whether its onResponse fired — stands in for the observability
@@ -93,7 +94,8 @@ void main() {
       await api.post('/authenticate/verify-otp', {'email': 'otp.user@example.com', 'otp': '493817'});
       await api.post('/account/change-password', {'currentPassword': 'OldPass#1', 'newPassword': 'NewPass#2'});
       await api.get('/account');
-      await api.put('/admin/users/extended', {
+      stubAsset('assets/mock/PUT_users_password_pathParams.json', '{}');
+      await api.put('/users/password', {
         'email': 'alice@example.com',
         'newPassword': 'Adm1nSet!Pw',
       }, pathParams: 'user-2');

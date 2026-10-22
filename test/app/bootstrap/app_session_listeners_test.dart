@@ -43,13 +43,11 @@ const _app = App(
   ),
 );
 
-/// Stores the language, theme and brightness a user chose on this device earlier, and a device preference of an earlier
-/// app version.
+/// Stores the language, theme and brightness a user chose on this device earlier.
 Future<void> _choosePreferences() async {
   await AppLocalStorage().save(StorageKeys.language.key, 'tr');
   await AppLocalStorage().save(StorageKeys.theme.key, 'nature');
   await AppLocalStorage().save(StorageKeys.brightness.key, 'dark');
-  await AppLocalStorage().save(StorageKeys.sidebarCollapsed.key, 'true');
 }
 
 /// Signs out as the user does: Logout in the user menu, then Yes in the confirmation dialog, in whichever language the
@@ -228,7 +226,6 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
       expect(await AppLocalStorage().read(StorageKeys.brightness.key), 'dark');
-      expect(await AppLocalStorage().read(StorageKeys.sidebarCollapsed.key), 'true');
       expect(await SharedPrefsCacheStorage().count(), 0);
     });
 
@@ -245,7 +242,6 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
       expect(await AppLocalStorage().read(StorageKeys.brightness.key), 'dark');
-      expect(await AppLocalStorage().read(StorageKeys.sidebarCollapsed.key), 'true');
       expect(await SharedPrefsCacheStorage().count(), 0);
 
       // A relaunch mounts a new App, which loads the theme from storage.
