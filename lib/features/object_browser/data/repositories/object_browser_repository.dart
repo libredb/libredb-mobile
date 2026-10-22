@@ -7,7 +7,6 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/kind_coun
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
@@ -20,10 +19,6 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
   final ApiClient _apiClient;
 
   static final _log = AppLogger.getLogger('ObjectBrowserRepository');
-
-  @override
-  Future<Result<ProviderMeta>> providerMeta(String connectionId) =>
-      _post('providerMeta', '/db/provider-meta', {'connectionId': connectionId}, ObjectBrowserJson.providerMeta);
 
   @override
   Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent}) => _post(

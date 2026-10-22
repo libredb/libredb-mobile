@@ -17,6 +17,7 @@ import 'package:libredb_mobile/features/users/presentation/pages/user_extended_i
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
 import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,8 +62,8 @@ void main() {
     'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
     'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
     'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
+    'IProviderMetaRepository.providerMeta': (client) => ProviderMetaRepository(client).providerMeta('seed:sales-db'),
     'IStudioIdentityRepository.fetch': (client) => StudioIdentityRepository(client).fetch(),
-    'IObjectBrowserRepository.providerMeta': (client) => ObjectBrowserRepository(client).providerMeta('seed:sales-db'),
     'IObjectBrowserRepository.containers': (client) => ObjectBrowserRepository(client).containers('seed:sales-db'),
     'IObjectBrowserRepository.counts': (client) =>
         ObjectBrowserRepository(client).counts('seed:sales-db', container: const ['public']),

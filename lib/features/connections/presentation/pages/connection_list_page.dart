@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
-import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';

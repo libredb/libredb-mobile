@@ -36,6 +36,7 @@ import 'package:libredb_mobile/features/auth/data/services/misconfigured_sso_ses
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
@@ -170,6 +171,9 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IStudioIdentityRepository>(
           create: (context) => dependencies.createStudioIdentityRepository(context.read<ApiClient>()),
+        ),
+        RepositoryProvider<IProviderMetaRepository>(
+          create: (context) => dependencies.createProviderMetaRepository(context.read<ApiClient>()),
         ),
         RepositoryProvider<IObjectBrowserRepository>(
           create: (context) => dependencies.createObjectBrowserRepository(context.read<ApiClient>()),

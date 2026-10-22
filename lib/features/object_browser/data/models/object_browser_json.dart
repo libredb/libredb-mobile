@@ -6,7 +6,6 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/kind_coun
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 
 /// Reads the answers of Studio's object routes (`src/lib/db/types.ts` in Studio for the shapes).
 ///
@@ -14,37 +13,6 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/provider_
 /// of an unexpected type are left out, so a newer Studio that adds fields reads as before.
 final class ObjectBrowserJson {
   const ObjectBrowserJson._();
-
-  /// `POST /api/db/provider-meta`: `{capabilities, labels}`.
-  static ProviderMeta providerMeta(String body) {
-    final capabilities = _map(_object(body)['capabilities'], 'capabilities');
-    final keyScan = capabilities['keyScan'];
-    return ProviderMeta(
-      queryLanguage: _string(capabilities['queryLanguage'], 'queryLanguage'),
-      containerLevels: [
-        for (final level in _list(capabilities['containerLevels'] ?? const [], 'containerLevels'))
-          ContainerLevel(
-            id: _string(_map(level, 'container level')['id'], 'id'),
-            label: _string((level as Map)['label'], 'label'),
-            labelPlural: _string(level['labelPlural'], 'labelPlural'),
-          ),
-      ],
-      objectKinds: [
-        for (final kind in _list(capabilities['objectKinds'] ?? const [], 'objectKinds')) _objectKind(kind),
-      ],
-      supportsExplain: capabilities['supportsExplain'] == true,
-      supportsTransactions: capabilities['supportsTransactions'] == true,
-      supportsQueryCancel: capabilities['supportsQueryCancel'] == true,
-      supportsResultPagination: capabilities['supportsResultPagination'] == true,
-      catalogSessions: capabilities['catalogSessions'] == true,
-      keyScan: keyScan is Map<String, dynamic>
-          ? KeyScanSpec(
-              defaultCount: _int(keyScan['defaultCount'], 'defaultCount'),
-              maxCount: _int(keyScan['maxCount'], 'maxCount'),
-            )
-          : null,
-    );
-  }
 
   /// `POST /api/db/objects/containers`: `Container[]`.
   static List<ObjectContainer> containers(String body) => [
@@ -122,20 +90,6 @@ final class ObjectBrowserJson {
             if (key is String && value is String) key: value,
       },
       total: _int(json['total'], 'total'),
-    );
-  }
-
-  static ObjectKind _objectKind(Object? item) {
-    final kind = _map(item, 'object kind');
-    return ObjectKind(
-      id: _string(kind['id'], 'id'),
-      role: _string(kind['role'], 'role'),
-      label: _string(kind['label'], 'label'),
-      labelPlural: _string(kind['labelPlural'], 'labelPlural'),
-      hasSource: kind['hasSource'] == true,
-      hasColumns: kind['hasColumns'] == true,
-      attachedTo: kind['attachedTo'] is String ? kind['attachedTo'] as String : null,
-      keyBrowserOnly: kind['enumeratedBy'] == 'key-browser',
     );
   }
 
