@@ -52,6 +52,22 @@ void main() {
     expect(SqlEditorJson.transactionBegun('{"status":"active","stateReported":null}'), isNull);
   });
 
+  test('transactionEnded reads a commit and a rollback', () {
+    expect(
+      () => SqlEditorJson.transactionEnded('{"status":"committed","message":"Transaction committed"}'),
+      returnsNormally,
+    );
+    expect(
+      () => SqlEditorJson.transactionEnded('{"status":"rolled_back","message":"Transaction rolled back"}'),
+      returnsNormally,
+    );
+  });
+
+  test('transactionEnded refuses an answer without a status', () {
+    expect(() => SqlEditorJson.transactionEnded('{"message":"Transaction committed"}'), throwsFormatException);
+    expect(() => SqlEditorJson.transactionEnded('{"status":1}'), throwsFormatException);
+  });
+
   test('cancelled refuses an answer without the flag', () {
     expect(() => SqlEditorJson.cancelled('{"error":"x"}'), throwsFormatException);
   });

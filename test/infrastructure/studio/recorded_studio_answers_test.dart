@@ -435,8 +435,7 @@ void main() {
     });
 
     test('POST /api/db/transaction commits that transaction', () {
-      // The app has no reader of this answer yet; #51 adds one.
-      expect((jsonDecode(fixture('txcommit')) as Map<String, dynamic>)['status'], 'committed');
+      expect(() => SqlEditorJson.transactionEnded(fixture('txcommit')), returnsNormally);
     });
   });
 
