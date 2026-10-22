@@ -89,22 +89,20 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
 
-              // Help & Resources section, when the project has a documentation website
-              if (context.read<ProjectLinks>().docsUrl case final docsUrl?) ...[
-                const SizedBox(height: AppSpacing.lg),
-                _SettingsSection(
-                  title: S.of(context).help_resources,
-                  children: [
-                    _SettingsTile(
-                      key: settingsWebsiteButtonKey,
-                      icon: Icons.language,
-                      title: S.of(context).website,
-                      subtitle: S.of(context).help_resources_subtitle,
-                      onTap: () => openExternalLink(context, Uri.parse(docsUrl)),
-                    ),
-                  ],
-                ),
-              ],
+              // Help & Resources section
+              const SizedBox(height: AppSpacing.lg),
+              _SettingsSection(
+                title: S.of(context).help_resources,
+                children: [
+                  _SettingsTile(
+                    key: settingsWebsiteButtonKey,
+                    icon: Icons.language,
+                    title: S.of(context).documentation,
+                    subtitle: S.of(context).help_resources_subtitle,
+                    onTap: () => openExternalLink(context, Uri.parse(context.read<ProjectLinks>().docsUrl)),
+                  ),
+                ],
+              ),
               // Logout intentionally lives only in the sidebar / topbar
               // shell, not here. Settings is feature-scoped and an
               // auth-session lifecycle action would cross feature

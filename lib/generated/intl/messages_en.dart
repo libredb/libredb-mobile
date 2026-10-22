@@ -84,11 +84,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "community_discussions": MessageLookupByLibrary.simpleMessage("Discussions"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Documentation"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Open an Issue"),
-    "community_open_source": MessageLookupByLibrary.simpleMessage("Open Source"),
+    "community_source_available": MessageLookupByLibrary.simpleMessage("Source Available"),
     "community_sponsor": MessageLookupByLibrary.simpleMessage("Sponsor"),
     "community_star": MessageLookupByLibrary.simpleMessage("Star & Fork"),
     "community_subtitle": MessageLookupByLibrary.simpleMessage(
-      "This project is open source. Your contributions make it better!",
+      "LibreDB\'s source code is public. Your contributions make it better!",
     ),
     "community_title": MessageLookupByLibrary.simpleMessage("Join the Community"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Translate"),
@@ -147,6 +147,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "dashboard_title": MessageLookupByLibrary.simpleMessage("System Dashboard"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Are you sure you want to delete?"),
     "delete_user": MessageLookupByLibrary.simpleMessage("Delete User"),
+    "documentation": MessageLookupByLibrary.simpleMessage("Documentation"),
     "dynamic_form_field_max_length": m5,
     "dynamic_form_field_min_length": m6,
     "dynamic_form_field_numeric": MessageLookupByLibrary.simpleMessage("Must be a number"),
@@ -253,7 +254,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "guest": MessageLookupByLibrary.simpleMessage("Guest"),
     "help_resources": MessageLookupByLibrary.simpleMessage("Help & Resources"),
-    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("Visit our website for documentation and guides"),
+    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("Read the documentation and guides on GitHub"),
     "home": MessageLookupByLibrary.simpleMessage("Home"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("You were signed out due to inactivity."),
     "inactive": MessageLookupByLibrary.simpleMessage("Inactive"),
@@ -399,7 +400,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "verify_otp_code": MessageLookupByLibrary.simpleMessage("Verify OTP Code"),
     "view_user": MessageLookupByLibrary.simpleMessage("View User"),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
-    "website": MessageLookupByLibrary.simpleMessage("Website"),
     "yes": MessageLookupByLibrary.simpleMessage("Yes"),
   };
 }

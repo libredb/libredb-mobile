@@ -17,7 +17,7 @@ const _repo = 'https://github.com/acme/dashboard';
 const _docs = 'https://docs.acme.example';
 const _sponsor = 'https://github.com/sponsors/acme';
 
-/// A project that gives all three links at build time.
+/// Links other than the app's own, so a test sees that the page reads them from `AppDependencies`.
 const _acmeLinks = ProjectLinks(repository: _repo, docs: _docs, sponsor: _sponsor);
 
 const _allUrls = CommunityUrls(repo: _repo, sponsor: _sponsor, docs: _docs);
@@ -82,18 +82,18 @@ void main() {
       expect(find.text('Join the Community'), findsOneWidget);
     });
 
-    testWidgets('renders Open Source pill badge', (tester) async {
+    testWidgets('renders Source Available pill badge', (tester) async {
       await tester.pumpWidget(buildWidget(isDesktop: true));
       await tester.pumpAndSettle();
 
-      expect(find.text('Open Source'), findsOneWidget);
+      expect(find.text('Source Available'), findsOneWidget);
     });
 
     testWidgets('renders subtitle text', (tester) async {
       await tester.pumpWidget(buildWidget(isDesktop: true));
       await tester.pumpAndSettle();
 
-      expect(find.text('This project is open source. Your contributions make it better!'), findsOneWidget);
+      expect(find.text("LibreDB's source code is public. Your contributions make it better!"), findsOneWidget);
     });
 
     testWidgets('renders a card for every community link', (tester) async {
@@ -131,7 +131,7 @@ void main() {
       await tester.pumpWidget(buildWidget(isDesktop: false));
       await tester.pumpAndSettle();
 
-      expect(find.text('This project is open source. Your contributions make it better!'), findsOneWidget);
+      expect(find.text("LibreDB's source code is public. Your contributions make it better!"), findsOneWidget);
     });
 
     testWidgets('renders a chip for every community link', (tester) async {
@@ -164,27 +164,9 @@ void main() {
     });
   });
 
-  group('CommunitySectionWidget - project without sponsor or documentation page', () {
-    for (final isDesktop in [true, false]) {
-      testWidgets('leaves out Sponsor and Documentation (${isDesktop ? 'desktop' : 'mobile'})', (tester) async {
-        await tester.pumpWidget(
-          buildWidget(
-            isDesktop: isDesktop,
-            urls: const CommunityUrls(repo: _repo),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(communityStarKey), findsOneWidget);
-        expect(find.byKey(communitySponsorKey), findsNothing);
-        expect(find.byKey(communityDocsKey), findsNothing);
-      });
-    }
-  });
-
   group('CommunityUrls', () {
     test('builds the repository pages from the repository URL', () {
-      const urls = CommunityUrls(repo: _repo);
+      const urls = _allUrls;
 
       expect(urls.repo, 'https://github.com/acme/dashboard');
       expect(urls.issues, 'https://github.com/acme/dashboard/issues');
@@ -194,47 +176,27 @@ void main() {
     });
 
     test('takes the repository, sponsor and documentation URLs from the project links', () {
-      final urls = CommunityUrls.of(_acmeLinks)!;
+      final urls = CommunityUrls.of(_acmeLinks);
 
       expect(urls.repo, _repo);
       expect(urls.sponsor, _sponsor);
       expect(urls.docs, _docs);
     });
-
-    // Made-up keys: replacing the template's real placeholders across a project leaves these tests as they are.
-    test('gives no links when the repository URL is not filled in', () {
-      expect(
-        CommunityUrls.of(const ProjectLinks(repository: '__REPOSITORY__', docs: _docs, sponsor: _sponsor)),
-        isNull,
-      );
-    });
-
-    test('leaves out the sponsor and documentation pages that are not filled in', () {
-      final urls = CommunityUrls.of(const ProjectLinks(repository: _repo, docs: '__DOCS__', sponsor: '__SPONSOR__'))!;
-
-      expect(urls.sponsor, isNull);
-      expect(urls.docs, isNull);
-    });
   });
 
   group('Login page - community section', () {
     for (final (name, size) in [('phone', _phone), ('desktop', _desktop)]) {
-      // A made-up key: replacing the template's real placeholders across a project leaves this test as it is.
-      testWidgets('shows no community section while the repository URL is a placeholder ($name)', (tester) async {
-        await pumpAppOnLogin(
-          tester,
-          links: const ProjectLinks(repository: '__REPOSITORY__', docs: _docs, sponsor: _sponsor),
-          size: size,
-        );
+      testWidgets('links the community section to the LibreDB Mobile repository by default ($name)', (tester) async {
+        final calls = stubOpeningUrlLauncher(canLaunch: true);
+        await pumpAppOnLogin(tester, links: const ProjectLinks(), size: size);
 
-        expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
-        expect(find.text('Join the Community'), findsNothing);
-        for (final key in _communityKeys) {
-          expect(find.byKey(key), findsNothing, reason: '$key');
-        }
+        expect(find.text('Join the Community'), findsOneWidget);
+        await scrollTo(tester, communityStarKey);
+        await expectTapShowsNoMessage(tester, find.byKey(communityStarKey));
+        expect(calls.launchedUrls, ['https://github.com/libredb/libredb-mobile']);
       });
 
-      testWidgets('links the community section to the repository given at build time ($name)', (tester) async {
+      testWidgets('links the community section to the repository it is given ($name)', (tester) async {
         final calls = stubOpeningUrlLauncher(canLaunch: true);
         await pumpAppOnLogin(tester, links: _acmeLinks, size: size);
 
@@ -276,11 +238,11 @@ void main() {
     }
   });
   group('CommunitySectionWidget - Turkish', () {
-    testWidgets('renders the Open Source pill badge in Turkish', (tester) async {
+    testWidgets('renders the Source Available pill badge in Turkish', (tester) async {
       await tester.pumpWidget(buildWidget(isDesktop: true, locale: const Locale('tr')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Açık Kaynak'), findsOneWidget);
+      expect(find.text('Kaynak Kodu Erişilebilir'), findsOneWidget);
     });
   });
 }

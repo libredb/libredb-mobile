@@ -19,7 +19,6 @@ import 'package:libredb_mobile/features/auth/presentation/widgets/community_sect
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
-import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
@@ -113,17 +112,11 @@ class _ScriptedOidcClient implements IOidcClient {
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const ProviderSessionEnded();
 }
 
-/// The test config in an oidc build over [client], for a project that gives all its links. Only the `admin` and
-/// `user` roles of the `roles` claim are allowed.
+/// The test config in an oidc build over [client]. Only the `admin` and `user` roles of the `roles` claim are allowed.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation})
     : super(
         appConfig: const AppConfig.test(),
-        projectLinks: const ProjectLinks(
-          repository: 'https://github.com/acme/dashboard',
-          docs: 'https://docs.acme.example',
-          sponsor: 'https://github.com/sponsors/acme',
-        ),
         authMode: OidcAuthMode(
           OidcSettings(
             issuer: Uri.parse('https://id.example.com/realms/demo'),
@@ -176,21 +169,9 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
   }
 
-  // The real app starts unauthenticated after the global reset, so it lands on /login. The project gives all its
-  // links, so the page shows its community section.
+  // The real app starts unauthenticated after the global reset, so it lands on /login.
   Future<void> pumpLogin(WidgetTester tester, {String language = 'en'}) async {
-    await tester.pumpWidget(
-      App(
-        language: language,
-        dependencies: const AppDependencies(
-          projectLinks: ProjectLinks(
-            repository: 'https://github.com/acme/dashboard',
-            docs: 'https://docs.acme.example',
-            sponsor: 'https://github.com/sponsors/acme',
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(App(language: language));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
   }

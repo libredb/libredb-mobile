@@ -47,7 +47,7 @@ void main() {
 
   // The real app, signed in, on settings: the sidebar is the same on every shell page and settings has no loading
   // animation. The shell shows the account name in the top bar once the mock API answers after its 500 ms delay, so
-  // let that land before the screen is compared. The build gives the documentation website [docs].
+  // let that land before the screen is compared. The app links to the documentation [docs].
   Future<void> pumpAppOnSettings(WidgetTester tester, {Size size = const Size(1600, 1600), String docs = _docs}) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = size;
@@ -68,9 +68,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('SidebarWidget - website link that does not open', () {
+  group('SidebarWidget - documentation link that does not open', () {
     for (final failure in UrlLauncherFailure.values) {
-      testWidgets('tapping Website shows a message when ${failure.description}', (tester) async {
+      testWidgets('tapping Documentation shows a message when ${failure.description}', (tester) async {
         final calls = stubFailingUrlLauncher(failure);
         await pumpAppOnSettings(tester);
 
@@ -81,7 +81,7 @@ void main() {
   });
 
   // On a phone the sidebar sits in the shell's drawer, which covers the snack bar that reports the failure.
-  group('SidebarWidget - website link in the phone drawer', () {
+  group('SidebarWidget - documentation link in the phone drawer', () {
     testWidgets('closes the drawer so the user sees that the link did not open', (tester) async {
       stubFailingUrlLauncher(UrlLauncherFailure.values.first);
       await pumpAppOnSettings(tester, size: const Size(390, 844));
@@ -92,9 +92,11 @@ void main() {
     });
   });
 
-  group('SidebarWidget - website link that opens', () {
+  group('SidebarWidget - documentation link that opens', () {
     for (final canLaunch in [true, false]) {
-      testWidgets('tapping Website opens it and shows no message when canLaunchUrl answers $canLaunch', (tester) async {
+      testWidgets('tapping Documentation opens it and shows no message when canLaunchUrl answers $canLaunch', (
+        tester,
+      ) async {
         final calls = stubOpeningUrlLauncher(canLaunch: canLaunch);
         await pumpAppOnSettings(tester);
 
@@ -112,13 +114,14 @@ void main() {
     });
   });
 
-  group('SidebarWidget - project without a documentation website', () {
-    // A made-up key: replacing the template's real placeholders across a project leaves this test as it is.
-    testWidgets('shows no Website link while the docs URL is a placeholder', (tester) async {
-      await pumpAppOnSettings(tester, docs: '__DOCS__');
+  group('SidebarWidget - documentation link by default', () {
+    testWidgets('opens the LibreDB Mobile documentation', (tester) async {
+      final calls = stubOpeningUrlLauncher(canLaunch: true);
+      await pumpAdminOnDashboard(tester);
 
-      expect(find.byKey(sidebarWebsiteButtonKey), findsNothing);
-      expect(find.text('Website'), findsNothing);
+      expect(inSidebar('Documentation'), findsOneWidget);
+      await expectTapShowsNoMessage(tester, find.byKey(sidebarWebsiteButtonKey));
+      expect(calls.launchedUrls, ['https://github.com/libredb/libredb-mobile/tree/main/docs']);
     });
   });
 

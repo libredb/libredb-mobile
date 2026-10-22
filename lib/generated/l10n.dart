@@ -441,10 +441,10 @@ class S {
     return Intl.message('Join the Community', name: 'community_title', desc: '', args: []);
   }
 
-  /// `This project is open source. Your contributions make it better!`
+  /// `LibreDB's source code is public. Your contributions make it better!`
   String get community_subtitle {
     return Intl.message(
-      'This project is open source. Your contributions make it better!',
+      'LibreDB\'s source code is public. Your contributions make it better!',
       name: 'community_subtitle',
       desc: '',
       args: [],
@@ -491,19 +491,19 @@ class S {
     return Intl.message('Help & Resources', name: 'help_resources', desc: '', args: []);
   }
 
-  /// `Visit our website for documentation and guides`
+  /// `Read the documentation and guides on GitHub`
   String get help_resources_subtitle {
     return Intl.message(
-      'Visit our website for documentation and guides',
+      'Read the documentation and guides on GitHub',
       name: 'help_resources_subtitle',
       desc: '',
       args: [],
     );
   }
 
-  /// `Website`
-  String get website {
-    return Intl.message('Website', name: 'website', desc: '', args: []);
+  /// `Documentation`
+  String get documentation {
+    return Intl.message('Documentation', name: 'documentation', desc: '', args: []);
   }
 
   /// `Invalid access token`
@@ -961,9 +961,9 @@ class S {
     return Intl.message('OTP sent to $email', name: 'otp_sent_to_email', desc: '', args: [email]);
   }
 
-  /// `Open Source`
-  String get community_open_source {
-    return Intl.message('Open Source', name: 'community_open_source', desc: '', args: []);
+  /// `Source Available`
+  String get community_source_available {
+    return Intl.message('Source Available', name: 'community_source_available', desc: '', args: []);
   }
 
   /// `Create your account`

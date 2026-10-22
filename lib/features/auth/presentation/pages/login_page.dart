@@ -181,10 +181,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       _statsRow(),
                       const SizedBox(height: 40),
                       _featureCards(),
-                      if (_communityUrls(context) case final urls?) ...[
-                        const SizedBox(height: 10),
-                        CommunitySectionWidget(isDesktop: true, urls: urls),
-                      ],
+                      const SizedBox(height: 10),
+                      CommunitySectionWidget(isDesktop: true, urls: _communityUrls(context)),
                     ],
                   ),
                 ),
@@ -445,7 +443,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Widget _passwordFormBody(BuildContext context, bool isDark, {required bool showCommunity}) {
-    final communityUrls = showCommunity ? _communityUrls(context) : null;
     return FormBuilder(
       key: _loginFormKey,
       child: Column(
@@ -473,9 +470,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           SizedBox(width: double.infinity, child: _otpLoginButton(context)),
           const SizedBox(height: 28),
           _registerLink(context),
-          if (communityUrls != null) ...[
+          if (showCommunity) ...[
             const SizedBox(height: 4),
-            CommunitySectionWidget(isDesktop: false, urls: communityUrls),
+            CommunitySectionWidget(isDesktop: false, urls: _communityUrls(context)),
           ],
           const SizedBox(height: 16),
           _versionText(context),
@@ -487,7 +484,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   /// The sign-in of an `oidc` build: the error line and the single sign-on button, which a misconfigured build leaves
   /// out.
   Widget _ssoFormBody(BuildContext context, AuthMode mode, {required bool showCommunity}) {
-    final communityUrls = showCommunity ? _communityUrls(context) : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -497,9 +493,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           SizedBox(width: double.infinity, child: _ssoButton(context)),
         ],
         const SizedBox(height: 28),
-        if (communityUrls != null) ...[
+        if (showCommunity) ...[
           const SizedBox(height: 4),
-          CommunitySectionWidget(isDesktop: false, urls: communityUrls),
+          CommunitySectionWidget(isDesktop: false, urls: _communityUrls(context)),
         ],
         const SizedBox(height: 16),
         _versionText(context),
@@ -564,8 +560,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   /// Starts the single sign-on. The page reads the route's `returnUrl` on the way out, as the password sign-in does.
   void _requestSso(BuildContext context) => context.read<LoginBloc>().add(const SsoSignInRequested());
 
-  /// The links of the community section, or null when the project has no repository to link to.
-  CommunityUrls? _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
+  /// The links of the community section.
+  CommunityUrls _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
 
   Widget _versionText(BuildContext context) {
     final cs = Theme.of(context).colorScheme;

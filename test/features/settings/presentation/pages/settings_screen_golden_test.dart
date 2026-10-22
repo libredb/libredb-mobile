@@ -39,10 +39,9 @@ void main() {
       ],
     );
 
-    // A project with a documentation website, so the screen shows its Help & Resources section.
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks(docs: 'https://docs.acme.example')),
+        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
         RepositoryProvider<AuthMode>.value(value: const JwtAuthMode()),
       ],
       child: MaterialApp.router(

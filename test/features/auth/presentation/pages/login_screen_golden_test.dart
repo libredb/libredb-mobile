@@ -37,14 +37,7 @@ void main() {
         RepositoryProvider<AuthMode>.value(value: authMode),
         BlocProvider<LoginBloc>.value(value: loginBloc),
         BlocProvider<AccountBloc>.value(value: accountBloc),
-        // A project that gives all its links, so the page shows its community section.
-        RepositoryProvider<ProjectLinks>.value(
-          value: const ProjectLinks(
-            repository: 'https://github.com/acme/dashboard',
-            docs: 'https://docs.acme.example',
-            sponsor: 'https://github.com/sponsors/acme',
-          ),
-        ),
+        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
       ],
       child: const LoginScreen(),
     );

@@ -82,11 +82,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "community_discussions": MessageLookupByLibrary.simpleMessage("Tartışmalar"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Sorun Bildir"),
-    "community_open_source": MessageLookupByLibrary.simpleMessage("Açık Kaynak"),
+    "community_source_available": MessageLookupByLibrary.simpleMessage("Kaynak Kodu Erişilebilir"),
     "community_sponsor": MessageLookupByLibrary.simpleMessage("Sponsor Ol"),
     "community_star": MessageLookupByLibrary.simpleMessage("Yıldız & Fork"),
     "community_subtitle": MessageLookupByLibrary.simpleMessage(
-      "Bu proje açık kaynaktır. Katkılarınız onu daha iyi yapar!",
+      "LibreDB\'nin kaynak kodu herkese açıktır. Katkılarınız onu daha iyi yapar!",
     ),
     "community_title": MessageLookupByLibrary.simpleMessage("Topluluğa Katılın"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Çeviriye Yardım Et"),
@@ -149,6 +149,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "dashboard_title": MessageLookupByLibrary.simpleMessage("Sistem Paneli"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "delete_user": MessageLookupByLibrary.simpleMessage("Kullanıcı Sil"),
+    "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "dynamic_form_field_max_length": m5,
     "dynamic_form_field_min_length": m6,
     "dynamic_form_field_numeric": MessageLookupByLibrary.simpleMessage("Sayı olmalıdır"),
@@ -251,9 +252,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "guest": MessageLookupByLibrary.simpleMessage("Kullanıcı"),
     "help_resources": MessageLookupByLibrary.simpleMessage("Yardım ve Kaynaklar"),
-    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage(
-      "Dokümantasyon ve rehberler için web sitemizi ziyaret edin",
-    ),
+    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("GitHub\'daki dokümantasyonu ve rehberleri okuyun"),
     "home": MessageLookupByLibrary.simpleMessage("Ana Sayfa"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("Hareketsizlik nedeniyle oturumunuz kapatıldı."),
     "inactive": MessageLookupByLibrary.simpleMessage("Pasif"),
@@ -407,7 +406,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "verify_otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu Doğrula"),
     "view_user": MessageLookupByLibrary.simpleMessage("Kullanıcı Görüntüle"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
-    "website": MessageLookupByLibrary.simpleMessage("Web Sitesi"),
     "yes": MessageLookupByLibrary.simpleMessage("Evet"),
   };
 }

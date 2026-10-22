@@ -222,19 +222,18 @@ class _SidebarFooter extends StatelessWidget {
               );
             },
           ),
-          // Website link, when the project has a documentation website
-          if (context.read<ProjectLinks>().docsUrl case final docsUrl?)
-            SidebarNavItem(
-              key: sidebarWebsiteButtonKey,
-              icon: Icons.language,
-              label: S.of(context).website,
-              isCollapsed: isCollapsed,
-              onTap: () {
-                // A link that does not open is reported in a snack bar, which an open drawer would cover.
-                _closeMobileDrawer(context);
-                openExternalLink(context, Uri.parse(docsUrl));
-              },
-            ),
+          // Documentation link
+          SidebarNavItem(
+            key: sidebarWebsiteButtonKey,
+            icon: Icons.language,
+            label: S.of(context).documentation,
+            isCollapsed: isCollapsed,
+            onTap: () {
+              // A link that does not open is reported in a snack bar, which an open drawer would cover.
+              _closeMobileDrawer(context);
+              openExternalLink(context, Uri.parse(context.read<ProjectLinks>().docsUrl));
+            },
+          ),
           // Collapse toggle
           SidebarNavItem(
             icon: isCollapsed ? Icons.chevron_right : Icons.chevron_left,
