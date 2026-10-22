@@ -102,7 +102,7 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
       return Success(read(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       final error = studioError(e);
-      _log.warn('{} failed: {}', [operation, error]);
+      _log.warn('{} failed: {}', [operation, error.code ?? error.runtimeType]);
       return Failure(error);
     }
   }

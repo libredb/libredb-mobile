@@ -23,7 +23,7 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
       return Success(identity);
     } catch (e) {
       final error = studioError(e);
-      _log.warn('fetch failed: {}', [error]);
+      _log.warn('fetch failed: {}', [error.code ?? error.runtimeType]);
       return Failure(error);
     }
   }

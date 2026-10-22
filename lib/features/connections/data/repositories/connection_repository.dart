@@ -52,7 +52,7 @@ class ConnectionRepository implements IConnectionRepository {
 
   static Failure<T> _failure<T>(String operation, Object e) {
     final error = studioError(e);
-    _log.warn('{} failed: {}', [operation, error]);
+    _log.warn('{} failed: {}', [operation, error.code ?? error.runtimeType]);
     return Failure(error);
   }
 }
