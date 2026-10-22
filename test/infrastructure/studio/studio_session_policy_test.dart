@@ -31,6 +31,14 @@ void main() {
       }
     });
 
+    // libredb-studio#1922 refuses an account with a role or identity it cannot use with a 403, which no refresh fixes.
+    test('refuses a 403 that refuses the account', () {
+      for (final code in ['BEARER_NO_ROLE', 'BEARER_NO_IDENTITY']) {
+        expect(isStudioSessionExpired(errorWith(403, '{"error":"x","code":"$code"}')), isFalse, reason: code);
+        expect(isStudioSessionRefused(errorWith(403, '{"error":"x","code":"$code"}')), isFalse, reason: code);
+      }
+    });
+
     test('refuses another status, or no response', () {
       expect(isStudioSessionExpired(errorWith(403, '{"error":"x","code":"AUTH_REQUIRED"}')), isFalse);
       expect(isStudioSessionExpired(errorWith(503, '{"code":"IDENTITY_PROVIDER_UNAVAILABLE"}')), isFalse);

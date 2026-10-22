@@ -99,11 +99,8 @@ class AppDependencies {
   IOidcClient createOidcClient(OidcSettings settings) => OidcClient(settings: settings);
 
   /// The single sign-on, which stores the session through [sessionRepository].
-  ISsoAuthRepository createSsoAuthRepository(
-    IOidcClient client,
-    IAuthSessionRepository sessionRepository,
-    OidcSettings settings,
-  ) => SsoAuthRepository(client: client, sessionRepository: sessionRepository, settings: settings);
+  ISsoAuthRepository createSsoAuthRepository(IOidcClient client, IAuthSessionRepository sessionRepository) =>
+      SsoAuthRepository(client: client, sessionRepository: sessionRepository);
 
   /// The token refresh, through [client] at the provider's token endpoint.
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>

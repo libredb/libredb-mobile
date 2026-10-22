@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/app/router/forbidden_page.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
-import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart' show Level, Logger, OutputEvent;
@@ -89,38 +87,6 @@ void main() {
       expect(rootPages(tester).last, isA<MaterialPage<void>>());
     });
 
-    testWidgets('builds the forbidden route as a Material page', (tester) async {
-      setDesktopViewport(tester);
-      TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
-      await tester.pumpAndSettle();
-
-      routerFromApp(tester).go(ApplicationRoutesConstants.forbidden);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ForbiddenPage), findsOneWidget);
-      expect(rootPages(tester).last, isA<MaterialPage<void>>());
-    });
-
-    // go_router 18.1.0 gave both shell pages the same page key and failed the Navigator assertion
-    // '!keyReservation.contains(key)' (flutter/flutter#140586, fixed in 18.1.1).
-    testWidgets('pushes a shell route over a root route pushed over the shell', (tester) async {
-      setDesktopViewport(tester);
-      TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
-      await tester.pumpAndSettle();
-
-      routerFromApp(tester).push(ApplicationRoutesConstants.forbidden);
-      await tester.pumpAndSettle();
-      expect(find.byType(ForbiddenPage), findsOneWidget);
-
-      routerFromApp(tester).push(ApplicationRoutesConstants.settings);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.settings);
-    });
-
     testWidgets('renders a Material not-found page for unknown locations', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
@@ -175,14 +141,11 @@ void main() {
       expect(warnings, contains(allOf(contains('/does-not-exist'), contains('no routes for location'))));
     });
 
-    // The two root pages outside the shell enter without a transition. While a root page that replaces the shell is
+    // The root page outside the shell, the not-found page, enters without a transition. While a root page that replaces the shell is
     // still entering, the root navigator keeps the exiting shell page mounted, and a shell page that comes back in that
     // window builds the shell Navigator a second time with the same GlobalKey: "Duplicate GlobalKey detected in widget
     // tree" (flutter/flutter#148768). Once a go_router or Flutter release fixes that, the entering transition can return.
-    for (final (label, location, page) in [
-      ('the not-found page', '/does-not-exist', NotFoundPage),
-      ('the forbidden page', ApplicationRoutesConstants.forbidden, ForbiddenPage),
-    ]) {
+    for (final (label, location, page) in [('the not-found page', '/does-not-exist', NotFoundPage)]) {
       testWidgets('returns to the shell 16 ms after leaving it for $label', (tester) async {
         setDesktopViewport(tester);
         TestEnv.authenticate();
@@ -235,24 +198,6 @@ void main() {
         expect(rootPages(tester).last, isA<MaterialPage<void>>());
       });
     }
-
-    testWidgets('pops a pushed forbidden page with the iOS back swipe', (tester) async {
-      setDesktopViewport(tester);
-      TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
-      await tester.pumpAndSettle();
-
-      routerFromApp(tester).push(ApplicationRoutesConstants.forbidden);
-      await tester.pumpAndSettle();
-      expect(find.byType(ForbiddenPage), findsOneWidget);
-
-      // A fast drag across 75% of the width, so the pop never hinges on the 50% threshold.
-      await tester.timedDragFrom(const Offset(5, 400), const Offset(1200, 0), const Duration(milliseconds: 150));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ForbiddenPage), findsNothing);
-      expect(find.byType(ConnectionListPage), findsOneWidget);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
     testWidgets('declares every route with a pageBuilder', (tester) async {
       setDesktopViewport(tester);

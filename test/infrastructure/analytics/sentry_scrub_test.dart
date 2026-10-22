@@ -450,7 +450,7 @@ void main() {
           'count': 3,
           'loaded': true,
           'pages': [1, 2],
-          'filter': {'authority': 'ROLE_USER'},
+          'filter': {'authority': 'reader'},
         },
       );
       final before = jsonEncode(breadcrumb.toJson());

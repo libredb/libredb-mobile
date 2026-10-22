@@ -1,9 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/router/app_root_page.dart';
 import 'package:libredb_mobile/app/router/app_router_refresh_notifier.dart';
-import 'package:libredb_mobile/app/router/forbidden_page.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
-import 'package:libredb_mobile/app/router/route_role_requirements.dart';
 // safeRedirectTarget lives in core/ so features/ guards can consume it too.
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -65,10 +63,6 @@ class AppRouterFactory {
             },
           ),
         ),
-        GoRoute(
-          path: ApplicationRoutesConstants.forbidden,
-          pageBuilder: (context, state) => appRootPage(state: state, child: const ForbiddenPage()),
-        ),
       ],
       redirect: (context, state) {
         final location = state.uri.path;
@@ -115,19 +109,6 @@ class AppRouterFactory {
           }
           final encoded = Uri.encodeQueryComponent(fullPath);
           return '${ApplicationRoutesConstants.login}?returnUrl=$encoded';
-        }
-
-        // Role gate. Empty required set → open access.
-        if (isAuthenticated) {
-          final required = requiredRolesFor(location);
-          if (!hasAnyRequiredRole(sessionState.roles, required)) {
-            _log.warn('redirect - role denied at {}: user roles {}, required {}', [
-              location,
-              sessionState.roles,
-              required,
-            ]);
-            return ApplicationRoutesConstants.forbidden;
-          }
         }
 
         return null;

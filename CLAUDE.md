@@ -172,6 +172,7 @@ The contract, the endpoint table and the error mapping are in `docs/architecture
 - Never retry a request that runs a statement, and never log statement text or a database error text.
 - Read answers in the feature's `data/models/`: throw a `FormatException` for a missing required field, leave out an optional field of an unexpected type, and treat Studio's kind ids as opaque strings.
 - Only a 401 `AUTH_REQUIRED` (or a 401 without a code) ends the session (`isStudioSessionExpired`); a new Studio code that the user should understand gets a `studio.*` `AppErrorCode` with English and Turkish messages.
+- The role comes only from Studio's `GET /api/auth/me` (`StudioIdentity.role`), never from a token, and is never stored; a sign-in succeeds only when that call answers 200.
 - Each new method needs a recorded answer in `assets/mock/`, an entry in `test/architecture/mock_asset_coverage_test.dart`, and, once it can be recorded against `tool/studio-dev`, a fixture in `test/fixtures/studio/` read by `test/infrastructure/studio/recorded_studio_answers_test.dart`.
 
 ## Adding a New Feature

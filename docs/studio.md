@@ -16,7 +16,7 @@ In Keycloak, next to Studio's own confidential client:
 - Redirect URI and post-logout redirect URI `org.libredb.mobile:/oauth2redirect`.
 - An Audience mapper on that client that puts Studio's API audience, for example `libredb-studio-api`, into the access token only.
   It must differ from Studio's own client id.
-- The role claim in both tokens: the app reads it from the ID token and Studio from the access token.
+- The role claim in the access token, where Studio maps it under its own `OIDC_ROLE_CLAIM`; the app reads the role only from Studio's `GET /api/auth/me`.
 
 In Studio:
 
@@ -32,15 +32,12 @@ The app is built with:
 ```env
 OIDC_ISSUER=https://keycloak.example.com/realms/libredb
 OIDC_CLIENT_ID=libredb-mobile
-OIDC_ROLE_CLAIM=realm_access.roles
-OIDC_ADMIN_ROLES=admin
-OIDC_USER_ROLES=user
 PROD_API_URL=https://studio.example.com/api
 ```
 
 Studio's API lives under `/api`, so `PROD_API_URL` ends with it and the repositories use paths such as `/connections/managed`.
 A prod build without `PROD_API_URL` stops at start with `ProdApiUrlConfigError`.
-In a Platform install the role claim is `libredb_roles` instead of `realm_access.roles`.
+In a Platform install Studio's role claim is `libredb_roles` instead of `realm_access.roles`; the app's build does not change.
 
 ## Try it locally
 
@@ -52,6 +49,7 @@ In a Platform install the role claim is `libredb_roles` instead of `realm_access
 | `https://localhost:9443` | Studio; the app's API is `https://localhost:9443/api` |
 
 The realm has the users `admin` / `admin` (realm role `admin`) and `user` / `user` (realm role `user`), and gives access tokens a 60 second life, so a walkthrough also exercises the refresh.
+`norole` / `norole` holds no realm role, so Studio refuses it: the sign-in stays on the login page with the refusal, and nothing is stored.
 The stack is unfit for production on purpose: `start-dev` with the embedded H2 store, a self-signed CA, and committed passwords and client secret.
 
 Build the Studio image from main, until a release contains the bearer channel:
@@ -98,7 +96,7 @@ This step was not run, since the stack was verified on Linux.
 ### What the walkthrough shows
 
 1. "Sign in with SSO" opens Keycloak in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
-2. After the sign-in the app opens the connection list; the sign-in itself sends nothing to Studio.
+2. After the sign-in the app asks Studio's `GET /api/auth/me` and opens the connection list only on its 200; `norole` / `norole` stays on the login page with "Studio did not accept this sign-in.", and nothing is stored.
 3. The connection list shows what Studio offers the user: without a seed file, Studio's two sample connections.
    That request carries the access token, so the list proves the bearer channel.
 4. A minute later the access token has expired: Studio answers the next request with 401, and the app refreshes at Keycloak and repeats it.
@@ -109,6 +107,7 @@ How far this was verified:
 | Platform | Status |
 | --- | --- |
 | Android emulator, API 30 Google APIs image | Walked through as above with Studio built from libredb/libredb-studio#1914 at `d8d1b4970`: sign-in, the connection list, the refresh after expiry and the logout all worked |
+| Android emulator, API 30 Google APIs image, Studio main `dbfea26` | The Keycloak-only sign-in of #11: `admin` and `user` land on the connection list, `norole` is refused at sign-in with `studio.account_refused` and a relaunch finds no session, and the logout ends the Keycloak session |
 | iOS simulator | Not run |
 
 ## Governed Studio

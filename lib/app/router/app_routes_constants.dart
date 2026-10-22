@@ -19,5 +19,4 @@ class ApplicationRoutesConstants {
 
   // Error routes
   static const notFound = '/not-found';
-  static const forbidden = '/forbidden';
 }

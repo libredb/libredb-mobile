@@ -90,7 +90,6 @@ class AppScope extends StatelessWidget {
             create: (context) => dependencies.createSsoAuthRepository(
               context.read<IOidcClient>(),
               context.read<IAuthSessionRepository>(),
-              oidcSettings,
             ),
           ),
           RepositoryProvider<TokenRotation>(
@@ -185,11 +184,16 @@ class AppScope extends StatelessWidget {
         providers: [
           BlocProvider<ConnectivityCubit>(create: (_) => ConnectivityCubit()..monitor()),
           BlocProvider<LoginBloc>(
-            // A misconfigured build has no sign-in: its login page shows why and offers none.
+            // A misconfigured build has no sign-in: its login page shows why and offers none. A sign-in succeeds only
+            // once Studio's GET /api/auth/me accepts the account.
             create: (context) => LoginBloc(
               signInWithSsoUseCase: oidcSettings == null
                   ? null
-                  : SignInWithSsoUseCase(context.read<ISsoAuthRepository>()),
+                  : SignInWithSsoUseCase(
+                      context.read<ISsoAuthRepository>(),
+                      context.read<IStudioIdentityRepository>(),
+                      context.read<IAuthSessionRepository>(),
+                    ),
             ),
           ),
           BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()..add(const LoadTheme())),

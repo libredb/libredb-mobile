@@ -100,6 +100,8 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
 
 1. "Sign in with SSO" runs the authorization code flow with PKCE in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
    The tokens go to the platform's secure storage.
+   The sign-in then calls `GET /api/auth/me` and succeeds only on its 200; any other answer clears the stored tokens and shows why, so an account Studio refuses never opens the app.
+   The role comes only from that answer (`StudioIdentity.role`): the app reads no role from a token, maps none and stores none.
 2. `AuthInterceptor` adds the access token to every request as `Authorization: Bearer`.
 3. When Studio refuses the token, `TokenRefreshInterceptor` refreshes it at Keycloak once and repeats the request.
    The session ends when the refresh fails at Keycloak, or when Studio answers the repeated request with 401 `AUTH_REQUIRED` (`isStudioSessionRefused`).
@@ -117,6 +119,7 @@ Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`, and wh
 | 401 `AUTH_ERROR` (the database refused its credential) | shows the error; the session stays |
 | 401 `LLM_AUTH` | the same; the AI routes are not used |
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
+| 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | shows the error, no refresh, the session stays; at sign-in the sign-in is refused |
 
 `GET /api/auth/me` answers 401 without a code both for a refused token and when Studio cannot reach Keycloak, so a 401 there does not prove the session is over.
 The rule after a refresh ([#12](https://github.com/libredb/libredb-mobile/issues/12)):
@@ -210,11 +213,14 @@ Studio's error body is `{error, code?, ...}`.
 | `CONNECTION_ERROR`, `POOL_EXHAUSTED` | `studio.database_unreachable` |
 | `GOVERNANCE_UNAVAILABLE`, `AUDIT_UNAVAILABLE` | `studio.governance_unavailable` |
 | `IDENTITY_PROVIDER_UNAVAILABLE` | `studio.identity_provider_unavailable` |
+| `BEARER_NO_ROLE` (403, from libredb-studio#1922 on) | `studio.account_has_no_role` |
+| `BEARER_NO_IDENTITY` (403, from libredb-studio#1922 on) | `studio.account_has_no_identity` |
 | `RATE_LIMITED`, any 429 | `studio.rate_limited`, as a `RateLimitedError` with the delay |
 | `TRANSACTION_NOT_OWNED` | `studio.transaction_not_owned` |
 | `TRANSACTION_CREDENTIAL_CHANGED` | `studio.transaction_credential_changed` |
 | an answer the app cannot read | `studio.unreadable_answer` |
 
+A sign-in that `GET /api/auth/me` refuses with any other `AuthError`, a 401 that reached the caller, shows `studio.account_refused`.
 A screen shows the translated message of the code.
 The SQL editor also shows the database's own words, the `message` of the error, because a syntax error is what the user needs to read there.
 

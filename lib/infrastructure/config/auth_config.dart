@@ -9,9 +9,6 @@ final class AuthDefines {
     this._oidcClientId = const String.fromEnvironment('OIDC_CLIENT_ID'),
     this._oidcScope = const String.fromEnvironment('OIDC_SCOPE'),
     this._oidcAudience = const String.fromEnvironment('OIDC_AUDIENCE'),
-    this._oidcRoleClaim = const String.fromEnvironment('OIDC_ROLE_CLAIM'),
-    this._oidcAdminRoles = const String.fromEnvironment('OIDC_ADMIN_ROLES'),
-    this._oidcUserRoles = const String.fromEnvironment('OIDC_USER_ROLES'),
     this._oidcPrompt = const String.fromEnvironment('OIDC_PROMPT'),
     this._oidcAutoRedirect = const String.fromEnvironment('OIDC_AUTO_REDIRECT'),
     this._oidcLogoutHint = const String.fromEnvironment('OIDC_LOGOUT_HINT'),
@@ -22,9 +19,6 @@ final class AuthDefines {
   final String _oidcClientId;
   final String _oidcScope;
   final String _oidcAudience;
-  final String _oidcRoleClaim;
-  final String _oidcAdminRoles;
-  final String _oidcUserRoles;
   final String _oidcPrompt;
   final String _oidcAutoRedirect;
   final String _oidcLogoutHint;
@@ -85,9 +79,6 @@ final class OidcSettings {
     required this.clientId,
     this.scopes = defaultScopes,
     this.audience,
-    this.roleClaim,
-    this.adminRoles = const ['admin'],
-    this.userRoles = const [],
     this.prompt = OidcPrompt.login,
     this.autoRedirect = false,
     this.logoutHint = true,
@@ -117,20 +108,11 @@ final class OidcSettings {
     if (scopes.isNotEmpty && !scopes.contains('openid')) {
       throw OidcConfigException('OIDC_SCOPE must contain openid, but it is "${defines._oidcScope.trim()}"');
     }
-    final roleClaim = _optional(defines._oidcRoleClaim);
-    final adminRoles = _list(defines._oidcAdminRoles);
-    final userRoles = _list(defines._oidcUserRoles);
-    if (userRoles.isNotEmpty && roleClaim == null) {
-      throw const OidcConfigException('OIDC_USER_ROLES needs OIDC_ROLE_CLAIM, which is unset');
-    }
     return OidcSettings(
       issuer: issuer,
       clientId: clientId,
       scopes: scopes.isEmpty ? defaultScopes : scopes,
       audience: _optional(defines._oidcAudience),
-      roleClaim: roleClaim,
-      adminRoles: adminRoles.isEmpty ? const ['admin'] : adminRoles,
-      userRoles: userRoles,
       prompt: _prompt(defines._oidcPrompt),
       autoRedirect: _flag('OIDC_AUTO_REDIRECT', defines._oidcAutoRedirect, whenUnset: false),
       logoutHint: _flag('OIDC_LOGOUT_HINT', defines._oidcLogoutHint, whenUnset: true),
@@ -192,10 +174,6 @@ final class OidcSettings {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-  /// The trimmed non-empty items of the comma list [value].
-  static List<String> _list(String value) =>
-      [for (final item in value.split(',')) item.trim()].where((item) => item.isNotEmpty).toList();
-
   /// The issuer, with discovery at `/.well-known/openid-configuration` under it.
   final Uri issuer;
 
@@ -205,13 +183,6 @@ final class OidcSettings {
 
   /// Sent as `audience` on the authorization request (Auth0), or null to send none.
   final String? audience;
-
-  /// The dot path to the role claim in the ID token, such as `realm_access.roles`.
-  final String? roleClaim;
-  final List<String> adminRoles;
-
-  /// When not empty, an account with neither an admin nor a user role is refused.
-  final List<String> userRoles;
   final OidcPrompt prompt;
 
   /// Whether the login page sends the user to the provider without waiting for a tap.

@@ -13,23 +13,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// read is cheap and correct.
 class AppLocalStorageCached {
   static final _log = AppLogger.getLogger("AppLocalStorageCached");
-  static List<String>? roles;
-  static String? username;
   static String? theme;
   static String? brightness;
 
   static Future<void> loadCache() async {
     _log.trace("Loading cache");
-    roles = await AppLocalStorage().read(StorageKeys.roles.key);
-    username = await AppLocalStorage().read(StorageKeys.username.key);
     theme = await AppLocalStorage().read(StorageKeys.theme.key) ?? "classic";
     brightness = await AppLocalStorage().read(StorageKeys.brightness.key) ?? "light";
-    _log.trace("Loaded cache with username:{}, roles:{}, theme:{}, brightness:{}", [
-      username,
-      roles,
-      theme,
-      brightness,
-    ]);
+    _log.trace("Loaded cache with theme:{}, brightness:{}", [theme, brightness]);
   }
 }
 
@@ -41,9 +32,7 @@ class AppLocalStorageCached {
 ///
 /// Each value also has a [scope], which decides whether ending a session removes it.
 enum StorageKeys {
-  roles('roles'),
   language('language'),
-  username('username'),
   theme('theme'),
   brightness('brightness');
 
@@ -54,9 +43,7 @@ enum StorageKeys {
   /// Whether this key belongs to the signed-in user or to the device. The switch is exhaustive on purpose: a new key
   /// does not compile until it is classified, so a logout neither leaves it for the next user nor drops a preference.
   StorageScope get scope => switch (this) {
-    StorageKeys.roles => StorageScope.session,
     StorageKeys.language => StorageScope.device,
-    StorageKeys.username => StorageScope.session,
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
   };

@@ -81,9 +81,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_auth_oidc_logout_incomplete": MessageLookupByLibrary.simpleMessage(
       "Bu uygulamadan çıkış yaptınız, ancak kimlik sağlayıcıdaki oturumunuz hâlâ açık olabilir.",
     ),
-    "error_auth_oidc_no_role": MessageLookupByLibrary.simpleMessage(
-      "Hesabınızın bu uygulamaya erişim veren bir rolü yok. Yöneticinize başvurun.",
-    ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
     "error_generic": MessageLookupByLibrary.simpleMessage("Bir şeyler ters gitti"),
     "error_link_open_failed": m0,
@@ -91,6 +88,15 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
+    "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
+      "Studio bu hesabın kim olduğunu belirleyemiyor. Bir yöneticiden hesabın e-posta adresini ve kullanıcı adını kontrol etmesini isteyin.",
+    ),
+    "error_studio_account_has_no_role": MessageLookupByLibrary.simpleMessage(
+      "Bu hesabın Studio\'da bir rolü yok. Bir yöneticiden hesaba rol vermesini isteyin.",
+    ),
+    "error_studio_account_refused": MessageLookupByLibrary.simpleMessage(
+      "Studio bu girişi kabul etmedi. Tekrar deneyin ya da erişim için bir yöneticiye başvurun.",
+    ),
     "error_studio_config_error": MessageLookupByLibrary.simpleMessage(
       "Bağlantı doğru yapılandırılmamış. Yöneticinize başvurun.",
     ),
@@ -133,9 +139,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Yönetici kullanıcı silinemez"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("Yetki bulunamadı"),
     "failed": MessageLookupByLibrary.simpleMessage("Başarısız"),
-    "forbidden_back_home": MessageLookupByLibrary.simpleMessage("Ana sayfaya dön"),
-    "forbidden_message": MessageLookupByLibrary.simpleMessage("Bu sayfayı görüntüleme yetkiniz yok."),
-    "forbidden_title": MessageLookupByLibrary.simpleMessage("Erişim engellendi"),
     "force_update_button": MessageLookupByLibrary.simpleMessage("Şimdi Güncelle"),
     "force_update_message": MessageLookupByLibrary.simpleMessage(
       "Yeni bir sürüm mevcut. Uygulamayı kullanmaya devam etmek için lütfen güncelleyin.",

@@ -44,6 +44,11 @@ AppError studioError(Object error) {
       return ServerError(message, code: AppErrorCode.studioGovernanceUnavailable.key);
     case 'IDENTITY_PROVIDER_UNAVAILABLE':
       return ServerError(message, code: AppErrorCode.studioIdentityProviderUnavailable.key);
+    // A verified token whose account Studio refuses, answered with 403 from libredb-studio#1922 on.
+    case 'BEARER_NO_ROLE':
+      return AuthError(message, code: AppErrorCode.studioAccountHasNoRole.key);
+    case 'BEARER_NO_IDENTITY':
+      return AuthError(message, code: AppErrorCode.studioAccountHasNoIdentity.key);
     case 'TRANSACTION_NOT_OWNED':
       return ValidationError(message, code: AppErrorCode.studioTransactionNotOwned.key);
     case 'TRANSACTION_CREDENTIAL_CHANGED':

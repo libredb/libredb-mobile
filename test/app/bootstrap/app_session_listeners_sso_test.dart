@@ -73,7 +73,6 @@ class _OidcDependencies extends AppDependencies {
           OidcSettings(
             issuer: Uri.parse('https://id.example.com/realms/demo'),
             clientId: 'app',
-            roleClaim: 'roles',
             autoRedirect: autoRedirect,
           ),
         ),

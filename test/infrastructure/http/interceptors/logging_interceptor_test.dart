@@ -375,10 +375,10 @@ void main() {
         stubAsset('assets/mock/GET_users_filter_queryParams.json', '[]');
         await TestEnv.apiClient().get(
           '/users/filter',
-          queryParams: {'page': '0', 'size': '10', 'name': 'jane.doe@example.com', 'authority': 'ROLE_USER'},
+          queryParams: {'page': '0', 'size': '10', 'name': 'jane.doe@example.com', 'authority': 'reader'},
         );
 
-        expect(log.first, contains('GET /users/filter?page=0&size=10&name=[REDACTED_EMAIL]&authority=ROLE_USER '));
+        expect(log.first, contains('GET /users/filter?page=0&size=10&name=[REDACTED_EMAIL]&authority=reader '));
         expect(log.join('\n'), isNot(contains('jane.doe')));
       });
 

@@ -7,6 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
@@ -24,7 +30,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../support/user_menu.dart';
 
-/// A sign-in that the provider accepts for an account with the admin role.
+/// A sign-in that the provider accepts.
 final _signedIn = OidcSignedIn(
   tokens: OidcTokens(
     accessToken: 'sso-access-token',
@@ -32,11 +38,7 @@ final _signedIn = OidcSignedIn(
     refreshToken: 'sso-refresh-token',
     accessTokenExpiresAt: DateTime.utc(2100),
   ),
-  claims: const {
-    'iss': 'https://id.example.com/realms/demo',
-    'sub': 'subject-1',
-    'roles': ['admin'],
-  },
+  claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'subject-1'},
 );
 
 /// The identity provider of an oidc build. Each sign-in answers with the next of [outcomes], and with [_signedIn] once
@@ -67,17 +69,15 @@ class _ScriptedOidcClient implements IOidcClient {
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const ProviderSessionEnded();
 }
 
-/// The test config in an oidc build over [client]. Only the `admin` and `user` roles of the `roles` claim are allowed.
+/// The test config over [client]: the mocked Studio answers `GET /api/auth/me`, unless [studio] answers it.
 class _OidcDependencies extends AppDependencies {
-  _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation})
+  _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation, this.studio})
     : super(
         appConfig: const AppConfig.test(),
         authMode: OidcAuthMode(
           OidcSettings(
             issuer: Uri.parse('https://id.example.com/realms/demo'),
             clientId: 'app',
-            roleClaim: 'roles',
-            userRoles: const ['user'],
             autoRedirect: autoRedirect,
           ),
         ),
@@ -88,12 +88,32 @@ class _OidcDependencies extends AppDependencies {
   /// The token refresh in place of the one through [client], when given.
   final TokenRotation? rotation;
 
+  /// Studio's answer to `GET /api/auth/me` in place of the mocked one, when given.
+  final IStudioIdentityRepository? studio;
+
+  @override
+  IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) =>
+      studio ?? super.createStudioIdentityRepository(apiClient);
+
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
 
   @override
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
       rotation ?? super.createOidcTokenRotation(client, secureStorage);
+}
+
+/// Studio's `GET /api/auth/me`, failing with [error].
+class _RefusingStudio implements IStudioIdentityRepository {
+  _RefusingStudio(this.error);
+
+  final AppError error;
+
+  @override
+  Future<Result<StudioIdentity>> fetch() async => Failure(error);
+
+  @override
+  Future<Result<void>> recordSignOut() => throw UnimplementedError('these tests never sign out');
 }
 
 /// A token refresh that fails with an error no rotation expects, so the startup step of an oidc build throws.
@@ -114,7 +134,10 @@ Future<void> _storeExpiredSession() async {
 const _discoveryMessage =
     'The identity provider could not be reached. Try again later, or contact your administrator if this continues.';
 const _failedMessage = 'Sign-in failed. Please try again.';
-const _noRoleMessage = 'Your account has no role that allows access to this app. Ask your administrator.';
+const _refusedMessage = 'Studio did not accept this sign-in. Try again, or ask an administrator for access.';
+const _noRoleMessage = 'This account has no role in Studio. Ask an administrator to give it one.';
+const _insecureConnectionMessage =
+    'The connection could not be verified as secure, so it was blocked. Try again later or on another network.';
 const _configMessage = 'Single sign-on is not configured correctly in this app. Contact your administrator.';
 
 void main() {
@@ -241,18 +264,6 @@ void main() {
       ('an unreachable provider', const OidcSignInFailed(OidcFailure.discovery), _discoveryMessage),
       ('an error answer', const OidcSignInFailed(OidcFailure.failed), _failedMessage),
       (
-        'an account with no allowed role',
-        OidcSignedIn(
-          tokens: _signedIn.tokens,
-          claims: const {
-            'iss': 'https://id.example.com/realms/demo',
-            'sub': 's',
-            'roles': ['guest'],
-          },
-        ),
-        _noRoleMessage,
-      ),
-      (
         'an ID token with no subject',
         OidcSignedIn(tokens: _signedIn.tokens, claims: const {'iss': 'https://id.example.com/realms/demo'}),
         _failedMessage,
@@ -270,6 +281,35 @@ void main() {
         expect(find.text(message), findsOneWidget);
         expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
         expect(location(tester), ApplicationRoutesConstants.login);
+      });
+    }
+
+    // Only Studio decides whether the account may use the app: GET /api/auth/me answers after the provider sign-in.
+    for (final (refusal, error, message) in [
+      ('a 401 without a code', const AuthError('Unauthorized'), _refusedMessage),
+      ('a 403 BEARER_NO_ROLE', AuthError('refused', code: AppErrorCode.studioAccountHasNoRole.key), _noRoleMessage),
+      (
+        'a certificate that matches no pin',
+        NetworkError('blocked', code: AppErrorCode.networkCertInvalid.key),
+        _insecureConnectionMessage,
+      ),
+    ]) {
+      testWidgets('says why Studio refused the account for $refusal, stores nothing and keeps the button', (
+        tester,
+      ) async {
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, studio: _RefusingStudio(error)));
+
+        await tester.tap(ssoButton);
+        await tester.pumpAndSettle();
+        await waitForSnackBarToGo(tester);
+
+        expect(client.signIns, 1);
+        expect(find.text(message), findsOneWidget);
+        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(location(tester), ApplicationRoutesConstants.login);
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
       });
     }
 

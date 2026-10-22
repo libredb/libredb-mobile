@@ -30,7 +30,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     emit(const LoginInitialState());
   }
 
-  /// The single sign-on stores the session itself.
+  /// The single sign-on stores the session itself, and succeeds only once Studio has accepted the account.
   Future<void> _onSsoSignInRequested(SsoSignInRequested event, Emitter<LoginState> emit) async {
     final signInWithSso = _signInWithSsoUseCase;
     if (signInWithSso == null) throw StateError('single sign-on is not configured in this build');
@@ -38,9 +38,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     emit(const LoginLoadingState());
     final result = await signInWithSso();
     switch (result) {
-      case SsoSignInSucceeded(:final username, :final roles):
-        emit(LoginLoadedState(username: username, roles: roles));
-        _log.debug('END: onSsoSignInRequested signed in: {}', [username]);
+      case SsoSignInSucceeded():
+        emit(const LoginLoadedState());
+        _log.debug('END: onSsoSignInRequested signed in');
       case SsoSignInCancelled():
         emit(const LoginInitialState());
         _log.info('END: onSsoSignInRequested the user left the provider page without signing in');

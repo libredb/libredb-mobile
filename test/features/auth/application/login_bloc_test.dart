@@ -4,10 +4,13 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
+
+const _admin = StudioIdentity(username: 'admin@example.com', role: StudioRole.admin, viaBearer: true);
 
 void main() {
   late MockSignInWithSsoUseCase signInWithSso;
@@ -30,17 +33,23 @@ void main() {
       expect(LoginBloc(signInWithSsoUseCase: signInWithSso).state, const LoginInitialState());
     });
 
+    // The state carries no role: the role comes only from Studio's /api/auth/me, which the shell reads.
     blocTest<LoginBloc, LoginState>(
-      'emits the signed-in state with the username and roles the sign-in gives',
-      setUp: () => when(() => signInWithSso()).thenAnswer(
-        (_) async => const SsoSignInSucceeded(username: 'admin@example.com', roles: ['ROLE_ADMIN', 'ROLE_USER']),
-      ),
+      'emits the signed-in state, without a role, when Studio accepts the account',
+      setUp: () => when(() => signInWithSso()).thenAnswer((_) async => const SsoSignInSucceeded(_admin)),
       build: () => LoginBloc(signInWithSsoUseCase: signInWithSso),
       act: (bloc) => bloc.add(const SsoSignInRequested()),
-      expect: () => [
-        const LoginLoadingState(),
-        const LoginLoadedState(username: 'admin@example.com', roles: ['ROLE_ADMIN', 'ROLE_USER']),
-      ],
+      expect: () => [const LoginLoadingState(), const LoginLoadedState()],
+    );
+
+    blocTest<LoginBloc, LoginState>(
+      'emits the error code of an account Studio refuses',
+      setUp: () =>
+          when(() => signInWithSso())
+              .thenAnswer((_) async => const SsoSignInRejected(AppErrorCode.studioAccountRefused)),
+      build: () => LoginBloc(signInWithSsoUseCase: signInWithSso),
+      act: (bloc) => bloc.add(const SsoSignInRequested()),
+      expect: () => [const LoginLoadingState(), const LoginErrorState(errorCode: AppErrorCode.studioAccountRefused)],
     );
 
     blocTest<LoginBloc, LoginState>(
@@ -77,12 +86,9 @@ void main() {
         await Future<void>.delayed(Duration.zero);
         bloc.add(const SsoSignInRequested());
         await Future<void>.delayed(Duration.zero);
-        pending.single.complete(const SsoSignInSucceeded(username: 'jdoe', roles: ['ROLE_USER']));
+        pending.single.complete(const SsoSignInSucceeded(_admin));
       },
-      expect: () => [
-        const LoginLoadingState(),
-        const LoginLoadedState(username: 'jdoe', roles: ['ROLE_USER']),
-      ],
+      expect: () => [const LoginLoadingState(), const LoginLoadedState()],
       verify: (_) => verify(() => signInWithSso()).called(1),
     );
 

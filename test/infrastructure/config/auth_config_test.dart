@@ -160,59 +160,6 @@ void main() {
       expect(settings.logoutHint, isFalse);
     });
 
-    test('is misconfigured for user roles without a role claim', () {
-      final mode = AuthMode.fromDefines(
-        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: 'user'),
-      );
-
-      expect(
-        mode,
-        isA<OidcMisconfiguredAuthMode>().having(
-          (m) => m.reason,
-          'reason',
-          allOf(contains('OIDC_USER_ROLES'), contains('OIDC_ROLE_CLAIM')),
-        ),
-      );
-    });
-
-    test('reads the role claim and the user roles together', () {
-      final settings = _settings(
-        const AuthDefines(
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcRoleClaim: ' realm_access.roles ',
-          oidcUserRoles: 'user',
-        ),
-      );
-
-      expect(settings.roleClaim, 'realm_access.roles');
-      expect(settings.userRoles, ['user']);
-    });
-
-    test('uses the admin role when the admin roles are only commas', () {
-      final settings = _settings(
-        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAdminRoles: ' , ,'),
-      );
-
-      expect(settings.adminRoles, ['admin']);
-    });
-
-    test('has no user roles when the user roles are only commas', () {
-      final settings = _settings(
-        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: ' , ,'),
-      );
-
-      expect(settings.userRoles, isEmpty);
-    });
-
-    test('trims each admin role and keeps its case', () {
-      final settings = _settings(
-        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAdminRoles: 'Admin, superadmin'),
-      );
-
-      expect(settings.adminRoles, ['Admin', 'superadmin']);
-    });
-
     test('uses the app redirect scheme when it is unset', () {
       final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
@@ -242,7 +189,7 @@ void main() {
       });
     }
 
-    test('reads the audience, and leaves an unset audience and role claim out', () {
+    test('reads the audience, and leaves an unset audience out', () {
       final withAudience = _settings(
         const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAudience: ' api '),
       );
@@ -250,7 +197,6 @@ void main() {
 
       expect(withAudience.audience, 'api');
       expect(without.audience, isNull);
-      expect(without.roleClaim, isNull);
     });
   });
 

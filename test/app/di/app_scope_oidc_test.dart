@@ -11,7 +11,6 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -140,7 +139,6 @@ void main() {
       await storage.write(SecureStorageKeys.jwtToken.key, 'provider-access-token');
       await storage.write(SecureStorageKeys.refreshToken.key, 'provider-refresh-token');
       await storage.write(SecureStorageKeys.oidcIdToken.key, 'provider-id-token');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN', 'ROLE_USER']);
     });
 
     testWidgets('restores signed out with the configuration error, and leaves the stored session alone', (

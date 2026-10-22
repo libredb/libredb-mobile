@@ -113,7 +113,6 @@ void main() {
     testWidgets('an idle timeout clears the stored session, so a relaunch opens the login screen', (tester) async {
       TestEnv.authenticate();
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'MOCK_REFRESH_TOKEN');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
       expect(find.byType(ResponsiveScaffold), findsOneWidget);
@@ -129,7 +128,6 @@ void main() {
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);
       expect(find.byType(ResponsiveScaffold), findsNothing);
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
-      expect(await AppLocalStorage().read(StorageKeys.roles.key), isNull);
     });
 
     testWidgets('an idle timeout tells the user on the login screen why they were signed out', (tester) async {
@@ -404,9 +402,7 @@ class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client)
     : super(
         appConfig: _app.dependencies.appConfig,
-        authMode: OidcAuthMode(
-          OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app', roleClaim: 'roles'),
-        ),
+        authMode: OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app')),
       );
 
   final IOidcClient client;

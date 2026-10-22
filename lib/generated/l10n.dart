@@ -303,21 +303,6 @@ class S {
     return Intl.message('Something went wrong', name: 'error_generic', desc: '', args: []);
   }
 
-  /// `Access denied`
-  String get forbidden_title {
-    return Intl.message('Access denied', name: 'forbidden_title', desc: '', args: []);
-  }
-
-  /// `You do not have permission to view this page.`
-  String get forbidden_message {
-    return Intl.message('You do not have permission to view this page.', name: 'forbidden_message', desc: '', args: []);
-  }
-
-  /// `Back to home`
-  String get forbidden_back_home {
-    return Intl.message('Back to home', name: 'forbidden_back_home', desc: '', args: []);
-  }
-
   /// `The connection could not be verified as secure, so it was blocked. Try again later or on another network.`
   String get error_network_cert_invalid {
     return Intl.message(
@@ -670,16 +655,6 @@ class S {
     );
   }
 
-  /// `Your account has no role that allows access to this app. Ask your administrator.`
-  String get error_auth_oidc_no_role {
-    return Intl.message(
-      'Your account has no role that allows access to this app. Ask your administrator.',
-      name: 'error_auth_oidc_no_role',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Sign-in failed. Please try again.`
   String get error_auth_oidc_failed {
     return Intl.message('Sign-in failed. Please try again.', name: 'error_auth_oidc_failed', desc: '', args: []);
@@ -835,6 +810,36 @@ class S {
     return Intl.message(
       'Studio cannot reach the identity provider right now. Try again in a moment.',
       name: 'error_studio_identity_provider_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio did not accept this sign-in. Try again, or ask an administrator for access.`
+  String get error_studio_account_refused {
+    return Intl.message(
+      'Studio did not accept this sign-in. Try again, or ask an administrator for access.',
+      name: 'error_studio_account_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This account has no role in Studio. Ask an administrator to give it one.`
+  String get error_studio_account_has_no_role {
+    return Intl.message(
+      'This account has no role in Studio. Ask an administrator to give it one.',
+      name: 'error_studio_account_has_no_role',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio cannot tell who this account is. Ask an administrator to check the account's email and username.`
+  String get error_studio_account_has_no_identity {
+    return Intl.message(
+      'Studio cannot tell who this account is. Ask an administrator to check the account\'s email and username.',
+      name: 'error_studio_account_has_no_identity',
       desc: '',
       args: [],
     );

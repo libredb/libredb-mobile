@@ -16,6 +16,8 @@ import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_s
 // Repository imports (interfaces)
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -25,6 +27,10 @@ import 'package:libredb_mobile/features/studio_status/domain/repositories/studio
 class MockIAuthRepository extends Mock implements IAuthRepository {}
 
 class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository {}
+
+class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
+
+class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepository {}
 
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 

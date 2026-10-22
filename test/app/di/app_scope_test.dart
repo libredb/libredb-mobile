@@ -14,6 +14,7 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
@@ -30,7 +31,6 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -197,9 +197,10 @@ class _RefreshRaceServer implements HttpClientAdapter {
       final other => '$other',
     };
     requests.add('$route $authorization');
+    final ok = authorization == 'Bearer fresh' || route == 'POST /auth/logout';
     return ResponseBody.fromString(
-      jsonEncode(authorization == 'Bearer fresh' ? {'connections': <Object>[]} : {'code': 'AUTH_REQUIRED'}),
-      authorization == 'Bearer fresh' ? 200 : 401,
+      jsonEncode(ok ? {'connections': <Object>[], 'success': true} : {'code': 'AUTH_REQUIRED'}),
+      ok ? 200 : 401,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
@@ -260,10 +261,14 @@ class _SignInRaceServer implements HttpClientAdapter {
       },
     );
     switch ((route, authorization)) {
+      case ('POST /auth/logout', 'Bearer signed-out-user'):
+        return json(200, {'success': true});
       case ('POST /db/query', 'Bearer signed-out-user'):
         saveReceived.complete();
         await releaseSave.future;
         return json(401, {'code': 'AUTH_REQUIRED'});
+      case ('GET /auth/me', 'Bearer signed-in-user'):
+        return json(200, _studioIdentity);
       case (_, 'Bearer signed-in-user'):
         return json(200, {'ok': true});
     }
@@ -273,6 +278,12 @@ class _SignInRaceServer implements HttpClientAdapter {
   @override
   void close({bool force = false}) {}
 }
+
+/// Studio's `GET /api/auth/me` answer for a signed-in user.
+const _studioIdentity = {
+  'authenticated': true,
+  'user': {'role': 'user', 'username': 'user@example.com', 'channel': 'bearer'},
+};
 
 /// Pumps until [done] holds, so a test can run a request, a token refresh and the end of the session in a fixed order.
 Future<void> _pumpUntil(WidgetTester tester, bool Function() done) async {
@@ -409,7 +420,6 @@ void main() {
       // the refresh, so the stored refresh token cannot renew the session.
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'rejected-refresh-token');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
       final rotation = _FakeRotation();
       final dependencies = _CountingDependencies(rotation: rotation);
       final scope = await _pumpScope(tester, dependencies);
@@ -432,7 +442,6 @@ void main() {
       await relaunched.restore();
       expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.noToken));
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
-      expect(await AppLocalStorage().read(StorageKeys.roles.key), isNull);
     });
 
     testWidgets('ends the session in mock mode when a request without a token gets 401', (tester) async {
@@ -489,7 +498,12 @@ void main() {
       final sessionRepository = _CountingSessionRepository();
       final scope = await _pumpScope(tester, _SessionRepositoryDependencies(sessionRepository));
 
-      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+      // The logout records the sign-out at Studio first, under a time budget that moves only while fake time does.
+      Result<void>? result;
+      scope.read<IAuthRepository>().logout().then((value) => result = value);
+      await _pumpUntil(tester, () => result != null);
+
+      expect(result, isA<Success<void>>());
 
       expect(sessionRepository.clears, 1);
     });
@@ -541,7 +555,6 @@ void main() {
         final freshJwt = _jwt(exp: 4102444801);
         await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, staleJwt);
         await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
-        await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
         final rotation = _GatedRotation(freshJwt);
         final dependencies = _CountingDependencies(
           rotation: rotation,
@@ -568,7 +581,11 @@ void main() {
         await _pumpUntil(tester, () => outcome != null);
 
         expect(outcome, isA<UnauthorizedException>());
-        expect(server.requests, ['GET /connections/managed Bearer stale']);
+        expect(server.requests, [
+          'GET /connections/managed Bearer stale',
+          // A logout the user starts records the sign-out at Studio before it clears the session.
+          if (name == 'the user logs out') 'POST /auth/logout Bearer stale',
+        ]);
         expect(dependencies.sessionExpiredCalls, 0);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
@@ -589,7 +606,6 @@ void main() {
       final signedInJwt = _jwt(exp: 4102444800, sub: 'user-two');
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, signedOutJwt);
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'signed-out-refresh-token');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
       final rotation = _FakeRotation(TokensRotated(accessToken: signedInJwt));
       final dependencies = _CountingDependencies(
         rotation: rotation,
@@ -630,11 +646,82 @@ void main() {
       await _pumpUntil(tester, () => outcome != null);
 
       expect(outcome, isA<UnauthorizedException>());
-      expect(server.requests, ['POST /db/query Bearer signed-out-user']);
+      expect(server.requests, [
+        'POST /db/query Bearer signed-out-user',
+        'POST /auth/logout Bearer signed-out-user',
+        'GET /auth/me Bearer signed-in-user',
+      ]);
       expect(rotation.rotations, 0, reason: 'the session the request was sent under has ended, so none is refreshed');
       expect(dependencies.sessionExpiredCalls, 0, reason: 'ending the session would sign out the user signed in now');
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), signedInJwt);
     });
+  });
+
+  // Studio decides at sign-in whether it accepts the account, through GET /api/auth/me. Studio main answers a refused
+  // account with 401 and no code; libredb-studio#1922 answers 403 BEARER_NO_ROLE, and 401 AUTH_REQUIRED for a token it
+  // refuses itself.
+  group('AppScope sign-in that Studio refuses', () {
+    final signedIn = OidcSignedIn(
+      tokens: OidcTokens(
+        accessToken: 'signed-in-access-token',
+        idToken: 'signed-in-id-token',
+        refreshToken: 'signed-in-refresh-token',
+        accessTokenExpiresAt: DateTime.utc(2100),
+      ),
+      claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'norole'},
+    );
+
+    for (final (shape, status, body, code, refreshes) in <(String, int, Object, AppErrorCode, int)>[
+      (
+        'a 401 without a code, twice (Studio main)',
+        401,
+        {'authenticated': false},
+        AppErrorCode.studioAccountRefused,
+        1,
+      ),
+      (
+        'a 401 AUTH_REQUIRED, twice',
+        401,
+        {'error': 'Invalid access token', 'code': 'AUTH_REQUIRED'},
+        AppErrorCode.studioAccountRefused,
+        1,
+      ),
+      (
+        'a 403 BEARER_NO_ROLE (libredb-studio#1922)',
+        403,
+        {'error': 'This account has no role in Studio.', 'code': 'BEARER_NO_ROLE'},
+        AppErrorCode.studioAccountHasNoRole,
+        0,
+      ),
+    ]) {
+      testWidgets('rejects $shape with ${code.key}, stores nothing and ends no session', (tester) async {
+        final rotation = _FakeRotation(const TokensRotated(accessToken: 'refreshed-access-token'));
+        final dependencies = _CountingDependencies(rotation: rotation, client: _FakeOidcClient(signedIn));
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        final sessionStates = <SessionState>[];
+        final subscription = session.stream.listen(sessionStates.add);
+        addTearDown(subscription.cancel);
+        final server = _ServerAdapter({'GET /auth/me': (status, body)});
+        scope.read<ApiClient>().instance.httpClientAdapter = server;
+
+        final login = scope.read<LoginBloc>();
+        login.add(const SsoSignInRequested());
+        await _pumpUntil(tester, () => login.state is LoginErrorState);
+
+        expect(login.state, LoginErrorState(errorCode: code));
+        expect(server.requests.map((request) => request.split(' ').take(2).join(' ')), [
+          for (var i = 0; i <= refreshes; i++) 'GET /auth/me',
+        ]);
+        expect(rotation.rotations, refreshes, reason: 'only a 401 starts a refresh');
+        final secure = FlutterSecureStorageAdapter();
+        for (final key in SecureStorageKeys.values) {
+          expect(await secure.read(key.key), isNull, reason: '${key.name} stays stored');
+        }
+        expect(sessionStates, isEmpty, reason: 'a refused sign-in signs nobody in and ends no session');
+        expect(session.state, isA<SessionUnauthenticated>());
+      });
+    }
   });
 
   group('AppScope single sign-on', () {
@@ -664,7 +751,7 @@ void main() {
       login.add(const SsoSignInRequested());
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
 
-      expect(login.state, const LoginLoadedState(username: 'jdoe@example.com', roles: ['ROLE_USER']));
+      expect(login.state, const LoginLoadedState());
       expect(dependencies.oidcClientsCreated, 1);
       final secure = FlutterSecureStorageAdapter();
       expect(await secure.read(SecureStorageKeys.jwtToken.key), 'sso-access-token');

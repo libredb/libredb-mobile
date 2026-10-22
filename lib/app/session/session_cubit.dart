@@ -10,7 +10,6 @@ import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repo
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/startup_storage_time_limit.dart';
 
@@ -42,20 +41,10 @@ final class SessionUnknown extends SessionState {
 
 /// User holds a valid session token in secure storage.
 ///
-/// [roles] is the **OR** set used by router guards: a route requiring
-/// `{'admin', 'auditor'}` accepts a user whose [roles] contains at least one
-/// of the listed values. Defaulting to the empty set preserves the
-/// pre-roles `const SessionAuthenticated()` callers while letting new
-/// code pass a real set. Stored as [Set] so membership checks at every
-/// route transition are O(1) — `AuthSession.roles` upstream is a list
-/// for backend-shape parity; we normalize at the cubit boundary.
+/// It carries no role: the role comes only from Studio's `GET /api/auth/me`
+/// and is never stored.
 final class SessionAuthenticated extends SessionState {
-  const SessionAuthenticated({this.roles = const <String>{}});
-
-  final Set<String> roles;
-
-  @override
-  List<Object?> get props => [roles];
+  const SessionAuthenticated();
 }
 
 /// User holds no valid session token. The [reason] is for logs and
@@ -390,7 +379,7 @@ class SessionCubit extends Cubit<SessionState> {
       // which never receive it.
       if (!checkJwtExpiry) {
         _log.info('restore: token found, its expiry checked by the startup step → authenticated');
-        return SessionAuthenticated(roles: await _readRoles());
+        return const SessionAuthenticated();
       }
       if (_appConfig.isProduction) {
         final expired = SecurityUtils.isTokenExpired(token);
@@ -398,11 +387,11 @@ class SessionCubit extends Cubit<SessionState> {
         if (expired) {
           return const SessionUnauthenticated(reason: SessionExpiredReason.expired);
         } else {
-          return SessionAuthenticated(roles: await _readRoles());
+          return const SessionAuthenticated();
         }
       } else {
         _log.info('restore: token found (dev/test lenient) → authenticated');
-        return SessionAuthenticated(roles: await _readRoles());
+        return const SessionAuthenticated();
       }
     } catch (e, st) {
       _log.error('restore: secure storage read failed → unauthenticated (safe default): {}\n{}', [e, st]);
@@ -411,14 +400,11 @@ class SessionCubit extends Cubit<SessionState> {
   }
 
   /// Flips the cubit into [SessionAuthenticated]. Caller-trusted —
-  /// used after a login flow has already persisted tokens via
-  /// [AuthSessionRepository.persist]. Does not re-read storage.
-  ///
-  /// [roles] defaults to the empty set; the post-login listener in
-  /// `AppSessionListeners` reads the persisted roles and passes them
-  /// here so route guards see them on the next router refresh.
-  void markAuthenticated({Set<String> roles = const <String>{}}) {
-    emit(SessionAuthenticated(roles: roles));
+  /// used after a sign-in has persisted the tokens via
+  /// [AuthSessionRepository.persist] and Studio has accepted the account.
+  /// Does not re-read storage.
+  void markAuthenticated() {
+    emit(const SessionAuthenticated());
   }
 
   /// Flips the cubit into [SessionUnauthenticated] with
@@ -499,21 +485,5 @@ class SessionCubit extends Cubit<SessionState> {
     }
     _ssoStartupTimers.clear();
     return super.close();
-  }
-
-  /// Reads the persisted role list from [AppLocalStorage] and normalizes
-  /// to a [Set]. Returns the empty set when the key is missing or the
-  /// stored shape is unexpected — UI guards fall back to "no access"
-  /// rather than failing open.
-  Future<Set<String>> _readRoles() async {
-    try {
-      final raw = await AppLocalStorage().read(StorageKeys.roles.key);
-      if (raw is List) {
-        return raw.whereType<String>().toSet();
-      }
-    } catch (e) {
-      _log.warn('_readRoles failed; returning empty set: {}', [e]);
-    }
-    return const <String>{};
   }
 }

@@ -117,7 +117,6 @@ Future<void> _getUnauthorized(ApiClient client, _UnauthorizedAdapter adapter, [S
 
 final _oidcSession = AuthSession(
   idToken: 'ACCESS',
-  username: 'alice',
   oidcIdToken: 'ID_TOKEN',
   accessTokenExpiresAt: DateTime.utc(2026, 10, 21, 12),
 );

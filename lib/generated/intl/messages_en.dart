@@ -81,9 +81,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_auth_oidc_logout_incomplete": MessageLookupByLibrary.simpleMessage(
       "You are signed out of this app, but your session at the identity provider may still be active.",
     ),
-    "error_auth_oidc_no_role": MessageLookupByLibrary.simpleMessage(
-      "Your account has no role that allows access to this app. Ask your administrator.",
-    ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
     "error_generic": MessageLookupByLibrary.simpleMessage("Something went wrong"),
     "error_link_open_failed": m0,
@@ -91,6 +88,15 @@ class MessageLookup extends MessageLookupByLibrary {
       "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Could not change the language"),
+    "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
+      "Studio cannot tell who this account is. Ask an administrator to check the account\'s email and username.",
+    ),
+    "error_studio_account_has_no_role": MessageLookupByLibrary.simpleMessage(
+      "This account has no role in Studio. Ask an administrator to give it one.",
+    ),
+    "error_studio_account_refused": MessageLookupByLibrary.simpleMessage(
+      "Studio did not accept this sign-in. Try again, or ask an administrator for access.",
+    ),
     "error_studio_config_error": MessageLookupByLibrary.simpleMessage(
       "The connection is not configured correctly. Contact your administrator.",
     ),
@@ -133,9 +139,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Admin user cannot be deleted"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("No authorities found"),
     "failed": MessageLookupByLibrary.simpleMessage("Failed"),
-    "forbidden_back_home": MessageLookupByLibrary.simpleMessage("Back to home"),
-    "forbidden_message": MessageLookupByLibrary.simpleMessage("You do not have permission to view this page."),
-    "forbidden_title": MessageLookupByLibrary.simpleMessage("Access denied"),
     "force_update_button": MessageLookupByLibrary.simpleMessage("Update Now"),
     "force_update_message": MessageLookupByLibrary.simpleMessage(
       "A new version is available. Please update to continue using the app.",
