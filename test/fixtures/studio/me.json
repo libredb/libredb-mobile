@@ -1,0 +1,1 @@
+{"authenticated":true,"user":{"role":"admin","username":"admin@example.com","idpSubject":"a487359a-d502-4912-bfeb-87ddb9481c5a","idpIssuer":"https://localhost:8443/realms/libredb","iat":1792647560,"exp":1792647620,"channel":"bearer"}}

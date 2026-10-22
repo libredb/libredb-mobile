@@ -1,0 +1,14 @@
+{
+  "status": "active",
+  "message": "Transaction started",
+  "stateReported": true,
+  "inTransaction": true,
+  "ownedByYou": true,
+  "heldByAnotherSession": false,
+  "startedAt": "2026-10-22T09:00:00.000Z",
+  "rows": [{ "id": 2, "status": "paid" }],
+  "fields": ["id", "status"],
+  "rowCount": 1,
+  "executionTime": 5,
+  "pagination": { "limit": 500, "offset": 0, "hasMore": false, "totalReturned": 1, "wasLimited": true }
+}

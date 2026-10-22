@@ -5,8 +5,11 @@ import 'package:flutter_bloc_advance/core/result/result.dart';
 import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
+import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/authority_repository.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/user_repository.dart';
@@ -56,6 +59,33 @@ void main() {
         LoginRepository(apiClient: client).verifyOtp(const VerifyOtpEntity(email: 'admin@sample.tech', otp: '123456')),
     'IAuthorityRepository.list': (client) => AuthorityRepositoryImpl(client).list(),
     'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
+    'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
+    'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
+    'IStudioIdentityRepository.fetch': (client) => StudioIdentityRepository(client).fetch(),
+    'IObjectBrowserRepository.providerMeta': (client) => ObjectBrowserRepository(client).providerMeta('seed:sales-db'),
+    'IObjectBrowserRepository.containers': (client) => ObjectBrowserRepository(client).containers('seed:sales-db'),
+    'IObjectBrowserRepository.counts': (client) =>
+        ObjectBrowserRepository(client).counts('seed:sales-db', container: const ['public']),
+    'IObjectBrowserRepository.list': (client) =>
+        ObjectBrowserRepository(client).list('seed:sales-db', container: const ['public'], kind: 'table'),
+    'IObjectBrowserRepository.describe': (client) =>
+        ObjectBrowserRepository(client).describe('seed:sales-db', path: const ['public', 'orders'], kind: 'table'),
+    'IObjectBrowserRepository.source': (client) =>
+        ObjectBrowserRepository(client).source('seed:sales-db', path: const ['sales', 'order_totals'], kind: 'view'),
+    'IObjectBrowserRepository.search': (client) =>
+        ObjectBrowserRepository(client).search('seed:sales-db', term: 'order'),
+    'IObjectBrowserRepository.scanKeys': (client) => ObjectBrowserRepository(client).scanKeys('seed:cache'),
+    'ISqlEditorRepository.run': (client) => SqlEditorRepository(client).run('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.runScript': (client) =>
+        SqlEditorRepository(client).runScript('seed:sales-db', 'select 1; select 2'),
+    'ISqlEditorRepository.cancel': (client) => SqlEditorRepository(client).cancel('seed:sales-db', 'q-1'),
+    'ISqlEditorRepository.beginTransaction': (client) => SqlEditorRepository(client).beginTransaction('seed:sales-db'),
+    'ISqlEditorRepository.runInTransaction': (client) =>
+        SqlEditorRepository(client).runInTransaction('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.commit': (client) => SqlEditorRepository(client).commit('seed:sales-db'),
+    'ISqlEditorRepository.rollback': (client) => SqlEditorRepository(client).rollback('seed:sales-db'),
+    'ISqlEditorRepository.transactionStatus': (client) =>
+        SqlEditorRepository(client).transactionStatus('seed:sales-db'),
     'IUserRepository.retrieve': (client) => UserRepository(client).retrieve('user-1'),
     'IUserRepository.create': (client) =>
         UserRepository(client).create(const UserEntity(login: 'new_user', email: 'new_user@sample.tech')),

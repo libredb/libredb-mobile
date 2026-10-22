@@ -1,0 +1,16 @@
+{
+  "path": ["sales", "order_totals"],
+  "kind": "view",
+  "parts": [
+    {
+      "id": "definition",
+      "label": "Definition",
+      "text": "SELECT customer_id, sum(total) AS total FROM orders GROUP BY customer_id;",
+      "language": "sql",
+      "form": "complete",
+      "origin": "regenerated",
+      "edit": { "offered": false, "reason": "not in v1" }
+    },
+    { "id": "comment", "label": "Comment", "unavailable": "no comment is set" }
+  ]
+}

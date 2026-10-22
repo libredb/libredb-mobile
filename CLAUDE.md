@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Flutter BLoC Advance Template - a production-ready Flutter application using BLoC pattern for state management. Supports Android, iOS, Web, macOS, Linux, and Windows.
+LibreDB Mobile - the Android and iOS client of LibreDB Studio, built with Flutter and the BLoC pattern.
+It signs in through Keycloak and calls Studio's API with the Keycloak access token as bearer; Studio holds every database credential, the app none.
+Primary targets are Android and iOS; the web and desktop builds inherited from the template still compile but are not product targets.
+The plan is in `docs/roadmap.md`, the Studio contract and layers in `docs/architecture.md`.
+The Dart package is still named `flutter_bloc_advance`, after the template the app grew from (`docs/template.md`).
 
 - **Flutter:** 3.47.7 | **Dart SDK:** ^3.13.5 | **FVM** is used for Flutter version management
 - **Line width:** 120 characters (configured in `analysis_options.yaml`)
@@ -168,6 +172,17 @@ When in doubt, prefer sealed and split the BLoC instead of growing the single st
 - **Sign-in mode** is a separate build-time switch, `AUTH_PROVIDER`: unset or `jwt` is the password and OTP sign-in against the backend, and `oidc` signs in through an OpenID Connect provider configured by the `OIDC_*` defines (`lib/infrastructure/config/auth_config.dart`, [`docs/oidc.md`](docs/oidc.md)).
   Both entry points accept both modes, and `jwt` mode must never construct or call anything from the OIDC path.
 - **Backend:** the app's backend is LibreDB Studio, called with the Keycloak access token as bearer; `PROD_API_URL` is Studio's `/api` ([`docs/studio.md`](docs/studio.md)).
+
+## Studio API Layer
+
+The contract, the endpoint table and the error mapping are in `docs/architecture.md`; follow them in every repository that calls Studio.
+
+- A repository catches everything and returns `Failure(studioError(e))` (`lib/infrastructure/studio/studio_errors.dart`); it never maps Studio's statuses itself.
+- Name a connection as `{'connectionId': 'seed:<id>'}`; never send or store database credentials.
+- Never retry a request that runs a statement, and never log statement text or a database error text.
+- Read answers in the feature's `data/models/`: throw a `FormatException` for a missing required field, leave out an optional field of an unexpected type, and treat Studio's kind ids as opaque strings.
+- Only a 401 `AUTH_REQUIRED` (or a 401 without a code) ends the session (`isStudioSessionExpired`); a new Studio code that the user should understand gets a `studio.*` `AppErrorCode` with English and Turkish messages.
+- Each new method needs a recorded answer in `assets/mock/`, an entry in `test/architecture/mock_asset_coverage_test.dart`, and, once it can be recorded against `tool/studio-dev`, a fixture in `test/fixtures/studio/` read by `test/infrastructure/studio/recorded_studio_answers_test.dart`.
 
 ## Adding a New Feature
 

@@ -1,0 +1,12 @@
+{
+  "authenticated": true,
+  "user": {
+    "role": "admin",
+    "username": "admin@example.com",
+    "idpSubject": "6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10",
+    "idpIssuer": "https://localhost:8443/realms/libredb",
+    "iat": 1792620000,
+    "exp": 1792620060,
+    "channel": "bearer"
+  }
+}

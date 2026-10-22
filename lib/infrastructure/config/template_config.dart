@@ -2,7 +2,7 @@
 ///
 /// Search for keywords starting with `__` (e.g. `__APP_NAME__`) across the
 /// entire project and replace them with your own values.
-/// See README.md → "Customizing for Your Project" for the full keyword list.
+/// See docs/template.md → "Customizing for Your Project" for the full keyword list.
 class TemplateConfig {
   // App identity
   static const String appName = '__APP_NAME__';

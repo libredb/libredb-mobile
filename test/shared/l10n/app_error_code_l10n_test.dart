@@ -25,6 +25,36 @@ void main() {
     return code.resolve(context);
   }
 
+  group('LibreDB Studio error codes', () {
+    const sentences = {
+      AppErrorCode.studioDatabaseAuth:
+          "The database refused the connection's credentials. Ask your administrator to check them.",
+      AppErrorCode.studioConnectionNotAvailable: "This connection is not available to you.",
+      AppErrorCode.studioPermissionDenied: "The database did not allow this. You may lack a privilege on this object.",
+      AppErrorCode.studioCustomConnectionsDisabled: "Studio allows only the connections your administrator set up.",
+      AppErrorCode.studioQueryError: "The statement failed.",
+      AppErrorCode.studioQueryCancelled: "The statement was cancelled.",
+      AppErrorCode.studioConfigError: "The connection is not configured correctly. Contact your administrator.",
+      AppErrorCode.studioTimeout: "The database did not answer in time.",
+      AppErrorCode.studioDatabaseUnreachable: "The database could not be reached. Try again in a moment.",
+      AppErrorCode.studioGovernanceUnavailable: "Studio cannot check your access right now. Try again in a moment.",
+      AppErrorCode.studioIdentityProviderUnavailable:
+          "Studio cannot reach the identity provider right now. Try again in a moment.",
+      AppErrorCode.studioRateLimited: "Too many requests in a short time. Wait a moment and try again.",
+      AppErrorCode.studioTransactionNotOwned: "Another session holds an open transaction on this connection.",
+      AppErrorCode.studioTransactionCredentialChanged:
+          "Your access to this connection changed, so the transaction was rolled back.",
+      AppErrorCode.studioUnreadableAnswer:
+          "Studio sent an answer this app cannot read. The app or Studio may need an update.",
+    };
+
+    for (final MapEntry(key: code, value: sentence) in sentences.entries) {
+      testWidgets('${code.name} resolves to its English sentence', (tester) async {
+        expect(await resolved(tester, code), sentence);
+      });
+    }
+  });
+
   group('single sign-on error codes', () {
     const sentences = {
       AppErrorCode.authOidcConfig:

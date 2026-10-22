@@ -1,0 +1,6 @@
+{
+  "keys": ["session:1", "session:2", "cart:7"],
+  "cursor": "1792",
+  "types": { "session:1": "hash", "session:2": "hash" },
+  "total": 1200
+}

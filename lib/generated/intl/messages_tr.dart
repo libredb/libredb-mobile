@@ -60,7 +60,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "account": MessageLookupByLibrary.simpleMessage("Hesabım"),
     "active": MessageLookupByLibrary.simpleMessage("Aktif"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
-    "app_title": MessageLookupByLibrary.simpleMessage("Flutter BLoC Advance Şablonu"),
+    "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Uygula"),
     "authorities": MessageLookupByLibrary.simpleMessage("Roller"),
     "authorities_load_failed": MessageLookupByLibrary.simpleMessage("Roller alınamadı"),
@@ -187,6 +187,45 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
+    "error_studio_config_error": MessageLookupByLibrary.simpleMessage(
+      "Bağlantı doğru yapılandırılmamış. Yöneticinize başvurun.",
+    ),
+    "error_studio_connection_not_available": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantı sizin kullanımınıza açık değil.",
+    ),
+    "error_studio_custom_connections_disabled": MessageLookupByLibrary.simpleMessage(
+      "Studio yalnızca yöneticinizin tanımladığı bağlantılara izin veriyor.",
+    ),
+    "error_studio_database_auth": MessageLookupByLibrary.simpleMessage(
+      "Veritabanı bağlantının kimlik bilgilerini reddetti. Yöneticinizden bunları kontrol etmesini isteyin.",
+    ),
+    "error_studio_database_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Veritabanına ulaşılamadı. Biraz sonra tekrar deneyin.",
+    ),
+    "error_studio_governance_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Studio şu anda erişiminizi denetleyemiyor. Biraz sonra tekrar deneyin.",
+    ),
+    "error_studio_identity_provider_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Studio şu anda kimlik sağlayıcıya ulaşamıyor. Biraz sonra tekrar deneyin.",
+    ),
+    "error_studio_permission_denied": MessageLookupByLibrary.simpleMessage(
+      "Veritabanı buna izin vermedi. Bu nesne üzerinde bir yetkiniz eksik olabilir.",
+    ),
+    "error_studio_query_cancelled": MessageLookupByLibrary.simpleMessage("Sorgu iptal edildi."),
+    "error_studio_query_error": MessageLookupByLibrary.simpleMessage("Sorgu başarısız oldu."),
+    "error_studio_rate_limited": MessageLookupByLibrary.simpleMessage(
+      "Kısa sürede çok fazla istek gönderildi. Biraz bekleyip tekrar deneyin.",
+    ),
+    "error_studio_timeout": MessageLookupByLibrary.simpleMessage("Veritabanı zamanında yanıt vermedi."),
+    "error_studio_transaction_credential_changed": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantıya erişiminiz değişti, bu yüzden işlem geri alındı.",
+    ),
+    "error_studio_transaction_not_owned": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantıda başka bir oturumun açık bir işlemi var.",
+    ),
+    "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
+      "Studio bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın ya da Studio\'nun güncellenmesi gerekebilir.",
+    ),
     "error_title": MessageLookupByLibrary.simpleMessage("Hata"),
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Yönetici kullanıcı silinemez"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("Yetki bulunamadı"),

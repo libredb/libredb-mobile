@@ -5,8 +5,8 @@ It signs in to Keycloak itself, as the public client `libredb-mobile` with the a
 Studio accepts that token through its bearer channel for native clients, which `OIDC_BEARER_AUDIENCE` turns on (Studio's `docs/OIDC.md`, "Bearer access tokens for native clients").
 The sign-in itself is the template's `oidc` mode, described in [oidc.md](oidc.md).
 
-The bearer channel comes with libredb/libredb-studio#1914.
-Until a Studio release contains it, build the Studio image from that branch, as shown below.
+The bearer channel came with libredb/libredb-studio#1914, which is on Studio's main branch; Studio 1.0.0 does not have it.
+Until a Studio release contains it, build the Studio image from main, as shown below.
 
 ## What Studio and Keycloak need
 
@@ -54,10 +54,10 @@ In a Platform install the role claim is `libredb_roles` instead of `realm_access
 The realm has the users `admin` / `admin` (realm role `admin`) and `user` / `user` (realm role `user`), and gives access tokens a 60 second life, so a walkthrough also exercises the refresh.
 The stack is unfit for production on purpose: `start-dev` with the embedded H2 store, a self-signed CA, and committed passwords and client secret.
 
-Build the Studio image from the bearer branch, until a release contains it:
+Build the Studio image from main, until a release contains the bearer channel:
 
 ```shell
-git clone --branch feat/oidc-bearer-access-token https://github.com/libredb/libredb-studio.git
+git clone https://github.com/libredb/libredb-studio.git
 docker build -t libredb-studio:bearer libredb-studio
 ```
 

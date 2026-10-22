@@ -1,4 +1,4 @@
-# Contributing to Flutter BLOC Template
+# Contributing to LibreDB Mobile
 
 We welcome contributions to this project! To ensure a smooth and efficient process, please follow the guidelines below.
 

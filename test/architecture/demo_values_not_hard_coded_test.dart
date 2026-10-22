@@ -15,7 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// settings, is not part of a copy and is not searched.
 ///
 /// The values that name the template itself (its name, short name and description) are not checked: `web/index.html`
-/// and the app still use that name until a project renames it by hand (README, "Customizing for Your Project").
+/// and the app still use that name until a project renames it by hand (docs/template.md, "Customizing for Your Project").
 void main() {
   const valuesPath = '.github/pages/demo-values.env';
   const templateNameKeys = {'APP_NAME', 'APP_SHORT_NAME', 'APP_DESCRIPTION'};

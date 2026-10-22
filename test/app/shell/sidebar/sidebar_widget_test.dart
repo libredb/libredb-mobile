@@ -104,6 +104,14 @@ void main() {
     }
   });
 
+  group('SidebarWidget - header', () {
+    testWidgets('names the product', (tester) async {
+      await pumpAdminOnDashboard(tester);
+
+      expect(inSidebar('LibreDB'), findsOneWidget);
+    });
+  });
+
   group('SidebarWidget - project without a documentation website', () {
     // A made-up key: replacing the template's real placeholders across a project leaves this test as it is.
     testWidgets('shows no Website link while the docs URL is a placeholder', (tester) async {

@@ -4,14 +4,20 @@ import 'package:flutter_bloc_advance/features/users/data/repositories/authority_
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/sso_auth_repository_impl.dart';
+import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
+import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:flutter_bloc_advance/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
@@ -32,6 +38,7 @@ import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
+import 'package:flutter_bloc_advance/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
@@ -69,9 +76,9 @@ class AppDependencies {
   }
 
   /// Which 401 means that the bearer is no longer valid, so the HTTP layer refreshes the session and ends it when the
-  /// refresh cannot fix the 401. Every 401 by default. An app on a backend that also answers 401 for other reasons
-  /// overrides it: LibreDB Studio, for one, means an ended session only by its `AUTH_REQUIRED` code.
-  SessionExpiredPredicate get sessionExpiredPredicate => isUnauthorized;
+  /// refresh cannot fix the 401. LibreDB Studio, the app's backend, also answers 401 for a refused database credential,
+  /// so only its `AUTH_REQUIRED` code, or a 401 without a code, counts.
+  SessionExpiredPredicate get sessionExpiredPredicate => isStudioSessionExpired;
 
   /// [onSessionExpired] runs when a 401 cannot be fixed by a token refresh; the caller ends the session there. The
   /// token refresh takes turns at [tokenRefreshLock] and records what it stores in [rotatedTokensTakeBack], both of
@@ -148,6 +155,15 @@ class AppDependencies {
 
   /// Studio's connection API.
   IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
+
+  /// Studio's session endpoint: who the signed-in user is.
+  IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);
+
+  /// Studio's read-only object routes.
+  IObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) => ObjectBrowserRepository(apiClient);
+
+  /// Studio's statement routes.
+  ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient) => SqlEditorRepository(apiClient);
 
   IDynamicFormRepository createDynamicFormRepository(ApiClient apiClient) => DynamicFormRepository(apiClient);
 

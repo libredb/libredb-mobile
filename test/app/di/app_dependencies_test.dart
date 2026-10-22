@@ -12,6 +12,7 @@ import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:flutter_bloc_advance/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -69,6 +70,11 @@ class _FakeRotation implements TokenRotation {
 
 /// Answers every request with 401, and records each request as `METHOD path`.
 class _UnauthorizedAdapter implements HttpClientAdapter {
+  _UnauthorizedAdapter([this.body = '']);
+
+  /// The body of every 401.
+  final String body;
+
   final requests = <String>[];
 
   @override
@@ -78,7 +84,13 @@ class _UnauthorizedAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add('${options.method} ${options.path}');
-    return ResponseBody.fromString('', 401);
+    return ResponseBody.fromString(
+      body,
+      401,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 
   @override
@@ -142,8 +154,9 @@ void main() {
     expect(secureStorage.store.keys, unorderedEquals([SecureStorageKeys.jwtToken.key]));
   });
 
-  test('the default 401 predicate is any 401', () {
-    expect(dependencies.sessionExpiredPredicate, same(isUnauthorized));
+  // LibreDB Studio also answers 401 for a wrong database password (AUTH_ERROR), which must not end the session.
+  test('the 401 predicate is Studio\'s', () {
+    expect(dependencies.sessionExpiredPredicate, same(isStudioSessionExpired));
   });
 
   test('createApiClient ends the session on a 401 its refresh cannot fix', () async {
@@ -160,6 +173,22 @@ void main() {
 
     expect(adapter.requests, ['GET /api/users', 'POST /token/refresh']);
     expect(sessionExpiredCalls, 1);
+  });
+
+  test('createApiClient keeps the session on a 401 AUTH_ERROR, a refused database credential', () async {
+    final adapter = _UnauthorizedAdapter('{"error":"password authentication failed","code":"AUTH_ERROR"}');
+    var sessionExpiredCalls = 0;
+    final client = const AppDependencies(appConfig: _prodConfig).createApiClient(
+      await _signedInStorage(),
+      onSessionExpired: () => sessionExpiredCalls++,
+      tokenRefreshLock: null,
+      rotatedTokensTakeBack: null,
+    );
+
+    await _getUnauthorized(client, adapter);
+
+    expect(adapter.requests, ['GET /api/users'], reason: 'AUTH_ERROR starts no refresh');
+    expect(sessionExpiredCalls, 0);
   });
 
   test('createApiClient uses sessionExpiredPredicate', () async {

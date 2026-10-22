@@ -1,0 +1,4 @@
+[
+  { "path": ["public", "orders"], "name": "orders", "kind": "table", "rowCount": 12000, "sizeBytes": 1835008 },
+  { "path": ["public", "customers"], "name": "customers", "kind": "table", "rowCount": 800 }
+]

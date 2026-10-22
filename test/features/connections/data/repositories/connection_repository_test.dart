@@ -1,7 +1,11 @@
 import 'package:flutter_bloc_advance/core/errors/app_error.dart';
 import 'package:flutter_bloc_advance/core/result/result.dart';
+import 'package:flutter_bloc_advance/features/connections/data/models/connection_policy_model.dart';
+import 'package:flutter_bloc_advance/features/connections/data/models/connection_test_result_model.dart';
 import 'package:flutter_bloc_advance/features/connections/data/models/managed_connections.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
+import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_policy.dart';
+import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_test_result.dart';
 import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,21 +28,54 @@ void main() {
       final connections = (result as Success<List<StudioConnection>>).data;
       expect(connections, const [
         StudioConnection(
-          id: 'seed:libredb-sample',
-          name: 'LibreDB Sample (SQLite)',
-          type: 'sqlite',
-          database: '/app/data/sample.db',
-          environment: 'development',
-          group: 'Samples',
-        ),
-        StudioConnection(
-          id: 'seed:sales-db',
-          name: 'Sales',
+          id: 'seed:sales-postgres',
+          name: 'Sales (PostgreSQL)',
           type: 'postgres',
-          host: 'db.example.com',
+          host: 'pg.sales.internal',
           port: 5432,
           database: 'sales',
           environment: 'production',
+          group: 'Sales',
+        ),
+        StudioConnection(
+          id: 'seed:catalog-mongo',
+          name: 'Product Catalog (MongoDB)',
+          type: 'mongodb',
+          host: 'mongo.catalog.internal',
+          port: 27017,
+          database: 'catalog',
+          environment: 'staging',
+          group: 'Catalog',
+        ),
+        StudioConnection(
+          id: 'seed:billing-mysql',
+          name: 'Billing (MySQL)',
+          type: 'mysql',
+          host: 'mysql.billing.internal',
+          port: 3306,
+          database: 'billing',
+          environment: 'production',
+          group: 'Finance',
+        ),
+        // Oracle names a service, not a database.
+        StudioConnection(
+          id: 'seed:erp-oracle',
+          name: 'ERP (Oracle)',
+          type: 'oracle',
+          host: 'oracle.erp.internal',
+          port: 1521,
+          environment: 'production',
+          group: 'Finance',
+        ),
+        StudioConnection(
+          id: 'seed:reporting-mssql',
+          name: 'Reporting (SQL Server)',
+          type: 'mssql',
+          host: 'mssql.reporting.internal',
+          port: 1433,
+          database: 'reporting',
+          environment: 'development',
+          group: 'Analytics',
         ),
       ]);
     });
@@ -60,6 +97,66 @@ void main() {
         () => ManagedConnections.fromJsonString('{"connections":[{"id":"seed:a","name":"A"}]}'),
         throwsFormatException,
       );
+    });
+  });
+
+  group('ConnectionRepository.fetchPolicy', () {
+    test('reads GET /connections/policy', () async {
+      TestEnv.authenticate();
+
+      final result = await repository.fetchPolicy();
+
+      expect(
+        result,
+        isA<Success<ConnectionPolicy>>().having(
+          (s) => s.data,
+          'data',
+          const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'full'),
+        ),
+      );
+    });
+
+    test('reads a policy without governance', () {
+      expect(
+        ConnectionPolicyModel.fromJsonString('{"customConnections":true}'),
+        const ConnectionPolicy(customConnections: true, governance: false),
+      );
+    });
+
+    test('refuses a policy without customConnections', () {
+      expect(() => ConnectionPolicyModel.fromJsonString('{}'), throwsFormatException);
+    });
+  });
+
+  group('ConnectionRepository.test', () {
+    test('sends the connection id to POST /db/test-connection and reads the latency', () async {
+      TestEnv.authenticate();
+
+      final result = await repository.test('seed:sales-db');
+
+      expect(
+        result,
+        isA<Success<ConnectionTestResult>>().having(
+          (s) => s.data,
+          'data',
+          const ConnectionTestResult(
+            message: 'Connection successful',
+            latency: Duration(milliseconds: 42),
+            degraded: false,
+          ),
+        ),
+      );
+    });
+
+    test('reads a degraded answer, connected but without a health reading', () {
+      expect(
+        ConnectionTestResultModel.fromJsonString('{"success":true,"degraded":true,"message":"health read failed"}'),
+        const ConnectionTestResult(message: 'health read failed', degraded: true),
+      );
+    });
+
+    test('refuses an answer that is not a success', () {
+      expect(() => ConnectionTestResultModel.fromJsonString('{"success":false,"error":"x"}'), throwsFormatException);
     });
   });
 }

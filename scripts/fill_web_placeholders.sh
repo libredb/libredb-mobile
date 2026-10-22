@@ -2,7 +2,7 @@
 #
 # Fills the template placeholders of a web build with the values of one deployment.
 #
-# web/ keeps __KEY__ placeholders for template users (README, "Customizing for Your Project"), and flutter build web
+# web/ keeps __KEY__ placeholders for template users (docs/template.md, "Customizing for Your Project"), and flutter build web
 # copies them into the build unchanged. This script replaces each __KEY__ in index.html, manifest.json, sitemap.xml,
 # humans.txt, 404.html, robots.txt and .well-known/security.txt under BUILD_DIR with the value of the KEY=value line in
 # VALUES_FILE, and strips the instruction for template users from the humans.txt header. It never changes web/ itself.

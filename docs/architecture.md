@@ -1,0 +1,179 @@
+# Architecture
+
+LibreDB Mobile is a thin client of LibreDB Studio.
+Studio holds every database credential, opens every database connection and enforces who may use which connection; the app signs the user in, sends requests and shows the answers.
+This page describes how the app is put together and the Studio contract it follows.
+The contract was read from Studio's code at `dbfea263` (main, with the bearer channel of libredb/libredb-studio#1914).
+
+## The three parties
+
+```text
+                 ┌──────────────┐
+                 │   Keycloak   │  realm with the clients libredb-studio (web) and libredb-mobile (public)
+                 └──────┬───────┘
+        sign in (PKCE)  │  verify the access token (JWKS)
+           ┌────────────┴────────────┐
+           │                         │
+ ┌─────────┴─────────┐   bearer   ┌──┴───────────────┐   credentials   ┌───────────┐
+ │  LibreDB Mobile   │ ─────────▶ │  LibreDB Studio  │ ──────────────▶ │ Databases │
+ │  tokens only      │ ◀───────── │  connections,    │                 └───────────┘
+ └───────────────────┘   JSON     │  queries, audit  │
+                                  └────────┬─────────┘
+                                           │ bridge views (governance mode only)
+                                  ┌────────┴─────────┐
+                                  │ LibreDB Platform │  grants, revocations, audit log
+                                  └──────────────────┘
+```
+
+- **Keycloak** signs the user in.
+  The app is the public client `libredb-mobile`: authorization code with PKCE, no client secret.
+  Its access token carries the audience `libredb-studio-api` and the user's role.
+- **Studio** accepts that access token as `Authorization: Bearer` when `OIDC_BEARER_AUDIENCE` is set.
+  It checks the signature, the issuer, the audience, the client (`OIDC_BEARER_CLIENT_IDS`), the identity (`email` or `preferred_username`) and the role on every request, and refuses an ID token.
+- **Platform**, when present, governs Studio: Studio's connections become the user's grants, every statement is recorded, and Platform can revoke a session.
+  The app does not talk to Platform until milestone M5 ([roadmap.md](roadmap.md)).
+
+Settings for each party are in [studio.md](studio.md).
+
+## Inside the app
+
+The app follows the feature-first clean architecture of [feature-first-clean-boundaries.md](feature-first-clean-boundaries.md): a page talks to a BLoC, the BLoC to use cases, the use cases to a repository interface, and the repository implementation to `ApiClient`.
+
+| Place | What it holds |
+| --- | --- |
+| `lib/features/auth/` | Sign-in through Keycloak (the template's `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` |
+| `lib/features/connections/` | The managed connections, the connection policy and the connection test |
+| `lib/features/object_browser/` | Capabilities, containers, counts, objects, details, source, search and key scan |
+| `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
+| `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role, used across features |
+| `lib/infrastructure/studio/` | What every Studio request shares: the error mapping and the session rule |
+| `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock) |
+
+Each repository returns a `Result`: the entity, or an `AppError` with a translated `AppErrorCode`.
+The readers in each feature's `data/models/` turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
+
+In mock mode (`main_local.dart`) `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
+
+## Sessions
+
+1. "Sign in with SSO" runs the authorization code flow with PKCE in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
+   The tokens go to the platform's secure storage.
+2. `AuthInterceptor` adds the access token to every request as `Authorization: Bearer`.
+3. When Studio refuses the token, `TokenRefreshInterceptor` refreshes it at Keycloak once and repeats the request; if that does not help, the session ends.
+4. Logout revokes nothing at Studio, which keeps no state for a bearer session: the app ends the Keycloak session (RP-initiated logout) and deletes its tokens.
+
+Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`:
+
+| Studio answers | The app |
+| --- | --- |
+| 401 `AUTH_REQUIRED` | refreshes the token and repeats the request once |
+| 401 without a code (`/api/auth/me`'s `{"authenticated":false}`) | the same |
+| 401 `AUTH_ERROR` (the database refused its credential) | shows the error; the session stays |
+| 401 `LLM_AUTH` | the same; the AI routes are not used |
+| 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
+
+`GET /api/auth/me` answers 401 both for a refused token and when Studio cannot reach Keycloak, so the app never ends a session on that answer alone.
+
+## Talking to Studio
+
+Every request follows these rules:
+
+- The base URL is `PROD_API_URL`, Studio's origin plus `/api`; the repositories use paths such as `/connections/managed`.
+- Every `POST` sends `Content-Type: application/json` and no `Origin` header, which is how Studio's CSRF check lets a native client through.
+- A managed connection is named in the body as `{"connectionId": "seed:<id>"}`, never inline; the app never sends or stores database credentials.
+- Nothing that runs a statement is retried on its own: a statement may have changed data.
+- Every `/api/db/*` request spends a slot of the user's request budget, 120 per minute by default, shared with the same user's browser tabs: the object browser caches metadata per connection.
+- Requests stay well under 10 MiB, above which Studio truncates the body and reads it as malformed.
+
+| Studio endpoint | Repository method | Answer |
+| --- | --- | --- |
+| `GET /api/auth/me` | `IStudioIdentityRepository.fetch` | `StudioIdentity` |
+| `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `List<StudioConnection>` |
+| `GET /api/connections/policy` | `IConnectionRepository.fetchPolicy` | `ConnectionPolicy` |
+| `POST /api/db/test-connection` | `IConnectionRepository.test` | `ConnectionTestResult` |
+| `POST /api/db/provider-meta` | `IObjectBrowserRepository.providerMeta` | `ProviderMeta` |
+| `POST /api/db/objects/containers` | `IObjectBrowserRepository.containers` | `List<ObjectContainer>` |
+| `POST /api/db/objects/counts` | `IObjectBrowserRepository.counts` | `Map<String, KindCount>` |
+| `POST /api/db/objects/list` | `IObjectBrowserRepository.list` | `List<DatabaseObject>` |
+| `POST /api/db/objects/describe` | `IObjectBrowserRepository.describe` | `ObjectDetail` |
+| `POST /api/db/objects/source` | `IObjectBrowserRepository.source` | `ObjectSource` |
+| `POST /api/db/objects/search` | `IObjectBrowserRepository.search` | `List<DatabaseObject>` |
+| `POST /api/db/keys/scan` | `IObjectBrowserRepository.scanKeys` | `KeyScanPage` |
+| `POST /api/db/query` | `ISqlEditorRepository.run` | `QueryResult` |
+| `POST /api/db/multi-query` | `ISqlEditorRepository.runScript` | `ScriptResult` |
+| `POST /api/db/cancel` | `ISqlEditorRepository.cancel` | whether the engine stopped the run |
+| `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction |
+
+### The object tree
+
+`provider-meta` describes the engine: how many container levels it has (none, a schema, or a database and its schemas), their names in the engine's words, and its object kinds.
+Kind ids such as `table` or `collection` are opaque: their labels come from Studio, never from the app, so a new engine needs no app change.
+The tree is containers, then `counts` for a container, then `list` for one kind, then `describe` or `source` for one object, as each kind's `hasColumns` and `hasSource` allow.
+Key-value engines page their keys with `scanKeys` until the cursor is `0`.
+
+### Statements
+
+- `run` sends one statement, with an optional page, bind values and a run id.
+  Studio pages a SELECT only when it adds the row bound itself; `QueryPage.after` asks for the next page, and `pagination.hasMore` says whether there is one.
+- `runScript` sends several statements, which Studio splits and runs in order, stopping at the first failure.
+  It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values and has no paging.
+  Deciding whether a text holds one statement or several is the editor's job (milestone M4).
+- `cancel` stops a run by the id the app gave it, from `newQueryId`, a UUID: Studio checks no owner on a cancel, so the id must be unguessable.
+  The cancelled run fails with `studio.query_cancelled`.
+- A transaction's statements cannot be cancelled.
+  Without governance Studio keeps one transaction per connection for every user of it, owned by the account that began it, and refuses others with `studio.transaction_not_owned` for up to five idle minutes.
+
+### Errors
+
+Studio's error body is `{error, code?, ...}`.
+`ApiClient` keeps the HTTP status, the code, the `Retry-After` delay and the scrubbed `error` text on the exception, and `studioError` maps them, the code first and the status after:
+
+| Studio code | `AppErrorCode` |
+| --- | --- |
+| `AUTH_REQUIRED` | `auth.invalid_access_token` |
+| `AUTH_ERROR` (401) | `studio.database_auth` |
+| `AUTH_ERROR` (403), `CONNECTION_NOT_FOUND` | `studio.connection_not_available` |
+| `PERMISSION_DENIED` | `studio.permission_denied` |
+| `CUSTOM_CONNECTIONS_DISABLED` | `studio.custom_connections_disabled` |
+| `QUERY_ERROR` | `studio.query_error` |
+| `QUERY_CANCELLED` | `studio.query_cancelled` |
+| `CONFIG_ERROR` | `studio.config_error` |
+| `TIMEOUT_ERROR` | `studio.timeout` |
+| `CONNECTION_ERROR`, `POOL_EXHAUSTED` | `studio.database_unreachable` |
+| `GOVERNANCE_UNAVAILABLE`, `AUDIT_UNAVAILABLE` | `studio.governance_unavailable` |
+| `IDENTITY_PROVIDER_UNAVAILABLE` | `studio.identity_provider_unavailable` |
+| `RATE_LIMITED`, any 429 | `studio.rate_limited`, as a `RateLimitedError` with the delay |
+| `TRANSACTION_NOT_OWNED` | `studio.transaction_not_owned` |
+| `TRANSACTION_CREDENTIAL_CHANGED` | `studio.transaction_credential_changed` |
+| an answer the app cannot read | `studio.unreadable_answer` |
+
+A screen shows the translated message of the code.
+The SQL editor also shows the database's own words, the `message` of the error, because a syntax error is what the user needs to read there.
+
+## Governance
+
+When Platform governs Studio, `fetchPolicy` answers `governance: true`, and:
+
+- the connection list is the user's unexpired grants, for admins too;
+- a connection that is not granted answers `studio.connection_not_available`;
+- Studio answers `studio.governance_unavailable` while it cannot serve its copy of the grants, which the app shows as such, never as an empty list;
+- every statement is recorded for Platform's audit log, which the app tells the user through the policy's `statementCapture`;
+- each user has their own transactions.
+
+Grants refer to the Keycloak subject, so the app must sign in to the same realm as Studio's web sign-in.
+
+## Security
+
+- The phone holds Keycloak tokens in secure storage and nothing else: no database credential, no connection the server does not manage.
+- Studio sends the credentials of an unmanaged seed connection in the connection list; the app's reader does not read them.
+- The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
+  The repositories never log statement text or database error text.
+- Certificate pinning and screen capture protection come from the template and are configured for release in milestone M6 ([template.md](template.md)).
+- A web build of the app cannot call Studio: Studio sends no CORS headers, on purpose.
+
+## Known gaps
+
+- Studio's `/api/auth/me` cannot tell a refused token from an unreachable identity provider (both 401).
+- Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
+- Whether a dropped mobile connection cancels the statement on the server is not verified; the editor cancels explicitly.
+- Granting a connection needs an API in Platform that does not exist yet (milestone M5).

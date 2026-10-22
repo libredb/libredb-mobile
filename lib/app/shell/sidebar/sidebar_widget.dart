@@ -99,7 +99,7 @@ class _SidebarHeader extends StatelessWidget {
               const SizedBox(width: 8), // gap-2
               Expanded(
                 child: Text(
-                  'BLoC Advance',
+                  'LibreDB',
                   style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                   overflow: TextOverflow.ellipsis,
                 ),

@@ -160,6 +160,7 @@ void main() {
           ServerError() => 'server',
           NotFoundError() => 'not_found',
           TimeoutError() => 'timeout',
+          RateLimitedError() => 'rate_limited',
           UnknownError() => 'unknown',
         };
         expect(result, 'network');
@@ -174,6 +175,7 @@ void main() {
           ServerError() => 'server',
           NotFoundError() => 'not_found',
           TimeoutError() => 'timeout',
+          RateLimitedError() => 'rate_limited',
           UnknownError() => 'unknown',
         };
         expect(result, 'auth');
@@ -188,6 +190,7 @@ void main() {
           ServerError() => 'server',
           NotFoundError() => 'not_found',
           TimeoutError() => 'timeout',
+          RateLimitedError() => 'rate_limited',
           UnknownError() => 'unknown',
         };
         expect(result, 'server');
@@ -201,6 +204,7 @@ void main() {
           const ServerError('s'),
           const NotFoundError('nf'),
           const TimeoutError('t'),
+          const RateLimitedError('r'),
           const UnknownError('u'),
         ];
 
@@ -213,12 +217,13 @@ void main() {
                 ServerError() => 'server',
                 NotFoundError() => 'not_found',
                 TimeoutError() => 'timeout',
+                RateLimitedError() => 'rate_limited',
                 UnknownError() => 'unknown',
               },
             )
             .toList();
 
-        expect(results, ['network', 'auth', 'validation', 'server', 'not_found', 'timeout', 'unknown']);
+        expect(results, ['network', 'auth', 'validation', 'server', 'not_found', 'timeout', 'rate_limited', 'unknown']);
       });
     });
   });

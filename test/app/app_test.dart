@@ -294,7 +294,7 @@ void main() {
     });
 
     // The task switcher and the browser tab show this title.
-    for (final (language, title) in [('en', 'Flutter BLoC Advance Template'), ('tr', 'Flutter BLoC Advance Şablonu')]) {
+    for (final (language, title) in [('en', 'LibreDB'), ('tr', 'LibreDB')]) {
       testWidgets('names the app in the task switcher in the app language ($language)', (tester) async {
         await tester.pumpWidget(App(language: language));
         await tester.pumpAndSettle();

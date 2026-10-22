@@ -1,0 +1,4 @@
+[
+  { "path": ["public"], "name": "public", "level": 0, "isSessionDefault": true },
+  { "path": ["sales"], "name": "sales", "level": 0 }
+]

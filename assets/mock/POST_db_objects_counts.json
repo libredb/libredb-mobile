@@ -1,0 +1,6 @@
+{
+  "table": { "count": 42 },
+  "view": { "count": 1000, "sampledFrom": "pg_class" },
+  "function": { "unavailable": "permission denied for schema sales" },
+  "trigger": { "count": 3 }
+}

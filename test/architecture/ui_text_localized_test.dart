@@ -49,7 +49,7 @@ const _skippedRoots = ['lib/app/dev_console/'];
 
 /// Literals that read the same in every language.
 const _sameInEveryLanguage = {
-  "'BLoC Advance'", // the template's short name, which a project renames by hand
+  "'LibreDB'", // the product name
   "'ESC'", // the name of a key on the keyboard
   "'en'", // a language code
   "'m@example.com'", // an example address in an input hint
