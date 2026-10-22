@@ -12,6 +12,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
@@ -47,6 +48,7 @@ import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 class AppScope extends StatelessWidget {
@@ -157,6 +159,9 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<ICollapsedSectionsRepository>(
           create: (_) => dependencies.createCollapsedSectionsRepository(),
         ),
+        RepositoryProvider<IFavoriteConnectionsRepository>(
+          create: (_) => dependencies.createFavoriteConnectionsRepository(),
+        ),
         RepositoryProvider<IStudioIdentityRepository>(
           create: (context) => dependencies.createStudioIdentityRepository(context.read<ApiClient>()),
         ),
@@ -256,6 +261,11 @@ class AppScope extends StatelessWidget {
           ),
           BlocProvider<ConnectionPolicyCubit>(
             create: (context) => ConnectionPolicyCubit(repository: context.read<IConnectionRepository>()),
+          ),
+          // Above the router, so the connection list and the app-bar switcher show the same stars; AppSessionListeners
+          // tells it whose they are from StudioIdentityCubit.
+          BlocProvider<FavoriteConnectionsBloc>(
+            create: (context) => FavoriteConnectionsBloc(repository: context.read<IFavoriteConnectionsRepository>()),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

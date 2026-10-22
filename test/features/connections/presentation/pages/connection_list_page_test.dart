@@ -19,15 +19,18 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/collapsed_sections_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
@@ -40,6 +43,10 @@ import '../../../../mocks/mock_classes.dart';
 /// The answer of `assets/mock/GET_connections_managed.json`, which the app shows in local mode.
 ManagedConnections _mockAnswer() =>
     ManagedConnectionsModel.read(File('assets/mock/GET_connections_managed.json').readAsStringSync());
+
+/// The identity provider's subjects of two accounts that sign in on the same phone.
+const _alice = 'subject-alice';
+const _bob = 'subject-bob';
 
 void main() {
   const online = ConnectivityState(status: ConnectivityStatus.online);
@@ -84,6 +91,7 @@ void main() {
     Size size = const Size(400, 900),
     ThemeData? theme,
     double textScale = 1,
+    String? subject = _alice,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -122,6 +130,11 @@ void main() {
                         ),
                         BlocProvider(
                           create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
+                        ),
+                        BlocProvider(
+                          create: (_) =>
+                              FavoriteConnectionsBloc(repository: FavoriteConnectionsRepository())
+                                ..add(FavoriteConnectionsSubjectChanged(subject)),
                         ),
                       ],
                       child: const ConnectionListPage(),
@@ -413,6 +426,189 @@ void main() {
     expect(find.descendant(of: sheet, matching: find.text('mysql.billing.internal:3306/billing')), findsOneWidget);
   });
 
+  group('favorites', () {
+    Finder star(String id) => find.byKey(ValueKey('connection-star-$id'));
+
+    /// The tooltip of the star button [finder] finds, which says what a tap does.
+    String? starTooltip(WidgetTester tester, Finder finder) =>
+        tester.widget<IconButton>(find.descendant(of: finder, matching: find.byType(IconButton))).tooltip;
+    Finder recent(String id) => find.byKey(ValueKey('connection-recent-$id'));
+    final favoritesHeader = header('favorites');
+
+    /// The ids of the rows on screen, top to bottom.
+    List<String> rowIds(WidgetTester tester) {
+      const prefix = 'connection-row-';
+      final keys = [
+        for (final element in find.byWidgetPredicate((w) => w.key is ValueKey<String>).evaluate())
+          if ((element.widget.key! as ValueKey<String>).value.startsWith(prefix))
+            element.widget.key! as ValueKey<String>,
+      ]..sort((a, b) => tester.getTopLeft(find.byKey(a)).dy.compareTo(tester.getTopLeft(find.byKey(b)).dy));
+      return [for (final key in keys) key.value.substring(prefix.length)];
+    }
+
+    testWidgets('starring a row moves it to Favorites on top, and the star survives a restart', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester);
+      expect(favoritesHeader, findsNothing);
+
+      await tester.tap(star('seed:sandbox-sqlite'));
+      await tester.pump();
+      await tester.tap(star('seed:billing-mysql'));
+      await tester.pump();
+
+      expect(favoritesHeader, findsOneWidget);
+      expect(find.descendant(of: favoritesHeader, matching: find.text(S.current.connection_favorites)), findsOneWidget);
+      expect(rowIds(tester).take(2), ['seed:billing-mysql', 'seed:sandbox-sqlite']);
+      expect(tester.getTopLeft(favoritesHeader).dy, lessThan(tester.getTopLeft(header('group:Analytics')).dy));
+      expect(
+        tester.getTopLeft(row('seed:sandbox-sqlite')).dy,
+        lessThan(tester.getTopLeft(header('group:Analytics')).dy),
+      );
+      // The rows moved: Other had only the sandbox and is gone, Finance keeps the Oracle row.
+      expect(header('other'), findsNothing);
+      expect(find.descendant(of: header('group:Finance'), matching: find.text('1')), findsOneWidget);
+
+      // The app starts again on the same phone for the same account.
+      await tester.pumpWidget(const SizedBox());
+      await pumpPage(tester);
+
+      expect(favoritesHeader, findsOneWidget);
+      expect(rowIds(tester).take(2), ['seed:billing-mysql', 'seed:sandbox-sqlite']);
+      expect(starTooltip(tester, star('seed:billing-mysql')), S.current.connection_unstar);
+      expect(starTooltip(tester, star('seed:erp-oracle')), S.current.connection_star);
+
+      await tester.tap(star('seed:sandbox-sqlite'));
+      await tester.pump();
+      expect(header('other'), findsOneWidget);
+      expect(rowIds(tester).first, 'seed:billing-mysql');
+    });
+
+    testWidgets('a second account on the same phone sees no stars from the first', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester, subject: _alice);
+      await tester.tap(star('seed:sales-postgres'));
+      await tester.pump();
+      await tester.tap(row('seed:erp-oracle'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(favoritesHeader, findsOneWidget);
+      expect(recent('seed:erp-oracle'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpPage(tester, subject: _bob);
+
+      expect(favoritesHeader, findsNothing);
+      expect(find.byKey(const ValueKey('connection-recent')), findsNothing);
+      expect(starTooltip(tester, star('seed:sales-postgres')), S.current.connection_star);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpPage(tester, subject: _alice);
+      expect(favoritesHeader, findsOneWidget);
+      expect(recent('seed:erp-oracle'), findsOneWidget);
+    });
+
+    testWidgets('the Recent strip shows the last three opened connections, last opened first', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester);
+      expect(find.byKey(const ValueKey('connection-recent')), findsNothing);
+
+      for (final id in ['seed:sales-postgres', 'seed:billing-mysql', 'seed:erp-oracle', 'seed:catalog-mongo']) {
+        await tester.tap(row(id));
+        await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+      }
+
+      final strip = find.byKey(const ValueKey('connection-recent'));
+      expect(find.descendant(of: strip, matching: find.text(S.current.connection_recent)), findsOneWidget);
+      final chips = ['seed:catalog-mongo', 'seed:erp-oracle', 'seed:billing-mysql'];
+      final lefts = [for (final id in chips) tester.getTopLeft(recent(id)).dx];
+      expect(lefts, [...lefts]..sort());
+      expect(recent('seed:sales-postgres'), findsNothing);
+      expect(find.descendant(of: recent('seed:erp-oracle'), matching: find.text('ERP (Oracle)')), findsOneWidget);
+
+      // A recent connection opens like its row, and moves to the front.
+      await tester.ensureVisible(recent('seed:billing-mysql'));
+      await tester.pumpAndSettle();
+      await tester.tap(recent('seed:billing-mysql'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('Billing (MySQL)')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(recent('seed:billing-mysql')).dx,
+        lessThan(tester.getTopLeft(recent('seed:catalog-mongo')).dx),
+      );
+
+      // A search hides the strip, which is a shortcut to the whole list.
+      await search(tester, 'sales');
+      expect(strip, findsNothing);
+    });
+
+    testWidgets('hides the star and the recent entry of a connection the list no longer has, and keeps them', (
+      tester,
+    ) async {
+      await AppLocalStorage().save(
+        StorageKeys.connectionFavorites.key,
+        '{"$_alice": {"starred": ["seed:gone"], "recent": ["seed:gone"]}}',
+      );
+      answer(_mockAnswer());
+
+      await pumpPage(tester);
+
+      expect(favoritesHeader, findsNothing);
+      expect(find.byKey(const ValueKey('connection-recent')), findsNothing);
+      await tester.tap(star('seed:sales-postgres'));
+      await tester.pump();
+      expect(rowIds(tester).first, 'seed:sales-postgres');
+      expect((await FavoriteConnectionsRepository().read(_alice)).starred, {'seed:gone', 'seed:sales-postgres'});
+    });
+
+    testWidgets('shows the list without favorites when the stored ones cannot be read', (tester) async {
+      await AppLocalStorage().save(StorageKeys.connectionFavorites.key, 'not JSON');
+      answer(_mockAnswer());
+
+      await pumpPage(tester);
+
+      expect(row('seed:sales-postgres'), findsOneWidget);
+      expect(star('seed:sales-postgres'), findsNothing);
+      expect(favoritesHeader, findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows the list without favorites for an account Studio names no subject for', (tester) async {
+      answer(_mockAnswer());
+
+      await pumpPage(tester, subject: null);
+
+      expect(row('seed:sales-postgres'), findsOneWidget);
+      expect(star('seed:sales-postgres'), findsNothing);
+    });
+
+    testWidgets('the detail sheet stars and unstars the connection', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester);
+
+      await tester.tap(row('seed:erp-oracle'));
+      await tester.pumpAndSettle();
+      final sheetStar = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byKey(const ValueKey('connection-detail-star')),
+      );
+      expect(starTooltip(tester, sheetStar), S.current.connection_star);
+
+      await tester.tap(sheetStar);
+      await tester.pump();
+
+      expect(starTooltip(tester, sheetStar), S.current.connection_unstar);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(favoritesHeader, findsOneWidget);
+      expect(rowIds(tester).first, 'seed:erp-oracle');
+    });
+  });
+
   testWidgets('never offers to add a connection', (tester) async {
     answer(_mockAnswer());
     await pumpPage(tester);
@@ -425,7 +621,7 @@ void main() {
   testWidgets('rows are at least 48 dp tall and lay out without overflow at a large text size', (tester) async {
     answer(_mockAnswer());
 
-    await pumpPage(tester, textScale: 2, size: const Size(360, 1600));
+    await pumpPage(tester, textScale: 2, size: const Size(360, 2400));
 
     expect(tester.takeException(), isNull);
     for (final id in ['seed:sales-postgres', 'seed:billing-mysql', 'seed:sandbox-sqlite']) {
