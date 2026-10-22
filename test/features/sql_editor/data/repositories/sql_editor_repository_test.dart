@@ -10,6 +10,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.da
 import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';
@@ -123,6 +124,39 @@ void main() {
       );
     });
 
+    group('waits for the answer', () {
+      final statementCalls = <String, Future<Object?> Function()>{
+        'run': () => repository.run(connection, 'select pg_sleep(40)'),
+        'runScript': () => repository.runScript(connection, 'select 1; select pg_sleep(40)'),
+        'beginTransaction': () => repository.beginTransaction(connection),
+        'runInTransaction': () => repository.runInTransaction(connection, 'update orders set status = 1'),
+        'commit': () => repository.commit(connection),
+        'rollback': () => repository.rollback(connection),
+        'transactionStatus': () => repository.transactionStatus(connection),
+      };
+
+      for (final MapEntry(key: name, value: call) in statementCalls.entries) {
+        test('as long as Studio lets a statement run, for $name', () async {
+          await call();
+
+          expect(adapter.lastReceiveTimeout, studioStatementReceiveTimeout);
+        });
+      }
+
+      test("Studio's 60 second statement timeout plus a 15 second margin", () {
+        expect(studioStatementReceiveTimeout, const Duration(seconds: 75));
+      });
+
+      test('the default 30 seconds for cancel, which runs no statement', () async {
+        adapter.answer = (200, '{"cancelled":true}');
+
+        await repository.cancel(connection, 'q-1');
+
+        expect(adapter.lastPath, '/db/cancel');
+        expect(adapter.lastReceiveTimeout, const Duration(seconds: 30));
+      });
+    });
+
     test('a cancelled run is reported as cancelled', () async {
       adapter.answer = (499, '{"error":"Query cancelled","code":"QUERY_CANCELLED","statusCode":499}');
 
@@ -151,6 +185,7 @@ class _RecordingAdapter implements HttpClientAdapter {
   String? lastPath;
   String? lastContentType;
   Object? lastBody;
+  Duration? lastReceiveTimeout;
 
   @override
   Future<ResponseBody> fetch(
@@ -159,6 +194,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     lastPath = options.path;
+    lastReceiveTimeout = options.receiveTimeout;
     lastContentType = options.contentType ?? '${options.headers[Headers.contentTypeHeader]}';
     final data = options.data;
     lastBody = data is String ? jsonDecode(data) : data;

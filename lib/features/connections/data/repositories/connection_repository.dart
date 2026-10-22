@@ -9,6 +9,7 @@ import 'package:libredb_mobile/features/connections/domain/entities/studio_conne
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 
 /// Studio's connection API. The paths are relative to `PROD_API_URL`, which ends in Studio's `/api`.
 class ConnectionRepository implements IConnectionRepository {
@@ -43,7 +44,10 @@ class ConnectionRepository implements IConnectionRepository {
   @override
   Future<Result<ConnectionTestResult>> test(String connectionId) async {
     try {
-      final response = await _apiClient.post('/db/test-connection', {'connectionId': connectionId});
+      // Studio opens a connection to the database host, which can take longer than the default on a slow host.
+      final response = await _apiClient.post('/db/test-connection', {
+        'connectionId': connectionId,
+      }, receiveTimeout: studioStatementReceiveTimeout);
       return Success(ConnectionTestResultModel.fromJsonString(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       return _failure('test', e);
