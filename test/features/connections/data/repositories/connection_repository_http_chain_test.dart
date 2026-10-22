@@ -10,6 +10,7 @@ import 'package:libredb_mobile/features/connections/data/repositories/connection
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 
 /// [ConnectionRepository] over the production interceptor chain, retry, circuit breaker and response cache included,
@@ -21,7 +22,7 @@ void main() {
   setUp(() {
     ResilienceInterceptor.instance.resetAll();
     adapter = _QueuedAdapter();
-    final client = ApiClient(appConfig: _prodConfig);
+    final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
     repository = ConnectionRepository(client);
   });

@@ -14,7 +14,8 @@
 # must all name the issuer with the same URL. Studio therefore shares Caddy's network namespace, so its own
 # localhost:8443 reaches the same Keycloak as everyone else's.
 #
-# Sign in as admin / admin (realm role admin) or user / user (realm role user).
+# Sign in as admin / admin (realm role admin) or user / user (realm role user). norole / norole holds no realm role,
+# so Studio refuses it, which shows the app's refused sign-in.
 # The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
 #
 # The Studio image needs the bearer channel of libredb/libredb-studio#1914, which no release has yet (1.0.0 does not).
@@ -346,6 +347,17 @@ configs:
             "lastName": "User",
             "credentials": [{ "type": "password", "value": "user", "temporary": false }],
             "realmRoles": ["user", "default-roles-libredb"]
+          },
+          {
+            "id": "a0000000-0000-4000-8000-000000000003",
+            "username": "norole",
+            "enabled": true,
+            "email": "norole@example.com",
+            "emailVerified": true,
+            "firstName": "Demo",
+            "lastName": "Norole",
+            "credentials": [{ "type": "password", "value": "norole", "temporary": false }],
+            "realmRoles": ["default-roles-libredb"]
           }
         ]
       }

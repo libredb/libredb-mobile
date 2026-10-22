@@ -17,13 +17,9 @@
 enum AppErrorCode {
   // --- auth ---
   authInvalidAccessToken('auth.invalid_access_token'),
-  authLoginFailed('auth.login_failed'),
-  authSendOtpFailed('auth.send_otp_failed'),
-  authOtpValidationError('auth.otp_validation_error'),
   authSessionPersistFailed('auth.session_persist_failed'),
   authOidcConfig('auth.oidc_config'),
   authOidcDiscovery('auth.oidc_discovery'),
-  authOidcNoRole('auth.oidc_no_role'),
   authOidcNoClaims('auth.oidc_no_claims'),
   authOidcFailed('auth.oidc_failed'),
   authOidcLogoutIncomplete('auth.oidc_logout_incomplete'),
@@ -31,10 +27,6 @@ enum AppErrorCode {
   // --- users ---
   userCannotDeleteAdmin('user.cannot_delete_admin'),
   userNoAuthorities('user.no_authorities'),
-
-  // --- account ---
-  accountPasswordRequired('account.password_required'),
-  accountPasswordsSame('account.passwords_same'),
 
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),
@@ -54,6 +46,9 @@ enum AppErrorCode {
   studioDatabaseUnreachable('studio.database_unreachable'),
   studioGovernanceUnavailable('studio.governance_unavailable'),
   studioIdentityProviderUnavailable('studio.identity_provider_unavailable'),
+  studioAccountRefused('studio.account_refused'),
+  studioAccountHasNoRole('studio.account_has_no_role'),
+  studioAccountHasNoIdentity('studio.account_has_no_identity'),
   studioRateLimited('studio.rate_limited'),
   studioTransactionNotOwned('studio.transaction_not_owned'),
   studioTransactionCredentialChanged('studio.transaction_credential_changed'),

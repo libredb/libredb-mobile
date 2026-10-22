@@ -4,7 +4,6 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
-import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_sign_out_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
@@ -13,7 +12,7 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
-/// The [IAuthRepository] of an `oidc` build, whose logout also ends the user's session at the identity provider.
+/// The [IAuthRepository] whose logout also ends the user's session at the identity provider.
 ///
 /// Only a logout the user starts comes here: an idle timeout or an unrefreshable 401 clears the local session through
 /// `SessionCubit`, since a provider logout needs a browser and the user is not there. Everything else is [_inner]'s.
@@ -46,15 +45,6 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   final ISsoSessionStartup _sessionRefresh;
   final Duration _studioSignOutTimeout;
   final DateTime Function() _now;
-
-  @override
-  Future<Result<AuthTokenEntity>> authenticate(AuthCredentialsEntity userJWT) => _inner.authenticate(userJWT);
-
-  @override
-  Future<Result<void>> sendOtp(SendOtpEntity request) => _inner.sendOtp(request);
-
-  @override
-  Future<Result<AuthTokenEntity>> verifyOtp(VerifyOtpEntity request) => _inner.verifyOtp(request);
 
   /// Reads the stored ID token, records the sign-out at Studio, clears the local session through [_inner], starts the
   /// provider logout, and answers [_inner]'s result as [SsoSignOut.cleared] without waiting for the provider.

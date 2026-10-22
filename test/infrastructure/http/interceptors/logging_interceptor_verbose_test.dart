@@ -100,7 +100,7 @@ void main() {
     test('verbose mode masks the tokens of a JSON response body that are not JWTs', () {
       LoggingInterceptor.verbose = true;
       final response = Response(
-        requestOptions: RequestOptions(path: '/authenticate', method: 'POST'),
+        requestOptions: RequestOptions(path: '/session', method: 'POST'),
         statusCode: 200,
         data: '{"id_token":"at-opaque-0a1b2c3d4e5f6a7b","refresh_token":"rt-9f8e7d6c5b4a3f2e1d0c"}',
       );
@@ -111,25 +111,23 @@ void main() {
       expect(line, allOf(isNot(contains('at-opaque-0a1b2c3d4e5f6a7b')), isNot(contains('rt-9f8e7d6c5b4a3f2e1d0c'))));
     });
 
-    test(
-      'verbose mode prints the sign-in and OTP requests of main_local without their credentials or tokens',
-      () async {
-        LoggingInterceptor.verbose = true;
-        final lines = <String>[];
-        void collect(OutputEvent event) => lines.addAll(event.lines);
-        Logger.addOutputListener(collect);
-        addTearDown(() => Logger.removeOutputListener(collect));
-        final api = TestEnv.apiClient();
+    test('verbose mode prints the requests of main_local without their credentials or tokens', () async {
+      LoggingInterceptor.verbose = true;
+      final lines = <String>[];
+      void collect(OutputEvent event) => lines.addAll(event.lines);
+      Logger.addOutputListener(collect);
+      addTearDown(() => Logger.removeOutputListener(collect));
+      TestEnv.authenticate();
+      final api = TestEnv.apiClient();
 
-        await api.post('/authenticate', {'username': 'admin', 'password': 'S3cret!pw'});
-        await api.post('/authenticate/verify-otp', {'email': 'otp.user@example.com', 'otp': '493817'});
+      await api.get('/auth/me');
+      await api.post('/db/test-connection', {'connectionId': 'seed:sales-db', 'password': 'S3cret!pw'});
 
-        expect(lines, anyElement(contains('Http : POST /authenticate -> 201')));
-        for (final secret in ['S3cret!pw', '493817', 'MOCK_TOKEN', 'MOCK_REFRESH_TOKEN']) {
-          expect(lines, everyElement(isNot(contains(secret))));
-        }
-      },
-    );
+      expect(lines, anyElement(contains('Http : POST /db/test-connection -> 201')));
+      for (final secret in ['S3cret!pw', 'MOCK_TOKEN']) {
+        expect(lines, everyElement(isNot(contains(secret))));
+      }
+    });
 
     // A server-driven form chooses the keys of its fields, so the key of a password field may name no credential.
     test('verbose mode masks the values of the keys the request names as sensitive', () {

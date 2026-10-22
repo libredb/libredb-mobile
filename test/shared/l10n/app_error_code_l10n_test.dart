@@ -40,6 +40,11 @@ void main() {
       AppErrorCode.studioGovernanceUnavailable: "Studio cannot check your access right now. Try again in a moment.",
       AppErrorCode.studioIdentityProviderUnavailable:
           "Studio cannot reach the identity provider right now. Try again in a moment.",
+      AppErrorCode.studioAccountRefused:
+          "Studio did not accept this sign-in. Try again, or ask an administrator for access.",
+      AppErrorCode.studioAccountHasNoRole: "This account has no role in Studio. Ask an administrator to give it one.",
+      AppErrorCode.studioAccountHasNoIdentity:
+          "Studio cannot tell who this account is. Ask an administrator to check the account's email and username.",
       AppErrorCode.studioRateLimited: "Too many requests in a short time. Wait a moment and try again.",
       AppErrorCode.studioTransactionNotOwned: "Another session holds an open transaction on this connection.",
       AppErrorCode.studioTransactionCredentialChanged:
@@ -60,7 +65,6 @@ void main() {
       AppErrorCode.authOidcConfig:
           'Single sign-on is not configured correctly in this app. Contact your administrator.',
       AppErrorCode.authOidcDiscovery: 'The identity provider could not be reached. Try again later, or contact your administrator if this continues.',
-      AppErrorCode.authOidcNoRole: 'Your account has no role that allows access to this app. Ask your administrator.',
       AppErrorCode.authOidcNoClaims: 'Sign-in failed. Please try again.',
       AppErrorCode.authOidcFailed: 'Sign-in failed. Please try again.',
       AppErrorCode.authOidcLogoutIncomplete:

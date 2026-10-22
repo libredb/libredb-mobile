@@ -108,7 +108,6 @@ void _printNextSteps(_FeatureNames f) {
   print("   static const ${f.camel}New = '/${f.kebab}/new';");
   print("   static const ${f.camel}Edit = '/${f.kebab}/:id/edit';");
   print("   static const ${f.camel}View = '/${f.kebab}/:id/view';");
-  print('   For a role-gated feature, also add /${f.kebab} to lib/app/router/route_role_requirements.dart.');
   print('');
   print('5. Add a sidebar menu entry with url /${f.kebab} to assets/mock/menus.json, and a case for its name to');
   print('   translate_menu_title in lib/l10n/intl_en.arb and intl_tr.arb; otherwise the sidebar shows "Other".');

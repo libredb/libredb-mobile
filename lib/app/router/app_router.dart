@@ -1,9 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/router/app_root_page.dart';
 import 'package:libredb_mobile/app/router/app_router_refresh_notifier.dart';
-import 'package:libredb_mobile/app/router/forbidden_page.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
-import 'package:libredb_mobile/app/router/route_role_requirements.dart';
 // safeRedirectTarget lives in core/ so features/ guards can consume it too.
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -21,18 +19,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouterFactory {
-  AppRouterFactory({
-    required this._sessionCubit,
-    this._authMode = const JwtAuthMode(),
-    List<NavigatorObserver>? observers,
-  }) : _observers = observers ?? [];
+  AppRouterFactory({required this._sessionCubit, List<NavigatorObserver>? observers}) : _observers = observers ?? [];
 
   static final _log = AppLogger.getLogger('AppRouterFactory');
 
   final SessionCubit _sessionCubit;
-
-  /// An `oidc` build leaves out the password routes: the identity provider owns the password.
-  final AuthMode _authMode;
   final List<NavigatorObserver> _observers;
 
   GoRouter create() {
@@ -61,11 +52,7 @@ class AppRouterFactory {
             state: state,
             child: AppShell(state: state, child: child),
           ),
-          routes: [
-            ...ConnectionsFeatureRoutes.routes,
-            ...SettingsFeatureRoutes.routes,
-            if (!_authMode.usesOidc) ...AuthFeatureRoutes.authenticatedRoutes,
-          ],
+          routes: [...ConnectionsFeatureRoutes.routes, ...SettingsFeatureRoutes.routes],
         ),
         ...AuthFeatureRoutes.publicRoutes(
           loginBuilder: (context) => LoginScreen(
@@ -75,11 +62,6 @@ class AppRouterFactory {
               SessionUnknown() || SessionAuthenticated() => null,
             },
           ),
-          ssoOnly: _authMode.usesOidc,
-        ),
-        GoRoute(
-          path: ApplicationRoutesConstants.forbidden,
-          pageBuilder: (context, state) => appRootPage(state: state, child: const ForbiddenPage()),
         ),
       ],
       redirect: (context, state) {
@@ -90,14 +72,13 @@ class AppRouterFactory {
 
         _log.debug('redirect - location: {}, session: {}', [location, sessionState.runtimeType]);
 
-        // In an oidc build, the callback URL reaching the router, such as a custom scheme link the platform pushes, must
-        // never become a router location or a returnUrl: its query holds the authorization code and state. A jwt build
-        // has no such path and keeps its usual handling of it.
-        if (_authMode.usesOidc && location == OidcSettings.redirectPath) return ApplicationRoutesConstants.login;
+        // The callback URL reaching the router, such as a custom scheme link the platform pushes, must never become a
+        // router location or a returnUrl: its query holds the authorization code and state.
+        if (location == OidcSettings.redirectPath) return ApplicationRoutesConstants.login;
 
-        // Authenticated user landing on a public route (login / register
-        // / forgot-password / OTP), for example by opening /login while
-        // signed in, should be sent to the home shell, or to the returnUrl
+        // Authenticated user landing on the public route (login), for
+        // example by opening /login while signed in, should be sent to
+        // the home shell, or to the returnUrl
         // that the redirect below gives the login page, as the sign-in on
         // that page does: SessionCubit signs the user in on that page when
         // the stored session answers only after its restore time limit.
@@ -130,19 +111,6 @@ class AppRouterFactory {
           return '${ApplicationRoutesConstants.login}?returnUrl=$encoded';
         }
 
-        // Role gate. Empty required set → open access.
-        if (isAuthenticated) {
-          final required = requiredRolesFor(location);
-          if (!hasAnyRequiredRole(sessionState.roles, required)) {
-            _log.warn('redirect - role denied at {}: user roles {}, required {}', [
-              location,
-              sessionState.roles,
-              required,
-            ]);
-            return ApplicationRoutesConstants.forbidden;
-          }
-        }
-
         return null;
       },
     );
@@ -153,11 +121,5 @@ class AppRouterFactory {
   bool isExitForced(GoRouterState leaving) =>
       _sessionCubit.state is! SessionAuthenticated && !_isPublicRoute(leaving.matchedLocation);
 
-  bool _isPublicRoute(String path) {
-    return path == ApplicationRoutesConstants.login ||
-        path == ApplicationRoutesConstants.register ||
-        path == ApplicationRoutesConstants.forgotPassword ||
-        path == ApplicationRoutesConstants.loginOtp ||
-        path.startsWith(ApplicationRoutesConstants.loginOtpVerify);
-  }
+  bool _isPublicRoute(String path) => path == ApplicationRoutesConstants.login;
 }

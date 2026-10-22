@@ -32,8 +32,8 @@ flowchart TB
     subgraph REPO["Repository Layer"]
         direction LR
         CR["ConnectionRepository"]
-        AR["AuthRepository"]
-        ACR["AccountRepository"]
+        SIR["StudioIdentityRepository"]
+        LR["LifecycleRepository"]
     end
 
     REPO --> API
@@ -93,10 +93,10 @@ flowchart LR
         WIDGET_TEST["Widget Tests"]
     end
 
-    UC_TEST -- "mocktail" --> MOCK_REPO["MockIConnectionRepository<br/>MockIAuthRepository<br/>MockIAccountRepository"]
-    BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockAccountRepository"]
+    UC_TEST -- "mocktail" --> MOCK_REPO["MockIConnectionRepository<br/>MockIAuthRepository<br/>MockIAuthSessionRepository"]
+    BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockSignInWithSsoUseCase"]
     API_TEST -- "StubInterceptor" --> STUB_DIO["Test Dio Instance<br/><i>No network, no assets</i>"]
-    WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockChangePasswordBloc<br/>MockLoginBloc"]
+    WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockLoginBloc"]
 
     MOCK_REPO --> RESULT_T["Result&lt;T&gt;"]
     MOCK_REPO_C --> RESULT_T
@@ -200,16 +200,14 @@ Always runs, in every mode.
 
 ### Token refresh
 
-`TokenRefreshInterceptor` sends the refresh, `POST /token/refresh`, through a Dio of its own, so a 401 on the refresh cannot come back into the chain.
-That Dio skips the `MockInterceptor` at the end of the chain, so outside production `ApiClient` gives it a `MockInterceptor` of its own (`_mockRefreshDio`).
-The mock answers the refresh from `POST_token_refresh.json`, the request that got the 401 is sent again with the new token, and the session continues, as it does against the server.
-In production the refresh Dio has no interceptors and uses the adapter of the client's Dio, so the refresh token keeps the certificate pinning.
+`TokenRefreshInterceptor` refreshes through the `TokenRotation` it is given, a `refresh_token` grant at the identity provider's token endpoint, never through the API, so a 401 on the refresh cannot come back into the chain.
+In mock mode the provider is `LocalOidcClient`, the debug-only double of `main_local.dart` ([oidc.md](oidc.md)), which answers the refresh with new tokens; the request that got the 401 is sent again with the new token, and the session continues, as it does against the server.
 
 `AuthInterceptor` records on each request the session generation it goes out under, before it reads the token (`SessionGeneration` in `lib/infrastructure/storage/session_generation.dart`).
 A logout or the end of the session wipes the stored session inside `SessionGeneration.wipe`.
 So a 401 for a request whose session has been wiped since, or is being wiped, is neither sent again nor refreshed: the token stored now may be that of another user who signed in since.
 A refresh still on its way drops the rotated tokens instead of storing a session that a relaunch would restore.
-The startup step of an `oidc` build refreshes through the same rotation and goes on after its time limit, so before it acts on the answer of a refresh, success or failure, `TokenRefreshInterceptor` also reads the stored refresh token again.
+The startup step refreshes through the same rotation and goes on after its time limit, so before it acts on the answer of a refresh, success or failure, `TokenRefreshInterceptor` also reads the stored refresh token again.
 When the session is no longer stored, the answer is dropped; when another refresh has rotated the session, its tokens stay and the request is sent again with its JWT.
 `CacheInterceptor` checks the same generation before it stores a response, so a GET still on its way when the session ends does not put the data of the user who signed out back into the cache the wipe cleared.
 
@@ -229,11 +227,10 @@ Mock JSON files served by `MockInterceptor` live in `assets/mock/` and follow a 
 
 | Request | Mock File |
 | --- | --- |
-| `GET /account` | `GET_account.json` |
-| `POST /authenticate` | `POST_authenticate.json` |
+| `GET /auth/me` | `GET_auth_me.json` |
 | `GET /connections/managed` | `GET_connections_managed.json` |
 | `POST /db/query` | `POST_db_query.json` |
-| `POST /account/change-password` | `POST_account_change_password.json` |
+| `POST /db/test-connection` | `POST_db_test_connection.json` |
 | `DELETE /items/{id}` | *(no file needed, returns 204 directly)* |
 
 **How the file name is resolved** (from `MockInterceptor`):
@@ -259,21 +256,19 @@ The `_basePath`, `_pathParams`, and `_queryParams` metadata are injected by `Api
 
 Each file contains the exact JSON the real API would return.
 
-**Single object** (`GET_account.json`):
+**Single object** (`GET_auth_me.json`):
 ```json
 {
-  "id": "user-1",
-  "login": "admin",
-  "email": "admin@sample.tech",
-  "firstName": "Admin",
-  "lastName": "User",
-  "activated": true,
-  "langKey": "en",
-  "createdBy": "system",
-  "createdDate": "2024-01-04T06:02:47.757Z",
-  "lastModifiedBy": "admin",
-  "lastModifiedDate": "2024-01-04T06:02:47.757Z",
-  "authorities": ["ROLE_ADMIN", "ROLE_USER"]
+  "authenticated": true,
+  "user": {
+    "role": "admin",
+    "username": "admin@example.com",
+    "idpSubject": "6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10",
+    "idpIssuer": "https://localhost:8443/realms/libredb",
+    "iat": 1792620000,
+    "exp": 1792620060,
+    "channel": "bearer"
+  }
 }
 ```
 
@@ -287,22 +282,7 @@ Each file contains the exact JSON the real API would return.
 }
 ```
 
-**Auth token** (`POST_authenticate.json`):
-```json
-{
-  "id_token": "MOCK_TOKEN",
-  "refresh_token": "MOCK_REFRESH_TOKEN"
-}
-```
-
-**Refreshed token** (`POST_token_refresh.json`) has the same shape.
-`TokenRefreshInterceptor` stores `id_token` as the new JWT and, when present, `refresh_token` as the new refresh token:
-```json
-{
-  "id_token": "MOCK_REFRESHED_TOKEN",
-  "refresh_token": "MOCK_REFRESH_TOKEN_NEW"
-}
-```
+There is no token file: the sign-in and the token refresh go to the identity provider, which `LocalOidcClient` stands in for in mock mode.
 
 ## Public vs. Private Endpoints
 
@@ -310,23 +290,17 @@ Each file contains the exact JSON the real API would return.
 
 | Method | Path | Sent by |
 | --- | --- | --- |
-| `POST` | `/authenticate` | Sign-in, `LoginRepository.authenticate` |
-| `POST` | `/authenticate/send-otp` | OTP sign-in, `LoginRepository.sendOtp` |
-| `POST` | `/authenticate/verify-otp` | OTP sign-in, `LoginRepository.verifyOtp` |
-| `POST` | `/register` | Registration, `AccountRepository.register` |
-| `POST` | `/account/reset-password/init` | Password reset, `AccountRepository.resetPassword` |
-| `POST` | `/token/refresh` | Token refresh, `TokenRefreshInterceptor` |
 | `GET` | `/app/config` | Lifecycle checks before sign-in, `LifecycleRepository.fetchAppConfig` |
 
 The path is the one the `ApiClient` method is called with, before any path parameters.
-Another method on the same path, such as `GET /authenticate`, is private, and the app's own routes, such as `/forgot-password`, are not API endpoints, so the list leaves them out.
+Another method on the same path is private, and the app's own routes, such as `/login`, are not API endpoints, so the list leaves them out.
 All other endpoints require a valid `Authorization` header.
 In dev/test mode the `MockInterceptor` enforces this check; in production the real API does.
 
 `AuthInterceptor`, `TokenRefreshInterceptor` and `MockInterceptor` all ask `isPublicEndpoint`, so they cannot disagree about an endpoint:
 
-- In every environment `AuthInterceptor` sends no token to a public endpoint, so a stale token left by an expired session never reaches the sign-in endpoints.
-- `TokenRefreshInterceptor` passes a 401 from any other public endpoint than the refresh endpoint on without a token refresh and without ending the session, because it is not about a session: on the sign-in endpoints it rejects the credentials in the request; a 401 from the refresh endpoint still ends the session.
+- In every environment `AuthInterceptor` sends no token to a public endpoint, so a stale token left by an expired session never reaches it.
+- `TokenRefreshInterceptor` passes a 401 from a public endpoint on without a token refresh and without ending the session, because it is not about a session.
 - `MockInterceptor` answers a public endpoint without a token, as the server does.
 
 `TokenRefreshInterceptor` also asks `isApiOriginRequest`: a 401 from another origin than the API's is passed on with no token refresh, no retry and no session end, because `AuthInterceptor` sent no token there and sending the request again would carry the refreshed one.
@@ -368,7 +342,7 @@ They replace a layer with a test double instead:
 │                        Test Layer                                 │
 │                                                                   │
 │  Use Case Tests:   MockIConnectionRepository (interface mock)    │
-│  BLoC Tests:       MockAccountRepository (concrete mock)         │
+│  BLoC Tests:       MockSignInWithSsoUseCase (use case mock)      │
 │  ApiClient Tests:  _StubInterceptor (Dio-level stub)             │
 │  Widget Tests:     MockBloc (bloc_test)                          │
 └──────────────────────────────────────────────────────────────────┘
@@ -377,7 +351,7 @@ They replace a layer with a test double instead:
 Two common setups do run the mock interceptor.
 `TestEnv.apiClient()`, which repository tests use, builds an `ApiClient` with `AppConfig.test()`, so `MockInterceptor` serves `assets/mock/*.json` without the simulated latency.
 Passing a stub `dio` to it replaces the whole chain, `MockInterceptor` included.
-A test that pumps the whole `App` with its default `AppDependencies`, such as `test/integration/app_smoke_test.dart`, runs with `AppConfig.dev()`, the same `AppConfig` as `main_local.dart`.
+A test that pumps the whole `App` with `LocalSignInDependencies()`, such as `test/integration/app_smoke_test.dart`, runs with `AppConfig.dev()` and the local sign-in, as `main_local.dart` does.
 
 ### Use Case Tests
 

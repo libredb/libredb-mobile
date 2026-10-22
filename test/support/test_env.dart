@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
@@ -28,7 +30,7 @@ class TestEnv {
   /// In-memory backing for the mocked flutter_secure_storage channel.
   /// Production code instantiates [FlutterSecureStorageAdapter] in several
   /// places (AuthInterceptor, TokenRefreshInterceptor, SessionCubit,
-  /// AuthSessionRepository, LoginRepository.logout); each
+  /// AuthSessionRepository); each
   /// routes through this MethodChannel. Without the mock those paths throw
   /// MissingPluginException.
   static final Map<String, String> _secureStore = {};
@@ -37,9 +39,19 @@ class TestEnv {
 
   /// Mock-backed client for tests: test AppConfig → MockInterceptor serves
   /// assets/mock/*.json; shared secure adapter → same MethodChannel mock the
-  /// repo layer reads. Pass [dio] to inject a stub.
-  static ApiClient apiClient({Dio? dio}) =>
-      ApiClient(appConfig: const AppConfig.test(), secureStorage: FlutterSecureStorageAdapter(), dio: dio);
+  /// repo layer reads; the token refresh of `main_local.dart`'s local sign-in.
+  /// Pass [dio] to inject a stub.
+  static ApiClient apiClient({Dio? dio}) {
+    final dependencies = LocalSignInDependencies(appConfig: const AppConfig.test());
+    final secureStorage = FlutterSecureStorageAdapter();
+    final settings = (dependencies.authMode as OidcAuthMode).settings;
+    return ApiClient(
+      appConfig: dependencies.appConfig,
+      secureStorage: secureStorage,
+      dio: dio,
+      tokenRotation: dependencies.createOidcTokenRotation(dependencies.createOidcClient(settings), secureStorage),
+    );
+  }
 
   /// Resets the per-test environment: re-installs the secure-storage mock,
   /// clears all storage and the process-wide [FeatureFlagService.instance].

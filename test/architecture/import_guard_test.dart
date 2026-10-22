@@ -29,24 +29,8 @@ const _knownSharedExceptions = {
   'lib/shared/widgets/language_selection_dialog.dart → app/localization/locale_cubit',
 };
 
-/// features/ importing other features' internals (auth↔account coupling)
-const _knownCrossFeatureExceptions = {
-  'lib/features/auth/navigation/auth_routes.dart → account/domain/repositories/account_repository',
-  // Cross-feature use case imports moved here when the BLoC constructors
-  // switched to required-use-case DI (#86). Proper fix is to relocate the
-  // Register/Forgot/Change BlocProviders out of auth/navigation into
-  // app/di/app_scope so the cross-feature coupling lives at the composition
-  // root. That move would change BLoC lifecycle (route-scoped → app-scoped),
-  // so it's deferred to its own issue.
-  'lib/features/auth/navigation/auth_routes.dart → account/application/usecases/change_password_usecase',
-  'lib/features/auth/navigation/auth_routes.dart → account/application/usecases/register_account_usecase',
-  'lib/features/auth/navigation/auth_routes.dart → account/application/usecases/reset_password_usecase',
-  'lib/features/auth/application/forgot_password_bloc.dart → account/application/usecases/reset_password_usecase',
-  'lib/features/auth/application/login_bloc.dart → account/application/usecases/get_account_usecase',
-  'lib/features/auth/application/change_password_bloc.dart → account/application/usecases/change_password_usecase',
-  'lib/features/auth/application/change_password_bloc.dart → account/data/models/change_password',
-  'lib/features/auth/application/register_bloc.dart → account/application/usecases/register_account_usecase',
-};
+/// features/ importing other features' internals. None today.
+const _knownCrossFeatureExceptions = <String>{};
 
 /// features/ importing app/ (route constants used for navigation)
 const _knownFeatureAppExceptions = {

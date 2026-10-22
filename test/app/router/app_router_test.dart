@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
@@ -15,6 +16,7 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +25,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../mocks/mock_classes.dart';
 import '../../support/test_env.dart';
 
-/// The identity provider of an oidc build. The router tests never sign in through it.
+/// The identity provider. The router tests never sign in through it.
 class _IdleOidcClient implements IOidcClient {
   @override
   Future<OidcSignInOutcome> signIn() => throw UnimplementedError('these tests never sign in through the provider');
@@ -41,7 +43,7 @@ class _IdleOidcClient implements IOidcClient {
       throw UnimplementedError('these tests never log out');
 }
 
-/// The test config in an oidc build.
+/// The test config.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies()
     : super(
@@ -81,10 +83,15 @@ void main() {
     await tester.binding.defaultBinaryMessenger.handlePlatformMessage(SystemChannels.navigation.name, message, (_) {});
   }
 
-  // Secure storage that answers the stored session read only when the returned completer completes.
+  // Secure storage that answers the stored token read only when the returned completer completes. It holds nothing
+  // else, so the startup step finds no expiry to refresh and reads the stored token.
   Completer<String?> storedTokenPending(MockISecureStorage secureStorage) {
     final storedToken = Completer<String?>();
-    when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
+    when(() => secureStorage.read(any())).thenAnswer(
+      (invocation) => invocation.positionalArguments.first == SecureStorageKeys.jwtToken.key
+          ? storedToken.future
+          : Future<String?>.value(),
+    );
     return storedToken;
   }
 
@@ -102,7 +109,7 @@ void main() {
   group('AppRouterFactory', () {
     testWidgets('redirects unauthenticated users to login', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final router = routerFromApp(tester);
@@ -115,7 +122,7 @@ void main() {
     testWidgets('allows authenticated users to open settings', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final router = routerFromApp(tester);
@@ -128,7 +135,7 @@ void main() {
     testWidgets('sends an authenticated user on the login page home when its returnUrl leaves the app', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final returnUrl = Uri.encodeQueryComponent('https://evil.example/settings');
@@ -141,7 +148,7 @@ void main() {
     testWidgets('signed in, / opens the connection list', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       routerFromApp(tester).go(ApplicationRoutesConstants.settings);
       await tester.pumpAndSettle();
@@ -156,7 +163,7 @@ void main() {
     testWidgets('signed out, / opens the login page with no returnUrl', (tester) async {
       setDesktopViewport(tester);
       startOn(tester, '/');
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -167,7 +174,7 @@ void main() {
       setDesktopViewport(tester);
       TestEnv.authenticate();
       final analytics = MockAnalyticsService();
-      await tester.pumpWidget(App(language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(loginFrames, isEmpty, reason: 'frames that built the login page');
@@ -185,7 +192,7 @@ void main() {
       setDesktopViewport(tester);
       startOn(tester, ApplicationRoutesConstants.settings);
       TestEnv.authenticate();
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.settings);
@@ -196,7 +203,7 @@ void main() {
     testWidgets('keeps a deep link as the login returnUrl on an unauthenticated cold start', (tester) async {
       setDesktopViewport(tester);
       startOn(tester, ApplicationRoutesConstants.settings);
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -207,7 +214,9 @@ void main() {
       setDesktopViewport(tester);
       final secureStorage = MockISecureStorage();
       final storedToken = storedTokenPending(secureStorage);
-      await tester.pumpWidget(App(language: 'en', secureStorage: secureStorage));
+      await tester.pumpWidget(
+        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+      );
       await tester.pump();
 
       await pushRouteFromPlatform(tester, ApplicationRoutesConstants.settings);
@@ -226,7 +235,9 @@ void main() {
       setDesktopViewport(tester);
       final secureStorage = MockISecureStorage();
       final storedToken = storedTokenPending(secureStorage);
-      await tester.pumpWidget(App(language: 'en', secureStorage: secureStorage));
+      await tester.pumpWidget(
+        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+      );
       await tester.pump();
 
       await pushRouteFromPlatform(tester, ApplicationRoutesConstants.settings);
@@ -238,18 +249,22 @@ void main() {
     });
   });
 
-  group('AppRouterFactory in oidc mode', () {
-    for (final location in [
-      ApplicationRoutesConstants.register,
-      ApplicationRoutesConstants.forgotPassword,
-      ApplicationRoutesConstants.loginOtp,
-      '${ApplicationRoutesConstants.loginOtpVerify}/x@example.com',
-    ]) {
-      testWidgets('signed out, $location shows the not-found page', (tester) async {
+  // The password sign-in is gone: its pages resolve to nothing.
+  group('AppRouterFactory - removed password routes', () {
+    const removed = [
+      '/register',
+      '/forgot-password',
+      '/change-password',
+      '/login-otp',
+      '/login-otp-verify/x@example.com',
+    ];
+
+    for (final location in removed) {
+      testWidgets('signed in, $location shows the not-found page', (tester) async {
         setDesktopViewport(tester);
-        await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies()));
+        TestEnv.authenticate();
+        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
-        expect(find.byType(LoginScreen), findsOneWidget);
 
         routerFromApp(tester).go(location);
         await tester.pumpAndSettle();
@@ -258,22 +273,23 @@ void main() {
       });
     }
 
-    testWidgets('signed in, the change-password page shows the not-found page', (tester) async {
-      setDesktopViewport(tester);
-      TestEnv.authenticate();
-      await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies()));
-      await tester.pumpAndSettle();
-      expect(find.byType(ConnectionListPage), findsOneWidget);
+    for (final location in removed) {
+      testWidgets('signed out, $location is not public and leads to the login page', (tester) async {
+        setDesktopViewport(tester);
+        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpAndSettle();
 
-      routerFromApp(tester).go(ApplicationRoutesConstants.changePassword);
-      await tester.pumpAndSettle();
+        routerFromApp(tester).go(location);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(NotFoundPage), findsOneWidget);
-    });
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.login);
+      });
+    }
   });
 
   // The app's own redirect paths carry the authorization code and state, which must never become a router location
-  // or a returnUrl. A jwt build has no such paths and keeps today's behavior for them.
+  // or a returnUrl.
   group('AppRouterFactory - redirect paths of the identity provider', () {
     for (final (mode, dependencies) in [
       ('oidc', _OidcDependencies()),
@@ -281,7 +297,7 @@ void main() {
         'misconfigured oidc',
         const AppDependencies(
           appConfig: AppConfig.test(),
-          authMode: OidcMisconfiguredAuthMode('OIDC_ISSUER is required in oidc mode'),
+          authMode: OidcMisconfiguredAuthMode('OIDC_ISSUER is required'),
         ),
       ),
     ]) {
@@ -320,7 +336,7 @@ void main() {
         expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.login);
       });
 
-      // A misconfigured oidc build can neither sign in nor restore a stored session.
+      // A misconfigured build can neither sign in nor restore a stored session.
       if (dependencies.authMode is OidcAuthMode) {
         testWidgets('in $mode mode, signed in, /oauth2redirect lands on the connection list', (tester) async {
           setDesktopViewport(tester);
@@ -338,17 +354,5 @@ void main() {
         });
       }
     }
-
-    testWidgets('in jwt mode, signed in, /oauth2redirect still shows the not-found page', (tester) async {
-      setDesktopViewport(tester);
-      TestEnv.authenticate();
-      await tester.pumpWidget(const App(language: 'en'));
-      await tester.pumpAndSettle();
-
-      routerFromApp(tester).go('/oauth2redirect?code=SECRETCODE&state=SECRETSTATE');
-      await tester.pumpAndSettle();
-
-      expect(find.byType(NotFoundPage), findsOneWidget);
-    });
   });
 }

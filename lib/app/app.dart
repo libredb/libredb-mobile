@@ -13,7 +13,6 @@ import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/features/lifecycle/presentation/pages/lifecycle_gate.dart';
 import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_status_gate.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -23,13 +22,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class App extends StatefulWidget {
-  const App({
-    super.key,
-    required this.language,
-    this.dependencies = const AppDependencies(),
-    this.secureStorage,
-    this._analytics,
-  });
+  const App({super.key, required this.language, required this.dependencies, this.secureStorage, this._analytics});
 
   /// The configured default language: the app shows it until a language is stored on the device, see [LocaleCubit].
   final String language;
@@ -88,7 +81,6 @@ class _AppViewState extends State<_AppView> {
     if (_router != null) return;
     final routerFactory = AppRouterFactory(
       sessionCubit: context.read<SessionCubit>(),
-      authMode: context.read<AuthMode>(),
       observers: [
         AnalyticsRouteObserver(widget.analytics),
         // Sentry breadcrumbs from navigation. Only meaningful when the

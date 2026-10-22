@@ -1,9 +1,8 @@
 # Single Sign-On with OpenID Connect
 
-The app signs users in one of two ways, chosen once at build time with `AUTH_PROVIDER`.
-`jwt`, the default, is the password and OTP sign-in against a backend that issues its own JWT.
-`oidc` signs the user in through any OpenID Connect provider, such as Keycloak, Zitadel, Auth0 or Microsoft Entra ID.
-In `oidc` mode the app is a public client: it uses the Authorization Code flow with PKCE (S256), holds the provider's tokens itself, and sends the provider's access token to the backend as the bearer.
+The app signs users in only through an OpenID Connect provider: Keycloak for LibreDB Studio, and in principle Zitadel, Auth0 or Microsoft Entra ID.
+It has no password, OTP or registration screen of its own, and calls no sign-in or token endpoint of its backend.
+The app is a public client: it uses the Authorization Code flow with PKCE (S256), holds the provider's tokens itself, and sends the provider's access token to LibreDB Studio as the bearer.
 There is no client secret anywhere in the app.
 The app runs on Android and iOS, and signs in through the system browser of each: a Custom Tab on Android and `ASWebAuthenticationSession` on iOS.
 
@@ -26,22 +25,20 @@ The provider sections below are a starting point for those three, and a report f
 ## Quick start
 
 1. Register a public client (no client secret) at your provider, with PKCE S256 and the redirect URI of the app (see [Redirect URI](#redirect-uri)).
-2. Make the provider put your role claim in both the ID token and the access token.
+2. Make the provider put the role claim into the access token, where LibreDB Studio maps it (see [Roles](#roles)).
 3. Build the app with the issuer and the client id:
 
 ```shell
 fvm flutter run --target lib/main/main_prod.dart \
-  --dart-define=AUTH_PROVIDER=oidc \
   --dart-define=OIDC_ISSUER=https://id.example.com/realms/acme \
-  --dart-define=OIDC_CLIENT_ID=acme-app \
-  --dart-define=OIDC_ROLE_CLAIM=realm_access.roles
+  --dart-define=OIDC_CLIENT_ID=acme-app
 ```
 
 A file of `KEY=value` lines works too, through `--dart-define-from-file=oidc.env`, as `tool/studio-dev/studio-dev.env` shows.
 Every value is compiled in, so a change needs a new build.
 
 The login page then shows a single "Sign in with SSO" button.
-Registration, forgot password, OTP sign-in and change password belong to the provider, so their routes are not registered in `oidc` mode and their entry points are hidden.
+Registration, forgot password and change password belong to the provider, so the app has no page for them.
 
 ### Redirect URI
 
@@ -80,20 +77,15 @@ A protocol mapper writes the realm roles to `realm_access.roles`, and an audienc
    - **Valid redirect URIs:** `org.libredb.mobile:/oauth2redirect`.
    - **Valid post logout redirect URIs:** `org.libredb.mobile:/oauth2redirect`.
 3. Under **Advanced**, set **Proof Key for Code Exchange Code Challenge Method** to `S256`.
-4. Roles: the realm-role mapper writes `realm_access.roles` to the access token by default, but not to the ID token.
-   Open **Client scopes**, then **roles**, then **Mappers**, then **realm roles**, switch **Add to ID token** on, and save.
-   The role claim must be in both tokens: the app reads it from the ID token for its UI, and your backend from the access token.
+4. Roles: the realm-role mapper writes `realm_access.roles` to the access token by default, which is where Studio reads it.
+   The ID token needs no role: the app takes the role from Studio's `GET /api/auth/me`.
 5. Audience: Keycloak's access token carries `aud: account`, not your API.
    Add an **Audience** mapper to the client's dedicated scope (**Client scopes** tab of the client, then the `-dedicated` scope, then **Add mapper**, **By configuration**, **Audience**), with **Included Client Audience** set to your backend's client and **Add to access token** on.
    Your backend then checks that audience.
 
 ```env
-AUTH_PROVIDER=oidc
 OIDC_ISSUER=https://keycloak.example.com/realms/acme
 OIDC_CLIENT_ID=acme-app
-OIDC_ROLE_CLAIM=realm_access.roles
-OIDC_ADMIN_ROLES=admin
-OIDC_USER_ROLES=user
 ```
 
 Keycloak issues a refresh token without `offline_access`, so the default scope is enough.
@@ -108,20 +100,14 @@ Not yet run against a live tenant; this section follows Zitadel's documentation.
 2. Redirect URIs: `org.libredb.mobile:/oauth2redirect`, and the same URI as the post logout URI.
 3. Grant types: switch **Refresh Token** on, and add `offline_access` to `OIDC_SCOPE`, or Zitadel issues no refresh token.
 4. Roles: create the project roles, grant them to users, and request them with the scope `urn:zitadel:iam:org:project:roles`.
-   In the application's token settings, switch on the option that adds the user roles to the ID token (**User roles inside ID Token**); the app sends no UserInfo request, so roles that are only in the UserInfo answer never reach it.
-   The claim is an object whose keys are the role names (`{"admin": {"<org id>": "<org domain>"}}`), which the app's role mapping reads as the roles `admin` (see [Role mapping](#role-mapping)).
-   The role claim must be in both tokens, so check that your backend sees it in the access token too.
+   The claim is an object whose keys are the role names (`{"admin": {"<org id>": "<org domain>"}}`); check that Studio maps it from the access token (see [Roles](#roles)).
 5. Audience: set the application's **Auth Token Type** to **JWT**, because the default bearer token is opaque and a backend cannot verify it against the JWKS.
    Add the scope `urn:zitadel:iam:org:project:id:<project id>:aud`, so the project id is in the access token's `aud`.
 
 ```env
-AUTH_PROVIDER=oidc
 OIDC_ISSUER=https://acme.zitadel.cloud
 OIDC_CLIENT_ID=<native client id>
 OIDC_SCOPE=openid profile email offline_access urn:zitadel:iam:org:project:roles urn:zitadel:iam:org:project:id:<project id>:aud
-OIDC_ROLE_CLAIM=urn:zitadel:iam:org:project:roles
-OIDC_ADMIN_ROLES=admin
-OIDC_USER_ROLES=user
 ```
 
 Zitadel advertises its `end_session_endpoint` through discovery, so the provider logout needs no special case.
@@ -140,30 +126,23 @@ Not yet run against a live tenant; this section follows Auth0's documentation.
    Without an audience, Auth0 issues an opaque access token that your backend cannot verify against the JWKS.
 4. Refresh: switch **Allow Offline Access** on for that API and add `offline_access` to `OIDC_SCOPE`; refresh token rotation is recommended.
 5. Roles: Auth0 puts no roles in the tokens by default.
-   Add a post-login Action that writes them to both tokens under a namespaced claim:
+   Add a post-login Action that writes them to the access token under a namespaced claim, for Studio to map:
 
 ```javascript
 exports.onExecutePostLogin = async (event, api) => {
-  const claim = 'https://example.com/roles';
   const roles = event.authorization?.roles ?? [];
-  api.idToken.setCustomClaim(claim, roles);
-  api.accessToken.setCustomClaim(claim, roles);
+  api.accessToken.setCustomClaim('https://example.com/roles', roles);
 };
 ```
 
 ```env
-AUTH_PROVIDER=oidc
 OIDC_ISSUER=https://acme.eu.auth0.com/
 OIDC_CLIENT_ID=<native client id>
 OIDC_SCOPE=openid profile email offline_access
 OIDC_AUDIENCE=https://api.example.com
-OIDC_ROLE_CLAIM=https://example.com/roles
-OIDC_ADMIN_ROLES=admin
-OIDC_USER_ROLES=user
 ```
 
 Use the issuer exactly as the `issuer` of your tenant's discovery document, which for Auth0 ends with a slash.
-The claim name `https://example.com/roles` contains dots, and the app first looks it up as one literal top-level key, so it works as it is.
 Auth0 advertises an `end_session_endpoint` only when **RP-Initiated Logout End Session Endpoint Discovery** is on in the tenant's advanced settings.
 Without it, for an issuer on `auth0.com` or a subdomain of it, the app falls back to Auth0's `/v2/logout` with `client_id` and `returnTo`.
 That fallback is the only provider-specific code path; a custom domain needs the discovery setting on.
@@ -181,19 +160,14 @@ Not yet run against a live tenant; this section follows Microsoft's documentatio
    Set `requestedAccessTokenVersion` (`accessTokenAcceptedVersion` in the older manifest) to `2`, so the access token's `iss` is the v2.0 issuer that your backend expects.
 4. Refresh: add `offline_access` to `OIDC_SCOPE`, or Entra ID issues no refresh token and the session ends when the access token expires.
 5. Roles: define **App roles** on the registration and assign them to users or groups under **Enterprise applications**.
-   Entra ID writes them to the `roles` claim of the ID token, and of the access token for an API exposed by the same registration, so both tokens carry them.
+   Entra ID writes them to the `roles` claim of the access token for an API exposed by the same registration, where Studio maps them.
 
 ```env
-AUTH_PROVIDER=oidc
 OIDC_ISSUER=https://login.microsoftonline.com/<tenant id>/v2.0
 OIDC_CLIENT_ID=<application id>
 OIDC_SCOPE=openid profile email offline_access api://<application id>/access_as_user
-OIDC_ROLE_CLAIM=roles
-OIDC_ADMIN_ROLES=Admin
-OIDC_USER_ROLES=User
 ```
 
-Role names are compared case-insensitively.
 Entra ID advertises its `end_session_endpoint` through discovery.
 
 ## Configuration reference
@@ -203,25 +177,20 @@ Strings are trimmed; flags and `OIDC_PROMPT` are also lower-cased.
 
 | Variable | Required | Default | Meaning |
 | --- | --- | --- | --- |
-| `AUTH_PROVIDER` | No | `jwt` | `jwt` or `oidc`, trimmed and lower-cased. Any other value stops the app at bootstrap with an error that names the variable |
 | `OIDC_ISSUER` | Yes | none | Issuer URL, with discovery at `/.well-known/openid-configuration` under it. `https` in any case, or `http` on `localhost`, `127.0.0.1` or `[::1]`. No query and no fragment |
 | `OIDC_CLIENT_ID` | Yes | none | The public client id |
 | `OIDC_SCOPE` | No | `openid profile email` | Space-separated, and must contain `openid`. Zitadel, Auth0 and Entra ID need `offline_access` for a refresh token |
 | `OIDC_AUDIENCE` | No | unset | Sent as `audience` on the authorization request (Auth0) |
-| `OIDC_ROLE_CLAIM` | No | unset | Name or dot path of the role claim in the ID token, such as `realm_access.roles` |
-| `OIDC_ADMIN_ROLES` | No | `admin` | Comma list, trimmed and compared case-insensitively |
-| `OIDC_USER_ROLES` | No | unset | Comma list. When set, an account with neither an admin nor a user role is refused. Needs `OIDC_ROLE_CLAIM` |
 | `OIDC_PROMPT` | No | `login` | `login`, `consent`, `select_account`, or `omit` to send none. Any other value, `none` included, is a configuration error |
 | `OIDC_AUTO_REDIRECT` | No | off | `true`, `1`, `on` or `yes` turn it on; `false`, `0`, `off`, `no` or empty leave it off. Any other value is a configuration error |
 | `OIDC_LOGOUT_HINT` | No | on | The same spellings. Off sends no `id_token_hint` at logout |
 | `OIDC_REDIRECT_SCHEME` | No | `org.libredb.mobile` | Custom URI scheme of the redirect URI `<scheme>:/oauth2redirect`: a lower-case letter, then lower-case letters, digits, `+`, `-` or `.`. It must equal the Android manifest placeholder |
 
-An empty role list, or one made only of commas, counts as unset.
 There is no `OIDC_CLIENT_SECRET`: the app is a public client, and a guard test fails when anything in `lib/` names a client secret or builds a client authentication other than `OidcClientAuthentication.none`.
 
-An invalid `oidc` configuration does not stop the app.
+An invalid configuration does not stop the app, and a build without `OIDC_ISSUER` or `OIDC_CLIENT_ID` is one: there is no other way to sign in.
 It starts, the login page shows "Single sign-on is not configured correctly in this app. Contact your administrator." in place of the button, and the log names the variable and the rule it breaks.
-Such a build fails closed on a session that an earlier, correctly configured build stored: it never restores it, so the user starts signed out with that sentence, and it never refreshes through the backend's `jwt` refresh endpoint, so the provider's refresh token never reaches the backend.
+Such a build fails closed on a session that an earlier, correctly configured build stored: it never restores it, so the user starts signed out with that sentence, and it never refreshes it.
 The stored session stays on the device unread, and is wiped if this build ends a session.
 
 To change the redirect scheme, change it in three places together:
@@ -238,53 +207,29 @@ With `OIDC_AUTO_REDIRECT` on, a signed-out cold start that lands on the login pa
 It fires at most once per app run, and never after a sign-in error, the configuration error, a cancel at the provider, or a logout the user started in the same run.
 The SSO button stays available in every case.
 
-## Role mapping
+## Roles
 
-The app maps the ID token's claims to one app role with a port of LibreDB Studio's `mapOIDCRole` (`lib/core/security/oidc_role_mapping.dart`):
+The app reads no role from a token, maps none and stores none.
+LibreDB Studio maps the role from the access token under its own `OIDC_ROLE_CLAIM`, `OIDC_ADMIN_ROLES` and `OIDC_USER_ROLES`, and enforces it on every request; the app takes the role only from Studio's answer to `GET /api/auth/me` (`StudioIdentity.role`), as Studio's web client does.
+So the provider must put the role claim into the access token, and an app build has no role setting.
 
-1. Without `OIDC_ROLE_CLAIM`, every account is a `user`, unless `OIDC_USER_ROLES` is set, which refuses it.
-2. When the claim name exists as a top-level key of the claims, that key's value is used as it is, dots and all, so Auth0's `https://example.com/roles` works.
-3. Otherwise the name is walked as a dot path, such as `realm_access.roles`.
-   A missing value, or a step through a value that is not an object, means no match.
-4. The value becomes a list of role names:
-   - an object contributes its keys, which is Zitadel's shape (`{"admin": {"<org id>": "<org domain>"}}`);
-   - an array contributes its elements, where an object element contributes its keys (`[{"user": {...}}]`) and any other element becomes a string;
-   - any other value becomes one name.
-5. Any case-insensitive match with `OIDC_ADMIN_ROLES` gives `admin`, so admin wins when the claim holds both.
-6. Otherwise a match with `OIDC_USER_ROLES` gives `user`.
-7. Anything else is a `user` while `OIDC_USER_ROLES` is unset, and is refused once it is set.
+A sign-in stores the provider's tokens, then calls `GET /api/auth/me`, and succeeds only on its 200.
+Any other answer clears the stored tokens and leaves the user on the login page with the reason:
 
-`admin` grants `ROLE_ADMIN` and `ROLE_USER`, and `user` grants `ROLE_USER`, the roles `GET /account` returns for those users in `jwt` mode.
-A refused account sees "Your account has no role that allows access to this app. Ask your administrator.", and nothing is stored.
+| Studio answers | The login page says |
+| --- | --- |
+| 401, without a code or with `AUTH_REQUIRED` after one refresh | Studio did not accept this sign-in. Try again, or ask an administrator for access. |
+| 403 `BEARER_NO_ROLE` (from libredb-studio#1922 on) | This account has no role in Studio. Ask an administrator to give it one. |
+| 403 `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | Studio cannot tell who this account is. Ask an administrator to check the account's email and username. |
+| 503 `IDENTITY_PROVIDER_UNAVAILABLE`, no network, or another error | The sentence of that error |
 
-| Claims | `OIDC_ROLE_CLAIM` | Admin / user roles | Result |
-| --- | --- | --- | --- |
-| `{"realm_access": {"roles": ["admin", "offline_access"]}}` | `realm_access.roles` | `admin` / `user` | `admin` |
-| `{"https://example.com/roles": ["User"]}` | `https://example.com/roles` | `admin` / `user` | `user` |
-| `{"urn:zitadel:iam:org:project:roles": {"admin": {"1": "acme"}}}` | `urn:zitadel:iam:org:project:roles` | `admin` / unset | `admin` |
-| `{"roles": ["guest"]}` | `roles` | `admin` / unset | `user` |
-| `{"roles": ["guest"]}` | `roles` | `admin` / `user` | refused |
-
-Roles are fixed at sign-in.
-A role changed at the provider shows in the app at the next sign-in, and the backend, which checks the roles of every access token, stays the authorization boundary.
-The app's roles only shape the UI: menus, routes and admin pages.
+Studio records a refused account in its audit as `permission_denied` with the reason `bearer_no_role`, `bearer_no_identity` or `bearer_token_invalid` (Studio's `docs/OIDC.md`).
+The role can lag the provider by one access token lifetime, because Studio maps it from the token; Studio answers 403 meanwhile.
 
 ## Backend contract
 
-In `oidc` mode every API request carries `Authorization: Bearer <access token>` from the provider.
-The backend must:
-- verify the access token's signature against the issuer's JWKS, and check `iss`, `aud` (its own audience) and `exp`;
-- map roles from the access token for its own authorization decisions, which is why each provider section puts the role claim in both tokens;
-- answer 401 to a missing, invalid or expired token, after which the app refreshes once at the provider and retries, and a second 401 ends the session;
-- answer 403 to a valid token without permission, which the app already handles.
-
-The app calls the same endpoints as in `jwt` mode, minus `/authenticate*`, `/register`, `/account/reset-password/*`, `/account/change-password` and `/token/refresh`.
-The account repository calls `GET /account` after sign-in for the profile.
-LibreDB Studio has no such endpoint and answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the profile sheet is milestone M2 ([#17](https://github.com/libredb/libredb-mobile/issues/17), [roadmap.md](roadmap.md)).
-The account fetch runs after sign-in, and its failure does not end the session.
-User management pages keep calling the backend as they do today; managing users in `oidc` mode is out of scope, and users and roles live at the provider.
-
-How to get an access token with the right audience:
+The app's backend is LibreDB Studio ([studio.md](studio.md)), and every API request carries `Authorization: Bearer <access token>` from the provider.
+Studio verifies the access token's signature against the issuer's JWKS and checks `iss`, `aud` and `exp`, so the provider must put Studio's audience into the access token:
 
 | Provider | How |
 | --- | --- |
@@ -293,102 +238,10 @@ How to get an access token with the right audience:
 | Entra ID | A scope of the exposed API (`api://<application id>/<scope>`) in `OIDC_SCOPE` |
 | Zitadel | The JWT access token type and the project audience scope |
 
-### Next.js with `jose`
-
-```ts
-// lib/bearer.ts
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
-
-const issuer = process.env.OIDC_ISSUER!; // https://localhost:8443/realms/libredb
-const audience = process.env.OIDC_API_AUDIENCE!; // the audience your provider puts in the access token
-const jwks = createRemoteJWKSet(new URL(process.env.OIDC_JWKS_URI!)); // jwks_uri of the discovery document
-
-export type Caller = { subject: string; roles: Set<string> };
-
-// Returns the caller of a valid bearer, or null, which the route answers with 401.
-export async function verifyBearer(request: Request): Promise<Caller | null> {
-  const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || !token) return null;
-  try {
-    // jwtVerify checks the signature, iss, aud and exp.
-    const { payload } = await jwtVerify(token, jwks, { issuer, audience });
-    return { subject: payload.sub!, roles: appRoles(payload) };
-  } catch {
-    return null;
-  }
-}
-
-// The same mapping as the app: admin grants ROLE_ADMIN and ROLE_USER, user grants ROLE_USER.
-function appRoles(payload: JWTPayload): Set<string> {
-  const realmAccess = payload.realm_access as { roles?: string[] } | undefined;
-  const names = (realmAccess?.roles ?? []).map((role) => role.toLowerCase());
-  if (names.includes('admin')) return new Set(['ROLE_ADMIN', 'ROLE_USER']);
-  if (names.includes('user')) return new Set(['ROLE_USER']);
-  return new Set();
-}
-```
-
-```ts
-// app/api/users/route.ts
-import { NextResponse } from 'next/server';
-import { verifyBearer } from '@/lib/bearer';
-
-export async function GET(request: Request) {
-  const caller = await verifyBearer(request);
-  if (!caller) return NextResponse.json({ code: 'AUTH_REQUIRED' }, { status: 401 });
-  if (!caller.roles.has('ROLE_ADMIN')) return NextResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
-  return NextResponse.json([]);
-}
-```
-
-### Spring Boot resource server
-
-With `spring-boot-starter-oauth2-resource-server`, Spring fetches discovery and the JWKS from the issuer, and checks the signature, `iss` and `exp`:
-
-```yaml
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://localhost:8443/realms/libredb
-          audiences: libredb-studio-api
-```
-
-A `JwtAuthenticationConverter` turns the role claim into the authorities the backend already uses:
-
-```java
-@Configuration
-@EnableWebSecurity
-class SecurityConfiguration {
-
-  @Bean
-  SecurityFilterChain api(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-            .anyRequest().authenticated())
-        .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter())));
-    return http.build();
-  }
-
-  // Maps Keycloak's realm_access.roles: admin grants ROLE_ADMIN and ROLE_USER, user grants ROLE_USER.
-  private JwtAuthenticationConverter roleConverter() {
-    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-    converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-      Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-      Collection<?> roles = realmAccess == null ? List.of() : (Collection<?>) realmAccess.getOrDefault("roles", List.of());
-      if (roles.contains("admin")) {
-        return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
-      }
-      if (roles.contains("user")) return List.of(new SimpleGrantedAuthority("ROLE_USER"));
-      return List.of();
-    });
-    return converter;
-  }
-}
-```
-
-The resource server answers 401 to a missing or invalid bearer and 403 to a missing authority, which is what the app expects.
+Studio answers 401 to a missing, invalid or expired token, after which the app refreshes once at the provider and retries, and 403 to a valid token without permission.
+The app calls Studio's API only; the sign-in, the token refresh and the provider logout go to the provider.
+Studio answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the profile sheet is milestone M2 ([#17](https://github.com/libredb/libredb-mobile/issues/17), [roadmap.md](roadmap.md)).
+Users and roles live at the provider, so the app has no user management.
 
 ### Which 401 ends the session
 
@@ -396,19 +249,16 @@ By default every 401 means the bearer is no longer valid: the app refreshes the 
 A backend that also answers 401 for other reasons needs that rule narrowed, or a refused database password would sign the user out.
 LibreDB Studio is such a backend: it answers 401 with `AUTH_ERROR` when a database refuses its credentials and with `LLM_AUTH` when a model key is rejected, and only its `code: "AUTH_REQUIRED"` means the session ended.
 The rule is one getter, `AppDependencies.sessionExpiredPredicate` in `lib/app/di/app_dependencies.dart`, which in this app is `isStudioSessionExpired` (`lib/infrastructure/studio/studio_session_policy.dart`): only a 401 with `AUTH_REQUIRED`, or a 401 without a code, ends the session.
-The predicate applies in both modes, and a 401 it does not match reaches the caller as an ordinary error.
+A 401 the predicate does not match reaches the caller as an ordinary error.
 
 ## Troubleshooting
 
 The log lines below come from `AppLogger`.
 A `main_local.dart` build uses its development filter, which prints nothing once asserts are off, so its sign-in and refresh lines are seen only in a debug build; a `main_prod.dart` build prints info and above.
 
-**The app stops at startup with "AUTH_PROVIDER is ..., but it must be jwt or oidc".**
-`AUTH_PROVIDER` has a value other than `jwt` or `oidc`; an unknown value is never read as `jwt`.
-
 **The login page says "Single sign-on is not configured correctly in this app."**
-The `oidc` settings break a rule.
-The log line `OIDC configuration is invalid: <reason>` names the variable, such as an `http` issuer that is not on a loopback host, `OIDC_PROMPT=none`, an unknown flag spelling, or `OIDC_USER_ROLES` without `OIDC_ROLE_CLAIM`.
+The `OIDC_*` settings break a rule, or the build has none.
+The log line `OIDC configuration is invalid: <reason>` names the variable, such as a missing `OIDC_ISSUER`, an `http` issuer that is not on a loopback host, `OIDC_PROMPT=none` or an unknown flag spelling.
 Fix the defines and build again; trying again cannot help.
 
 **"The identity provider could not be reached."**
@@ -420,13 +270,10 @@ With the local stack on the Android emulator, run `tool/studio-dev/trust-android
 The redirect URI the app sent is not registered.
 Check that the scheme equals `OIDC_REDIRECT_SCHEME` and the Android manifest placeholder, and that `<scheme>:/oauth2redirect` is registered.
 
-**"Your account has no role that allows access to this app."**
-`OIDC_USER_ROLES` is set, and the ID token holds neither an admin nor a user role under `OIDC_ROLE_CLAIM`.
-Most often the role claim is only in the access token: in Keycloak switch **Add to ID token** on, and in Zitadel **User roles inside ID Token**.
-The app sends no UserInfo request, so roles must be in the ID token itself.
-
-**Everyone is a `user`, even admins.**
-`OIDC_ROLE_CLAIM` is unset or names a claim the ID token does not carry, or `OIDC_ADMIN_ROLES` does not match the role names; decode an ID token and compare.
+**"Studio did not accept this sign-in." or "This account has no role in Studio."**
+The provider signed the user in, but Studio refused the access token's account at `GET /api/auth/me`.
+Most often the account holds none of Studio's `OIDC_ADMIN_ROLES` or `OIDC_USER_ROLES` under its `OIDC_ROLE_CLAIM`, or the role claim is not in the access token; Studio's audit names the reason.
+Studio before libredb-studio#1922 answers every refusal, and an unreachable provider, with the same 401, so the first sentence covers them all there.
 
 **"Sign-in failed. Please try again."**
 The provider answered with an error, or its answer failed a check: a `state` mismatch, a refused code exchange, an ID token whose signature, `iss`, `aud`, `exp` or `nonce` does not verify, or a token answer without `expires_in`.
@@ -451,24 +298,20 @@ With `OIDC_LOGOUT_HINT=false` Keycloak asks the user to confirm each logout.
 See [Known limitations](#known-limitations): `ASWebAuthenticationSession` is unverified with Keycloak's login cookies.
 
 **The Android build fails in the manifest merger.**
-The `oidc_android` plugin needs the `oidcRedirectScheme` placeholder in `android/app/build.gradle.kts`, in every build, `jwt` included.
+The `oidc_android` plugin needs the `oidcRedirectScheme` placeholder in `android/app/build.gradle.kts`, in every build.
 
-## Switching modes
+## Mock mode without Keycloak
 
-`AUTH_PROVIDER` decides only how the user signs in.
-The entry point still decides between the mock API and the real one, so both entry points accept both modes:
+`main_prod.dart` signs in through the provider its `OIDC_*` defines name, and `main_local.dart` signs in without one.
+`main_local.dart` passes `LocalSignInDependencies` (`lib/app/di/local_sign_in_dependencies.dart`) to `AppBootstrap.run`, which replaces only the provider: its `IOidcClient` is `LocalOidcClient` (`lib/infrastructure/auth/oidc/local_oidc_client.dart`).
+A tap on "Sign in with SSO" signs in at once with tokens the mock API accepts (`MOCK_TOKEN`, valid for an hour), every refresh gives new ones, and there is no provider logout.
+Everything above the client runs as in production: `SsoAuthRepository` stores the session, the API calls go to the mocked Studio of `assets/mock/`, and a 401 refreshes through `OidcTokenRotation`.
 
-| | `AUTH_PROVIDER=jwt` | `AUTH_PROVIDER=oidc` |
-| --- | --- | --- |
-| `main_local.dart` (mock API) | Today's demo | Sign-in at a real provider, API calls answered by the mock |
-| `main_prod.dart` (real API) | Password sign-in and the backend's JWT | A real provider and a real backend |
+The double is debug only and never part of a production build:
+- both constructors throw a `StateError` in a profile or release build;
+- only `main_local.dart` and the tests import it, so the compiler leaves it out of `main_prod.dart`, and `test/architecture/local_sign_in_test.dart` fails when anything that `main_prod.dart` imports, directly or not, imports it.
 
-There is no mock identity provider: the Keycloak of `tool/studio-dev` plays that part.
-In `jwt` mode the app constructs and calls nothing from the OIDC path: no discovery request, no OIDC client and no OIDC storage key.
-The `oidc` package stays in `pubspec.yaml` in both modes, so every Android build merges its redirect activity.
-
-Sign out before a device switches from one build mode to the other.
-The two modes share the bearer slot of secure storage, so an `oidc` build reads a `jwt` session it finds as signed in, without an expiry, until its first 401 ends it.
+The widget tests build the app with `LocalSignInDependencies` as well, so they need neither a network nor a provider.
 
 ## Known limitations
 
@@ -478,8 +321,8 @@ The two modes share the bearer slot of secure storage, so an `oidc` build reads 
 - **Keycloak's cookies on iOS:** Keycloak 26.8.1 chooses its cookie attributes by user agent, and `ASWebAuthenticationSession` on iOS is unverified with them.
   If a sign-in fails there with "Restart login cookie not found", check the cookie attributes Keycloak sends to Safari.
 - **iOS shows its system alert:** iOS uses the shared browser session, so it asks "... Wants to Use ... to Sign In" on every sign-in and every logout.
-- **Roles are fixed at sign-in:** a role changed at the provider shows at the next sign-in.
-- **No user management:** the user list, the user editor and account editing still call the backend; with single sign-on, manage users at the provider.
+- **The role lags the provider:** Studio maps it from the access token, so a role changed at the provider shows after the next token refresh.
+- **No user management:** manage users and their roles at the provider.
 
 # Part 2: Internals
 
@@ -487,12 +330,11 @@ The two modes share the bearer slot of secure storage, so an `oidc` build reads 
 
 ### Bootstrap
 
-`AppBootstrap.run` reads `AuthMode.fromDefines(const AuthDefines())` once.
-An unknown `AUTH_PROVIDER` throws `AuthProviderConfigError`, which is logged and stops the app before any screen.
-`oidc` becomes `OidcAuthMode(settings)`, or `OidcMisconfiguredAuthMode(reason)` when the settings break a rule; the reason is logged at error.
+`AppBootstrap.run` builds the `AppDependencies` through `AppBootstrap.definedDependencies`, unless `main_local.dart` passes its local sign-in, which reads `AuthMode.fromDefines(const AuthDefines())` once.
+The defines become `OidcAuthMode(settings)`, or `OidcMisconfiguredAuthMode(reason)` when the settings break a rule or are missing; the reason is logged at error.
 The mode is injected through `AppDependencies.authMode`, and `AppScope` provides it as `AuthMode`.
 Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`, one `TokenRotation` shared by the startup step and the `ApiClient`, `SsoSignOutAuthRepository` and `SsoAutoRedirectGate`.
-`OidcMisconfiguredAuthMode` builds no OIDC client and fails closed: `SessionCubit` gets `MisconfiguredSsoSessionStartup`, which answers `oidc_config` without reading the stored session, and the `ApiClient` gets `RefusingTokenRotation`, which refuses every refresh without a request, so a stored provider refresh token never reaches `BackendTokenRotation`.
+`OidcMisconfiguredAuthMode` builds no OIDC client and fails closed: `SessionCubit` gets `MisconfiguredSsoSessionStartup`, which answers `oidc_config` without reading the stored session, and the `ApiClient` gets `RefusingTokenRotation`, which refuses every refresh without a request.
 
 ### Sign-in
 
@@ -502,15 +344,16 @@ Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`,
 4. The platform opens the provider's page: a Custom Tab on Android, `ASWebAuthenticationSession` on iOS.
 5. On return the package checks `state`, exchanges the code with the verifier, and validates the ID token: its signature against the JWKS, `iss`, `aud`, `exp` and `nonce`.
 6. `OidcClient` requires an access token, an ID token and `expires_in`, and strips `nonce`, `at_hash` and `c_hash` from the claims it hands on.
-7. `SsoAuthRepository` requires a string `sub` and `iss` (`oidc_no_claims` otherwise), maps the role (`oidc_no_role` otherwise, with nothing written), and takes the username from `email`, else `preferred_username`, else `sub`.
-8. The session is persisted through `AuthSessionRepository` with its rollback: the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`; the username and roles go to local storage.
-9. `LoginBloc` emits the same `LoginLoadedState(roles)` as a password sign-in, without the `GET /account` call; `AppSessionListeners`, `SessionCubit.markAuthenticated`, the account fetch and the idle observer run unchanged, and the page navigates to the safe return path.
+7. `SsoAuthRepository` requires a string `sub` and `iss` (`oidc_no_claims` otherwise), and reads no role and no username from the claims.
+8. The session is persisted through `AuthSessionRepository` with its rollback: the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`.
+9. `SignInWithSsoUseCase` calls Studio's `GET /api/auth/me` with the new bearer; any failure clears the stored session and rejects with the code of [Roles](#roles).
+10. On Studio's 200 `LoginBloc` emits `LoginLoadedState`; `AppSessionListeners`, `SessionCubit.markAuthenticated` and the idle observer run, and the page navigates to the safe return path.
 
 A closed provider page is a cancel: no message, logged at info, and the automatic redirect gate closes.
 On Android a closed Custom Tab tells the app nothing, so `OidcClient` cancels the pending flow whenever the app resumes; after a real redirect that cancel does nothing.
 Every outcome ends with the transaction store cleared and the package's user manager forgetting its user, so the app's secure storage is the only place tokens live.
 
-### Startup in `oidc` mode
+### Startup
 
 `SessionCubit.restore` runs the startup step first, under its own 15 second limit, and only then reads the stored session under the existing 10 second storage limit.
 The step checks the stored access token expiry, never a JWT `exp`, so an opaque access token works too.
@@ -525,14 +368,14 @@ What the step answers after its limit is acted on only while nothing has been em
 
 `TokenRefreshInterceptor` stays the only owner of refresh, with its single flight, its session-generation checks, its rollback, and its check of the stored refresh token after the grant, since the startup step can rotate the session while a request refreshes it.
 The package's own refresh timers are off (`AppOidcUserManager`).
-In `oidc` mode the refresh goes through `OidcTokenRotation`:
+The refresh goes through `OidcTokenRotation`:
 1. Rotations run one at a time, and a refresh token that the provider has replaced or refused is never sent in a second grant, so a provider with refresh token reuse detection never sees a used token twice.
    A provider that does not rotate refresh tokens answers with no new one, or the same one, so that token stays the stored one and is sent again when the new access token expires.
 2. A refresh token that the store no longer holds gets `RotationUnavailable` without a request, and the interceptor retries with the stored tokens.
 3. `OidcClient.refresh` hands the stored access token, ID token and refresh token to the package for one `refresh_token` grant at the provider's token endpoint; the stored ID token may have expired.
 4. A new ID token's signature is then verified against the provider's keys.
    When the token endpoint has answered but the JWKS cannot be fetched for that check, the grant is not thrown away: the answer keeps the new access and refresh tokens, drops the unchecked ID token so the stored one stays, and a warning is logged.
-5. The interceptor stores the new access token and its expiry, the new refresh token when the provider rotates it, and the new ID token when one is returned and checked; roles are not re-mapped.
+5. The interceptor stores the new access token and its expiry, the new refresh token when the provider rotates it, and the new ID token when one is returned and checked.
 
 | Answer | Result | Effect |
 | --- | --- | --- |
@@ -541,8 +384,6 @@ In `oidc` mode the refresh goes through `OidcTokenRotation`:
 | `invalid_grant`, `invalid_client` or another client or authentication error, or a new ID token whose signature or claims fail a check | `RotationRefused` | The session ends with reason expired, and the login page shows the button with no error |
 | A token endpoint status of 429 or 5xx whatever its error code, `server_error`, `temporarily_unavailable`, discovery that cannot be fetched, or a transport failure | `RotationUnavailable` | The session is kept, the request fails as a network error, and the next 401 tries again |
 
-`jwt` mode keeps `BackendTokenRotation`, today's `POST /token/refresh`, where any failure ends the session.
-
 ### Logout
 
 A logout the user starts goes through `SsoSignOutUseCase` and `SsoSignOutAuthRepository.signOut`:
@@ -550,7 +391,7 @@ A logout the user starts goes through `SsoSignOutUseCase` and `SsoSignOutAuthRep
 2. It refreshes an expired access token and records the sign-out at Studio, for at most three seconds, whatever they answer.
    It never sends an access token it knows has expired, such as when the provider could not be reached, and a refresh that answers after the three seconds sends nothing.
    A sign-out that leaves Studio without a record writes one `warn` line naming the reason: budget passed, refresh refused, no refresh token, provider unreachable, store unreadable, or Studio's error code; the user sees nothing for it.
-3. It clears the local session exactly as in `jwt` mode, including the OIDC keys, and answers at once with that result and the provider logout started (`SsoSignOut`).
+3. It clears the local session, including the OIDC keys, and answers at once with that result and the provider logout started (`SsoSignOut`).
 4. `SignOutBloc` signs the app out on that answer, so the login page shows while the provider logout goes on.
 5. `OidcClient.endProviderSession` uses the discovered `end_session_endpoint`, else Auth0's `/v2/logout` for an issuer on `auth0.com`, else no provider logout.
 6. It opens that endpoint with `client_id`, the `post_logout_redirect_uri` `<scheme>:/oauth2redirect`, and the ID token as `id_token_hint` while `OIDC_LOGOUT_HINT` is on.
@@ -564,17 +405,16 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 
 | Path | Role |
 | --- | --- |
-| `lib/infrastructure/config/auth_config.dart` | `AuthDefines`, the sealed `AuthMode` (`JwtAuthMode`, `OidcAuthMode`, `OidcMisconfiguredAuthMode`), `OidcSettings.parse` and its rules, and the redirect URI |
-| `lib/core/security/oidc_role_mapping.dart` | `mapOidcRole` and `appRolesFor`, pure functions |
+| `lib/infrastructure/config/auth_config.dart` | `AuthDefines`, the sealed `AuthMode` (`OidcAuthMode`, `OidcMisconfiguredAuthMode`), `OidcSettings.parse` and its rules, and the redirect URI |
 | `lib/core/security/safe_redirect.dart` | `safeReturnPath`: the return path rules on top of `safeRedirectTarget` |
 | `lib/core/security/sensitive_data_scrubber.dart` | `sensitiveExactKeys`: `code`, `code_verifier`, `state`, `nonce`, `session_state`, `id_token_hint` |
 | `lib/infrastructure/analytics/sentry_scrub.dart` | Masks those keys in breadcrumbs, keeping the navigation breadcrumb's `state` |
-| `lib/core/errors/app_error_code.dart`, `lib/shared/l10n/app_error_code_l10n.dart` | The six `auth.oidc_*` codes and their sentences |
+| `lib/core/errors/app_error_code.dart`, `lib/shared/l10n/app_error_code_l10n.dart` | The five `auth.oidc_*` codes, the three `studio.account_*` codes of a refused sign-in, and their sentences |
 | `lib/l10n/intl_en.arb`, `lib/l10n/intl_tr.arb` (and `lib/generated/`) | The sentences, the SSO button and its subtitle |
 | `lib/infrastructure/storage/secure_storage.dart` | The `oidcIdToken` and `accessTokenExpiresAt` keys and the expiry encoding |
 | `lib/features/auth/domain/entities/auth_session.dart` | `AuthSession.oidcIdToken` and `accessTokenExpiresAt` |
-| `lib/features/auth/data/repositories/auth_session_repository_impl.dart` | Persist, rollback and clear of the OIDC keys, only with `oidcKeys: true` |
-| `lib/infrastructure/http/token_rotation.dart` | `TokenRotation`, `TokenRotationResult`, `BackendTokenRotation`, `RefusingTokenRotation` for a misconfigured build, and the `SessionExpiredPredicate` seam |
+| `lib/features/auth/data/repositories/auth_session_repository_impl.dart` | Persist, rollback and clear of the OIDC keys |
+| `lib/infrastructure/http/token_rotation.dart` | `TokenRotation`, `TokenRotationResult`, `RefusingTokenRotation` for a misconfigured build, and the `SessionExpiredPredicate` seam |
 | `lib/infrastructure/http/interceptors/token_refresh_interceptor.dart` | Refreshes through a `TokenRotation`, honors `RotationUnavailable`, stores the OIDC fields |
 | `lib/infrastructure/http/api_client.dart` | Passes the rotation and the 401 predicate to the interceptor |
 | `lib/infrastructure/http/interceptors/mock_interceptor.dart` | Answers 401 to an expired JWT bearer in dev mode |
@@ -582,9 +422,9 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/infrastructure/auth/oidc/app_oidc_user_manager.dart` | The package's `OidcUserManager` with timers off, a 5 minute transaction life, session adoption and the refreshed ID token check |
 | `lib/infrastructure/auth/oidc/oidc_transaction_store.dart` | The app-owned `OidcStore`, in memory for the run, cleared after every operation |
 | `lib/infrastructure/auth/oidc/oidc_token_rotation.dart` | `OidcTokenRotation` |
-| `lib/features/auth/domain/repositories/sso_auth_repository.dart`, `lib/features/auth/data/repositories/sso_auth_repository_impl.dart` | `ISsoAuthRepository` and `SsoAuthRepository`: claims, roles and persist |
-| `lib/features/auth/domain/entities/sso_sign_in_result.dart` | The sealed `SsoSignInResult` |
-| `lib/features/auth/application/usecases/sign_in_with_sso_usecase.dart` | `SignInWithSsoUseCase` |
+| `lib/features/auth/domain/repositories/sso_auth_repository.dart`, `lib/features/auth/data/repositories/sso_auth_repository_impl.dart` | `ISsoAuthRepository` and `SsoAuthRepository`: claims and persist |
+| `lib/features/auth/domain/entities/sso_sign_in_result.dart` | The sealed `SsoProviderSignIn` of the provider and `SsoSignInResult` of the whole sign-in |
+| `lib/features/auth/application/usecases/sign_in_with_sso_usecase.dart` | `SignInWithSsoUseCase`: the provider sign-in, then Studio's `GET /api/auth/me`, clearing the session on a refusal |
 | `lib/features/auth/application/login_bloc.dart`, `login_event.dart` | `SsoSignInRequested` and its handler |
 | `lib/features/auth/domain/services/sso_session_startup.dart`, `lib/features/auth/data/services/sso_session_startup_impl.dart` | The startup step and its sealed result |
 | `lib/features/auth/domain/services/sso_auto_redirect_gate.dart` | `SsoAutoRedirectGate` |
@@ -592,14 +432,14 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/features/auth/data/repositories/sso_sign_out_auth_repository.dart` | `SsoSignOutAuthRepository`: the local clear, then the provider logout |
 | `lib/features/auth/data/services/misconfigured_sso_session_startup.dart` | `MisconfiguredSsoSessionStartup`, which answers `oidc_config` without reading the stored session |
 | `lib/app/session/session_cubit.dart` | Runs the startup step under its own limit, `SessionUnauthenticated.signInError` |
-| `lib/app/bootstrap/app_bootstrap.dart` | Reads the mode, stops on an unknown `AUTH_PROVIDER` |
+| `lib/app/bootstrap/app_bootstrap.dart` | Reads the mode from the defines, or takes the local sign-in of `main_local.dart` |
+| `lib/app/di/local_sign_in_dependencies.dart`, `lib/infrastructure/auth/oidc/local_oidc_client.dart` | The debug-only provider double of `main_local.dart`, see [Mock mode without Keycloak](#mock-mode-without-keycloak) |
 | `lib/app/bootstrap/app_session_listeners.dart` | Closes the gate on sign-in, logout and a restore past the storage limit, and shows the logout notice, also when it follows the sign-out |
 | `lib/app/di/app_dependencies.dart`, `lib/app/di/app_scope.dart` | Builds and provides the OIDC pieces in `OidcAuthMode` only, the fail-closed startup and rotation of `OidcMisconfiguredAuthMode`, and `sessionExpiredPredicate` |
-| `lib/app/shell/menu_bloc/menu_bloc.dart`, `menu_state.dart` | Signs out on the local clear, then `MenuStateStatus.providerSessionLeft` when the provider logout fails |
+| `lib/features/auth/application/sign_out_bloc.dart` | Signs out on the local clear, then `SignedOutWithProviderSessionLeft` when the provider logout fails |
 | `lib/features/auth/presentation/pages/login_page.dart` | The SSO variant of the login page, its error line and the automatic redirect |
-| `lib/features/auth/navigation/auth_routes.dart` | Only the `login` route in the `oidc` modes |
-| `lib/app/router/app_router.dart`, `lib/app/app.dart` | Routes by mode, and `/oauth2redirect` to `/login` with no `returnUrl` |
-| `lib/features/settings/presentation/pages/settings_screen.dart`, `lib/app/shell/command_palette/command_palette_widget.dart` | Change password hidden outside `jwt` mode |
+| `lib/features/auth/navigation/auth_routes.dart` | The `login` route, the only public one |
+| `lib/app/router/app_router.dart`, `lib/app/app.dart` | `/oauth2redirect` to `/login` with no `returnUrl` |
 | `android/app/build.gradle.kts` | The `oidcRedirectScheme` manifest placeholder |
 | `tool/studio-dev/docker-compose.yml`, `tool/studio-dev/studio-dev.env` | The local Keycloak and Studio, see [studio.md](studio.md) |
 | `pubspec.yaml`, `pubspec.lock` | `oidc` 5.0.2, `http` 1.6.0, and `logging` 1.3.0 for tests |
@@ -620,9 +460,9 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
   The scrubber masks the exact keys `code`, `code_verifier`, `state`, `nonce`, `session_state` and `id_token_hint` in bodies and query strings, while names such as `statusCode` keep their values.
   The package's own `package:logging` records do not reach the app's dev console, but go_router's root logging subscription (`debugLogDiagnostics` is on) sends them, unscrubbed, to `dart:developer`, which is the IDE and DevTools log, and a SEVERE one to `FlutterError.dumpErrorToConsole`.
   So the client avoids every record that carries a secret: UserInfo is off.
-  `AuthInterceptor`'s request log keeps its existing masked preview of the bearer, the first and last four characters through `maskToken`, which predates this feature and applies in both modes.
+  `AuthInterceptor`'s request log keeps its existing masked preview of the bearer, the first and last four characters through `maskToken`, which predates this feature.
 - **Router:** `/oauth2redirect` always goes to `/login` with no `returnUrl`, so a callback URL never becomes a router location or a return path.
-- **Misconfigured build:** fails closed on a stored session: it never restores it and never refreshes, so a provider refresh token never reaches the backend's `jwt` refresh endpoint.
+- **Misconfigured build:** fails closed on a stored session: it never restores it and never refreshes it.
 - **Return path:** checked on the way in and on the way out with `safeReturnPath`: a local path only, at most 1024 UTF-8 bytes, no control characters, and not the login route; an unsafe value becomes `/`.
 - **`id_token_hint`:** always the current session's ID token, because it is written, rolled back and wiped together with the session it belongs to.
 - **Credentials in `toString`:** `OidcTokens`, `TokensRotated` and `OidcTokenRotation` print tokens only through `maskToken` or `secretMask`.
@@ -634,7 +474,7 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 - A logout the user starts signs the app out before the provider logout runs, instead of after it, so the login page shows at once and the `oidc_logout_incomplete` sentence can follow it.
 - A refresh whose new ID token cannot be checked because the JWKS cannot be fetched keeps the new access and refresh tokens and the stored ID token, since the provider has already traded the refresh token.
 - A sign-in whose token response has no `expires_in` fails with `oidc_failed`, because the session could never be refreshed in time.
-- The scrubber's exact OIDC keys apply in `jwt` mode too: a `state=` or `code=` value in a logged URL and a `{"code": ...}` member in a logged body now print `[REDACTED]`.
+- The scrubber's exact OIDC keys apply to every logged request: a `state=` or `code=` value in a logged URL and a `{"code": ...}` member in a logged body print `[REDACTED]`.
   Sentry navigation breadcrumbs keep their `didPush`, `didPop` or `didReplace` state.
 
 ## Error codes
@@ -645,13 +485,12 @@ Each code is an `AppErrorCode` in the `auth.` namespace, with one sentence in ea
 | --- | --- | --- |
 | `auth.oidc_config` | Invalid configuration, checked at bootstrap; such a build starts signed out, whatever session is stored | Single sign-on is not configured correctly in this app. Contact your administrator. |
 | `auth.oidc_discovery` | Discovery, the JWKS or the token endpoint unreachable, a TLS failure, a response that is not JSON, or a discovery document naming another issuer | The identity provider could not be reached. Try again later, or contact your administrator if this continues. |
-| `auth.oidc_no_role` | Role mapping refused the account | Your account has no role that allows access to this app. Ask your administrator. |
 | `auth.oidc_no_claims` | The ID token has no string `sub` or `iss` | Sign-in failed. Please try again. |
 | `auth.oidc_failed` | Any other failure after the provider answered: a `state` mismatch, a failed code exchange, an invalid ID token, an answer without `expires_in`, or an error from the provider | Sign-in failed. Please try again. |
 | `auth.oidc_logout_incomplete` | The provider logout failed, was cancelled or could not be opened; shown after the app has signed out, so it can follow the login page | You are signed out of this app, but your session at the identity provider may still be active. |
 | (none) | The user closed or left the provider page: a closed Custom Tab or system sheet | No message |
 
-A sign-in whose session cannot be stored shows the existing `auth.session_persist_failed` sentence.
+A sign-in whose session cannot be stored shows the existing `auth.session_persist_failed` sentence, and one that Studio refuses shows a `studio.account_*` sentence, see [Roles](#roles).
 
 ## Tests
 
@@ -661,22 +500,21 @@ Each test file below names the behavior it pins.
 | Test | What it pins |
 | --- | --- |
 | `test/infrastructure/config/auth_config_test.dart` | Every variable, default and spelling, every refusal, and the redirect URI |
-| `test/app/di/app_dependencies_test.dart`, `test/app/di/app_scope_test.dart`, `test/app/di/app_scope_oidc_test.dart` | The mode's injection; a `jwt` build creates no OIDC client and touches no OIDC key; a misconfigured build restores signed out with `oidc_config`, leaves the stored session alone and refreshes through a rotation that refuses |
-| `test/core/security/oidc_role_mapping_test.dart` | LibreDB Studio's `mapOIDCRole` cases, the literal key, the object and array-wrapped shapes |
+| `test/app/di/app_dependencies_test.dart`, `test/app/di/app_scope_test.dart`, `test/app/di/app_scope_oidc_test.dart` | The mode's injection; a misconfigured build creates no OIDC client, restores signed out with `oidc_config`, leaves the stored session alone and refreshes through a rotation that refuses |
 | `test/core/security/safe_redirect_test.dart` | Each return path rule |
 | `test/core/security/sensitive_data_scrubber_test.dart`, `test/infrastructure/analytics/sentry_scrub_test.dart` | The exact OIDC keys, and the navigation breadcrumb's `state` |
 | `test/shared/l10n/app_error_code_l10n_test.dart` | Each code's sentence in English and Turkish |
-| `test/features/auth/data/repositories/auth_session_repository_impl_test.dart`, `test/infrastructure/storage/secure_storage_test.dart`, `test/features/auth/domain/entities/auth_session_test.dart` | The OIDC keys are written, rolled back and cleared with the session, and never touched in `jwt` mode |
+| `test/features/auth/data/repositories/auth_session_repository_impl_test.dart`, `test/infrastructure/storage/secure_storage_test.dart`, `test/features/auth/domain/entities/auth_session_test.dart` | The OIDC keys are written, rolled back and cleared with the session |
 | `test/infrastructure/http/interceptors/mock_interceptor_test.dart` | An expired JWT bearer gets a 401, and `MOCK_TOKEN` still passes |
-| `test/infrastructure/http/token_rotation_test.dart`, `test/infrastructure/http/interceptors/token_refresh_interceptor_test.dart` | The rotation seam, `RotationUnavailable`, `RefusingTokenRotation`, the narrowed 401 predicate, and `jwt` refresh unchanged |
+| `test/infrastructure/http/token_rotation_test.dart`, `test/infrastructure/http/interceptors/token_refresh_interceptor_test.dart` | The rotation seam, `RotationUnavailable`, `RefusingTokenRotation` and the narrowed 401 predicate |
 | `test/infrastructure/auth/oidc/oidc_transaction_store_test.dart` | The store's namespaces, what `clearTransactions` removes, and the refused `session` namespace |
 | `test/infrastructure/auth/oidc/oidc_client_test.dart`, `oidc_token_rotation_test.dart` | Sign-in, the custom-scheme redirect URI, Android cancel on resume, refresh classification (a 429 or 5xx token answer keeps the session, an unreachable JWKS after the grant keeps the new tokens and the stored ID token), a provider that does not rotate refresh tokens, one operation at a time, provider logout and the Auth0 fallback |
-| `test/features/auth/data/repositories/sso_auth_repository_impl_test.dart`, `test/features/auth/application/login_bloc_test.dart`, `test/features/auth/application/usecases/sign_in_with_sso_usecase_test.dart` | Claims, roles and persist; the production log names the role but not the username; each outcome in `LoginBloc`; dropped concurrent taps |
+| `test/features/auth/data/repositories/sso_auth_repository_impl_test.dart`, `test/features/auth/application/login_bloc_test.dart`, `test/features/auth/application/usecases/sign_in_with_sso_usecase_test.dart`, `test/app/di/app_scope_test.dart` | Claims and persist, whatever the role claim holds; the production log names no user; Studio's 200 as the only success, each refusal clearing once with its code, also for Studio main's 401 and #1922's 403; each outcome in `LoginBloc`; dropped concurrent taps |
 | `test/features/auth/data/services/sso_session_startup_impl_test.dart`, `test/features/auth/domain/services/sso_auto_redirect_gate_test.dart`, `test/app/session/session_cubit_test.dart` | The startup step, its time limit and late answers, and the gate |
-| `test/features/auth/data/repositories/sso_sign_out_auth_repository_test.dart`, `test/app/shell/menu_bloc/menu_bloc_test.dart`, `test/app/bootstrap/app_session_listeners_test.dart`, `test/app/bootstrap/app_session_listeners_sso_test.dart` | Provider logout; the sign-out answers before the provider logout ends, so the login page opens while it is pending; the incomplete-logout notice, also when it comes later; the gate after logout and after a restore past the storage limit |
+| `test/features/auth/data/repositories/sso_sign_out_auth_repository_test.dart`, `test/features/auth/application/sign_out_bloc_test.dart`, `test/app/bootstrap/app_session_listeners_test.dart`, `test/app/bootstrap/app_session_listeners_sso_test.dart` | Provider logout; the sign-out answers before the provider logout ends, so the login page opens while it is pending; the incomplete-logout notice, also when it comes later; the gate after logout and after a restore past the storage limit |
 | `test/features/auth/presentation/pages/login_screen_test.dart`, `login_screen_golden_test.dart` | The SSO page, each error sentence, the Turkish text, the automatic redirect and the `login_screen_sso_light` golden |
-| `test/app/router/app_router_test.dart` | The password routes are absent in `oidc` mode, and a callback URL, with or without a trailing slash, lands on `/login` with no `returnUrl` |
-| `test/features/settings/presentation/pages/settings_screen_test.dart`, `test/app/shell/command_palette/command_palette_widget_test.dart` | Change password offered only in `jwt` mode |
+| `test/app/router/app_router_test.dart` | The password routes resolve to nothing, and a callback URL, with or without a trailing slash, lands on `/login` with no `returnUrl` |
+| `test/infrastructure/config/auth_config_test.dart`, `test/integration/app_smoke_test.dart`, `test/architecture/local_sign_in_test.dart` | A build without OIDC settings has no password sign-in to fall back to; `main_local.dart`'s local sign-in opens the connection list; `main_prod.dart` never imports the double |
 | `test/features/auth/sso_log_hygiene_test.dart` | A full sign-in, refresh, logout and pushed callback route print no token, code, verifier, `state` or `nonce` |
 | `test/architecture/oidc_platform_setup_test.dart` | The Android placeholder equals the default scheme, no client secret in `lib/` and only `.none` client authentication, and no intent filter for the scheme or its placeholder in any app manifest |
 

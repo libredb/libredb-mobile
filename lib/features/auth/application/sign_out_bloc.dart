@@ -25,7 +25,8 @@ class SignOutBloc extends Bloc<SignOutEvent, SignOutState> {
 
   final LogoutUseCase _logoutUseCase;
 
-  /// The logout of an `oidc` build, which runs instead of [_logoutUseCase]; null in a `jwt` build.
+  /// The logout that also ends the session at the identity provider, which runs instead of [_logoutUseCase]; null in
+  /// a misconfigured build, which cannot reach the provider.
   final SsoSignOutUseCase? _ssoSignOutUseCase;
 
   /// Signs out even when the logout cannot clear all that the session stored, as SessionCubit.endSession does: the

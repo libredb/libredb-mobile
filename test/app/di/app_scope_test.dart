@@ -10,8 +10,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
@@ -28,7 +31,6 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -117,8 +119,8 @@ class _CountingSessionRepository implements IAuthSessionRepository {
 }
 
 /// The test config with [sessionRepository] in place of the one AppDependencies creates.
-class _SessionRepositoryDependencies extends AppDependencies {
-  const _SessionRepositoryDependencies(this.sessionRepository) : super(appConfig: const AppConfig.test());
+class _SessionRepositoryDependencies extends LocalSignInDependencies {
+  _SessionRepositoryDependencies(this.sessionRepository) : super(appConfig: const AppConfig.test());
 
   final IAuthSessionRepository sessionRepository;
 
@@ -126,58 +128,61 @@ class _SessionRepositoryDependencies extends AppDependencies {
   IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) => sessionRepository;
 }
 
-/// The production dependencies, counting how often the client reports a 401 that a token refresh could not fix.
-class _CountingDependencies extends AppDependencies {
-  _CountingDependencies() : super(appConfig: _prodConfig);
+/// A token refresh at the identity provider that answers [result], a refusal by default, counted in [rotations].
+class _FakeRotation implements TokenRotation {
+  _FakeRotation([this.result = const RotationRefused()]);
 
+  final TokenRotationResult result;
+  int rotations = 0;
+
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async {
+    rotations++;
+    return result;
+  }
+}
+
+/// The production dependencies with [rotation] as the token refresh and [client] as the identity provider, counting
+/// how often the client reports a 401 that a token refresh could not fix.
+class _CountingDependencies extends AppDependencies {
+  _CountingDependencies({TokenRotation? rotation, IOidcClient? client})
+    : rotation = rotation ?? _FakeRotation(),
+      client = client ?? _FakeOidcClient(const OidcSignInCancelled()),
+      super(appConfig: _prodConfig, authMode: OidcAuthMode(_oidcSettings));
+
+  final TokenRotation rotation;
+  final IOidcClient client;
   int sessionExpiredCalls = 0;
 
   @override
-  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
-      super.createApiClient(
-        secureStorage,
-        onSessionExpired: () {
-          sessionExpiredCalls++;
-          onSessionExpired();
-        },
-      );
-}
+  IOidcClient createOidcClient(OidcSettings settings) => client;
 
-/// Pumps [AppScope] over an expired stored session, the state a production launch leaves the login page in: restore()
-/// reports the expired JWT as signed out but leaves it and the refresh token stored. Returns a context below the scope.
-Future<BuildContext> _pumpExpiredSession(WidgetTester tester, AppDependencies dependencies) async {
-  await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _expiredJwt());
-  await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
-  late BuildContext scope;
-  await tester.pumpWidget(
-    AppScope(
-      dependencies: dependencies,
-      defaultLocale: const Locale('en'),
-      child: Builder(
-        builder: (context) {
-          scope = context;
-          return const SizedBox();
-        },
-      ),
-    ),
+  @override
+  TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) => rotation;
+
+  @override
+  ApiClient createApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    required TokenRotation tokenRotation,
+  }) => super.createApiClient(
+    secureStorage,
+    onSessionExpired: () {
+      sessionExpiredCalls++;
+      onSessionExpired();
+    },
+    tokenRotation: tokenRotation,
   );
-  final session = scope.read<SessionCubit>();
-  await tester.pumpAndSettle();
-  expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
-  return scope;
 }
 
-/// Answers like the server while a token refresh races the end of the session: a request with [staleJwt] gets 401, the
-/// refresh waits for [releaseRefresh] and then rotates the tokens to [freshJwt], and a request with [freshJwt] gets the
-/// account. Records each request with its Authorization header.
+/// Answers like the server while a token refresh races the end of the session: a request with [staleJwt] gets 401,
+/// and a request with [freshJwt] gets an answer. Records each request with its Authorization header.
 class _RefreshRaceServer implements HttpClientAdapter {
   _RefreshRaceServer({required this.staleJwt, required this.freshJwt});
 
   final String staleJwt;
   final String freshJwt;
   final requests = <String>[];
-  final refreshReceived = Completer<void>();
-  final releaseRefresh = Completer<void>();
 
   @override
   Future<ResponseBody> fetch(
@@ -192,36 +197,40 @@ class _RefreshRaceServer implements HttpClientAdapter {
       final other => '$other',
     };
     requests.add('$route $authorization');
-    ResponseBody json(int statusCode, Object body) => ResponseBody.fromString(
-      jsonEncode(body),
-      statusCode,
+    final ok = authorization == 'Bearer fresh' || route == 'POST /auth/logout';
+    return ResponseBody.fromString(
+      jsonEncode(ok ? {'connections': <Object>[], 'success': true} : {'code': 'AUTH_REQUIRED'}),
+      ok ? 200 : 401,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
     );
-    if (route == 'POST /token/refresh') {
-      refreshReceived.complete();
-      await releaseRefresh.future;
-      return json(200, {'id_token': freshJwt, 'refresh_token': 'rotated-refresh-token'});
-    }
-    if (authorization == 'Bearer fresh') {
-      return json(200, {
-        'id': 'user-1',
-        'login': 'admin',
-        'authorities': ['ROLE_ADMIN'],
-      });
-    }
-    return json(401, {'title': 'Unauthorized'});
   }
 
   @override
   void close({bool force = false}) {}
 }
 
+/// The identity provider's token refresh while it races the end of the session: it waits for [releaseRefresh] and then
+/// rotates the tokens to [freshJwt].
+class _GatedRotation implements TokenRotation {
+  _GatedRotation(this.freshJwt);
+
+  final String freshJwt;
+  final refreshReceived = Completer<void>();
+  final releaseRefresh = Completer<void>();
+
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async {
+    refreshReceived.complete();
+    await releaseRefresh.future;
+    return TokensRotated(accessToken: freshJwt, refreshToken: 'rotated-refresh-token');
+  }
+}
+
 /// Answers like the server while a request of one user is on its way and that user signs out and another signs in:
-/// the account save sent with [signedOutJwt] waits for [releaseSave] and is then rejected with 401, the sign-in answers
-/// with [signedInJwt], and every request with [signedInJwt] succeeds. Records each request with its Authorization
-/// header.
+/// the statement sent with [signedOutJwt] waits for [releaseSave] and is then rejected with 401, and every request with
+/// [signedInJwt] succeeds. Records each request with its Authorization header.
 class _SignInRaceServer implements HttpClientAdapter {
   _SignInRaceServer({required this.signedOutJwt, required this.signedInJwt});
 
@@ -252,25 +261,29 @@ class _SignInRaceServer implements HttpClientAdapter {
       },
     );
     switch ((route, authorization)) {
-      case ('POST /authenticate', 'null'):
-        return json(200, {'id_token': signedInJwt, 'refresh_token': 'signed-in-refresh-token'});
-      case ('POST /account', 'Bearer signed-out-user'):
+      case ('POST /auth/logout', 'Bearer signed-out-user'):
+        return json(200, {'success': true});
+      case ('POST /db/query', 'Bearer signed-out-user'):
         saveReceived.complete();
         await releaseSave.future;
-        return json(401, {'title': 'Unauthorized'});
+        return json(401, {'code': 'AUTH_REQUIRED'});
+      case ('GET /auth/me', 'Bearer signed-in-user'):
+        return json(200, _studioIdentity);
       case (_, 'Bearer signed-in-user'):
-        return json(200, {
-          'id': 'user-2',
-          'login': 'user-two',
-          'authorities': ['ROLE_USER'],
-        });
+        return json(200, {'ok': true});
     }
-    return json(401, {'title': 'Unauthorized'});
+    return json(401, {'code': 'AUTH_REQUIRED'});
   }
 
   @override
   void close({bool force = false}) {}
 }
+
+/// Studio's `GET /api/auth/me` answer for a signed-in user.
+const _studioIdentity = {
+  'authenticated': true,
+  'user': {'role': 'user', 'username': 'user@example.com', 'channel': 'bearer'},
+};
 
 /// Pumps until [done] holds, so a test can run a request, a token refresh and the end of the session in a fixed order.
 Future<void> _pumpUntil(WidgetTester tester, bool Function() done) async {
@@ -284,9 +297,12 @@ final _oidcSettings = OidcSettings(issuer: Uri.parse('https://id.example.com/rea
 
 /// Signs in with [outcome], as a provider would after the user signed in on its page.
 class _FakeOidcClient implements IOidcClient {
-  _FakeOidcClient(this.outcome);
+  _FakeOidcClient(this.outcome, {this.logout});
 
   final OidcSignInOutcome outcome;
+
+  /// How a provider logout ends, or null for a test that never logs out.
+  final OidcLogoutOutcome? logout;
 
   @override
   Future<OidcSignInOutcome> signIn() async => outcome;
@@ -300,8 +316,8 @@ class _FakeOidcClient implements IOidcClient {
   }) => throw UnimplementedError('these tests never refresh');
 
   @override
-  Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) =>
-      throw UnimplementedError('these tests never log out');
+  Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async =>
+      logout ?? (throw UnimplementedError('this test never logs out'));
 }
 
 /// The test config in [authMode], counting the OIDC clients it creates; each one is [client].
@@ -376,7 +392,7 @@ class _StudioIdentityDependencies extends AppDependencies {
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => studioIdentity;
 }
 
-/// Pumps [AppScope] over [dependencies] and returns a context below it.
+/// Pumps [AppScope] over [dependencies], restores the stored session as a launch does, and returns a context below it.
 Future<BuildContext> _pumpScope(WidgetTester tester, AppDependencies dependencies) async {
   late BuildContext scope;
   await tester.pumpWidget(
@@ -391,83 +407,55 @@ Future<BuildContext> _pumpScope(WidgetTester tester, AppDependencies dependencie
       ),
     ),
   );
+  // SessionCubit is created, and restores the stored session, on its first read, as App reads it on launch.
+  scope.read<SessionCubit>();
   await tester.pumpAndSettle();
   return scope;
 }
 
-/// The server's answer to a refresh, which a sign-in must never ask for.
-final _refreshRoute = <String, (int, Object)>{
-  'POST /token/refresh': (200, {'id_token': _unexpiredJwt(), 'refresh_token': 'rotated-refresh-token'}),
-};
-
 void main() {
   group('AppScope', () {
     testWidgets('ends the session and clears the stored session when a 401 cannot be refreshed', (tester) async {
-      // A production config sends requests to the adapter instead of the mock assets. The adapter rejects the
-      // refresh request too, so the stored refresh token cannot renew the session.
+      // A production config sends requests to the adapter instead of the mock assets. The identity provider refuses
+      // the refresh, so the stored refresh token cannot renew the session.
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'rejected-refresh-token');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: const AppDependencies(appConfig: _prodConfig),
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
+      final rotation = _FakeRotation();
+      final dependencies = _CountingDependencies(rotation: rotation);
+      final scope = await _pumpScope(tester, dependencies);
       final session = scope.read<SessionCubit>();
-      await tester.pumpAndSettle();
       expect(session.state, isA<SessionAuthenticated>());
 
       final apiClient = scope.read<ApiClient>();
       apiClient.instance.httpClientAdapter = _UnauthorizedAdapter();
       // Dio runs each interceptor step on a timer, so the request, the refresh and the wipe of the stored session run
       // while fake time moves, and all of them have finished when the pump returns.
-      final request = expectLater(apiClient.get('/api/account'), throwsA(isA<UnauthorizedException>()));
+      final request = expectLater(apiClient.get('/connections/managed'), throwsA(isA<UnauthorizedException>()));
       await tester.pump(Duration.zero);
       await request;
 
       expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+      expect(rotation.rotations, 1);
       // A relaunch restores the session from secure storage, as AppScope does on launch.
       final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
       addTearDown(relaunched.close);
       await relaunched.restore();
       expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.noToken));
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
-      expect(await AppLocalStorage().read(StorageKeys.roles.key), isNull);
     });
 
     testWidgets('ends the session in mock mode when a request without a token gets 401', (tester) async {
       // The mock answers a protected request without a token with 401, as the server does. That happens when the
       // stored token is gone while the session is open. No refresh token is stored, so the refresh fails.
       TestEnv.authenticate();
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: const AppDependencies(appConfig: AppConfig.test()),
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
       final session = scope.read<SessionCubit>();
-      await tester.pumpAndSettle();
       expect(session.state, isA<SessionAuthenticated>());
 
       await FlutterSecureStorageAdapter().delete(SecureStorageKeys.jwtToken.key);
       final apiClient = scope.read<ApiClient>();
       // Dio runs each interceptor step on a timer, so the request moves only while fake time does.
-      final request = expectLater(apiClient.get('/account'), throwsA(isA<UnauthorizedException>()));
+      final request = expectLater(apiClient.get('/connections/managed'), throwsA(isA<UnauthorizedException>()));
       await tester.pump(Duration.zero);
       await request;
 
@@ -475,113 +463,32 @@ void main() {
     });
 
     testWidgets('keeps the session in mock mode when a 401 can be fixed by a token refresh', (tester) async {
-      // A refresh token is stored, so the 401 starts a token refresh, as it does in production. The mock answers the
-      // refresh like the server would, the request is sent again with the new token, and the user stays signed in.
-      TestEnv.authenticate();
-      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'MOCK_REFRESH_TOKEN');
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: const AppDependencies(appConfig: AppConfig.test()),
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
+      // The mock answers a request whose JWT bearer has expired with 401, which starts a token refresh, as it does in
+      // production. The local sign-in answers the refresh as the identity provider would, the request is sent again
+      // with the new token, and the user stays signed in.
+      final secure = FlutterSecureStorageAdapter();
+      await secure.write(SecureStorageKeys.jwtToken.key, _expiredJwt());
+      await secure.write(SecureStorageKeys.refreshToken.key, 'LOCAL_REFRESH_TOKEN');
+      await secure.write(SecureStorageKeys.oidcIdToken.key, 'LOCAL_ID_TOKEN');
+      await secure.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2100)));
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
       final session = scope.read<SessionCubit>();
-      await tester.pumpAndSettle();
       expect(session.state, isA<SessionAuthenticated>());
 
-      await FlutterSecureStorageAdapter().delete(SecureStorageKeys.jwtToken.key);
       final apiClient = scope.read<ApiClient>();
       // Dio runs each interceptor step on a timer, so the request and the refresh move only while fake time does.
-      final request = apiClient.get('/account');
+      final request = apiClient.get('/connections/managed');
       await tester.pump(Duration.zero);
       final response = await request;
 
       expect(response.statusCode, 200);
-      expect(response.data, contains('"login": "admin"'));
       expect(session.state, isA<SessionAuthenticated>());
-      // The tokens from assets/mock/POST_token_refresh.json.
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), 'MOCK_REFRESHED_TOKEN');
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'MOCK_REFRESH_TOKEN_NEW');
-    });
-
-    testWidgets('a wrong password neither refreshes nor ends the expired stored session', (tester) async {
-      final dependencies = _CountingDependencies();
-      final scope = await _pumpExpiredSession(tester, dependencies);
-      final server = _ServerAdapter({
-        'POST /authenticate': (401, {'title': 'Bad credentials'}),
-        ..._refreshRoute,
-      });
-      scope.read<ApiClient>().instance.httpClientAdapter = server;
-
-      final login = scope.read<LoginBloc>();
-      login.add(const LoginFormSubmitted(username: 'admin', password: 'wrong-password'));
-      await tester.pumpAndSettle();
-
-      expect(login.state, isA<LoginErrorState>());
-      expect(server.requests, ['POST /authenticate null'], reason: 'no stored token is sent, and none is refreshed');
-      expect(dependencies.sessionExpiredCalls, 0);
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'stored-refresh-token');
-      // A relaunch restores the session from secure storage, as AppScope does on launch.
-      final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
-      addTearDown(relaunched.close);
-      await relaunched.restore();
-      expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
-    });
-
-    testWidgets('the right password signs in without sending the expired stored token', (tester) async {
-      final dependencies = _CountingDependencies();
-      final scope = await _pumpExpiredSession(tester, dependencies);
-      final server = _ServerAdapter({
-        'POST /authenticate': (200, {'id_token': _unexpiredJwt(), 'refresh_token': 'signed-in-refresh-token'}),
-        'GET /account': (
-          200,
-          {
-            'id': 'user-1',
-            'login': 'admin',
-            'authorities': ['ROLE_ADMIN'],
-          },
-        ),
-        ..._refreshRoute,
-      });
-      scope.read<ApiClient>().instance.httpClientAdapter = server;
-
-      final login = scope.read<LoginBloc>();
-      login.add(const LoginFormSubmitted(username: 'admin', password: 'admin'));
-      await tester.pumpAndSettle();
-
-      expect(login.state, isA<LoginLoadedState>());
-      expect(server.requests, ['POST /authenticate null', 'GET /account Bearer ${_unexpiredJwt()}']);
-      expect(dependencies.sessionExpiredCalls, 0);
-      // The sign-in replaces the expired session that restore() left stored.
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'signed-in-refresh-token');
-      final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
-      addTearDown(relaunched.close);
-      await relaunched.restore();
-      expect(relaunched.state, const SessionAuthenticated(roles: {'ROLE_ADMIN'}));
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), LocalOidcClient.accessToken);
     });
 
     testWidgets('provides the auth mode that AppDependencies carries', (tester) async {
       const authMode = OidcMisconfiguredAuthMode('OIDC_ISSUER is required');
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: const AppDependencies(authMode: authMode),
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
+      final scope = await _pumpScope(tester, const AppDependencies(authMode: authMode));
 
       expect(scope.read<AuthMode>(), same(authMode));
     });
@@ -589,37 +496,28 @@ void main() {
     // The logout, the idle timeout and an unrefreshable 401 must clear the same things, so they share one repository.
     testWidgets('logs out through the session repository that AppDependencies creates', (tester) async {
       final sessionRepository = _CountingSessionRepository();
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: _SessionRepositoryDependencies(sessionRepository),
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+      final scope = await _pumpScope(tester, _SessionRepositoryDependencies(sessionRepository));
 
-      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+      // The logout records the sign-out at Studio first, under a time budget that moves only while fake time does.
+      Result<void>? result;
+      scope.read<IAuthRepository>().logout().then((value) => result = value);
+      await _pumpUntil(tester, () => result != null);
+
+      expect(result, isA<Success<void>>());
 
       expect(sessionRepository.clears, 1);
     });
 
-    // The lifecycle checks read GET /app/config before sign-in. Were it not public, it would carry the expired token
-    // restore() leaves stored, get 401, and spend the stored refresh token on a refresh that stores a working session
-    // for a relaunch to restore.
-    testWidgets('reading the app config before sign-in neither sends nor refreshes the expired stored session', (
-      tester,
-    ) async {
-      final dependencies = _CountingDependencies();
-      final scope = await _pumpExpiredSession(tester, dependencies);
+    // The lifecycle checks read GET /app/config before sign-in. Were it not public, it would carry the stored token,
+    // which the server may reject, and spend the stored refresh token on a refresh.
+    testWidgets('reading the app config sends no stored token and refreshes none', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _expiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      final rotation = _FakeRotation();
+      final dependencies = _CountingDependencies(rotation: rotation);
+      final scope = await _pumpScope(tester, dependencies);
       final server = _ServerAdapter({
         'GET /app/config': (200, {'minimumVersion': '1.0.0', 'maintenanceMode': false}),
-        ..._refreshRoute,
       });
       final apiClient = scope.read<ApiClient>();
       apiClient.instance.httpClientAdapter = server;
@@ -630,13 +528,9 @@ void main() {
 
       expect(result, isA<Success<AppConfigEntity>>());
       expect(server.requests, ['GET /app/config null'], reason: 'no stored token is sent, and none is refreshed');
+      expect(rotation.rotations, 0);
       expect(dependencies.sessionExpiredCalls, 0);
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'stored-refresh-token');
-      // A relaunch restores the session from secure storage, as AppScope does on launch.
-      final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
-      addTearDown(relaunched.close);
-      await relaunched.restore();
-      expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
     });
 
     // Regression: a token refresh still on its way when the session ended stored the rotated tokens after the wipe.
@@ -661,43 +555,37 @@ void main() {
         final freshJwt = _jwt(exp: 4102444801);
         await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, staleJwt);
         await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
-        await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
-        final dependencies = _CountingDependencies();
-        late BuildContext scope;
-        await tester.pumpWidget(
-          AppScope(
-            dependencies: dependencies,
-            defaultLocale: const Locale('en'),
-            child: Builder(
-              builder: (context) {
-                scope = context;
-                return const SizedBox();
-              },
-            ),
-          ),
+        final rotation = _GatedRotation(freshJwt);
+        final dependencies = _CountingDependencies(
+          rotation: rotation,
+          client: _FakeOidcClient(const OidcSignInCancelled(), logout: const NoProviderLogout()),
         );
+        final scope = await _pumpScope(tester, dependencies);
         final session = scope.read<SessionCubit>();
-        await tester.pumpAndSettle();
         expect(session.state, isA<SessionAuthenticated>());
         final server = _RefreshRaceServer(staleJwt: staleJwt, freshJwt: freshJwt);
         final apiClient = scope.read<ApiClient>();
         apiClient.instance.httpClientAdapter = server;
 
-        // The stored token is rejected, so the request starts a refresh, and the session ends before the server
-        // answers the refresh.
+        // The stored token is rejected, so the request starts a refresh, and the session ends before the identity
+        // provider answers the refresh.
         Object? outcome;
         apiClient
-            .get('/account')
+            .get('/connections/managed')
             .then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
-        await _pumpUntil(tester, () => server.refreshReceived.isCompleted);
+        await _pumpUntil(tester, () => rotation.refreshReceived.isCompleted);
         var ended = false;
         endSession(scope).then((_) => ended = true);
         await _pumpUntil(tester, () => ended);
-        server.releaseRefresh.complete();
+        rotation.releaseRefresh.complete();
         await _pumpUntil(tester, () => outcome != null);
 
         expect(outcome, isA<UnauthorizedException>());
-        expect(server.requests, ['GET /account Bearer stale', 'POST /token/refresh null']);
+        expect(server.requests, [
+          'GET /connections/managed Bearer stale',
+          // A logout the user starts records the sign-out at Studio before it clears the session.
+          if (name == 'the user logs out') 'POST /auth/logout Bearer stale',
+        ]);
         expect(dependencies.sessionExpiredCalls, 0);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
@@ -718,57 +606,126 @@ void main() {
       final signedInJwt = _jwt(exp: 4102444800, sub: 'user-two');
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, signedOutJwt);
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'signed-out-refresh-token');
-      await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
-      final dependencies = _CountingDependencies();
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: dependencies,
-          defaultLocale: const Locale('en'),
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
+      final rotation = _FakeRotation(TokensRotated(accessToken: signedInJwt));
+      final dependencies = _CountingDependencies(
+        rotation: rotation,
+        client: _FakeOidcClient(
+          OidcSignedIn(
+            tokens: OidcTokens(
+              accessToken: signedInJwt,
+              idToken: 'signed-in-id-token',
+              refreshToken: 'signed-in-refresh-token',
+              accessTokenExpiresAt: DateTime.utc(2100),
+            ),
+            claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'user-two'},
           ),
+          logout: const NoProviderLogout(),
         ),
       );
+      final scope = await _pumpScope(tester, dependencies);
       final session = scope.read<SessionCubit>();
-      await tester.pumpAndSettle();
       expect(session.state, isA<SessionAuthenticated>());
       final server = _SignInRaceServer(signedOutJwt: signedOutJwt, signedInJwt: signedInJwt);
       final apiClient = scope.read<ApiClient>();
       apiClient.instance.httpClientAdapter = server;
 
-      // The first user saves the account. Before the server answers, that user signs out and another signs in.
+      // The first user runs a statement. Before the server answers, that user signs out and another signs in.
       Object? outcome;
       apiClient
-          .post('/account', {'login': 'user-one', 'firstName': 'One'})
+          .post('/db/query', {'connectionId': 'seed:sales-db', 'sql': 'update t set x = 1'})
           .then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
       await _pumpUntil(tester, () => server.saveReceived.isCompleted);
       final signOut = scope.read<SignOutBloc>();
       signOut.add(const SignOutRequested());
       await _pumpUntil(tester, () => signOut.state is SignOutDone);
       final login = scope.read<LoginBloc>();
-      login.add(const LoginFormSubmitted(username: 'user-two', password: 'user-two-password'));
+      login.add(const SsoSignInRequested());
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
-      // The token of the first user expired on the way, so the server rejects the save.
+      // The token of the first user expired on the way, so the server rejects the statement.
       server.releaseSave.complete();
       await _pumpUntil(tester, () => outcome != null);
 
       expect(outcome, isA<UnauthorizedException>());
       expect(server.requests, [
-        'POST /account Bearer signed-out-user',
-        'POST /authenticate null',
-        'GET /account Bearer signed-in-user',
+        'POST /db/query Bearer signed-out-user',
+        'POST /auth/logout Bearer signed-out-user',
+        'GET /auth/me Bearer signed-in-user',
       ]);
+      expect(rotation.rotations, 0, reason: 'the session the request was sent under has ended, so none is refreshed');
       expect(dependencies.sessionExpiredCalls, 0, reason: 'ending the session would sign out the user signed in now');
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), signedInJwt);
     });
   });
 
+  // Studio decides at sign-in whether it accepts the account, through GET /api/auth/me. Studio main answers a refused
+  // account with 401 and no code; libredb-studio#1922 answers 403 BEARER_NO_ROLE, and 401 AUTH_REQUIRED for a token it
+  // refuses itself.
+  group('AppScope sign-in that Studio refuses', () {
+    final signedIn = OidcSignedIn(
+      tokens: OidcTokens(
+        accessToken: 'signed-in-access-token',
+        idToken: 'signed-in-id-token',
+        refreshToken: 'signed-in-refresh-token',
+        accessTokenExpiresAt: DateTime.utc(2100),
+      ),
+      claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'norole'},
+    );
+
+    for (final (shape, status, body, code, refreshes) in <(String, int, Object, AppErrorCode, int)>[
+      (
+        'a 401 without a code, twice (Studio main)',
+        401,
+        {'authenticated': false},
+        AppErrorCode.studioAccountRefused,
+        1,
+      ),
+      (
+        'a 401 AUTH_REQUIRED, twice',
+        401,
+        {'error': 'Invalid access token', 'code': 'AUTH_REQUIRED'},
+        AppErrorCode.studioAccountRefused,
+        1,
+      ),
+      (
+        'a 403 BEARER_NO_ROLE (libredb-studio#1922)',
+        403,
+        {'error': 'This account has no role in Studio.', 'code': 'BEARER_NO_ROLE'},
+        AppErrorCode.studioAccountHasNoRole,
+        0,
+      ),
+    ]) {
+      testWidgets('rejects $shape with ${code.key}, stores nothing and ends no session', (tester) async {
+        final rotation = _FakeRotation(const TokensRotated(accessToken: 'refreshed-access-token'));
+        final dependencies = _CountingDependencies(rotation: rotation, client: _FakeOidcClient(signedIn));
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        final sessionStates = <SessionState>[];
+        final subscription = session.stream.listen(sessionStates.add);
+        addTearDown(subscription.cancel);
+        final server = _ServerAdapter({'GET /auth/me': (status, body)});
+        scope.read<ApiClient>().instance.httpClientAdapter = server;
+
+        final login = scope.read<LoginBloc>();
+        login.add(const SsoSignInRequested());
+        await _pumpUntil(tester, () => login.state is LoginErrorState);
+
+        expect(login.state, LoginErrorState(errorCode: code));
+        expect(server.requests.map((request) => request.split(' ').take(2).join(' ')), [
+          for (var i = 0; i <= refreshes; i++) 'GET /auth/me',
+        ]);
+        expect(rotation.rotations, refreshes, reason: 'only a 401 starts a refresh');
+        final secure = FlutterSecureStorageAdapter();
+        for (final key in SecureStorageKeys.values) {
+          expect(await secure.read(key.key), isNull, reason: '${key.name} stays stored');
+        }
+        expect(sessionStates, isEmpty, reason: 'a refused sign-in signs nobody in and ends no session');
+        expect(session.state, isA<SessionUnauthenticated>());
+      });
+    }
+  });
+
   group('AppScope single sign-on', () {
-    testWidgets('an oidc build signs in through the OIDC client and stores the whole session', (tester) async {
+    testWidgets('signs in through the OIDC client and stores the whole session', (tester) async {
       final expiresAt = DateTime.utc(2100);
       final dependencies = _OidcClientDependencies(
         authMode: OidcAuthMode(_oidcSettings),
@@ -794,7 +751,7 @@ void main() {
       login.add(const SsoSignInRequested());
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
 
-      expect(login.state, const LoginLoadedState(username: 'jdoe@example.com', roles: ['ROLE_USER']));
+      expect(login.state, const LoginLoadedState());
       expect(dependencies.oidcClientsCreated, 1);
       final secure = FlutterSecureStorageAdapter();
       expect(await secure.read(SecureStorageKeys.jwtToken.key), 'sso-access-token');
@@ -804,26 +761,27 @@ void main() {
       expect(scope.read<TokenRotation>(), isA<OidcTokenRotation>());
     });
 
-    testWidgets('a jwt build creates no OIDC client', (tester) async {
+    testWidgets('a misconfigured build creates no OIDC client', (tester) async {
       final dependencies = _OidcClientDependencies(
-        authMode: const JwtAuthMode(),
+        authMode: const OidcMisconfiguredAuthMode('OIDC_ISSUER is required'),
         client: _FakeOidcClient(const OidcSignInCancelled()),
       );
       final scope = await _pumpScope(tester, dependencies);
 
-      // LoginBloc is created on first read, which is when an oidc build reads the OIDC client.
+      // LoginBloc is created on first read, which is when a configured build reads the OIDC client.
       expect(scope.read<LoginBloc>().state, const LoginInitialState());
 
       expect(dependencies.oidcClientsCreated, 0);
+      expect(() => scope.read<IOidcClient>(), throwsA(isA<ProviderNotFoundException>()));
     });
 
     testWidgets('provides the provider meta repository that several features read', (tester) async {
-      final scope = await _pumpScope(tester, const AppDependencies(appConfig: AppConfig.test()));
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
     });
 
-    testWidgets('an oidc build records the sign-out at Studio', (tester) async {
+    testWidgets('records the sign-out at Studio', (tester) async {
       final dependencies = _StudioIdentityDependencies(authMode: OidcAuthMode(_oidcSettings));
       final scope = await _pumpScope(tester, dependencies);
 
@@ -832,9 +790,7 @@ void main() {
       expect(dependencies.studioIdentity.signOutsRecorded, 1);
     });
 
-    testWidgets('an oidc build refreshes an expired access token before it records the sign-out at Studio', (
-      tester,
-    ) async {
+    testWidgets('refreshes an expired access token before it records the sign-out at Studio', (tester) async {
       final dependencies = _StudioIdentityDependencies(authMode: OidcAuthMode(_oidcSettings));
       final scope = await _pumpScope(tester, dependencies);
       final session = scope.read<SessionCubit>();
@@ -851,19 +807,15 @@ void main() {
       expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
     });
 
-    testWidgets('a jwt build never records the sign-out at Studio', (tester) async {
-      final dependencies = _StudioIdentityDependencies(authMode: const JwtAuthMode());
+    testWidgets('a misconfigured build never records the sign-out at Studio', (tester) async {
+      final dependencies = _StudioIdentityDependencies(
+        authMode: const OidcMisconfiguredAuthMode('OIDC_ISSUER is required'),
+      );
       final scope = await _pumpScope(tester, dependencies);
 
       expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
 
       expect(dependencies.studioIdentity.signOutsRecorded, 0);
-    });
-
-    testWidgets('a jwt build provides no OIDC client', (tester) async {
-      final scope = await _pumpScope(tester, const AppDependencies(appConfig: AppConfig.test()));
-
-      expect(() => scope.read<IOidcClient>(), throwsA(isA<ProviderNotFoundException>()));
     });
   });
 }

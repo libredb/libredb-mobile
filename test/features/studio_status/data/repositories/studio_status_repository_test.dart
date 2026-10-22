@@ -12,6 +12,7 @@ import 'package:libredb_mobile/features/studio_status/domain/entities/studio_rea
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 
 import '../../../../support/test_env.dart';
@@ -38,7 +39,7 @@ void main() {
     setUp(() {
       ResilienceInterceptor.instance.resetAll();
       adapter = _QueuedAdapter();
-      final client = ApiClient(appConfig: _prodConfig);
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = StudioStatusRepository(client);
     });

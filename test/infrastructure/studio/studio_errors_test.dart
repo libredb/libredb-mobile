@@ -46,6 +46,9 @@ void main() {
       (503, 'GOVERNANCE_UNAVAILABLE', ServerError, AppErrorCode.studioGovernanceUnavailable),
       (503, 'AUDIT_UNAVAILABLE', ServerError, AppErrorCode.studioGovernanceUnavailable),
       (503, 'IDENTITY_PROVIDER_UNAVAILABLE', ServerError, AppErrorCode.studioIdentityProviderUnavailable),
+      // libredb-studio#1922: a verified token whose account Studio refuses.
+      (403, 'BEARER_NO_ROLE', AuthError, AppErrorCode.studioAccountHasNoRole),
+      (403, 'BEARER_NO_IDENTITY', AuthError, AppErrorCode.studioAccountHasNoIdentity),
       (409, 'TRANSACTION_NOT_OWNED', ValidationError, AppErrorCode.studioTransactionNotOwned),
       (409, 'TRANSACTION_CREDENTIAL_CHANGED', ServerError, AppErrorCode.studioTransactionCredentialChanged),
     ];

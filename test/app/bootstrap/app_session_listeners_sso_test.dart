@@ -35,7 +35,7 @@ const _providerSessionLeft =
 
 const _storedDataLeft = 'You were signed out, but some stored data could not be removed from this device.';
 
-/// The identity provider of an oidc build. A provider logout ends when the test completes [logout], so a test can
+/// The identity provider. A provider logout ends when the test completes [logout], so a test can
 /// hold it open as the browser flow does while the user is still at the provider; [signIns] counts the sign-ins the
 /// app starts.
 class _FakeOidcClient implements IOidcClient {
@@ -64,7 +64,7 @@ class _FakeOidcClient implements IOidcClient {
   }
 }
 
-/// The dependencies of an oidc build over [client], on the mock-backed development config.
+/// The dependencies over [client], on the mock-backed development config.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client, {bool autoRedirect = false})
     : super(
@@ -73,7 +73,6 @@ class _OidcDependencies extends AppDependencies {
           OidcSettings(
             issuer: Uri.parse('https://id.example.com/realms/demo'),
             clientId: 'app',
-            roleClaim: 'roles',
             autoRedirect: autoRedirect,
           ),
         ),
@@ -121,12 +120,12 @@ Future<void> _logOut(WidgetTester tester) async {
   await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
   await tester.pumpAndSettle();
-  // An oidc build waits for Studio to record the sign-out, which the mock answers after its simulated latency.
+  // The app waits for Studio to record the sign-out, which the mock answers after its simulated latency.
   await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
   await tester.pumpAndSettle();
 }
 
-/// Starts the app of an oidc build over [client] with the mock session stored, on the connection list.
+/// Starts the app over [client] with the mock session stored, on the connection list.
 Future<void> _startSignedIn(WidgetTester tester, _FakeOidcClient client) async {
   TestEnv.authenticate();
   await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies(client)));
@@ -138,7 +137,7 @@ BuildContext _app(WidgetTester tester) => tester.element(find.byType(MaterialApp
 
 void main() {
   // The provider logout waits for the browser, and for as long as the discovery request hangs.
-  group('in an oidc build, a logout the user starts', () {
+  group('a logout the user starts', () {
     testWidgets('opens the login page while the provider logout has not ended', (tester) async {
       final client = _FakeOidcClient();
       await _startSignedIn(tester, client);
@@ -207,9 +206,7 @@ void main() {
 
   // The stored session may still open the app when its read answers late, so the login page must not send the user to
   // the identity provider meanwhile.
-  testWidgets('in an oidc build, a stored session read past the restore limit closes the automatic redirect gate', (
-    tester,
-  ) async {
+  testWidgets('a stored session read past the restore limit closes the automatic redirect gate', (tester) async {
     final client = _FakeOidcClient();
     final storage = _SlowAccessTokenStorage();
     await tester.pumpWidget(
@@ -230,30 +227,29 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  // A session that an earlier, correctly configured oidc build stored holds the provider's tokens, and this build
+  // A session that an earlier, correctly configured build stored holds the provider's tokens, and this build
   // provides no automatic redirect gate.
-  testWidgets(
-    'in a misconfigured oidc build, a session an earlier build left starts signed out with the config error',
-    (tester) async {
-      TestEnv.authenticate();
-      await tester.pumpWidget(
-        const App(
-          language: 'en',
-          dependencies: AppDependencies(
-            appConfig: _appConfig,
-            authMode: OidcMisconfiguredAuthMode('OIDC_SCOPE must hold openid'),
-          ),
+  testWidgets('in a misconfigured build, a session an earlier build left starts signed out with the config error', (
+    tester,
+  ) async {
+    TestEnv.authenticate();
+    await tester.pumpWidget(
+      const App(
+        language: 'en',
+        dependencies: AppDependencies(
+          appConfig: _appConfig,
+          authMode: OidcMisconfiguredAuthMode('OIDC_SCOPE must hold openid'),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.byType(ResponsiveScaffold), findsNothing);
-      expect(
-        find.text('Single sign-on is not configured correctly in this app. Contact your administrator.'),
-        findsOneWidget,
-      );
-      expect(() => _app(tester).read<SsoAutoRedirectGate>(), throwsA(isA<ProviderNotFoundException>()));
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(find.byType(ResponsiveScaffold), findsNothing);
+    expect(
+      find.text('Single sign-on is not configured correctly in this app. Contact your administrator.'),
+      findsOneWidget,
+    );
+    expect(() => _app(tester).read<SsoAutoRedirectGate>(), throwsA(isA<ProviderNotFoundException>()));
+    expect(tester.takeException(), isNull);
+  });
 }

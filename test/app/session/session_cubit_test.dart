@@ -98,7 +98,7 @@ void main() {
       expect(failed, isNot(equals(failedWithError)));
     });
 
-    // A jwt build never sets a sign-in error, and its logs print this state as they did before the field existed.
+    // A state without a sign-in error prints only its reason, as it did before the field existed.
     test('SessionUnauthenticated without a sign-in error prints only the reason', () {
       expect(
         const SessionUnauthenticated(reason: SessionExpiredReason.noToken).toString(),
@@ -369,13 +369,13 @@ void main() {
 
         unawaited(cubit.restore());
         async.elapse(timeLimit);
-        cubit.markAuthenticated(roles: {'ROLE_USER'});
+        cubit.markAuthenticated();
         storedToken.complete('MOCK_TOKEN');
         async.flushMicrotasks();
 
         expect(states, [
           const SessionUnauthenticated(reason: SessionExpiredReason.storageTimeout),
-          const SessionAuthenticated(roles: {'ROLE_USER'}),
+          const SessionAuthenticated(),
         ]);
         expect(warnings, contains(allOf(contains('SessionCubit : restore'), contains('ignored'))));
         unawaited(cubit.close());
@@ -456,7 +456,7 @@ void main() {
     });
   });
 
-  group('restore in oidc mode', () {
+  group('restore with the startup step', () {
     const timeLimit = Duration(seconds: 3);
 
     SessionCubit cubitWith(
@@ -486,12 +486,12 @@ void main() {
 
     blocTest<SessionCubit, SessionState>(
       'a failed startup sign-in gives SessionUnauthenticated(signInFailed) with its error',
-      build: () => cubitWith(const SsoStartupSignInFailed(AppErrorCode.authOidcNoRole)),
+      build: () => cubitWith(const SsoStartupSignInFailed(AppErrorCode.authOidcConfig)),
       act: (cubit) => cubit.restore(),
       expect: () => [
         const SessionUnauthenticated(
           reason: SessionExpiredReason.signInFailed,
-          signInError: AppErrorCode.authOidcNoRole,
+          signInError: AppErrorCode.authOidcConfig,
         ),
       ],
     );
@@ -510,7 +510,7 @@ void main() {
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)],
     );
 
-    // The startup step owns the expiry in oidc mode, and a provider's access token need not be a JWT.
+    // The startup step owns the expiry, and a provider's access token need not be a JWT.
     blocTest<SessionCubit, SessionState>(
       'the stored session is not checked for a JWT exp in production',
       build: () {
@@ -682,7 +682,7 @@ void main() {
       });
 
       for (final (name, late) in [
-        ('SignInFailed', const SsoStartupSignInFailed(AppErrorCode.authOidcNoRole) as SsoStartupResult),
+        ('SignInFailed', const SsoStartupSignInFailed(AppErrorCode.authOidcConfig) as SsoStartupResult),
         ('UseStoredSession', const SsoStartupUseStoredSession()),
       ]) {
         test('a late $name only logs', () {

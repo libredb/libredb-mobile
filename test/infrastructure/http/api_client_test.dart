@@ -15,6 +15,7 @@ import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.d
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
 import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
@@ -318,7 +319,7 @@ void main() {
       stub = _StubInterceptor();
       final testDio = Dio(BaseOptions(baseUrl: 'https://test.api', responseType: ResponseType.plain));
       testDio.interceptors.add(stub);
-      client = ApiClient(appConfig: const AppConfig.prod(), dio: testDio);
+      client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: const AppConfig.prod(), dio: testDio);
     });
 
     group('HTTP Requests', () {
@@ -659,7 +660,7 @@ void main() {
 
       test('given test environment when GET request is made then should return mock data', () async {
         TestEnv.authenticate();
-        final response = await mockClient.get('/account');
+        final response = await mockClient.get('/auth/me');
         expect(response.statusCode, lessThan(300));
       });
 
@@ -714,23 +715,33 @@ void main() {
       test('given test environment without token when DELETE request is made then should throw', () async {
         expect(() => mockClient.delete('/test'), throwsA(isA<UnauthorizedException>()));
       });
+    });
+  });
 
-      // Regression: the token refresh went through a Dio without MockInterceptor, so in mock mode it went to the
-      // transport instead of the mock, failed, and ended the session.
-      test('given test environment when a 401 is refreshed then the mock answers the refresh', () async {
-        await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'MOCK_REFRESH_TOKEN');
-        final adapter = _FakeHttpClientAdapter();
-        mockClient.instance.httpClientAdapter = adapter;
+  // LibreDB Studio refuses a POST that carries no Origin header unless its content type is JSON (403 ORIGIN_MISMATCH),
+  // and the app sends no Origin.
+  group('ApiClient POST headers', () {
+    test('a POST with a map body sends Content-Type: application/json and no Origin header', () async {
+      TestEnv.authenticate();
+      final handler = _TestRequestHandler();
+      final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
+        appConfig: const AppConfig(
+          environment: Environment.prod,
+          apiBaseUrl: 'https://api.example.test',
+          certificatePins: [],
+          idleTimeout: null,
+        ),
+        secureStorage: FlutterSecureStorageAdapter(),
+      );
+      client.instance.interceptors.add(handler);
 
-        final response = await mockClient.get('/account');
+      await client.post('/auth/logout', {'reason': 'user'});
 
-        expect(response.statusCode, 200);
-        expect(
-          adapter.requests,
-          isEmpty,
-          reason: 'in mock mode no request may reach the network, the refresh included',
-        );
-      });
+      final sent = handler.requests.single;
+      expect(sent.method, 'POST');
+      expect(sent.contentType, 'application/json');
+      expect(sent.headers.keys.map((key) => key.toLowerCase()), isNot(contains('origin')));
     });
   });
 
@@ -809,14 +820,14 @@ void main() {
       // No secureStorage passed → exercises the documented `_secureStorage == null`
       // fallback branch in _createDio. AppConfig.test() keeps baseUrl empty (valid)
       // and forces the real chain (no injected Dio).
-      final client = ApiClient(appConfig: const AppConfig.test());
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: const AppConfig.test());
       client.instance; // force Dio + chain construction
       final names = client.interceptorChainSnapshot.map((e) => e.name);
       expect(names, containsAll(<String>['AuthInterceptor', 'TokenRefreshInterceptor']));
     });
   });
 
-  // Regression: retries and the token-refresh POST used to go through fresh Dio instances on the
+  // Regression: retries used to go through fresh Dio instances on the
   // default adapter, so with certificate pinning configured they were checked against system trust
   // only. Every request the client sends must go through the adapter installed on its Dio.
   group('ApiClient transport', () {
@@ -827,6 +838,7 @@ void main() {
       // Production chain (no MockInterceptor) with pinning configured. The fake replaces the pinned
       // adapter in its slot, so it sees every request that adapter would carry.
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -850,25 +862,6 @@ void main() {
       expect(response.statusCode, 200);
       const sent = (method: 'GET', path: '/api/transport/retry', authorization: 'Bearer MOCK_TOKEN', body: null);
       expect(adapter.requests, [sent, sent]);
-      expect(adapter.closed, isFalse);
-    });
-
-    test('sends the token refresh POST through the client adapter', () async {
-      TestEnv.authenticate();
-      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'REFRESH_TOKEN');
-      adapter
-        ..reply(401)
-        ..reply(200, '{"id_token":"NEW_JWT","refresh_token":"NEW_REFRESH"}')
-        ..reply(200, '{"ok":true}');
-
-      final response = await client.get('/api/transport/refresh');
-
-      expect(response.statusCode, 200);
-      expect(adapter.requests, [
-        (method: 'GET', path: '/api/transport/refresh', authorization: 'Bearer MOCK_TOKEN', body: null),
-        (method: 'POST', path: '/token/refresh', authorization: null, body: '{"refresh_token":"REFRESH_TOKEN"}'),
-        (method: 'GET', path: '/api/transport/refresh', authorization: 'Bearer NEW_JWT', body: null),
-      ]);
       expect(adapter.closed, isFalse);
     });
 
@@ -966,6 +959,7 @@ void main() {
       port = (await startLoopbackTlsServer(body: cached)).port;
       // Production chain on system trust, without pins.
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://127.0.0.1:$port',
@@ -1045,6 +1039,7 @@ void main() {
     Future<ApiClient> clientOfCuttingServer({required bool tls, required _Cut cut, required bool reset}) async {
       final server = await _startCuttingServer(body: cached, cut: cut, reset: reset, tls: tls);
       final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: AppConfig(
           environment: Environment.prod,
           apiBaseUrl: '${tls ? 'https' : 'http'}://127.0.0.1:${server.port}',
@@ -1118,6 +1113,7 @@ void main() {
 
     setUp(() {
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1165,14 +1161,16 @@ void main() {
   // bounded so a regression fails the test instead of hanging the suite.
   group('ApiClient token refresh', () {
     const bound = Duration(seconds: 5);
-    const rotatedTokens = '{"id_token":"NEW_JWT","refresh_token":"NEW_REFRESH"}';
+    late _CountingRotation rotation;
     late ApiClient client;
     late _FakeHttpClientAdapter adapter;
     late int sessionExpiredCalls;
 
     setUp(() async {
       sessionExpiredCalls = 0;
+      rotation = _CountingRotation();
       client = ApiClient(
+        tokenRotation: rotation,
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1191,7 +1189,6 @@ void main() {
     test('fails with UnauthorizedException and expires the session once when the retry gets 401 again', () async {
       adapter
         ..reply(401)
-        ..reply(200, rotatedTokens)
         ..reply(401, 'Unauthorized');
 
       await expectLater(client.get('/api/refresh/retry-401').timeout(bound), throwsA(isA<UnauthorizedException>()));
@@ -1199,15 +1196,14 @@ void main() {
       expect(sessionExpiredCalls, 1);
       expect(adapter.requests.map((r) => '${r.method} ${r.path} ${r.authorization}'), [
         'GET /api/refresh/retry-401 Bearer MOCK_TOKEN',
-        'POST /token/refresh null',
         'GET /api/refresh/retry-401 Bearer NEW_JWT',
       ], reason: 'a second 401 must not start another refresh');
+      expect(rotation.rotations, 1);
     });
 
     test('fails with the server error when the retry gets 500, and later failures still complete', () async {
       adapter
         ..reply(401)
-        ..reply(200, rotatedTokens)
         ..reply(500, 'boom');
 
       await expectLater(
@@ -1228,35 +1224,11 @@ void main() {
       );
     });
 
-    // Regression: a refresh request that failed in transport, such as on a certificate pin mismatch, was logged as
-    // "Token refresh request failed: null", because a DioException that only wraps the transport error has no message.
-    // The refresh request skips the client's interceptors, so this line is the only record of why the session ended.
-    test('logs the type and the cause when the refresh request fails in transport', () async {
-      adapter
-        ..reply(401)
-        ..fail(const CertificatePinningException('api.example.test', 443));
-      final lines = _capturePrintedLines();
-
-      await expectLater(client.get('/api/refresh/pin-mismatch').timeout(bound), throwsA(isA<UnauthorizedException>()));
-
-      expect(sessionExpiredCalls, 1);
-      expect(
-        lines,
-        anyElement(
-          endsWith(
-            'TokenRefreshInterceptor : Token refresh request failed (type: unknown, message: null, error: '
-            'CertificatePinningException: the certificate of api.example.test:443 matches no configured pin)',
-          ),
-        ),
-      );
-    });
-
     // Regression: when the retry that follows a successful refresh failed in transport, the line read
     // "Retry after refresh failed (Dio): null", for the same reason.
     test('logs the type and the cause when the retry after a refresh fails in transport', () async {
       adapter
         ..reply(401)
-        ..reply(200, rotatedTokens)
         ..fail(const CertificatePinningException('api.example.test', 443));
       final lines = _capturePrintedLines();
 
@@ -1279,9 +1251,8 @@ void main() {
 
     test('refreshes once when several requests get 401 at the same time', () async {
       final routing = _RoutingHttpClientAdapter(
-        (options) => switch ((options.method, options.headers['Authorization'])) {
-          ('POST', _) => (200, rotatedTokens),
-          (_, 'Bearer NEW_JWT') => (200, '{"ok":true}'),
+        (options) => switch (options.headers['Authorization']) {
+          'Bearer NEW_JWT' => (200, '{"ok":true}'),
           _ => (401, ''),
         },
       );
@@ -1292,7 +1263,7 @@ void main() {
       ]).timeout(bound);
 
       expect(responses.map((r) => r.statusCode), [200, 200, 200]);
-      expect(routing.requests.where((r) => r.startsWith('POST /token/refresh')), hasLength(1));
+      expect(rotation.rotations, 1);
       expect(routing.requests.where((r) => r.endsWith('Bearer NEW_JWT')), hasLength(3));
       expect(sessionExpiredCalls, 0);
     });
@@ -1305,6 +1276,7 @@ void main() {
     test('masks an email in the request path on every line while the server answers 503', () {
       fakeAsync((async) {
         final client = ApiClient(
+          tokenRotation: const RefusingTokenRotation(),
           appConfig: const AppConfig(
             environment: Environment.prod,
             apiBaseUrl: 'https://api.example.test',
@@ -1358,6 +1330,7 @@ void main() {
     setUp(() {
       AppLogger.configure(isProduction: true);
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1407,9 +1380,7 @@ void main() {
       adapter.reply(401, jsonEncode({'status': 401, 'detail': 'OTP 493817 expired for otp.user@example.com'}));
       final lines = _capturePrintedLines();
 
-      final text = await failureText(
-        client.post('/authenticate/verify-otp', {'email': 'otp.user@example.com', 'otp': '493817'}),
-      );
+      final text = await failureText(client.post('/codes/verify', {'email': 'otp.user@example.com', 'otp': '493817'}));
 
       expect([text, ...lines], everyElement(isNot(contains('493817'))));
       expect(text, allOf(startsWith('Unauthorized: '), contains('expired for')));
@@ -1431,7 +1402,9 @@ void main() {
       );
       final lines = _capturePrintedLines();
 
-      final text = await failureText(client.post('/authenticate', {'username': 'admin', 'password': 'S3cret!pw'}));
+      final text = await failureText(
+        client.post('/db/test-connection', {'username': 'admin', 'password': 'S3cret!pw'}),
+      );
 
       expect([text, ...lines], everyElement(isNot(contains('S3cret!pw'))));
       expect(text, allOf(contains('HTTP 422: '), contains('at least 12 characters')));
@@ -1441,7 +1414,9 @@ void main() {
       adapter.reply(400, 'Password S3cret!pw is too weak');
       final lines = _capturePrintedLines();
 
-      final text = await failureText(client.post('/authenticate', {'username': 'admin', 'password': 'S3cret!pw'}));
+      final text = await failureText(
+        client.post('/db/test-connection', {'username': 'admin', 'password': 'S3cret!pw'}),
+      );
 
       expect([text, ...lines], everyElement(isNot(contains('S3cret!pw'))));
       expect(text, allOf(startsWith('Invalid Request: Password '), endsWith(' is too weak')));
@@ -1472,6 +1447,7 @@ void main() {
       status = ConnectivityStatus.online;
       sessionExpiredCalls = 0;
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1617,6 +1593,7 @@ void main() {
       // The server answers the first GET and closes the connection of the second while its body is read.
       final server = await _startCuttingServer(body: cached, cut: _Cut.midBody, reset: false, tls: false);
       final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'http://127.0.0.1:${server.port}',
@@ -1649,6 +1626,7 @@ void main() {
     test('answers the GET and logs the key and the size of the entry as an error', () async {
       SharedPreferencesStorePlatform.instance = _FullCacheStore();
       final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1688,6 +1666,7 @@ void main() {
 
     setUp(() {
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1803,6 +1782,7 @@ void main() {
 
     setUp(() {
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1853,6 +1833,7 @@ void main() {
       const previousUsersData = '[{"login":"user-a","email":"a@example.test"}]';
       final server = _SlowServerAdapter(previousUsersData);
       final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://api.example.test',
@@ -1892,6 +1873,7 @@ void main() {
       ResilienceInterceptor.instance.resetAll();
       adapter = _OptionsRecordingAdapter();
       client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
         appConfig: const AppConfig(
           environment: Environment.prod,
           apiBaseUrl: 'https://studio.example.test/api',
@@ -1988,4 +1970,26 @@ class _OptionsRecordingAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+/// The identity provider: every refresh gives NEW_JWT and NEW_REFRESH, counted in [rotations].
+class _CountingRotation implements TokenRotation {
+  var rotations = 0;
+
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async {
+    rotations++;
+    return const TokensRotated(accessToken: 'NEW_JWT', refreshToken: 'NEW_REFRESH');
+  }
+}
+
+/// The last interceptor of the chain: records each request as it would leave for the server, and answers it with 200.
+class _TestRequestHandler extends Interceptor {
+  final requests = <RequestOptions>[];
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    requests.add(options);
+    handler.resolve(Response(requestOptions: options, statusCode: 200, data: '{}'));
+  }
 }

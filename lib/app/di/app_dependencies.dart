@@ -2,14 +2,12 @@ import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_i
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
-import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
@@ -36,11 +34,13 @@ import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart'
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
+/// What the app is built from. The app signs in only through the OpenID Connect provider; `main_local.dart` swaps the
+/// provider for a debug-only double (`LocalSignInDependencies`), which `main_prod.dart` never imports.
 class AppDependencies {
   const AppDependencies({
+    required this.authMode,
     this.appConfig = const AppConfig.dev(),
     this.projectLinks = const ProjectLinks(),
-    this.authMode = const JwtAuthMode(),
   });
 
   final AppConfig appConfig;
@@ -48,7 +48,7 @@ class AppDependencies {
   /// The project's repository, documentation and sponsor links that the app shows.
   final ProjectLinks projectLinks;
 
-  /// How the user signs in, read from `AUTH_PROVIDER` at bootstrap.
+  /// The OpenID Connect settings of the build, read from the `OIDC_*` defines at bootstrap.
   final AuthMode authMode;
 
   /// Returns the analytics implementation appropriate for the active
@@ -72,18 +72,9 @@ class AppDependencies {
   /// `AUTH_REQUIRED` code counts; any other 401 reaches the caller with the session kept.
   SessionRefusedPredicate get sessionRefusedPredicate => isStudioSessionRefused;
 
-  /// [onSessionExpired] runs when a 401 cannot be fixed by a token refresh; the caller ends the session there.
-  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) => ApiClient(
-    appConfig: appConfig,
-    secureStorage: secureStorage,
-    onSessionExpired: onSessionExpired,
-    isSessionExpired: sessionExpiredPredicate,
-    isSessionRefused: sessionRefusedPredicate,
-  );
-
-  /// The [ApiClient] of an `oidc` build, which refreshes the session through [tokenRotation] instead of the backend's
-  /// refresh endpoint. [onSessionExpired] runs when a 401 cannot be fixed by a token refresh.
-  ApiClient createOidcApiClient(
+  /// The [ApiClient], which refreshes the session through [tokenRotation] at the identity provider. [onSessionExpired]
+  /// runs when a 401 cannot be fixed by a token refresh; the caller ends the session there.
+  ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     required TokenRotation tokenRotation,
@@ -96,31 +87,22 @@ class AppDependencies {
     isSessionRefused: sessionRefusedPredicate,
   );
 
-  IAccountRepository createAccountRepository(ApiClient apiClient) => AccountRepository(apiClient);
-
   /// The logout clears the session through [sessionRepository], as the idle timeout and an unrefreshable 401 do.
-  IAuthRepository createAuthRepository(IAuthSessionRepository sessionRepository, ApiClient apiClient) =>
-      LoginRepository(sessionRepository: sessionRepository, apiClient: apiClient);
+  IAuthRepository createAuthRepository(IAuthSessionRepository sessionRepository) =>
+      LoginRepository(sessionRepository: sessionRepository);
 
-  /// Ending a session also clears the cache of GET responses that [ApiClient] keeps in SharedPreferences. Only an
-  /// `oidc` build stores the OIDC ID token and the access token expiry.
-  IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) => AuthSessionRepository(
-    secureStorage: secureStorage,
-    cacheStorage: SharedPrefsCacheStorage(),
-    oidcKeys: authMode.usesOidc,
-  );
+  /// Ending a session also clears the cache of GET responses that [ApiClient] keeps in SharedPreferences.
+  IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) =>
+      AuthSessionRepository(secureStorage: secureStorage, cacheStorage: SharedPrefsCacheStorage());
 
-  /// The OpenID Connect client of an `oidc` build.
+  /// The OpenID Connect client, which talks to the identity provider.
   IOidcClient createOidcClient(OidcSettings settings) => OidcClient(settings: settings);
 
-  /// The single sign-on of an `oidc` build, which stores the session through [sessionRepository].
-  ISsoAuthRepository createSsoAuthRepository(
-    IOidcClient client,
-    IAuthSessionRepository sessionRepository,
-    OidcSettings settings,
-  ) => SsoAuthRepository(client: client, sessionRepository: sessionRepository, settings: settings);
+  /// The single sign-on, which stores the session through [sessionRepository].
+  ISsoAuthRepository createSsoAuthRepository(IOidcClient client, IAuthSessionRepository sessionRepository) =>
+      SsoAuthRepository(client: client, sessionRepository: sessionRepository);
 
-  /// The token refresh of an `oidc` build, through [client] at the provider's token endpoint.
+  /// The token refresh, through [client] at the provider's token endpoint.
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
       OidcTokenRotation(client: client, secureStorage: secureStorage);
 

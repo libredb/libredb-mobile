@@ -1,5 +1,6 @@
 import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -39,6 +40,9 @@ class _InitCalls {
   }
 }
 
+/// No test here signs in.
+const _authMode = OidcMisconfiguredAuthMode('these tests never sign in');
+
 void main() {
   group('SentryStart.gate', () {
     test('keeps the config when the host app started the native SDK', () async {
@@ -47,7 +51,10 @@ void main() {
       final config = await start.gate(_prodWithDsn);
 
       expect(config.sentryDsn, _dsn);
-      expect(const AppDependencies(appConfig: _prodWithDsn).createAnalyticsService(), isA<SentryAnalyticsService>());
+      expect(
+        const AppDependencies(appConfig: _prodWithDsn, authMode: _authMode).createAnalyticsService(),
+        isA<SentryAnalyticsService>(),
+      );
     });
 
     // A release build whose host did not start the native SDK runs as without a DSN: no Dart SDK, and the log
@@ -60,7 +67,10 @@ void main() {
       expect(config.sentryDsn, isNull);
       expect(config.environment, Environment.prod);
       expect(config.apiBaseUrl, _prodWithDsn.apiBaseUrl);
-      expect(AppDependencies(appConfig: config).createAnalyticsService(), isA<LogAnalyticsService>());
+      expect(
+        AppDependencies(appConfig: config, authMode: _authMode).createAnalyticsService(),
+        isA<LogAnalyticsService>(),
+      );
     });
 
     test('does not ask the host when there is no DSN', () async {

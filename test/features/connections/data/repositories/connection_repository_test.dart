@@ -12,6 +12,7 @@ import 'package:libredb_mobile/features/connections/domain/entities/connection_t
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -186,7 +187,7 @@ void main() {
         ],
         'cacheHint': 60000,
       });
-    final client = ApiClient(appConfig: _prodConfig);
+    final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
 
     late Result<ManagedConnections> result;
@@ -205,7 +206,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
-      final client = ApiClient(appConfig: _prodConfig);
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = ConnectionRepository(client);
     });

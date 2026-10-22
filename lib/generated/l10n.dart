@@ -68,21 +68,6 @@ class S {
     return Intl.message('Login', name: 'login', desc: '', args: []);
   }
 
-  /// `First Name`
-  String get first_name {
-    return Intl.message('First Name', name: 'first_name', desc: '', args: []);
-  }
-
-  /// `Last Name`
-  String get last_name {
-    return Intl.message('Last Name', name: 'last_name', desc: '', args: []);
-  }
-
-  /// `Email`
-  String get email {
-    return Intl.message('Email', name: 'email', desc: '', args: []);
-  }
-
   /// `Active`
   String get active {
     return Intl.message('Active', name: 'active', desc: '', args: []);
@@ -113,34 +98,9 @@ class S {
     return Intl.message('Required Field', name: 'required_field', desc: '', args: []);
   }
 
-  /// `Field must be at least 2 characters long`
-  String get min_length_2 {
-    return Intl.message('Field must be at least 2 characters long', name: 'min_length_2', desc: '', args: []);
-  }
-
-  /// `Field must be at least 4 characters long`
-  String get min_length_4 {
-    return Intl.message('Field must be at least 4 characters long', name: 'min_length_4', desc: '', args: []);
-  }
-
-  /// `Field cannot be more than 20 characters long`
-  String get max_length_20 {
-    return Intl.message('Field cannot be more than 20 characters long', name: 'max_length_20', desc: '', args: []);
-  }
-
-  /// `Field cannot be more than 100 characters long`
-  String get max_length_100 {
-    return Intl.message('Field cannot be more than 100 characters long', name: 'max_length_100', desc: '', args: []);
-  }
-
   /// `List`
   String get list {
     return Intl.message('List', name: 'list', desc: '', args: []);
-  }
-
-  /// `Email must be a valid email address`
-  String get email_pattern {
-    return Intl.message('Email must be a valid email address', name: 'email_pattern', desc: '', args: []);
   }
 
   /// `Turkish`
@@ -176,21 +136,6 @@ class S {
   /// `Account`
   String get account {
     return Intl.message('Account', name: 'account', desc: '', args: []);
-  }
-
-  /// `Change Password`
-  String get change_password {
-    return Intl.message('Change Password', name: 'change_password', desc: '', args: []);
-  }
-
-  /// `Ensure your account is using a long, random password to stay secure.`
-  String get change_password_description {
-    return Intl.message(
-      'Ensure your account is using a long, random password to stay secure.',
-      name: 'change_password_description',
-      desc: '',
-      args: [],
-    );
   }
 
   /// `Select Language`
@@ -233,119 +178,14 @@ class S {
     );
   }
 
-  /// `No changes made`
-  String get no_changes_made {
-    return Intl.message('No changes made', name: 'no_changes_made', desc: '', args: []);
-  }
-
   /// `No Data`
   String get no_data {
     return Intl.message('No Data', name: 'no_data', desc: '', args: []);
   }
 
-  /// `Username`
-  String get login_user_name {
-    return Intl.message('Username', name: 'login_user_name', desc: '', args: []);
-  }
-
-  /// `Password`
-  String get login_password {
-    return Intl.message('Password', name: 'login_password', desc: '', args: []);
-  }
-
-  /// `Current Password`
-  String get current_password {
-    return Intl.message('Current Password', name: 'current_password', desc: '', args: []);
-  }
-
-  /// `New Password`
-  String get new_password {
-    return Intl.message('New Password', name: 'new_password', desc: '', args: []);
-  }
-
-  /// `Forgot Password`
-  String get password_forgot {
-    return Intl.message('Forgot Password', name: 'password_forgot', desc: '', args: []);
-  }
-
-  /// `Register`
-  String get register {
-    return Intl.message('Register', name: 'register', desc: '', args: []);
-  }
-
-  /// `Password cannot be more than {max} characters long`
-  String password_max_length(int max) {
-    return Intl.message(
-      'Password cannot be more than $max characters long',
-      name: 'password_max_length',
-      desc: '',
-      args: [max],
-    );
-  }
-
-  /// `Password must be at least {min} characters long`
-  String password_min_length(int min) {
-    return Intl.message(
-      'Password must be at least $min characters long',
-      name: 'password_min_length',
-      desc: '',
-      args: [min],
-    );
-  }
-
-  /// `Login`
-  String get login_button {
-    return Intl.message('Login', name: 'login_button', desc: '', args: []);
-  }
-
   /// `Loading...`
   String get loading {
     return Intl.message('Loading...', name: 'loading', desc: '', args: []);
-  }
-
-  /// `Send Email`
-  String get email_send {
-    return Intl.message('Send Email', name: 'email_send', desc: '', args: []);
-  }
-
-  /// `Login with Email`
-  String get login_with_email {
-    return Intl.message('Login with Email', name: 'login_with_email', desc: '', args: []);
-  }
-
-  /// `Send OTP Code`
-  String get send_otp_code {
-    return Intl.message('Send OTP Code', name: 'send_otp_code', desc: '', args: []);
-  }
-
-  /// `Invalid email address`
-  String get invalid_email {
-    return Intl.message('Invalid email address', name: 'invalid_email', desc: '', args: []);
-  }
-
-  /// `Resend OTP Code`
-  String get resend_otp_code {
-    return Intl.message('Resend OTP Code', name: 'resend_otp_code', desc: '', args: []);
-  }
-
-  /// `Verify OTP Code`
-  String get verify_otp_code {
-    return Intl.message('Verify OTP Code', name: 'verify_otp_code', desc: '', args: []);
-  }
-
-  /// `Only numbers are allowed`
-  String get only_numbers {
-    return Intl.message('Only numbers are allowed', name: 'only_numbers', desc: '', args: []);
-  }
-
-  /// `OTP must be 6 characters long`
-  String get otp_length {
-    return Intl.message('OTP must be 6 characters long', name: 'otp_length', desc: '', args: []);
-  }
-
-  /// `OTP Code`
-  String get otp_code {
-    return Intl.message('OTP Code', name: 'otp_code', desc: '', args: []);
   }
 
   /// `Theme`
@@ -433,21 +273,6 @@ class S {
     return Intl.message('Invalid access token', name: 'error_auth_invalid_access_token', desc: '', args: []);
   }
 
-  /// `Login failed`
-  String get error_auth_login_failed {
-    return Intl.message('Login failed', name: 'error_auth_login_failed', desc: '', args: []);
-  }
-
-  /// `Could not send the OTP code`
-  String get error_auth_send_otp_failed {
-    return Intl.message('Could not send the OTP code', name: 'error_auth_send_otp_failed', desc: '', args: []);
-  }
-
-  /// `OTP validation failed`
-  String get error_auth_otp_validation {
-    return Intl.message('OTP validation failed', name: 'error_auth_otp_validation', desc: '', args: []);
-  }
-
   /// `Could not save the session`
   String get error_auth_session_persist_failed {
     return Intl.message('Could not save the session', name: 'error_auth_session_persist_failed', desc: '', args: []);
@@ -463,26 +288,6 @@ class S {
     return Intl.message('No authorities found', name: 'error_user_no_authorities', desc: '', args: []);
   }
 
-  /// `Both current and new password are required`
-  String get error_account_password_required {
-    return Intl.message(
-      'Both current and new password are required',
-      name: 'error_account_password_required',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `New password must be different from current password`
-  String get error_account_passwords_same {
-    return Intl.message(
-      'New password must be different from current password',
-      name: 'error_account_passwords_same',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Could not change the language`
   String get error_settings_change_language_failed {
     return Intl.message(
@@ -496,21 +301,6 @@ class S {
   /// `Something went wrong`
   String get error_generic {
     return Intl.message('Something went wrong', name: 'error_generic', desc: '', args: []);
-  }
-
-  /// `Access denied`
-  String get forbidden_title {
-    return Intl.message('Access denied', name: 'forbidden_title', desc: '', args: []);
-  }
-
-  /// `You do not have permission to view this page.`
-  String get forbidden_message {
-    return Intl.message('You do not have permission to view this page.', name: 'forbidden_message', desc: '', args: []);
-  }
-
-  /// `Back to home`
-  String get forbidden_back_home {
-    return Intl.message('Back to home', name: 'forbidden_back_home', desc: '', args: []);
   }
 
   /// `The connection could not be verified as secure, so it was blocked. Try again later or on another network.`
@@ -718,26 +508,6 @@ class S {
     return Intl.message('Welcome back', name: 'login_welcome_title', desc: '', args: []);
   }
 
-  /// `Enter your credentials to access your account`
-  String get login_welcome_subtitle {
-    return Intl.message(
-      'Enter your credentials to access your account',
-      name: 'login_welcome_subtitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `or`
-  String get login_or {
-    return Intl.message('or', name: 'login_or', desc: '', args: []);
-  }
-
-  /// `Don't have an account? `
-  String get login_no_account {
-    return Intl.message('Don\'t have an account? ', name: 'login_no_account', desc: '', args: []);
-  }
-
   /// `Switch to light mode`
   String get login_switch_to_light_mode {
     return Intl.message('Switch to light mode', name: 'login_switch_to_light_mode', desc: '', args: []);
@@ -748,49 +518,14 @@ class S {
     return Intl.message('Switch to dark mode', name: 'login_switch_to_dark_mode', desc: '', args: []);
   }
 
-  /// `Enter your email to receive OTP code`
-  String get login_otp_email_instructions {
-    return Intl.message(
-      'Enter your email to receive OTP code',
-      name: 'login_otp_email_instructions',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `OTP sent to {email}`
-  String otp_sent_to_email(String email) {
-    return Intl.message('OTP sent to $email', name: 'otp_sent_to_email', desc: '', args: [email]);
-  }
-
   /// `Source Available`
   String get community_source_available {
     return Intl.message('Source Available', name: 'community_source_available', desc: '', args: []);
   }
 
-  /// `Create your account`
-  String get register_subtitle {
-    return Intl.message('Create your account', name: 'register_subtitle', desc: '', args: []);
-  }
-
-  /// `Enter your email address and we'll send you a link to reset your password.`
-  String get forgot_password_description {
-    return Intl.message(
-      'Enter your email address and we\'ll send you a link to reset your password.',
-      name: 'forgot_password_description',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Manage your account preferences`
   String get settings_subtitle {
     return Intl.message('Manage your account preferences', name: 'settings_subtitle', desc: '', args: []);
-  }
-
-  /// `Update your password securely`
-  String get settings_change_password_subtitle {
-    return Intl.message('Update your password securely', name: 'settings_change_password_subtitle', desc: '', args: []);
   }
 
   /// `Appearance`
@@ -895,16 +630,6 @@ class S {
     return Intl.message('Warm stone, rich and inviting', name: 'theme_palette_sunset_description', desc: '', args: []);
   }
 
-  /// `Show password`
-  String get password_show {
-    return Intl.message('Show password', name: 'password_show', desc: '', args: []);
-  }
-
-  /// `Hide password`
-  String get password_hide {
-    return Intl.message('Hide password', name: 'password_hide', desc: '', args: []);
-  }
-
   /// `LibreDB`
   String get app_title {
     return Intl.message('LibreDB', name: 'app_title', desc: '', args: []);
@@ -925,16 +650,6 @@ class S {
     return Intl.message(
       'The identity provider could not be reached. Try again later, or contact your administrator if this continues.',
       name: 'error_auth_oidc_discovery',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Your account has no role that allows access to this app. Ask your administrator.`
-  String get error_auth_oidc_no_role {
-    return Intl.message(
-      'Your account has no role that allows access to this app. Ask your administrator.',
-      name: 'error_auth_oidc_no_role',
       desc: '',
       args: [],
     );
@@ -1095,6 +810,36 @@ class S {
     return Intl.message(
       'Studio cannot reach the identity provider right now. Try again in a moment.',
       name: 'error_studio_identity_provider_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio did not accept this sign-in. Try again, or ask an administrator for access.`
+  String get error_studio_account_refused {
+    return Intl.message(
+      'Studio did not accept this sign-in. Try again, or ask an administrator for access.',
+      name: 'error_studio_account_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This account has no role in Studio. Ask an administrator to give it one.`
+  String get error_studio_account_has_no_role {
+    return Intl.message(
+      'This account has no role in Studio. Ask an administrator to give it one.',
+      name: 'error_studio_account_has_no_role',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio cannot tell who this account is. Ask an administrator to check the account's email and username.`
+  String get error_studio_account_has_no_identity {
+    return Intl.message(
+      'Studio cannot tell who this account is. Ask an administrator to check the account\'s email and username.',
+      name: 'error_studio_account_has_no_identity',
       desc: '',
       args: [],
     );

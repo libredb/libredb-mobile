@@ -242,8 +242,8 @@ real business logic.
 with a type matcher and an explicit count:
 
 ```dart
-verify(() => bloc.add(any(that: isA<ChangePasswordChanged>()))).called(1);   // action fired
-verifyNever(() => bloc.add(any(that: isA<ChangePasswordChanged>())));        // must NOT fire (e.g. invalid form)
+verify(() => bloc.add(any(that: isA<SsoSignInRequested>()))).called(1);   // action fired
+verifyNever(() => bloc.add(any(that: isA<SsoSignInRequested>())));        // must NOT fire (e.g. a misconfigured build)
 ```
 
 Do **not** use `verify(() => bloc.add(any())).called(...)` or `.called(greaterThan(0))`:
@@ -271,9 +271,9 @@ Awaiting the request in the test body is worse: nothing pumps while the body wai
 Start the request without awaiting it, pump with a duration, then check or await the result:
 
 ```dart
-TestEnv.authenticate(); // the secure store is empty at the start of every test, and /account needs a token
+TestEnv.authenticate(); // the secure store is empty at the start of every test, and /auth/me needs a token
 Response<String>? response;
-unawaited(TestEnv.apiClient().get('/account').then((value) => response = value));
+unawaited(TestEnv.apiClient().get('/auth/me').then((value) => response = value));
 await tester.pump(Duration.zero); // any duration fires the timers that are due, Duration.zero included
 
 expect(response, isNotNull, reason: 'the mock request never completed');
@@ -313,8 +313,8 @@ singleton or `setTestInstance`.
 ### End-to-end smoke
 
 `test/integration/app_smoke_test.dart` boots the **whole app** in mock mode
-(`App`'s default `AppDependencies` = `AppConfig.dev()`, which serves
-`assets/mock/*.json`) and drives cold-start → login → connection list, exercising
+(`LocalSignInDependencies()`, as `main_local.dart` passes it: `AppConfig.dev()`, which serves
+`assets/mock/*.json`, and the local sign-in in place of Keycloak) and drives cold-start → single sign-on → connection list, exercising
 routing + DI + BLoCs + the mock HTTP layer together. It is a full-app widget test
 (`TestWidgetsFlutterBinding`), so it runs headless under the normal
 `flutter test` — no device, no `integration_test` package, no CI changes. The
@@ -396,7 +396,7 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 - **`credential_to_string_test.dart`** fails if a class in `lib/` has a `String` field whose name contains one of `sensitiveBodyKeySubstrings`, such as `password`, `otpCode` or `refreshToken`, and its `toString` is not overridden, prints such a field, or prints the props.
   A log line, the dev console and a Sentry event print an object through `toString`, and an Equatable prints its props there whenever `stringify` is on, the default of every debug build.
   A token may be printed through `maskToken`; a password or an OTP is printed as `secretMask`.
-- **`oidc_platform_setup_test.dart`** guards the platform setup of the `oidc` mode ([`docs/oidc.md`](oidc.md)).
+- **`oidc_platform_setup_test.dart`** guards the platform setup of the single sign-on ([`docs/oidc.md`](oidc.md)).
   It fails if `defaultConfig` in `android/app/build.gradle.kts` does not set `manifestPlaceholders["oidcRedirectScheme"]` to `OidcSettings.defaultRedirectScheme`: the `oidc_android` manifest merge needs the placeholder in every build, and the redirect never reaches the app when it differs from the scheme the Dart side sends.
   It fails if a line in `lib/` names a client secret in any spelling (`client_secret`, `OIDC_CLIENT_SECRET`, `clientSecret`, `clientSecretPost`), except the scrubber's doc comment, or if any `OidcClientAuthentication` in `lib/` is other than `.none`, since the app is a public PKCE client.
   It fails if any `android/app/src/*/AndroidManifest.xml` mentions the redirect scheme or the `oidcRedirectScheme` placeholder: an intent filter there would let Android offer `MainActivity` for the callback instead of the package's redirect activity.
@@ -405,10 +405,11 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   It fails if `android/app/build.gradle.kts` passes `SENTRY_DSN` to the native SDK other than through the check on the target file name, or if that file is not the only entry point that selects the prod environment, and if `MainActivity.kt` stops answering the channel `nativeSdkReady` asks.
   The logic of the two copies is held equal by `test/fixtures/native_scrub_cases.json` and `test/fixtures/native_scrub_map_cases.json`, which the Dart tests and the Android JVM tests (`android/app/src/test/kotlin`) both run; see "Running tests" for the JVM command.
 
-The `oidc` mode has more guards next to the code they guard:
+The single sign-on has more guards next to the code they guard:
 
-- `test/app/di/app_scope_test.dart` fails if a `jwt` build creates or provides an OIDC client, and `test/app/di/app_dependencies_test.dart` if its session repository touches an OIDC key.
-- `test/features/auth/data/repositories/auth_session_repository_impl_test.dart` fails if the session clear of an `oidc` build leaves the OIDC ID token or the access token expiry behind, since the clear deletes keys one by one and is not exhaustive.
+- `test/app/di/app_scope_test.dart` fails if a misconfigured build creates or provides an OIDC client.
+- `test/architecture/local_sign_in_test.dart` fails if `main_prod.dart` imports the debug-only local sign-in of `main_local.dart`, directly or not.
+- `test/features/auth/data/repositories/auth_session_repository_impl_test.dart` fails if the session clear leaves the OIDC ID token or the access token expiry behind, since the clear deletes keys one by one and is not exhaustive.
 - `test/app/router/app_router_test.dart` fails if a callback URL such as `/oauth2redirect?code=...&state=...` becomes a router location or a `returnUrl`, since the router logs locations.
 - `test/features/auth/sso_log_hygiene_test.dart` drives a full sign-in, refresh, logout and pushed callback route against the fake provider of `test/infrastructure/auth/oidc/support/fake_provider.dart`, and fails if AppLogger, `printedLines` or a `package:logging` record shows a token, the code, the verifier, `state` or the nonce.
 

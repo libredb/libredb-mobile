@@ -34,7 +34,6 @@ class ResponsiveScaffold extends StatelessWidget {
     return switch (segment) {
       'connections' => l10n.connections,
       'settings' => l10n.settings,
-      'change-password' => l10n.change_password,
       _ => segment.replaceFirst(segment[0], segment[0].toUpperCase()),
     };
   }

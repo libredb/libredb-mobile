@@ -6,11 +6,8 @@ import 'package:libredb_mobile/infrastructure/http/api_origin.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
-import 'package:libredb_mobile/infrastructure/http/token_rotation.dart' as token_rotation show defaultRefreshDio;
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
-
-export 'package:libredb_mobile/infrastructure/http/token_rotation.dart' show RefreshDioFactory;
 
 /// HTTP auth header shape, isolated as named constants: these are how
 /// this layer writes the header, not a cross-feature contract.
@@ -68,21 +65,19 @@ final class _SessionEnded extends _RefreshOutcome {
 /// Which 401 for a request sent again after a refresh ends the session is
 /// [SessionRefusedPredicate]'s call, also [isUnauthorized] by default; any
 /// other 401 then reaches the caller and the session is kept.
-/// The refresh itself is a [TokenRotation]: [BackendTokenRotation], the
-/// backend's refresh endpoint, unless another one is given. A rotation
-/// whose server cannot be reached ([RotationUnavailable]) keeps the
-/// session and fails the request as a connection error.
+/// The refresh itself is a [TokenRotation], at the identity provider's
+/// token endpoint. A rotation whose server cannot be reached
+/// ([RotationUnavailable]) keeps the session and fails the request as a
+/// connection error.
 ///
-/// A 401 from a public endpoint ([isPublicEndpoint]) other than the refresh
-/// endpoint is passed on as it is: it rejects the credentials in the request,
-/// not an expired token. A 401 from the refresh endpoint still ends the
-/// session.
+/// A 401 from a public endpoint ([isPublicEndpoint]) is passed on as it is:
+/// the request carried no token, so the 401 is not about the session.
 ///
 /// The refresh request is coalesced via a shared in-flight [Future].
 /// When several requests fail with 401 around the same time the first
 /// one starts the refresh; the rest await the same Future and retry
 /// with the already-rotated token instead of triggering a refresh
-/// storm against the refresh endpoint.
+/// storm against the identity provider.
 ///
 /// A 401 for a request sent under a session that a logout or the end of
 /// the session has wiped since, or is wiping, is neither sent again nor
@@ -92,7 +87,7 @@ final class _SessionEnded extends _RefreshOutcome {
 /// the session the user ended. The requests fail with their 401
 /// ([SessionGeneration]).
 ///
-/// The startup step of an `oidc` build refreshes through the same
+/// The startup step refreshes through the same
 /// [TokenRotation], and it goes on after its time limit, so it can rotate
 /// the session while this refresh is on its way. Before it acts on the
 /// answer, success or failure, the refresh reads the stored refresh token
@@ -129,9 +124,8 @@ class TokenRefreshInterceptor extends Interceptor {
   TokenRefreshInterceptor({
     required Dio dio,
     OnSessionExpired? onSessionExpired,
+    required TokenRotation rotation,
     ISecureStorage? secureStorage,
-    RefreshDioFactory? refreshDioFactory,
-    TokenRotation? rotation,
     SessionExpiredPredicate isSessionExpired = isUnauthorized,
     SessionRefusedPredicate isSessionRefused = isUnauthorized,
     // ignore: prefer_initializing_formals
@@ -139,17 +133,12 @@ class TokenRefreshInterceptor extends Interceptor {
        // ignore: prefer_initializing_formals
        _onSessionExpired = onSessionExpired,
        _secureStorage = secureStorage ?? FlutterSecureStorageAdapter(),
-       // [refreshDioFactory] is the backend rotation's, so it is not used when [rotation] is given.
-       _rotation =
-           rotation ?? BackendTokenRotation(dio: dio, refreshDioFactory: refreshDioFactory ?? defaultRefreshDio),
+       // ignore: prefer_initializing_formals
+       _rotation = rotation,
        // ignore: prefer_initializing_formals
        _isSessionExpired = isSessionExpired,
        // ignore: prefer_initializing_formals
        _isSessionRefused = isSessionRefused;
-
-  /// The default [RefreshDioFactory], which [BackendTokenRotation] uses unless it is given another one: see
-  /// [token_rotation.defaultRefreshDio].
-  static Dio defaultRefreshDio(Dio source) => token_rotation.defaultRefreshDio(source);
 
   /// Typed marker that flags a [RequestOptions] as "already retried
   /// once after a successful refresh." A second 401 on the same
@@ -193,8 +182,7 @@ class TokenRefreshInterceptor extends Interceptor {
     }
 
     // AuthInterceptor sends no token to another origin than the API's, so its 401 is not about the session, and
-    // sending the request again would carry the token there: no refresh, no retry, and no session to end. Checked
-    // first, so a path there that looks like the refresh endpoint ends no session either.
+    // sending the request again would carry the token there: no refresh, no retry, and no session to end.
     if (!isApiOriginRequest(err.requestOptions)) {
       _log.warn('401 from another origin than the API for [{}] {}: no token refresh', [
         err.requestOptions.method,
@@ -204,22 +192,11 @@ class TokenRefreshInterceptor extends Interceptor {
       return;
     }
 
-    // Avoid refreshing on the refresh endpoint itself to prevent infinite loops
     final requestPath = err.requestOptions.path;
-    if (requestPath.contains(refreshEndpointPath)) {
-      _log.warn('Refresh endpoint returned 401 — session expired');
-      _triggerLogout();
-      handler.next(err);
-      return;
-    }
 
     // A public endpoint is sent without a token, so its 401 is not about the
-    // session: no refresh, and no session to end. For sign-in, OTP,
-    // registration and password reset it rejects the credentials or input
-    // in the request, and a refresh here would spend the stored refresh
-    // token on a wrong password and resend the credentials with a fresh
-    // bearer token. The app config is public too: the lifecycle checks read
-    // it before sign-in.
+    // session: no refresh, and no session to end. The app config is public:
+    // the lifecycle checks read it before sign-in.
     if (isPublicEndpoint(err.requestOptions)) {
       _log.debug('401 from public endpoint {}: no token refresh', [requestPath]);
       handler.next(err);
@@ -408,8 +385,8 @@ class TokenRefreshInterceptor extends Interceptor {
       final newIdToken = rotated.accessToken;
       final newRefreshToken = rotated.refreshToken;
       final hasNewRefreshToken = newRefreshToken != null && newRefreshToken.isNotEmpty;
-      // The OIDC ID token and the expiry come only from an OIDC rotation. A key without a new value is not read,
-      // written, rolled back or taken back, so a jwt refresh touches exactly the keys it touched before.
+      // The provider may leave the ID token or the expiry out of its answer. A key without a new value is not read,
+      // written, rolled back or taken back.
       final newOidcIdToken = rotated.oidcIdToken;
       final hasNewOidcIdToken = newOidcIdToken != null && newOidcIdToken.isNotEmpty;
       final expiresAt = rotated.accessTokenExpiresAt;

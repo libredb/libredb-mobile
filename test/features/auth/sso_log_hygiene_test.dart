@@ -30,9 +30,9 @@ import 'package:logging/logging.dart' as logging;
 import '../../infrastructure/auth/oidc/support/fake_provider.dart';
 import '../../support/printed_lines.dart';
 
-final _settings = OidcSettings(issuer: Uri.parse(fakeIssuer), clientId: fakeClientId, roleClaim: 'realm_access.roles');
+final _settings = OidcSettings(issuer: Uri.parse(fakeIssuer), clientId: fakeClientId);
 
-/// The test config in an oidc build whose client talks to [provider] through the fake platform.
+/// The test config whose client talks to [provider] through the fake platform.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.provider) : super(appConfig: const AppConfig.test(), authMode: OidcAuthMode(_settings));
 
@@ -129,7 +129,7 @@ void main() {
     final sessions = dependencies.createAuthSessionRepository(secureStorage);
     final rotation = dependencies.createOidcTokenRotation(client, secureStorage);
     var sessionsExpired = 0;
-    final apiClient = dependencies.createOidcApiClient(
+    final apiClient = dependencies.createApiClient(
       secureStorage,
       onSessionExpired: () async {
         sessionsExpired++;
@@ -140,9 +140,9 @@ void main() {
     final server = _ServerStub();
     final dio = apiClient.instance;
     dio.interceptors.insert(dio.interceptors.length - 1, server);
-    final ssoRepository = dependencies.createSsoAuthRepository(client, sessions, _settings);
+    final ssoRepository = dependencies.createSsoAuthRepository(client, sessions);
     final signOutRepository = SsoSignOutAuthRepository(
-      inner: dependencies.createAuthRepository(sessions, apiClient),
+      inner: dependencies.createAuthRepository(sessions),
       client: client,
       secureStorage: secureStorage,
       settings: _settings,
@@ -162,13 +162,13 @@ void main() {
       // A code exchange the provider refuses.
       final defaultCodeAnswer = provider.codeAnswer;
       provider.codeAnswer = () => FakeProvider.errorAnswer('invalid_grant');
-      expect(await ssoRepository.signIn(), isA<SsoSignInRejected>());
+      expect(await ssoRepository.signIn(), isA<SsoProviderRejected>());
       provider.codeAnswer = defaultCodeAnswer;
 
       // A sign-in, then a 401 that a refresh fixes.
-      expect(await ssoRepository.signIn(), isA<SsoSignInSucceeded>());
+      expect(await ssoRepository.signIn(), isA<SsoProviderSignedIn>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
-      expect((await apiClient.get('/account')).statusCode, 200);
+      expect((await apiClient.get('/connections/managed')).statusCode, 200);
       expect(provider.tokenRequests, hasLength(3));
 
       // A logout that ends the provider session with the refreshed ID token as its hint.
@@ -176,10 +176,12 @@ void main() {
       expect(issued, contains(platform.endSessionRequests.single.idTokenHint));
 
       // A sign-in, then a 401 whose refresh the provider refuses, which ends the session.
-      expect(await ssoRepository.signIn(), isA<SsoSignInSucceeded>());
+      expect(await ssoRepository.signIn(), isA<SsoProviderSignedIn>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
       provider.refreshAnswer = () => FakeProvider.errorAnswer('invalid_grant');
-      apiError = await apiClient.get('/account').then<Object?>((_) => null, onError: (Object error) => error);
+      apiError = await apiClient
+          .get('/connections/managed')
+          .then<Object?>((_) => null, onError: (Object error) => error);
       expect(apiError, isNotNull);
       expect(sessionsExpired, 1);
       expect(await stored(SecureStorageKeys.jwtToken), isNull);

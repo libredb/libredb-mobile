@@ -1,35 +1,3 @@
-import 'package:libredb_mobile/features/account/data/models/change_password.dart';
-import 'package:libredb_mobile/features/auth/data/models/jwt_token.dart';
-import 'package:libredb_mobile/features/account/data/models/user.dart';
-import 'package:libredb_mobile/features/auth/data/models/user_jwt.dart';
-
-final DateTime createdDate = DateTime(2024, 1, 1);
-
 /// Fixed instant for fixtures whose timestamp value is arbitrary. Use this
 /// instead of DateTime.now() so a fixture never depends on wall-clock time.
 final DateTime kTestInstant = DateTime.utc(2024, 1, 1, 12);
-
-/// User fake data with full payload
-final mockUserFullPayload = User(
-  id: '1',
-  login: 'test_login',
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john.doe@example.com',
-  activated: true,
-  langKey: 'en',
-  createdBy: 'admin',
-  createdDate: createdDate,
-  lastModifiedBy: 'admin',
-  lastModifiedDate: createdDate,
-  authorities: const ['ROLE_USER'],
-);
-
-/// PasswordChange fake data with full payload
-const mockPasswordChangePayload = PasswordChangeDTO(currentPassword: 'password', newPassword: 'new_password');
-
-/// JWTToken fake data
-const mockJWTTokenPayload = JWTToken(idToken: 'MOCK_TOKEN');
-
-/// UserJWT fake data with full payload
-const mockUserJWTPayload = UserJWT("username", "password");

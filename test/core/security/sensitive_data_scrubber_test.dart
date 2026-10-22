@@ -153,7 +153,7 @@ void main() {
     });
 
     test('keeps a JSON string without a credential as it is, formatting included', () {
-      const body = '{\n  "login": "admin",\n  "authorities": ["ROLE_ADMIN"]\n}';
+      const body = '{\n  "login": "admin",\n  "authorities": ["admin"]\n}';
 
       expect(scrubBodyText(body), body);
     });

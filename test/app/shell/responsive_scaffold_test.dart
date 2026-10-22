@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
@@ -21,7 +22,7 @@ void main() {
     tester.view.viewPadding = insets;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(const App(language: 'en'));
+    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
     await tester.pumpAndSettle();
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
   }
@@ -79,7 +80,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(language: language));
+    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
     await tester.pumpAndSettle();
     (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(location);
     await tester.pump(const Duration(seconds: 2));
@@ -92,7 +93,6 @@ void main() {
     for (final (location, title) in const [
       (ApplicationRoutesConstants.connectionList, 'Bağlantılar'),
       (ApplicationRoutesConstants.settings, 'Ayarlar'),
-      (ApplicationRoutesConstants.changePassword, 'Şifre Değiştir'),
     ]) {
       testWidgets('shows $title for $location in Turkish', (tester) async {
         await pumpPhoneOn(tester, location, language: 'tr');
@@ -101,11 +101,5 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
-
-    testWidgets('shows the page title of a route with a hyphen in English', (tester) async {
-      await pumpPhoneOn(tester, ApplicationRoutesConstants.changePassword, language: 'en');
-
-      expect(titleInTopBar('Change Password'), findsOneWidget);
-    });
   });
 }

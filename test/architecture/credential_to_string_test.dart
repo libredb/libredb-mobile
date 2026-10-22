@@ -30,7 +30,7 @@ void main() {
 
     expect(
       classes.map((type) => type.name),
-      containsAll(['PasswordChangeDTO', 'LoginFormSubmitted', 'JWTToken']),
+      containsAll(['AuthSession', 'TokensRotated', 'OidcTokens']),
       reason: 'the guard no longer finds the credential fields it was written for, so it reads nothing',
     );
     expect(

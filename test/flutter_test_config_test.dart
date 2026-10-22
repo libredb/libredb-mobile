@@ -18,11 +18,11 @@ void main() {
   for (final run in const ['first', 'second']) {
     testWidgets('loads a mock asset in the $run testWidgets of a file that opts out of the reset', (tester) async {
       String? json;
-      unawaited(rootBundle.loadString('assets/mock/GET_account.json').then((value) => json = value));
+      unawaited(rootBundle.loadString('assets/mock/GET_auth_me.json').then((value) => json = value));
       await tester.pump();
 
       expect(json, isNotNull, reason: 'the asset load never completed');
-      expect(jsonDecode(json!), containsPair('login', 'admin'));
+      expect(jsonDecode(json!), containsPair('authenticated', true));
     });
   }
 

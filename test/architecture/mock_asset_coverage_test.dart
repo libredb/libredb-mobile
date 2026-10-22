@@ -2,11 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/result/result.dart';
-import 'package:libredb_mobile/features/account/data/models/change_password.dart';
-import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
-import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
@@ -14,9 +10,7 @@ import 'package:libredb_mobile/features/studio_status/data/repositories/studio_s
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
-import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
-import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_env.dart';
@@ -36,21 +30,6 @@ import '../support/test_env.dart';
 void main() {
   // Keyed by test name; the part before the first space is the repository method.
   final requests = <String, Future<Result<Object?>> Function(ApiClient client)>{
-    'IAccountRepository.register': (client) =>
-        AccountRepository(client).register(const UserEntity(email: 'new.user@sample.tech')),
-    'IAccountRepository.changePassword': (client) =>
-        AccountRepository(client)
-            .changePassword(const PasswordChangeDTO(currentPassword: 'password', newPassword: 'new_password')),
-    'IAccountRepository.resetPassword': (client) => AccountRepository(client).resetPassword('admin@sample.tech'),
-    'IAccountRepository.getAccount': (client) => AccountRepository(client).getAccount(),
-    'IAuthRepository.authenticate': (client) =>
-        LoginRepository(apiClient: client)
-            .authenticate(const AuthCredentialsEntity(username: 'admin', password: 'admin')),
-    'IAuthRepository.logout': (client) => LoginRepository(apiClient: client).logout(),
-    'IAuthRepository.sendOtp': (client) =>
-        LoginRepository(apiClient: client).sendOtp(const SendOtpEntity(email: 'admin@sample.tech')),
-    'IAuthRepository.verifyOtp': (client) =>
-        LoginRepository(apiClient: client).verifyOtp(const VerifyOtpEntity(email: 'admin@sample.tech', otp: '123456')),
     'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
     'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
     'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
@@ -95,14 +74,9 @@ void main() {
     });
   }
 
-  // Sent before sign-in: sign-in, the OTP sign-in, registration and password reset, the app config the lifecycle
-  // checks read, and Studio's liveness and readiness.
+  // Sent before sign-in: the app config the lifecycle checks read, and Studio's liveness and readiness. The sign-in
+  // itself goes to the identity provider.
   const sentBeforeSignIn = [
-    'IAuthRepository.authenticate',
-    'IAuthRepository.sendOtp',
-    'IAuthRepository.verifyOtp',
-    'IAccountRepository.register',
-    'IAccountRepository.resetPassword',
     'ILifecycleRepository.fetchAppConfig',
     'IStudioStatusRepository.liveness',
     'IStudioStatusRepository.readiness',
@@ -120,13 +94,12 @@ void main() {
   test('no request path the app sends starts with /api/', () async {
     final sentPaths = <String>{};
     for (final send in requests.values) {
-      // The sign-out of IAuthRepository.logout ends the session the next request needs.
       TestEnv.authenticate();
       final client = TestEnv.apiClient();
       client.instance.interceptors.insert(0, _PathRecordingInterceptor(sentPaths));
       await send(client);
     }
-    final paths = {...sentPaths, refreshEndpointPath, for (final endpoint in publicEndpoints) endpoint.path};
+    final paths = {...sentPaths, for (final endpoint in publicEndpoints) endpoint.path};
 
     expect(sentPaths, isNotEmpty);
     expect(paths.where((path) => path.startsWith('/api/')), isEmpty);

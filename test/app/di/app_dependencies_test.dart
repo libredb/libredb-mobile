@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
-import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
@@ -42,12 +41,14 @@ class _MemorySecureStorage implements ISecureStorage {
 
 /// Dependencies whose 401 predicate accepts no 401, as an app on a backend that narrows it does.
 class _NoSessionExpiryDependencies extends AppDependencies {
-  const _NoSessionExpiryDependencies() : super(appConfig: _prodConfig);
+  _NoSessionExpiryDependencies() : super(appConfig: _prodConfig, authMode: _oidcMode);
 
   @override
   SessionExpiredPredicate get sessionExpiredPredicate =>
       (_) => false;
 }
+
+final _oidcMode = OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.test/realms/demo'), clientId: 'app'));
 
 /// A production config, so no MockInterceptor answers in place of the adapter the tests install.
 const _prodConfig = AppConfig(
@@ -116,45 +117,25 @@ Future<void> _getUnauthorized(ApiClient client, _UnauthorizedAdapter adapter, [S
 
 final _oidcSession = AuthSession(
   idToken: 'ACCESS',
-  username: 'alice',
   oidcIdToken: 'ID_TOKEN',
   accessTokenExpiresAt: DateTime.utc(2026, 10, 21, 12),
 );
 
 void main() {
-  const dependencies = AppDependencies();
-
-  test('AppDependencies defaults to jwt', () {
-    expect(const AppDependencies().authMode, isA<JwtAuthMode>());
-  });
-
-  test('app dependencies expose account repository contract', () {
-    expect(dependencies.createAccountRepository(TestEnv.apiClient()), isA<IAccountRepository>());
-  });
+  final dependencies = AppDependencies(authMode: _oidcMode);
 
   test('app dependencies expose auth repository contract', () {
     final sessionRepository = dependencies.createAuthSessionRepository(_StubSecureStorage());
-    expect(dependencies.createAuthRepository(sessionRepository, TestEnv.apiClient()), isA<IAuthRepository>());
+    expect(dependencies.createAuthRepository(sessionRepository), isA<IAuthRepository>());
   });
 
-  test('the session repository of an oidc build stores the OIDC ID token and the expiry', () async {
-    final oidc = AppDependencies(
-      authMode: OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.test/realms/demo'), clientId: 'app')),
-    );
-    final secureStorage = _MemorySecureStorage();
-
-    await oidc.createAuthSessionRepository(secureStorage).persist(_oidcSession);
-
-    expect(secureStorage.store[SecureStorageKeys.oidcIdToken.key], 'ID_TOKEN');
-    expect(secureStorage.store[SecureStorageKeys.accessTokenExpiresAt.key], isNotNull);
-  });
-
-  test('the session repository of a jwt build leaves the OIDC keys alone', () async {
+  test('the session repository stores the OIDC ID token and the expiry', () async {
     final secureStorage = _MemorySecureStorage();
 
     await dependencies.createAuthSessionRepository(secureStorage).persist(_oidcSession);
 
-    expect(secureStorage.store.keys, unorderedEquals([SecureStorageKeys.jwtToken.key]));
+    expect(secureStorage.store[SecureStorageKeys.oidcIdToken.key], 'ID_TOKEN');
+    expect(secureStorage.store[SecureStorageKeys.accessTokenExpiresAt.key], isNotNull);
   });
 
   // LibreDB Studio also answers 401 for a wrong database password (AUTH_ERROR), which must not end the session.
@@ -162,58 +143,35 @@ void main() {
     expect(dependencies.sessionExpiredPredicate, same(isStudioSessionExpired));
   });
 
-  test('createApiClient ends the session on a 401 its refresh cannot fix', () async {
-    final adapter = _UnauthorizedAdapter();
-    var sessionExpiredCalls = 0;
-    final client = const AppDependencies(appConfig: _prodConfig)
-        .createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++);
-
-    await _getUnauthorized(client, adapter);
-
-    expect(adapter.requests, ['GET /api/users', 'POST /token/refresh']);
-    expect(sessionExpiredCalls, 1);
-  });
-
   test('createApiClient keeps the session on a 401 AUTH_ERROR, a refused database credential', () async {
     final adapter = _UnauthorizedAdapter('{"error":"password authentication failed","code":"AUTH_ERROR"}');
+    final rotation = _FakeRotation();
     var sessionExpiredCalls = 0;
-    final client = const AppDependencies(appConfig: _prodConfig)
-        .createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++);
+    final client = AppDependencies(
+      appConfig: _prodConfig,
+      authMode: _oidcMode,
+    ).createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++, tokenRotation: rotation);
 
     await _getUnauthorized(client, adapter);
 
     expect(adapter.requests, ['GET /api/users'], reason: 'AUTH_ERROR starts no refresh');
+    expect(rotation.sent, isEmpty);
     expect(sessionExpiredCalls, 0);
   });
 
-  test('createApiClient uses sessionExpiredPredicate', () async {
-    final adapter = _UnauthorizedAdapter();
-    var sessionExpiredCalls = 0;
-    final client = const _NoSessionExpiryDependencies().createApiClient(
-      await _signedInStorage(),
-      onSessionExpired: () => sessionExpiredCalls++,
-    );
-
-    await _getUnauthorized(client, adapter);
-
-    expect(adapter.requests, ['GET /api/users'], reason: 'a 401 the predicate refuses starts no refresh');
-    expect(sessionExpiredCalls, 0);
-  });
-
-  test('createOidcApiClient routes a 401 to the given rotation', () async {
+  test('createApiClient routes a 401 to the given rotation', () async {
     final adapter = _UnauthorizedAdapter();
     final rotation = _FakeRotation();
     var sessionExpiredCalls = 0;
-    final client = const AppDependencies(appConfig: _prodConfig).createOidcApiClient(
-      await _signedInStorage(),
-      onSessionExpired: () => sessionExpiredCalls++,
-      tokenRotation: rotation,
-    );
+    final client = AppDependencies(
+      appConfig: _prodConfig,
+      authMode: _oidcMode,
+    ).createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++, tokenRotation: rotation);
 
     await _getUnauthorized(client, adapter);
 
     expect(rotation.sent, ['REFRESH']);
-    expect(adapter.requests, ['GET /api/users'], reason: 'the backend refresh endpoint is not called');
+    expect(adapter.requests, ['GET /api/users'], reason: 'the refresh goes to the identity provider, not the API');
     expect(sessionExpiredCalls, 1, reason: 'the fake rotation refuses');
   });
 
@@ -222,15 +180,14 @@ void main() {
     expect(dependencies.sessionRefusedPredicate, same(isStudioSessionRefused));
   });
 
-  test('createOidcApiClient keeps the session when /auth/me answers 401 without a code after a refresh', () async {
+  test('createApiClient keeps the session when /auth/me answers 401 without a code after a refresh', () async {
     final adapter = _UnauthorizedAdapter('{"authenticated":false}');
     final rotation = _FakeRotation(const TokensRotated(accessToken: 'NEW_ACCESS'));
     var sessionExpiredCalls = 0;
-    final client = const AppDependencies(appConfig: _prodConfig).createOidcApiClient(
-      await _signedInStorage(),
-      onSessionExpired: () => sessionExpiredCalls++,
-      tokenRotation: rotation,
-    );
+    final client = AppDependencies(
+      appConfig: _prodConfig,
+      authMode: _oidcMode,
+    ).createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++, tokenRotation: rotation);
 
     await _getUnauthorized(client, adapter, '/auth/me');
 
@@ -239,15 +196,14 @@ void main() {
     expect(sessionExpiredCalls, 0);
   });
 
-  test('createOidcApiClient ends the session when Studio answers 401 AUTH_REQUIRED after a refresh', () async {
+  test('createApiClient ends the session when Studio answers 401 AUTH_REQUIRED after a refresh', () async {
     final adapter = _UnauthorizedAdapter('{"error":"Invalid access token","code":"AUTH_REQUIRED"}');
     final rotation = _FakeRotation(const TokensRotated(accessToken: 'NEW_ACCESS'));
     var sessionExpiredCalls = 0;
-    final client = const AppDependencies(appConfig: _prodConfig).createOidcApiClient(
-      await _signedInStorage(),
-      onSessionExpired: () => sessionExpiredCalls++,
-      tokenRotation: rotation,
-    );
+    final client = AppDependencies(
+      appConfig: _prodConfig,
+      authMode: _oidcMode,
+    ).createApiClient(await _signedInStorage(), onSessionExpired: () => sessionExpiredCalls++, tokenRotation: rotation);
 
     await _getUnauthorized(client, adapter, '/connections/managed');
 
@@ -255,11 +211,11 @@ void main() {
     expect(sessionExpiredCalls, 1);
   });
 
-  test('createOidcApiClient uses sessionExpiredPredicate', () async {
+  test('createApiClient uses sessionExpiredPredicate', () async {
     final adapter = _UnauthorizedAdapter();
     final rotation = _FakeRotation();
     var sessionExpiredCalls = 0;
-    final client = const _NoSessionExpiryDependencies().createOidcApiClient(
+    final client = _NoSessionExpiryDependencies().createApiClient(
       await _signedInStorage(),
       onSessionExpired: () => sessionExpiredCalls++,
       tokenRotation: rotation,

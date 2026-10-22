@@ -7,7 +7,6 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart' show Logger, OutputEvent;
@@ -55,18 +54,9 @@ final _tokens = OidcTokens(
   accessTokenExpiresAt: _expiresAt,
 );
 
-final _settings = OidcSettings(
-  issuer: Uri.parse('https://id.example.com/realms/demo'),
-  clientId: 'app',
-  roleClaim: 'roles',
-  adminRoles: ['admin'],
-  userRoles: ['user'],
-);
-
-Map<String, Object?> _claims({Object? roles = const ['user'], Map<String, Object?> extra = const {}}) => {
+Map<String, Object?> _claims({Map<String, Object?> extra = const {}}) => {
   'iss': 'https://id.example.com/realms/demo',
   'sub': 'subject-1',
-  'roles': roles,
   ...extra,
 };
 
@@ -78,35 +68,47 @@ void main() {
   setUp(() {
     client = _FakeOidcClient();
     sessions = _FakeAuthSessionRepository();
-    repository = SsoAuthRepository(client: client, sessionRepository: sessions, settings: _settings);
+    repository = SsoAuthRepository(client: client, sessionRepository: sessions);
   });
 
-  Future<SsoSignInResult> signInWith(Map<String, Object?> claims) {
+  Future<SsoProviderSignIn> signInWith(Map<String, Object?> claims) {
     client.signInOutcome = OidcSignedIn(tokens: _tokens, claims: claims);
     return repository.signIn();
   }
 
   group('SsoAuthRepository.signIn', () {
-    test('persists the session the tokens and the mapped role make, and answers the username and roles', () async {
+    test('persists the session the tokens make', () async {
       final result = await signInWith(_claims(extra: {'email': 'user@example.com'}));
 
-      expect(
-        result,
-        isA<SsoSignInSucceeded>().having((r) => r.username, 'username', 'user@example.com').having(
-          (r) => r.roles,
-          'roles',
-          ['ROLE_USER'],
-        ),
-      );
+      expect(result, isA<SsoProviderSignedIn>());
       expect(sessions.persisted, hasLength(1));
       final session = sessions.persisted.single;
       expect(session.idToken, 'access-token');
       expect(session.refreshToken, 'refresh-token');
-      expect(session.username, 'user@example.com');
-      expect(session.roles, ['ROLE_USER']);
       expect(session.oidcIdToken, 'id-token');
       expect(session.accessTokenExpiresAt, _expiresAt);
     });
+
+    // The role comes only from Studio's GET /api/auth/me, so a token's role claim is never read.
+    for (final roles in [
+      ['admin'],
+      ['guest'],
+      <String>[],
+    ]) {
+      test('signs in whatever the role claim holds ($roles)', () async {
+        final result = await signInWith(
+          _claims(
+            extra: {
+              'roles': roles,
+              'realm_access': {'roles': roles},
+            },
+          ),
+        );
+
+        expect(result, isA<SsoProviderSignedIn>());
+        expect(sessions.persisted, hasLength(1));
+      });
+    }
 
     test('persists no refresh token when the provider issued none', () async {
       client.signInOutcome = OidcSignedIn(
@@ -114,114 +116,26 @@ void main() {
         claims: _claims(),
       );
 
-      expect(await repository.signIn(), isA<SsoSignInSucceeded>());
+      expect(await repository.signIn(), isA<SsoProviderSignedIn>());
 
       expect(sessions.persisted.single.refreshToken, isNull);
     });
 
-    test('an admin claim persists the admin and user roles', () async {
-      final result = await signInWith(_claims(roles: ['admin']));
-
-      expect(result, isA<SsoSignInSucceeded>().having((r) => r.roles, 'roles', ['ROLE_ADMIN', 'ROLE_USER']));
-      expect(sessions.persisted.single.roles, ['ROLE_ADMIN', 'ROLE_USER']);
-    });
-
-    group('the username', () {
-      test('is the email when there is one', () async {
-        final result = await signInWith(_claims(extra: {'email': 'user@example.com', 'preferred_username': 'jdoe'}));
-
-        expect((result as SsoSignInSucceeded).username, 'user@example.com');
-      });
-
-      test('is the preferred username when there is no email', () async {
-        final result = await signInWith(_claims(extra: {'preferred_username': 'jdoe'}));
-
-        expect((result as SsoSignInSucceeded).username, 'jdoe');
-        expect(sessions.persisted.single.username, 'jdoe');
-      });
-
-      test('is the preferred username when the email is empty or not a string', () async {
-        expect(
-          (await signInWith(
-            _claims(extra: {'email': '', 'preferred_username': 'jdoe'}),
-          ) as SsoSignInSucceeded).username,
-          'jdoe',
-        );
-        expect(
-          (await signInWith(
-            _claims(extra: {'email': 42, 'preferred_username': 'jdoe'}),
-          ) as SsoSignInSucceeded).username,
-          'jdoe',
-        );
-      });
-
-      test('is the subject when there is neither an email nor a preferred username', () async {
-        final result = await signInWith(_claims(extra: {'preferred_username': ''}));
-
-        expect((result as SsoSignInSucceeded).username, 'subject-1');
-        expect(sessions.persisted.single.username, 'subject-1');
-      });
-    });
-
-    test('an account with no allowed role is rejected and nothing is persisted', () async {
-      final result = await signInWith(_claims(roles: ['guest']));
-
-      expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcNoRole));
-      expect(sessions.persisted, isEmpty);
-    });
-
     for (final (name, claims) in [
-      (
-        'no sub',
-        {
-          'iss': 'https://id.example.com/realms/demo',
-          'roles': const ['user'],
-        },
-      ),
-      (
-        'an empty sub',
-        {
-          'iss': 'https://id.example.com/realms/demo',
-          'sub': '',
-          'roles': const ['user'],
-        },
-      ),
-      (
-        'a sub that is not a string',
-        {
-          'iss': 'https://id.example.com/realms/demo',
-          'sub': 7,
-          'roles': const ['user'],
-        },
-      ),
-      (
-        'no iss',
-        {
-          'sub': 'subject-1',
-          'roles': const ['user'],
-        },
-      ),
-      (
-        'an empty iss',
-        {
-          'iss': '',
-          'sub': 'subject-1',
-          'roles': const ['user'],
-        },
-      ),
-      (
-        'an iss that is not a string',
-        {
-          'iss': true,
-          'sub': 'subject-1',
-          'roles': const ['user'],
-        },
-      ),
+      ('no sub', {'iss': 'https://id.example.com/realms/demo'}),
+      ('an empty sub', {'iss': 'https://id.example.com/realms/demo', 'sub': ''}),
+      ('a sub that is not a string', {'iss': 'https://id.example.com/realms/demo', 'sub': 7}),
+      ('no iss', {'sub': 'subject-1'}),
+      ('an empty iss', {'iss': '', 'sub': 'subject-1'}),
+      ('an iss that is not a string', {'iss': true, 'sub': 'subject-1'}),
     ]) {
       test('an ID token with $name is rejected and nothing is persisted', () async {
         final result = await signInWith(claims);
 
-        expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcNoClaims));
+        expect(
+          result,
+          isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcNoClaims),
+        );
         expect(sessions.persisted, isEmpty);
       });
     }
@@ -231,7 +145,10 @@ void main() {
 
       final result = await repository.signIn();
 
-      expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcDiscovery));
+      expect(
+        result,
+        isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcDiscovery),
+      );
       expect(sessions.persisted, isEmpty);
     });
 
@@ -240,14 +157,14 @@ void main() {
 
       final result = await repository.signIn();
 
-      expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcFailed));
+      expect(result, isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcFailed));
       expect(sessions.persisted, isEmpty);
     });
 
     test('a cancel passes through', () async {
       client.signInOutcome = const OidcSignInCancelled();
 
-      expect(await repository.signIn(), isA<SsoSignInCancelled>());
+      expect(await repository.signIn(), isA<SsoProviderCancelled>());
       expect(sessions.persisted, isEmpty);
     });
 
@@ -258,7 +175,7 @@ void main() {
 
       expect(
         result,
-        isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authSessionPersistFailed),
+        isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authSessionPersistFailed),
       );
     });
   });
@@ -277,17 +194,12 @@ void main() {
 
     tearDown(() => AppLogger.configure(isProduction: false));
 
-    for (final (name, extra, username) in <(String, Map<String, Object?>, String)>[
-      ('the preferred username', {'preferred_username': 'jdoe-identifier'}, 'jdoe-identifier'),
-      ('the subject', {}, 'subject-1'),
-    ]) {
-      test('a sign-in whose username is $name logs the role but not the username', () async {
-        final result = await signInWith(_claims(extra: extra));
+    test('a sign-in logs neither the username nor the subject', () async {
+      final result = await signInWith(_claims(extra: {'preferred_username': 'jdoe-identifier'}));
 
-        expect(result, isA<SsoSignInSucceeded>().having((r) => r.username, 'username', username));
-        expect(lines.join('\n'), contains('with role user'));
-        expect(lines.join('\n'), isNot(contains(username)));
-      });
-    }
+      expect(result, isA<SsoProviderSignedIn>());
+      expect(lines.join('\n'), contains('Signed in through the identity provider'));
+      expect(lines.join('\n'), allOf(isNot(contains('jdoe-identifier')), isNot(contains('subject-1'))));
+    });
   });
 }

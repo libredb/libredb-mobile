@@ -95,14 +95,13 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
           listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
           listener: (context, state) {
             if (state is LoginLoadedState) {
-              // Mark the session authenticated SYNCHRONOUSLY using the roles
-              // carried on LoginLoadedState. As an ancestor of the login page
-              // this listener fires before the page's success listener, so the
-              // session is already authenticated (with roles) when that listener
-              // navigates to the `returnUrl` deep link. The previous version
-              // awaited a storage read here, which let navigation win the race
-              // and bounce the deep link back to /login → home.
-              context.read<SessionCubit>().markAuthenticated(roles: state.roles.toSet());
+              // Mark the session authenticated SYNCHRONOUSLY. As an ancestor
+              // of the login page this listener fires before the page's
+              // success listener, so the session is already authenticated
+              // when that listener navigates to the `returnUrl` deep link.
+              // Awaiting a storage read here would let navigation win the
+              // race and bounce the deep link back to /login → home.
+              context.read<SessionCubit>().markAuthenticated();
             }
           },
         ),
@@ -112,7 +111,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             context.read<SessionCubit>().markLoggedOut();
             _closeSsoAutoRedirect(context);
             // SignOutBloc signs out with stored data left when the logout could not remove all stored data, and with
-            // the provider session left when an oidc build could not end the session at the identity provider.
+            // the provider session left when the app could not end the session at the identity provider.
             switch (state) {
               case SignedOutWithDataLeft():
                 _showNotice((strings) => strings.logout_stored_data_left);
@@ -123,7 +122,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             }
           },
         ),
-        // The sign-out of an oidc build ends before the provider logout has ended, and tells afterwards when the
+        // The sign-out ends before the provider logout has ended, and tells afterwards when the
         // provider logout failed.
         BlocListener<SignOutBloc, SignOutState>(
           listenWhen: (previous, current) => previous is SignedOut && current is SignedOutWithProviderSessionLeft,

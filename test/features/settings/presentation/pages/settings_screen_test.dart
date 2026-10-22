@@ -3,12 +3,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
@@ -40,8 +39,8 @@ class _LanguageRefusingStorage implements AppLocalStorage {
   void setPreferencesInstance(SharedPreferences prefs) => AppLocalStorage().setPreferencesInstance(prefs);
 }
 
-class _LocalStorageDependencies extends AppDependencies {
-  const _LocalStorageDependencies(this.localStorage, {super.projectLinks});
+class _LocalStorageDependencies extends LocalSignInDependencies {
+  _LocalStorageDependencies(this.localStorage, {super.projectLinks});
 
   final AppLocalStorage localStorage;
 
@@ -50,12 +49,8 @@ class _LocalStorageDependencies extends AppDependencies {
 }
 
 void main() {
-  // The app links to the documentation [docs] and signs in as [authMode] says.
-  Widget buildTestableWidget({
-    String docs = _docs,
-    Locale locale = const Locale('en'),
-    AuthMode authMode = const JwtAuthMode(),
-  }) {
+  // The app links to the documentation [docs].
+  Widget buildTestableWidget({String docs = _docs, Locale locale = const Locale('en')}) {
     final router = GoRouter(
       initialLocation: ApplicationRoutesConstants.settings,
       routes: [
@@ -63,18 +58,11 @@ void main() {
           path: ApplicationRoutesConstants.settings,
           builder: (context, state) => const Scaffold(body: SettingsScreen()),
         ),
-        GoRoute(
-          path: ApplicationRoutesConstants.changePassword,
-          builder: (context, state) => const Scaffold(body: Placeholder()),
-        ),
       ],
     );
 
     return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider<ProjectLinks>.value(value: ProjectLinks(docs: docs)),
-        RepositoryProvider<AuthMode>.value(value: authMode),
-      ],
+      providers: [RepositoryProvider<ProjectLinks>.value(value: ProjectLinks(docs: docs))],
       child: MaterialApp.router(
         routerConfig: router,
         locale: locale,
@@ -103,7 +91,7 @@ void main() {
       App(
         language: 'en',
         dependencies: localStorage == null
-            ? AppDependencies(projectLinks: projectLinks)
+            ? LocalSignInDependencies(projectLinks: projectLinks)
             : _LocalStorageDependencies(localStorage, projectLinks: projectLinks),
       ),
     );
@@ -125,7 +113,6 @@ void main() {
       // test to the active locale (every title comes from S.of(context)).
       // Key presence is enough to guard the screen layout against
       // accidental tile removal.
-      expect(find.byKey(settingsChangePasswordButtonKey), findsOneWidget);
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
       expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
@@ -162,39 +149,6 @@ void main() {
 
       expect(find.byType(LicensePage), findsOneWidget);
     });
-
-    testWidgets('navigates to change password screen when button is pressed', (WidgetTester tester) async {
-      TestEnv.authenticate();
-      await tester.pumpWidget(buildTestableWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(settingsChangePasswordButtonKey));
-      await tester.pumpAndSettle();
-
-      // Assert we navigated TO the change-password route (its content renders),
-      // not merely that the settings screen disappeared.
-      expect(find.byType(Placeholder), findsOneWidget);
-      expect(find.byType(SettingsScreen), findsNothing);
-    });
-  });
-
-  group('SettingsScreen in oidc mode', () {
-    for (final (build, authMode) in <(String, AuthMode)>[
-      ('an oidc build', OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.com'), clientId: 'app'))),
-      ('a misconfigured oidc build', const OidcMisconfiguredAuthMode('OIDC_ISSUER is required in oidc mode')),
-    ]) {
-      // The identity provider owns the password, so the app has no page to change it.
-      testWidgets('in $build, shows no change-password entry', (WidgetTester tester) async {
-        TestEnv.authenticate();
-        await tester.pumpWidget(buildTestableWidget(authMode: authMode));
-        await tester.pumpAndSettle();
-
-        expect(find.byKey(settingsChangePasswordButtonKey), findsNothing);
-        expect(find.text('Change Password'), findsNothing);
-        expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
-        expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
-      });
-    }
   });
 
   group('SettingsScreen - Turkish', () {
@@ -204,7 +158,6 @@ void main() {
 
       for (final text in [
         'Hesap tercihlerinizi yönetin',
-        'Şifrenizi güvenle güncelleyin',
         'Görünüm',
         'Tema',
         'Tercih ettiğiniz tema stilini seçin',
@@ -264,17 +217,17 @@ void main() {
       await selectFromUserMenu(tester, Icons.logout);
       await tester.tap(find.widgetWithText(FilledButton, 'Evet'));
       await tester.pumpAndSettle();
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
-      expect(find.text('Şifremi unuttum'), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+      expect(find.text('SSO ile giriş yap'), findsOneWidget);
 
       // The next cold start: a new App, which reads the stored language.
       await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
-      expect(find.text('Şifremi unuttum'), findsOneWidget);
-      expect(find.text('Forgot Password'), findsNothing);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+      expect(find.text('SSO ile giriş yap'), findsOneWidget);
+      expect(find.text('Sign in with SSO'), findsNothing);
     });
 
     testWidgets('keeps the language and says so when the device cannot store it', (tester) async {

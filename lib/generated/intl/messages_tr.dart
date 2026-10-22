@@ -26,21 +26,15 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m2(time) => "Tahmini bitiş: ${time}";
 
-  static String m3(email) => "OTP kodu ${email} adresine gönderildi";
+  static String m3(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
 
-  static String m4(max) => "Şifre en fazla ${max} karakter uzunluğunda olmalıdır";
+  static String m4(message) => "Hata: ${message}";
 
-  static String m5(min) => "Şifre en az ${min} karakter uzunluğunda olmalıdır";
+  static String m5(detail) => "Ayrıntı: ${detail}";
 
-  static String m6(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m6(host) => "Studio adresi: ${host}";
 
-  static String m7(message) => "Hata: ${message}";
-
-  static String m8(detail) => "Ayrıntı: ${detail}";
-
-  static String m9(host) => "Studio adresi: ${host}";
-
-  static String m10(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m7(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -52,10 +46,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "authorities": MessageLookupByLibrary.simpleMessage("Roller"),
     "back": MessageLookupByLibrary.simpleMessage("Geri"),
     "cancel": MessageLookupByLibrary.simpleMessage("İptal"),
-    "change_password": MessageLookupByLibrary.simpleMessage("Şifre Değiştir"),
-    "change_password_description": MessageLookupByLibrary.simpleMessage(
-      "Hesabınızın güvende kalması için uzun ve rastgele bir şifre kullandığınızdan emin olun.",
-    ),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Katkıda Bulun"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Sorun Bildir"),
@@ -76,18 +66,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_type": MessageLookupByLibrary.simpleMessage("Motor"),
     "connections": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı yok"),
-    "current_password": MessageLookupByLibrary.simpleMessage("Mevcut Şifre"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "edit": MessageLookupByLibrary.simpleMessage("Düzenle"),
-    "email": MessageLookupByLibrary.simpleMessage("E-posta"),
-    "email_pattern": MessageLookupByLibrary.simpleMessage("E-posta adresi geçerli değil"),
-    "email_send": MessageLookupByLibrary.simpleMessage("E-posta Gönder"),
     "english": MessageLookupByLibrary.simpleMessage("İngilizce"),
-    "error_account_password_required": MessageLookupByLibrary.simpleMessage("Mevcut ve yeni şifre alanları zorunludur"),
-    "error_account_passwords_same": MessageLookupByLibrary.simpleMessage("Yeni şifre mevcut şifreden farklı olmalıdır"),
     "error_auth_invalid_access_token": MessageLookupByLibrary.simpleMessage("Geçersiz erişim belirteci"),
-    "error_auth_login_failed": MessageLookupByLibrary.simpleMessage("Giriş başarısız"),
     "error_auth_oidc_config": MessageLookupByLibrary.simpleMessage(
       "Bu uygulamada tek oturum açma doğru yapılandırılmamış. Yöneticinize başvurun.",
     ),
@@ -98,11 +81,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_auth_oidc_logout_incomplete": MessageLookupByLibrary.simpleMessage(
       "Bu uygulamadan çıkış yaptınız, ancak kimlik sağlayıcıdaki oturumunuz hâlâ açık olabilir.",
     ),
-    "error_auth_oidc_no_role": MessageLookupByLibrary.simpleMessage(
-      "Hesabınızın bu uygulamaya erişim veren bir rolü yok. Yöneticinize başvurun.",
-    ),
-    "error_auth_otp_validation": MessageLookupByLibrary.simpleMessage("OTP doğrulaması başarısız"),
-    "error_auth_send_otp_failed": MessageLookupByLibrary.simpleMessage("OTP kodu gönderilemedi"),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
     "error_generic": MessageLookupByLibrary.simpleMessage("Bir şeyler ters gitti"),
     "error_link_open_failed": m0,
@@ -110,6 +88,15 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
+    "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
+      "Studio bu hesabın kim olduğunu belirleyemiyor. Bir yöneticiden hesabın e-posta adresini ve kullanıcı adını kontrol etmesini isteyin.",
+    ),
+    "error_studio_account_has_no_role": MessageLookupByLibrary.simpleMessage(
+      "Bu hesabın Studio\'da bir rolü yok. Bir yöneticiden hesaba rol vermesini isteyin.",
+    ),
+    "error_studio_account_refused": MessageLookupByLibrary.simpleMessage(
+      "Studio bu girişi kabul etmedi. Tekrar deneyin ya da erişim için bir yöneticiye başvurun.",
+    ),
     "error_studio_config_error": MessageLookupByLibrary.simpleMessage(
       "Bağlantı doğru yapılandırılmamış. Yöneticinize başvurun.",
     ),
@@ -152,10 +139,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Yönetici kullanıcı silinemez"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("Yetki bulunamadı"),
     "failed": MessageLookupByLibrary.simpleMessage("Başarısız"),
-    "first_name": MessageLookupByLibrary.simpleMessage("İsim"),
-    "forbidden_back_home": MessageLookupByLibrary.simpleMessage("Ana sayfaya dön"),
-    "forbidden_message": MessageLookupByLibrary.simpleMessage("Bu sayfayı görüntüleme yetkiniz yok."),
-    "forbidden_title": MessageLookupByLibrary.simpleMessage("Erişim engellendi"),
     "force_update_button": MessageLookupByLibrary.simpleMessage("Şimdi Güncelle"),
     "force_update_message": MessageLookupByLibrary.simpleMessage(
       "Yeni bir sürüm mevcut. Uygulamayı kullanmaya devam etmek için lütfen güncelleyin.",
@@ -168,18 +151,13 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "force_update_title": MessageLookupByLibrary.simpleMessage("Güncelleme Gerekli"),
     "force_update_versions": m1,
-    "forgot_password_description": MessageLookupByLibrary.simpleMessage(
-      "E-posta adresinizi girin, şifrenizi sıfırlamanız için size bir bağlantı gönderelim.",
-    ),
     "help_resources": MessageLookupByLibrary.simpleMessage("Yardım ve Kaynaklar"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("GitHub\'daki dokümantasyonu ve rehberleri okuyun"),
     "home": MessageLookupByLibrary.simpleMessage("Ana Sayfa"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("Hareketsizlik nedeniyle oturumunuz kapatıldı."),
     "inactive": MessageLookupByLibrary.simpleMessage("Pasif"),
-    "invalid_email": MessageLookupByLibrary.simpleMessage("Geçersiz e-posta adresi"),
     "language": MessageLookupByLibrary.simpleMessage("Dil"),
     "language_select": MessageLookupByLibrary.simpleMessage("Dil Seçimi"),
-    "last_name": MessageLookupByLibrary.simpleMessage("Soyisim"),
     "list": MessageLookupByLibrary.simpleMessage("Listele"),
     "loading": MessageLookupByLibrary.simpleMessage("Yükleniyor..."),
     "login": MessageLookupByLibrary.simpleMessage("Kullanıcı Adı"),
@@ -187,7 +165,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "LibreDB Studio\'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
     ),
     "login_brand_headline": MessageLookupByLibrary.simpleMessage("Veritabanlarınız\ncebinizde."),
-    "login_button": MessageLookupByLibrary.simpleMessage("Giriş Yap"),
     "login_feature_auth_description": MessageLookupByLibrary.simpleMessage(
       "Kurumunuzun Keycloak\'ta yönettiği hesapla oturum açın.",
     ),
@@ -200,20 +177,11 @@ class MessageLookup extends MessageLookupByLibrary {
       "Size verilen bağlantılarda şemalara göz atın ve sorgu çalıştırın.",
     ),
     "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Göz atın ve sorgulayın"),
-    "login_no_account": MessageLookupByLibrary.simpleMessage("Hesabınız yok mu? "),
-    "login_or": MessageLookupByLibrary.simpleMessage("veya"),
-    "login_otp_email_instructions": MessageLookupByLibrary.simpleMessage(
-      "OTP kodunu almak için e-posta adresinizi girin",
-    ),
-    "login_password": MessageLookupByLibrary.simpleMessage("Şifre"),
     "login_sso_button": MessageLookupByLibrary.simpleMessage("SSO ile giriş yap"),
     "login_sso_subtitle": MessageLookupByLibrary.simpleMessage("Kurumsal hesabınızla giriş yapın."),
     "login_switch_to_dark_mode": MessageLookupByLibrary.simpleMessage("Koyu temaya geç"),
     "login_switch_to_light_mode": MessageLookupByLibrary.simpleMessage("Açık temaya geç"),
-    "login_user_name": MessageLookupByLibrary.simpleMessage("Kullanıcı adı"),
-    "login_welcome_subtitle": MessageLookupByLibrary.simpleMessage("Hesabınıza erişmek için bilgilerinizi girin"),
     "login_welcome_title": MessageLookupByLibrary.simpleMessage("Tekrar hoş geldiniz"),
-    "login_with_email": MessageLookupByLibrary.simpleMessage("E-posta ile Giriş"),
     "logout": MessageLookupByLibrary.simpleMessage("Çıkış Yap"),
     "logout_stored_data_left": MessageLookupByLibrary.simpleMessage(
       "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
@@ -225,41 +193,21 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "maintenance_retry": MessageLookupByLibrary.simpleMessage("Tekrar Dene"),
     "maintenance_title": MessageLookupByLibrary.simpleMessage("Bakım Yapılıyor"),
-    "max_length_100": MessageLookupByLibrary.simpleMessage("Maksimum 100 karakter uzunluğunda olmalıdır"),
-    "max_length_20": MessageLookupByLibrary.simpleMessage("Maksimum 20 karakter uzunluğunda olmalıdır"),
-    "min_length_2": MessageLookupByLibrary.simpleMessage("Minimum 2 karakter uzunluğunda olmalıdır"),
-    "min_length_4": MessageLookupByLibrary.simpleMessage("Minimum 4 karakter uzunluğunda olmalıdır"),
     "name": MessageLookupByLibrary.simpleMessage("İsim"),
     "new_item": MessageLookupByLibrary.simpleMessage("Yeni"),
-    "new_password": MessageLookupByLibrary.simpleMessage("Yeni Şifre"),
     "next": MessageLookupByLibrary.simpleMessage("Sonraki"),
     "no": MessageLookupByLibrary.simpleMessage("Hayır"),
-    "no_changes_made": MessageLookupByLibrary.simpleMessage("Değişiklik yapılmadı"),
     "no_data": MessageLookupByLibrary.simpleMessage("Veri Yok"),
     "not_found_message": MessageLookupByLibrary.simpleMessage("İstediğiniz sayfa bulunamadı."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Sayfa Bulunamadı"),
-    "only_numbers": MessageLookupByLibrary.simpleMessage("Sadece sayılar kullanılabilir"),
-    "otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu"),
-    "otp_length": MessageLookupByLibrary.simpleMessage("OTP 6 haneli olmalıdır"),
-    "otp_sent_to_email": m3,
-    "password_forgot": MessageLookupByLibrary.simpleMessage("Şifremi unuttum"),
-    "password_hide": MessageLookupByLibrary.simpleMessage("Şifreyi gizle"),
-    "password_max_length": m4,
-    "password_min_length": m5,
-    "password_show": MessageLookupByLibrary.simpleMessage("Şifreyi göster"),
     "previous": MessageLookupByLibrary.simpleMessage("Önceki"),
     "refresh": MessageLookupByLibrary.simpleMessage("Yenile"),
-    "register": MessageLookupByLibrary.simpleMessage("Kayıt Ol"),
-    "register_subtitle": MessageLookupByLibrary.simpleMessage("Hesabınızı oluşturun"),
     "required_field": MessageLookupByLibrary.simpleMessage("Zorunlu Alan"),
-    "resend_otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu Tekrar Gönder"),
     "retry": MessageLookupByLibrary.simpleMessage("Tekrar Dene"),
     "role": MessageLookupByLibrary.simpleMessage("Rol"),
     "save": MessageLookupByLibrary.simpleMessage("Kaydet"),
-    "send_otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu Gönder"),
     "settings": MessageLookupByLibrary.simpleMessage("Ayarlar"),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Görünüm"),
-    "settings_change_password_subtitle": MessageLookupByLibrary.simpleMessage("Şifrenizi güvenle güncelleyin"),
     "settings_licenses": MessageLookupByLibrary.simpleMessage("Lisanslar"),
     "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
       "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
@@ -270,24 +218,24 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m6,
-    "studio_error_semantics": m7,
+    "studio_error_retry_in": m3,
+    "studio_error_semantics": m4,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m8,
+    "studio_governance_detail": m5,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
     ),
-    "studio_unreachable_host": m9,
+    "studio_unreachable_host": m6,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
     "studio_unreachable_title": MessageLookupByLibrary.simpleMessage("Studio\'ya ulaşılamıyor"),
     "submit": MessageLookupByLibrary.simpleMessage("Gönder"),
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
-    "table_rows_listed": m10,
+    "table_rows_listed": m7,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),
@@ -302,7 +250,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "Kaydedilmemiş değişiklikleriniz var. Çıkmak istediğinize emin misiniz?",
     ),
     "users": MessageLookupByLibrary.simpleMessage("Kullanıcılar"),
-    "verify_otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu Doğrula"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
     "yes": MessageLookupByLibrary.simpleMessage("Evet"),
   };
