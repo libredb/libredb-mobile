@@ -108,6 +108,60 @@ void main() {
       expect(adapter.lastBody, {'connectionId': connection, 'action': 'commit'});
     });
 
+    group('names the database of a server-level connection', () {
+      // Studio keys a transaction by connection and catalog, so an action without the catalog its begin named finds no
+      // transaction: commit and rollback answer 400 "No active transaction", status says none is open.
+      final endingActions = <String, Future<Object?> Function({String? catalog})>{
+        'commit': ({catalog}) => repository.commit(connection, catalog: catalog),
+        'rollback': ({catalog}) => repository.rollback(connection, catalog: catalog),
+      };
+      for (final MapEntry(key: action, value: call) in endingActions.entries) {
+        test('$action sends the catalog when given', () async {
+          adapter.answer = (200, '{"status":"x","message":"x"}');
+
+          await call(catalog: 'app');
+
+          expect(adapter.lastContentType, startsWith('application/json'));
+          expect(adapter.lastBody, {'connectionId': connection, 'action': action, 'catalog': 'app'});
+        });
+
+        test('$action leaves the catalog out when not given', () async {
+          adapter.answer = (200, '{"status":"x","message":"x"}');
+
+          await call();
+
+          expect(adapter.lastBody, {'connectionId': connection, 'action': action});
+        });
+      }
+
+      const statusAnswer = '{"inTransaction":true,"ownedByYou":true,"heldByAnotherSession":false,"startedAt":null}';
+
+      test('transactionStatus sends the catalog when given', () async {
+        adapter.answer = (200, statusAnswer);
+
+        await repository.transactionStatus(connection, catalog: 'app');
+
+        expect(adapter.lastContentType, startsWith('application/json'));
+        expect(adapter.lastBody, {'connectionId': connection, 'action': 'status', 'catalog': 'app'});
+      });
+
+      test('transactionStatus leaves the catalog out when not given', () async {
+        adapter.answer = (200, statusAnswer);
+
+        await repository.transactionStatus(connection);
+
+        expect(adapter.lastBody, {'connectionId': connection, 'action': 'status'});
+      });
+    });
+
+    test('an ending answer without a status is a failure', () async {
+      adapter.answer = (200, '{"message":"Transaction committed"}');
+
+      final result = await repository.commit(connection);
+
+      expect(result, isA<Failure<void>>());
+    });
+
     test("a database error keeps the database's words and the query error code", () async {
       adapter.answer = (400, '{"error":"relation \\"ordrs\\" does not exist","code":"QUERY_ERROR","statusCode":400}');
 

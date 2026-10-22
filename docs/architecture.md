@@ -195,6 +195,7 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   The cancelled run fails with `studio.query_cancelled`.
 - A transaction's statements cannot be cancelled.
   Without governance Studio keeps one transaction per connection for every user of it, owned by the account that began it, and refuses others with `studio.transaction_not_owned` for up to five idle minutes.
+  On a server-level connection it keeps one per database, so `commit`, `rollback` and `transactionStatus` name the `catalog` the transaction began in; without it Studio finds no open transaction.
 
 ### Errors
 

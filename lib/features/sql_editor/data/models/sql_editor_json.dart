@@ -30,6 +30,11 @@ final class SqlEditorJson {
     return stateReported is bool ? stateReported : null;
   }
 
+  /// `commit` and `rollback` of `POST /api/db/transaction`: `{status, message}`.
+  static void transactionEnded(String body) {
+    _string(_object(body)['status'], 'status');
+  }
+
   /// `query` of `POST /api/db/transaction`: a query or script answer plus `inTransaction`.
   static TransactionRun transactionRun(String body) {
     final json = _object(body);

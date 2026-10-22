@@ -79,18 +79,24 @@ class SqlEditorRepository implements ISqlEditorRepository {
   }, SqlEditorJson.transactionRun);
 
   @override
-  Future<Result<void>> commit(String connectionId) =>
-      _post('commit', '/db/transaction', {'connectionId': connectionId, 'action': 'commit'}, (_) {});
+  Future<Result<void>> commit(String connectionId, {String? catalog}) => _post('commit', '/db/transaction', {
+    'connectionId': connectionId,
+    'action': 'commit',
+    'catalog': ?catalog,
+  }, SqlEditorJson.transactionEnded);
 
   @override
-  Future<Result<void>> rollback(String connectionId) =>
-      _post('rollback', '/db/transaction', {'connectionId': connectionId, 'action': 'rollback'}, (_) {});
+  Future<Result<void>> rollback(String connectionId, {String? catalog}) => _post('rollback', '/db/transaction', {
+    'connectionId': connectionId,
+    'action': 'rollback',
+    'catalog': ?catalog,
+  }, SqlEditorJson.transactionEnded);
 
   @override
-  Future<Result<TransactionStatus>> transactionStatus(String connectionId) => _post(
+  Future<Result<TransactionStatus>> transactionStatus(String connectionId, {String? catalog}) => _post(
     'transactionStatus',
     '/db/transaction',
-    {'connectionId': connectionId, 'action': 'status'},
+    {'connectionId': connectionId, 'action': 'status', 'catalog': ?catalog},
     SqlEditorJson.transactionStatus,
   );
 
