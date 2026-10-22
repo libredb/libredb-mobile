@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/app_oidc_user_manager.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
@@ -584,7 +585,40 @@ void main() {
     },
   );
 
+  group('OidcPlatformKind.current', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('maps Android and iOS to their kind', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(OidcPlatformKind.current(), OidcPlatformKind.android);
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      expect(OidcPlatformKind.current(), OidcPlatformKind.ios);
+    });
+
+    test('refuses every other platform', () {
+      for (final platform in [
+        TargetPlatform.macOS,
+        TargetPlatform.linux,
+        TargetPlatform.windows,
+        TargetPlatform.fuchsia,
+      ]) {
+        debugDefaultTargetPlatformOverride = platform;
+        expect(OidcPlatformKind.current, throwsUnsupportedError, reason: platform.name);
+      }
+    });
+  });
+
   group('one operation at a time', () {
+    test('an operation that throws does not stop the next one', () async {
+      final breaking = _ClearFailsOnceStore();
+      final client = newClient(transactionStore: breaking);
+
+      await expectLater(client.signIn(), throwsStateError);
+
+      expect(await client.signIn(), isA<OidcSignedIn>());
+      expect(await client.endProviderSession(idTokenHint: 'id-token-value'), isA<ProviderSessionEnded>());
+    });
+
     test('a sign-in started during a refresh runs after it, and its ID token signature is still checked', () async {
       final refreshAnswer = Completer<http.Response>();
       provider.refreshAnswer = () => refreshAnswer.future;
@@ -650,6 +684,14 @@ void main() {
         'post_logout_redirect_uri': 'org.libredb.mobile:/oauth2redirect',
         'id_token_hint': 'id-token-value',
       });
+    });
+
+    test('the provider logout keeps the Custom Tab and the shared Apple session', () async {
+      await newClient().endProviderSession(idTokenHint: 'id-token-value');
+
+      final options = platform.endSessionOptions.single;
+      expect(options.android.useAuthTab, OidcAuthTabMode.never);
+      expect(options.ios.prefersEphemeralWebBrowserSession, isFalse);
     });
 
     test('without a hint, the URL has no id_token_hint, even after a sign-in', () async {
@@ -722,3 +764,17 @@ void main() {
 
 Matcher _failed(OidcFailure failure) =>
     isA<OidcSignInFailed>().having((outcome) => outcome.failure, 'failure', failure);
+
+/// A transaction store whose first clear throws, as a sign-in ends, so that sign-in rejects with it.
+final class _ClearFailsOnceStore extends OidcTransactionStore {
+  bool _failed = false;
+
+  @override
+  Future<void> clearTransactions() async {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('The store could not be cleared');
+    }
+    await super.clearTransactions();
+  }
+}

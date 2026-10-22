@@ -4,7 +4,8 @@ import 'package:oidc/oidc.dart';
 ///
 /// A sign-in completes within one run, in the browser the app opens and closes, so nothing the manager stores needs to
 /// outlive it, and the app's session storage owns the tokens. `session` is unused by the manager and refused.
-final class OidcTransactionStore implements OidcStore {
+/// It is a base class so that a test can make one of its calls fail.
+base class OidcTransactionStore implements OidcStore {
   OidcTransactionStore();
 
   final _namespaces = <OidcStoreNamespace, Map<String, String>>{};

@@ -116,7 +116,7 @@ class _ScriptedOidcClient implements IOidcClient {
 /// The test config in an oidc build over [client], for a project that gives all its links. Only the `admin` and
 /// `user` roles of the `roles` claim are allowed.
 class _OidcDependencies extends AppDependencies {
-  _OidcDependencies(this.client, {bool autoRedirect = false})
+  _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation})
     : super(
         appConfig: const AppConfig.test(),
         projectLinks: const ProjectLinks(
@@ -137,8 +137,30 @@ class _OidcDependencies extends AppDependencies {
 
   final IOidcClient client;
 
+  /// The token refresh in place of the one through [client], when given.
+  final TokenRotation? rotation;
+
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
+
+  @override
+  TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
+      rotation ?? super.createOidcTokenRotation(client, secureStorage);
+}
+
+/// A token refresh that fails with an error no rotation expects, so the startup step of an oidc build throws.
+class _ThrowingRotation implements TokenRotation {
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async => throw StateError('rotation failed');
+}
+
+/// Stores a session whose access token has expired, so the startup step of an oidc build refreshes it.
+Future<void> _storeExpiredSession() async {
+  final storage = FlutterSecureStorageAdapter();
+  await storage.write(SecureStorageKeys.jwtToken.key, 'expired-access-token');
+  await storage.write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+  await storage.write(SecureStorageKeys.oidcIdToken.key, 'stored-id-token');
+  await storage.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2000)));
 }
 
 const _discoveryMessage =
@@ -201,6 +223,15 @@ void main() {
       await pumpLogin(tester);
 
       expect(tester.takeException(), isNull);
+    });
+
+    // The app ships on Android and iOS.
+    testWidgets('counts two platforms', (tester) async {
+      setViewport(tester, const Size(1600, 1600));
+      await pumpLogin(tester);
+
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('7+'), findsNothing);
     });
   });
 
@@ -458,6 +489,29 @@ void main() {
       });
     }
 
+    // A startup step that throws signs the user out with authOidcFailed, which the router hands to the page.
+    testWidgets('shows a startup sign-in error until the first tap, and nothing while the sign-in runs', (
+      tester,
+    ) async {
+      await _storeExpiredSession();
+      final answer = Completer<OidcSignInOutcome>();
+      final client = _ScriptedOidcClient(outcomes: [answer.future]);
+      await pumpOidcApp(tester, _OidcDependencies(client, rotation: _ThrowingRotation()));
+      expect(find.text(_failedMessage), findsOneWidget);
+
+      await tester.tap(ssoButton);
+      // The spinner runs until the provider answers, so the frames are pumped one by one.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.descendant(of: ssoButton, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+      expect(find.text(_failedMessage), findsNothing);
+
+      answer.complete(const OidcSignInCancelled());
+      await tester.pumpAndSettle();
+
+      expect(find.text(_failedMessage), findsNothing);
+      expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+    });
+
     testWidgets('a misconfigured build says so and shows no button', (tester) async {
       await pumpOidcApp(
         tester,
@@ -526,6 +580,15 @@ void main() {
         expect(client.signIns, 1);
         expect(find.byType(ResponsiveScaffold), findsOneWidget);
         expect(gate(tester).isOpen, isFalse);
+      });
+
+      testWidgets('does not run after a startup sign-in error', (tester) async {
+        await _storeExpiredSession();
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true, rotation: _ThrowingRotation()));
+
+        expect(client.signIns, 0);
+        expect(find.text(_failedMessage), findsOneWidget);
       });
 
       testWidgets('does not run when it is turned off', (tester) async {

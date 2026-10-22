@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       crossAxisAlignment: WrapCrossAlignment.center,
       runSpacing: 8,
       children: [
-        _statItem('7+', l10n.login_brand_stat_platforms),
+        _statItem('2', l10n.login_brand_stat_platforms),
         _statDot(),
         _statItem('5', l10n.login_brand_stat_layers),
         _statDot(),
