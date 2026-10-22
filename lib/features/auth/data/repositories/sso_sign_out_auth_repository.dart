@@ -54,7 +54,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   @override
   Future<Result<AuthTokenEntity>> verifyOtp(VerifyOtpEntity request) => _inner.verifyOtp(request);
 
-  /// Records the sign-out at Studio, reads the stored ID token, clears the local session through [_inner], starts the
+  /// Reads the stored ID token, records the sign-out at Studio, clears the local session through [_inner], starts the
   /// provider logout, and answers [_inner]'s result as [SsoSignOut.cleared] without waiting for the provider.
   ///
   /// Studio's record needs a valid access token, so it is sent before the wipe, and an expired stored access token is
@@ -64,13 +64,13 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   ///
   /// The ID token is sent as `id_token_hint` when `OIDC_LOGOUT_HINT` is on. It is written, rolled back and wiped
   /// together with the session it belongs to, so it is always the current session's, and it is sent even when it has
-  /// expired: Keycloak gives it the access token's short life and still accepts it at its logout endpoint.
+  /// expired: Keycloak gives it the access token's short life and still accepts it at its logout endpoint. It is read
+  /// before the refresh, because a refresh that ends the session also deletes it.
   ///
   /// [SsoSignOut.providerLogout] fails with an [AuthError] of [AppErrorCode.authOidcLogoutIncomplete] when the
   /// provider logout failed.
   @override
   Future<SsoSignOut> signOut() async {
-    await _recordSignOutAtStudio();
     String? idToken;
     try {
       idToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
@@ -80,6 +80,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
         error.runtimeType,
       ]);
     }
+    await _recordSignOutAtStudio();
     final cleared = await _inner.logout();
     return SsoSignOut(cleared: cleared, providerLogout: _endProviderSession(_settings.logoutHint ? idToken : null));
   }

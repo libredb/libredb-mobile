@@ -144,7 +144,10 @@ String _jwt({required int exp}) {
 
 final _now = DateTime.utc(2026, 10, 22, 12);
 
-/// The read of the stored access token expiry, with which every sign-out starts.
+/// The read of the stored ID token, with which every sign-out starts: a refresh that ends the session deletes it.
+final _readIdToken = 'read ${SecureStorageKeys.oidcIdToken.key}';
+
+/// The read of the stored access token expiry, with which the refresh before the record starts.
 final _readExpiry = 'read ${SecureStorageKeys.accessTokenExpiresAt.key}';
 
 void main() {
@@ -192,18 +195,12 @@ void main() {
   });
 
   group('SsoSignOutAuthRepository.logout', () {
-    test('records the sign-out at Studio, reads the ID token before the wipe, then ends the provider session with it '
+    test('reads the ID token, records the sign-out at Studio, wipes, then ends the provider session with the ID token '
         'as the hint', () async {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, [
-        _readExpiry,
-        'recordSignOut',
-        'read ${SecureStorageKeys.oidcIdToken.key}',
-        'wipe',
-        'endProviderSession',
-      ]);
+      expect(calls, [_readIdToken, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
       expect(client.hints, ['stored-id-token']);
     });
 
@@ -222,13 +219,7 @@ void main() {
           final result = await repository().logout();
 
           expect(result, const Success<void>(null));
-          expect(calls, [
-            _readExpiry,
-            'recordSignOut',
-            'read ${SecureStorageKeys.oidcIdToken.key}',
-            'wipe',
-            'endProviderSession',
-          ]);
+          expect(calls, [_readIdToken, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
           expect(storage.values, isEmpty);
         });
       }
@@ -288,6 +279,19 @@ void main() {
           'wipe',
           'endProviderSession',
         ]);
+        expect(client.hints, ['stored-id-token']);
+      });
+
+      // The refresh ends a session it cannot refresh, and that clear also deletes the ID token.
+      test('records nothing when no refresh token is stored, and still sends the hint', () async {
+        storage.values.remove(SecureStorageKeys.refreshToken.key);
+
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls.where((call) => !call.startsWith('read ')), ['clear session', 'wipe', 'endProviderSession']);
+        expect(client.hints, ['stored-id-token']);
+        verifyNever(() => rotation.rotate(any()));
       });
 
       test('signs out when the refresh does not answer within the timeout', () async {
@@ -347,13 +351,7 @@ void main() {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, [
-        _readExpiry,
-        'clear session',
-        'read ${SecureStorageKeys.oidcIdToken.key}',
-        'wipe',
-        'endProviderSession',
-      ]);
+      expect(calls, [_readIdToken, _readExpiry, 'clear session', 'wipe', 'endProviderSession']);
       expect(client.hints, [null]);
     });
 
@@ -420,13 +418,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(signedOut.cleared, const Success<void>(null));
-      expect(calls, [
-        _readExpiry,
-        'recordSignOut',
-        'read ${SecureStorageKeys.oidcIdToken.key}',
-        'wipe',
-        'endProviderSession',
-      ]);
+      expect(calls, [_readIdToken, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
       expect(pending.hints, ['stored-id-token']);
       expect(providerLogoutEnded, isFalse);
 
