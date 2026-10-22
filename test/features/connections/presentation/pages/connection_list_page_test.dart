@@ -207,6 +207,28 @@ void main() {
     expect(header('group:Finance'), findsOneWidget);
   });
 
+  testWidgets('a search shows the matches of a collapsed section and clearing it collapses the section again', (
+    tester,
+  ) async {
+    answer(_mockAnswer());
+    await pumpPage(tester);
+    await tester.tap(header('group:Finance'));
+    await tester.pump();
+    expect(row('seed:billing-mysql'), findsNothing);
+
+    await search(tester, 'billing');
+    expect(row('seed:billing-mysql'), findsOneWidget);
+    expect(find.text(S.current.connection_search_no_match), findsNothing);
+    // While searching the header does not toggle, so the stored state stays as the user left it.
+    await tester.tap(header('group:Finance'));
+    await tester.pump();
+    expect(row('seed:billing-mysql'), findsOneWidget);
+
+    await search(tester, '  ');
+    expect(row('seed:billing-mysql'), findsNothing);
+    expect(row('seed:erp-oracle'), findsNothing);
+  });
+
   testWidgets("an empty search result says 'No connections match' and clearing brings the rows back", (tester) async {
     answer(_mockAnswer());
     await pumpPage(tester);

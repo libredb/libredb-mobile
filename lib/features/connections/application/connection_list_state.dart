@@ -46,6 +46,9 @@ final class ConnectionListLoaded extends ConnectionListState {
   /// Why the last refresh failed; shown via `errorCode.resolve(context)`, the raw message only goes to the log.
   final AppErrorCode? refreshErrorCode;
 
+  /// Whether [query] filters the list at all; whitespace alone does not (see [normalizeSearchQuery]).
+  bool get isSearching => normalizeSearchQuery(query).isNotEmpty;
+
   /// The rows that match [query] and [environment], in sections by group.
   List<ConnectionSection> get sections =>
       groupConnections(filterConnections(connections, query: query, environment: environment));

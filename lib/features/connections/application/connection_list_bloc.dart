@@ -9,6 +9,7 @@ import 'package:libredb_mobile/features/connections/application/connection_secti
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/shared/utils/search_fold.dart';
 
 part 'connection_list_event.dart';
 part 'connection_list_state.dart';

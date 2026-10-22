@@ -90,6 +90,8 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
       );
     }
     final sections = state.sections;
+    // A search shows every match, so it opens the collapsed sections without changing what the device remembers.
+    final searching = state.isSearching;
     return Column(
       children: [
         Padding(
@@ -120,10 +122,10 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
                       key: ValueKey('connection-section-${section.key}'),
                       title: section.group ?? l10n.connection_group_other,
                       count: section.connections.length,
-                      collapsed: collapsed.isCollapsed(section.key),
-                      onTap: () => context.read<CollapsedSectionsCubit>().toggle(section.key),
+                      collapsed: !searching && collapsed.isCollapsed(section.key),
+                      onTap: searching ? null : () => context.read<CollapsedSectionsCubit>().toggle(section.key),
                     ),
-                    if (!collapsed.isCollapsed(section.key))
+                    if (searching || !collapsed.isCollapsed(section.key))
                       for (final connection in section.connections)
                         _ConnectionRow(key: ValueKey('connection-row-${connection.id}'), connection: connection),
                   ],
@@ -216,13 +218,15 @@ class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;
   final bool collapsed;
-  final VoidCallback onTap;
+
+  /// Null while a search is active: the section then stays open and the header does not toggle it.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Semantics(
-      button: true,
+      button: onTap != null,
       expanded: !collapsed,
       child: InkWell(
         onTap: onTap,
