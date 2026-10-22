@@ -411,7 +411,7 @@ class ApiClient {
       requestBody: e.requestOptions.data,
       sensitiveKeys: sensitiveKeysOf(e.requestOptions),
     );
-    final code = _errorCodeOf(e.response?.data);
+    final code = errorCodeOf(e.response?.data);
     switch (statusCode) {
       case 400:
         return BadRequestException(body, statusCode, code);
@@ -440,7 +440,7 @@ class ApiClient {
 
   /// The string `code` of a JSON object body, given as a decoded map or as text. A code names a kind of failure and
   /// holds no request data, so it is read before the body is scrubbed.
-  static String? _errorCodeOf(Object? data) {
+  static String? errorCodeOf(Object? data) {
     Object? decoded = data;
     if (data is String) {
       try {
