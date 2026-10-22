@@ -7,18 +7,17 @@ import 'package:libredb_mobile/shared/models/studio_identity.dart';
 final class StudioIdentityModel {
   const StudioIdentityModel._();
 
-  /// Throws a [FormatException] for an answer that is not signed in, lacks the username, or names an unknown role.
+  /// Throws a [FormatException] for an answer that is not signed in, lacks the username, or has a missing, empty or
+  /// non-string role. A role this app does not know is a [StudioUnknownRole], kept as Studio sent it.
   static StudioIdentity fromJsonString(String body) {
     final decoded = jsonDecode(body);
     final user = decoded is Map<String, dynamic> && decoded['authenticated'] == true ? decoded['user'] : null;
     if (user is! Map<String, dynamic>) throw const FormatException('The session answer is not signed in');
     final username = user['username'];
     if (username is! String || username.isEmpty) throw const FormatException('The session has no username');
-    final role = switch (user['role']) {
-      'admin' => StudioRole.admin,
-      'user' => StudioRole.user,
-      _ => throw const FormatException('The session names an unknown role'),
-    };
+    final roleName = user['role'];
+    if (roleName is! String || roleName.isEmpty) throw const FormatException('The session has no role');
+    final role = StudioRole.fromName(roleName);
     final exp = user['exp'];
     return StudioIdentity(
       username: username,

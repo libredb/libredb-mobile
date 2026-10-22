@@ -9,7 +9,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
 
-const _user = StudioIdentity(username: 'user@example.com', role: StudioRole.user, viaBearer: true);
+const _user = StudioIdentity(username: 'user@example.com', role: StudioUserRole(), viaBearer: true);
 
 void main() {
   late MockISsoAuthRepository ssoRepository;
