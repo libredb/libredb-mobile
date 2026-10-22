@@ -1,5 +1,4 @@
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
-import 'package:libredb_mobile/infrastructure/config/template_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -19,7 +18,7 @@ void main() {
     test('prod config sets production environment', () {
       const config = AppConfig.prod();
       expect(config.isProduction, true);
-      expect(config.apiBaseUrl, TemplateConfig.prodApiUrl);
+      expect(config.apiBaseUrl, const String.fromEnvironment('PROD_API_URL'));
       expect(config.idleTimeout, const Duration(minutes: 15));
       expect(config.certificatePins, isEmpty);
     });

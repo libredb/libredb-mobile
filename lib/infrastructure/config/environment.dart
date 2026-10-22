@@ -1,5 +1,3 @@
-import 'package:libredb_mobile/infrastructure/config/template_config.dart';
-
 /// This file is used to set the environment
 enum Environment { dev, prod, test }
 
@@ -28,7 +26,7 @@ final class AppConfig {
 
   const AppConfig.prod()
     : environment = Environment.prod,
-      apiBaseUrl = TemplateConfig.prodApiUrl,
+      apiBaseUrl = prodApiUrl,
       certificatePins = const <String>[],
       idleTimeout = const Duration(minutes: 15),
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
@@ -38,6 +36,10 @@ final class AppConfig {
     Environment.prod => const AppConfig.prod(),
     Environment.test => const AppConfig.test(),
   };
+
+  /// LibreDB Studio's API, its origin plus `/api`, given at build time with
+  /// `--dart-define=PROD_API_URL=https://studio.example.com/api` (docs/studio.md).
+  static const String prodApiUrl = String.fromEnvironment('PROD_API_URL');
 
   final Environment environment;
   final String? apiBaseUrl;
@@ -54,7 +56,7 @@ final class AppConfig {
 
   /// Production-only DSN passed via `--dart-define=SENTRY_DSN=...`.
   /// Returns null in non-prod, or when the define is absent / empty.
-  /// **Never** commit a DSN to source (public template).
+  /// **Never** commit a DSN to source: the repository is public.
   String? get sentryDsn {
     if (!isProduction) return null;
     return sentryDsnDefine.isEmpty ? null : sentryDsnDefine;

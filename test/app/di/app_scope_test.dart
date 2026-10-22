@@ -33,8 +33,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
 
-/// Production behavior (no mock interceptor, token expiry enforced) with a valid base URL instead of the template
-/// placeholder in [AppConfig.prod].
+/// Production behavior (no mock interceptor, token expiry enforced) with a valid base URL, which [AppConfig.prod] has
+/// only when the build gives `PROD_API_URL`.
 const _prodConfig = AppConfig(
   environment: Environment.prod,
   apiBaseUrl: 'https://api.example.test',

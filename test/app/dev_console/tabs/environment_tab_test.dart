@@ -53,4 +53,18 @@ void main() {
     expect(find.text('Current Route'), findsOneWidget);
     expect(find.text('/'), findsWidgets, reason: 'current location path is shown');
   });
+
+  testWidgets('EnvironmentTab shows the app name LibreDB', (tester) async {
+    await tester.pumpWidget(
+      RepositoryProvider<AppConfig>.value(
+        value: const AppConfig.test(),
+        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: buildRouter()),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('LibreDB'), findsOneWidget);
+  });
 }
