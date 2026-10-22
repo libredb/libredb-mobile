@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

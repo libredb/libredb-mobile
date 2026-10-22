@@ -1,17 +1,17 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_session_repository_impl.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/shared_prefs_cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

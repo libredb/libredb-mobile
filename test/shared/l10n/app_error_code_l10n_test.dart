@@ -2,8 +2,8 @@
 library;
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/golden_app.dart';

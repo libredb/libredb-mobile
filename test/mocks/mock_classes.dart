@@ -3,42 +3,42 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Service imports
-import 'package:flutter_bloc_advance/core/analytics/analytics_service.dart';
+import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 
 // Infrastructure imports
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 // BLoC imports
-import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/change_password_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/forgot_password_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/login_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/register_bloc.dart';
-import 'package:flutter_bloc_advance/features/dashboard/application/dashboard_cubit.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_event.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:flutter_bloc_advance/features/users/application/authority_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_list_bloc.dart';
+import 'package:libredb_mobile/features/account/application/account_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/forgot_password_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/register_bloc.dart';
+import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_event.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
+import 'package:libredb_mobile/features/users/application/user_editor_bloc.dart';
+import 'package:libredb_mobile/features/users/application/user_list_bloc.dart';
 
 // Repository imports (concrete)
-import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
-import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
+import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
+import 'package:libredb_mobile/app/shell/repositories/menu_repository.dart';
 
 // Repository imports (interfaces)
-import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
 // Entity/model imports for fallback values
-import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
-import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
+import 'package:libredb_mobile/features/account/data/models/change_password.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 
 // Concrete repository mocks (for BLoC tests that depend on concrete types)
 class MockAccountRepository extends Mock implements AccountRepository {}

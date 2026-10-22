@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_page.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
 
 /// The answer to one statement.
 class QueryResult extends Equatable {

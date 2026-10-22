@@ -1,8 +1,8 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc_advance/app/localization/locale_cubit.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/localization/locale_cubit.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart' show Level, Logger, OutputEvent;
 import 'package:shared_preferences/shared_preferences.dart';

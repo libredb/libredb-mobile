@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_event.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_state.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/force_update_screen.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/maintenance_screen.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_state.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/force_update_screen.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/maintenance_screen.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 /// Wraps the app content and gates it behind lifecycle checks.
 ///

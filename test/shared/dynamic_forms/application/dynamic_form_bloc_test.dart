@@ -2,16 +2,16 @@ import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/logging_interceptor.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_event.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/logging_interceptor.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_event.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 

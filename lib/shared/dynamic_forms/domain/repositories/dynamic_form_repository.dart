@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
 
 /// Domain port for dynamic-form persistence and dispatch.
 ///

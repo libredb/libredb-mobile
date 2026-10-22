@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/printed_lines.dart';

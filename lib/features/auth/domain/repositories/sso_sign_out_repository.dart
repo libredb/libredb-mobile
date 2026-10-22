@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
+import 'package:libredb_mobile/core/result/result.dart';
 
 /// A logout the user starts in an `oidc` build: it clears the session on this device, then ends the session at the
 /// identity provider.

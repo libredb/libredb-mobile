@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// PII / token scrubber for Sentry events. Runs as the SDK's

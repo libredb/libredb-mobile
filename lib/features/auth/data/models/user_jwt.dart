@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 
 class UserJWT extends Equatable {
   final String? username;

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/widgets/confirmation_dialog_widget.dart';
+import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
 import 'package:go_router/go_router.dart';
 
 /// Whether the page [leaving] may close without asking although its form holds unsaved changes, such as when the

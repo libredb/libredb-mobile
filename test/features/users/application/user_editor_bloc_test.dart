@@ -1,12 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/fetch_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/save_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/application/usecases/fetch_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/usecases/save_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/user_editor_bloc.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeUserRepository implements IUserRepository {

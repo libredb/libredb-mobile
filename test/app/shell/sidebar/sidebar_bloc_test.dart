@@ -1,6 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_bloc.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
-import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/features/account/data/models/change_password.dart';
+import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/printed_lines.dart';

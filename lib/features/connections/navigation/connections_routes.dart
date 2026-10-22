@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/features/connections/application/connection_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/connections/application/usecases/list_managed_connections_usecase.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
-import 'package:flutter_bloc_advance/features/connections/presentation/pages/connection_list_page.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
+import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:go_router/go_router.dart';
 
 class ConnectionsFeatureRoutes {

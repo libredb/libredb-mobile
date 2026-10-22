@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/template_config.dart';
+import 'package:libredb_mobile/infrastructure/config/template_config.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AppConstants {

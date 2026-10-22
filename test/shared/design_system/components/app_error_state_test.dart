@@ -1,7 +1,7 @@
 @Tags(['widget'])
 library;
 
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

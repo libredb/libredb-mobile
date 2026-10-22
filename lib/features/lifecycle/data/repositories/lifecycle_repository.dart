@@ -1,12 +1,12 @@
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/data/models/app_config_model.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/lifecycle/data/models/app_config_model.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 
 class LifecycleRepository implements ILifecycleRepository {
   LifecycleRepository(this._apiClient);

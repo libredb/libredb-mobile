@@ -1,14 +1,14 @@
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/models/form_bundle_model.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/models/form_schema_model.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/models/form_bundle_model.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/models/form_schema_model.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 
 /// HTTP-backed implementation of [IDynamicFormRepository].
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc_advance/app/shell/top_bar/breadcrumb_route_resolver.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/app/shell/top_bar/breadcrumb_route_resolver.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

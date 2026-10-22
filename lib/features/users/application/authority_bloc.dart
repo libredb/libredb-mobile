@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/list_authorities_usecase.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/application/usecases/list_authorities_usecase.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'authority_event.dart';
 part 'authority_state.dart';

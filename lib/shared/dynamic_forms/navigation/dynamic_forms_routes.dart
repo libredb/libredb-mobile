@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/presentation/pages/dynamic_form_page.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/presentation/pages/dynamic_form_page.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:go_router/go_router.dart';
 
 class DynamicFormsFeatureRoutes {

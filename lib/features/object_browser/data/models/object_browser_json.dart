@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/database_object.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/key_scan_page.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/kind_count.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_container.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_detail.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_source.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/provider_meta.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 
 /// Reads the answers of Studio's object routes (`src/lib/db/types.ts` in Studio for the shapes).
 ///

@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
 
 class ResetPasswordUseCase {
   const ResetPasswordUseCase(this._repository);

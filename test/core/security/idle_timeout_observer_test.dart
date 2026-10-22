@@ -1,6 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc_advance/core/security/idle_timeout_observer.dart';
+import 'package:libredb_mobile/core/security/idle_timeout_observer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

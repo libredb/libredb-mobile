@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/printed_lines.dart';

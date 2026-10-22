@@ -1,19 +1,19 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/account/application/usecases/change_password_usecase.dart';
-import 'package:flutter_bloc_advance/features/account/application/usecases/register_account_usecase.dart';
-import 'package:flutter_bloc_advance/features/account/application/usecases/reset_password_usecase.dart';
-import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/application/change_password_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/forgot_password_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/application/register_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/change_password_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/forgot_password_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/register_page.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/features/account/application/usecases/change_password_usecase.dart';
+import 'package:libredb_mobile/features/account/application/usecases/register_account_usecase.dart';
+import 'package:libredb_mobile/features/account/application/usecases/reset_password_usecase.dart';
+import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/forgot_password_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/register_bloc.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/change_password_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/forgot_password_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/register_page.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:go_router/go_router.dart';
 
 class AuthFeatureRoutes {

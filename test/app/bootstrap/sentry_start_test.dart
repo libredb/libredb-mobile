@@ -1,8 +1,8 @@
-import 'package:flutter_bloc_advance/app/bootstrap/sentry_start.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/core/analytics/log_analytics_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/analytics/sentry_analytics_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
+import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 // ignore: implementation_imports
 import 'package:sentry/src/platform/platform.dart';
 import 'package:flutter_test/flutter_test.dart';

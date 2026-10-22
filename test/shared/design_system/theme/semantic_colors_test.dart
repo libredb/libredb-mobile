@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/semantic_colors.dart';
+import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

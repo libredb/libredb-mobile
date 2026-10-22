@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 
 abstract class IUserRepository {
   Future<Result<UserEntity>> retrieve(String id);

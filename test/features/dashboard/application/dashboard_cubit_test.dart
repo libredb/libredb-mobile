@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/feature_flags/feature_flag_service.dart';
-import 'package:flutter_bloc_advance/features/dashboard/application/dashboard_cubit.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/shared_prefs_cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/circuit_breaker.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/resilience_interceptor.dart';
+import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
+import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/script_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 
 /// Whether a connection has an open transaction, and whose it is.
 ///

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/menu_bloc/menu_bloc.dart';
-import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/shared/widgets/confirmation_dialog_widget.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_avatar.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart' show AppComponentSize;
+import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
+import 'package:libredb_mobile/features/account/application/account_bloc.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_avatar.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart' show AppComponentSize;
 import 'package:go_router/go_router.dart';
 
 import 'breadcrumb_widget.dart';

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_card.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/l10n/locale_l10n.dart';
-import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
-import 'package:flutter_bloc_advance/shared/widgets/language_selection_dialog.dart';
-import 'package:flutter_bloc_advance/shared/widgets/theme_selection_dialog.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/locale_l10n.dart';
+import 'package:libredb_mobile/shared/utils/external_link.dart';
+import 'package:libredb_mobile/shared/widgets/language_selection_dialog.dart';
+import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../generated/l10n.dart';

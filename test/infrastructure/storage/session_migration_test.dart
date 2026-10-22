@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_migration.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/startup_storage_time_limit.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_migration.dart';
+import 'package:libredb_mobile/infrastructure/storage/startup_storage_time_limit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart' show Level, Logger, OutputEvent;
 import 'package:mocktail/mocktail.dart';

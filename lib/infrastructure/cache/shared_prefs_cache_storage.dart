@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences-based cache storage implementation.

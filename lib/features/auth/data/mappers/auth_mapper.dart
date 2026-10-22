@@ -1,9 +1,9 @@
-import 'package:flutter_bloc_advance/core/security/security_utils.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/jwt_token.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/send_otp_request.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/user_jwt.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/verify_otp_request.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/core/security/security_utils.dart';
+import 'package:libredb_mobile/features/auth/data/models/jwt_token.dart';
+import 'package:libredb_mobile/features/auth/data/models/send_otp_request.dart';
+import 'package:libredb_mobile/features/auth/data/models/user_jwt.dart';
+import 'package:libredb_mobile/features/auth/data/models/verify_otp_request.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 
 class AuthMapper {
   const AuthMapper._();

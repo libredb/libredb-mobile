@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/services/sso_session_startup.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
 
 /// The startup step of a misconfigured `oidc` build: it never uses the stored session, so the user starts signed out
 /// and the login page shows [AppErrorCode.authOidcConfig].

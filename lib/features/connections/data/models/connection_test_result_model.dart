@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_test_result.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
 
 /// Reads a successful `POST /api/db/test-connection`: `{success: true, message, latency}` or `{success: true, degraded:
 /// true, message}`. Studio reports a failed connect as an error status, never as `success: false` with a 2xx.

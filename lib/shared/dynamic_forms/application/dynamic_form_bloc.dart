@@ -1,16 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_event.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_event.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_bundle_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/submit_form_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 class DynamicFormBloc extends Bloc<DynamicFormEvent, DynamicFormState> {
   DynamicFormBloc({

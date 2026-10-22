@@ -1,16 +1,16 @@
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/data/mappers/auth_mapper.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/jwt_token.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_session_repository_impl.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/data/mappers/auth_mapper.dart';
+import 'package:libredb_mobile/features/auth/data/models/jwt_token.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 class LoginRepository implements IAuthRepository {
   static final _log = AppLogger.getLogger("LoginRepository");

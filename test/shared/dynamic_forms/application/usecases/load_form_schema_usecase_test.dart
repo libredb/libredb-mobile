@@ -1,9 +1,9 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/usecases/load_form_schema_usecase.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeRepo implements IDynamicFormRepository {

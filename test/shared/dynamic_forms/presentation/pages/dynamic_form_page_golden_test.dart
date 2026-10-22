@@ -2,10 +2,10 @@ import 'package:alchemist/alchemist.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/presentation/pages/dynamic_form_page.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/presentation/pages/dynamic_form_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

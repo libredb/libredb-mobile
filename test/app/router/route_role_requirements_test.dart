@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/router/route_role_requirements.dart';
-import 'package:flutter_bloc_advance/core/security/safe_redirect.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/router/route_role_requirements.dart';
+import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -2,11 +2,11 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/app/dev_console/dev_console_overlay.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/environment_tab.dart';
-import 'package:flutter_bloc_advance/app/shell/top_bar/top_bar_widget.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
+import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/environment_tab.dart';
+import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';

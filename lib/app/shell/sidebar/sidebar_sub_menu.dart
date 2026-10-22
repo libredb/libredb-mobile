@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_radius.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_durations.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
 
 import 'sidebar_nav_item.dart';
 

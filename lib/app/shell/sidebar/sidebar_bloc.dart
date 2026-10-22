@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 
 part 'sidebar_event.dart';
 part 'sidebar_state.dart';

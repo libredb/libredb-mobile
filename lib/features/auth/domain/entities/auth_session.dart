@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
 
 /// Value object representing a fully-formed authenticated session.
 ///

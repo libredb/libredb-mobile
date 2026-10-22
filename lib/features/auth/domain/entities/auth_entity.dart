@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 
 class AuthCredentialsEntity extends Equatable {
   const AuthCredentialsEntity({required this.username, required this.password});

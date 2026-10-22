@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Guards the platform setup the `oidc` package needs.

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
-import 'package:flutter_bloc_advance/core/security/credential_json.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/core/security/credential_json.dart';
 
 /// The path of the backend's refresh endpoint in `jwt` mode, relative to the API base URL as every other request path
 /// is. A 401 from it ends the session in `TokenRefreshInterceptor`, since there is nothing left to refresh with.

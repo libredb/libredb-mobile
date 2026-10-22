@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/sso_sign_in_result.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeSsoAuthRepository implements ISsoAuthRepository {

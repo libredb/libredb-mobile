@@ -2,10 +2,10 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_skeleton.dart';
-import 'package:flutter_bloc_advance/shared/widgets/app_data_table.dart';
-import 'package:flutter_bloc_advance/shared/widgets/app_responsive_list_view.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_skeleton.dart';
+import 'package:libredb_mobile/shared/widgets/app_data_table.dart';
+import 'package:libredb_mobile/shared/widgets/app_responsive_list_view.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 

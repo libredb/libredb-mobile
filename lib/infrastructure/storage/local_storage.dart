@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory cache for fields that are read synchronously across the app.

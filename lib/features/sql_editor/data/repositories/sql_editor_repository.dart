@@ -1,13 +1,13 @@
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/data/models/sql_editor_json.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_page.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/script_result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/transaction_state.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/repositories/sql_editor_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 
 /// Studio's statement routes, all `POST` with the connection named in the body. The paths are relative to
 /// `PROD_API_URL`, which ends in Studio's `/api`. The statement text is never logged.

@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_origin.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/public_endpoint.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/infrastructure/http/api_origin.dart';
+import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
 /// Injects JWT Bearer token into every outgoing request, except a request
 /// to a public endpoint ([isPublicEndpoint]) and a request to any origin

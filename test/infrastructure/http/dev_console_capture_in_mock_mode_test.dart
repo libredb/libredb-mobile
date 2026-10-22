@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/mock_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/mock_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';

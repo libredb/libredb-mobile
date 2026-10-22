@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 abstract class IStudioIdentityRepository {
   /// Who Studio says the signed-in user is.

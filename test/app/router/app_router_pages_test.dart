@@ -2,14 +2,14 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/router/forbidden_page.dart';
-import 'package:flutter_bloc_advance/app/router/not_found_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/register_page.dart';
-import 'package:flutter_bloc_advance/features/dashboard/presentation/pages/dashboard_home_page.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/router/forbidden_page.dart';
+import 'package:libredb_mobile/app/router/not_found_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/register_page.dart';
+import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_home_page.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart' show Level, Logger, OutputEvent;

@@ -1,1 +1,1 @@
-export 'package:flutter_bloc_advance/shared/widgets/editor_form_mode.dart';
+export 'package:libredb_mobile/shared/widgets/editor_form_mode.dart';

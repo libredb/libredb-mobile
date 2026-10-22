@@ -2,20 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/app_bootstrap_config.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/sentry_start.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/analytics/crash_reporter.dart';
-import 'package:flutter_bloc_advance/app/dev_console/time_travel/time_travel_bloc_observer.dart';
-import 'package:flutter_bloc_advance/core/logging/app_bloc_observer.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_migration.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
+import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/analytics/crash_reporter.dart';
+import 'package:libredb_mobile/app/dev_console/time_travel/time_travel_bloc_observer.dart';
+import 'package:libredb_mobile/core/logging/app_bloc_observer.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_migration.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 class AppBootstrap {
   /// Starts the app as [config] says. [sentry] decides whether Sentry starts and starts it; a test passes its own.

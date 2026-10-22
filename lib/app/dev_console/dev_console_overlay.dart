@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/network_tab.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/bloc_tab.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/storage_tab.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/environment_tab.dart';
-import 'package:flutter_bloc_advance/app/dev_console/time_travel/time_travel_store.dart';
-import 'package:flutter_bloc_advance/app/dev_console/time_travel/time_travel_tab.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/network_tab.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/bloc_tab.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/storage_tab.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/environment_tab.dart';
+import 'package:libredb_mobile/app/dev_console/time_travel/time_travel_store.dart';
+import 'package:libredb_mobile/app/dev_console/time_travel/time_travel_tab.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 
 /// Keyboard shortcut wrapper that listens for Ctrl+Shift+D to open the developer console.
 ///

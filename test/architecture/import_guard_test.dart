@@ -218,7 +218,7 @@ List<String> _getImports(File file) {
     if (match == null) continue;
     final importPath = match.group(1)!;
 
-    if (importPath.contains('flutter_bloc_advance')) {
+    if (importPath.contains('libredb_mobile')) {
       result.add(importPath);
     } else if (importPath.startsWith('.')) {
       // Resolve relative import to package-style path for consistent checking
@@ -226,10 +226,10 @@ List<String> _getImports(File file) {
       final lastSlash = filePath.lastIndexOf('/');
       final fileDir = lastSlash != -1 ? filePath.substring(0, lastSlash) : '.';
       final resolved = _resolveRelativePath(fileDir, importPath);
-      // Convert to package:flutter_bloc_advance/... style
+      // Convert to package:libredb_mobile/... style
       final libIndex = resolved.indexOf('/lib/');
       if (libIndex != -1) {
-        final packagePath = 'package:flutter_bloc_advance/${resolved.substring(libIndex + 5)}';
+        final packagePath = 'package:libredb_mobile/${resolved.substring(libIndex + 5)}';
         result.add(packagePath);
       }
     }
@@ -267,9 +267,9 @@ String? _extractFeatureNameFromImport(String import) {
 /// Make path relative for readable output.
 String _relative(String path) => path.replaceAll(RegExp(r'^.*/lib/'), 'lib/');
 
-/// Extract a short fragment from the import path (after package:flutter_bloc_advance/).
+/// Extract a short fragment from the import path (after package:libredb_mobile/).
 String _importFragment(String import) {
-  return import.replaceAll('package:flutter_bloc_advance/', '').replaceAll('.dart', '');
+  return import.replaceAll('package:libredb_mobile/', '').replaceAll('.dart', '');
 }
 
 /// Check if a violation key matches any known exception (substring match).

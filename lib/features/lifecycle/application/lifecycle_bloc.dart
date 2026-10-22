@@ -2,17 +2,17 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/feature_flags/feature_flag_service.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_event.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_state.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
-import 'package:flutter_bloc_advance/shared/utils/semver.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_state.dart';
+import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/shared/utils/semver.dart';
 
 /// Decides from the remote app config whether the app opens, shows the maintenance screen or asks for an update.
 ///

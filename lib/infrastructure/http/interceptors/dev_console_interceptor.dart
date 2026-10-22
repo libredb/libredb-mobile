@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/sensitive_keys.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 
 /// Dio interceptor that records HTTP requests/responses to [DevConsoleStore].
 ///

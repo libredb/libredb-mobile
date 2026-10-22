@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/infrastructure/analytics/native_sentry_start.dart';
+import 'package:libredb_mobile/infrastructure/analytics/native_sentry_start.dart';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: implementation_imports
 import 'package:sentry/src/platform/platform.dart';

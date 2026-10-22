@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/domain/user_roles.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/widgets/authorities_dropdown.dart';
-import 'package:flutter_bloc_advance/shared/widgets/editor_form_mode.dart';
-import 'package:flutter_bloc_advance/shared/widgets/user_form_fields.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/components.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/features/users/application/user_editor_bloc.dart';
+import 'package:libredb_mobile/features/users/domain/user_roles.dart';
+import 'package:libredb_mobile/features/users/presentation/widgets/authorities_dropdown.dart';
+import 'package:libredb_mobile/shared/widgets/editor_form_mode.dart';
+import 'package:libredb_mobile/shared/widgets/user_form_fields.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/components.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
 

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/logging_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/sensitive_keys.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/logging_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 

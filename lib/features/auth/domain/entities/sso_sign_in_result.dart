@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 
 /// How a single sign-on ended, once the provider's answer has become the app's session.
 sealed class SsoSignInResult {

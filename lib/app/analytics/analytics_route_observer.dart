@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/core/analytics/analytics_service.dart';
+import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 
 /// NavigatorObserver that logs screen views to an analytics service.
 ///

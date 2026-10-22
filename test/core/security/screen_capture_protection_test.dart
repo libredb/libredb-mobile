@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/core/security/screen_capture_protection.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

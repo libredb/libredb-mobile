@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/shared/utils/semver.dart';
+import 'package:libredb_mobile/shared/utils/semver.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

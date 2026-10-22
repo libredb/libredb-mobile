@@ -1,9 +1,9 @@
-name: flutter_bloc_advance
+name: libredb_mobile
 description: "LibreDB Mobile, the Android and iOS client of LibreDB Studio"
 publish_to: 'none'
 version: 0.22.2+1
 
-# ➜  flutter_bloc_advance git:(main) ✗ flutter --version
+# fvm flutter --version
 # Flutter 3.47.7 • channel stable • https://github.com/flutter/flutter.git
 # Framework • revision abaf9c5237 (12 days ago) • 2026-10-08 09:51:21 -0700
 # Engine • hash d8a2d6c768c334d53e16277f837970ffa1e2de81 (revision deb287481e) (12 days ago) • 2026-10-07 17:09:12.000Z

@@ -1,12 +1,12 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_policy_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_test_result_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/managed_connections.dart';
-import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_policy.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_test_result.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';

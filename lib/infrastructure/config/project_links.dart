@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/template_config.dart';
+import 'package:libredb_mobile/infrastructure/config/template_config.dart';
 
 /// The project's own pages that the app links to: its source repository, its documentation and its sponsor page.
 ///

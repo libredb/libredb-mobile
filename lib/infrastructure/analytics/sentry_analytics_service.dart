@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/analytics/analytics_service.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/analytics/analytics_service.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// [IAnalyticsService] implementation backed by the Sentry SDK.

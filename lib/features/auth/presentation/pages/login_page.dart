@@ -2,25 +2,22 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-// Uncomment to block screenshots / blur task-switcher snapshot on the login screen.
-// See lib/core/security/screen_capture_protection.dart for Android/iOS asymmetry.
-// import 'package:flutter_bloc_advance/core/security/screen_capture_protected.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
-import 'package:flutter_bloc_advance/shared/widgets/password_validator.dart';
-import 'package:flutter_bloc_advance/shared/widgets/responsive_form_widget.dart';
-import 'package:flutter_bloc_advance/shared/widgets/submit_button_widget.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/core/security/safe_redirect.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/widgets/password_validator.dart';
+import 'package:libredb_mobile/shared/widgets/responsive_form_widget.dart';
+import 'package:libredb_mobile/shared/widgets/submit_button_widget.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/core/security/safe_redirect.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 import 'package:form_builder_validators/form_builder_validators.dart';
 
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 import '../../application/login_bloc.dart';
 import '../../domain/services/sso_auto_redirect_gate.dart';
@@ -41,8 +38,6 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-// To opt in to screen capture protection on this screen, also add
-// `ScreenCaptureProtected<LoginScreen>,` to the `with` clause below.
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final GlobalKey<FormBuilderState> _loginFormKey = GlobalKey<FormBuilderState>(debugLabel: '__loginFormKey__');
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>(debugLabel: '__loginScaffoldKey__');

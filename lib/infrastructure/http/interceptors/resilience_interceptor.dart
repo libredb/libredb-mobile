@@ -1,14 +1,14 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/circuit_breaker.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/cache_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/connectivity_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/idempotency_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/transport_errors.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/idempotency_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 
 /// Dio interceptor that combines **smart retry** with a **circuit breaker**
 /// to improve resilience against transient failures.

@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The issuer and client id of a valid `oidc` build, which a row changes one field of.

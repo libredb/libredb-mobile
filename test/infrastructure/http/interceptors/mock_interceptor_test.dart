@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/mock_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/mock_interceptor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/printed_lines.dart';

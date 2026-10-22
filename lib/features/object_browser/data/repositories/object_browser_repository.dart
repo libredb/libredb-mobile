@@ -1,16 +1,16 @@
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/object_browser/data/models/object_browser_json.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/database_object.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/key_scan_page.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/kind_count.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_container.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_detail.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_source.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/provider_meta.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/repositories/object_browser_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
+import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 
 /// Studio's object routes, all `POST` with the connection named in the body. The paths are relative to
 /// `PROD_API_URL`, which ends in Studio's `/api`.

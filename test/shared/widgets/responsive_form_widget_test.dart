@@ -4,7 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_bloc_advance/shared/widgets/responsive_form_widget.dart';
+import 'package:libredb_mobile/shared/widgets/responsive_form_widget.dart';
 
 void main() {
   group('ResponsiveFormBuilder Widget Tests', () {

@@ -1,8 +1,8 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/application/usecases/persist_auth_session_usecase.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/persist_auth_session_usecase.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeAuthSessionRepository implements IAuthSessionRepository {

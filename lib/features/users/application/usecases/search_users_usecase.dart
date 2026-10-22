@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 
 class SearchUsersParams {
   const SearchUsersParams({this.page = 0, this.size = 10, this.authorities, this.name});

@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/features/object_browser/data/models/object_browser_json.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/object_source.dart';
-import 'package:flutter_bloc_advance/features/object_browser/domain/entities/provider_meta.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/provider_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

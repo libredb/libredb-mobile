@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/connectivity/connectivity_cubit.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_durations.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 
 /// An animated banner that appears at the top of the scaffold when the device is offline.
 ///

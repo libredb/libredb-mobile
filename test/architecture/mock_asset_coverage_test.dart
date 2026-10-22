@@ -1,24 +1,24 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
-import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
-import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
-import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/features/users/data/repositories/authority_repository.dart';
-import 'package:flutter_bloc_advance/features/users/data/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/pages/user_extended_info_page.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/public_endpoint.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/account/data/models/change_password.dart';
+import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/users/data/repositories/authority_repository.dart';
+import 'package:libredb_mobile/features/users/data/repositories/user_repository.dart';
+import 'package:libredb_mobile/features/users/presentation/pages/user_extended_info_page.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_env.dart';
@@ -179,7 +179,7 @@ Set<String> _apiClientRepositoryMethods() {
   ];
   final implemented = {
     for (final source in sources)
-      if (source.contains("import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';"))
+      if (source.contains("import 'package:libredb_mobile/infrastructure/http/api_client.dart';"))
         for (final match in RegExp(r'class \w+ implements (I\w+Repository)\b').allMatches(source)) match[1]!,
   };
   final declared = {

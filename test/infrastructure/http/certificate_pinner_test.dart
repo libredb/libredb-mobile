@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String _hashOf(Uint8List bytes) => base64.encode(sha256.convert(bytes).bytes);

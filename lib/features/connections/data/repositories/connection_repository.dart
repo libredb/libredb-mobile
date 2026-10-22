@@ -1,14 +1,14 @@
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_policy_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_test_result_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/managed_connections.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_policy.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_test_result.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 
 /// Studio's connection API. The paths are relative to `PROD_API_URL`, which ends in Studio's `/api`.
 class ConnectionRepository implements IConnectionRepository {

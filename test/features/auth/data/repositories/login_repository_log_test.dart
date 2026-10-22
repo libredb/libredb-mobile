@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/printed_lines.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 
 /// A mobile-optimized card list that handles loading, empty, and populated states.
 ///

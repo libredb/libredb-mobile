@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 
-import 'package:flutter_bloc_advance/app/shell/models/menu.dart';
+import 'package:libredb_mobile/app/shell/models/menu.dart';
 
 class MenuRepository {
   static final _log = AppLogger.getLogger("MenuRepository");

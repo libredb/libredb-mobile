@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/app/dev_console/time_travel/time_travel_store.dart';
+import 'package:libredb_mobile/app/dev_console/time_travel/time_travel_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
