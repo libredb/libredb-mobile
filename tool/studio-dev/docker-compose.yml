@@ -16,7 +16,7 @@
 #
 # Sign in as admin / admin (realm role admin) or user / user (realm role user). norole / norole holds no realm role,
 # so Studio refuses it, which shows the app's refused sign-in.
-# Studio lists the Postgres seeds of seed-connections.yaml beside its built-in samples.
+# Studio lists the Postgres and Redis seeds of seed-connections.yaml beside its built-in samples.
 # The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
 #
 # The Studio image needs the bearer channel of libredb/libredb-studio#1914, which no release has yet (1.0.0 does not).
@@ -32,6 +32,8 @@ name: libredb-mobile-studio-dev
 # The passwords of the roles the Postgres seeds sign in as (postgres/seed.sql); only this file holds them.
 x-app-owner-password: &app-owner-password app-owner-dev-not-for-production
 x-studio-reader-password: &studio-reader-password studio-reader-dev-not-for-production
+# The password of the Redis server behind seed:dev-redis; only this file holds it.
+x-redis-password: &redis-password redis-dev-not-for-production
 
 services:
   proxy:
@@ -110,6 +112,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      redis-seed:
+        condition: service_completed_successfully
     environment:
       NEXT_PUBLIC_AUTH_PROVIDER: oidc
       OIDC_ISSUER: https://localhost:8443/realms/libredb
@@ -122,10 +126,11 @@ services:
       OIDC_BEARER_AUDIENCE: libredb-studio-api
       OIDC_BEARER_CLIENT_IDS: libredb-mobile
       NODE_EXTRA_CA_CERTS: /ca/root.crt
-      # The Postgres seeds of seed-connections.yaml, beside the built-in samples.
+      # The Postgres and Redis seeds of seed-connections.yaml, beside the built-in samples.
       SEED_CONFIG_PATH: /app/config/seed-connections.yaml
       APP_OWNER_PASSWORD: *app-owner-password
       STUDIO_READER_PASSWORD: *studio-reader-password
+      REDIS_PASSWORD: *redis-password
     volumes:
       - dev-ca:/ca:ro
       - ./seed-connections.yaml:/app/config/seed-connections.yaml:ro
@@ -156,6 +161,37 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  # The Redis behind seed:dev-redis, with no persistence, so every start begins empty and redis-seed loads it.
+  redis:
+    image: redis:8.10.2-alpine
+    command: [redis-server, --save, "", --appendonly, "no", --requirepass, *redis-password]
+    environment:
+      REDISCLI_AUTH: *redis-password
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Loads redis/seed.redis into the Redis above, once it answers. redis-cli goes on after a failed command, so a reply
+  # that is an error fails the service, and with it the stack.
+  redis-seed:
+    image: redis:8.10.2-alpine
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDISCLI_AUTH: *redis-password
+    volumes:
+      - ./redis/seed.redis:/seed/seed.redis:ro
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        grep -v -e '^#' -e '^$$' /seed/seed.redis | redis-cli -h redis > /tmp/replies &&
+        if grep -E '^(ERR|WRONGTYPE)' /tmp/replies; then exit 1; fi
+    restart: "no"
 
   # The governed profile (--profile governed) adds a second Studio in governance mode beside the first one, at
   # https://localhost:9444. Its connections and grants come from the governance source, a Postgres that holds the

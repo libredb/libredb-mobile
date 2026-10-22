@@ -1,0 +1,1 @@
+{"rows":[{"member":"ada","score":"8"},{"member":"linus","score":"17"},{"member":"grace","score":"42"}],"fields":["member","score"],"rowCount":3,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":3,"wasLimited":false}}

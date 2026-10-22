@@ -1,0 +1,19 @@
+{
+  "keyscan_first": {
+    "connectionId": "seed:dev-redis",
+    "pattern": "user:*",
+    "database": 1
+  },
+  "keyscan_next": {
+    "connectionId": "seed:dev-redis",
+    "pattern": "user:*",
+    "database": 1,
+    "cursor": "406"
+  },
+  "keyscan_last": {
+    "connectionId": "seed:dev-redis",
+    "pattern": "user:*",
+    "database": 1,
+    "cursor": "907"
+  }
+}

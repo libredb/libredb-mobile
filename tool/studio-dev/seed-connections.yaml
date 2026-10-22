@@ -47,3 +47,16 @@ connections:
     group: "Dev databases"
     roles: ["*"]
     managed: true
+
+  # The Redis of the compose file, loaded by redis/seed.redis. Names no database, so a walk or a query without one
+  # reads database 0, Redis's own default, and a request names another in database.
+  - id: dev-redis
+    name: "Dev Redis"
+    type: redis
+    host: redis
+    port: 6379
+    password: "${REDIS_PASSWORD}"
+    environment: development
+    group: "Dev databases"
+    roles: ["*"]
+    managed: true

@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/connections/data/models/connection_polic
 import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
@@ -38,6 +39,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// The Postgres fixtures (`*_postgres*.json`, and `txbegin.json`, `txquery.json` and `txcommit.json` on one database
 /// of the server-level seed) come from the Postgres seeds of tool/studio-dev, Studio main at c9989a6b5, as user admin
 /// with a libredb-mobile access token; docs/studio.md lists the seeds and the command that recorded each one.
+/// The Redis fixtures (`*_redis*.json` and `keyscan_*.json`) come from seed:dev-redis of tool/studio-dev the same way;
+/// `keyscan_requests.json` holds the body each recorded key-scan page was requested with.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -437,6 +440,180 @@ void main() {
     test('POST /api/db/transaction commits that transaction', () {
       // The app has no reader of this answer yet; #51 adds one.
       expect((jsonDecode(fixture('txcommit')) as Map<String, dynamic>)['status'], 'committed');
+    });
+  });
+
+  group('the Redis seed of tool/studio-dev', () {
+    test('POST /api/db/provider-meta of Redis', () {
+      final meta = ProviderMetaJson.read(fixture('meta_redis'));
+      ObjectKind kind(String id) => meta.objectKinds.singleWhere((k) => k.id == id);
+
+      expect(meta.isSql, isFalse);
+      expect(meta.queryLanguage, 'json');
+      expect(meta.queryDialect, 'redis');
+      expect(meta.containerLevels, const [ContainerLevel(id: 'schema', label: 'Database', labelPlural: 'Databases')]);
+      expect(meta.supportsTransactions, isFalse);
+      expect(meta.supportsResultPagination, isFalse);
+      expect(meta.tablesAreDerivedGroupings, isTrue);
+      expect(meta.objectKinds.map((k) => k.id), ['keyspace', 'function']);
+      expect(kind('keyspace').hasColumns, isTrue);
+      expect(kind('keyspace').hasSource, isFalse);
+      expect(kind('function').sourceLanguage, 'lua');
+      expect(kind('function').acceptsSourceEdits, isTrue);
+    });
+
+    test('POST /api/db/provider-meta of Redis reads the labels and the schema refresh rule', () {
+      final meta = ProviderMetaJson.read(fixture('meta_redis'));
+
+      expect(meta.schemaRefreshPattern, r'(DEL|FLUSHDB|FLUSHALL|RENAME)\b');
+      expect(meta.refreshesSchema('del user:1'), isTrue);
+      expect(meta.refreshesSchema('GET user:1'), isFalse);
+      expect(
+        meta.labels,
+        const ProviderLabels(
+          entityName: 'Key Pattern',
+          entityNamePlural: 'Key Patterns',
+          rowName: 'key',
+          rowNamePlural: 'keys',
+          selectAction: 'Scan Keys',
+          generateAction: 'Generate Command',
+          searchPlaceholder: 'Search keys...',
+        ),
+      );
+    });
+
+    test('POST /api/db/provider-meta of Redis declares the default key-scan shape', () {
+      final keyScan = ProviderMetaJson.read(fixture('meta_redis')).keyScan!;
+      final raw = (jsonDecode(fixture('meta_redis')) as Map<String, dynamic>)['capabilities']['keyScan'] as Map;
+
+      expect(raw.keys, unorderedEquals(['defaultCount', 'maxCount']), reason: 'Redis declares no shape field');
+      expect(keyScan, const KeyScanSpec(defaultCount: 500, maxCount: 1000));
+      expect(keyScan.separator, ':');
+      expect(keyScan.cursor, 'decimal');
+      expect(keyScan.pattern, 'glob');
+      expect(keyScan.totalScope, 'database');
+      expect(keyScan.levels, isNull);
+    });
+
+    test('POST /api/db/objects/containers of Redis lists its numbered databases', () {
+      final containers = ObjectBrowserJson.containers(fixture('containers_redis'));
+
+      expect(containers.map((c) => c.path), [
+        for (var i = 0; i < 16; i++) [i.toString()],
+      ]);
+      expect(containers.map((c) => c.level), everyElement(0));
+      expect(containers.singleWhere((c) => c.isSessionDefault).name, '0');
+    });
+
+    test('POST /api/db/objects/counts of database 1', () {
+      final counts = ObjectBrowserJson.counts(fixture('counts_redis'));
+
+      expect(counts.keys, unorderedEquals(['keyspace', 'function']));
+      expect(
+        counts['keyspace'],
+        const KindCounted(3, sampledFrom: 'the first 1,000 keys of one SCAN walk'),
+        reason: 'the prefixes user, session and cache, from a walk Studio bounds at 1,000 keys',
+      );
+      expect(counts['function'], const KindCounted(0));
+    });
+
+    KeyScanPage page(String name) => ObjectBrowserJson.keyScanPage(fixture(name));
+    Map<String, dynamic> request(String name) =>
+        (jsonDecode(fixture('keyscan_requests')) as Map<String, dynamic>)[name] as Map<String, dynamic>;
+
+    test('POST /api/db/keys/scan walks user:* in database 1 over several pages', () {
+      for (final name in ['keyscan_first', 'keyscan_next', 'keyscan_last']) {
+        final scanned = page(name);
+
+        expect(request(name), containsPair('pattern', 'user:*'), reason: name);
+        expect(request(name), containsPair('database', 1), reason: name);
+        expect(scanned.keys, isNotEmpty, reason: name);
+        expect(scanned.keys, everyElement(startsWith('user:')), reason: name);
+        expect(scanned.types.keys, containsAll(scanned.keys), reason: '$name reads the type of every key');
+        expect(scanned.total, 1207, reason: '$name counts every key of database 1');
+      }
+      expect(request('keyscan_first'), isNot(contains('cursor')), reason: 'a walk starts without a cursor');
+      expect(page('keyscan_first').isLast, isFalse);
+      expect(page('keyscan_next').isLast, isFalse);
+      expect(page('keyscan_last').isLast, isTrue);
+    });
+
+    test('POST /api/db/keys/scan pages chain by the cursor of the page before', () {
+      expect(request('keyscan_next')['cursor'], page('keyscan_first').cursor);
+      expect(request('keyscan_last')['cursor'], isNot('0'));
+      expect(page('keyscan_next').keys.toSet().intersection(page('keyscan_first').keys.toSet()), isEmpty);
+    });
+
+    test('POST /api/db/keys/scan reads the type of each key and covers every user:* key once', () {
+      final pages = [
+        for (final name in ['keyscan_first', 'keyscan_next', 'keyscan_last']) page(name),
+      ];
+      final keys = [for (final scanned in pages) ...scanned.keys];
+      final types = {for (final scanned in pages) ...scanned.types};
+
+      expect(keys, hasLength(1203));
+      expect(keys.toSet(), hasLength(1203));
+      expect(types['user:0001'], 'string');
+      expect(types['user:2'], 'hash');
+      expect(types['user:2:roles'], 'set');
+      expect(types['user:2:profile'], 'string');
+    });
+
+    // One read per key type, each the statement Studio's key browser generates for it, run in database 1.
+    test('POST /api/db/query reads a string', () {
+      expect(SqlEditorJson.queryResult(fixture('query_redis_string')).rows, [
+        {'result': 'hello from db1'},
+      ]);
+    });
+
+    test('POST /api/db/query reads a string holding JSON as text', () {
+      final result = SqlEditorJson.queryResult(fixture('query_redis_json'));
+
+      expect(result.fields, ['result']);
+      expect(jsonDecode(result.rows.single['result']! as String), {
+        'name': 'Grace Hopper',
+        'languages': ['en'],
+        'active': true,
+      });
+    });
+
+    test('POST /api/db/query reads a hash as field and value rows', () {
+      final result = SqlEditorJson.queryResult(fixture('query_redis_hash'));
+
+      expect(result.fields, ['field', 'value']);
+      expect(result.rows.map((r) => r['field']), ['name', 'email', 'plan']);
+      expect(result.rows.first['value'], 'Grace Hopper');
+    });
+
+    test('POST /api/db/query reads a list and a set as numbered rows', () {
+      final list = SqlEditorJson.queryResult(fixture('query_redis_list'));
+      final set = SqlEditorJson.queryResult(fixture('query_redis_set'));
+
+      expect(list.fields, ['index', 'value']);
+      expect(list.rows.map((r) => r['index']), [1, 2, 3]);
+      expect(list.rows.map((r) => r['value']), ['login', 'run-query', 'logout']);
+      expect(set.fields, ['index', 'value']);
+      expect(set.rows.map((r) => r['value']), unorderedEquals(['analyst', 'viewer']));
+    });
+
+    test('POST /api/db/query reads a sorted set with each score as text', () {
+      final result = SqlEditorJson.queryResult(fixture('query_redis_zset'));
+
+      expect(result.fields, ['member', 'score']);
+      expect(result.rows, [
+        {'member': 'ada', 'score': '8'},
+        {'member': 'linus', 'score': '17'},
+        {'member': 'grace', 'score': '42'},
+      ]);
+    });
+
+    test('POST /api/db/query reads a stream as one row per entry', () {
+      final result = SqlEditorJson.queryResult(fixture('query_redis_stream'));
+
+      expect(result.fields, ['id', 'action', 'device']);
+      expect(result.rows.map((r) => r['id']), ['1700000000000-0', '1700000000001-0']);
+      expect(result.rows.map((r) => r['action']), ['login', 'run-query']);
+      expect(result.pagination?.hasMore, isFalse);
     });
   });
 

@@ -1,0 +1,28 @@
+# The keys of seed:dev-redis, run by the redis-seed service of tool/studio-dev/docker-compose.yml through redis-cli.
+# NOT A PRODUCTION CONFIGURATION. docs/studio.md lists what each database holds.
+# One key of every type the key browser reads, under user:*, session:* and cache:*, in databases 0 and 1, and in
+# database 1 also 1,200 user:NNNN strings, so a walk of user:* takes several pages.
+# A stream entry has a fixed id, so a recorded read of it does not depend on the clock.
+
+FLUSHALL
+
+SELECT 0
+SET cache:greeting "hello from db0"
+SET user:1:profile "{\"name\":\"Ada Lovelace\",\"languages\":[\"en\",\"tr\"]}"
+HSET user:1 name "Ada Lovelace" email ada@example.com plan pro
+RPUSH session:1:events login open-orders logout
+SADD user:1:roles admin editor
+ZADD cache:leaderboard 30 ada 20 bob 10 cem
+XADD session:1:log 1700000000000-0 action login device phone
+XADD session:1:log 1700000000001-0 action logout device phone
+
+SELECT 1
+SET cache:greeting "hello from db1"
+SET user:2:profile "{\"name\":\"Grace Hopper\",\"languages\":[\"en\"],\"active\":true}"
+HSET user:2 name "Grace Hopper" email grace@example.com plan team
+RPUSH session:2:events login run-query logout
+SADD user:2:roles analyst viewer
+ZADD cache:leaderboard 42 grace 17 linus 8 ada
+XADD session:2:log 1700000000000-0 action login device tablet
+XADD session:2:log 1700000000001-0 action run-query device tablet
+EVAL "for i = 1, 1200 do redis.call('SET', string.format('user:%04d', i), 'visitor ' .. i) end return 1200" 0
