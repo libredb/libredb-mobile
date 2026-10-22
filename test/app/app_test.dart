@@ -443,6 +443,8 @@ void main() {
       when(() => repository.liveness()).thenAnswer((_) async => const Success(null));
       await tester.tap(find.byType(AppButton));
       await tester.pumpAndSettle();
+      // The shell asks Studio who the user is when it opens, which the mock API answers after its 500 ms delay.
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(StudioUnreachablePage), findsNothing);
       expect(find.byType(SettingsScreen), findsOneWidget);

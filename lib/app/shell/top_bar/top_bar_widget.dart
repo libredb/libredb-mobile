@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
 import 'package:go_router/go_router.dart';
 
-/// Top bar — h-12, border-b, px-4, flex items-center.
+/// The one top bar of the shell: a back arrow on a page that is no tab, the page title, and the avatar that opens the
+/// profile sheet.
 class TopBarWidget extends StatelessWidget {
   final String title;
 
-  const TopBarWidget({super.key, required this.title});
+  /// Returns from a page that is no tab; null on a tab, which has no back arrow.
+  final VoidCallback? onBack;
+
+  const TopBarWidget({super.key, required this.title, this.onBack});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final back = onBack;
 
     return Container(
       height: 48, // h-12
@@ -25,8 +32,8 @@ class TopBarWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 8),
-          // Takes the width that the user menu leaves, and is shortened when that is too little.
+          if (back != null) BackButton(onPressed: back) else const SizedBox(width: 8),
+          // Takes the width that the avatar leaves, and is shortened when that is too little.
           Expanded(
             child: Text(
               title,
@@ -35,56 +42,29 @@ class TopBarWidget extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          _buildUserMenu(context),
+          IconButton(
+            key: profileButtonKey,
+            tooltip: S.of(context).profile,
+            icon: Icon(Icons.account_circle_outlined, color: cs.onSurfaceVariant),
+            onPressed: () => _openProfile(context),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildUserMenu(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 40),
-      icon: Icon(Icons.account_circle_outlined, color: cs.onSurfaceVariant),
-      onSelected: (value) => _onMenuSelected(context, value),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'settings',
-          height: 32,
-          child: Row(
-            children: [
-              Icon(Icons.settings_outlined, size: 14, color: cs.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Text(S.of(context).settings, style: tt.bodySmall),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(height: 1),
-        PopupMenuItem(
-          value: 'logout',
-          height: 32,
-          child: Row(
-            children: [
-              Icon(Icons.logout, size: 14, color: cs.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Text(S.of(context).logout, style: tt.bodySmall),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _onMenuSelected(BuildContext context, String value) {
-    switch (value) {
-      case 'settings':
-        context.go(ApplicationRoutesConstants.settings);
-        break;
-      case 'logout':
-        _handleLogout(context);
-        break;
+  Future<void> _openProfile(BuildContext context) async {
+    final action = await ProfileSheet.show(context);
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case ProfileSheetAction.settings:
+        final router = GoRouter.of(context);
+        // Stacks on the open tab, so the back arrow returns to it; on the settings it stays.
+        if (router.state.uri.path != ApplicationRoutesConstants.settings) {
+          router.push(ApplicationRoutesConstants.settings);
+        }
+      case ProfileSheetAction.signOut:
+        await _handleLogout(context);
     }
   }
 

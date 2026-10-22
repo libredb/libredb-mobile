@@ -11,6 +11,7 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -116,7 +117,7 @@ void main() {
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
       expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
-      // Logout intentionally lives only in the top bar of the shell:
+      // Logout intentionally lives only in the profile sheet of the shell:
       // settings does not own auth-session lifecycle (cross-feature).
     });
 
@@ -192,9 +193,9 @@ void main() {
 
       expect(find.text('Yardım ve Kaynaklar'), findsOneWidget);
       expect(
-        find.widgetWithText(NavigationDestination, 'Bağlantılar'),
+        find.descendant(of: find.byType(TopBarWidget), matching: find.text('Ayarlar')),
         findsOneWidget,
-        reason: 'the bottom navigation bar switches too',
+        reason: 'the top bar of the shell switches too',
       );
       expect(find.descendant(of: find.byKey(settingsChangeLanguageButtonKey), matching: find.text('Türkçe')), findsOne);
       expect(find.text('Help & Resources'), findsNothing);

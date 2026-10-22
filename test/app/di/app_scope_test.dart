@@ -18,6 +18,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
@@ -655,6 +656,60 @@ void main() {
       expect(dependencies.sessionExpiredCalls, 0, reason: 'ending the session would sign out the user signed in now');
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), signedInJwt);
     });
+  });
+
+  // Signed in, the shell asks GET /api/auth/me who the user is. Its failure shows with a retry and never ends the
+  // session: only the ApiClient does, for a 401 AUTH_REQUIRED that survives the token refresh.
+  group('AppScope StudioIdentityCubit, signed in', () {
+    for (final (shape, status, body, code, refreshes) in <(String, int, Object, AppErrorCode, int)>[
+      ('a 401 without a code, twice (Studio main)', 401, {'authenticated': false}, AppErrorCode.generic, 1),
+      (
+        'a 503 IDENTITY_PROVIDER_UNAVAILABLE (libredb-studio#1922)',
+        503,
+        {'error': 'The identity provider is unavailable.', 'code': 'IDENTITY_PROVIDER_UNAVAILABLE'},
+        AppErrorCode.studioIdentityProviderUnavailable,
+        0,
+      ),
+      (
+        'a 403 BEARER_NO_ROLE (libredb-studio#1922)',
+        403,
+        {'error': 'This account has no role in Studio.', 'code': 'BEARER_NO_ROLE'},
+        AppErrorCode.studioAccountHasNoRole,
+        0,
+      ),
+      (
+        'a 403 BEARER_NO_IDENTITY (libredb-studio#1922)',
+        403,
+        {'error': 'This account has no identity in Studio.', 'code': 'BEARER_NO_IDENTITY'},
+        AppErrorCode.studioAccountHasNoIdentity,
+        0,
+      ),
+    ]) {
+      testWidgets('keeps $shape as a failure with ${code.key} and the user signed in', (tester) async {
+        await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+        await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+        final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+        final dependencies = _CountingDependencies(rotation: rotation);
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        expect(session.state, isA<SessionAuthenticated>());
+        final server = _ServerAdapter({'GET /auth/me': (status, body)});
+        scope.read<ApiClient>().instance.httpClientAdapter = server;
+
+        final identity = scope.read<StudioIdentityCubit>();
+        unawaited(identity.load());
+        await _pumpUntil(tester, () => identity.state is StudioIdentityFailure);
+
+        expect(identity.state, StudioIdentityFailure(code));
+        expect(server.requests.map((request) => request.split(' ').take(2).join(' ')), [
+          for (var i = 0; i <= refreshes; i++) 'GET /auth/me',
+        ]);
+        expect(rotation.rotations, refreshes, reason: 'only a 401 starts a refresh');
+        expect(dependencies.sessionExpiredCalls, 0);
+        expect(session.state, isA<SessionAuthenticated>());
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNotNull);
+      });
+    }
   });
 
   // Studio decides at sign-in whether it accepts the account, through GET /api/auth/me. Studio main answers a refused

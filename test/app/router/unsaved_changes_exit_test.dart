@@ -14,8 +14,8 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
-import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
@@ -28,9 +28,9 @@ class _MockSessionCubit extends Mock implements SessionCubit {}
 
 class _MockGoRouterState extends Mock implements GoRouterState {}
 
-/// No page of the app holds a form with unsaved changes yet, so these tests add one to the shell: a page guarded the
-/// way a form page is, behind the real [AppRouterFactory] and the registry that [App] wires to it.
-const _formPath = '/unsaved-changes-test-form';
+/// No page of the app holds a form with unsaved changes yet, so these tests add one to the Connections tab of the shell:
+/// a page guarded the way a form page is, behind the real [AppRouterFactory] and the registry that [App] wires to it.
+const _formPath = '${ApplicationRoutesConstants.connectionList}/unsaved-changes-test-form';
 
 const _formFieldKey = Key('unsavedChangesTestField');
 
@@ -84,8 +84,8 @@ Future<void> _pumpApp(WidgetTester tester) async {
   addTearDown(tester.view.reset);
   tester.view.physicalSize = const Size(1600, 1600);
   tester.view.devicePixelRatio = 1.0;
-  SettingsFeatureRoutes.routes.add(_formRoute);
-  addTearDown(() => SettingsFeatureRoutes.routes.remove(_formRoute));
+  ConnectionsFeatureRoutes.routes.add(_formRoute);
+  addTearDown(() => ConnectionsFeatureRoutes.routes.remove(_formRoute));
   TestEnv.authenticate();
   await tester.pumpWidget(_app);
   await tester.pumpAndSettle();
@@ -110,10 +110,9 @@ Future<void> _answer(WidgetTester tester, {required bool leave}) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens the settings from the bottom navigation bar, pushes the test form on them and types in it.
+/// Pushes the test form on the connection list and types in it.
 Future<void> _openDirtyForm(WidgetTester tester) async {
-  await tester.tap(find.widgetWithText(NavigationDestination, 'Settings'));
-  await tester.pumpAndSettle();
+  expect(find.byType(ConnectionListPage), findsOneWidget);
   _router(tester).push(_formPath);
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(_formFieldKey), 'changed');
@@ -164,7 +163,7 @@ void main() {
   });
 
   group('A dirty form in the app', () {
-    testWidgets('asks before the Android back button pops it off the settings page', (tester) async {
+    testWidgets('asks before the Android back button pops it off the connection list', (tester) async {
       await _pumpApp(tester);
       await _openDirtyForm(tester);
 
@@ -173,25 +172,25 @@ void main() {
 
       await _answer(tester, leave: true);
       expect(find.byType(_FormPage), findsNothing);
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
     });
 
     testWidgets('asks before the bottom navigation bar leaves it, and stays when the user stays', (tester) async {
       await _pumpApp(tester);
       await _openDirtyForm(tester);
 
-      await tester.tap(find.widgetWithText(NavigationDestination, 'Connections'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Browse'));
       await tester.pumpAndSettle();
       expect(_unsavedChangesDialog, findsOneWidget);
 
       await _answer(tester, leave: false);
       expect(find.byType(_FormPage), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(NavigationDestination, 'Connections'));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Browse'));
       await tester.pumpAndSettle();
       await _answer(tester, leave: true);
       expect(find.byType(_FormPage), findsNothing);
-      expect(_router(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+      expect(_router(tester).state.uri.path, ApplicationRoutesConstants.browse);
     });
 
     testWidgets('does not hold up signing out', (tester) async {

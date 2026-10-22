@@ -240,7 +240,7 @@ Studio verifies the access token's signature against the issuer's JWKS and check
 
 Studio answers 401 to a missing, invalid or expired token, after which the app refreshes once at the provider and retries, and 403 to a valid token without permission.
 The app calls Studio's API only; the sign-in, the token refresh and the provider logout go to the provider.
-Studio answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the profile sheet is milestone M2 ([#17](https://github.com/libredb/libredb-mobile/issues/17), [roadmap.md](roadmap.md)).
+Studio answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads and the profile sheet of the shell shows, with the username and Studio's role.
 Users and roles live at the provider, so the app has no user management.
 
 ### Which 401 ends the session

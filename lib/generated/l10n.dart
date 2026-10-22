@@ -974,6 +974,56 @@ class S {
   String studio_governance_detail(String detail) {
     return Intl.message('Details: $detail', name: 'studio_governance_detail', desc: '', args: [detail]);
   }
+
+  /// `Profile`
+  String get profile {
+    return Intl.message('Profile', name: 'profile', desc: '', args: []);
+  }
+
+  /// `Unknown user`
+  String get profile_unknown_user {
+    return Intl.message('Unknown user', name: 'profile_unknown_user', desc: '', args: []);
+  }
+
+  /// `Administrator`
+  String get profile_role_admin {
+    return Intl.message('Administrator', name: 'profile_role_admin', desc: '', args: []);
+  }
+
+  /// `User`
+  String get profile_role_user {
+    return Intl.message('User', name: 'profile_role_user', desc: '', args: []);
+  }
+
+  /// `Governed by LibreDB Platform`
+  String get profile_governed_by_platform {
+    return Intl.message('Governed by LibreDB Platform', name: 'profile_governed_by_platform', desc: '', args: []);
+  }
+
+  /// `Browse`
+  String get tab_browse {
+    return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);
+  }
+
+  /// `SQL`
+  String get tab_sql {
+    return Intl.message('SQL', name: 'tab_sql', desc: '', args: []);
+  }
+
+  /// `Pick a connection first`
+  String get pick_connection_first {
+    return Intl.message('Pick a connection first', name: 'pick_connection_first', desc: '', args: []);
+  }
+
+  /// `Open a connection from the Connections tab to use this tab.`
+  String get pick_connection_first_description {
+    return Intl.message(
+      'Open a connection from the Connections tab to use this tab.',
+      name: 'pick_connection_first_description',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
