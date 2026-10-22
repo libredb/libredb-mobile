@@ -25,6 +25,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:libredb_mobile/features/account/data/models/change_password.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
@@ -42,6 +43,8 @@ class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository 
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
+
+class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
 
 // BLoC mocks (using MockBloc from bloc_test)
 class MockChangePasswordBloc extends MockBloc<ChangePasswordEvent, ChangePasswordState> implements ChangePasswordBloc {}

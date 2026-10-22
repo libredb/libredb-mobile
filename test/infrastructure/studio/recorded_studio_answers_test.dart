@@ -9,6 +9,9 @@ import 'package:libredb_mobile/features/connections/data/models/connection_test_
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
+import 'package:libredb_mobile/features/studio_status/data/models/studio_status_json.dart';
+import 'package:libredb_mobile/features/studio_status/domain/entities/governance_outage.dart';
+import 'package:libredb_mobile/features/studio_status/domain/entities/studio_readiness.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
@@ -27,6 +30,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
 /// status. docs/studio.md describes the profile and how the unavailable source was produced.
 /// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
+/// `health.json`, `ready.json`, `ready_governed.json` and `ready_degraded.json` (the governed Studio with its source
+/// stopped) were recorded without a token, as the app sends them.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -189,5 +194,27 @@ void main() {
 
   test('a transaction on an engine without transactions is a 400 without a code', () {
     expect(ApiClient.errorCodeOf(fixture('txstatus')), isNull);
+  });
+
+  // Studio 02dc26057 has the same health and ready routes as dbfea263.
+  test('GET /api/health', () {
+    StudioStatusJson.liveness(fixture('health'));
+  });
+
+  test('GET /api/ready without governance', () {
+    expect(StudioStatusJson.readiness(fixture('ready')), const StudioReadinessReady());
+  });
+
+  test('GET /api/ready of the governed Studio', () {
+    expect(StudioStatusJson.readiness(fixture('ready_governed')), const StudioReadinessOk());
+  });
+
+  // Recorded about 15 seconds after the governance source was stopped, while the connection routes answered
+  // governance_unavailable.json.
+  test('GET /api/ready of the governed Studio without its source is degraded, worded as temporarily unavailable', () {
+    final readiness = StudioStatusJson.readiness(fixture('ready_degraded'));
+
+    expect(readiness, const StudioReadinessDegraded());
+    expect(GovernanceOutage.fromReadiness(readiness).kind, GovernanceOutageKind.temporarilyUnavailable);
   });
 }

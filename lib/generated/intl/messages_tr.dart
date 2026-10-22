@@ -36,7 +36,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m7(message) => "Hata: ${message}";
 
-  static String m8(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m8(detail) => "Ayrıntı: ${detail}";
+
+  static String m9(host) => "Studio adresi: ${host}";
+
+  static String m10(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -269,9 +273,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_retry_in": m6,
     "studio_error_semantics": m7,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
+    "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
+      "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
+    ),
+    "studio_governance_detail": m8,
+    "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
+    ),
+    "studio_unreachable_host": m9,
+    "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
+      "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+    ),
+    "studio_unreachable_title": MessageLookupByLibrary.simpleMessage("Studio\'ya ulaşılamıyor"),
     "submit": MessageLookupByLibrary.simpleMessage("Gönder"),
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
-    "table_rows_listed": m8,
+    "table_rows_listed": m10,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),

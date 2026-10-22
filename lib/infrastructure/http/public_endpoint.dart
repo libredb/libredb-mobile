@@ -4,10 +4,11 @@ import 'package:dio/dio.dart';
 typedef PublicEndpoint = ({String method, String path});
 
 /// The API endpoints that serve requests without a session: sign-in, the OTP sign-in, registration, password reset,
-/// the token refresh, and the app config.
+/// the token refresh, the app config, and Studio's liveness and readiness.
 ///
-/// The lifecycle checks read the app config when the app starts and when it comes back to the foreground, so before
-/// sign-in as well.
+/// The lifecycle checks read the app config, and the Studio status check Studio's liveness, when the app starts and
+/// when it comes back to the foreground, so before sign-in as well. Studio serves `/api/health` and `/api/ready`
+/// without a session (libredb-studio `src/proxy.ts`).
 ///
 /// `AuthInterceptor` sends no token to them, `TokenRefreshInterceptor` passes a 401 from them on without a refresh (a
 /// 401 from the refresh endpoint still ends the session), and `MockInterceptor` answers them without a token. Any other
@@ -20,6 +21,8 @@ const publicEndpoints = <PublicEndpoint>{
   (method: 'POST', path: '/account/reset-password/init'),
   (method: 'POST', path: '/token/refresh'),
   (method: 'GET', path: '/app/config'),
+  (method: 'GET', path: '/health'),
+  (method: 'GET', path: '/ready'),
 };
 
 /// Whether [options] targets one of the [publicEndpoints].

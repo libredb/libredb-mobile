@@ -46,6 +46,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/features/object_browser/` | Containers, counts, objects, details, source, search and key scan |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
 | `lib/features/lifecycle/` | The maintenance and forced update check at start ([below](#maintenance-and-forced-updates)) |
+| `lib/features/studio_status/` | Studio's liveness and readiness: the unreachable page and the wording of a governance outage ([below](#studio-reachability)) |
 | `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role, used across features |
 | `lib/shared/models/studio_connection.dart` | A connection Studio offers, read by the connection list, the active connection, the object browser and the SQL editor |
 | `lib/shared/models/provider_meta.dart` | What the engine of a connection can do (`ProviderMeta`, `ContainerLevel`, `ObjectKind`, `KeyScanSpec`), read by the connections, the object browser, the SQL editor and the result view |
@@ -76,6 +77,24 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
   An untrusted certificate is reported with `AppErrorCode.networkCertInvalid`.
   A failed re-check keeps a maintenance or update page the server already asked for, so a server error or a lost connection does not let the user skip a required update.
 - A non-empty `featureFlags` map in the answer replaces the flags in `FeatureFlagService`.
+
+### Studio reachability
+
+`StudioStatusGate` (`lib/features/studio_status/`) sits beside `LifecycleGate` in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
+
+- `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, and when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`).
+- A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, over the session restore and the router.
+  They stay mounted underneath, offstage and without tickers, focus or semantics, so the open pages keep their state, unsaved input included.
+  It fails on no connection (an offline device fails at once), a timeout of 10 seconds (`studioProbeTimeout`), an untrusted certificate (the page adds why), or an answer that is not Studio's.
+  Both probes bypass the client's retries and circuit breaker (`bypassResilience`): one check sends one request, so 10 seconds is the whole wait, and a Retry reaches Studio as soon as it answers again.
+- The check never touches the session: a Retry that reaches Studio shows the app again where it was, signed in as before.
+  A governance outage shown before Studio stopped answering shows again, until a connection route answers again.
+  The app is not held back while the check runs.
+- Both endpoints need no session and spend no rate-limit slot, so the app sends them without a token (`publicEndpoints`).
+- `GET /api/ready` only chooses the wording of a governance outage, whose trigger is a connection route's own 503 `GOVERNANCE_UNAVAILABLE` (`StudioGovernanceOutageReported`).
+  200 `degraded` and 503 `loading` read as "temporarily unavailable", and 503 `misconfigured` or `incompatible` as "Studio cannot serve connections right now", with Studio's `detail` shown to admins only (`StudioGovernanceNotice`).
+  200 `degraded` never reads as healthy: a stale snapshot answers it while every connection route answers 503.
+  A readiness that cannot be read still shows the outage, worded as temporary, and is logged.
 
 ## Sessions
 
@@ -124,6 +143,8 @@ Every request follows these rules:
 | --- | --- | --- |
 | `GET /api/auth/me` | `IStudioIdentityRepository.fetch` | `StudioIdentity` |
 | `POST /api/auth/logout` | `IStudioIdentityRepository.recordSignOut` | none; Studio only writes its logout audit line |
+| `GET /api/health` | `IStudioStatusRepository.liveness` | whether Studio answers |
+| `GET /api/ready` | `IStudioStatusRepository.readiness` | `StudioReadiness`, the 503 answers included |
 | `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `ManagedConnections` (`StudioConnection` list and `cacheHint`) |
 | `GET /api/connections/policy` | `IConnectionRepository.fetchPolicy` | `ConnectionPolicy` |
 | `POST /api/db/test-connection` | `IConnectionRepository.test` | `ConnectionTestResult` |

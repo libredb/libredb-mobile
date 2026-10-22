@@ -26,6 +26,9 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+
+import '../../../../support/answering_studio_status_repository.dart';
 
 import '../../../../support/user_menu.dart';
 
@@ -65,6 +68,10 @@ class _PinnedDependencies extends AppDependencies {
   @override
   ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
       super.createApiClient(secureStorage, onSessionExpired: onSessionExpired)..instance.httpClientAdapter = adapter;
+
+  /// Studio answered its liveness check when the app started; the pin mismatch meets the requests that come after.
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
 }
 
 const _insecureConnectionMessage =

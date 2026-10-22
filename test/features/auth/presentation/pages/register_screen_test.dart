@@ -26,9 +26,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 
 import '../../../../mocks/mock_classes.dart';
 import '../../../../support/unsaved_changes_host.dart';
+import '../../../../support/answering_studio_status_repository.dart';
 
 void main() {
   late MockRegisterBloc mockRegisterBloc;
@@ -339,6 +341,10 @@ class _PinnedDependencies extends AppDependencies {
   @override
   ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
       super.createApiClient(secureStorage, onSessionExpired: onSessionExpired)..instance.httpClientAdapter = adapter;
+
+  /// Studio answered its liveness check when the app started; the pin mismatch meets the requests that come after.
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
 }
 
 /// Pumps for [duration] and collects the text and the display duration of every snack bar shown meanwhile. The page

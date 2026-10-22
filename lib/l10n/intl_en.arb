@@ -336,5 +336,29 @@
         "type": "String"
       }
     }
+  },
+  "studio_unreachable_title": "Can't reach Studio",
+  "@studio_unreachable_title": {},
+  "studio_unreachable_message": "LibreDB Studio does not answer. Check your internet connection, then try again.",
+  "@studio_unreachable_message": {},
+  "studio_unreachable_host": "Studio address: {host}",
+  "@studio_unreachable_host": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "studio_governance_temporarily_unavailable": "Connections are temporarily unavailable. Try again in a moment.",
+  "@studio_governance_temporarily_unavailable": {},
+  "studio_governance_cannot_serve": "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
+  "@studio_governance_cannot_serve": {},
+  "studio_governance_detail": "Details: {detail}",
+  "@studio_governance_detail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
   }
 }

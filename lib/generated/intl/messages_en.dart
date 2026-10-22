@@ -36,7 +36,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m7(message) => "Error: ${message}";
 
-  static String m8(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m8(detail) => "Details: ${detail}";
+
+  static String m9(host) => "Studio address: ${host}";
+
+  static String m10(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -271,9 +275,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_retry_in": m6,
     "studio_error_semantics": m7,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
+    "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
+      "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
+    ),
+    "studio_governance_detail": m8,
+    "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Connections are temporarily unavailable. Try again in a moment.",
+    ),
+    "studio_unreachable_host": m9,
+    "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
+      "LibreDB Studio does not answer. Check your internet connection, then try again.",
+    ),
+    "studio_unreachable_title": MessageLookupByLibrary.simpleMessage("Can\'t reach Studio"),
     "submit": MessageLookupByLibrary.simpleMessage("Submit"),
     "success": MessageLookupByLibrary.simpleMessage("Success"),
-    "table_rows_listed": m8,
+    "table_rows_listed": m10,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),

@@ -60,7 +60,7 @@ RequestOptions _sentRequest(String path, {String? method, Map<String, dynamic>? 
 );
 
 /// The public endpoints the app calls before sign-in: sign-in, OTP send and verify, registration and password reset,
-/// and the app config the lifecycle checks read.
+/// the app config the lifecycle checks read, and Studio's liveness and readiness.
 const _publicEndpoints = [
   ('POST', '/authenticate'),
   ('POST', '/authenticate/send-otp'),
@@ -68,6 +68,8 @@ const _publicEndpoints = [
   ('POST', '/register'),
   ('POST', '/account/reset-password/init'),
   ('GET', '/app/config'),
+  ('GET', '/health'),
+  ('GET', '/ready'),
 ];
 
 void main() {

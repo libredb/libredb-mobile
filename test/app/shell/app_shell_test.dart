@@ -6,8 +6,12 @@ import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/answering_studio_status_repository.dart';
 import '../../support/test_env.dart';
 
 void main() {
@@ -32,7 +36,7 @@ void main() {
     tester.view.viewPadding = const FakeViewPadding(top: 48);
     TestEnv.authenticate();
 
-    await tester.pumpWidget(const App(language: 'en'));
+    await tester.pumpWidget(const App(language: 'en', dependencies: _StudioAnsweredDependencies()));
     await tester.pumpAndSettle();
 
     final banner = tester.getRect(find.byType(ConnectivityBanner));
@@ -40,4 +44,13 @@ void main() {
     expect(banner.bottom, greaterThan(48), reason: 'the banner itself pads for the status bar');
     expect(tester.getRect(find.byType(TopBarWidget)).top, banner.bottom);
   });
+}
+
+/// The device went offline after Studio answered its liveness check; offline at start, the unreachable page would show
+/// in place of the shell.
+class _StudioAnsweredDependencies extends AppDependencies {
+  const _StudioAnsweredDependencies();
+
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
 }

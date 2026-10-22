@@ -336,5 +336,29 @@
         "type": "String"
       }
     }
+  },
+  "studio_unreachable_title": "Studio'ya ulaşılamıyor",
+  "@studio_unreachable_title": {},
+  "studio_unreachable_message": "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+  "@studio_unreachable_message": {},
+  "studio_unreachable_host": "Studio adresi: {host}",
+  "@studio_unreachable_host": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "studio_governance_temporarily_unavailable": "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
+  "@studio_governance_temporarily_unavailable": {},
+  "studio_governance_cannot_serve": "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
+  "@studio_governance_cannot_serve": {},
+  "studio_governance_detail": "Ayrıntı: {detail}",
+  "@studio_governance_detail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
   }
 }
