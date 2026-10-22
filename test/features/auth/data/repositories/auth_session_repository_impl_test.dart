@@ -310,14 +310,9 @@ void main() {
       expect(await storage.read(StorageKeys.sidebarCollapsed.key), 'true');
     });
 
-    // Guards the switch from wiping everything to removing session keys: runSessionMigration copies back a kept token.
-    test('clear removes the session keys, also the plaintext tokens a failed migration left behind', () async {
+    test('clear removes the session keys', () async {
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
       await repo.persist(const AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH', username: 'alice', roles: ['R']));
-      // Releases before the move to secure storage kept the tokens here, and runSessionMigration leaves them when
-      // it cannot remove them.
-      await storage.save('jwtToken', 'PLAINTEXT_TOKEN');
-      await storage.save('refreshToken', 'PLAINTEXT_REFRESH');
 
       final result = await repo.clear();
 
@@ -326,8 +321,6 @@ void main() {
       expect(await secure.read(SecureStorageKeys.refreshToken.key), isNull);
       expect(await storage.read(StorageKeys.username.key), isNull);
       expect(await storage.read(StorageKeys.roles.key), isNull);
-      expect(await storage.read('jwtToken'), isNull);
-      expect(await storage.read('refreshToken'), isNull);
     });
 
     // Guards the switch from wiping everything to removing session keys: the cache is no longer wiped with them.
@@ -367,7 +360,6 @@ void main() {
       final refusing = _RemoveRefusingStorage(storage, StorageKeys.username.key);
       final repo = AuthSessionRepository(secureStorage: secure, storage: refusing, cacheStorage: cache);
       await repo.persist(const AuthSession(idToken: 'TOKEN', username: 'alice', roles: ['ROLE_USER']));
-      await storage.save('jwtToken', 'PLAINTEXT_TOKEN');
 
       final result = await repo.clear();
 
@@ -375,7 +367,6 @@ void main() {
       expect((result as Failure<void>).error.message, contains('username'));
       expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
       expect(await storage.read(StorageKeys.roles.key), isNull);
-      expect(await storage.read('jwtToken'), isNull);
       expect(await cache.read('GET_/account'), isNull);
     });
 

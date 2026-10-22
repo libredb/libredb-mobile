@@ -14,7 +14,6 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
-import 'package:libredb_mobile/infrastructure/storage/session_migration.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 class AppBootstrap {
@@ -48,12 +47,6 @@ class AppBootstrap {
     final appConfig = await sentry.gate(AppConfig.fromEnvironment(config.environment));
     final dependencies = AppDependencies(appConfig: appConfig, authMode: authMode);
     final secureStorage = dependencies.createSecureStorage();
-
-    // One-shot migration of legacy plaintext tokens (jwtToken/refreshToken).
-    // Must run BEFORE any consumer reads the secure store (SessionCubit
-    // .restore, AuthInterceptor, TokenRefreshInterceptor) so the
-    // migrated tokens are available on first use.
-    await runSessionMigration(secureStorage: secureStorage, localStorage: AppLocalStorage());
 
     final existingPalette = await AppLocalStorage().read(StorageKeys.theme.key);
     if (existingPalette == null) {
@@ -91,10 +84,8 @@ class AppBootstrap {
       config.defaultBrightness,
     ]);
 
-    // Reuse the same ISecureStorage that ran the migration above so
-    // the entire widget tree shares one adapter instance — no config
-    // drift between migration and runtime consumers, and overriding
-    // for tests / alternate environments is a single hand-off.
+    // Hand the ISecureStorage created above to App so the entire widget tree shares one adapter instance, and
+    // overriding it for tests or alternate environments is a single hand-off.
     // The Sentry options are configureSentryOptions (lib/app/bootstrap/sentry_start.dart). On Android the host app
     // starts the native SDK, so a native option set there must also be set in NativeSentry.kt of the Android host app
     // (under android/app/src/main/kotlin).

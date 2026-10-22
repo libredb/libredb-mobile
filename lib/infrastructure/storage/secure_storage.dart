@@ -7,8 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// in plaintext SharedPreferences.
 ///
 /// Failure contract: every method MUST throw on platform failure so
-/// that callers using Result/rollback semantics — the session-persist
-/// repository and the session-migration runner — can react correctly.
+/// that callers using Result/rollback semantics, such as the
+/// session-persist repository, can react correctly.
 /// Silently swallowing errors here makes Success reports meaningless.
 /// In particular, [read] does NOT collapse platform failures to null
 /// — a transient read failure during a rollback snapshot must not be
@@ -100,23 +100,12 @@ class FlutterSecureStorageAdapter implements ISecureStorage {
 /// Keys for values that must be stored in the platform-backed secure
 /// store (iOS Keychain, Android Keystore-backed ciphers).
 ///
-/// Renaming an enum value will NOT change the stored key, so user data
-/// survives refactors safely. Add new entries by appending — do not
-/// change existing [key] strings without a migration.
-///
-/// The current strings (`'jwtToken'`, `'refreshToken'`) deliberately
-/// match the legacy plaintext SharedPreferences key names so the
-/// one-shot `runSessionMigration()` can locate the source data
-/// (see `session_migration.dart`). Once analytics confirm no installs
-/// older than the migration
-/// remain in the wild (target: 2 minor versions after #129 ships),
-/// these can be renamed to e.g. `'secure.jwt'` / `'secure.refresh'`
-/// with a one-shot migration step that copies the value forward —
-/// TODO(#129-follow-up): close the legacy-name reuse loop.
+/// Each enum value carries an explicit [key] string, so renaming an enum
+/// value does not change the stored key.
 ///
 /// [oidcIdToken] and [accessTokenExpiresAt] are used only in an `oidc`
 /// build. The OIDC ID token has its own name so it cannot be confused
-/// with [jwtToken], which holds the bearer under the legacy name. The
+/// with [jwtToken], which holds the bearer. The
 /// expiry is stored with [encodeAccessTokenExpiry] and read with
 /// [readAccessTokenExpiry].
 enum SecureStorageKeys {

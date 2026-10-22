@@ -43,8 +43,7 @@ The screenshots below are included to help contributors and adopters understand 
   (iOS Keychain, Android custom AES-GCM ciphers). Keychain accessibility is pinned to
   `first_unlock_this_device` so tokens stay on the device (no iCloud Keychain sync).
   Non-secret session fields (`username`, `roles`) remain in `SharedPreferences` for
-  synchronous access. The first launch after upgrading from an older build runs a one-shot
-  migration from the legacy plaintext keys into secure storage.
+  synchronous access.
 
 ### User Management
 

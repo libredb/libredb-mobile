@@ -67,7 +67,7 @@ class AppScope extends StatelessWidget {
   final AppDependencies dependencies;
 
   /// Pre-constructed ISecureStorage from bootstrap. When provided, it is
-  /// shared via `.value` so migration and runtime consumers use the same
+  /// shared via `.value` so bootstrap and runtime consumers use the same
   /// instance. When null, AppScope falls back to `dependencies.createSecureStorage()`
   /// (useful for tests that don't go through bootstrap).
   final ISecureStorage? secureStorage;

@@ -28,7 +28,7 @@ class TestEnv {
   /// In-memory backing for the mocked flutter_secure_storage channel.
   /// Production code instantiates [FlutterSecureStorageAdapter] in several
   /// places (AuthInterceptor, TokenRefreshInterceptor, SessionCubit,
-  /// AuthSessionRepository, LoginRepository.logout, SessionMigration); each
+  /// AuthSessionRepository, LoginRepository.logout); each
   /// routes through this MethodChannel. Without the mock those paths throw
   /// MissingPluginException.
   static final Map<String, String> _secureStore = {};

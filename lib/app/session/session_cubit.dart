@@ -142,8 +142,7 @@ class SessionCubit extends Cubit<SessionState> {
   }
 
   /// How long [restore] waits for the stored session unless the
-  /// constructor is given another `restoreTimeLimit`: ten seconds, the
-  /// limit that the session migration before runApp has too, see
+  /// constructor is given another `restoreTimeLimit`: ten seconds, see
   /// [StartupStorageTimeLimit.defaultDuration].
   ///
   /// An answer that comes after the limit still settles the session while

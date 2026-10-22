@@ -35,10 +35,10 @@ class App extends StatefulWidget {
   final AppDependencies dependencies;
 
   /// Single [ISecureStorage] instance created in bootstrap. Threaded
-  /// through so the same adapter handles bootstrap-time migration AND
-  /// runtime consumers (repositories, interceptors, SessionCubit) —
-  /// avoids divergent instances if adapter configuration ever varies
-  /// and makes overriding for tests / alternate environments trivial.
+  /// through so every runtime consumer (repositories, interceptors,
+  /// SessionCubit) uses the same adapter, which avoids divergent instances
+  /// if adapter configuration ever varies and makes overriding for tests
+  /// or alternate environments trivial.
   /// When null, [AppScope] falls back to [AppDependencies.createSecureStorage].
   final ISecureStorage? secureStorage;
   final IAnalyticsService? _analytics;

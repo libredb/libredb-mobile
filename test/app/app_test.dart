@@ -22,8 +22,6 @@ import 'package:libredb_mobile/features/lifecycle/presentation/pages/maintenance
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
-import 'package:libredb_mobile/infrastructure/storage/session_migration.dart';
-import 'package:libredb_mobile/infrastructure/storage/startup_storage_time_limit.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -103,27 +101,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.bySemanticsLabel('Loading...'), findsNothing);
-      expect(find.byType(LoginScreen), findsOneWidget);
-    });
-
-    testWidgets('shows the login page when secure storage never answers, from the session migration at startup on', (
-      tester,
-    ) async {
-      final secureStorage = MockISecureStorage();
-      when(() => secureStorage.read(any())).thenAnswer((_) => Completer<String?>().future);
-
-      // AppBootstrap.run awaits the session migration, which reads secure storage first, and only then runs App.
-      var migrated = false;
-      unawaited(
-        runSessionMigration(secureStorage: secureStorage, localStorage: AppLocalStorage()).then((_) => migrated = true),
-      );
-      await tester.pump(StartupStorageTimeLimit.defaultDuration);
-      expect(migrated, isTrue, reason: 'the launch screen stays up until the migration is done');
-
-      await tester.pumpWidget(App(language: 'en', secureStorage: secureStorage));
-      await tester.pump(SessionCubit.defaultRestoreTimeLimit);
-      await tester.pumpAndSettle();
-
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 

@@ -9,8 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// storage tests use an in-memory fake that cannot fail, so a future
 /// "helpful" refactor that catches and returns null inside the adapter
 /// would silently break rollback semantics in
-/// [AuthSessionRepositoryImpl.persist] and [SessionMigration] without
-/// any test surface noticing.
+/// [AuthSessionRepositoryImpl.persist] without any test surface noticing.
 ///
 /// We drive the underlying `plugins.it_nomads.com/flutter_secure_storage`
 /// MethodChannel directly to simulate a platform error.

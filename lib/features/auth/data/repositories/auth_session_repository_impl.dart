@@ -246,7 +246,6 @@ class AuthSessionRepository implements IAuthSessionRepository {
         // so they cannot iterate here. Any future field this
         // repository persists must extend the snapshot/restore
         // signature, not silently land in the unreachable branches.
-        // The same holds for the legacy plaintext token keys.
         final prior = switch (key) {
           StorageKeys.username => priorUsername,
           StorageKeys.roles => priorRoles,
@@ -254,8 +253,6 @@ class AuthSessionRepository implements IAuthSessionRepository {
           StorageKeys.theme => null,
           StorageKeys.brightness => null,
           StorageKeys.sidebarCollapsed => null,
-          StorageKeys.legacyJwtToken => null,
-          StorageKeys.legacyRefreshToken => null,
         };
         // AppLocalStorage.save/remove can refuse a mutation by returning
         // false without throwing. Honor that signal so a rollback that
