@@ -19,9 +19,9 @@ val dartDefines: Map<String, String> =
 
 // The host app starts sentry-android itself (NativeSentry.kt), and only when the Dart side starts Sentry: in the prod
 // environment, which only lib/main/main_prod.dart selects, with a SENTRY_DSN (AppConfig.sentryDsn). On Android every
-// Dart event leaves the device through the native SDK, so the two gates must agree; a fork that renames the prod
-// entry point changes it here too (test/architecture/sentry_native_scrub_patterns_test.dart checks it, and
-// nativeSdkReady fails at start when the gates disagree).
+// Dart event leaves the device through the native SDK, so the two gates must agree; renaming lib/main/main_prod.dart
+// means changing it here too (test/architecture/sentry_native_scrub_patterns_test.dart checks it, and nativeSdkReady
+// fails at start when the gates disagree).
 val isProdTarget = File(project.findProperty("target") as String? ?: "").name == "main_prod.dart"
 
 fun buildConfigString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""

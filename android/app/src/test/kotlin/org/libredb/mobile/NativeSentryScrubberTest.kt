@@ -247,8 +247,8 @@ class NativeSentryScrubberTest {
         )
     }
 
-    // Scope sync copies the Dart user to the native scope, so a fork that calls setUserId with an email sends it in
-    // every native crash.
+    // Scope sync copies the Dart user to the native scope, so a setUserId call with an email would send it in every
+    // native crash.
     @Test
     fun masksTheUserLikeTheDartScrubber() {
         val event = SentryEvent().apply {
