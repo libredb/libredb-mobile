@@ -277,7 +277,7 @@ The backend must:
 
 The app calls the same endpoints as in `jwt` mode, minus `/authenticate*`, `/register`, `/account/reset-password/*`, `/account/change-password` and `/token/refresh`.
 The account repository calls `GET /account` after sign-in for the profile.
-LibreDB Studio has no such endpoint and answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the shell is milestone M2 ([roadmap.md](roadmap.md)).
+LibreDB Studio has no such endpoint and answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the profile sheet is milestone M2 ([#17](https://github.com/libredb/libredb-mobile/issues/17), [roadmap.md](roadmap.md)).
 The account fetch runs after sign-in, and its failure does not end the session.
 User management pages keep calling the backend as they do today; managing users in `oidc` mode is out of scope, and users and roles live at the provider.
 

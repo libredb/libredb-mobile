@@ -3,7 +3,7 @@
 LibreDB Mobile is a thin client of LibreDB Studio.
 Studio holds every database credential, opens every database connection and enforces who may use which connection; the app signs the user in, sends requests and shows the answers.
 This page describes how the app is put together and the Studio contract it follows.
-The contract was read from Studio's code at `dbfea263` (main, with the bearer channel of libredb/libredb-studio#1914).
+The contract was read from Studio's code at `dbfea263` (main, with the bearer channel of libredb/libredb-studio#1914); the rate limit, catalog, cancel and revocation notes were checked against main at `02dc2605`.
 
 ## The three parties
 
@@ -31,7 +31,7 @@ The contract was read from Studio's code at `dbfea263` (main, with the bearer ch
 - **Studio** accepts that access token as `Authorization: Bearer` when `OIDC_BEARER_AUDIENCE` is set.
   It checks the signature, the issuer, the audience, the client (`OIDC_BEARER_CLIENT_IDS`), the identity (`email` or `preferred_username`) and the role on every request, and refuses an ID token.
 - **Platform**, when present, governs Studio: Studio's connections become the user's grants, every statement is recorded, and Platform can revoke a session.
-  The app does not talk to Platform until milestone M5 ([roadmap.md](roadmap.md)).
+  The app does not talk to Platform until milestone M9 ([roadmap.md](roadmap.md)).
 
 Settings for each party are in [studio.md](studio.md).
 
@@ -75,7 +75,9 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
    The tokens go to the platform's secure storage.
 2. `AuthInterceptor` adds the access token to every request as `Authorization: Bearer`.
 3. When Studio refuses the token, `TokenRefreshInterceptor` refreshes it at Keycloak once and repeats the request; if that does not help, the session ends.
-4. Logout revokes nothing at Studio, which keeps no state for a bearer session: the app ends the Keycloak session (RP-initiated logout) and deletes its tokens.
+4. Logout ends the Keycloak session (RP-initiated logout) and deletes the app's tokens.
+   Once [#18](https://github.com/libredb/libredb-mobile/issues/18) lands, the app first posts `POST /api/auth/logout`, so Studio writes a logout line in its audit trail as it does for a web sign-out.
+   That revokes nothing: Studio keeps no state for a bearer session.
 
 Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`:
 
@@ -87,7 +89,13 @@ Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`:
 | 401 `LLM_AUTH` | the same; the AI routes are not used |
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
 
-`GET /api/auth/me` answers 401 both for a refused token and when Studio cannot reach Keycloak, so the app never ends a session on that answer alone.
+`GET /api/auth/me` answers 401 without a code both for a refused token and when Studio cannot reach Keycloak, so a 401 there does not prove the session is over.
+Today `TokenRefreshInterceptor` ends the session when the request still answers 401 after a refresh, whether it carries `AUTH_REQUIRED` or no code.
+The rule [#12](https://github.com/libredb/libredb-mobile/issues/12) implements:
+
+- A 401 without a code that comes back after a successful refresh leaves the session alone; the error reaches the screen, which offers a retry.
+- A 401 `AUTH_REQUIRED` that comes back after a successful refresh ends the session, because Studio refused a token Keycloak has just issued.
+- A refresh that Keycloak refuses ends the session, as before.
 
 ## Talking to Studio
 
@@ -99,7 +107,8 @@ Every request follows these rules:
 - Nothing that runs a statement is retried on its own: a statement may have changed data.
 - The app waits 30 seconds for an answer, and 75 seconds (`studioStatementReceiveTimeout`) for the routes that run a statement or reach a database host: `/db/query`, `/db/multi-query`, `/db/transaction`, `/db/profile`, `/db/monitoring`, `/db/maintenance` and `/db/test-connection`.
   That is Studio's default statement timeout of 60 seconds plus a margin, because Studio cancels a run whose request the phone gives up on.
-- Every `/api/db/*` request spends a slot of the user's request budget, 120 per minute by default, shared with the same user's Studio sessions in the browser: the object browser caches metadata per connection.
+- Most `/api/db/*` requests spend a slot of the user's `query` request budget, 120 per minute by default, shared with the same user's Studio sessions in the browser: the object browser caches metadata per connection.
+  See [Rate limit](#rate-limit) for which requests do.
 - Requests stay well under 10 MiB, above which Studio truncates the body and reads it as malformed.
 
 | Studio endpoint | Repository method | Answer |
@@ -121,11 +130,22 @@ Every request follows these rules:
 | `POST /api/db/cancel` | `ISqlEditorRepository.cancel` | whether the engine stopped the run |
 | `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction |
 
+### Rate limit
+
+Studio counts requests per user in buckets, per Studio process (`src/lib/api/rate-limit.ts`).
+
+- These spend no slot: `GET /api/connections/managed`, `GET /api/connections/policy`, `GET /api/auth/me`, `POST /api/auth/logout`, `GET /api/health`, `GET /api/ready` and `GET /api/db/health`.
+- `POST /api/db/health`, `POST /api/db/provider-meta`, every other `/api/db/*` route, the object routes under `/api/db/objects` and the storage routes spend the shared `query` bucket.
+  S-13, drafted for Studio and not filed yet, asks Studio to stop charging `provider-meta`.
+- A refused request answers 429 with `Retry-After`, which reaches the caller as `studio.rate_limited`.
+
 ### The object tree
 
 `provider-meta` describes the engine: how many container levels it has (none, a schema, or a database and its schemas), their names in the engine's words, and its object kinds.
 Kind ids such as `table` or `collection` are opaque: their labels come from Studio, never from the app, so a new engine needs no app change.
 The tree is containers, then `counts` for a container, then `list` for one kind, then `describe` or `source` for one object, as each kind's `hasColumns` and `hasSource` allow.
+The object routes carry no `catalog` field: on a server-level connection the catalog is `container[0]` or `path[0]` (`src/app/api/db/objects/list/route.ts`).
+Only the routes that run statements or read a connection's state take a `catalog` body field: query, multi-query, transaction, profile, monitoring, maintenance and its preview, `POST /api/db/health` and pool statistics.
 Key-value engines page their keys with `scanKeys` until the cursor is `0`.
 
 ### Statements
@@ -134,7 +154,7 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   Studio pages a SELECT only when it adds the row bound itself; `QueryPage.after` asks for the next page, and `pagination.hasMore` says whether there is one.
 - `runScript` sends several statements, which Studio splits and runs in order, stopping at the first failure.
   It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values and has no paging.
-  Deciding whether a text holds one statement or several is the editor's job (milestone M4).
+  Deciding whether a text holds one statement or several is the editor's job (milestone M5).
 - `cancel` stops a run by the id the app gave it, from `newQueryId`, a UUID: Studio checks no owner on a cancel, so the id must be unguessable.
   The cancelled run fails with `studio.query_cancelled`.
 - A transaction's statements cannot be cancelled.
@@ -179,6 +199,9 @@ When Platform governs Studio, `fetchPolicy` answers `governance: true`, and:
 
 Grants refer to the Keycloak subject, so the app must sign in to the same realm as Studio's web sign-in.
 
+Studio masks sensitive columns in results only in the browser (`src/lib/data-masking.ts`); `POST /api/db/query` answers raw rows.
+The app therefore applies the same masking rules before it shows a row (M4-03, in [#32](https://github.com/libredb/libredb-mobile/issues/32)).
+
 ## Security
 
 - The phone holds Keycloak tokens in secure storage and nothing else: no database credential, no connection the server does not manage.
@@ -193,7 +216,14 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 
 - Studio's `/api/auth/me` cannot tell a refused token from an unreachable identity provider (both 401).
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
-- Whether a dropped mobile connection cancels the statement on the server is not verified; the editor cancels explicitly.
-- Granting a connection needs an API in Platform that does not exist yet (milestone M5).
+- Studio cancels a run when its request is aborted (`src/lib/api/abort-cancel.ts`, used by `src/lib/api/editor-query.ts:135` and `src/app/api/db/multi-query/route.ts:297`).
+  So a client receive timeout shorter than Studio's query timeout kills the statement on the server ([#15](https://github.com/libredb/libredb-mobile/issues/15)), and so may the app going to the background during a run (M5-09, in [#33](https://github.com/libredb/libredb-mobile/issues/33)).
+  Whether a dropped mobile connection behind a proxy aborts the request is not verified until M5-03 (in [#33](https://github.com/libredb/libredb-mobile/issues/33)) does; the editor cancels explicitly.
+- Granting a connection needs an API in Platform that does not exist yet (milestone M9).
 - Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
 - Studio has no `/api/app/config`, so maintenance mode, forced updates and remote feature flags work only against the mock (milestone M6).
+
+## Open questions
+
+- Governance revocation: Studio compares the token's `iat` with the subject's `revoked_before` (`src/lib/local-accounts.ts:445-449, 479-484`).
+  The app's token refresh produces a newer `iat`, so a refreshed token passes again unless Platform also ends the Keycloak session or revokes its refresh tokens.
