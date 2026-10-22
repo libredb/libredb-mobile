@@ -256,7 +256,7 @@
   "connection_check_online_no_latency": "Reachable",
   "connection_check_degraded": "Reachable, without health data",
   "connection_check_not_checked": "Not checked: checking would start billed compute",
-  "connection_check_failed": "Not reachable",
+  "connection_check_failed": "Check failed",
   "error_studio_database_auth": "The database refused the connection's credentials. Ask your administrator to check them.",
   "@error_studio_database_auth": {},
   "error_studio_connection_not_available": "This connection is not available to you.",

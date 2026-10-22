@@ -870,9 +870,9 @@ class S {
     );
   }
 
-  /// `Not reachable`
+  /// `Check failed`
   String get connection_check_failed {
-    return Intl.message('Not reachable', name: 'connection_check_failed', desc: '', args: []);
+    return Intl.message('Check failed', name: 'connection_check_failed', desc: '', args: []);
   }
 
   /// `The database refused the connection's credentials. Ask your administrator to check them.`

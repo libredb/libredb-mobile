@@ -256,7 +256,7 @@
   "connection_check_online_no_latency": "Erişilebilir",
   "connection_check_degraded": "Erişilebilir, sağlık bilgisi yok",
   "connection_check_not_checked": "Kontrol edilmedi: kontrol, ücretli işlem gücünü başlatır",
-  "connection_check_failed": "Erişilemiyor",
+  "connection_check_failed": "Kontrol başarısız",
   "error_studio_database_auth": "Veritabanı bağlantının kimlik bilgilerini reddetti. Yöneticinizden bunları kontrol etmesini isteyin.",
   "@error_studio_database_auth": {},
   "error_studio_connection_not_available": "Bu bağlantı sizin kullanımınıza açık değil.",

@@ -206,7 +206,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.descendant(of: status(), matching: find.text('Not reachable')), findsOneWidget);
+    expect(find.descendant(of: status(), matching: find.text('Check failed')), findsOneWidget);
     expect(find.text(AppErrorCode.studioDatabaseAuth.resolve(contextOf(tester))), findsOneWidget);
     expect(find.text("ALTER USER app WITH PASSWORD '...'"), findsOneWidget);
     expect(find.textContaining('password authentication failed'), findsNothing);
@@ -227,6 +227,8 @@ void main() {
     await tester.pump();
 
     final s = S.of(contextOf(tester));
+    // A rate limit says nothing about the database, so the chip does not claim it is unreachable.
+    expect(find.descendant(of: status(), matching: find.text('Check failed')), findsOneWidget);
     expect(find.text(s.studio_error_retry_in(2)), findsOneWidget);
     final retry = find.widgetWithText(OutlinedButton, s.retry);
     expect(tester.widget<OutlinedButton>(retry).onPressed, isNull);

@@ -70,7 +70,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_check_anyway": MessageLookupByLibrary.simpleMessage("Yine de kontrol et"),
     "connection_check_checking": MessageLookupByLibrary.simpleMessage("Kontrol ediliyor"),
     "connection_check_degraded": MessageLookupByLibrary.simpleMessage("Erişilebilir, sağlık bilgisi yok"),
-    "connection_check_failed": MessageLookupByLibrary.simpleMessage("Erişilemiyor"),
+    "connection_check_failed": MessageLookupByLibrary.simpleMessage("Kontrol başarısız"),
     "connection_check_idle": MessageLookupByLibrary.simpleMessage("Henüz kontrol edilmedi"),
     "connection_check_not_checked": MessageLookupByLibrary.simpleMessage(
       "Kontrol edilmedi: kontrol, ücretli işlem gücünü başlatır",

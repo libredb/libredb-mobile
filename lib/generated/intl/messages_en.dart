@@ -70,7 +70,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_check_anyway": MessageLookupByLibrary.simpleMessage("Check anyway"),
     "connection_check_checking": MessageLookupByLibrary.simpleMessage("Checking"),
     "connection_check_degraded": MessageLookupByLibrary.simpleMessage("Reachable, without health data"),
-    "connection_check_failed": MessageLookupByLibrary.simpleMessage("Not reachable"),
+    "connection_check_failed": MessageLookupByLibrary.simpleMessage("Check failed"),
     "connection_check_idle": MessageLookupByLibrary.simpleMessage("Not checked yet"),
     "connection_check_not_checked": MessageLookupByLibrary.simpleMessage(
       "Not checked: checking would start billed compute",
