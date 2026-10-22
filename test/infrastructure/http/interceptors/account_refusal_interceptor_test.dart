@@ -47,6 +47,11 @@ void main() {
     (401, '{"authenticated":false}'),
     (403, '{"error":"Access denied","code":"AUTH_ERROR"}'),
     (403, '{"error":"Not permitted","code":"PERMISSION_DENIED"}'),
+    (403, '{"error":"Admin access required","code":"ADMIN_REQUIRED"}'),
+    (403, '{"error":"Origin mismatch","code":"ORIGIN_MISMATCH"}'),
+    (403, '{"error":"Forbidden"}'),
+    (403, 'Forbidden'),
+    (403, ''),
     (503, '{"error":"The identity provider could not be reached.","code":"IDENTITY_PROVIDER_UNAVAILABLE"}'),
   ]) {
     test('reports nothing for $status $body', () async {

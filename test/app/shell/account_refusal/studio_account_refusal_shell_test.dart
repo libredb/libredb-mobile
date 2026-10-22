@@ -11,6 +11,7 @@ import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -56,19 +57,59 @@ void main() {
     expect(appContext(tester).read<SessionCubit>().state, isA<SessionAuthenticated>(), reason: 'the session stays');
   });
 
-  testWidgets('a refusal met by any later request replaces the screen with the page', (tester) async {
-    await pumpSignedIn(tester);
-    expect(find.byType(ResponsiveScaffold), findsOneWidget);
-    studio.refused.add('/auth/me');
+  // An administrator removed the role, or the account lost its user name; the next request Studio answers, wherever it
+  // comes from, meets the refusal. The page only covers the shell: the session and its tokens stay, for Retry.
+  for (final (code, expected) in [
+    ('BEARER_NO_ROLE', AppErrorCode.studioAccountHasNoRole),
+    ('BEARER_NO_IDENTITY', AppErrorCode.studioAccountHasNoIdentity),
+  ]) {
+    for (final path in ['/auth/me', '/connections/managed']) {
+      testWidgets('a 403 $code met later by $path replaces the screen with the page and keeps the session', (
+        tester,
+      ) async {
+        await pumpSignedIn(tester);
+        expect(find.byType(ResponsiveScaffold), findsOneWidget);
+        studio
+          ..body = '{"error":"refused","code":"$code"}'
+          ..refused.add(path);
 
-    // An administrator removed the role; the next request Studio answers, wherever it comes from, meets the refusal.
-    final apiClient = appContext(tester).read<ApiClient>();
-    await tester.runAsync(() => apiClient.get('/auth/me').then<void>((_) {}, onError: (Object _) {}));
-    await tester.pumpAndSettle();
+        final apiClient = appContext(tester).read<ApiClient>();
+        await tester.runAsync(() => apiClient.get(path).then<void>((_) {}, onError: (Object _) {}));
+        await tester.pumpAndSettle();
 
-    expect(find.byType(StudioAccountRefusalPage), findsOneWidget);
-    expect(find.byType(ResponsiveScaffold), findsNothing);
-  });
+        expect(find.byType(StudioAccountRefusalPage), findsOneWidget);
+        expect(find.byType(ResponsiveScaffold), findsNothing);
+        expect(appContext(tester).read<StudioAccountRefusalCubit>().state, StudioAccountRefused(expected));
+        expect(appContext(tester).read<SessionCubit>().state, isA<SessionAuthenticated>());
+        final tokens = appContext(tester).read<ISecureStorage>();
+        expect(await tester.runAsync(() => tokens.read(SecureStorageKeys.jwtToken.key)), 'MOCK_TOKEN');
+      });
+    }
+  }
+
+  // Studio answers 403 for other reasons too, such as a route only an administrator may use, or a POST it does not
+  // trust; those are the screen's to tell, and the tabs stay.
+  for (final body in [
+    '{"error":"Unauthorized. Admin access required.","code":"ADMIN_REQUIRED"}',
+    '{"error":"Origin mismatch","code":"ORIGIN_MISMATCH"}',
+    '{"error":"Forbidden"}',
+  ]) {
+    testWidgets('a 403 $body met later keeps the tabs and the session', (tester) async {
+      await pumpSignedIn(tester);
+      studio
+        ..body = body
+        ..refused.add('/connections/managed');
+
+      final apiClient = appContext(tester).read<ApiClient>();
+      await tester.runAsync(() => apiClient.get('/connections/managed').then<void>((_) {}, onError: (Object _) {}));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudioAccountRefusalPage), findsNothing);
+      expect(find.byType(ResponsiveScaffold), findsOneWidget);
+      expect(appContext(tester).read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+      expect(appContext(tester).read<SessionCubit>().state, isA<SessionAuthenticated>());
+    });
+  }
 
   testWidgets('Retry asks Studio again and brings the tabs back once it accepts the account', (tester) async {
     studio.refused.addAll(['/auth/me', '/connections/managed', '/connections/policy']);
@@ -107,11 +148,13 @@ void main() {
   });
 }
 
-/// Studio refusing the account with 403 BEARER_NO_ROLE on the [refused] paths, as libredb-studio#1922 does for a
+/// Studio answering 403 with [body] on the [refused] paths, by default BEARER_NO_ROLE as libredb-studio#1922 does for a
 /// Keycloak user without a Studio role; the mock API answers every other request. Records the paths it is sent.
 class _RefusingStudio extends Interceptor {
   final refused = <String>{};
   final requests = <String>[];
+  String body =
+      '{"error":"This account has no role in Studio. Ask an administrator for access.","code":"BEARER_NO_ROLE"}';
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -121,11 +164,7 @@ class _RefusingStudio extends Interceptor {
       DioException(
         requestOptions: options,
         type: DioExceptionType.badResponse,
-        response: Response(
-          requestOptions: options,
-          statusCode: 403,
-          data: '{"error":"This account has no role in Studio. Ask an administrator for access.","code":"BEARER_NO_ROLE"}',
-        ),
+        response: Response(requestOptions: options, statusCode: 403, data: body),
       ),
       true,
     );
