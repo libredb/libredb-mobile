@@ -1,96 +1,67 @@
 # Contributing to LibreDB Mobile
 
-We welcome contributions to this project! To ensure a smooth and efficient process, please follow the guidelines below.
+Contributions are welcome.
+This page describes how to report a problem, suggest a change and send code.
 
-## How to Contribute
-Reporting Issues
+## Reporting issues
 
-If you encounter any bugs or issues, please report them by creating a new issue in the issue tracker. Provide as much detail as possible, including steps to reproduce the issue, screenshots, and any relevant logs.
+Report a bug by opening an issue in the [issue tracker](https://github.com/libredb/libredb-mobile/issues).
+Give the steps to reproduce it, what you expected, what happened, and any screenshots or logs, with credentials and personal data removed.
+Report a security problem privately, as [SECURITY.md](SECURITY.md) describes, not in a public issue.
 
-## Suggesting Enhancements
+## Suggesting enhancements
 
-If you have ideas for improving the project, please suggest them by creating a new issue with the "Enhancement" label. Describe the enhancement in detail and explain why you believe it would be valuable.
+Open an issue with the "Enhancement" label.
+Describe the change and why it would be valuable.
 
-## Submitting Code
+## Submitting code
 
-1. Fork the Repository
+1. Fork the repository and clone your fork:
 
-    Click the "Fork" button at the top right of this repository to create your own copy.
+   ```shell
+   git clone https://github.com/<your-account>/libredb-mobile.git
+   cd libredb-mobile
+   fvm install && fvm flutter pub get
+   ```
 
-    Clone Your Fork
+2. Create a branch for your change:
 
-    bash
+   ```shell
+   git checkout -b your-branch-name
+   ```
 
-git clone https://github.com/your-username/project-name.git
+3. Make your change in the existing code style, with tests for any change in behavior.
+   [CLAUDE.md](CLAUDE.md) holds the conventions, and [docs/development.md](docs/development.md) the toolchain.
 
-2. Create a Branch
+4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/) message, such as `fix: keep the session after a 401 AUTH_ERROR`.
 
-Create a new branch for your changes:
+5. Before you open the pull request, sync your branch with `main`, resolve any conflicts and run:
 
-bash
+   ```shell
+   fvm dart run intl_utils:generate
+   fvm dart format lib/generated --line-length=120
+   fvm dart format . --line-length=120 --set-exit-if-changed
+   fvm flutter analyze
+   fvm flutter test --coverage
+   ```
 
-git checkout -b your-branch-name
+6. Push your branch and open a pull request against `main` of [libredb/libredb-mobile](https://github.com/libredb/libredb-mobile).
+   Say what you changed and why, and link the issues it addresses.
 
-3. Make Your Changes
+## Code style
 
-Implement your changes in the new branch. Ensure that your code adheres to the existing code style and includes appropriate tests.
+- Follow the Dart style guide; the line width is 120.
+- Include tests for every new feature and bug fix.
+- Update the documentation when your change affects it.
 
-4. Commit Your Changes
+## Review
 
-Commit your changes with a descriptive message:
+The maintainers review each pull request, may ask for changes, and merge it into `main` once it is ready.
 
-bash
+## Code of conduct
 
-git add .
-git commit -m "Your descriptive commit message"
-
-5. Push Your Changes
-
-Push your changes to your fork:
-
-bash
-
-    git push origin your-branch-name
-
-6. Before Pull Request !!!
-- sync your fork on GitHub
-- git pull on your local machine
-- resolve conflicts
-- run commands sequentially
-    ```shell
-        flutter clean
-        flutter pub get
-        dart run intl_utils:generate
-        dart format lib/generated --line-length=120
-        flutter analyze
-        flutter test --coverage
-    ```
-- fix errors if needed
-
-
-7. Create a Pull Request
-
-    Navigate to the original repository and click the "New Pull Request" button. Select your branch and provide a clear description of your changes.
-        Description: Provide a concise summary of what you have changed and why.
-        Related Issues: Link to any related issues if applicable.
-
-## Code Style
-
-    Follow Dart Style Guidelines: Ensure that your code follows the Dart style guide and is properly formatted.
-    Write Tests: Include tests for any new features or bug fixes.
-    Documentation: Update documentation where necessary to reflect your changes.
-
-## Review Process
-
-    Pull requests will be reviewed by the project maintainers. Feedback will be provided, and changes may be requested.
-    Maintainers will review your pull request, and if everything looks good, it will be merged into the main branch.
-
-## Code of Conduct
-
-By contributing to this project, you agree to adhere to our Code of Conduct.
+By contributing to this project, you agree to follow its [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Contact
 
-If you have any questions, ask in this repository's Discussions or open an issue.
-
-Thank you for your interest in contributing to our project!
+Ask questions in the repository's [Discussions](https://github.com/libredb/libredb-mobile/discussions) or open an issue.

@@ -41,18 +41,32 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 
 | Place | What it holds |
 | --- | --- |
-| `lib/features/auth/` | Sign-in through Keycloak (the template's `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` |
+| `lib/features/auth/` | Sign-in through Keycloak (the `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
 | `lib/features/object_browser/` | Capabilities, containers, counts, objects, details, source, search and key scan |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
+| `lib/features/lifecycle/` | The maintenance and forced update check at start ([below](#maintenance-and-forced-updates)) |
 | `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role, used across features |
 | `lib/infrastructure/studio/` | What every Studio request shares: the error mapping and the session rule |
-| `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock) |
+| `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
 
 Each repository returns a `Result`: the entity, or an `AppError` with a translated `AppErrorCode`.
 The readers in each feature's `data/models/` turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
 
 In mock mode (`main_local.dart`) `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
+
+### Maintenance and forced updates
+
+At start the app reads `GET /app/config` under `PROD_API_URL`, an endpoint that needs no session (mock: `assets/mock/GET_app_config.json`).
+`LifecycleGate` (`lib/features/lifecycle/`) sits in the `MaterialApp` builder, around the session restore and the router, and shows a full-screen page in their place when the answer asks for one.
+
+- `maintenanceMode: true` shows the maintenance page with the answer's `maintenanceMessage` (or a translated default), the `maintenanceEstimatedEnd` time in the user's language and time zone, and a retry button.
+- A `minimumVersion` above the installed version shows the update page, which opens the `storeUrl` when it is an https link.
+- The app checks again when it comes back to the foreground, at most once every 5 minutes (`LifecycleBloc.defaultRecheckInterval`).
+- The check fails open: when the endpoint is missing or the request fails, the app opens normally and logs the failure as an error.
+  An untrusted certificate is reported with `AppErrorCode.networkCertInvalid`.
+  A failed re-check keeps a maintenance or update page the server already asked for, so a server error or a lost connection does not let the user skip a required update.
+- A non-empty `featureFlags` map in the answer replaces the flags in `FeatureFlagService`.
 
 ## Sessions
 
@@ -168,7 +182,8 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 - Studio sends the credentials of an unmanaged seed connection in the connection list; the app's reader does not read them.
 - The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
   The repositories never log statement text or database error text.
-- Certificate pinning and screen capture protection come from the template and are configured for release in milestone M6 ([template.md](template.md)).
+- Certificate pinning and screen capture protection are built in and off; milestone M6 configures them for the release build.
+  [security.md](security.md) describes them, the token storage and the inactivity sign-out, and [crash-reporting.md](crash-reporting.md) what a crash report may carry.
 
 ## Known gaps
 

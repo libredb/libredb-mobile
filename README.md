@@ -84,12 +84,19 @@ The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUD
 | [docs/architecture.md](docs/architecture.md) | App layers, the Studio contract, errors, sessions and security |
 | [docs/studio.md](docs/studio.md) | Keycloak and Studio settings, the local stack, device setup |
 | [docs/oidc.md](docs/oidc.md) | The OpenID Connect sign-in in depth |
+| [docs/http-client.md](docs/http-client.md) | Retries, idempotency keys and the response cache |
+| [docs/security.md](docs/security.md) | Token storage, certificate pinning, screen capture protection and the inactivity sign-out |
+| [docs/crash-reporting.md](docs/crash-reporting.md) | Sentry and what it masks before an event leaves the device |
+| [docs/development.md](docs/development.md) | Toolchain, test slices, the feature generator and CI |
 | [docs/testing-architecture.md](docs/testing-architecture.md) | Test layers, doubles and guard tests |
-| [docs/template.md](docs/template.md) | The Flutter template this app grew from: Sentry, certificate pinning, caching and other building blocks |
+| [docs/mock-architecture.md](docs/mock-architecture.md) | How recorded answers in `assets/mock/` are served |
+| [docs/feature-first-clean-boundaries.md](docs/feature-first-clean-boundaries.md) | Layer boundaries and dependency rules |
 
 ## Contributing
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+
+The app started from the [flutter-bloc-advanced](https://github.com/cevheri/flutter-bloc-advanced) template.
 
 ## License
 

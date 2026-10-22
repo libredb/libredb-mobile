@@ -1,7 +1,7 @@
 # Single Sign-On with OpenID Connect
 
-The template signs users in one of two ways, chosen once at build time with `AUTH_PROVIDER`.
-`jwt`, the default, is the password and OTP sign-in against the template's own backend, which issues its own JWT.
+The app signs users in one of two ways, chosen once at build time with `AUTH_PROVIDER`.
+`jwt`, the default, is the password and OTP sign-in against a backend that issues its own JWT.
 `oidc` signs the user in through any OpenID Connect provider, such as Keycloak, Zitadel, Auth0 or Microsoft Entra ID.
 In `oidc` mode the app is a public client: it uses the Authorization Code flow with PKCE (S256), holds the provider's tokens itself, and sends the provider's access token to the backend as the bearer.
 There is no client secret anywhere in the app.
@@ -276,7 +276,8 @@ The backend must:
 - answer 403 to a valid token without permission, which the app already handles.
 
 The app calls the same endpoints as in `jwt` mode, minus `/authenticate*`, `/register`, `/account/reset-password/*`, `/account/change-password` and `/token/refresh`.
-The template's account repository calls `GET /account` after sign-in for the profile; an app on another backend replaces that repository, for example with LibreDB Studio's `GET /api/auth/me`.
+The account repository calls `GET /account` after sign-in for the profile.
+LibreDB Studio has no such endpoint and answers who the user is at `GET /api/auth/me`, which `StudioIdentityRepository` reads; showing that answer in the shell is milestone M2 ([roadmap.md](roadmap.md)).
 The account fetch runs after sign-in, and its failure does not end the session.
 User management pages keep calling the backend as they do today; managing users in `oidc` mode is out of scope, and users and roles live at the provider.
 
@@ -351,7 +352,7 @@ spring:
           audiences: libredb-studio-api
 ```
 
-A `JwtAuthenticationConverter` turns the role claim into the authorities the template's backend already uses:
+A `JwtAuthenticationConverter` turns the role claim into the authorities the backend already uses:
 
 ```java
 @Configuration

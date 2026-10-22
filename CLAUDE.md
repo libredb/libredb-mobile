@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LibreDB Mobile - the Android and iOS client of LibreDB Studio, built with Flutter and the BLoC pattern.
 It signs in through Keycloak and calls Studio's API with the Keycloak access token as bearer; Studio holds every database credential, the app none.
-The app ships on Android and iOS only; the template's web and desktop builds were removed.
+The app ships on Android and iOS only.
 The plan is in `docs/roadmap.md`, the Studio contract and layers in `docs/architecture.md`.
-The Dart package is still named `flutter_bloc_advance`, after the template the app grew from (`docs/template.md`).
+The Dart package is `libredb_mobile`.
 
 - **Flutter:** 3.47.7 | **Dart SDK:** ^3.13.5 | **FVM** is used for Flutter version management
 - **Line width:** 120 characters (configured in `analysis_options.yaml`)

@@ -1,6 +1,6 @@
 # Feature-First Clean Boundaries
 
-This document defines the target architecture for `flutter_bloc_advance`.
+This document defines the target architecture for LibreDB Mobile.
 
 ## Goals
 
