@@ -13,6 +13,7 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -55,6 +56,9 @@ Future<void> _choosePreferences() async {
 Future<void> _logOut(WidgetTester tester) async {
   await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+  await tester.pumpAndSettle();
+  // An oidc build waits for Studio to record the sign-out, which the mock answers after its simulated latency.
+  await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
   await tester.pumpAndSettle();
 }
 
@@ -335,6 +339,8 @@ void main() {
         expect(app.read<SsoAutoRedirectGate>().isOpen, isTrue);
 
         app.read<SignOutBloc>().add(const SignOutRequested());
+        await tester.pumpAndSettle();
+        await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
         await tester.pumpAndSettle();
 
         expect(app.read<SignOutBloc>().state, isA<SignOutDone>());

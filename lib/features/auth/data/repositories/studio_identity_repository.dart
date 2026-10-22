@@ -6,7 +6,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
-/// Studio's session endpoint. The path is relative to `PROD_API_URL`, which ends in Studio's `/api`.
+/// Studio's session endpoints. The paths are relative to `PROD_API_URL`, which ends in Studio's `/api`.
 class StudioIdentityRepository implements IStudioIdentityRepository {
   StudioIdentityRepository(this._apiClient);
 
@@ -24,6 +24,24 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
     } catch (e) {
       final error = studioError(e);
       _log.warn('fetch failed: {}', [error.code ?? error.runtimeType]);
+      return Failure(error);
+    }
+  }
+
+  @override
+  Future<Result<void>> recordSignOut() async {
+    try {
+      final response = await _apiClient.post(
+        '/auth/logout',
+        const <String, Object?>{},
+        contentType: 'application/json',
+      );
+      StudioIdentityModel.readSignOutAccepted(ApiClient.decodeUTF8(response.data!));
+      return const Success(null);
+    } catch (e) {
+      final error = studioError(e);
+      // Only the code or the type: the sign-out goes on without Studio's record, and the answer body is not logged.
+      _log.debug('recordSignOut failed: {}', [error.code ?? error.runtimeType]);
       return Failure(error);
     }
   }

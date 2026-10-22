@@ -498,7 +498,7 @@ void main() {
 
     blocTest<SessionCubit, SessionState>(
       'a session the startup step ended gives SessionUnauthenticated(expired)',
-      build: () => cubitWith(const SsoStartupSessionEnded()),
+      build: () => cubitWith(const SsoStartupSessionEnded(SsoSessionEndReason.refreshRefused)),
       act: (cubit) => cubit.restore(),
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.expired)],
     );
@@ -670,7 +670,7 @@ void main() {
 
           // The refresh was refused after the limit: the step has cleared the stored session.
           storage._store.clear();
-          startup.complete(const SsoStartupSessionEnded());
+          startup.complete(const SsoStartupSessionEnded(SsoSessionEndReason.refreshRefused));
           async.flushMicrotasks();
 
           expect(states, [
@@ -707,7 +707,7 @@ void main() {
       }
 
       for (final (name, late) in [
-        ('SessionEnded', const SsoStartupSessionEnded() as SsoStartupResult),
+        ('SessionEnded', const SsoStartupSessionEnded(SsoSessionEndReason.refreshRefused) as SsoStartupResult),
         ('UseStoredSession', const SsoStartupUseStoredSession()),
       ]) {
         test('a late $name after the user has signed in or out only logs', () {
@@ -751,7 +751,7 @@ void main() {
 
           unawaited(cubit.restore());
           async.elapse(timeLimit);
-          startup.complete(const SsoStartupSessionEnded());
+          startup.complete(const SsoStartupSessionEnded(SsoSessionEndReason.refreshRefused));
           async.flushMicrotasks();
           expect(states, isEmpty);
 

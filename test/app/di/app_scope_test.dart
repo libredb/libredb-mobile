@@ -18,6 +18,7 @@ import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
@@ -30,6 +31,7 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -314,6 +316,64 @@ class _OidcClientDependencies extends AppDependencies {
     oidcClientsCreated++;
     return client;
   }
+}
+
+/// Counts the sign-outs recorded at Studio, noting each one in [events] with the bearer stored when it was sent.
+class _CountingStudioIdentity implements IStudioIdentityRepository {
+  _CountingStudioIdentity(this.events);
+
+  final List<String> events;
+  int signOutsRecorded = 0;
+
+  @override
+  Future<Result<void>> recordSignOut() async {
+    signOutsRecorded++;
+    events.add('recordSignOut ${await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key)}');
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<StudioIdentity>> fetch() => throw UnimplementedError('these tests never read the identity');
+}
+
+/// A provider without a logout endpoint, so a logout ends no provider session.
+class _NoLogoutOidcClient extends _FakeOidcClient {
+  _NoLogoutOidcClient() : super(const OidcSignInCancelled());
+
+  @override
+  Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const NoProviderLogout();
+}
+
+/// Rotates every refresh token into the access token `refreshed-access-token`, noting each rotation in [events].
+class _RecordingTokenRotation implements TokenRotation {
+  _RecordingTokenRotation(this.events);
+
+  final List<String> events;
+
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async {
+    events.add('rotate $refreshToken');
+    return TokensRotated(accessToken: 'refreshed-access-token', accessTokenExpiresAt: DateTime.utc(2100));
+  }
+}
+
+/// The test config in [authMode], whose Studio identity repository is [studioIdentity] and whose oidc token rotation
+/// notes each rotation in [events].
+class _StudioIdentityDependencies extends AppDependencies {
+  _StudioIdentityDependencies({required super.authMode}) : super(appConfig: const AppConfig.test());
+
+  final events = <String>[];
+  late final studioIdentity = _CountingStudioIdentity(events);
+
+  @override
+  IOidcClient createOidcClient(OidcSettings settings) => _NoLogoutOidcClient();
+
+  @override
+  TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
+      _RecordingTokenRotation(events);
+
+  @override
+  IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => studioIdentity;
 }
 
 /// Pumps [AppScope] over [dependencies] and returns a context below it.
@@ -761,6 +821,43 @@ void main() {
       final scope = await _pumpScope(tester, const AppDependencies(appConfig: AppConfig.test()));
 
       expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
+    });
+
+    testWidgets('an oidc build records the sign-out at Studio', (tester) async {
+      final dependencies = _StudioIdentityDependencies(authMode: OidcAuthMode(_oidcSettings));
+      final scope = await _pumpScope(tester, dependencies);
+
+      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+
+      expect(dependencies.studioIdentity.signOutsRecorded, 1);
+    });
+
+    testWidgets('an oidc build refreshes an expired access token before it records the sign-out at Studio', (
+      tester,
+    ) async {
+      final dependencies = _StudioIdentityDependencies(authMode: OidcAuthMode(_oidcSettings));
+      final scope = await _pumpScope(tester, dependencies);
+      final session = scope.read<SessionCubit>();
+      await _pumpUntil(tester, () => session.state is! SessionUnknown);
+      // Stored after startup, as a token that expired while the app was open.
+      final secure = FlutterSecureStorageAdapter();
+      await secure.write(SecureStorageKeys.jwtToken.key, 'expired-access-token');
+      await secure.write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      await secure.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2020)));
+
+      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+
+      expect(dependencies.events, ['rotate stored-refresh-token', 'recordSignOut refreshed-access-token']);
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
+    });
+
+    testWidgets('a jwt build never records the sign-out at Studio', (tester) async {
+      final dependencies = _StudioIdentityDependencies(authMode: const JwtAuthMode());
+      final scope = await _pumpScope(tester, dependencies);
+
+      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+
+      expect(dependencies.studioIdentity.signOutsRecorded, 0);
     });
 
     testWidgets('a jwt build provides no OIDC client', (tester) async {

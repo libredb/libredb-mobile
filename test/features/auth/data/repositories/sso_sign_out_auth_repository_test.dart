@@ -5,16 +5,21 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
+import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/printed_lines.dart';
 
 /// The secure store of the session in memory, which records each read in [calls] and throws on a read when
 /// [readError] is set.
@@ -112,6 +117,23 @@ class _PendingLogoutClient extends _FakeOidcClient {
   }
 }
 
+/// Records the sign-out at Studio through [record], noting each call in [calls].
+class _RecordingStudioIdentity implements IStudioIdentityRepository {
+  _RecordingStudioIdentity(this.calls);
+
+  final List<String> calls;
+  Future<Result<void>> Function() record = () async => const Success(null);
+
+  @override
+  Future<Result<void>> recordSignOut() {
+    calls.add('recordSignOut');
+    return record();
+  }
+
+  @override
+  Future<Result<StudioIdentity>> fetch() => throw UnimplementedError('a logout never reads the identity');
+}
+
 OidcSettings _settings({bool logoutHint = true}) =>
     OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app', logoutHint: logoutHint);
 
@@ -121,17 +143,42 @@ String _jwt({required int exp}) {
   return '${part({'alg': 'none'})}.${part({'sub': 'subject-1', 'exp': exp})}.';
 }
 
+final _now = DateTime.utc(2026, 10, 22, 12);
+
+/// The read of the stored ID token, with which every sign-out starts: a refresh that ends the session deletes it.
+final _readIdToken = 'read ${SecureStorageKeys.oidcIdToken.key}';
+
+/// The read of the stored access token expiry, with which the refresh before the record starts, and which the record
+/// reads again so that it never sends a bearer the refresh left expired.
+final _readExpiry = 'read ${SecureStorageKeys.accessTokenExpiresAt.key}';
+
 void main() {
   late List<String> calls;
   late _RecordingSecureStorage storage;
   late _RecordingAuthRepository inner;
   late _FakeOidcClient client;
+  late _RecordingStudioIdentity studioIdentity;
+  late MockTokenRotation rotation;
+  late MockIAuthSessionRepository sessionRepository;
+
+  /// The startup step's refresh of an expired access token, over the session store of the test.
+  SsoSessionStartup sessionRefresh() => SsoSessionStartup(
+    rotation: rotation,
+    secureStorage: storage,
+    sessionRepository: sessionRepository,
+    gate: SsoAutoRedirectGate(),
+    now: () => _now,
+  );
 
   SsoSignOutAuthRepository repository({bool logoutHint = true}) => SsoSignOutAuthRepository(
     inner: inner,
     client: client,
     secureStorage: storage,
     settings: _settings(logoutHint: logoutHint),
+    studioIdentity: studioIdentity,
+    sessionRefresh: sessionRefresh(),
+    studioSignOutTimeout: const Duration(milliseconds: 50),
+    now: () => _now,
   );
 
   setUp(() {
@@ -139,16 +186,140 @@ void main() {
     storage = _RecordingSecureStorage(calls);
     inner = _RecordingAuthRepository(calls, storage);
     client = _FakeOidcClient(calls);
+    studioIdentity = _RecordingStudioIdentity(calls);
+    rotation = MockTokenRotation();
+    sessionRepository = MockIAuthSessionRepository();
+    when(() => sessionRepository.clear()).thenAnswer((_) async {
+      calls.add('clear session');
+      await storage.deleteAll();
+      return const Success(null);
+    });
     storage.values[SecureStorageKeys.oidcIdToken.key] = 'stored-id-token';
   });
 
   group('SsoSignOutAuthRepository.logout', () {
-    test('reads the ID token before the wipe, then ends the provider session with it as the hint', () async {
+    test('reads the ID token, records the sign-out at Studio, wipes, then ends the provider session with the ID token '
+        'as the hint', () async {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
       expect(client.hints, ['stored-id-token']);
+    });
+
+    // Studio's audit line is a record, not a step of the sign-out: an unreachable or failing Studio must not keep the
+    // user signed in.
+    group('signs out when recording the sign-out at Studio', () {
+      final outcomes = <String, Future<Result<void>> Function()>{
+        'fails': () async => const Failure(ServerError('Internal Server Error')),
+        'throws': () async => throw StateError('unexpected'),
+        'hangs past the timeout': () => Completer<Result<void>>().future,
+      };
+      for (final MapEntry(key: name, value: record) in outcomes.entries) {
+        test(name, () async {
+          studioIdentity.record = record;
+
+          final result = await repository().logout();
+
+          expect(result, const Success<void>(null));
+          expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
+          expect(storage.values, isEmpty);
+        });
+      }
+    });
+
+    // Studio writes no audit line for an expired bearer and still answers 200, so the token is refreshed first.
+    group('with an access token that has expired', () {
+      setUp(() {
+        storage.values
+          ..[SecureStorageKeys.jwtToken.key] = 'expired-access-token'
+          ..[SecureStorageKeys.refreshToken.key] = 'stored-refresh-token'
+          ..[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
+            _now.subtract(const Duration(minutes: 5)),
+          );
+      });
+
+      test('refreshes it, records the sign-out with the new token, then wipes', () async {
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) async {
+          calls.add('rotate');
+          return TokensRotated(
+            accessToken: 'fresh-access-token',
+            refreshToken: 'fresh-refresh-token',
+            accessTokenExpiresAt: _now.add(const Duration(minutes: 1)),
+          );
+        });
+        String? bearerAtRecord;
+        studioIdentity.record = () async {
+          bearerAtRecord = storage.values[SecureStorageKeys.jwtToken.key];
+          return const Success(null);
+        };
+
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls.where((call) => !call.startsWith('read ')), [
+          'rotate',
+          'recordSignOut',
+          'wipe',
+          'endProviderSession',
+        ]);
+        expect(bearerAtRecord, 'fresh-access-token');
+        expect(storage.values, isEmpty);
+      });
+
+      test('records nothing when the provider refuses the refresh, and still signs out', () async {
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) async {
+          calls.add('rotate');
+          return const RotationRefused();
+        });
+
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls.where((call) => !call.startsWith('read ')), [
+          'rotate',
+          'clear session',
+          'wipe',
+          'endProviderSession',
+        ]);
+        expect(client.hints, ['stored-id-token']);
+      });
+
+      // The refresh ends a session it cannot refresh, and that clear also deletes the ID token.
+      test('records nothing when no refresh token is stored, and still sends the hint', () async {
+        storage.values.remove(SecureStorageKeys.refreshToken.key);
+
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls.where((call) => !call.startsWith('read ')), ['clear session', 'wipe', 'endProviderSession']);
+        expect(client.hints, ['stored-id-token']);
+        verifyNever(() => rotation.rotate(any()));
+      });
+
+      test('signs out when the refresh does not answer within the timeout', () async {
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) {
+          calls.add('rotate');
+          return Completer<TokenRotationResult>().future;
+        });
+
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls.where((call) => !call.startsWith('read ')), ['rotate', 'wipe', 'endProviderSession']);
+        expect(storage.values, isEmpty);
+      });
+    });
+
+    test('sends the record without a refresh while the access token is valid', () async {
+      storage.values[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
+        _now.add(const Duration(minutes: 1)),
+      );
+
+      await repository().logout();
+
+      expect(calls.where((call) => !call.startsWith('read ')), ['recordSignOut', 'wipe', 'endProviderSession']);
+      verifyNever(() => rotation.rotate(any()));
     });
 
     test('sends no hint when OIDC_LOGOUT_HINT is off', () async {
@@ -176,14 +347,150 @@ void main() {
       expect(client.hints, [null]);
     });
 
-    test('sends no hint when the ID token cannot be read, and still wipes and ends the provider session', () async {
+    // An unreadable store also hides the access token expiry, so the refresh ends the session and Studio gets no record.
+    test('sends no hint when the store cannot be read, and still wipes and ends the provider session', () async {
       storage.readError = Exception('keystore locked');
 
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, [_readIdToken, _readExpiry, 'clear session', 'wipe', 'endProviderSession']);
       expect(client.hints, [null]);
+    });
+
+    // .team decision '## #18: sign-out audit wait': every sign-out that leaves Studio without a record writes exactly
+    // one warn line naming the reason, and nothing more, with no secret in any line.
+    group('without a record at Studio', () {
+      const secrets = ['stored-id-token', 'expired-access-token', 'stored-refresh-token', 'fresh-access-token'];
+
+      /// The lines of the sign-out repository itself, which the interceptor's and the startup step's lines are not.
+      List<String> signOutLines(List<String> lines) => [
+        for (final line in lines)
+          if (line.contains('SsoSignOutAuthRepository')) line,
+      ];
+
+      void expectOneMissedRecordLine(List<String> lines, String reason) {
+        final missed = [
+          for (final line in signOutLines(lines))
+            if (line.contains('Studio has no record of this sign-out')) line,
+        ];
+        expect(missed, [allOf(contains('[W]'), endsWith(reason))]);
+        for (final secret in secrets) {
+          expect(lines.where((line) => line.contains(secret)), isEmpty, reason: 'a log line carries $secret');
+        }
+      }
+
+      void expireStoredAccessToken() => storage.values
+        ..[SecureStorageKeys.jwtToken.key] = 'expired-access-token'
+        ..[SecureStorageKeys.refreshToken.key] = 'stored-refresh-token'
+        ..[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
+          _now.subtract(const Duration(minutes: 5)),
+        );
+
+      test('writes no warn line when Studio records the sign-out', () async {
+        final lines = await printedLines(() => repository().logout());
+
+        expect(signOutLines(lines).where((line) => line.contains('[W]')), isEmpty);
+        expect(calls, contains('recordSignOut'));
+      });
+
+      test('names the passed budget when Studio does not answer within it', () async {
+        studioIdentity.record = () => Completer<Result<void>>().future;
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'budget passed');
+      });
+
+      test("names Studio's error code when Studio refuses the record", () async {
+        studioIdentity.record = () async =>
+            Failure(AuthError('refused-body-text', code: AppErrorCode.authInvalidAccessToken.key));
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, AppErrorCode.authInvalidAccessToken.key);
+        expect(lines.where((line) => line.contains('refused-body-text')), isEmpty);
+      });
+
+      test('names the error type when the failure has no code', () async {
+        studioIdentity.record = () async => const Failure(ServerError('Internal Server Error'));
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'ServerError');
+      });
+
+      test('names the error type when the record throws', () async {
+        studioIdentity.record = () async => throw StateError('unexpected');
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'StateError');
+      });
+
+      test('names the refused refresh', () async {
+        expireStoredAccessToken();
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) async => const RotationRefused());
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'refresh refused');
+      });
+
+      test('names the missing refresh token', () async {
+        expireStoredAccessToken();
+        storage.values.remove(SecureStorageKeys.refreshToken.key);
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'no refresh token');
+      });
+
+      test('names the unreadable store', () async {
+        storage.readError = Exception('keystore locked');
+
+        final lines = await printedLines(() => repository().logout());
+
+        expectOneMissedRecordLine(lines, 'store unreadable');
+      });
+
+      // The startup step keeps an expired session when the provider cannot be reached; the sign-out must not post the
+      // bearer it knows has expired.
+      test('posts nothing and names the unreachable provider when the refresh cannot reach it', () async {
+        expireStoredAccessToken();
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) async => const RotationUnavailable());
+
+        final lines = await printedLines(() => repository().logout());
+
+        expect(calls, isNot(contains('recordSignOut')));
+        expect(calls.where((call) => !call.startsWith('read ')), ['wipe', 'endProviderSession']);
+        expectOneMissedRecordLine(lines, 'provider unreachable');
+      });
+
+      // A refresh that answers after the budget must neither send the record nor log a second reason.
+      test('a refresh that answers after the budget posts nothing and logs nothing more', () async {
+        expireStoredAccessToken();
+        final lateRefresh = Completer<TokenRotationResult>();
+        when(() => rotation.rotate('stored-refresh-token')).thenAnswer((_) => lateRefresh.future);
+        late Result<void> result;
+
+        final duringSignOut = await printedLines(() async => result = await repository().logout());
+        final afterBudget = await printedLines(() async {
+          lateRefresh.complete(
+            TokensRotated(
+              accessToken: 'fresh-access-token',
+              refreshToken: 'fresh-refresh-token',
+              accessTokenExpiresAt: _now.add(const Duration(minutes: 1)),
+            ),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        });
+
+        expect(result, const Success<void>(null));
+        expectOneMissedRecordLine(duringSignOut, 'budget passed');
+        expect(calls, isNot(contains('recordSignOut')));
+        expect(signOutLines(afterBudget), isEmpty);
+      });
     });
 
     group('answers', () {
@@ -231,8 +538,14 @@ void main() {
   group('SsoSignOutAuthRepository.signOut', () {
     late _PendingLogoutClient pending;
 
-    SsoSignOutAuthRepository pendingRepository() =>
-        SsoSignOutAuthRepository(inner: inner, client: pending, secureStorage: storage, settings: _settings());
+    SsoSignOutAuthRepository pendingRepository() => SsoSignOutAuthRepository(
+      inner: inner,
+      client: pending,
+      secureStorage: storage,
+      settings: _settings(),
+      studioIdentity: studioIdentity,
+      sessionRefresh: sessionRefresh(),
+    );
 
     setUp(() => pending = _PendingLogoutClient(calls));
 
@@ -243,7 +556,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(signedOut.cleared, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
       expect(pending.hints, ['stored-id-token']);
       expect(providerLogoutEnded, isFalse);
 
@@ -295,6 +608,8 @@ void main() {
         client: client,
         secureStorage: storage,
         settings: _settings(),
+        studioIdentity: studioIdentity,
+        sessionRefresh: sessionRefresh(),
       );
     });
 

@@ -29,4 +29,17 @@ final class StudioIdentityModel {
       viaBearer: user['channel'] == 'bearer',
     );
   }
+
+  /// Reads Studio's `POST /api/auth/logout` answer, `{"success": true}`.
+  ///
+  /// The answer only says Studio accepted the request: Studio gives it as well when the bearer is expired or refused
+  /// and it writes no audit line, so it does not prove the sign-out was recorded.
+  ///
+  /// Throws a [FormatException] for an answer that does not say the logout succeeded.
+  static void readSignOutAccepted(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic> || decoded['success'] != true) {
+      throw const FormatException('The logout answer does not say the logout succeeded');
+    }
+  }
 }

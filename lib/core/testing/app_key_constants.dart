@@ -10,6 +10,9 @@ const Key loginButtonSsoKey = Key("loginButtonSsoKey");
 const Key forgotPasswordButtonSubmitKey = Key("forgotPasswordButtonSubmit");
 const Key forgotPasswordTextFieldEmailKey = Key("forgotPasswordTextFieldEmail");
 
+// the progress over the shell while a sign-out runs
+const Key signOutProgressIndicatorKey = Key("signOutProgressIndicatorKey");
+
 // settings screen
 const Key settingsChangePasswordButtonKey = Key("settingsChangePasswordButtonKey");
 const Key settingsChangeLanguageButtonKey = Key("settingsChangeLanguageButtonKey");

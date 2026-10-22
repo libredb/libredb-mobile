@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
@@ -62,6 +63,17 @@ void main() {
       expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.login);
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(routerOf(tester).canPop(), isFalse);
+    });
+  });
+
+  group('TopBarWidget - sign-out progress', () {
+    testWidgets('the signed-in shell sits under the sign-out progress barrier', (tester) async {
+      await pumpSignedIn(tester);
+
+      expect(
+        find.ancestor(of: find.byType(TopBarWidget), matching: find.byType(SignOutProgressBarrier)),
+        findsOneWidget,
+      );
     });
   });
 

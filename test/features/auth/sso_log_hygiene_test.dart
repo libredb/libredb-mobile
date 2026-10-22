@@ -11,7 +11,10 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_transaction_store.dart';
@@ -143,6 +146,13 @@ void main() {
       client: client,
       secureStorage: secureStorage,
       settings: _settings,
+      studioIdentity: StudioIdentityRepository(apiClient),
+      sessionRefresh: SsoSessionStartup(
+        rotation: rotation,
+        secureStorage: secureStorage,
+        sessionRepository: sessions,
+        gate: SsoAutoRedirectGate(),
+      ),
     );
     Future<String?> stored(SecureStorageKeys key) => secureStorage.read(key.key);
     // The error a caller of the API gets, which a page or a BLoC may log in turn.
@@ -180,6 +190,12 @@ void main() {
     expect(verifiers, hasLength(3), reason: 'three code exchanges, the refused one among them');
     expect(platform.authorizeRequests, hasLength(3));
     expect(lines, contains(contains('Signed in through the identity provider')), reason: 'the capture saw no log');
+    // The stub answers the logout record with `{}`, so the sign-out's one warn line for a missed record is among them.
+    expect(
+      lines,
+      contains(contains('Studio has no record of this sign-out')),
+      reason: 'the missed record went unlogged',
+    );
     _expectNoSecret(
       [...lines, apiError.toString()],
       {
