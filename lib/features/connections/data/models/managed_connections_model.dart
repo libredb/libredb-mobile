@@ -5,8 +5,9 @@ import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 /// Reads the body of Studio's `GET /api/connections/managed`: `{"connections": [...], "cacheHint": ..., ...}`.
 ///
-/// Studio sends the credentials of an unmanaged seed (`managed: false`) to a bearer client, such as `user`, `password`,
-/// `connectionString` and `apiKeySecret`. The reader reads only the fields it names, so none of them is ever kept.
+/// Studio before libredb-studio#1922 sends the credentials of an unmanaged seed (`managed: false`) to a bearer client,
+/// such as `user`, `password`, `connectionString` and `apiKeySecret`. The reader reads only the fields it names, so none
+/// of them is ever kept.
 final class ManagedConnectionsModel {
   const ManagedConnectionsModel._();
 

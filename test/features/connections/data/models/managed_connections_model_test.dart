@@ -103,7 +103,8 @@ void main() {
       );
     });
 
-    // Studio sends the credentials of an unmanaged seed to a bearer client (S-12), so the reader keeps none of them.
+    // Studio before libredb-studio#1922 sends the credentials of an unmanaged seed to a bearer client (S-12), so the
+    // reader keeps none of them.
     test('keeps no credential of an unmanaged row', () {
       const secrets = ['s3cret-password', 'postgres://u:pw@db/x', 'api-key-secret-value', 'reader-user'];
       final connection = only({

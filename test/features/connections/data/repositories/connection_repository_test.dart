@@ -168,7 +168,7 @@ void main() {
     });
   });
 
-  // Studio sends the credentials of an unmanaged seed to a bearer client (S-12).
+  // Studio before libredb-studio#1922 sends the credentials of an unmanaged seed to a bearer client (S-12).
   test('ConnectionRepository.listManaged logs no part of a body that carries credentials', () async {
     final adapter = _RecordingAdapter()
       ..answer = jsonEncode({

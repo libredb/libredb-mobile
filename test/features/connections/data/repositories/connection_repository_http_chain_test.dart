@@ -7,7 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
-import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
@@ -35,7 +35,7 @@ void main() {
 
     expect(
       result,
-      isA<Failure<List<StudioConnection>>>().having(
+      isA<Failure<ManagedConnections>>().having(
         (f) => f.error.code,
         'code',
         AppErrorCode.studioGovernanceUnavailable.key,
@@ -47,12 +47,12 @@ void main() {
 
   test('offline, listManaged returns a network failure, not the list it read before', () async {
     adapter.replies.add((200, '{"connections":[{"id":"seed:sales-postgres","name":"Sales","type":"postgres"}]}'));
-    expect(await repository.listManaged(), isA<Success<List<StudioConnection>>>());
+    expect(await repository.listManaged(), isA<Success<ManagedConnections>>());
 
     adapter.replies.addAll([for (var i = 0; i < 4; i++) const SocketException('Network is unreachable')]);
     final result = await repository.listManaged();
 
-    expect(result, isA<Failure<List<StudioConnection>>>().having((f) => f.error, 'error', isA<NetworkError>()));
+    expect(result, isA<Failure<ManagedConnections>>().having((f) => f.error, 'error', isA<NetworkError>()));
   });
 
   test('offline, fetchPolicy returns a network failure, not the policy it read before', () async {

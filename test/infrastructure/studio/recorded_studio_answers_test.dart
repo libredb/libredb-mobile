@@ -56,7 +56,8 @@ void main() {
   });
 
   test('GET /api/connections/managed under governance lists the granted connections', () {
-    final connections = ManagedConnections.fromJsonString(fixture('managed_governed'));
+    final managed = ManagedConnectionsModel.read(fixture('managed_governed'));
+    final connections = managed.connections;
 
     expect(connections.map((c) => c.id), ['seed:sales-dev', 'seed:sales-prod']);
     expect(connections.map((c) => c.environment), ['development', 'production']);
@@ -67,6 +68,24 @@ void main() {
       'sales_writer',
       'sales_reader',
     ], reason: 'sales-prod is bound for read');
+  });
+
+  test('GET /api/connections/managed under governance reads the fields of a governed connection', () {
+    final managed = ManagedConnectionsModel.read(fixture('managed_governed'));
+    final connections = managed.connections;
+
+    expect(connections.map((c) => c.color), ['#16a34a', '#dc2626']);
+    expect(connections.map((c) => c.seedId), ['sales-dev', 'sales-prod']);
+    expect(connections.every((c) => c.managed), isTrue);
+    expect(
+      connections.every((c) => !c.readOnly),
+      isTrue,
+      reason: 'a read grant is not the seed flag; the recorded Studio sends no access field',
+    );
+    expect(managed.cacheHint, const Duration(seconds: 10));
+    final text = connections.map((c) => '$c ${c.props}').join();
+    expect(text, isNot(contains('sales_writer')));
+    expect(text, isNot(contains('sales_reader')));
   });
 
   test('GET /api/connections/policy under governance', () {
