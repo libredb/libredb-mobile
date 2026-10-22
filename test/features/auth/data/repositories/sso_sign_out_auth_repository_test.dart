@@ -7,10 +7,12 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -112,6 +114,23 @@ class _PendingLogoutClient extends _FakeOidcClient {
   }
 }
 
+/// Records the sign-out at Studio through [record], noting each call in [calls].
+class _RecordingStudioIdentity implements IStudioIdentityRepository {
+  _RecordingStudioIdentity(this.calls);
+
+  final List<String> calls;
+  Future<Result<void>> Function() record = () async => const Success(null);
+
+  @override
+  Future<Result<void>> recordSignOut() {
+    calls.add('recordSignOut');
+    return record();
+  }
+
+  @override
+  Future<Result<StudioIdentity>> fetch() => throw UnimplementedError('a logout never reads the identity');
+}
+
 OidcSettings _settings({bool logoutHint = true}) =>
     OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app', logoutHint: logoutHint);
 
@@ -126,12 +145,15 @@ void main() {
   late _RecordingSecureStorage storage;
   late _RecordingAuthRepository inner;
   late _FakeOidcClient client;
+  late _RecordingStudioIdentity studioIdentity;
 
   SsoSignOutAuthRepository repository({bool logoutHint = true}) => SsoSignOutAuthRepository(
     inner: inner,
     client: client,
     secureStorage: storage,
     settings: _settings(logoutHint: logoutHint),
+    studioIdentity: studioIdentity,
+    studioSignOutTimeout: const Duration(milliseconds: 50),
   );
 
   setUp(() {
@@ -139,16 +161,39 @@ void main() {
     storage = _RecordingSecureStorage(calls);
     inner = _RecordingAuthRepository(calls, storage);
     client = _FakeOidcClient(calls);
+    studioIdentity = _RecordingStudioIdentity(calls);
     storage.values[SecureStorageKeys.oidcIdToken.key] = 'stored-id-token';
   });
 
   group('SsoSignOutAuthRepository.logout', () {
-    test('reads the ID token before the wipe, then ends the provider session with it as the hint', () async {
+    test('records the sign-out at Studio, reads the ID token before the wipe, then ends the provider session with it '
+        'as the hint', () async {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, ['recordSignOut', 'read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
       expect(client.hints, ['stored-id-token']);
+    });
+
+    // Studio's audit line is a record, not a step of the sign-out: an unreachable or failing Studio must not keep the
+    // user signed in.
+    group('signs out when recording the sign-out at Studio', () {
+      final outcomes = <String, Future<Result<void>> Function()>{
+        'fails': () async => const Failure(ServerError('Internal Server Error')),
+        'throws': () async => throw StateError('unexpected'),
+        'hangs past the timeout': () => Completer<Result<void>>().future,
+      };
+      for (final MapEntry(key: name, value: record) in outcomes.entries) {
+        test(name, () async {
+          studioIdentity.record = record;
+
+          final result = await repository().logout();
+
+          expect(result, const Success<void>(null));
+          expect(calls, ['recordSignOut', 'read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+          expect(storage.values, isEmpty);
+        });
+      }
     });
 
     test('sends no hint when OIDC_LOGOUT_HINT is off', () async {
@@ -182,7 +227,7 @@ void main() {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, ['recordSignOut', 'read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
       expect(client.hints, [null]);
     });
 
@@ -231,8 +276,13 @@ void main() {
   group('SsoSignOutAuthRepository.signOut', () {
     late _PendingLogoutClient pending;
 
-    SsoSignOutAuthRepository pendingRepository() =>
-        SsoSignOutAuthRepository(inner: inner, client: pending, secureStorage: storage, settings: _settings());
+    SsoSignOutAuthRepository pendingRepository() => SsoSignOutAuthRepository(
+      inner: inner,
+      client: pending,
+      secureStorage: storage,
+      settings: _settings(),
+      studioIdentity: studioIdentity,
+    );
 
     setUp(() => pending = _PendingLogoutClient(calls));
 
@@ -243,7 +293,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(signedOut.cleared, const Success<void>(null));
-      expect(calls, ['read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
+      expect(calls, ['recordSignOut', 'read ${SecureStorageKeys.oidcIdToken.key}', 'wipe', 'endProviderSession']);
       expect(pending.hints, ['stored-id-token']);
       expect(providerLogoutEnded, isFalse);
 
@@ -295,6 +345,7 @@ void main() {
         client: client,
         secureStorage: storage,
         settings: _settings(),
+        studioIdentity: studioIdentity,
       );
     });
 

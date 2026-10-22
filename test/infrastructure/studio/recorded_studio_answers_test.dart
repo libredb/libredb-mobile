@@ -38,6 +38,10 @@ void main() {
     expect(identity.viaBearer, isTrue);
   });
 
+  test('POST /api/auth/logout of a bearer session', () {
+    expect(() => StudioIdentityModel.readSignOutRecorded(fixture('logout')), returnsNormally);
+  });
+
   test('GET /api/connections/managed', () {
     final managed = ManagedConnectionsModel.read(fixture('managed'));
     final connections = managed.connections;

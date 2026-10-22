@@ -29,4 +29,14 @@ final class StudioIdentityModel {
       viaBearer: user['channel'] == 'bearer',
     );
   }
+
+  /// Reads Studio's `POST /api/auth/logout` of a bearer session, `{"success": true}`.
+  ///
+  /// Throws a [FormatException] for an answer that does not say the sign-out was recorded.
+  static void readSignOutRecorded(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic> || decoded['success'] != true) {
+      throw const FormatException('The logout answer does not say the sign-out was recorded');
+    }
+  }
 }

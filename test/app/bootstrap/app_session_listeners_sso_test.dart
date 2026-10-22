@@ -10,6 +10,7 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -119,6 +120,9 @@ class _CacheKeepingStore extends InMemorySharedPreferencesStore {
 Future<void> _logOut(WidgetTester tester) async {
   await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+  await tester.pumpAndSettle();
+  // An oidc build waits for Studio to record the sign-out, which the mock answers after its simulated latency.
+  await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
   await tester.pumpAndSettle();
 }
 

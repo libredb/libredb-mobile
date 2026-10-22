@@ -181,6 +181,7 @@ class AppScope extends StatelessWidget {
               client: context.read<IOidcClient>(),
               secureStorage: context.read<ISecureStorage>(),
               settings: oidcSettings,
+              studioIdentity: context.read<IStudioIdentityRepository>(),
             ),
           ),
           RepositoryProvider<IAuthRepository>(create: (context) => context.read<SsoSignOutAuthRepository>()),

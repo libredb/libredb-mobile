@@ -41,7 +41,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 
 | Place | What it holds |
 | --- | --- |
-| `lib/features/auth/` | Sign-in through Keycloak (the `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` |
+| `lib/features/auth/` | Sign-in through Keycloak (the `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` and the sign-out record at `POST /api/auth/logout` |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
 | `lib/features/object_browser/` | Containers, counts, objects, details, source, search and key scan |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
@@ -123,6 +123,7 @@ Every request follows these rules:
 | Studio endpoint | Repository method | Answer |
 | --- | --- | --- |
 | `GET /api/auth/me` | `IStudioIdentityRepository.fetch` | `StudioIdentity` |
+| `POST /api/auth/logout` | `IStudioIdentityRepository.recordSignOut` | none; Studio only writes its logout audit line |
 | `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `ManagedConnections` (`StudioConnection` list and `cacheHint`) |
 | `GET /api/connections/policy` | `IConnectionRepository.fetchPolicy` | `ConnectionPolicy` |
 | `POST /api/db/test-connection` | `IConnectionRepository.test` | `ConnectionTestResult` |

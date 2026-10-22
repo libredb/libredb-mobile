@@ -55,6 +55,7 @@ void main() {
     'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
     'IProviderMetaRepository.providerMeta': (client) => ProviderMetaRepository(client).providerMeta('seed:sales-db'),
     'IStudioIdentityRepository.fetch': (client) => StudioIdentityRepository(client).fetch(),
+    'IStudioIdentityRepository.recordSignOut': (client) => StudioIdentityRepository(client).recordSignOut(),
     'IObjectBrowserRepository.containers': (client) => ObjectBrowserRepository(client).containers('seed:sales-db'),
     'IObjectBrowserRepository.counts': (client) =>
         ObjectBrowserRepository(client).counts('seed:sales-db', container: const ['public']),
