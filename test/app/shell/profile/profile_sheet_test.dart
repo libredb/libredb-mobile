@@ -29,6 +29,7 @@ void main() {
     identity = MockStudioIdentityCubit();
     policy = MockConnectionPolicyCubit();
     when(() => identity.load()).thenAnswer((_) async {});
+    when(() => policy.load()).thenAnswer((_) async {});
   });
 
   // A page with one button that opens the sheet, as the top bar does, keeping what the sheet answered.
@@ -159,6 +160,28 @@ void main() {
 
         expect(inSheet(find.byType(Chip)), findsNothing);
         expect(find.text('Governed by LibreDB Platform'), findsNothing);
+      });
+    }
+
+    testWidgets('opening the sheet after a failed policy request asks Studio for the policy again', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(user),
+        policyState: const ConnectionPolicyFailure(AppErrorCode.generic),
+      );
+
+      verify(() => policy.load()).called(1);
+    });
+
+    for (final (shape, state) in <(String, ConnectionPolicyState)>[
+      ('a loaded policy', const ConnectionPolicyLoaded(governed)),
+      ('no policy yet', const ConnectionPolicyInitial()),
+      ('a policy still loading', const ConnectionPolicyLoading()),
+    ]) {
+      testWidgets('opening the sheet with $shape does not ask Studio for the policy', (tester) async {
+        await pumpSheet(tester, identityState: const StudioIdentityLoaded(user), policyState: state);
+
+        verifyNever(() => policy.load());
       });
     }
   });

@@ -18,12 +18,19 @@ class ProfileSheet extends StatelessWidget {
   const ProfileSheet({super.key});
 
   /// Opens the sheet and answers what the user picked, or null when the sheet was dismissed.
-  static Future<ProfileSheetAction?> show(BuildContext context) => showModalBottomSheet<ProfileSheetAction>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => const ProfileSheet(),
-  );
+  ///
+  /// The shell asks for the connection policy only once, so a request that failed is asked again here, where the
+  /// governance chip it decides is shown.
+  static Future<ProfileSheetAction?> show(BuildContext context) {
+    final policy = context.read<ConnectionPolicyCubit>();
+    if (policy.state is ConnectionPolicyFailure) policy.load();
+    return showModalBottomSheet<ProfileSheetAction>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => const ProfileSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
