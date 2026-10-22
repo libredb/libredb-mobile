@@ -3,12 +3,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.13.5-0175C2?logo=dart)
-![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-2E7D32)
+![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS-2E7D32)
 ![Open Source](https://img.shields.io/badge/Open%20Source-Community%20Template-black)
 
-A production-ready, community-friendly Flutter starter built with BLoC, repository pattern, responsive UI, role-based access control, internationalization, and multi-environment support. It is designed to help you move from prototype to maintainable product faster across mobile, web, and desktop.
+This document describes the Flutter template LibreDB Mobile grew from: a starter built with BLoC, the repository pattern, responsive UI, role-based access control, internationalization and multi-environment support.
+The template targeted mobile, web and desktop; LibreDB Mobile keeps only its Android and iOS builds, and this document describes the building blocks as they work there.
 
-**Useful links:** [Live Demo](https://cevheri.github.io/flutter-bloc-advanced/) · [Wiki](https://deepwiki.com/cevheri/flutter-bloc-advanced) · [Transformation Log](archived/clean-modernize-strengthen.md) · [Report an Issue](https://github.com/cevheri/flutter-bloc-advanced/issues) · [Contributing](#contributing)
+**Useful links:** [Wiki](https://deepwiki.com/cevheri/flutter-bloc-advanced) · [Transformation Log](archived/clean-modernize-strengthen.md) · [Template issues](https://github.com/cevheri/flutter-bloc-advanced/issues)
 
 ## Why This Template?
 
@@ -20,14 +21,6 @@ A production-ready, community-friendly Flutter starter built with BLoC, reposito
 ## Screenshots
 
 The screenshots below are included to help contributors and adopters understand the current UX quickly before cloning or running the project.
-
-### Web Experience
-
-| Dark Login | Light Login |
-| --- | --- |
-| ![Web login screen in dark theme](screenshots/web-login-dark.png) | ![Web login screen in light theme](screenshots/web-login-light.png) |
-
-![Web user management list screen](screenshots/web-list-user.png)
 
 ### Mobile Experience
 
@@ -46,17 +39,12 @@ The screenshots below are included to help contributors and adopters understand 
 - **Single sign-on (opt-in)**: the sign-in method is chosen at build time with `AUTH_PROVIDER`.
   `jwt`, the default, is the password and OTP sign-in above against the template's backend, and `oidc` signs users in through any OpenID Connect provider, such as Keycloak, Zitadel, Auth0 or Microsoft Entra ID.
   See [Single Sign-On](#single-sign-on-oidc-opt-in) and [docs/oidc.md](oidc.md).
-- **Token storage** — JWT and refresh tokens are persisted via `flutter_secure_storage`
+- **Token storage**: JWT and refresh tokens are persisted via `flutter_secure_storage`
   (iOS Keychain, Android custom AES-GCM ciphers). Keychain accessibility is pinned to
   `first_unlock_this_device` so tokens stay on the device (no iCloud Keychain sync).
   Non-secret session fields (`username`, `roles`) remain in `SharedPreferences` for
   synchronous access. The first launch after upgrading from an older build runs a one-shot
   migration from the legacy plaintext keys into secure storage.
-- **macOS keychain**: on macOS the tokens live in the login keychain, because the data protection keychain needs an Apple Developer team and a provisioning profile, and the default macOS build is signed ad hoc without them.
-  The login keychain protects the tokens with an access control list that names the app, and keychain accessibility such as `first_unlock_this_device` does not apply there, so none is set on macOS.
-  An ad-hoc signature names the app by its code hash, so after a rebuild macOS asks for the login keychain password before the app can read the stored session.
-  Startup waits at most 10 seconds for the keychain in the session migration, then at most 10 seconds more in the session restore, and shows the login page if the password has not been entered by then; the stored session still opens once it is.
-  With a team and a provisioning profile you can move to the data protection keychain: add `keychain-access-groups` to both `macos/Runner/*.entitlements` files and set `usesDataProtectionKeychain: true` and `accessibility: KeychainAccessibility.first_unlock_this_device` in `FlutterSecureStorageAdapter` (`lib/infrastructure/storage/secure_storage.dart`); users then sign in once more.
 
 ### User Management
 
@@ -72,7 +60,7 @@ The screenshots below are included to help contributors and adopters understand 
 
 ### Crash Reporting (Sentry, opt-in)
 
-The template ships with a Sentry adapter (`SentryAnalyticsService`) and a conservative PII / token scrubber, but **no DSN is committed** — public templates with a committed DSN bleed events from every fork into the original project's quota. Provide a DSN at build time:
+The template ships with a Sentry adapter (`SentryAnalyticsService`) and a conservative PII / token scrubber, but **no DSN is committed**: public templates with a committed DSN bleed events from every fork into the original project's quota. Provide a DSN at build time:
 
 ```shell
 fvm flutter run --target lib/main/main_prod.dart \
@@ -97,16 +85,14 @@ fvm flutter build apk --release --target lib/main/main_prod.dart \
 - Email addresses, JWTs and the secrets `maskSecrets` finds (see the last item) in every other request header value and every `request.env` value; the header names are kept
 - The values of body keys whose names contain `password`, `otp`, `token` or `secret` (case-insensitive substring), at any depth, replaced with `[REDACTED]`
 - Email addresses and JWT-shaped strings (3 base64url segments) in exception values, the event message and the request body (which only an HTTP integration a fork adds, such as `sentry_dio`, attaches), replaced with `[REDACTED_EMAIL]` / `[REDACTED_JWT]`
-- Email addresses and JWTs in the page location (`request.url`, query string, fragment) and the transaction name, replaced with `[REDACTED_EMAIL]` / `[REDACTED_JWT]`.
-  On web the OTP route `/login-otp-verify/:email` puts the user's email there.
+- Email addresses and JWTs in the request URL (`request.url`, query string, fragment) and the transaction name, replaced with `[REDACTED_EMAIL]` / `[REDACTED_JWT]`.
+  A route such as the OTP route `/login-otp-verify/:email` can put the user's email there.
 - In the same text, the value of a JSON member or a `name=value` pair whose name contains one of those words, and the credentials of a `Bearer` authorization, replaced with `[REDACTED]` by `maskSecrets`, which `AppLogger` also runs over every line it prints.
 
 `sentryBeforeBreadcrumb`, the `beforeBreadcrumb` hook, masks email addresses, JWTs and the secrets `maskSecrets` finds in the message and the data of every breadcrumb when it is recorded, and the value of every credential key of the data: the breadcrumbs of `SentryAnalyticsService` and the navigation breadcrumbs.
 It also covers the http and ui breadcrumbs a fork adds through `sentry_dio` or `SentryUserInteractionWidget`.
 `installSentryScrubbers` installs both hooks, and `configureSentryOptions` (`lib/app/bootstrap/sentry_start.dart`), the options `AppBootstrap.run` starts Sentry with, calls it.
-It also turns print breadcrumbs off, so no printed line, and no `AppLogger` line, becomes a breadcrumb.
-On web the SDK runs the app in a zone that made a breadcrumb of every printed line, and a scrubber cannot find a password or a code in free text.
-Native builds never recorded `AppLogger` lines.
+It also turns print breadcrumbs off, so no printed line, and no `AppLogger` line, becomes a breadcrumb: a scrubber cannot find a password or a code in free text.
 
 The native Sentry SDKs record breadcrumbs and send events of their own (activity and app lifecycle, system events, Java and Kotlin exceptions, ANR events, native crash reports), and none of them pass through the Dart hooks.
 On Android the host app starts sentry-android itself (`MainApplication.kt` and `NativeSentry.kt` under `android/app/src/main/kotlin`) with `beforeSend` and `beforeBreadcrumb` hooks that mask them with a Kotlin copy of the same rules (`NativeSentryScrubber.kt`), and the Dart side turns `autoInitializeNativeSdk` off on Android only.
@@ -114,26 +100,13 @@ On Android the host app starts sentry-android itself (`MainApplication.kt` and `
 Gradle needs JDK 17 there, and the Gradle wrapper is not committed: any Flutter Android build writes it, for example `fvm flutter build apk --config-only --target lib/main/main_prod.dart`.
 The lifecycle breadcrumbs of sentry-android keep their `state` (such as `resumed` or `foreground`); a copy that Sentry merges into a Dart event still shows it masked.
 
-On web the native SDK in the table is the Sentry JavaScript SDK, which sentry_flutter starts there.
-
 | Platform | Dart events and breadcrumbs | Native breadcrumbs | Native events and crash reports |
 | --- | --- | --- | --- |
 | Android | Scrubbed | Scrubbed | Scrubbed |
 | iOS | Scrubbed | Not scrubbed | Not scrubbed |
-| macOS | Scrubbed | Not scrubbed | Not scrubbed |
-| Linux, Windows | Scrubbed | None recorded | Minidumps, which cannot be scrubbed |
-| Web | Scrubbed | None recorded | Not scrubbed |
 
-Native scrubbing is not done on iOS and macOS yet: sentry_flutter starts sentry-cocoa there, and what it records itself leaves the device unmasked.
-It is not done on web either, and the code fix for all three is tracked in #177.
-On web sentry_flutter starts the JavaScript SDK with only its global handlers and its dedupe integration, so the JavaScript SDK records no console, fetch, XHR, DOM or navigation breadcrumbs of its own.
-The global handlers send an event of their own for every uncaught JavaScript error and unhandled promise rejection, and so for a Dart error that escapes the zone `SentryFlutter.init` runs the app in, such as one thrown inside a JavaScript interop callback.
-Such an event carries its error message and stack trace unmasked: the Dart `beforeSend` and `beforeBreadcrumb` hooks are not passed to the JavaScript SDK, and the `beforeSend` that sentry_flutter sets there only names the SDK.
-It carries none of the Dart breadcrumbs, user or tags, because sentry_flutter does not copy the Dart scope to the JavaScript SDK on web.
-The Dart events leave through the JavaScript SDK as well, but only after the Dart hooks have masked them.
-When a DSN is set, sentry_flutter fetches the JavaScript SDK at start from `https://browser.sentry-cdn.com` (`bundle.tracing.min.js` in a release build, with a subresource integrity hash), so a fork with a strict Content Security Policy allows that origin in `script-src` and the ingest host of its DSN in `connect-src`.
-Where Trusted Types are enforced, the loader creates a policy named `sentry-dart`, which the `trusted-types` directive must allow.
-On Linux and Windows sentry-native records no breadcrumbs of its own, but a native crash uploads a minidump, a copy of process memory that no text scrubber can clean; set `options.enableNativeCrashHandling = false` for those platforms in `configureSentryOptions` if that is not acceptable.
+Native scrubbing is not done on iOS yet: sentry_flutter starts sentry-cocoa there, and what it records itself leaves the device unmasked.
+The code fix is tracked in the template's #177.
 Sentry's server-side data scrubbing (Advanced Data Scrubbing in the project settings) is a useful complement on every platform, but it runs after the data has left the device, so it does not replace the hooks.
 
 On Android, Gradle passes the DSN to the native SDK only for a `lib/main/main_prod.dart` build (`android/app/build.gradle.kts`), the only entry point that selects the prod environment in which the Dart side starts Sentry.
@@ -146,7 +119,7 @@ Default sample rate: `tracesSampleRate: 0.2`. Adjust in `configureSentryOptions`
 
 ### Certificate Pinning (opt-in)
 
-The HTTP client supports certificate pinning to defend against MITM via user-installed root CAs, rogue intermediates, and other forms of device-trust-store compromise. **Default off** — the template ships with an empty pin list because pinning the wrong cert bricks every install.
+The HTTP client supports certificate pinning to defend against MITM via user-installed root CAs, rogue intermediates, and other forms of device-trust-store compromise. **Default off**: the template ships with an empty pin list because pinning the wrong cert bricks every install.
 
 How it works:
 
@@ -165,8 +138,6 @@ How it works:
   `CacheInterceptor` answers a GET from cache only when it cannot reach the server: a connection error, a timeout, or a connection closed or reset before the whole response arrived; a response that dart:io cannot parse counts too.
   `ApiClient` throws such a failure, and a certificate that `IOHttpClientAdapter.validateCertificate` rejects (`DioExceptionType.badCertificate`), as an `UntrustedCertificateException` too, so the screens above show the same translated message; the exception message keeps the TLS error for the log.
   `ResilienceInterceptor` does not count it toward opening the endpoint's circuit, so a circuit-open error never replaces it.
-  On web the browser reports a TLS failure as a connection error, so there it cannot be told apart from a lost connection.
-- **Web platform is a hard no-op.** Browsers control TLS; from JS we cannot intercept the handshake. Use HSTS / CT pinning at the server side instead.
 
 Extract pins from your live backend:
 
@@ -177,7 +148,7 @@ openssl s_client -servername api.example.com -connect api.example.com:443 < /dev
   | openssl enc -base64
 ```
 
-(**v1 caveat — full-cert hash, not SPKI.** The OWASP-recommended pin is `SHA-256(SubjectPublicKeyInfo)`, which survives certificate rotation as long as the keypair is reused. Extracting SPKI from X.509 DER requires ASN.1 parsing; we ship full-cert hash for simplicity and auditability. Stored pin shape stays identical when upgrading — only the hash input changes. Track this gap in your fork before adopting in production.)
+(**v1 caveat: full-cert hash, not SPKI.** The OWASP-recommended pin is `SHA-256(SubjectPublicKeyInfo)`, which survives certificate rotation as long as the keypair is reused. Extracting SPKI from X.509 DER requires ASN.1 parsing; we ship full-cert hash for simplicity and auditability. Stored pin shape stays identical when upgrading; only the hash input changes. Track this gap in your fork before adopting in production.)
 
 Key rotation procedure:
 
@@ -201,19 +172,12 @@ fvm flutter run --target lib/main/main_prod.dart \
   --dart-define=OIDC_ROLE_CLAIM=realm_access.roles
 ```
 
-- **Every platform:** Android through a Custom Tab, iOS and macOS through `ASWebAuthenticationSession`, web in the same tab through `web/redirect.html`, and Linux and Windows through the system browser with a loopback redirect.
+- **Browser:** Android through a Custom Tab and iOS through `ASWebAuthenticationSession`, both returning to `<redirect scheme>:/oauth2redirect`.
 - **Roles** come from a claim of the ID token (`OIDC_ROLE_CLAIM`, `OIDC_ADMIN_ROLES`, `OIDC_USER_ROLES`) and map to `ROLE_ADMIN` and `ROLE_USER`.
 - **Refresh** goes to the provider's token endpoint through the same `TokenRefreshInterceptor`, and a logout the user starts also ends the session at the provider.
 - **Registration, forgot password, OTP sign-in and change password** belong to the provider, so their routes and entry points are left out.
 
-Try it locally with the bundled Keycloak demo, which needs no backend because `main_local.dart` answers API calls from the mock data:
-
-```shell
-docker compose -f tool/oidc-demo/docker-compose.yml up -d --wait
-fvm flutter run -d chrome --web-port 8081 --target lib/main/main_local.dart --dart-define-from-file=tool/oidc-demo/oidc-demo.env
-```
-
-Sign in as `admin` / `admin` or `user` / `user`, and stop the demo with `docker compose -f tool/oidc-demo/docker-compose.yml down -v`.
+LibreDB Mobile signs in against a local Keycloak and Studio from `tool/studio-dev`, described in [docs/studio.md](studio.md).
 [docs/oidc.md](oidc.md) has the provider setup for Keycloak, Zitadel, Auth0 and Entra ID, the configuration reference, the backend contract with Next.js and Spring Boot examples, troubleshooting and the known limitations.
 
 ### Inactivity Auto-Logout
@@ -222,12 +186,8 @@ Sign in as `admin` / `admin` or `user` / `user`, and stop the demo with `docker 
 
 - Configured via `AppConfig.idleTimeout` in `lib/infrastructure/config/environment.dart`: `AppConfig.prod()` sets 15 minutes, `AppConfig.dev()` and `AppConfig.test()` set `null`, which disables it.
 - Background-aware: on iOS the Dart `Timer` pauses while the app is suspended, so the observer also captures wall-clock `DateTime.now()` on lifecycle transitions; resumes past the threshold fire immediately.
-- Browser tabs: on web all tabs of the app share one session, and an idle timeout in any tab signs out every tab.
-  So each tab records its latest activity in `localStorage` while it is in the foreground, at most once every 10 seconds, and before a tab signs out, from its timer or when the user returns to it, it checks the latest activity of every tab.
-  Returning to a tab left idle does not sign out the session the user is working in, in another tab.
-  Activity can reach the other tabs up to 10 seconds late, so the session can end up to 10 seconds early.
 - Surfacing: when the timer fires, the user sees a localized snackbar ("You were signed out due to inactivity.") and the router redirects to login. The reason is tagged `SessionExpiredReason.idleTimeout` so logs and UI can distinguish it from a manual sign-out.
-- Activity scope: a touch, click or drag, mouse wheel and trackpad scrolling, and key presses reset the timer, so a user who only scrolls a long page or only types in a form stays signed in.
+- Activity scope: a touch or drag, mouse wheel and trackpad scrolling, and hardware key presses reset the timer, so a user who only scrolls a long page or only types in a form stays signed in.
   Moving the mouse without a button pressed does not count, and neither do key events Flutter synthesizes to match the keyboard state.
 
 Compliance baselines that expect inactivity timeouts: SOC2 CC6.1, ISO 27001 A.9.4.2, GDPR Art. 32.
@@ -267,7 +227,7 @@ await apiClient.patch<User>('/admin/users', user, pathParams: '42', idempotent: 
 
 Worked example: `UserRepository.create` opts in (see `lib/features/users/data/repositories/user_repository.dart`).
 
-**Retry stability:** once generated, the key is stashed on `RequestOptions.extra['_idempotency_key']` and reused on every subsequent pass — covers both `ResilienceInterceptor` retries (transient 5xx) and `TokenRefreshInterceptor` re-submission after a 401 + refresh.
+**Retry stability:** once generated, the key is stashed on `RequestOptions.extra['_idempotency_key']` and reused on every subsequent pass, which covers both `ResilienceInterceptor` retries (transient 5xx) and `TokenRefreshInterceptor` re-submission after a 401 + refresh.
 
 `GET`, `HEAD`, `OPTIONS`, `DELETE` never get the header (safe / idempotent by HTTP semantics).
 
@@ -287,9 +247,9 @@ Past its TTL an entry still answers a `GET` that cannot reach the server, with a
 An entry read after that is deleted instead.
 Ending the session, by a logout, the idle timeout or a token that cannot be refreshed, deletes every entry, and a clear that leaves some behind is logged as an error.
 The response of a `GET` still on its way when the session ends is not stored, so it cannot answer the next user with the previous user's data.
-The entries live in `SharedPreferences`, which on web is `localStorage`, whose per-origin quota the stored session and the preferences share.
+The entries live in `SharedPreferences` next to the preferences.
 So `SharedPrefsCacheStorage` evicts: when it starts and before each write it deletes the entries past 24 hours, and before each write it deletes the oldest entries until the new one fits in 200 entries and 1,000,000 characters.
-A write the store refuses, such as one past the quota, is logged as an error with the key and the size, the entry is not cached, and the `GET` still succeeds.
+A write the store refuses is logged as an error with the key and the size, the entry is not cached, and the `GET` still succeeds.
 A `GET` cannot reach the server when the device is offline, or when the connection is refused, times out, or is closed or reset before the whole response arrived.
 A response that dart:io cannot parse, such as one from a server that does not answer in HTTP, counts the same way, since dart:io reports it like a connection reset while the response is awaited.
 Every other failure reaches the caller, a server error or a TLS failure included: an untrusted certificate is never answered from the cache (see [Certificate Pinning](#certificate-pinning-opt-in)).
@@ -298,18 +258,17 @@ An answer from a fresh `cacheFirst` or `cacheOnly` entry carries `x-cache: hit`.
 
 ### Screen Capture Protection (opt-in)
 
-Mechanism for sensitive screens (credentials, OTP, payment, tokens) shipped **disabled by default**. The template's job is to provide the hook, not impose UX on every fork — many apps legitimately want users to screenshot QR codes, receipts, etc.
+Mechanism for sensitive screens (credentials, OTP, payment, tokens) shipped **disabled by default**. The template's job is to provide the hook, not impose UX on every fork, and many apps legitimately want users to screenshot QR codes, receipts, etc.
 
 - Helper: `ScreenCaptureProtection.enable()` / `.disable()` in `lib/core/security/screen_capture_protection.dart`.
-- Per-screen mixin: `ScreenCaptureProtected<T>` in `lib/core/security/screen_capture_protected.dart` — add to a `State<T>` and it auto-enables on `initState`, releases on `dispose`.
+- Per-screen mixin: `ScreenCaptureProtected<T>` in `lib/core/security/screen_capture_protected.dart`: add to a `State<T>` and it auto-enables on `initState`, releases on `dispose`.
 
-Platform behaviour (**asymmetric — read this**):
+Platform behaviour (**asymmetric, read this**):
 
 | Platform | What happens |
 | --- | --- |
 | Android | `FLAG_SECURE`: screenshots and screen recording are blocked; recent-apps preview renders black. |
 | iOS | iOS provides no API to block screenshots (Apple policy). The task-switcher snapshot is **blurred** so on-screen secrets do not leak into the app preview. Screenshots while foregrounded still succeed. |
-| Web / Desktop | No-op. |
 
 Opt-in example (uncomment in `LoginScreen`):
 
@@ -330,12 +289,12 @@ When not to enable: screens with content the user is expected to capture (QR cod
 - 16 supported field types: text, email, password, number, phone, textarea,
   dropdown, multiSelect, date, datetime, toggle, checkbox, radio, slider,
   sectionHeader, divider
-- Schema-only loading (`/dynamic-forms/sample` — CRM lead demo) or bundled
+- Schema-only loading (`/dynamic-forms/sample`, a CRM lead demo) or bundled
   `{schema, values}` loading with per-instance `pathParams`
-  (`/user/:id/extended-info` — user extended-info kitchen-sink covering all 16
+  (`/user/:id/extended-info`, a user extended-info kitchen-sink covering all 16
   types)
 - Reusable from any feature via `DynamicFormsFeatureRoutes.withBloc(context, child)`
-  — the engine lives under `shared/dynamic_forms/` and is feature-agnostic
+  (the engine lives under `shared/dynamic_forms/` and is feature-agnostic)
 
 ### UI and Developer Experience
 
@@ -343,7 +302,7 @@ When not to enable: screens with content the user is expected to capture (QR cod
 - Responsive layout support
 - English and Turkish localization
 - Design system foundation with reusable components
-- Multi-platform support for Android, iOS, Web, macOS, Linux, and Windows
+- Android and iOS builds
 
 ### Architecture
 
@@ -367,8 +326,8 @@ When not to enable: screens with content the user is expected to capture (QR cod
 - Flutter `3.47.7` and Dart `3.13.5`
 - [FVM](https://fvm.app/documentation/getting-started/installation) recommended for version consistency
 - Android SDK for Android builds
-- Xcode for iOS and macOS builds
-- Minimum deployment targets: Android 8.0 (API 26), iOS 15, macOS 12
+- Xcode for iOS builds
+- Minimum deployment targets: Android 8.0 (API 26), iOS 15
 
 ### Install FVM
 
@@ -397,14 +356,7 @@ fvm flutter pub get
 All local requests use `assets/mock/`, so you can explore the app without standing up a backend first.
 
 ```shell
-# Mobile
 fvm flutter run --target lib/main/main_local.dart
-
-# Web
-fvm flutter run -d chrome --target lib/main/main_local.dart
-
-# Web with a specific port
-fvm flutter run -d chrome --web-port 3000 --target lib/main/main_local.dart
 ```
 
 ### Demo Credentials
@@ -417,11 +369,7 @@ fvm flutter run -d chrome --web-port 3000 --target lib/main/main_local.dart
 ### Run Against the Real API
 
 ```shell
-# Mobile
 fvm flutter run --target lib/main/main_prod.dart
-
-# Web
-fvm flutter run -d chrome --target lib/main/main_prod.dart
 ```
 
 The production environment is configured in `lib/infrastructure/config/environment.dart`.
@@ -486,46 +434,30 @@ All template placeholders use `__KEYWORD__` naming. Run a **global search** for 
 
 | Keyword | Description | Example | Where Used |
 | --- | --- | --- | --- |
-| `__APP_NAME__` | Full application name | `Acme Dashboard` | template_config.dart, manifest.json, 404.html |
-| `__APP_SHORT_NAME__` | Short name (PWA, mobile) | `Acme` | manifest.json |
-| `__APP_DESCRIPTION__` | One-line app description | `Team collaboration platform` | manifest.json |
-| `__PROD_API_URL__` | Production API endpoint | `https://api.acme.com/v1` | template_config.dart, index.html |
-| `__WEB_BASE_URL__` | Deployment URL (trailing `/`) | `https://app.acme.com/` | index.html, sitemap.xml, robots.txt, .well-known/security.txt |
-| `__WEB_BASE_PATH__` | Path of the deployment URL (leading and trailing `/`) | `/` | 404.html, robots.txt |
-| `__GITHUB_REPO_URL__` | GitHub repository URL (no trailing `/`) | `https://github.com/acme/dashboard` | template_config.dart, .well-known/security.txt |
+| `__APP_NAME__` | Full application name | `Acme Dashboard` | template_config.dart |
+| `__PROD_API_URL__` | Production API endpoint | `https://api.acme.com/v1` | template_config.dart |
+| `__GITHUB_REPO_URL__` | GitHub repository URL (no trailing `/`) | `https://github.com/acme/dashboard` | template_config.dart |
 | `__DOCS_URL__` | Documentation website | `https://docs.acme.com` | template_config.dart |
 | `__SPONSOR_URL__` | Sponsor page | `https://github.com/sponsors/acme` | template_config.dart |
-| `__SECURITY_CONTACT__` | Email address for vulnerability reports | `security@acme.com` | .well-known/security.txt |
-| `__AUTHOR_NAME__` | Developer or company name | `Acme Inc.` | index.html, humans.txt |
-| `__AUTHOR_URL__` | Author website / profile | `https://github.com/acme` | index.html, humans.txt |
-| `__AUTHOR_LOCATION__` | Author location | `San Francisco, CA` | humans.txt |
 
-The hosted demo fills these placeholders only at deploy time, from `.github/pages/demo-values.env`, and `scripts/check_web_placeholders.sh` fails the GitHub Pages build of any repository that would still publish one, naming the file and keyword (`__PROD_API_URL__` is exempt because the mock-mode web build does not use it).
-
-`template_config.dart` reads `__GITHUB_REPO_URL__`, `__DOCS_URL__` and `__SPONSOR_URL__` at build time, so you can replace them there or give them to `flutter run` and `flutter build`.
-Pass `--dart-define=GITHUB_REPO_URL=https://github.com/acme/dashboard` for one value, or `--dart-define-from-file=values.env` for a file of `KEY=value` lines; the hosted demo builds with `.github/pages/demo-values.env`.
+`template_config.dart` reads `__PROD_API_URL__`, `__GITHUB_REPO_URL__`, `__DOCS_URL__` and `__SPONSOR_URL__` at build time, so you can replace them there or give them to `flutter run` and `flutter build`.
+Pass `--dart-define=GITHUB_REPO_URL=https://github.com/acme/dashboard` for one value, or `--dart-define-from-file=values.env` for a file of `KEY=value` lines.
 The login page shows its community section only when the repository URL is given, and its Sponsor and Documentation links only when their URLs are; the sidebar and settings show the Website link only when the docs URL is given.
 An unfilled template therefore shows no link that leads nowhere.
 An empty value, such as `--dart-define=SPONSOR_URL=`, leaves that link out.
-A web build that still contains one of these placeholders in `main.dart.js` fails `scripts/check_web_placeholders.sh`.
 
 Also update manually:
 
 1. **`pubspec.yaml`**: Package name, version, description.
-2. **`web/index.html`**: Page `<title>`, meta descriptions, Open Graph / Twitter Card text.
-3. **`lib/l10n/intl_en.arb` / `intl_tr.arb`**: App-specific translations, including `app_title`, the app name the task switcher and the browser tab show once the app has started (keep it in step with the `<title>` in `web/index.html`).
+2. **`lib/l10n/intl_en.arb` / `intl_tr.arb`**: App-specific translations, including `app_title`, the app name the task switcher shows once the app has started.
 
-These platform identifiers still name the template and its author, so rename them by hand:
+A project made from the template renames these platform identifiers by hand; LibreDB Mobile uses `org.libredb.mobile`:
 
 - **Android**: `namespace` and `applicationId` in `android/app/build.gradle.kts`, the package of `MainActivity.kt` and its folder under `android/app/src/main/kotlin/`, and `android:label` in `android/app/src/main/AndroidManifest.xml`.
 - **iOS**: `PRODUCT_BUNDLE_IDENTIFIER` in `ios/Runner.xcodeproj/project.pbxproj`, and `CFBundleDisplayName` and `CFBundleName` in `ios/Runner/Info.plist`.
-- **macOS**: `PRODUCT_NAME`, `PRODUCT_BUNDLE_IDENTIFIER` and `PRODUCT_COPYRIGHT` in `macos/Runner/Configs/AppInfo.xcconfig`, and the test bundle identifiers in `macos/Runner.xcodeproj/project.pbxproj`.
-- **Linux**: `BINARY_NAME` and `APPLICATION_ID` in `linux/CMakeLists.txt`, and the window title in `linux/my_application.cc`.
-- **Windows**: `BINARY_NAME` in `windows/CMakeLists.txt`, the version strings in `windows/runner/Runner.rc`, and the window title in `windows/runner/main.cpp`.
 - **Issue templates**: the Discussions links in `.github/ISSUE_TEMPLATE/config.yml` and `.github/ISSUE_TEMPLATE/tech_debt.yml`.
 - **SonarCloud**: `sonar.projectKey` and `sonar.organization` in `sonar-project.properties` and `scripts/run_sonar_scanner.sh`.
-- **GitHub Pages**: `--base-href` in `.github/workflows/build-web.yml` and `scripts/deploy_web.sh`, the same path as `__WEB_BASE_PATH__`.
-- **Single sign-on**: the redirect scheme `org.libredb.mobile` in `OidcSettings.defaultRedirectScheme` (`lib/infrastructure/config/auth_config.dart`) and in `manifestPlaceholders["oidcRedirectScheme"]` (`android/app/build.gradle.kts`), which must stay equal, and in the demo realm of `tool/oidc-demo/docker-compose.yml`.
+- **Single sign-on**: the redirect scheme `org.libredb.mobile` in `OidcSettings.defaultRedirectScheme` (`lib/infrastructure/config/auth_config.dart`) and in `manifestPlaceholders["oidcRedirectScheme"]` (`android/app/build.gradle.kts`), which must stay equal, and in the realm of `tool/studio-dev/docker-compose.yml`.
   The URIs registered at your provider change with it; see [docs/oidc.md](oidc.md#configuration-reference).
 
 `lib/infrastructure/config/template_config.dart` holds the template values the Dart code reads: the app name shown in the developer console, the production API URL, and the repository, docs and sponsor links.
@@ -540,9 +472,6 @@ fvm flutter build apk --target lib/main/main_prod.dart
 
 # iOS
 fvm flutter build ios --target lib/main/main_prod.dart
-
-# Web
-fvm flutter build web --target lib/main/main_prod.dart
 ```
 
 ### Test
@@ -614,7 +543,6 @@ bash scripts/setup_hooks.sh
 GitHub Actions workflows included in this repository:
 
 - `build_and_test.yml` for build and test automation
-- `build-web.yml` for web builds
 - `sonar_scanner.yml` for SonarQube analysis
 
 To enable SonarQube, add the `SONAR_TOKEN` secret to your repository or organization.
@@ -650,7 +578,7 @@ For a CRUD feature, `fvm dart run tool/generate_feature.dart <feature>` does ste
 **Dependency rules** (enforced by architecture guard tests):
 - `core/` imports nothing from the project
 - `shared/` imports only from `core/`
-- `features/` imports from `shared/`, `infrastructure/`, `core/` — never from other features
+- `features/` imports from `shared/`, `infrastructure/`, `core/`, never from other features
 - `app/` can import from all layers
 
 ## Contributing
@@ -672,9 +600,9 @@ If you are unsure where to start, documentation improvements, screenshot refresh
 | [Transformation Log](archived/clean-modernize-strengthen.md) | What changed, why, before/after comparison |
 | [Architecture Migration](archived/architecture-migration_en.md) | Feature-first migration guide |
 | [Feature-First Boundaries](feature-first-clean-boundaries.md) | Clean architecture design document |
-| [Upgrade Guide — Flutter 3.44.0](upgrade_flutter_3.44.0.md) | Flutter 3.41.8 → 3.44.0 upgrade notes (v0.21.0) |
+| [Upgrade Guide - Flutter 3.44.0](upgrade_flutter_3.44.0.md) | Flutter 3.41.8 → 3.44.0 upgrade notes (v0.21.0) |
 | [Upgrade Guide - Flutter 3.47.7](upgrade_flutter_3.47.7.md) | Flutter 3.44.3 → 3.47.7 upgrade notes |
-| [Single Sign-On (OIDC)](oidc.md) | `AUTH_PROVIDER=oidc` setup per provider, the Keycloak demo, the backend contract and the internals |
+| [Single Sign-On (OIDC)](oidc.md) | `AUTH_PROVIDER=oidc` setup per provider, the backend contract and the internals |
 
 ## References
 

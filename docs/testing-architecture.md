@@ -58,35 +58,23 @@ test/
 ├── architecture/              # Meta-tests enforcing rules (see below)
 │   ├── android_manifest_test.dart    # Android INTERNET, backup off
 │   ├── credential_to_string_test.dart # a class with a credential field keeps it out of toString
-│   ├── demo_values_not_hard_coded_test.dart # no demo URL, path or contact in web/ or lib/
 │   ├── feature_generator_test.dart   # tool/generate_feature.dart output is clean and passes its tests
 │   ├── import_guard_test.dart        # layer dependency rules, url_launcher only in external_link.dart
 │   ├── log_placeholders_test.dart    # every AppLogger call has one {} for each argument
 │   ├── log_secrets_test.dart         # no AppLogger call passes a value named for a credential
-│   ├── macos_entitlements_test.dart  # macOS sandbox keeps network.client
 │   ├── mock_asset_coverage_test.dart # every repository method succeeds on the mock
 │   ├── mock_asset_naming_test.dart   # mock asset names use '_', never '-'
-│   ├── oidc_platform_setup_test.dart # OIDC scheme placeholder, web/redirect.html, no client secret
+│   ├── oidc_platform_setup_test.dart # OIDC scheme placeholder, no client secret
 │   ├── sentry_native_scrub_patterns_test.dart # Kotlin scrub patterns equal the Dart ones, Gradle DSN gate
-│   ├── test_file_naming_test.dart    # forbids *.test.dart (dot) files
-│   ├── web_history_test.dart         # web/index.html leaves the browser history to Flutter
-│   ├── web_placeholders_test.dart    # demo values cover every web/ and build-time placeholder
-│   └── web_sitemap_test.dart         # sitemap lists only the canonical root page
+│   └── test_file_naming_test.dart    # forbids *.test.dart (dot) files
 ├── fixtures/                  # inputs and expected outputs shared with the Android JVM tests
 ├── app/                       # app/ layer tests (router, shell, theme, di, ...)
 ├── core/                      # core/ tests (errors, logging, security, result, ...)
 ├── features/<feature>/        # application/ data/ domain/ navigation/ presentation/
 ├── infrastructure/            # config, http (+ interceptors), storage, cache, ...
 ├── shared/                    # design_system, dynamic_forms, models, utils, widgets
-├── main/                      # app_test.dart (root widget smoke test)
-└── browser_only/              # @TestOn('browser') tests of the web interop, with a bootstrap of their own
+└── main/                      # app_test.dart (root widget smoke test)
 ```
-
-`test/browser_only/` holds the tests that need a real browser: the `BroadcastChannel` of the session end signal and the Web Lock, IndexedDB and localStorage of the token refresh lock.
-Each file is `@TestOn('browser')`, so the VM run skips it without compiling it, and the folder has its own `flutter_test_config.dart`, which only configures `AppLogger`, because the global bootstrap imports alchemist, which does not compile for the web.
-So these tests get neither `TestEnv`, the mocktail fallbacks nor the per-test reset.
-Two objects in one page stand for two tabs there, and they share one copy of localStorage, so the lag between tabs that the hand-over of the lock exists for is modelled by the VM tests in `test/infrastructure/` instead.
-CI runs the folder in Chrome after the VM suite.
 
 ---
 
@@ -387,8 +375,6 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 - **`test_file_naming_test.dart`** fails if any file is named `*.test.dart`
   (a dot instead of `_test.dart`) — such files compile and pass `analyze` but
   are silently never executed by `flutter test`.
-- **`macos_entitlements_test.dart`** fails if either macOS entitlement file drops `com.apple.security.network.client`.
-  The sandboxed macOS app cannot make outgoing requests without it, the `flutter create` template omits it, and no CI job builds macOS.
 - **`android_manifest_test.dart`** fails if `AndroidManifest.xml` drops the `INTERNET` permission, `android:allowBackup="false"`, or the references to the two backup rule files, or if either rule file stops excluding shared preferences.
   Release builds need the permission to reach the API, and a restored backup or device transfer brings back session tokens that no longer decrypt.
   CI builds the release APK, but that build succeeds without any of these.
@@ -397,16 +383,6 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 - **`mock_asset_coverage_test.dart`** drives every method of every repository that uses `ApiClient`, and submits each dynamic form the app opens, through `TestEnv.apiClient()`; it fails when one of them does not succeed.
   `MockInterceptor` fails a GET, POST, PUT or PATCH whose mock file is missing with 501, so a missing file fails the test and the failure names it.
   A last test reads the repository interfaces under `lib/` and fails when a method is not driven, so a new repository method needs an entry in the test, and its mock file, before the build passes.
-- **`web_placeholders_test.dart`** fails if a `__KEY__` placeholder in `web/index.html`, `manifest.json`, `sitemap.xml`, `humans.txt`, `404.html`, `robots.txt` or `.well-known/security.txt` has no value in `.github/pages/demo-values.env`, apart from `__KEYWORD__` and `__PROD_API_URL__`, which the hosted demo leaves on purpose.
-  The GitHub Pages job fills these files in `build/web` from that file and then fails on any placeholder left (`scripts/check_web_placeholders.sh`).
-  It also fails if a key that `lib/infrastructure/config/template_config.dart` reads with `String.fromEnvironment` and a placeholder default has no value there: the job builds the app with `--dart-define-from-file` pointing at that file, and a key without a value leaves its placeholder in `main.dart.js`.
-  It runs only after a push to `main`, so without this test a missing value would surface as a failed deploy instead of in the pull request.
-- **`demo_values_not_hard_coded_test.dart`** fails if a deployment-specific value of `.github/pages/demo-values.env` (any key but `APP_NAME`, `APP_SHORT_NAME` and `APP_DESCRIPTION`) appears verbatim in a file under `web/` or `lib/` (apart from `lib/generated/`), or in `SECURITY.md`.
-  Only this repository's Pages job puts those values into a build, so a value written into these files instead would ship the demo's URL, path, author or security contact in every project made from the template.
-- **`web_sitemap_test.dart`** fails if `web/sitemap.xml` lists any URL other than the canonical root of `web/index.html`.
-  The app keeps Flutter's default hash URL strategy, so a path such as `/login` is not a page of the deployed site and GitHub Pages answers it with 404.
-- **`web_history_test.dart`** fails if `web/index.html` listens for `popstate` or `beforeunload`, or replaces `history.back`, `forward`, `go`, `pushState` or `replaceState`.
-  Such a script keeps the browser back and forward buttons from reaching go_router, and no widget test can see it, because `flutter test` never loads `web/index.html`.
 - **`feature_generator_test.dart`** runs `tool/generate_feature.dart` in a temporary copy of the project and fails if the generated feature is not formatted, does not analyze cleanly or fails its own tests.
   Nothing else compiles the generator's templates, so they drift silently when an API they call changes.
   The generated repository and route tests go through the real `ApiClient` and `MockInterceptor`, so a mock file named differently from the request it should answer fails the guard too.
@@ -422,7 +398,6 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   A token may be printed through `maskToken`; a password or an OTP is printed as `secretMask`.
 - **`oidc_platform_setup_test.dart`** guards the platform setup of the `oidc` mode ([`docs/oidc.md`](oidc.md)).
   It fails if `defaultConfig` in `android/app/build.gradle.kts` does not set `manifestPlaceholders["oidcRedirectScheme"]` to `OidcSettings.defaultRedirectScheme`: the `oidc_android` manifest merge needs the placeholder in every build, and the redirect never reaches the app when it differs from the scheme the Dart side sends.
-  It fails if `web/redirect.html` is not the `oidc` package's `example/web/redirect.html` with its three documented replacements: the error branch shows fixed copy instead of the provider's `error_description` and `error_uri`, a `state` the page cannot find is logged without its value, and the page returns to the app with `location.replace`; after an `oidc` upgrade, copy the page again and re-apply the replacements.
   It fails if a line in `lib/` names a client secret in any spelling (`client_secret`, `OIDC_CLIENT_SECRET`, `clientSecret`, `clientSecretPost`), except the scrubber's doc comment, or if any `OidcClientAuthentication` in `lib/` is other than `.none`, since the app is a public PKCE client.
   It fails if any `android/app/src/*/AndroidManifest.xml` mentions the redirect scheme or the `oidcRedirectScheme` placeholder: an intent filter there would let Android offer `MainActivity` for the callback instead of the package's redirect activity.
 - **`sentry_native_scrub_patterns_test.dart`** guards the Kotlin copy of the scrub policy that the Android host masks native Sentry events and breadcrumbs with (`NativeScrubPatterns.kt`, `NativeSentryScrubber.kt` under `android/app/src/main/kotlin`).
@@ -504,10 +479,7 @@ fvm flutter test test/features/users               # a subtree
 fvm flutter test test/path/to/specific_test.dart   # one file
 fvm flutter test --coverage                         # with coverage
 fvm flutter test --concurrency=1 --test-randomize-ordering-seed=random  # flush order/leak bugs
-fvm flutter test --platform chrome test/browser_only/                   # the browser-only tests, in Chrome
 ```
-
-`flutter test --platform chrome` finds Chrome on the `PATH`, or takes the browser that `CHROME_EXECUTABLE` names.
 
 The Android JVM unit tests (`android/app/src/test/kotlin`) cover the Kotlin scrubber of native Sentry events and run in the Build Android job of CI.
 They need JDK 17 and the Gradle wrapper, which is not committed: any Flutter Android build writes it, for example `fvm flutter build apk --config-only --target lib/main/main_prod.dart`.
@@ -548,14 +520,9 @@ cd android && ./gradlew :app:testDebugUnitTest -Ptarget=lib/main/main_prod.dart
 | Shared mocks/fakes | `test/mocks/mock_classes.dart`, `test/mocks/fake_data.dart` |
 | Layer dependency guard | `test/architecture/import_guard_test.dart` |
 | Test-file naming guard | `test/architecture/test_file_naming_test.dart` |
-| macOS network entitlement guard | `test/architecture/macos_entitlements_test.dart` |
 | Android manifest guard | `test/architecture/android_manifest_test.dart` |
 | Mock asset naming guard | `test/architecture/mock_asset_naming_test.dart` |
 | Mock asset coverage guard | `test/architecture/mock_asset_coverage_test.dart` |
-| Web demo values guard | `test/architecture/web_placeholders_test.dart` |
-| Demo values not hard-coded guard | `test/architecture/demo_values_not_hard_coded_test.dart` |
-| Web sitemap guard | `test/architecture/web_sitemap_test.dart` |
-| Web history guard | `test/architecture/web_history_test.dart` |
 | Feature generator guard | `test/architecture/feature_generator_test.dart` |
 | Log placeholder guard | `test/architecture/log_placeholders_test.dart` |
 | Log secrets guard | `test/architecture/log_secrets_test.dart` |

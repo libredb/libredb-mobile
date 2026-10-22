@@ -82,7 +82,7 @@ Every request follows these rules:
 - Every `POST` sends `Content-Type: application/json` and no `Origin` header, which is how Studio's CSRF check lets a native client through.
 - A managed connection is named in the body as `{"connectionId": "seed:<id>"}`, never inline; the app never sends or stores database credentials.
 - Nothing that runs a statement is retried on its own: a statement may have changed data.
-- Every `/api/db/*` request spends a slot of the user's request budget, 120 per minute by default, shared with the same user's browser tabs: the object browser caches metadata per connection.
+- Every `/api/db/*` request spends a slot of the user's request budget, 120 per minute by default, shared with the same user's Studio sessions in the browser: the object browser caches metadata per connection.
 - Requests stay well under 10 MiB, above which Studio truncates the body and reads it as malformed.
 
 | Studio endpoint | Repository method | Answer |
@@ -169,7 +169,6 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 - The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
   The repositories never log statement text or database error text.
 - Certificate pinning and screen capture protection come from the template and are configured for release in milestone M6 ([template.md](template.md)).
-- A web build of the app cannot call Studio: Studio sends no CORS headers, on purpose.
 
 ## Known gaps
 
