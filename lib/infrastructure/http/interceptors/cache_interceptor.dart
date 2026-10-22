@@ -10,7 +10,14 @@ import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 /// Dio interceptor that caches successful GET responses and serves them
 /// when offline or when a [CachePolicy] is specified.
 ///
-/// Cache behavior is controlled via `options.extra['cachePolicy']`.
+/// Cache behavior is controlled via `options.extra['cachePolicy']`, which is
+/// [CachePolicy.networkFirst] when the request names none, except for Studio's
+/// live endpoints: `/connections/managed`, `/connections/policy`, `/auth/me`,
+/// `/health`, `/ready` and every `/db/*` path are [CachePolicy.networkOnly]
+/// unless the request names another policy. Their answers hold grants, policy,
+/// identity and database state that may change at any time: served from the
+/// cache, a connection whose grant was revoked would look available. A stale
+/// list, when one is wanted, is held in BLoC state and shown as stale.
 /// Only GET requests are cached. POST/PUT/DELETE skip caching.
 ///
 /// A response is not stored when the session it was sent under has ended
@@ -212,7 +219,18 @@ class CacheInterceptor extends Interceptor {
   static CachePolicy _extractPolicy(RequestOptions options) {
     final extra = options.extra['cachePolicy'];
     if (extra is CachePolicy) return extra;
-    return CachePolicy.networkFirst; // Default
+    return _isStudioLiveEndpoint(options.path) ? CachePolicy.networkOnly : CachePolicy.networkFirst;
+  }
+
+  /// Studio's endpoints whose answers are never served from the cache unless the request names a policy.
+  static const _studioLiveEndpoints = {'/connections/managed', '/connections/policy', '/auth/me', '/health', '/ready'};
+
+  /// Whether [path], relative to Studio's `/api`, is one of [_studioLiveEndpoints] or under `/db/`.
+  static bool _isStudioLiveEndpoint(String path) {
+    final queryStart = path.indexOf('?');
+    final bare = queryStart < 0 ? path : path.substring(0, queryStart);
+    final normalized = bare.startsWith('/') ? bare : '/$bare';
+    return _studioLiveEndpoints.contains(normalized) || normalized.startsWith('/db/');
   }
 
   Duration _extractTtl(RequestOptions options) {

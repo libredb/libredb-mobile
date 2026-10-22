@@ -458,22 +458,20 @@ void main() {
       }
     });
 
-    // A retry sends the request again, so it is safe only when a second copy cannot change anything on the
-    // server: an idempotent method, or a POST or PATCH whose Idempotency-Key the retry sends again.
+    // A retry sends the request again. Only a GET is repeated: a POST may run a statement on Studio, and no other
+    // method is sent to Studio unless it changes something there.
     group('retry by HTTP method', () {
-      for (final method in ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE']) {
-        test('retries $method requests after a 503', () async {
-          final adapter = _FakeHttpClientAdapter([503, 200]);
+      test('retries GET requests after a 503', () async {
+        final adapter = _FakeHttpClientAdapter([503, 200]);
 
-          final response = await _retryingDio(adapter).request<String>('/api/users', options: Options(method: method));
+        final response = await _retryingDio(adapter).request<String>('/api/users', options: Options(method: 'GET'));
 
-          expect(response.statusCode, 200);
-          expect(adapter.requestCount, 2);
-        });
-      }
+        expect(response.statusCode, 200);
+        expect(adapter.requestCount, 2);
+      });
 
-      for (final method in ['POST', 'PATCH']) {
-        test('does not retry $method requests without an Idempotency-Key after a 503', () async {
+      for (final method in ['HEAD', 'OPTIONS', 'PUT', 'DELETE', 'POST', 'PATCH']) {
+        test('does not retry $method requests after a 503', () async {
           final adapter = _FakeHttpClientAdapter([503, 200]);
 
           await expectLater(
@@ -482,19 +480,33 @@ void main() {
           );
           expect(adapter.requestCount, 1);
         });
+      }
 
-        test('retries $method requests that carry an Idempotency-Key after a 503', () async {
+      for (final method in ['POST', 'PATCH']) {
+        test('does not retry $method requests that carry an Idempotency-Key after a 503', () async {
           final adapter = _FakeHttpClientAdapter([503, 200]);
 
-          final response = await _retryingDio(adapter).request<String>(
-            '/api/users',
-            options: Options(method: method, headers: {'Idempotency-Key': 'order-42'}),
+          await expectLater(
+            _retryingDio(adapter).request<String>(
+              '/api/users',
+              options: Options(method: method, headers: {'Idempotency-Key': 'order-42'}),
+            ),
+            throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', 503)),
           );
-
-          expect(response.statusCode, 200);
-          expect(adapter.requestCount, 2);
+          expect(adapter.requestCount, 1);
         });
       }
+
+      test('does not retry a PUT after a connection error', () async {
+        const refused = SocketException('Connection refused');
+        final adapter = _FakeHttpClientAdapter([refused, 200]);
+
+        await expectLater(
+          _retryingDio(adapter).request<String>('/api/users', options: Options(method: 'PUT')),
+          throwsA(isA<DioException>()),
+        );
+        expect(adapter.requestCount, 1);
+      });
 
       test('does not retry a POST without an Idempotency-Key after a receive timeout', () {
         fakeAsync((async) {
@@ -530,6 +542,105 @@ void main() {
           final result = _captureOnErrorSync(interceptor, err);
           expect(result.passed, isTrue);
         });
+      });
+    });
+
+    // Studio's error body carries a code: such an answer is Studio speaking, not a transport failure, so it reaches
+    // the repository after one request and says nothing about the endpoint's health.
+    group('Studio answers', () {
+      for (final (status, code) in [
+        (503, 'GOVERNANCE_UNAVAILABLE'),
+        (503, 'AUDIT_UNAVAILABLE'),
+        (503, 'IDENTITY_PROVIDER_UNAVAILABLE'),
+        (504, 'TIMEOUT_ERROR'),
+        (502, 'CONNECTION_ERROR'),
+        (500, 'QUERY_ERROR'),
+      ]) {
+        test('passes a $status $code on through after one request without moving the breaker', () async {
+          final adapter = _FakeHttpClientAdapter([(status, _studioBody(code, status)), 200]);
+          final (dio, interceptor) = _studioDio(adapter);
+
+          await expectLater(
+            dio.get<String>('/connections/managed'),
+            throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', status)),
+          );
+
+          expect(adapter.requestCount, 1);
+          final breaker = interceptor.circuitBreakers['/connections/managed'];
+          expect(breaker?.failureCount ?? 0, 0);
+          expect(breaker?.state ?? CircuitBreakerState.closed, CircuitBreakerState.closed);
+        });
+      }
+
+      test('never opens the circuit, however often Studio answers with a code', () async {
+        final adapter = _FakeHttpClientAdapter([
+          for (var i = 0; i < 6; i++) (503, _studioBody('GOVERNANCE_UNAVAILABLE', 503)),
+          200,
+        ]);
+        final (dio, _) = _studioDio(adapter, failureThreshold: 2);
+
+        for (var i = 0; i < 6; i++) {
+          await expectLater(dio.get<String>('/connections/managed'), throwsA(isA<DioException>()));
+        }
+        final response = await dio.get<String>('/connections/managed');
+
+        expect(response.statusCode, 200);
+        expect(adapter.requestCount, 7);
+      });
+
+      test('does not count a 4xx with a Studio code either', () async {
+        final adapter = _FakeHttpClientAdapter([(403, _studioBody('PERMISSION_DENIED', 403))]);
+        final (dio, interceptor) = _studioDio(adapter);
+
+        await expectLater(dio.get<String>('/connections/managed'), throwsA(isA<DioException>()));
+
+        expect(adapter.requestCount, 1);
+        expect(interceptor.circuitBreakers['/connections/managed']?.failureCount ?? 0, 0);
+      });
+
+      test('stops retrying when a retry is answered with a Studio code', () async {
+        final adapter = _FakeHttpClientAdapter([502, (503, _studioBody('GOVERNANCE_UNAVAILABLE', 503)), 200]);
+        final (dio, interceptor) = _studioDio(adapter, maxRetries: 3);
+
+        await expectLater(
+          dio.get<String>('/connections/managed'),
+          throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', 503)),
+        );
+
+        expect(adapter.requestCount, 2);
+        // The bare 502 counts; the coded answer to its retry does not.
+        expect(interceptor.circuitBreakers['/connections/managed']!.failureCount, 1);
+      });
+
+      for (final (description, body) in [
+        ('an empty body', ''),
+        ('a body that is not JSON', '<html>Bad Gateway</html>'),
+        ('a JSON body without a code', '{"error":"upstream"}'),
+      ]) {
+        test('retries a GET after a 503 with $description, and counts it', () async {
+          final adapter = _FakeHttpClientAdapter([(503, body), 200]);
+          final (dio, _) = _studioDio(adapter, maxRetries: 1);
+
+          final response = await dio.get<String>('/connections/managed');
+
+          expect(response.statusCode, 200);
+          expect(adapter.requestCount, 2);
+        });
+      }
+
+      test('counts a bare 500 without a code against the breaker', () {
+        final interceptor = ResilienceInterceptor(failureThreshold: 1, cooldownDuration: const Duration(hours: 1));
+        final options = RequestOptions(path: '/connections/managed');
+        _fireOnError(
+          interceptor,
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.badResponse,
+            response: Response(requestOptions: options, statusCode: 500, data: '{"error":"boom"}'),
+          ),
+        );
+
+        expect(interceptor.circuitBreakers['/connections/managed']!.failureCount, 1);
       });
     });
 
@@ -969,6 +1080,27 @@ Dio _retryingDio(_FakeHttpClientAdapter adapter) {
   return dio;
 }
 
+/// A Dio with a [ResilienceInterceptor] that retries through [adapter] without a backoff delay, and the interceptor.
+(Dio, ResilienceInterceptor) _studioDio(
+  _FakeHttpClientAdapter adapter, {
+  int maxRetries = 3,
+  int failureThreshold = 5,
+}) {
+  final dio = Dio(BaseOptions(baseUrl: 'https://studio.example.test/api'))..httpClientAdapter = adapter;
+  final interceptor = ResilienceInterceptor(
+    maxRetries: maxRetries,
+    baseDelay: Duration.zero,
+    maxJitter: Duration.zero,
+    failureThreshold: failureThreshold,
+    cooldownDuration: const Duration(hours: 1),
+  ).forDio(dio);
+  dio.interceptors.add(interceptor);
+  return (dio, interceptor);
+}
+
+/// Studio's error body (`src/lib/api/errors.ts` in Studio): the message, the code and the status.
+String _studioBody(String code, int status) => '{"error":"Studio said no","code":"$code","statusCode":$status}';
+
 class _InterceptorResult {
   final bool passed;
   final bool rejected;
@@ -1028,7 +1160,8 @@ class _TestResponseHandler extends ResponseInterceptorHandler {
   }
 }
 
-/// Counts requests and answers each one with the next queued status code, or throws the next queued error.
+/// Counts requests and answers each one with the next queued status code, or status code and JSON body, or throws the
+/// next queued error.
 class _FakeHttpClientAdapter implements HttpClientAdapter {
   _FakeHttpClientAdapter(this._replies);
 
@@ -1044,6 +1177,13 @@ class _FakeHttpClientAdapter implements HttpClientAdapter {
     requestCount++;
     return switch (_replies.removeAt(0)) {
       final int statusCode => ResponseBody.fromString('', statusCode),
+      (final int statusCode, final String body) => ResponseBody.fromString(
+        body,
+        statusCode,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      ),
       final Object error => throw error,
     };
   }

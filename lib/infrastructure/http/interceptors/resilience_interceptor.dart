@@ -4,22 +4,24 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
-import 'package:libredb_mobile/infrastructure/http/interceptors/idempotency_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 
 /// Dio interceptor that combines **smart retry** with a **circuit breaker**
 /// to improve resilience against transient failures.
 ///
 /// **Retry logic:**
-/// - Retryable errors: timeout, connection error, HTTP 502/503/504.
+/// - Retryable errors: timeout, connection error, and an HTTP 502/503/504 without a Studio error code in its body.
 ///   A connection that closed before a full response header arrived is not retried.
-/// - Only requests that are safe to send twice are retried: GET, HEAD, OPTIONS, PUT and DELETE, and any other
-///   method, POST and PATCH included, only when it carries an `Idempotency-Key` header (see
-///   [IdempotencyInterceptor]). Otherwise the error passes through, because the server may already have
-///   processed the request.
+/// - Only a GET is retried. A POST may run a statement on Studio, which a second copy would run again, and every
+///   other method changes something on the server, so none of them is repeated, an `Idempotency-Key` header or not.
+/// - An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`, read by
+///   [ApiClient.errorCodeOf]), such as a 503 `GOVERNANCE_UNAVAILABLE` or `AUDIT_UNAVAILABLE`, a 502
+///   `IDENTITY_PROVIDER_UNAVAILABLE` or a 504 `TIMEOUT_ERROR`, is Studio's own answer: it passes through after one
+///   request, so the repository can report what Studio said, and it does not count against the circuit breaker.
 /// - Non-retryable: 400, 401, 403, 404, 422 pass through immediately.
 /// - A request that [ConnectivityInterceptor] rejected because the device is offline (its error is a
 ///   [ConnectivityException]) passes through immediately and does not count against the circuit breaker: it was
@@ -43,6 +45,11 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 ///   cache alone (`CachePolicy.cacheOnly`) is let through: it never reaches the network, and its failure when nothing
 ///   is cached does not count against the circuit breaker.
 /// - After a response: records success or failure.
+/// - Only a failure that says the endpoint is unhealthy counts: a timeout, a connection error, or a 5xx without a
+///   Studio error code. A 4xx, an answer with a Studio error code at any status, an offline rejection, a TLS failure
+///   and the failure of a cacheOnly GET do not count, and neither records a success. Studio answering
+///   `GOVERNANCE_UNAVAILABLE` on every poll therefore never opens the circuit: the user keeps seeing Studio's
+///   'temporarily unavailable' instead of a circuit-open error.
 ///
 /// Must be added to the interceptor chain AFTER [AuthInterceptor] so that
 /// the auth token is present, and BEFORE [MockInterceptor] so that
@@ -53,10 +60,6 @@ class ResilienceInterceptor extends Interceptor {
 
   static final ResilienceInterceptor _instance = ResilienceInterceptor();
   static ResilienceInterceptor get instance => _instance;
-
-  /// Methods that HTTP defines as idempotent (RFC 9110, section 9.2.2): sending one twice has the same effect
-  /// on the server as sending it once.
-  static const _idempotentMethods = {'GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'};
 
   /// Maximum number of retry attempts for retryable errors.
   final int maxRetries;
@@ -201,13 +204,22 @@ class ResilienceInterceptor extends Interceptor {
       return;
     }
 
+    // Studio answered with one of its error codes: that is the answer the repository must report, and it says
+    // nothing about the endpoint's health, so it is neither retried nor counted.
+    if (_isStudioAnswer(err)) {
+      _log.debug('Passing on Studio answer {} for {} {} without retrying or counting it', [
+        err.response?.statusCode,
+        err.requestOptions.method,
+        err.requestOptions.path,
+      ]);
+      handler.next(err);
+      return;
+    }
+
     // Non-retryable errors: record failure and pass through immediately.
     if (!_isRetryable(err)) {
       if (_isTransient(err)) {
-        _log.debug('Not retrying {} {}: the method is not idempotent and the request has no Idempotency-Key', [
-          err.requestOptions.method,
-          err.requestOptions.path,
-        ]);
+        _log.debug('Not retrying {} {}: only a GET is retried', [err.requestOptions.method, err.requestOptions.path]);
       }
       // Client errors (4xx) should not trip the circuit breaker.
       if (!_isClientError(err)) {
@@ -318,7 +330,7 @@ class ResilienceInterceptor extends Interceptor {
         ),
       );
     } on DioException catch (retryErr) {
-      if (!_isTlsFailure(retryErr)) breaker.recordFailure();
+      if (!_isTlsFailure(retryErr) && !_isStudioAnswer(retryErr)) breaker.recordFailure();
 
       if (_isRetryable(retryErr) && nextAttempt < maxRetries) {
         retryErr.requestOptions.extra['_retryAttempt'] = nextAttempt;
@@ -388,7 +400,7 @@ class ResilienceInterceptor extends Interceptor {
         return !_isClosedAfterRequestSent(err);
       case DioExceptionType.badResponse:
         final statusCode = err.response?.statusCode ?? 0;
-        return statusCode == 502 || statusCode == 503 || statusCode == 504;
+        return (statusCode == 502 || statusCode == 503 || statusCode == 504) && !_isStudioAnswer(err);
       case DioExceptionType.cancel:
       case DioExceptionType.badCertificate:
       // The server already answered; a retry would only repeat the same slow response transform.
@@ -406,17 +418,17 @@ class ResilienceInterceptor extends Interceptor {
   bool _isClosedAfterRequestSent(DioException err) =>
       err.error?.toString().contains('Connection closed before full header was received') ?? false;
 
-  /// Whether sending [options] a second time cannot apply the request twice on the server.
+  /// Whether [options] may be sent a second time: only a GET.
   ///
   /// One rule covers every error type. A refused connection or a connect timeout does prove that the
   /// request was never sent, but dio has moved a failure after sending into connection errors before
-  /// (5.10). So a POST or PATCH is repeated only with an `Idempotency-Key`: a retry sends this same
-  /// [RequestOptions], so the server sees the same key again and can drop the duplicate.
-  bool _isSafeToRepeat(RequestOptions options) {
-    if (_idempotentMethods.contains(options.method.toUpperCase())) return true;
-    final key = options.headers[IdempotencyInterceptor.headerName]?.toString();
-    return key != null && key.isNotEmpty;
-  }
+  /// (5.10). A POST to Studio may run a statement, and the other methods change something on the server,
+  /// so none of them is repeated.
+  bool _isSafeToRepeat(RequestOptions options) => options.method.toUpperCase() == 'GET';
+
+  /// Whether [err] is an HTTP answer whose body carries a Studio error code, such as `GOVERNANCE_UNAVAILABLE`.
+  bool _isStudioAnswer(DioException err) =>
+      err.type == DioExceptionType.badResponse && ApiClient.errorCodeOf(err.response?.data) != null;
 
   /// Whether the TLS handshake failed, so the request never reached the server: see [isTlsError].
   bool _isTlsFailure(DioException err) => err.type == DioExceptionType.badCertificate || isTlsError(err.error);

@@ -11,15 +11,13 @@ import 'package:uuid/uuid.dart';
 /// **Backend dependency.** The header is meaningless unless the server is
 /// configured to deduplicate by it (see IETF draft `idempotency-key-header`,
 /// Stripe's worked example). The client side of the contract is in this file;
-/// the server side belongs to the backend. The key is also what
-/// lets `ResilienceInterceptor` retry a POST or PATCH after a transient failure,
-/// so against a server that ignores it, opting in creates duplicates.
+/// the server side belongs to the backend. `ResilienceInterceptor` retries only
+/// a GET, so the key does not make a POST or PATCH retryable.
 ///
 /// **Retry stability.** The key is stamped onto the [RequestOptions] (both the
 /// `Idempotency-Key` header and `extra['_idempotency_key']`) on the initial
-/// send. It is preserved across retries because the same [RequestOptions]
-/// instance — headers and extra included — is reused: `ResilienceInterceptor`
-/// replays it through a new bare [Dio] (bypassing the interceptor chain), and
+/// send. It is preserved across resends because the same [RequestOptions]
+/// instance — headers and extra included — is reused:
 /// `TokenRefreshInterceptor` re-fetches it after refreshing the token. The
 /// cached `extra` value also lets this interceptor recover the key on the rare
 /// path where it does run again.
