@@ -42,6 +42,23 @@ enum AppErrorCode {
   // --- network ---
   networkCertInvalid('network.cert_invalid'),
 
+  // --- LibreDB Studio (lib/infrastructure/studio/studio_errors.dart maps Studio's codes to these) ---
+  studioDatabaseAuth('studio.database_auth'),
+  studioConnectionNotAvailable('studio.connection_not_available'),
+  studioPermissionDenied('studio.permission_denied'),
+  studioCustomConnectionsDisabled('studio.custom_connections_disabled'),
+  studioQueryError('studio.query_error'),
+  studioQueryCancelled('studio.query_cancelled'),
+  studioConfigError('studio.config_error'),
+  studioTimeout('studio.timeout'),
+  studioDatabaseUnreachable('studio.database_unreachable'),
+  studioGovernanceUnavailable('studio.governance_unavailable'),
+  studioIdentityProviderUnavailable('studio.identity_provider_unavailable'),
+  studioRateLimited('studio.rate_limited'),
+  studioTransactionNotOwned('studio.transaction_not_owned'),
+  studioTransactionCredentialChanged('studio.transaction_credential_changed'),
+  studioUnreadableAnswer('studio.unreadable_answer'),
+
   // --- generic fallback ---
   generic('error.generic');
 

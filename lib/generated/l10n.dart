@@ -1596,6 +1596,141 @@ class S {
   String get connection_target {
     return Intl.message('Target', name: 'connection_target', desc: '', args: []);
   }
+
+  /// `The database refused the connection's credentials. Ask your administrator to check them.`
+  String get error_studio_database_auth {
+    return Intl.message(
+      'The database refused the connection\'s credentials. Ask your administrator to check them.',
+      name: 'error_studio_database_auth',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This connection is not available to you.`
+  String get error_studio_connection_not_available {
+    return Intl.message(
+      'This connection is not available to you.',
+      name: 'error_studio_connection_not_available',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The database did not allow this. You may lack a privilege on this object.`
+  String get error_studio_permission_denied {
+    return Intl.message(
+      'The database did not allow this. You may lack a privilege on this object.',
+      name: 'error_studio_permission_denied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio allows only the connections your administrator set up.`
+  String get error_studio_custom_connections_disabled {
+    return Intl.message(
+      'Studio allows only the connections your administrator set up.',
+      name: 'error_studio_custom_connections_disabled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The statement failed.`
+  String get error_studio_query_error {
+    return Intl.message('The statement failed.', name: 'error_studio_query_error', desc: '', args: []);
+  }
+
+  /// `The statement was cancelled.`
+  String get error_studio_query_cancelled {
+    return Intl.message('The statement was cancelled.', name: 'error_studio_query_cancelled', desc: '', args: []);
+  }
+
+  /// `The connection is not configured correctly. Contact your administrator.`
+  String get error_studio_config_error {
+    return Intl.message(
+      'The connection is not configured correctly. Contact your administrator.',
+      name: 'error_studio_config_error',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The database did not answer in time.`
+  String get error_studio_timeout {
+    return Intl.message('The database did not answer in time.', name: 'error_studio_timeout', desc: '', args: []);
+  }
+
+  /// `The database could not be reached. Try again in a moment.`
+  String get error_studio_database_unreachable {
+    return Intl.message(
+      'The database could not be reached. Try again in a moment.',
+      name: 'error_studio_database_unreachable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio cannot check your access right now. Try again in a moment.`
+  String get error_studio_governance_unavailable {
+    return Intl.message(
+      'Studio cannot check your access right now. Try again in a moment.',
+      name: 'error_studio_governance_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio cannot reach the identity provider right now. Try again in a moment.`
+  String get error_studio_identity_provider_unavailable {
+    return Intl.message(
+      'Studio cannot reach the identity provider right now. Try again in a moment.',
+      name: 'error_studio_identity_provider_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Too many requests in a short time. Wait a moment and try again.`
+  String get error_studio_rate_limited {
+    return Intl.message(
+      'Too many requests in a short time. Wait a moment and try again.',
+      name: 'error_studio_rate_limited',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Another session holds an open transaction on this connection.`
+  String get error_studio_transaction_not_owned {
+    return Intl.message(
+      'Another session holds an open transaction on this connection.',
+      name: 'error_studio_transaction_not_owned',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your access to this connection changed, so the transaction was rolled back.`
+  String get error_studio_transaction_credential_changed {
+    return Intl.message(
+      'Your access to this connection changed, so the transaction was rolled back.',
+      name: 'error_studio_transaction_credential_changed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio sent an answer this app cannot read. The app or Studio may need an update.`
+  String get error_studio_unreadable_answer {
+    return Intl.message(
+      'Studio sent an answer this app cannot read. The app or Studio may need an update.',
+      name: 'error_studio_unreadable_answer',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

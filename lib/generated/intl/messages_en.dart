@@ -189,6 +189,45 @@ class MessageLookup extends MessageLookupByLibrary {
       "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Could not change the language"),
+    "error_studio_config_error": MessageLookupByLibrary.simpleMessage(
+      "The connection is not configured correctly. Contact your administrator.",
+    ),
+    "error_studio_connection_not_available": MessageLookupByLibrary.simpleMessage(
+      "This connection is not available to you.",
+    ),
+    "error_studio_custom_connections_disabled": MessageLookupByLibrary.simpleMessage(
+      "Studio allows only the connections your administrator set up.",
+    ),
+    "error_studio_database_auth": MessageLookupByLibrary.simpleMessage(
+      "The database refused the connection\'s credentials. Ask your administrator to check them.",
+    ),
+    "error_studio_database_unreachable": MessageLookupByLibrary.simpleMessage(
+      "The database could not be reached. Try again in a moment.",
+    ),
+    "error_studio_governance_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Studio cannot check your access right now. Try again in a moment.",
+    ),
+    "error_studio_identity_provider_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Studio cannot reach the identity provider right now. Try again in a moment.",
+    ),
+    "error_studio_permission_denied": MessageLookupByLibrary.simpleMessage(
+      "The database did not allow this. You may lack a privilege on this object.",
+    ),
+    "error_studio_query_cancelled": MessageLookupByLibrary.simpleMessage("The statement was cancelled."),
+    "error_studio_query_error": MessageLookupByLibrary.simpleMessage("The statement failed."),
+    "error_studio_rate_limited": MessageLookupByLibrary.simpleMessage(
+      "Too many requests in a short time. Wait a moment and try again.",
+    ),
+    "error_studio_timeout": MessageLookupByLibrary.simpleMessage("The database did not answer in time."),
+    "error_studio_transaction_credential_changed": MessageLookupByLibrary.simpleMessage(
+      "Your access to this connection changed, so the transaction was rolled back.",
+    ),
+    "error_studio_transaction_not_owned": MessageLookupByLibrary.simpleMessage(
+      "Another session holds an open transaction on this connection.",
+    ),
+    "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
+      "Studio sent an answer this app cannot read. The app or Studio may need an update.",
+    ),
     "error_title": MessageLookupByLibrary.simpleMessage("Error"),
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Admin user cannot be deleted"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("No authorities found"),

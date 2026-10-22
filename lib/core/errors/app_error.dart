@@ -46,6 +46,14 @@ final class TimeoutError extends AppError {
   const TimeoutError(super.message, {super.code});
 }
 
+/// The server refused the request because the client sent too many (429). [retryAfter] is how long it asked the client
+/// to wait, when it said.
+final class RateLimitedError extends AppError {
+  const RateLimitedError(super.message, {super.code, this.retryAfter});
+
+  final Duration? retryAfter;
+}
+
 /// Unknown/unexpected error.
 final class UnknownError extends AppError {
   const UnknownError(super.message, {super.code});
