@@ -24,12 +24,13 @@ String? _fixStatementOf(AppError error) => switch (error) {
 
 bool _isGovernanceUnavailable(AppError error) => error.code == AppErrorCode.studioGovernanceUnavailable.key;
 
-/// Copies [statement] to the clipboard and confirms it in a snack bar.
-Future<void> _copyStatement(BuildContext context, String statement) async {
-  final copied = S.of(context).studio_error_statement_copied;
-  final messenger = ScaffoldMessenger.maybeOf(context);
+/// Copies [statement] to the clipboard and confirms it with [confirmation] through [messenger].
+///
+/// It takes the messenger and the text instead of a [BuildContext], so that an action that outlives the page that
+/// showed it, such as a snack bar's, never looks up a deactivated context.
+Future<void> _copyStatement(ScaffoldMessengerState? messenger, String confirmation, String statement) async {
   await Clipboard.setData(ClipboardData(text: statement));
-  messenger?.showSnackBar(SnackBar(content: Text(copied)));
+  messenger?.showSnackBar(SnackBar(content: Text(confirmation)));
 }
 
 /// The same reaction to LibreDB Studio's cross-cutting errors on every screen.
@@ -150,7 +151,11 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
                   IconButton(
                     tooltip: s.studio_error_copy_statement,
                     icon: Icon(Icons.copy, color: foreground),
-                    onPressed: () => _copyStatement(context, fixStatement),
+                    onPressed: () => _copyStatement(
+                      ScaffoldMessenger.maybeOf(context),
+                      s.studio_error_statement_copied,
+                      fixStatement,
+                    ),
                   ),
                 ],
               ),
@@ -191,14 +196,18 @@ void showStudioErrorSnackBar(BuildContext context, AppError error) {
       ? '$message ${s.studio_error_retry_in(retryAfter.inSeconds)}'
       : message;
   final fixStatement = _fixStatementOf(error);
-  ScaffoldMessenger.of(context).showSnackBar(
+  // The snack bar lives on the root messenger and can outlast the page that showed it, so its action uses the messenger
+  // and the confirmation read now, never the page's context.
+  final messenger = ScaffoldMessenger.of(context);
+  final copied = s.studio_error_statement_copied;
+  messenger.showSnackBar(
     SnackBar(
       content: Text(text),
       action: fixStatement == null
           ? null
           : SnackBarAction(
               label: s.studio_error_copy_statement,
-              onPressed: () => _copyStatement(context, fixStatement),
+              onPressed: () => _copyStatement(messenger, copied, fixStatement),
             ),
     ),
   );

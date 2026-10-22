@@ -28,6 +28,12 @@ final class AuthError extends AppError {
   const AuthError(super.message, {super.code, this.fixStatement});
 
   final String? fixStatement;
+
+  @override
+  bool operator ==(Object other) => other is AuthError && super == other && other.fixStatement == fixStatement;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, fixStatement);
 }
 
 /// Input validation error (invalid form data, bad request params).

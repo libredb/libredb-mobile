@@ -1,6 +1,8 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -292,6 +294,74 @@ void main() {
       );
 
       expect(find.widgetWithText(SnackBarAction, 'Copy statement'), findsOneWidget);
+    });
+
+    group('copy action', () {
+      const error = AuthError('refused', code: 'studio.database_auth', fixStatement: 'GRANT ROLE R TO USER U');
+      late List<MethodCall> platformCalls;
+
+      setUp(() {
+        platformCalls = [];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            platformCalls.add(call);
+            return null;
+          },
+        );
+      });
+
+      tearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        );
+      });
+
+      Future<void> expectCopied(WidgetTester tester) async {
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(SnackBarAction, 'Copy statement'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final copy = platformCalls.singleWhere((call) => call.method == 'Clipboard.setData');
+        expect((copy.arguments as Map)['text'], 'GRANT ROLE R TO USER U');
+        expect(find.descendant(of: find.byType(SnackBar), matching: find.text('Statement copied')), findsOneWidget);
+      }
+
+      testWidgets('copies the fixStatement and confirms it', (tester) async {
+        await show(tester, error);
+
+        await expectCopied(tester);
+      });
+
+      testWidgets('still copies after the page that showed the snack bar is popped', (tester) async {
+        await tester.pumpWidget(_app(const SizedBox.shrink()));
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+        unawaited(
+          navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    key: const Key('show'),
+                    onPressed: () => showStudioErrorSnackBar(context, error),
+                    child: const SizedBox(width: 40, height: 40),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('show')));
+        await tester.pump();
+        navigator.pop();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('show')), findsNothing, reason: 'the page that showed the snack bar is gone');
+
+        await expectCopied(tester);
+      });
     });
   });
 }
