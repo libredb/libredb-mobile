@@ -5,7 +5,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// The channel on which `MainActivity.kt` answers whether the host app
 /// started the native Sentry SDK.
-const String nativeSentryChannelName = 'flutter_bloc_advance/native_sentry';
+const String nativeSentryChannelName = 'org.libredb.mobile/native_sentry';
 
 final _log = AppLogger.getLogger('NativeSentryStart');
 
