@@ -23,7 +23,7 @@ import '../../../../mocks/mock_classes.dart';
 import '../../../../support/url_launcher_stub.dart';
 
 void main() {
-  const storeUrl = 'https://play.google.com/store/apps/details?id=com.example.app';
+  const storeUrl = 'https://play.google.com/store/apps/details?id=org.libredb.mobile';
   final updateButton = find.descendant(of: find.byType(ForceUpdateScreen), matching: find.byType(AppButton));
 
   // The gate is pumped on its own, with the app theme; test/app/app_test.dart covers it inside App. The server asks for
@@ -90,8 +90,8 @@ void main() {
 
   group('ForceUpdateScreen - store URL that is not https', () {
     for (final rejectedUrl in [
-      'http://play.google.com/store/apps/details?id=com.example.app',
-      'market://details?id=com.example.app',
+      'http://play.google.com/store/apps/details?id=org.libredb.mobile',
+      'market://details?id=org.libredb.mobile',
       'https:///store/apps/details',
       'https://[::1',
     ]) {

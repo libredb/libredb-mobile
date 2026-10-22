@@ -293,7 +293,7 @@ void main() {
       expect(settings.redirectUri.path, OidcSettings.redirectPath);
     });
 
-    for (final scheme in ['com.example_app', '9app', 'Com.Example.App']) {
+    for (final scheme in ['org.libredb_mobile', '9app', 'Com.Example.App']) {
       test('is misconfigured for the redirect scheme $scheme', () {
         final mode = AuthMode.fromDefines(
           AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcRedirectScheme: scheme),
