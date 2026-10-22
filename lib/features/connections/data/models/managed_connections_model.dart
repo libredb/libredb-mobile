@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
+import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 /// Reads the body of Studio's `GET /api/connections/managed`: `{"connections": [...], "cacheHint": ..., ...}`.
@@ -50,8 +51,17 @@ final class ManagedConnectionsModel {
       readOnly: item['readOnly'] == true,
       managed: item['managed'] == true,
       seedId: _string(item['seedId']),
+      access: _access(item['access']),
     );
   }
+
+  /// A governed Studio from libredb-studio#1922 on sends `read` or `write`; anything else is left out, unlogged, since
+  /// the list is read again every 10 seconds under governance.
+  static StudioAccess? _access(Object? value) => switch (value) {
+    'read' => StudioAccess.read,
+    'write' => StudioAccess.write,
+    _ => null,
+  };
 
   static String? _string(Object? value) => value is String && value.isNotEmpty ? value : null;
 }

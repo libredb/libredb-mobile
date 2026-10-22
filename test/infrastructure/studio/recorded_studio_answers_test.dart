@@ -22,6 +22,7 @@ import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,6 +37,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// governed profile of tool/studio-dev, Studio main at dbfea263 in governance mode, recorded with a libredb-mobile access
 /// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
 /// status. docs/studio.md describes the profile and how the unavailable source was produced.
+/// `managed_governed.json` was recorded again the same way from Studio main at c9989a6b5, which sends the grant's
+/// `access` (libredb-studio#1922).
 /// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
 /// `health.json`, `ready.json`, `ready_governed.json` and `ready_degraded.json` (the governed Studio with its source
 /// stopped) were recorded without a token, as the app sends them.
@@ -143,15 +146,30 @@ void main() {
     expect(connections.map((c) => c.color), ['#16a34a', '#dc2626']);
     expect(connections.map((c) => c.seedId), ['sales-dev', 'sales-prod']);
     expect(connections.every((c) => c.managed), isTrue);
-    expect(
-      connections.every((c) => !c.readOnly),
-      isTrue,
-      reason: 'a read grant is not the seed flag; the recorded Studio sends no access field',
-    );
+    expect(connections.every((c) => !c.readOnly), isTrue, reason: 'a read grant is not the seed flag');
     expect(managed.cacheHint, const Duration(seconds: 10));
     final text = connections.map((c) => '$c ${c.props}').join();
     expect(text, isNot(contains('sales_writer')));
     expect(text, isNot(contains('sales_reader')));
+  });
+
+  test('GET /api/connections/managed under governance reads the level of each grant', () {
+    final connections = ManagedConnectionsModel.read(fixture('managed_governed')).connections;
+
+    expect(connections.map((c) => c.access), [StudioAccess.write, StudioAccess.read]);
+    expect(connections.map((c) => c.readOnlyForUser), [false, true], reason: 'user holds a read grant on sales-prod');
+  });
+
+  test('GET /api/connections/managed under governance from Studio before libredb-studio#1922', () {
+    // The same recording without the access field, as a governed Studio before libredb-studio#1922 sends it.
+    final body = jsonDecode(fixture('managed_governed')) as Map<String, dynamic>;
+    for (final connection in body['connections'] as List) {
+      (connection as Map<String, dynamic>).remove('access');
+    }
+    final connections = ManagedConnectionsModel.read(jsonEncode(body)).connections;
+
+    expect(connections.map((c) => c.access), [null, null]);
+    expect(connections.every((c) => !c.readOnlyForUser), isTrue);
   });
 
   test('GET /api/connections/policy under governance', () {

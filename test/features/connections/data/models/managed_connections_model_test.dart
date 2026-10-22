@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
+import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -55,6 +56,28 @@ void main() {
         expect(only({}).readOnly, isFalse);
         expect(only({'readOnly': false}).readOnly, isFalse);
         expect(only({'readOnly': 'true'}).readOnly, isFalse);
+      });
+    });
+
+    group('access', () {
+      test('reads a read grant and a write grant', () {
+        expect(only({'access': 'read'}).access, StudioAccess.read);
+        expect(only({'access': 'write'}).access, StudioAccess.write);
+      });
+
+      test('is null without the field, as Studio before libredb-studio#1922 and without governance sends it', () {
+        expect(only({}).access, isNull);
+      });
+
+      test('leaves out a level it does not know or that is not a string', () {
+        for (final access in ['admin', 'READ', '', 1, true, <Object?>[]]) {
+          expect(only({'access': access}).access, isNull, reason: '$access');
+        }
+      });
+
+      test('does not fold a read grant into the seed flag', () {
+        expect(only({'access': 'read'}).readOnly, isFalse);
+        expect(only({'access': 'read'}).readOnlyForUser, isTrue);
       });
     });
 
