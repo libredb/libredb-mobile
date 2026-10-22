@@ -191,7 +191,11 @@ void main() {
     expect(platform.authorizeRequests, hasLength(3));
     expect(lines, contains(contains('Signed in through the identity provider')), reason: 'the capture saw no log');
     // The stub answers the logout record with `{}`, so the sign-out's one warn line for a missed record is among them.
-    expect(lines, contains(contains('Studio has no record of this sign-out')), reason: 'the missed record went unlogged');
+    expect(
+      lines,
+      contains(contains('Studio has no record of this sign-out')),
+      reason: 'the missed record went unlogged',
+    );
     _expectNoSecret(
       [...lines, apiError.toString()],
       {
