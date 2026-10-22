@@ -105,17 +105,32 @@ void main() {
     });
   });
 
-  testWidgets('governance unavailable asks to try again and never claims a retry nothing runs', (tester) async {
-    var retried = 0;
-    await tester.pumpWidget(
-      _app(StudioErrorBanner(error: _error(AppErrorCode.studioGovernanceUnavailable), onRetry: () => retried++)),
-    );
+  // Governance unavailable and an identity provider Studio cannot reach are both outages that pass: shown as transient,
+  // asking to try again, with the screen's own retry and no claim that anything retries by itself.
+  group('a transient Studio outage', () {
+    final cases = <AppErrorCode, String>{
+      AppErrorCode.studioGovernanceUnavailable: 'Studio cannot check your access right now. Try again in a moment.',
+      AppErrorCode.studioIdentityProviderUnavailable:
+          'Studio cannot reach the identity provider right now. Try again in a moment.',
+    };
+    for (final MapEntry(key: code, value: message) in cases.entries) {
+      testWidgets('${code.key} asks to try again and never claims a retry nothing runs', (tester) async {
+        var retried = 0;
+        await tester.pumpWidget(_app(StudioErrorBanner(error: _error(code), onRetry: () => retried++)));
 
-    expect(find.text('Studio cannot check your access right now. Try again in a moment.'), findsOneWidget);
-    expect(find.textContaining('Retrying automatically'), findsNothing);
-    expect(find.byIcon(Icons.sync_problem), findsOneWidget);
-    await tester.tap(_retryButton);
-    expect(retried, 1);
+        expect(find.text(message), findsOneWidget);
+        expect(find.textContaining('Retrying automatically'), findsNothing);
+        expect(find.byIcon(Icons.sync_problem), findsOneWidget);
+        expect(find.byIcon(Icons.error_outline), findsNothing);
+        final colorScheme = Theme.of(tester.element(find.byType(StudioErrorBanner))).colorScheme;
+        final box = tester.widget<Container>(
+          find.descendant(of: find.byType(StudioErrorBanner), matching: find.byType(Container)).first,
+        );
+        expect((box.decoration! as BoxDecoration).color, colorScheme.secondaryContainer);
+        await tester.tap(_retryButton);
+        expect(retried, 1);
+      });
+    }
   });
 
   group('database auth', () {
