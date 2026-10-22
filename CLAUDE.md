@@ -68,6 +68,7 @@ lib/
 │   └── <feature_name>/
 │       ├── application/    # BLoCs & Use Cases (Business Logic)
 │       ├── data/           # Repositories & Models (Data Layer)
+│       ├── domain/         # Entities & Repository interfaces
 │       ├── navigation/     # Feature-specific route definitions
 │       └── presentation/   # Pages & Widgets (UI Layer)
 ├── shared/                 # Shared foundation across features
@@ -181,14 +182,16 @@ The contract, the endpoint table and the error mapping are in `docs/architecture
 ## Adding a New Feature
 
 1. Create a new directory under `lib/features/<feature_name>/`.
-2. Define models and repository implementations in `data/`.
-3. Add Use Cases and BLoCs in `application/`.
-4. Define feature-specific routes in `navigation/`.
-5. Implement pages and feature-specific widgets in `presentation/`.
-6. Register the feature routes in `lib/app/router/app_router.dart`.
-7. Add translations to `lib/l10n/`, run `fvm dart run intl_utils:generate`, then `fvm dart format lib/generated --line-length=120`.
-8. Write tests mirroring the feature structure under `test/features/<feature_name>/`.
-9. Add each new repository method that sends requests through `ApiClient` to the table in `test/architecture/mock_asset_coverage_test.dart`, with the mock files it needs under `assets/mock/`.
+2. Define the entities in `domain/entities/` and the repository interface in `domain/repositories/`.
+3. Define models and repository implementations in `data/`.
+4. Register the repository in `lib/app/di/app_dependencies.dart` and provide it in `lib/app/di/app_scope.dart`.
+5. Add Use Cases and BLoCs in `application/`.
+6. Define feature-specific routes in `navigation/`.
+7. Implement pages and feature-specific widgets in `presentation/`.
+8. Register the feature routes in `lib/app/router/app_router.dart`.
+9. Add translations to `lib/l10n/`, run `fvm dart run intl_utils:generate`, then `fvm dart format lib/generated --line-length=120`.
+10. Write tests mirroring the feature structure under `test/features/<feature_name>/`.
+11. Add each new repository method that sends requests through `ApiClient` to the table in `test/architecture/mock_asset_coverage_test.dart`, with the mock files it needs under `assets/mock/`.
 
 ## Testing
 
