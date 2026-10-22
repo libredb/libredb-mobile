@@ -258,6 +258,29 @@ void main() {
     expect(inner.calls, hasLength(2));
   });
 
+  test('a request overtaken by a refresh that answers first leaves later callers joining the refresh', () async {
+    inner.hold = true;
+    final first = cache.containers(_sales);
+    final refreshed = cache.containers(_sales, refresh: true);
+
+    inner.answer(
+      Success([
+        const ObjectContainer(path: ['public'], name: 'older', level: 0),
+      ]),
+    );
+    await first;
+    final third = cache.containers(_sales);
+
+    expect(inner.calls, hasLength(2));
+    inner.answer(
+      Success([
+        const ObjectContainer(path: ['public'], name: 'refreshed', level: 0),
+      ]),
+    );
+    expect(_data(await third).single.name, 'refreshed');
+    expect(_data(await refreshed).single.name, 'refreshed');
+  });
+
   group('invalidation', () {
     test('invalidate drops every entry of the connection and no other', () async {
       await cache.containers(_sales);
@@ -272,33 +295,64 @@ void main() {
       expect(inner.calls, hasLength(5));
     });
 
-    test('invalidateContainer drops the container and what is under it, and nothing else', () async {
+    test(
+      'invalidateContainer drops the container, what is under it and the list that names it, and nothing else',
+      () async {
+        await cache.containers(_sales);
+        await cache.containers(_sales, parent: _public);
+        await cache.counts(_sales, container: _public);
+        await cache.list(_sales, container: _public, kind: 'table');
+        await cache.describe(_sales, path: const ['public', 'orders'], kind: 'table');
+        await cache.counts(_sales, container: const ['sales']);
+        await cache.counts(_sales, container: const ['public_archive']);
+        await cache.counts(_crm, container: _public);
+        inner.calls.clear();
+
+        cache.invalidateContainer(_sales, _public);
+        await cache.containers(_sales);
+        await cache.containers(_sales, parent: _public);
+        await cache.counts(_sales, container: _public);
+        await cache.list(_sales, container: _public, kind: 'table');
+        await cache.describe(_sales, path: const ['public', 'orders'], kind: 'table');
+        await cache.counts(_sales, container: const ['sales']);
+        await cache.counts(_sales, container: const ['public_archive']);
+        await cache.counts(_crm, container: _public);
+
+        expect(inner.calls, [
+          'containers $_sales null',
+          'containers $_sales [public]',
+          'counts $_sales [public]',
+          'list $_sales [public] table',
+          'describe $_sales [public, orders] table',
+        ]);
+      },
+    );
+
+    test('invalidateContainer of a nested container drops the list of its parent and keeps the top level', () async {
       await cache.containers(_sales);
-      await cache.containers(_sales, parent: _public);
-      await cache.counts(_sales, container: _public);
-      await cache.list(_sales, container: _public, kind: 'table');
-      await cache.describe(_sales, path: const ['public', 'orders'], kind: 'table');
-      await cache.counts(_sales, container: const ['sales']);
-      await cache.counts(_sales, container: const ['public_archive']);
-      await cache.counts(_crm, container: _public);
+      await cache.containers(_sales, parent: const ['sales']);
+      await cache.containers(_sales, parent: const ['sales', 'public']);
+      await cache.containers(_sales, parent: const ['crm']);
       inner.calls.clear();
 
-      cache.invalidateContainer(_sales, _public);
+      cache.invalidateContainer(_sales, const ['sales', 'public']);
       await cache.containers(_sales);
-      await cache.containers(_sales, parent: _public);
-      await cache.counts(_sales, container: _public);
-      await cache.list(_sales, container: _public, kind: 'table');
-      await cache.describe(_sales, path: const ['public', 'orders'], kind: 'table');
-      await cache.counts(_sales, container: const ['sales']);
-      await cache.counts(_sales, container: const ['public_archive']);
-      await cache.counts(_crm, container: _public);
+      await cache.containers(_sales, parent: const ['sales']);
+      await cache.containers(_sales, parent: const ['sales', 'public']);
+      await cache.containers(_sales, parent: const ['crm']);
 
-      expect(inner.calls, [
-        'containers $_sales [public]',
-        'counts $_sales [public]',
-        'list $_sales [public] table',
-        'describe $_sales [public, orders] table',
-      ]);
+      expect(inner.calls, ['containers $_sales [sales]', 'containers $_sales [sales, public]']);
+    });
+
+    test('an entry keeps its key when the caller changes the list it passed', () async {
+      final container = ['public'];
+      await cache.counts(_sales, container: container);
+      container[0] = 'sales';
+
+      cache.invalidateContainer(_sales, const ['sales']);
+      await cache.counts(_sales, container: const ['public']);
+
+      expect(inner.calls, hasLength(1));
     });
 
     for (final (name, invalidate) in <(String, void Function(CachedObjectBrowserRepository))>[
@@ -328,6 +382,29 @@ void main() {
 
         inner.hold = false;
         expect(_data(await cache.list(_sales, container: _public, kind: 'table')).single.name, 'orders');
+        expect(inner.calls, hasLength(2));
+      });
+    }
+
+    for (final (name, invalidate) in <(String, void Function(CachedObjectBrowserRepository))>[
+      ('invalidate', (cache) => cache.invalidate(_sales)),
+      ('invalidateContainer', (cache) => cache.invalidateContainer(_sales, _public)),
+      ('clear', (cache) => cache.clear()),
+    ]) {
+      test('the only answer in flight across $name is not stored, so the next read sends a request', () async {
+        inner.hold = true;
+        final before = cache.list(_sales, container: _public, kind: 'table');
+
+        invalidate(cache);
+        inner.answer(
+          Success([
+            const DatabaseObject(path: ['public', 'dropped'], name: 'dropped', kind: 'table'),
+          ]),
+        );
+        await before;
+
+        inner.hold = false;
+        expect(_data(await cache.list(_sales, container: _public, kind: 'table')).single.name, 'orders 2');
         expect(inner.calls, hasLength(2));
       });
     }

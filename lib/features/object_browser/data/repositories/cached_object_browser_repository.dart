@@ -96,9 +96,14 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   void invalidate(String connectionId) => _cache.invalidateWhere((key) => key.connectionId == connectionId);
 
   /// Drops the answers about [container] of [connectionId] and about everything under it: its counts, lists and child
-  /// containers, and the describe answers of its objects.
-  void invalidateContainer(String connectionId, List<String> container) =>
-      _cache.invalidateWhere((key) => key.connectionId == connectionId && key.isUnder(container));
+  /// containers, and the describe answers of its objects. The containers list that names [container], the top level or
+  /// its parent's, is dropped too, since creating or dropping a schema changes it.
+  void invalidateContainer(String connectionId, List<String> container) {
+    final parent = container.isEmpty ? null : container.sublist(0, container.length - 1);
+    _cache.invalidateWhere(
+      (key) => key.connectionId == connectionId && (key.isUnder(container) || key.isContainersOf(parent)),
+    );
+  }
 
   /// Drops the answers past [ttl], when the user switches to another connection, so a long session does not keep each
   /// connection it ever opened. The fresh answers stay, so going back within [ttl] sends no request.
@@ -122,7 +127,9 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
 }
 
 class _BrowserKey extends Equatable {
-  const _BrowserKey(this.connectionId, this.method, this.path, [this.kind]);
+  /// Keeps its own unmodifiable copy of [path], so a caller that changes its list later cannot move the entry.
+  _BrowserKey(this.connectionId, this.method, List<String>? path, [this.kind])
+    : path = path == null ? null : List.unmodifiable(path);
 
   final String connectionId;
   final String method;
@@ -134,9 +141,20 @@ class _BrowserKey extends Equatable {
   /// Whether [path] is [container] or starts with its segments.
   bool isUnder(List<String> container) {
     final path = this.path;
-    if (path == null || path.length < container.length) return false;
-    for (var i = 0; i < container.length; i++) {
-      if (path[i] != container[i]) return false;
+    return path != null && _startsWith(path, container);
+  }
+
+  /// Whether this is the `containers` list under [parent], where null and an empty path both name the top level.
+  bool isContainersOf(List<String>? parent) {
+    if (method != 'containers' || parent == null) return false;
+    final path = this.path ?? const <String>[];
+    return path.length == parent.length && _startsWith(path, parent);
+  }
+
+  static bool _startsWith(List<String> path, List<String> prefix) {
+    if (path.length < prefix.length) return false;
+    for (var i = 0; i < prefix.length; i++) {
+      if (path[i] != prefix[i]) return false;
     }
     return true;
   }

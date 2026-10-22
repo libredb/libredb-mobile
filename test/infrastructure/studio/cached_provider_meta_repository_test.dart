@@ -133,6 +133,32 @@ void main() {
     expect(_language(await cache.providerMeta(_sales)), 'after');
   });
 
+  test('the only answer in flight across an invalidation is not stored, so the next read sends a request', () async {
+    inner.hold = true;
+    final before = cache.providerMeta(_sales);
+
+    cache.invalidate(_sales);
+    inner.answer(Success(_meta('before')));
+    await before;
+
+    inner.hold = false;
+    expect(_language(await cache.providerMeta(_sales)), '2');
+    expect(inner.calls, hasLength(2));
+  });
+
+  test('the only answer in flight across a clear is not stored, so the next read sends a request', () async {
+    inner.hold = true;
+    final before = cache.providerMeta(_sales);
+
+    cache.clear();
+    inner.answer(Success(_meta('before')));
+    await before;
+
+    inner.hold = false;
+    expect(_language(await cache.providerMeta(_sales)), '2');
+    expect(inner.calls, hasLength(2));
+  });
+
   group('the session end', () {
     test('clears every entry', () async {
       await cache.providerMeta(_sales);
