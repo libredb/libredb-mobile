@@ -65,8 +65,9 @@ class InterceptorChainEntry {
 /// for a Studio route that runs a statement (`studioStatementReceiveTimeout`).
 ///
 /// `tokenRotation` replaces the backend's refresh endpoint ([BackendTokenRotation]) as the way
-/// [TokenRefreshInterceptor] refreshes the session, and `isSessionExpired` decides which 401 starts
-/// that refresh ([isUnauthorized], every 401, when it is null).
+/// [TokenRefreshInterceptor] refreshes the session, `isSessionExpired` decides which 401 starts
+/// that refresh, and `isSessionRefused` which 401 after it ends the session ([isUnauthorized],
+/// every 401, when either is null).
 class ApiClient {
   ApiClient({
     required this._appConfig,
@@ -75,6 +76,7 @@ class ApiClient {
     this._dio,
     this._tokenRotation,
     this._isSessionExpired,
+    this._isSessionRefused,
   });
 
   static final _log = AppLogger.getLogger('ApiClient');
@@ -86,6 +88,7 @@ class ApiClient {
   final OnSessionExpired? _onSessionExpired;
   final TokenRotation? _tokenRotation;
   final SessionExpiredPredicate? _isSessionExpired;
+  final SessionRefusedPredicate? _isSessionRefused;
   Dio? _dio;
   List<InterceptorChainEntry> _chainSnapshot = const [];
 
@@ -159,6 +162,7 @@ class ApiClient {
           refreshDioFactory: _appConfig.isProduction ? null : _mockRefreshDio,
           rotation: _tokenRotation,
           isSessionExpired: _isSessionExpired ?? isUnauthorized,
+          isSessionRefused: _isSessionRefused ?? isUnauthorized,
         ),
         meta: const InterceptorChainEntry(name: 'TokenRefreshInterceptor', detail: 'Refreshes expired access tokens'),
       ),

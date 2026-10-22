@@ -22,7 +22,11 @@ class _BackendRefreshContract {
 /// refresh the session, and end it when the refresh cannot fix the 401.
 typedef SessionExpiredPredicate = bool Function(DioException error);
 
-/// The default [SessionExpiredPredicate]: every 401 means the bearer is no longer valid.
+/// Decides whether a 401 for a request sent again with the token a refresh has just issued means that the server
+/// refuses the session, which ends it. Any other 401 then reaches the caller and leaves the session as it is.
+typedef SessionRefusedPredicate = bool Function(DioException error);
+
+/// The default [SessionExpiredPredicate] and [SessionRefusedPredicate]: every 401 means the bearer is no longer valid.
 bool isUnauthorized(DioException error) => error.response?.statusCode == 401;
 
 /// How a token rotation ended.

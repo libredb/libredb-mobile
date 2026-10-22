@@ -37,4 +37,30 @@ void main() {
       expect(isStudioSessionExpired(errorWith(null)), isFalse);
     });
   });
+
+  // After a refresh, only AUTH_REQUIRED means Studio refuses the token Keycloak has just issued. A 401 without a code
+  // is also what GET /api/auth/me answers when Studio cannot reach Keycloak, which a new session would not fix.
+  group('isStudioSessionRefused', () {
+    test('accepts a 401 AUTH_REQUIRED, as text or as a decoded map', () {
+      expect(isStudioSessionRefused(errorWith(401, '{"error":"Invalid access token","code":"AUTH_REQUIRED"}')), isTrue);
+      expect(isStudioSessionRefused(errorWith(401, {'error': 'x', 'code': 'AUTH_REQUIRED'})), isTrue);
+    });
+
+    test('refuses a 401 without a code', () {
+      expect(isStudioSessionRefused(errorWith(401, '{"authenticated":false}')), isFalse);
+      expect(isStudioSessionRefused(errorWith(401, 'Unauthorized')), isFalse);
+      expect(isStudioSessionRefused(errorWith(401)), isFalse);
+    });
+
+    test('refuses a 401 with any other code', () {
+      for (final code in ['AUTH_ERROR', 'LLM_AUTH']) {
+        expect(isStudioSessionRefused(errorWith(401, '{"error":"x","code":"$code"}')), isFalse, reason: code);
+      }
+    });
+
+    test('refuses another status, or no response', () {
+      expect(isStudioSessionRefused(errorWith(403, '{"error":"x","code":"AUTH_REQUIRED"}')), isFalse);
+      expect(isStudioSessionRefused(errorWith(null)), isFalse);
+    });
+  });
 }

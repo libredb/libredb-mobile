@@ -13,5 +13,14 @@ bool isStudioSessionExpired(DioException error) {
   return code == null || code == studioSessionEndedCode;
 }
 
+/// The [SessionRefusedPredicate] of LibreDB Studio: a 401 `AUTH_REQUIRED` for a request sent again with a token the
+/// identity provider has just issued.
+///
+/// A 401 without a code is not one: `GET /api/auth/me` answers `{"authenticated":false}` both for a refused token and
+/// when Studio cannot reach the identity provider to check it, and a new session would not fix the second, so the
+/// error reaches the caller and the session is kept.
+bool isStudioSessionRefused(DioException error) =>
+    error.response?.statusCode == 401 && ApiClient.errorCodeOf(error.response?.data) == studioSessionEndedCode;
+
 /// The only error code by which Studio says that the session ended.
 const studioSessionEndedCode = 'AUTH_REQUIRED';
