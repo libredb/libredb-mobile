@@ -206,13 +206,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    // The app ships on Android and iOS.
-    testWidgets('counts two platforms', (tester) async {
+    // The panel speaks to someone signing in to LibreDB, not to a developer choosing a starter project.
+    testWidgets('describes LibreDB, not the template it grew from', (tester) async {
       setViewport(tester, const Size(1600, 1600));
       await pumpLogin(tester);
 
-      expect(find.text('2'), findsOneWidget);
-      expect(find.text('7+'), findsNothing);
+      expect(find.text('Your databases,\nin your pocket.'), findsOneWidget);
+      expect(find.text('Organization sign-in'), findsOneWidget);
+      expect(find.text('No passwords on the phone'), findsOneWidget);
+      expect(find.text('Browse and query'), findsOneWidget);
+      for (final templateText in ['Flutter 3.47.7', 'Core Layers', 'BLoC Ready', 'Clean Architecture', 'Platforms']) {
+        expect(find.text(templateText), findsNothing, reason: templateText);
+      }
     });
   });
 
@@ -287,14 +292,11 @@ void main() {
         'Hesabınıza erişmek için bilgilerinizi girin',
         'veya',
         'Hesabınız yok mu? ',
-        'Prototipten\nüretime ölçeklenin.',
-        'Platform',
-        'Temel Katman',
-        '%100',
-        'BLoC Hazır',
-        'Kimlik Doğrulama ve Erişim Kontrolü',
-        'Temiz Mimari',
-        "Sahte Veriden Gerçek API'ye",
+        'Veritabanlarınız\ncebinizde.',
+        "LibreDB Studio'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
+        'Kurum hesabıyla giriş',
+        'Telefonda parola yok',
+        'Göz atın ve sorgulayın',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }

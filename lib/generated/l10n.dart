@@ -831,76 +831,61 @@ class S {
     return Intl.message('Update password', name: 'command_palette_change_password_description', desc: '', args: []);
   }
 
-  /// `Scale from prototype\nto production.`
+  /// `Your databases,\nin your pocket.`
   String get login_brand_headline {
-    return Intl.message('Scale from prototype\nto production.', name: 'login_brand_headline', desc: '', args: []);
+    return Intl.message('Your databases,\nin your pocket.', name: 'login_brand_headline', desc: '', args: []);
   }
 
-  /// `Authentication, role-based access, user management,\ntheming, and multi-environment support in one robust starter.`
+  /// `Reach the databases LibreDB Studio grants you, from your phone.`
   String get login_brand_description {
     return Intl.message(
-      'Authentication, role-based access, user management,\ntheming, and multi-environment support in one robust starter.',
+      'Reach the databases LibreDB Studio grants you, from your phone.',
       name: 'login_brand_description',
       desc: '',
       args: [],
     );
   }
 
-  /// `Platforms`
-  String get login_brand_stat_platforms {
-    return Intl.message('Platforms', name: 'login_brand_stat_platforms', desc: '', args: []);
-  }
-
-  /// `Core Layers`
-  String get login_brand_stat_layers {
-    return Intl.message('Core Layers', name: 'login_brand_stat_layers', desc: '', args: []);
-  }
-
-  /// `BLoC Ready`
-  String get login_brand_stat_bloc_ready {
-    return Intl.message('BLoC Ready', name: 'login_brand_stat_bloc_ready', desc: '', args: []);
-  }
-
-  /// `Authentication & Access Control`
+  /// `Organization sign-in`
   String get login_feature_auth_title {
-    return Intl.message('Authentication & Access Control', name: 'login_feature_auth_title', desc: '', args: []);
+    return Intl.message('Organization sign-in', name: 'login_feature_auth_title', desc: '', args: []);
   }
 
-  /// `Password and OTP login flows with role-based routing guards.`
+  /// `Sign in with the account your organization manages in Keycloak.`
   String get login_feature_auth_description {
     return Intl.message(
-      'Password and OTP login flows with role-based routing guards.',
+      'Sign in with the account your organization manages in Keycloak.',
       name: 'login_feature_auth_description',
       desc: '',
       args: [],
     );
   }
 
-  /// `Clean Architecture`
-  String get login_feature_architecture_title {
-    return Intl.message('Clean Architecture', name: 'login_feature_architecture_title', desc: '', args: []);
+  /// `No passwords on the phone`
+  String get login_feature_credentials_title {
+    return Intl.message('No passwords on the phone', name: 'login_feature_credentials_title', desc: '', args: []);
   }
 
-  /// `BLoC + Repository pattern with clear separation of concerns.`
-  String get login_feature_architecture_description {
+  /// `Studio holds every database credential, and the app never stores one.`
+  String get login_feature_credentials_description {
     return Intl.message(
-      'BLoC + Repository pattern with clear separation of concerns.',
-      name: 'login_feature_architecture_description',
+      'Studio holds every database credential, and the app never stores one.',
+      name: 'login_feature_credentials_description',
       desc: '',
       args: [],
     );
   }
 
-  /// `Mock to Real API`
-  String get login_feature_mock_api_title {
-    return Intl.message('Mock to Real API', name: 'login_feature_mock_api_title', desc: '', args: []);
+  /// `Browse and query`
+  String get login_feature_query_title {
+    return Intl.message('Browse and query', name: 'login_feature_query_title', desc: '', args: []);
   }
 
-  /// `Develop locally with mock data and switch to production endpoints.`
-  String get login_feature_mock_api_description {
+  /// `Look through schemas and run queries on the connections you are given.`
+  String get login_feature_query_description {
     return Intl.message(
-      'Develop locally with mock data and switch to production endpoints.',
-      name: 'login_feature_mock_api_description',
+      'Look through schemas and run queries on the connections you are given.',
+      name: 'login_feature_query_description',
       desc: '',
       args: [],
     );

@@ -266,25 +266,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "loading": MessageLookupByLibrary.simpleMessage("Loading..."),
     "login": MessageLookupByLibrary.simpleMessage("Login"),
     "login_brand_description": MessageLookupByLibrary.simpleMessage(
-      "Authentication, role-based access, user management,\ntheming, and multi-environment support in one robust starter.",
+      "Reach the databases LibreDB Studio grants you, from your phone.",
     ),
-    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Scale from prototype\nto production."),
-    "login_brand_stat_bloc_ready": MessageLookupByLibrary.simpleMessage("BLoC Ready"),
-    "login_brand_stat_layers": MessageLookupByLibrary.simpleMessage("Core Layers"),
-    "login_brand_stat_platforms": MessageLookupByLibrary.simpleMessage("Platforms"),
+    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Your databases,\nin your pocket."),
     "login_button": MessageLookupByLibrary.simpleMessage("Login"),
-    "login_feature_architecture_description": MessageLookupByLibrary.simpleMessage(
-      "BLoC + Repository pattern with clear separation of concerns.",
-    ),
-    "login_feature_architecture_title": MessageLookupByLibrary.simpleMessage("Clean Architecture"),
     "login_feature_auth_description": MessageLookupByLibrary.simpleMessage(
-      "Password and OTP login flows with role-based routing guards.",
+      "Sign in with the account your organization manages in Keycloak.",
     ),
-    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Authentication & Access Control"),
-    "login_feature_mock_api_description": MessageLookupByLibrary.simpleMessage(
-      "Develop locally with mock data and switch to production endpoints.",
+    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Organization sign-in"),
+    "login_feature_credentials_description": MessageLookupByLibrary.simpleMessage(
+      "Studio holds every database credential, and the app never stores one.",
     ),
-    "login_feature_mock_api_title": MessageLookupByLibrary.simpleMessage("Mock to Real API"),
+    "login_feature_credentials_title": MessageLookupByLibrary.simpleMessage("No passwords on the phone"),
+    "login_feature_query_description": MessageLookupByLibrary.simpleMessage(
+      "Look through schemas and run queries on the connections you are given.",
+    ),
+    "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Browse and query"),
     "login_no_account": MessageLookupByLibrary.simpleMessage("Don\'t have an account? "),
     "login_or": MessageLookupByLibrary.simpleMessage("or"),
     "login_otp_email_instructions": MessageLookupByLibrary.simpleMessage("Enter your email to receive OTP code"),

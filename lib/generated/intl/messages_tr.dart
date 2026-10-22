@@ -264,25 +264,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "loading": MessageLookupByLibrary.simpleMessage("Yükleniyor..."),
     "login": MessageLookupByLibrary.simpleMessage("Kullanıcı Adı"),
     "login_brand_description": MessageLookupByLibrary.simpleMessage(
-      "Kimlik doğrulama, rol tabanlı erişim, kullanıcı yönetimi,\ntema ve çoklu ortam desteği tek bir sağlam başlangıç projesinde.",
+      "LibreDB Studio\'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
     ),
-    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Prototipten\nüretime ölçeklenin."),
-    "login_brand_stat_bloc_ready": MessageLookupByLibrary.simpleMessage("BLoC Hazır"),
-    "login_brand_stat_layers": MessageLookupByLibrary.simpleMessage("Temel Katman"),
-    "login_brand_stat_platforms": MessageLookupByLibrary.simpleMessage("Platform"),
+    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Veritabanlarınız\ncebinizde."),
     "login_button": MessageLookupByLibrary.simpleMessage("Giriş Yap"),
-    "login_feature_architecture_description": MessageLookupByLibrary.simpleMessage(
-      "Sorumlulukları net biçimde ayıran BLoC + Repository deseni.",
-    ),
-    "login_feature_architecture_title": MessageLookupByLibrary.simpleMessage("Temiz Mimari"),
     "login_feature_auth_description": MessageLookupByLibrary.simpleMessage(
-      "Rol tabanlı yönlendirme korumalarıyla şifre ve OTP ile giriş akışları.",
+      "Kurumunuzun Keycloak\'ta yönettiği hesapla oturum açın.",
     ),
-    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Kimlik Doğrulama ve Erişim Kontrolü"),
-    "login_feature_mock_api_description": MessageLookupByLibrary.simpleMessage(
-      "Yerelde sahte verilerle geliştirin, ardından üretim uç noktalarına geçin.",
+    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Kurum hesabıyla giriş"),
+    "login_feature_credentials_description": MessageLookupByLibrary.simpleMessage(
+      "Her veritabanı kimlik bilgisini Studio tutar, uygulama hiçbirini saklamaz.",
     ),
-    "login_feature_mock_api_title": MessageLookupByLibrary.simpleMessage("Sahte Veriden Gerçek API\'ye"),
+    "login_feature_credentials_title": MessageLookupByLibrary.simpleMessage("Telefonda parola yok"),
+    "login_feature_query_description": MessageLookupByLibrary.simpleMessage(
+      "Size verilen bağlantılarda şemalara göz atın ve sorgu çalıştırın.",
+    ),
+    "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Göz atın ve sorgulayın"),
     "login_no_account": MessageLookupByLibrary.simpleMessage("Hesabınız yok mu? "),
     "login_or": MessageLookupByLibrary.simpleMessage("veya"),
     "login_otp_email_instructions": MessageLookupByLibrary.simpleMessage(

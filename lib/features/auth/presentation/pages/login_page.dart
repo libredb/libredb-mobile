@@ -14,7 +14,6 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show NumberFormat;
 import 'package:form_builder_validators/form_builder_validators.dart';
 
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
@@ -177,8 +176,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       _heroText(),
                       const SizedBox(height: 16),
                       _heroSubtext(),
-                      const SizedBox(height: 20),
-                      _statsRow(),
                       const SizedBox(height: 40),
                       _featureCards(),
                       const SizedBox(height: 10),
@@ -211,14 +208,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Widget _brandBadges() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 8,
-      children: [
-        _glassPill(AppConstants.appName, const Color(0xFFA5B4FC)),
-        _glassPill('Flutter 3.47.7', const Color(0xFF94A3B8)),
-      ],
-    );
+    return _glassPill(AppConstants.appName, const Color(0xFFA5B4FC));
   }
 
   Widget _glassPill(String text, Color textColor) {
@@ -256,48 +246,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _statsRow() {
-    final l10n = S.of(context);
-    final percent = NumberFormat.percentPattern(Localizations.localeOf(context).toString()).format(1);
-    // Wraps instead of overflowing when the brand panel is narrow or the text is scaled up.
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      runSpacing: 8,
-      children: [
-        _statItem('2', l10n.login_brand_stat_platforms),
-        _statDot(),
-        _statItem('5', l10n.login_brand_stat_layers),
-        _statDot(),
-        _statItem(percent, l10n.login_brand_stat_bloc_ready),
-      ],
-    );
-  }
-
-  Widget _statItem(String value, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45))),
-      ],
-    );
-  }
-
-  Widget _statDot() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        width: 4,
-        height: 4,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.25)),
-      ),
-    );
-  }
-
   Widget _featureCards() {
     final l10n = S.of(context);
     return Column(
@@ -305,15 +253,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _glassFeatureCard(Icons.shield_outlined, l10n.login_feature_auth_title, l10n.login_feature_auth_description),
         const SizedBox(height: 10),
         _glassFeatureCard(
-          Icons.layers_outlined,
-          l10n.login_feature_architecture_title,
-          l10n.login_feature_architecture_description,
+          Icons.key_off_outlined,
+          l10n.login_feature_credentials_title,
+          l10n.login_feature_credentials_description,
         ),
         const SizedBox(height: 10),
         _glassFeatureCard(
-          Icons.swap_horiz_outlined,
-          l10n.login_feature_mock_api_title,
-          l10n.login_feature_mock_api_description,
+          Icons.table_chart_outlined,
+          l10n.login_feature_query_title,
+          l10n.login_feature_query_description,
         ),
       ],
     );
