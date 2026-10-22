@@ -2,13 +2,14 @@
 library;
 
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// End-to-end smoke: boots the full app in mock mode (`AppConfig.dev()` —
 /// `App`'s default dependencies serve `assets/mock/*.json`) and drives
-/// cold-start → login → dashboard. Exercises routing + DI + BLoCs + the mock
+/// cold-start → login → connection list. Exercises routing + DI + BLoCs + the mock
 /// HTTP layer together.
 ///
 /// Runs headless under the normal `flutter test` (no device/emulator). The
@@ -16,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// secure-storage mock + a clean storage reset before each test, so the app
 /// starts unauthenticated and lands on login.
 void main() {
-  testWidgets('cold start → login → dashboard (mock mode)', (tester) async {
+  testWidgets('cold start → login → connection list (mock mode)', (tester) async {
     await tester.pumpWidget(const App(language: 'en'));
     await tester.pumpAndSettle();
 
@@ -30,7 +31,12 @@ void main() {
     await tester.tap(find.byKey(loginButtonSubmitKey));
     await tester.pumpAndSettle();
 
-    // Router redirects to the authenticated shell.
+    // Router redirects to the authenticated shell, which opens the connection list.
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
+    expect(find.byType(ConnectionListPage), findsOneWidget);
+    // The mock API answers the managed connections after a delay.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
   });
 }

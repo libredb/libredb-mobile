@@ -8,7 +8,6 @@ import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
@@ -20,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../support/test_env.dart';
 import '../../../../support/url_launcher_stub.dart';
+import '../../../../support/user_menu.dart';
 
 const _docs = 'https://docs.acme.example';
 
@@ -129,7 +129,7 @@ void main() {
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
       expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
-      // Logout intentionally lives only in the sidebar / topbar shell —
+      // Logout intentionally lives only in the top bar of the shell —
       // settings does not own auth-session lifecycle (cross-feature).
     });
 
@@ -204,7 +204,6 @@ void main() {
 
       for (final text in [
         'Hesap tercihlerinizi yönetin',
-        'Profil bilgilerinizi görüntüleyin veya düzenleyin',
         'Şifrenizi güvenle güncelleyin',
         'Görünüm',
         'Tema',
@@ -239,7 +238,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Yardım ve Kaynaklar'), findsOneWidget);
-      expect(find.text('Çıkış Yap'), findsOneWidget, reason: 'the sidebar switches too');
+      expect(
+        find.widgetWithText(NavigationDestination, 'Bağlantılar'),
+        findsOneWidget,
+        reason: 'the bottom navigation bar switches too',
+      );
       expect(find.descendant(of: find.byKey(settingsChangeLanguageButtonKey), matching: find.text('Türkçe')), findsOne);
       expect(find.text('Help & Resources'), findsNothing);
 
@@ -258,8 +261,7 @@ void main() {
       await tester.tap(find.text('Türkçe'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithIcon(SidebarNavItem, Icons.logout));
-      await tester.pumpAndSettle();
+      await selectFromUserMenu(tester, Icons.logout);
       await tester.tap(find.widgetWithText(FilledButton, 'Evet'));
       await tester.pumpAndSettle();
       expect(find.byKey(loginButtonSubmitKey), findsOneWidget);

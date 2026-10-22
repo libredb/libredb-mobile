@@ -1,8 +1,6 @@
-import 'package:libredb_mobile/features/users/data/models/authority.dart';
 import 'package:libredb_mobile/features/account/data/models/change_password.dart';
 import 'package:libredb_mobile/features/auth/data/models/jwt_token.dart';
-import 'package:libredb_mobile/app/shell/models/menu.dart';
-import 'package:libredb_mobile/features/users/data/models/user.dart';
+import 'package:libredb_mobile/features/account/data/models/user.dart';
 import 'package:libredb_mobile/features/auth/data/models/user_jwt.dart';
 
 final DateTime createdDate = DateTime(2024, 1, 1);
@@ -27,27 +25,11 @@ final mockUserFullPayload = User(
   authorities: const ['ROLE_USER'],
 );
 
-/// Authority(Role) fake data
-const mockAuthorityPayload = Authority(name: 'ROLE_USER');
-
 /// PasswordChange fake data with full payload
 const mockPasswordChangePayload = PasswordChangeDTO(currentPassword: 'password', newPassword: 'new_password');
 
 /// JWTToken fake data
 const mockJWTTokenPayload = JWTToken(idToken: 'MOCK_TOKEN');
-
-/// Menu fake data with full payload
-const mockMenuPayload = Menu(
-  id: "0",
-  name: 'test name',
-  description: '',
-  url: 'https://dhw-api.onrender.com/',
-  icon: '',
-  orderPriority: 01,
-  active: false,
-  parent: null,
-  level: 01,
-);
 
 /// UserJWT fake data with full payload
 const mockUserJWTPayload = UserJWT("username", "password");

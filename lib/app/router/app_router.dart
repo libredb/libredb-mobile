@@ -10,15 +10,11 @@ import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
-import 'package:libredb_mobile/features/account/navigation/account_routes.dart';
 import 'package:libredb_mobile/features/auth/navigation/auth_routes.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
-import 'package:libredb_mobile/features/dashboard/navigation/dashboard_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/navigation/dynamic_forms_routes.dart';
-import 'package:libredb_mobile/features/users/navigation/users_routes.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:flutter/material.dart';
@@ -58,18 +54,16 @@ class AppRouterFactory {
         );
       },
       routes: [
+        // The root has no page of its own: it opens the connection list.
+        GoRoute(path: ApplicationRoutesConstants.root, redirect: (context, state) => ApplicationRoutesConstants.home),
         ShellRoute(
           pageBuilder: (context, state, child) => appPlatformPage(
             state: state,
             child: AppShell(state: state, child: child),
           ),
           routes: [
-            ...DashboardFeatureRoutes.routes,
-            ...AccountFeatureRoutes.routes,
             ...ConnectionsFeatureRoutes.routes,
-            ...UsersFeatureRoutes.routes,
             ...SettingsFeatureRoutes.routes,
-            ...DynamicFormsFeatureRoutes.routes,
             if (!_authMode.usesOidc) ...AuthFeatureRoutes.authenticatedRoutes,
           ],
         ),
@@ -122,12 +116,14 @@ class AppRouterFactory {
         if (!isAuthenticated && !isPublic) {
           // Preserve the intended destination as `returnUrl` so login
           // success can land the user where they were going. The
-          // dashboard fallback handles the "user typed /login directly"
+          // home fallback handles the "user typed /login directly"
           // case where there's nothing meaningful to return to. The
           // login screen validates the value as a local path before
           // honoring it (see LoginScreen — open-redirect guard).
           final fullPath = state.uri.toString();
-          if (fullPath == ApplicationRoutesConstants.home || fullPath == ApplicationRoutesConstants.login) {
+          if (fullPath == ApplicationRoutesConstants.root ||
+              fullPath == ApplicationRoutesConstants.home ||
+              fullPath == ApplicationRoutesConstants.login) {
             return ApplicationRoutesConstants.login;
           }
           final encoded = Uri.encodeQueryComponent(fullPath);

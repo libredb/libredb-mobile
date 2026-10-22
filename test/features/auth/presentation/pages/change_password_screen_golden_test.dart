@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/change_password_page.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -16,11 +15,9 @@ void main() {
   setUpAll(() => TestEnv.autoReset = false);
 
   late MockChangePasswordBloc changePasswordBloc;
-  late MockAuthorityBloc authorityBloc;
 
   setUp(() {
     changePasswordBloc = MockChangePasswordBloc();
-    authorityBloc = MockAuthorityBloc();
 
     whenListen(
       changePasswordBloc,
@@ -28,17 +25,11 @@ void main() {
       initialState: const ChangePasswordInitialState(),
     );
     when(() => changePasswordBloc.state).thenReturn(const ChangePasswordInitialState());
-
-    whenListen(authorityBloc, Stream<AuthorityState>.empty(), initialState: const AuthorityInitialState());
-    when(() => authorityBloc.state).thenReturn(const AuthorityInitialState());
   });
 
   Widget buildScreen({bool dark = false}) {
     final screen = MultiBlocProvider(
-      providers: [
-        BlocProvider<ChangePasswordBloc>.value(value: changePasswordBloc),
-        BlocProvider<AuthorityBloc>.value(value: authorityBloc),
-      ],
+      providers: [BlocProvider<ChangePasswordBloc>.value(value: changePasswordBloc)],
       child: ChangePasswordScreen(),
     );
     return goldenRoutedScreen(screen, dark: dark);

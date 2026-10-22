@@ -10,9 +10,7 @@ class BottomNavWidget extends StatelessWidget {
   const BottomNavWidget({super.key, required this.activeRoute});
 
   int get _currentIndex {
-    if (activeRoute == ApplicationRoutesConstants.home) return 0;
-    if (activeRoute.startsWith('/user')) return 1;
-    if (activeRoute == ApplicationRoutesConstants.settings) return 2;
+    if (activeRoute == ApplicationRoutesConstants.settings) return 1;
     return 0;
   }
 
@@ -22,8 +20,7 @@ class BottomNavWidget extends StatelessWidget {
       selectedIndex: _currentIndex,
       onDestinationSelected: (index) => _onTap(context, index),
       destinations: [
-        NavigationDestination(icon: const Icon(Icons.dashboard_outlined), label: S.of(context).dashboard),
-        NavigationDestination(icon: const Icon(Icons.people_outlined), label: S.of(context).list_user),
+        NavigationDestination(icon: const Icon(Icons.storage_outlined), label: S.of(context).connections),
         NavigationDestination(icon: const Icon(Icons.settings_outlined), label: S.of(context).settings),
       ],
     );
@@ -32,12 +29,9 @@ class BottomNavWidget extends StatelessWidget {
   void _onTap(BuildContext context, int index) {
     switch (index) {
       case 0:
-        context.go(ApplicationRoutesConstants.home);
+        context.go(ApplicationRoutesConstants.connectionList);
         break;
       case 1:
-        context.go(ApplicationRoutesConstants.userList);
-        break;
-      case 2:
         context.go(ApplicationRoutesConstants.settings);
         break;
     }

@@ -99,8 +99,8 @@ This step was not run, since the stack was verified on Linux.
 ### What the walkthrough shows
 
 1. "Sign in with SSO" opens Keycloak in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
-2. After the sign-in the app opens the dashboard; the sign-in sends nothing to Studio.
-3. Connections in the menu lists what Studio offers the user: without a seed file, Studio's two sample connections.
+2. After the sign-in the app opens the connection list; the sign-in itself sends nothing to Studio.
+3. The connection list shows what Studio offers the user: without a seed file, Studio's two sample connections.
    That request carries the access token, so the list proves the bearer channel.
 4. A minute later the access token has expired: Studio answers the next request with 401, and the app refreshes at Keycloak and repeats it.
 5. Logout ends the Keycloak session as well, and the app is back on the login page.

@@ -95,10 +95,10 @@ class ApiClient {
   /// Snapshot of the active interceptor chain, in order. Populated the
   /// first time [instance] is read (i.e. when Dio is built).
   ///
-  /// Consumers like `SystemDashboardCubit` should read this instead of
-  /// hard-coding names — keeps the dashboard in sync with the chain
-  /// even when interceptors are added, removed, or conditionally
-  /// included (e.g. [MockInterceptor] outside production).
+  /// Consumers should read this instead of hard-coding names — keeps
+  /// them in sync with the chain even when interceptors are added,
+  /// removed, or conditionally included (e.g. [MockInterceptor]
+  /// outside production).
   List<InterceptorChainEntry> get interceptorChainSnapshot => List.unmodifiable(_chainSnapshot);
 
   /// The active Dio instance.

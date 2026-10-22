@@ -137,17 +137,16 @@ void main() {
       expect(loggedScreens(), ['login']);
     });
 
-    testWidgets('logs the dashboard once when an authenticated session starts', (tester) async {
+    testWidgets('logs the connection list once when an authenticated session starts', (tester) async {
       await startAuthenticated(tester);
 
-      expect(loggedScreens(), ['home']);
+      expect(loggedScreens(), ['connectionList']);
     });
 
     // Shell routes are named like root routes: the route name, else the path pattern, never parameter values.
     for (final (location, screenName) in const [
       (ApplicationRoutesConstants.settings, 'settings'),
-      (ApplicationRoutesConstants.account, '/account'),
-      ('/dynamic-forms/sample', 'dynamicForm'),
+      (ApplicationRoutesConstants.changePassword, 'change-password'),
     ]) {
       testWidgets('logs the shell route $location once as $screenName', (tester) async {
         final router = await startAuthenticated(tester);
@@ -166,9 +165,9 @@ void main() {
       await tester.pumpAndSettle();
       clearInteractions(analytics);
 
-      router.push(ApplicationRoutesConstants.account);
+      router.push(ApplicationRoutesConstants.changePassword);
       await tester.pumpAndSettle();
-      expect(loggedScreens(), ['/account']);
+      expect(loggedScreens(), ['change-password']);
 
       router.pop();
       await tester.pumpAndSettle();
@@ -210,7 +209,7 @@ void main() {
     // Going from a root route to a shell route pops the root route and updates the shell in the same frame.
     for (final (location, screenName) in const [
       (ApplicationRoutesConstants.settings, 'settings'),
-      (ApplicationRoutesConstants.home, 'home'),
+      (ApplicationRoutesConstants.home, 'connectionList'),
     ]) {
       testWidgets('logs only $screenName when a root route over settings goes to $location', (tester) async {
         final router = await startAuthenticated(tester);
@@ -300,10 +299,10 @@ void main() {
     });
 
     // Going from a root route under a root dialog removes the root route and pops the dialog in the same frame. The
-    // settings case reproduces the gap; the home case passed before too and guards against logging settings and home.
+    // settings case reproduces the gap; the home case passed before too and guards against logging settings and the connection list.
     for (final (location, screenName) in const [
       (ApplicationRoutesConstants.settings, 'settings'),
-      (ApplicationRoutesConstants.home, 'home'),
+      (ApplicationRoutesConstants.home, 'connectionList'),
     ]) {
       testWidgets('logs only $screenName when a root route under a root dialog goes to $location', (tester) async {
         final router = await startAuthenticated(tester);

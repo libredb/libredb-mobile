@@ -355,7 +355,7 @@ class ResilienceInterceptor extends Interceptor {
   /// Extract a stable endpoint key from a request path.
   ///
   /// Strips trailing path segments that look like IDs (numeric, UUIDs, etc.)
-  /// so that `/admin/users/123` and `/admin/users/456` share the same breaker.
+  /// so that `/items/123` and `/items/456` share the same breaker.
   String _extractEndpointKey(String path) {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.isEmpty) return '/';

@@ -14,7 +14,7 @@ const Key forgotPasswordTextFieldEmailKey = Key("forgotPasswordTextFieldEmail");
 const Key settingsChangePasswordButtonKey = Key("settingsChangePasswordButtonKey");
 const Key settingsChangeLanguageButtonKey = Key("settingsChangeLanguageButtonKey");
 // Logout is intentionally not exposed from settings — it lives in the
-// sidebar / topbar shell (see SettingsScreen for the rationale).
+// top bar of the shell (see SettingsScreen for the rationale).
 
 // change password screen
 const Key changePasswordButtonSubmitKey = Key("changePasswordButtonSubmitKey");
@@ -30,4 +30,3 @@ const Key communitySponsorKey = Key("communitySponsorKey");
 const Key communityDocsKey = Key("communityDocsKey");
 const Key settingsWebsiteButtonKey = Key("settingsWebsiteButtonKey");
 const Key settingsLicensesButtonKey = Key("settingsLicensesButtonKey");
-const Key sidebarWebsiteButtonKey = Key("sidebarWebsiteButtonKey");

@@ -16,11 +16,6 @@ class SecurityUtils {
     return token != null && token.isNotEmpty;
   }
 
-  static bool isCurrentUserAdmin(List<String>? roles) {
-    if (roles == null) return false;
-    return roles.contains("ROLE_ADMIN");
-  }
-
   /// True when [token] is missing, malformed, or past its `exp` claim.
   static bool isTokenExpired(String? token) {
     if (token == null || token.isEmpty) return true;

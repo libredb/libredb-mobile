@@ -16,7 +16,6 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/change_password_page.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -41,7 +40,6 @@ final _log = AppLogger.getLogger("AccountsScreenTest");
 /// Change Password Screen Test
 void main() {
   //region setup
-  late MockAuthorityBloc authorityBloc;
   late MockChangePasswordBloc changePasswordBloc;
   late StreamController<ChangePasswordState> stateController;
 
@@ -50,15 +48,11 @@ void main() {
   });
 
   setUp(() {
-    authorityBloc = MockAuthorityBloc();
     changePasswordBloc = MockChangePasswordBloc();
     stateController = StreamController<ChangePasswordState>.broadcast();
 
     when(() => changePasswordBloc.stream).thenAnswer((_) => stateController.stream);
     when(() => changePasswordBloc.state).thenReturn(const ChangePasswordInitialState());
-
-    when(() => authorityBloc.stream).thenAnswer((_) => Stream.fromIterable([const AuthorityInitialState()]));
-    when(() => authorityBloc.state).thenReturn(const AuthorityInitialState());
   });
 
   final Iterable<LocalizationsDelegate<dynamic>> locales = [
@@ -70,10 +64,7 @@ void main() {
 
   Widget buildBlocProviders({required Widget child}) {
     return MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthorityBloc>(create: (context) => authorityBloc),
-        BlocProvider<ChangePasswordBloc>(create: (context) => changePasswordBloc),
-      ],
+      providers: [BlocProvider<ChangePasswordBloc>(create: (context) => changePasswordBloc)],
       child: child,
     );
   }
@@ -101,7 +92,7 @@ void main() {
       initialLocation: '/change-password',
       routes: [
         GoRoute(
-          path: '/',
+          path: ApplicationRoutesConstants.home,
           builder: (_, _) => const Scaffold(body: Text('Home')),
         ),
         GoRoute(

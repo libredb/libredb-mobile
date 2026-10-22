@@ -11,7 +11,6 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -27,6 +26,8 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../../support/user_menu.dart';
 
 /// Production chain (no MockInterceptor) with certificate pinning configured.
 const _pinnedProdConfig = AppConfig(
@@ -401,10 +402,9 @@ void main() {
     SsoAutoRedirectGate gate(WidgetTester tester) =>
         tester.element(find.byType(MaterialApp)).read<SsoAutoRedirectGate>();
 
-    // Signs out as the user does: Logout in the sidebar, then Yes in the confirmation dialog.
+    // Signs out as the user does: Logout in the user menu, then Yes in the confirmation dialog.
     Future<void> logOut(WidgetTester tester) async {
-      await tester.tap(find.widgetWithIcon(SidebarNavItem, Icons.logout));
-      await tester.pumpAndSettle();
+      await selectFromUserMenu(tester, Icons.logout);
       await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
       await tester.pumpAndSettle();
     }
@@ -518,7 +518,7 @@ void main() {
       expect(find.text('Kurumsal hesabınızla giriş yapın.'), findsOneWidget);
     });
 
-    testWidgets('a tap signs in and opens the dashboard', (tester) async {
+    testWidgets('a tap signs in and opens the connection list', (tester) async {
       final client = _ScriptedOidcClient();
       await pumpOidcApp(tester, _OidcDependencies(client));
 

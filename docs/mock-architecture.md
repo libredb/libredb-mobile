@@ -231,12 +231,10 @@ Mock JSON files served by `MockInterceptor` live in `assets/mock/` and follow a 
 | --- | --- |
 | `GET /account` | `GET_account.json` |
 | `POST /authenticate` | `POST_authenticate.json` |
-| `GET /admin/users/{id}` | `GET_admin_users_pathParams.json` |
-| `GET /admin/users?page=0&size=10` | `GET_admin_users_queryParams.json` |
-| `GET /admin/users/filter?name=John` | `GET_admin_users_filter_queryParams.json` |
-| `PUT /admin/users` | `PUT_admin_users.json` |
+| `GET /connections/managed` | `GET_connections_managed.json` |
+| `POST /db/query` | `POST_db_query.json` |
 | `POST /account/change-password` | `POST_account_change_password.json` |
-| `DELETE /admin/users/{id}` | *(no file needed — returns 204 directly)* |
+| `DELETE /items/{id}` | *(no file needed — returns 204 directly)* |
 
 **How the file name is resolved** (from `MockInterceptor`):
 
@@ -255,7 +253,7 @@ if (hasPathParams) {
 }
 ```
 
-The `_basePath`, `_pathParams`, and `_queryParams` metadata are injected by `ApiClient` into `options.extra` so the interceptor can distinguish between `/admin/users` (list) and `/admin/users/123` (single item).
+The `_basePath`, `_pathParams`, and `_queryParams` metadata are injected by `ApiClient` into `options.extra` so the interceptor can distinguish between `/items` (list) and `/items/123` (single item).
 
 ## Mock JSON File Structure
 
@@ -364,22 +362,6 @@ The `pathParams: id` argument causes `ApiClient` to:
 1. Build the URL as `/admin/users/{id}`
 2. Store `_basePath: '/admin/users'` and `_pathParams: id` in `options.extra`
 3. In dev mode, `MockInterceptor` reads `_pathParams`, resolves `GET_admin_users_pathParams.json`
-
-## Menu: Direct Asset Read
-
-The shell menu is the one exception where mock data is read outside the interceptor:
-
-```dart
-// lib/app/shell/repositories/menu_repository.dart
-Future<List<Menu>> list() async {
-  final json = await rootBundle.loadString('assets/mock/menus.json');
-  final result = Menu.fromJsonStringList(json);
-  return result;
-}
-```
-
-`AppDependencies.createMenuRepository()` returns this repository in every environment, so the menu comes from the bundled `menus.json` in production too.
-Because the file never goes through `ApiClient`, its name does not follow the `{METHOD}_{path}` convention.
 
 ## Test Layer
 

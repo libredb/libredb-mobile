@@ -10,6 +10,4 @@ abstract class IAccountRepository {
   Future<Result<void>> resetPassword(String mailAddress);
 
   Future<Result<UserEntity>> getAccount();
-
-  Future<Result<UserEntity>> update(UserEntity user);
 }

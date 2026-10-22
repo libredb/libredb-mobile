@@ -1,32 +1,26 @@
 @Tags(['widget'])
 library;
 
-import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
-import 'package:libredb_mobile/features/account/presentation/pages/account_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../mocks/mock_classes.dart';
 import '../../../support/test_env.dart';
+import '../../../support/user_menu.dart';
 
 void main() {
   GoRouter routerOf(WidgetTester tester) =>
       tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
 
-  // The real app, signed in, on the dashboard, after the mock API has answered.
-  Future<void> pumpSignedInOnDashboard(
+  // The real app, signed in, on the connection list, after the mock API has answered.
+  Future<void> pumpSignedIn(
     WidgetTester tester, {
     Size size = const Size(1600, 1600),
     String language = 'en',
@@ -43,35 +37,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> selectFromUserMenu(WidgetTester tester, String label) async {
-    await tester.tap(find.descendant(of: find.byType(TopBarWidget), matching: find.byType(PopupMenuButton<String>)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(PopupMenuItem<String>, label));
-    await tester.pumpAndSettle();
-  }
+  Finder userMenu() => find.descendant(of: find.byType(TopBarWidget), matching: find.byType(PopupMenuButton<String>));
 
   group('TopBarWidget - user menu', () {
-    for (final (label, location, page) in const [
-      ('Account', ApplicationRoutesConstants.account, AccountScreen),
-      ('Settings', ApplicationRoutesConstants.settings, SettingsScreen),
-    ]) {
-      testWidgets('$label opens $location in place of the dashboard', (tester) async {
-        await pumpSignedInOnDashboard(tester);
+    testWidgets('Settings opens /settings in place of the connection list', (tester) async {
+      await pumpSignedIn(tester);
 
-        await selectFromUserMenu(tester, label);
+      await selectFromUserMenu(tester, Icons.settings_outlined);
 
-        expect(routerOf(tester).state.uri.path, location);
-        expect(find.byType(page), findsOneWidget);
-        expect(routerOf(tester).canPop(), isFalse, reason: 'a menu entry replaces the page instead of stacking on it');
-      });
-    }
+      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.settings);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(routerOf(tester).canPop(), isFalse, reason: 'a menu entry replaces the page instead of stacking on it');
+    });
 
     testWidgets('Logout signs the user out and opens the login page with no signed-in page to go back to', (
       tester,
     ) async {
-      await pumpSignedInOnDashboard(tester);
+      await pumpSignedIn(tester);
 
-      await selectFromUserMenu(tester, 'Logout');
+      await selectFromUserMenu(tester, Icons.logout);
       await tester.tap(find.widgetWithText(FilledButton, 'Yes'));
       await tester.pumpAndSettle();
 
@@ -83,77 +67,56 @@ void main() {
 
   group('TopBarWidget - Turkish', () {
     testWidgets('the user menu shows its entries in Turkish', (tester) async {
-      await pumpSignedInOnDashboard(tester, language: 'tr');
+      await pumpSignedIn(tester, language: 'tr');
 
-      await tester.tap(find.descendant(of: find.byType(TopBarWidget), matching: find.byType(PopupMenuButton<String>)));
+      await tester.tap(userMenu());
       await tester.pumpAndSettle();
 
-      for (final label in ['Hesabım', 'Ayarlar', 'Çıkış Yap']) {
+      for (final label in ['Ayarlar', 'Çıkış Yap']) {
         expect(find.widgetWithText(PopupMenuItem<String>, label), findsOneWidget, reason: label);
       }
     });
   });
 
   group('TopBarWidget - phone width', () {
-    Finder userMenu() => find.descendant(of: find.byType(TopBarWidget), matching: find.byType(PopupMenuButton<String>));
-
-    // Small phones, narrowest first. At 320 px the bar overflowed by 4.3 px with the dashboard title and the mock
-    // account's name.
-    for (final size in const [Size(320, 568), Size(360, 640), Size(375, 667)]) {
-      testWidgets('the signed-in top bar fits a ${size.width.toInt()}x${size.height.toInt()} phone', (tester) async {
-        await pumpSignedInOnDashboard(tester, size: size);
-
-        expect(tester.takeException(), isNull);
-        expect(tester.getRect(userMenu()).right, lessThanOrEqualTo(tester.getRect(find.byType(TopBarWidget)).right));
-        expect(find.descendant(of: find.byType(TopBarWidget), matching: find.text('Admin')), findsOneWidget);
-      });
-    }
-
-    // The same phones with the system text size raised to 130 percent, in both app languages.
+    // The narrowest phones, at the default text size and with the system text size raised to 130 percent, in both app
+    // languages.
     for (final language in const ['en', 'tr']) {
-      for (final size in const [Size(320, 568), Size(360, 640), Size(375, 667)]) {
-        testWidgets('the signed-in top bar fits a ${size.width.toInt()}x${size.height.toInt()} phone at text scale 1.3 '
-            'in $language', (tester) async {
-          await pumpSignedInOnDashboard(tester, size: size, language: language, textScale: 1.3);
+      for (final textScale in const [1.0, 1.3]) {
+        for (final size in const [Size(320, 568), Size(360, 640), Size(375, 667)]) {
+          testWidgets('the signed-in top bar fits a ${size.width.toInt()}x${size.height.toInt()} phone at text scale '
+              '$textScale in $language', (tester) async {
+            await pumpSignedIn(tester, size: size, language: language, textScale: textScale);
 
-          expect(tester.takeException(), isNull);
-          expect(tester.getRect(userMenu()).right, lessThanOrEqualTo(tester.getRect(find.byType(TopBarWidget)).right));
-        });
+            expect(tester.takeException(), isNull);
+            expect(
+              tester.getRect(userMenu()).right,
+              lessThanOrEqualTo(tester.getRect(find.byType(TopBarWidget)).right),
+            );
+          });
+        }
       }
     }
 
-    // A screen reader user has to know what the bare menu icon does, in the language of the app.
-    for (final (language, label) in const [('en', 'Open navigation menu'), ('tr', 'Gezinme menüsünü aç')]) {
-      testWidgets('the menu button is announced as "$label" in $language', (tester) async {
+    // A screen reader user has to know what the bare user menu icon does, in the language of the app.
+    for (final language in const ['en', 'tr']) {
+      testWidgets('the user menu button is announced with the menu tooltip in $language', (tester) async {
         final semantics = tester.ensureSemantics();
-        addTearDown(tester.view.reset);
-        tester.view.physicalSize = const Size(360, 640);
-        tester.view.devicePixelRatio = 1.0;
-        TestEnv.authenticate();
+        await pumpSignedIn(tester, size: const Size(360, 640), language: language);
 
-        await tester.pumpWidget(App(language: language));
-        await tester.pumpAndSettle();
-
-        final button = find.descendant(of: find.byType(TopBarWidget), matching: find.byType(IconButton));
+        final label = MaterialLocalizations.of(tester.element(userMenu())).showMenuTooltip;
+        final button = find.descendant(of: userMenu(), matching: find.byType(IconButton));
         expect(tester.getSemantics(button), isSemantics(tooltip: label, isButton: true, hasTapAction: true));
         semantics.dispose();
       });
     }
 
-    // A page title and a first name much longer than the dashboard's and the mock account's, on the narrowest phone.
-    testWidgets('a long page title and a long name are shortened instead of overflowing a 320 px bar', (tester) async {
+    // A page title much longer than any of the app's, on the narrowest phone.
+    testWidgets('a long page title is shortened instead of overflowing a 320 px bar', (tester) async {
       addTearDown(tester.view.reset);
       tester.view.physicalSize = const Size(320, 568);
       tester.view.devicePixelRatio = 1.0;
-      final accountBloc = MockAccountBloc();
-      whenListen(
-        accountBloc,
-        const Stream<AccountState>.empty(),
-        initialState: const AccountState(
-          data: UserEntity(firstName: 'Maximiliano Alejandro', lastName: 'Montgomery'),
-          status: AccountStatus.success,
-        ),
-      );
+      const title = 'A page title far longer than the narrowest phone has room for';
 
       await tester.pumpWidget(
         MaterialApp(
@@ -164,67 +127,13 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: S.delegate.supportedLocales,
-          home: BlocProvider<AccountBloc>.value(
-            value: accountBloc,
-            child: Scaffold(
-              body: TopBarWidget(title: 'Change-password', onMenuTap: () {}),
-            ),
-          ),
+          home: const Scaffold(body: TopBarWidget(title: title)),
         ),
       );
 
       expect(tester.takeException(), isNull);
       expect(tester.getRect(userMenu()).right, lessThanOrEqualTo(320));
-      expect(find.text('Change-password'), findsOneWidget);
-      expect(find.text('Maximiliano Alejandro'), findsOneWidget);
-    });
-  });
-
-  // Without a page title the bar shows the breadcrumb, as on tablets and desktops, and has room for the whole name.
-  group('TopBarWidget - user name beside the breadcrumb', () {
-    testWidgets('a long name is shown in full', (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.physicalSize = const Size(1600, 900);
-      tester.view.devicePixelRatio = 1.0;
-      final accountBloc = MockAccountBloc();
-      whenListen(
-        accountBloc,
-        const Stream<AccountState>.empty(),
-        initialState: const AccountState(
-          data: UserEntity(firstName: 'Maximiliano Alejandro', lastName: 'Montgomery'),
-          status: AccountStatus.success,
-        ),
-      );
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => BlocProvider<AccountBloc>.value(
-              value: accountBloc,
-              child: const Scaffold(body: TopBarWidget()),
-            ),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-
-      await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: const [
-            S.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: S.delegate.supportedLocales,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final name = tester.renderObject<RenderParagraph>(find.text('Maximiliano Alejandro'));
-      expect(name.didExceedMaxLines, isFalse);
-      expect(name.size.width, greaterThan(120));
+      expect(find.text(title), findsOneWidget);
     });
   });
 }

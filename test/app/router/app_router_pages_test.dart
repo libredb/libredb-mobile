@@ -8,7 +8,7 @@ import 'package:libredb_mobile/app/router/forbidden_page.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/register_page.dart';
-import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_home_page.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -108,7 +108,7 @@ void main() {
       await tester.pumpWidget(const App(language: 'en'));
       await tester.pumpAndSettle();
 
-      routerFromApp(tester).go(ApplicationRoutesConstants.userList);
+      routerFromApp(tester).go(ApplicationRoutesConstants.forbidden);
       await tester.pumpAndSettle();
 
       expect(find.byType(ForbiddenPage), findsOneWidget);
@@ -210,7 +210,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.path, ApplicationRoutesConstants.home);
-        expect(find.byType(DashboardHomePage), findsOneWidget);
+        expect(find.byType(ConnectionListPage), findsOneWidget);
       });
 
       testWidgets('returns to the shell after $label has settled', (tester) async {
@@ -227,7 +227,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.path, ApplicationRoutesConstants.home);
-        expect(find.byType(DashboardHomePage), findsOneWidget);
+        expect(find.byType(ConnectionListPage), findsOneWidget);
       });
 
       testWidgets('shows $label without an entering transition', (tester) async {
@@ -264,7 +264,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ForbiddenPage), findsNothing);
-      expect(find.byType(DashboardHomePage), findsOneWidget);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
     }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
     testWidgets('declares every route with a pageBuilder', (tester) async {

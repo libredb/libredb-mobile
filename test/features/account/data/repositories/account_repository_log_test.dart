@@ -17,7 +17,6 @@ void main() {
         repository.changePassword(const PasswordChangeDTO(currentPassword: 'Old#1', newPassword: 'New#2')),
     'resetPassword': (repository) => repository.resetPassword('jane@example.test'),
     'getAccount': (repository) => repository.getAccount(),
-    'update': (repository) => repository.update(const UserEntity(id: 'user-1', login: 'jane')),
   };
   const failures = [
     (status: 401, kind: 'auth error', label: '[W]'),

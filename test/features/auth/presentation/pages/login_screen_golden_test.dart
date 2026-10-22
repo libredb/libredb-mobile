@@ -2,7 +2,6 @@ import 'package:alchemist/alchemist.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -18,17 +17,12 @@ void main() {
   setUpAll(() => TestEnv.autoReset = false);
 
   late MockLoginBloc loginBloc;
-  late MockAccountBloc accountBloc;
 
   setUp(() {
     loginBloc = MockLoginBloc();
-    accountBloc = MockAccountBloc();
 
     whenListen(loginBloc, Stream<LoginState>.empty(), initialState: const LoginInitialState());
     when(() => loginBloc.state).thenReturn(const LoginInitialState());
-
-    whenListen(accountBloc, Stream<AccountState>.empty(), initialState: const AccountState());
-    when(() => accountBloc.state).thenReturn(const AccountState());
   });
 
   Widget buildScreen({bool dark = false, AuthMode authMode = const JwtAuthMode()}) {
@@ -36,7 +30,6 @@ void main() {
       providers: [
         RepositoryProvider<AuthMode>.value(value: authMode),
         BlocProvider<LoginBloc>.value(value: loginBloc),
-        BlocProvider<AccountBloc>.value(value: accountBloc),
         RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
       ],
       child: const LoginScreen(),

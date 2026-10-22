@@ -9,7 +9,6 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
@@ -21,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../support/test_env.dart';
+import '../../support/user_menu.dart';
 
 const _appConfig = AppConfig(
   environment: Environment.dev,
@@ -115,15 +115,14 @@ class _CacheKeepingStore extends InMemorySharedPreferencesStore {
   Future<bool> remove(String key) async => key.startsWith('flutter._cache_') ? false : super.remove(key);
 }
 
-/// Signs out as the user does: Logout in the sidebar, then Yes in the confirmation dialog.
+/// Signs out as the user does: Logout in the user menu, then Yes in the confirmation dialog.
 Future<void> _logOut(WidgetTester tester) async {
-  await tester.tap(find.widgetWithIcon(SidebarNavItem, Icons.logout));
-  await tester.pumpAndSettle();
+  await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
   await tester.pumpAndSettle();
 }
 
-/// Starts the app of an oidc build over [client] with the mock session stored, on the dashboard.
+/// Starts the app of an oidc build over [client] with the mock session stored, on the connection list.
 Future<void> _startSignedIn(WidgetTester tester, _FakeOidcClient client) async {
   TestEnv.authenticate();
   await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies(client)));

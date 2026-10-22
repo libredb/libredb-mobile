@@ -32,7 +32,7 @@ fvm flutter test --concurrency=1 --test-randomize-ordering-seed=random  # to fin
 ```
 
 The tags are declared in `dart_test.yaml`.
-The smoke test `test/integration/app_smoke_test.dart` boots the whole app in mock mode and drives it from sign-in to the dashboard; it runs headless as part of `flutter test`.
+The smoke test `test/integration/app_smoke_test.dart` boots the whole app in mock mode and drives it from sign-in to the connection list; it runs headless as part of `flutter test`.
 
 ## Git hooks
 

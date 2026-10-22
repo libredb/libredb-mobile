@@ -5,7 +5,7 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/account/data/models/change_password.dart';
 import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
-import 'package:libredb_mobile/features/users/data/models/user.dart';
+import 'package:libredb_mobile/features/account/data/models/user.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/shared/models/user_entity.dart';
 
@@ -17,7 +17,6 @@ class AccountRepository implements IAccountRepository {
   static final _log = AppLogger.getLogger('AccountRepository');
 
   static const _resource = 'account';
-  static const userIdNotNull = 'User id not null';
 
   @override
   Future<Result<UserEntity>> register(UserEntity newUser) async {
@@ -145,38 +144,6 @@ class AccountRepository implements IAccountRepository {
       return Failure(_mapFetchDataException(e));
     } catch (e, st) {
       _log.error('getAccount error: {}', [e]);
-      return Failure(UnknownError(e.toString()), stackTrace: st);
-    }
-  }
-
-  @override
-  Future<Result<UserEntity>> update(UserEntity user) async {
-    _log.debug('BEGIN:saveAccount repository start : {}', [user]);
-    try {
-      if (user.id == null || user.id!.isEmpty) {
-        return const Failure(ValidationError(userIdNotNull));
-      }
-      final updatedUser = user.copyWith(langKey: user.langKey ?? 'en');
-      final response = await _apiClient.post<User>('/$_resource', User.fromEntity(updatedUser));
-      final decoded = ApiClient.decodeUTF8(response.data!);
-      final parsed = User.fromJsonString(decoded);
-      if (parsed == null) {
-        return const Failure(ServerError('Update account response is null'));
-      }
-      final result = parsed;
-      _log.debug('END:saveAccount successful');
-      return Success(result);
-    } on UnauthorizedException catch (e) {
-      _log.warn('update auth error: {}', [e]);
-      return Failure(AuthError(e.toString()));
-    } on BadRequestException catch (e) {
-      _log.info('update validation error: {}', [e]);
-      return Failure(ValidationError(e.toString()));
-    } on FetchDataException catch (e) {
-      _log.warn('update network error: {}', [e]);
-      return Failure(_mapFetchDataException(e));
-    } catch (e, st) {
-      _log.error('update error: {}', [e]);
       return Failure(UnknownError(e.toString()), stackTrace: st);
     }
   }

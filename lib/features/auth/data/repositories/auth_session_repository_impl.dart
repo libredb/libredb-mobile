@@ -169,7 +169,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
         errors.add('${key.key}: $e');
       }
     }
-    // Cached GET responses, such as /account and /admin/users, are this user's data too.
+    // Cached GET responses, such as /account and /connections/managed, are this user's data too.
     try {
       await _cacheStorage.clear();
     } catch (e) {

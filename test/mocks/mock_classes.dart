@@ -10,30 +10,19 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 // BLoC imports
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/forgot_password_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/register_bloc.dart';
-import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_event.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
-import 'package:libredb_mobile/features/users/application/user_editor_bloc.dart';
-import 'package:libredb_mobile/features/users/application/user_list_bloc.dart';
 
 // Repository imports (concrete)
 import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
-import 'package:libredb_mobile/app/shell/repositories/menu_repository.dart';
 
 // Repository imports (interfaces)
 import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/shared/models/user_entity.dart';
@@ -43,10 +32,6 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 // Concrete repository mocks (for BLoC tests that depend on concrete types)
 class MockAccountRepository extends Mock implements AccountRepository {}
 
-class MockAuthorityRepository extends Mock implements IAuthorityRepository {}
-
-class MockMenuRepository extends Mock implements MenuRepository {}
-
 // Interface repository mocks (for use case tests)
 class MockIAccountRepository extends Mock implements IAccountRepository {}
 
@@ -54,21 +39,11 @@ class MockIAuthRepository extends Mock implements IAuthRepository {}
 
 class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository {}
 
-class MockIUserRepository extends Mock implements IUserRepository {}
-
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 
 // BLoC mocks (using MockBloc from bloc_test)
-class MockAccountBloc extends MockBloc<AccountEvent, AccountState> implements AccountBloc {}
-
-class MockUserListBloc extends MockBloc<UserListEvent, UserListState> implements UserListBloc {}
-
-class MockUserEditorBloc extends MockBloc<UserEditorEvent, UserEditorState> implements UserEditorBloc {}
-
-class MockAuthorityBloc extends MockBloc<AuthorityEvent, AuthorityState> implements AuthorityBloc {}
-
 class MockChangePasswordBloc extends MockBloc<ChangePasswordEvent, ChangePasswordState> implements ChangePasswordBloc {}
 
 class MockForgotPasswordBloc extends MockBloc<ForgotPasswordEvent, ForgotPasswordState> implements ForgotPasswordBloc {}
@@ -76,10 +51,6 @@ class MockForgotPasswordBloc extends MockBloc<ForgotPasswordEvent, ForgotPasswor
 class MockRegisterBloc extends MockBloc<RegisterEvent, RegisterState> implements RegisterBloc {}
 
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
-
-class MockDynamicFormBloc extends MockBloc<DynamicFormEvent, DynamicFormState> implements DynamicFormBloc {}
-
-class MockSystemDashboardCubit extends MockCubit<SystemDashboardState> implements SystemDashboardCubit {}
 
 // Service mocks
 class MockAnalyticsService extends Mock implements IAnalyticsService {}
@@ -102,11 +73,6 @@ class FakeSendOtpEntity extends Fake implements SendOtpEntity {}
 
 class FakeVerifyOtpEntity extends Fake implements VerifyOtpEntity {}
 
-class FakeAccountEvent extends Fake implements AccountEvent {}
-
-// UserListEvent / UserEditorEvent are sealed (Dart 3); we use concrete
-// variants directly as fallback values instead of Fakes.
-
 class FakeForgotPasswordEvent extends Fake implements ForgotPasswordEvent {}
 
 class FakeChangePasswordEvent extends Fake implements ChangePasswordEvent {}
@@ -115,21 +81,15 @@ class FakeRegisterEvent extends Fake implements RegisterEvent {}
 
 class FakeLoginEvent extends Fake implements LoginEvent {}
 
-class FakeDynamicFormEvent extends Fake implements DynamicFormEvent {}
-
 class FakeUri extends Fake implements Uri {}
 
 /// Register all fallback values needed for mocktail's any() matcher.
 /// Call this in setUpAll() for tests that use any() with non-nullable types.
 void registerAllFallbackValues() {
-  registerFallbackValue(FakeAccountEvent());
-  registerFallbackValue(const UserListSearch());
-  registerFallbackValue(const UserEditorReset());
   registerFallbackValue(FakeForgotPasswordEvent());
   registerFallbackValue(FakeChangePasswordEvent());
   registerFallbackValue(FakeRegisterEvent());
   registerFallbackValue(FakeLoginEvent());
-  registerFallbackValue(FakeDynamicFormEvent());
   registerFallbackValue(FakeUri());
   registerFallbackValue(FakeUserEntity());
   registerFallbackValue(FakePasswordChangeDTO());

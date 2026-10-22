@@ -6,18 +6,13 @@ import 'package:libredb_mobile/app/localization/locale_cubit.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
-import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/app/shell/repositories/menu_repository.dart';
 import 'package:libredb_mobile/features/account/application/usecases/get_account_usecase.dart';
-import 'package:libredb_mobile/features/account/application/usecases/update_account_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/authenticate_user_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/clear_auth_session_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
@@ -35,25 +30,17 @@ import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth
 import 'package:libredb_mobile/features/auth/data/services/misconfigured_sso_session_startup.dart';
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
-import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
 import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
-import 'package:libredb_mobile/features/users/application/usecases/list_authorities_usecase.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
-import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
-import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 class AppScope extends StatelessWidget {
@@ -163,9 +150,6 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<IAccountRepository>(
           create: (context) => dependencies.createAccountRepository(context.read<ApiClient>()),
         ),
-        RepositoryProvider<IAuthorityRepository>(
-          create: (context) => dependencies.createAuthorityRepository(context.read<ApiClient>()),
-        ),
         RepositoryProvider<IConnectionRepository>(
           create: (context) => dependencies.createConnectionRepository(context.read<ApiClient>()),
         ),
@@ -202,15 +186,8 @@ class AppScope extends StatelessWidget {
           RepositoryProvider<IAuthRepository>(create: (context) => context.read<SsoSignOutAuthRepository>()),
           RepositoryProvider<ISsoSignOutRepository>(create: (context) => context.read<SsoSignOutAuthRepository>()),
         ],
-        RepositoryProvider<IDynamicFormRepository>(
-          create: (context) => dependencies.createDynamicFormRepository(context.read<ApiClient>()),
-        ),
         RepositoryProvider<ILifecycleRepository>(
           create: (context) => dependencies.createLifecycleRepository(context.read<ApiClient>()),
-        ),
-        RepositoryProvider<MenuRepository>(create: (_) => dependencies.createMenuRepository()),
-        RepositoryProvider<IUserRepository>(
-          create: (context) => dependencies.createUserRepository(context.read<ApiClient>()),
         ),
       ],
       child: MultiBlocProvider(
@@ -229,16 +206,6 @@ class AppScope extends StatelessWidget {
                   : SignInWithSsoUseCase(context.read<ISsoAuthRepository>()),
             ),
           ),
-          BlocProvider<AuthorityBloc>(
-            create: (context) =>
-                AuthorityBloc(listAuthoritiesUseCase: ListAuthoritiesUseCase(context.read<IAuthorityRepository>())),
-          ),
-          BlocProvider<AccountBloc>(
-            create: (context) => AccountBloc(
-              getAccountUseCase: GetAccountUseCase(context.read<IAccountRepository>()),
-              updateAccountUseCase: UpdateAccountUseCase(context.read<IAccountRepository>()),
-            ),
-          ),
           BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()..add(const LoadTheme())),
           // Created, and the first check sent, when App's LifecycleGate first builds.
           BlocProvider<LifecycleBloc>(
@@ -251,23 +218,10 @@ class AppScope extends StatelessWidget {
             create: (_) =>
                 LocaleCubit(storage: dependencies.createLocalStorage(), defaultLocale: defaultLocale)..restore(),
           ),
-          BlocProvider<MenuBloc>(
-            create: (context) => MenuBloc(
+          BlocProvider<SignOutBloc>(
+            create: (context) => SignOutBloc(
               logoutUseCase: LogoutUseCase(context.read<IAuthRepository>()),
-              menuRepository: context.read<MenuRepository>(),
               ssoSignOutUseCase: oidcSettings == null ? null : SsoSignOutUseCase(context.read<ISsoSignOutRepository>()),
-            ),
-          ),
-          // Created with the app instead of on first use, so the stored collapse state is restored before the shell
-          // first shows the sidebar, which would otherwise open expanded and then animate closed.
-          BlocProvider<SidebarBloc>(lazy: false, create: (_) => SidebarBloc()..add(const RestoreSidebarCollapse())),
-          BlocProvider<SystemDashboardCubit>(
-            create: (context) => SystemDashboardCubit(
-              connectivityService: ConnectivityService.instance,
-              featureFlagService: FeatureFlagService.instance,
-              resilienceInterceptor: ResilienceInterceptor.instance,
-              cacheStorage: SharedPrefsCacheStorage.instance,
-              apiClient: context.read<ApiClient>(),
             ),
           ),
         ],

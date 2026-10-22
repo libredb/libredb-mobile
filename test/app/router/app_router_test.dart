@@ -9,7 +9,7 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_home_page.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -135,7 +135,32 @@ void main() {
       routerFromApp(tester).go('${ApplicationRoutesConstants.login}?returnUrl=$returnUrl');
       await tester.pumpAndSettle();
 
-      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.home);
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.connectionList);
+    });
+
+    testWidgets('signed in, / opens the connection list', (tester) async {
+      setDesktopViewport(tester);
+      TestEnv.authenticate();
+      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpAndSettle();
+      routerFromApp(tester).go(ApplicationRoutesConstants.settings);
+      await tester.pumpAndSettle();
+
+      routerFromApp(tester).go('/');
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
+    });
+
+    testWidgets('signed out, / opens the login page with no returnUrl', (tester) async {
+      setDesktopViewport(tester);
+      startOn(tester, '/');
+      await tester.pumpWidget(const App(language: 'en'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.login);
     });
 
     testWidgets('never builds the login page on an authenticated cold start', (tester) async {
@@ -146,8 +171,8 @@ void main() {
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(loginFrames, isEmpty, reason: 'frames that built the login page');
-      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.home);
-      expect(find.byType(DashboardHomePage), findsOneWidget);
+      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
       verifyNever(
         () => analytics.logScreenView(
           screenName: any(named: 'screenName', that: equals('login')),
@@ -238,7 +263,7 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies()));
       await tester.pumpAndSettle();
-      expect(find.byType(DashboardHomePage), findsOneWidget);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
 
       routerFromApp(tester).go(ApplicationRoutesConstants.changePassword);
       await tester.pumpAndSettle();
@@ -297,7 +322,7 @@ void main() {
 
       // A misconfigured oidc build can neither sign in nor restore a stored session.
       if (dependencies.authMode is OidcAuthMode) {
-        testWidgets('in $mode mode, signed in, /oauth2redirect lands on the dashboard', (tester) async {
+        testWidgets('in $mode mode, signed in, /oauth2redirect lands on the connection list', (tester) async {
           setDesktopViewport(tester);
           TestEnv.authenticate();
           await tester.pumpWidget(App(language: 'en', dependencies: dependencies));
@@ -308,8 +333,8 @@ void main() {
           routerFromApp(tester).go('/oauth2redirect?code=SECRETCODE&state=SECRETSTATE');
           await tester.pumpAndSettle();
 
-          expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.home);
-          expect(find.byType(DashboardHomePage), findsOneWidget);
+          expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.connectionList);
+          expect(find.byType(ConnectionListPage), findsOneWidget);
         });
       }
     }
