@@ -2,7 +2,7 @@
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS-2E7D32)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-005571.svg)](LICENSE)
 
 The mobile client of [LibreDB Studio](https://github.com/libredb/libredb-studio), for Android and iOS.
 Sign in with your organization's Keycloak account, see the databases Studio offers you, look inside them, and run SQL from your phone.
@@ -100,4 +100,9 @@ The app started from the [flutter-bloc-advanced](https://github.com/cevheri/flut
 
 ## License
 
-[MIT](LICENSE).
+LibreDB Mobile is source-available under the [Elastic License 2.0](LICENSE), with SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ as the licensor.
+You may use, copy and modify it.
+You may not provide it to third parties as a hosted or managed service, or alter, remove or obscure any licensing, copyright or other notices of the licensor.
+This is a summary: the [LICENSE](LICENSE) file holds the full terms.
+
+The app includes code from the [flutter-bloc-advanced](https://github.com/cevheri/flutter-bloc-advanced) template, which is licensed under the MIT License; [NOTICE](NOTICE) reproduces that license.
