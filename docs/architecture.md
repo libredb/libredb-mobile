@@ -90,7 +90,7 @@ Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`:
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
 
 `GET /api/auth/me` answers 401 without a code both for a refused token and when Studio cannot reach Keycloak, so a 401 there does not prove the session is over.
-Today `TokenRefreshInterceptor` ends the session when the request still answers 401 after a refresh, whatever the code.
+Today `TokenRefreshInterceptor` ends the session when the request still answers 401 after a refresh, whether it carries `AUTH_REQUIRED` or no code.
 The rule [#12](https://github.com/libredb/libredb-mobile/issues/12) implements:
 
 - A 401 without a code that comes back after a successful refresh leaves the session alone; the error reaches the screen, which offers a retry.
