@@ -15,9 +15,12 @@ import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.d
 import 'package:libredb_mobile/features/studio_status/data/models/studio_status_json.dart';
 import 'package:libredb_mobile/features/studio_status/domain/entities/governance_outage.dart';
 import 'package:libredb_mobile/features/studio_status/domain/entities/studio_readiness.dart';
+import 'package:dio/dio.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,8 +44,50 @@ import 'package:flutter_test/flutter_test.dart';
 /// with a libredb-mobile access token; docs/studio.md lists the seeds and the command that recorded each one.
 /// The Redis fixtures (`*_redis*.json` and `keyscan_*.json`) come from seed:dev-redis of tool/studio-dev the same way;
 /// `keyscan_requests.json` holds the body each recorded key-scan page was requested with.
+/// The refusals of `GET /api/auth/me` (`me_norole.json`, `me_expired.json` and `me_idp_unavailable.json`) come from
+/// Studio main at c9989a6b5 in tool/studio-dev, which has libredb-studio#1922; docs/studio.md says how each was produced.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
+
+  group('GET /api/auth/me refused', () {
+    DioException answer(int status, String body) {
+      final request = RequestOptions(path: '/auth/me');
+      return DioException(
+        requestOptions: request,
+        response: Response(requestOptions: request, statusCode: status, data: body),
+      );
+    }
+
+    AppError mapped(int status, String body) =>
+        studioError(FetchDataException(body, statusCode: status, errorCode: ApiClient.errorCodeOf(body)));
+
+    test('for an account without a Studio role: no refresh, the account code', () {
+      final body = fixture('me_norole');
+
+      expect(
+        mapped(403, body),
+        isA<AuthError>().having((e) => e.code, 'code', AppErrorCode.studioAccountHasNoRole.key),
+      );
+      expect(isStudioSessionExpired(answer(403, body)), isFalse);
+      expect(isStudioSessionRefused(answer(403, body)), isFalse);
+    });
+
+    test('for an expired access token: a refresh, and the end of the session if it comes again', () {
+      final body = fixture('me_expired');
+
+      expect(mapped(401, body).code, AppErrorCode.authInvalidAccessToken.key);
+      expect(isStudioSessionExpired(answer(401, body)), isTrue);
+      expect(isStudioSessionRefused(answer(401, body)), isTrue);
+    });
+
+    test('while Studio cannot reach the identity provider: no refresh, a transient error', () {
+      final body = fixture('me_idp_unavailable');
+
+      expect(mapped(503, body).code, AppErrorCode.studioIdentityProviderUnavailable.key);
+      expect(isStudioSessionExpired(answer(503, body)), isFalse);
+      expect(isStudioSessionRefused(answer(503, body)), isFalse);
+    });
+  });
 
   test('GET /api/auth/me of a bearer session', () {
     final identity = StudioIdentityModel.fromJsonString(fixture('me'));

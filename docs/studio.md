@@ -330,4 +330,17 @@ record txquery /db/transaction '{"connectionId":"seed:dev-postgres-server","acti
 record txcommit /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"commit","catalog":"app"}'
 ```
 
+The refusals of `GET /api/auth/me` come from the same Studio, which has libredb/libredb-studio#1922:
+
+```shell
+token=$(tool/studio-dev/access-token.sh norole) && record me_norole /auth/me     # 403 BEARER_NO_ROLE
+token=$(tool/studio-dev/access-token.sh user) && sleep 100 && record me_expired /auth/me
+docker compose -f tool/studio-dev/docker-compose.yml stop keycloak
+docker compose -f tool/studio-dev/docker-compose.yml restart libredb-studio
+record me_idp_unavailable /auth/me                                                # with a token fetched before the stop
+```
+
+`me_expired.json` is the 401 `AUTH_REQUIRED` of a token past its 60 seconds and Studio's 30 second clock tolerance, sent with `WWW-Authenticate: Bearer error="invalid_token"`.
+`me_idp_unavailable.json` is the 503 `IDENTITY_PROVIDER_UNAVAILABLE` of a Studio restarted while Keycloak is stopped, so it has no signing keys cached to check the token with.
+
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads every one of them.
