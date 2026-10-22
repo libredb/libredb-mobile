@@ -94,7 +94,9 @@ The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUD
 
 ## Contributing
 
-Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Issues are welcome: report a bug or propose a change in [GitHub Issues](https://github.com/libredb/libredb-mobile/issues).
+Pull requests from outside the team are not accepted at this time, as [CONTRIBUTING.md](CONTRIBUTING.md) explains, and [SECURITY.md](SECURITY.md) says how to report a vulnerability.
+For licensing, write to [info@libredb.org](mailto:info@libredb.org).
 
 ## License
 

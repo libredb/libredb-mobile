@@ -1,7 +1,11 @@
 # Contributing to LibreDB Mobile
 
-Contributions are welcome.
-This page describes how to report a problem, suggest a change and send code.
+LibreDB Mobile is source-available under the [Elastic License 2.0](LICENSE), and SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ develops it.
+We do not accept pull requests from outside the team at this time, so that SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ keeps the right to license all of the code.
+Only collaborators of the repository can open a pull request, so an outside contributor opens an issue instead, and we will consider the change.
+For licensing, write to info@libredb.org.
+
+When this project starts to accept outside contributions, this file will say how, and under which contributor agreement.
 
 ## Reporting issues
 
@@ -14,12 +18,14 @@ Report a security problem privately, as [SECURITY.md](SECURITY.md) describes, no
 Open an issue with the Feature request form, which adds the `enhancement` label.
 Describe the change and why it would be valuable.
 
-## Submitting code
+Offer a translation the same way, as an issue with the new or corrected texts.
 
-1. Fork the repository and clone your fork:
+## Submitting code (team members)
+
+1. Clone the repository:
 
    ```shell
-   git clone https://github.com/<your-account>/libredb-mobile.git
+   git clone https://github.com/libredb/libredb-mobile.git
    cd libredb-mobile
    fvm install && fvm flutter pub get
    ```
@@ -45,7 +51,7 @@ Describe the change and why it would be valuable.
    fvm flutter test --coverage
    ```
 
-6. Push your branch and open a pull request against `main` of [libredb/libredb-mobile](https://github.com/libredb/libredb-mobile).
+6. Push your branch and open a pull request against `main`.
    Say what you changed and why, and link the issues it addresses.
 
 ## Code style
