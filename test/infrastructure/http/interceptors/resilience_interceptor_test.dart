@@ -1098,7 +1098,7 @@ Dio _retryingDio(_FakeHttpClientAdapter adapter) {
   return (dio, interceptor);
 }
 
-/// Studio's error body (`src/lib/api/errors.ts` in Studio): the message, the code and the status.
+/// Studio's error body (`src/lib/api/error-body.ts` in Studio): the message, the code and the status.
 String _studioBody(String code, int status) => '{"error":"Studio said no","code":"$code","statusCode":$status}';
 
 class _InterceptorResult {

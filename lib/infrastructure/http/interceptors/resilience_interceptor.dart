@@ -19,8 +19,8 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 /// - Only a GET is retried. A POST may run a statement on Studio, which a second copy would run again, and every
 ///   other method changes something on the server, so none of them is repeated, an `Idempotency-Key` header or not.
 /// - An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`, read by
-///   [ApiClient.errorCodeOf]), such as a 503 `GOVERNANCE_UNAVAILABLE` or `AUDIT_UNAVAILABLE`, a 502
-///   `IDENTITY_PROVIDER_UNAVAILABLE` or a 504 `TIMEOUT_ERROR`, is Studio's own answer: it passes through after one
+///   [ApiClient.errorCodeOf]), such as a 503 `GOVERNANCE_UNAVAILABLE`, `AUDIT_UNAVAILABLE` or
+///   `IDENTITY_PROVIDER_UNAVAILABLE`, or a 504 `TIMEOUT_ERROR`, is Studio's own answer: it passes through after one
 ///   request, so the repository can report what Studio said, and it does not count against the circuit breaker.
 /// - Non-retryable: 400, 401, 403, 404, 422 pass through immediately.
 /// - A request that [ConnectivityInterceptor] rejected because the device is offline (its error is a

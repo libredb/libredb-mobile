@@ -9,7 +9,7 @@ The rules for Studio's endpoints are in [architecture.md](architecture.md#talkin
 `ResilienceInterceptor` repeats a `GET` that failed with a timeout, a connection error, or a 502, 503 or 504 without a Studio error code in its body, up to three times.
 No other method is repeated: a `POST` to Studio may run a statement, and the other methods change something on the server, so the caller gets the error, an `Idempotency-Key` header or not.
 
-An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`) is Studio's own answer, such as a 503 `GOVERNANCE_UNAVAILABLE`, a 502 `IDENTITY_PROVIDER_UNAVAILABLE` or a 504 `TIMEOUT_ERROR`.
+An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`) is Studio's own answer, such as a 503 `GOVERNANCE_UNAVAILABLE` or `IDENTITY_PROVIDER_UNAVAILABLE`, or a 504 `TIMEOUT_ERROR`.
 It reaches the repository after one request, so the user sees what Studio said, and it is never repeated.
 
 After five failures in a row the interceptor opens the endpoint's circuit and refuses its requests for 30 seconds with `CircuitBreakerOpenException`.
