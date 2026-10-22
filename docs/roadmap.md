@@ -13,7 +13,7 @@ How the app talks to Studio is in [architecture.md](architecture.md).
 | Milestone | Status |
 | --- | --- |
 | M0 Foundation | Done |
-| M1 Studio API layer | In progress |
+| M1 Studio API layer | Done |
 | M2 Connection list | Planned |
 | M3 Object browser | Planned |
 | M4 SQL editor | Planned |
@@ -41,6 +41,7 @@ A typed Dart client for the Studio endpoints the next milestones need, with no n
 - Repositories for the session (`/api/auth/me`), connections, the object browser and the SQL editor, each with mock answers and tests.
 
 Done when every repository has tests against recorded Studio answers and one smoke run against the local Studio passes.
+The answers in `test/fixtures/studio/` were recorded from Studio main in `tool/studio-dev` on the SQLite sample, which has no transactions: the transaction methods are tested against hand-written answers only, until the local stack has an engine with transactions.
 
 ## M2 Connection list
 

@@ -173,6 +173,17 @@ When in doubt, prefer sealed and split the BLoC instead of growing the single st
   Both entry points accept both modes, and `jwt` mode must never construct or call anything from the OIDC path.
 - **Backend:** the app's backend is LibreDB Studio, called with the Keycloak access token as bearer; `PROD_API_URL` is Studio's `/api` ([`docs/studio.md`](docs/studio.md)).
 
+## Studio API Layer
+
+The contract, the endpoint table and the error mapping are in `docs/architecture.md`; follow them in every repository that calls Studio.
+
+- A repository catches everything and returns `Failure(studioError(e))` (`lib/infrastructure/studio/studio_errors.dart`); it never maps Studio's statuses itself.
+- Name a connection as `{'connectionId': 'seed:<id>'}`; never send or store database credentials.
+- Never retry a request that runs a statement, and never log statement text or a database error text.
+- Read answers in the feature's `data/models/`: throw a `FormatException` for a missing required field, leave out an optional field of an unexpected type, and treat Studio's kind ids as opaque strings.
+- Only a 401 `AUTH_REQUIRED` (or a 401 without a code) ends the session (`isStudioSessionExpired`); a new Studio code that the user should understand gets a `studio.*` `AppErrorCode` with English and Turkish messages.
+- Each new method needs a recorded answer in `assets/mock/`, an entry in `test/architecture/mock_asset_coverage_test.dart`, and, once it can be recorded against `tool/studio-dev`, a fixture in `test/fixtures/studio/` read by `test/infrastructure/studio/recorded_studio_answers_test.dart`.
+
 ## Adding a New Feature
 
 1. Create a new directory under `lib/features/<feature_name>/`.

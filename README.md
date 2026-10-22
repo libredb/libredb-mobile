@@ -18,7 +18,7 @@ The project is at its start.
 | --- | --- |
 | Sign-in through Keycloak (PKCE, refresh, logout) | Done |
 | Connection list | First version |
-| Studio API layer | In progress |
+| Studio API layer | Done |
 | Object browser | Planned |
 | SQL editor | Planned |
 | Grant a connection as an admin | Planned, needs Platform v1 |
