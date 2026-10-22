@@ -174,7 +174,7 @@ void main() {
       storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)));
       when(() => rotation.rotate('stored-refresh')).thenAnswer((_) async => const RotationRefused());
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.refreshRefused));
       verify(() => sessionRepository.clear()).called(1);
       expect(storage.writes, isEmpty);
     });
@@ -193,7 +193,7 @@ void main() {
           'without a refresh', () async {
         storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)), refreshToken: refreshToken);
 
-        expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+        expect(await newStartup().run(), _ended(SsoSessionEndReason.noRefreshToken));
         verify(() => sessionRepository.clear()).called(1);
         verifyNever(() => rotation.rotate(any()));
       });
@@ -212,7 +212,7 @@ void main() {
         ),
       );
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.refreshNotStored));
       verify(() => sessionRepository.clear()).called(1);
       expect(errors, contains(contains('SsoSessionStartup')));
       expect(errors.join('\n'), isNot(contains('new-')));
@@ -222,7 +222,7 @@ void main() {
       final errors = _recordLogs(Level.error);
       storage.failReads = true;
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.storeUnreadable));
       verify(() => sessionRepository.clear()).called(1);
       expect(errors, contains(contains('SsoSessionStartup')));
     });
@@ -232,7 +232,7 @@ void main() {
       storage.store[SecureStorageKeys.accessTokenExpiresAt.key] = 'not-a-number-secret';
       storage.store[SecureStorageKeys.refreshToken.key] = 'stored-refresh';
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.storeUnreadable));
       verify(() => sessionRepository.clear()).called(1);
       verifyNever(() => rotation.rotate(any()));
       expect(errors, contains(contains('SsoSessionStartup')));
@@ -245,7 +245,7 @@ void main() {
       when(() => rotation.rotate('stored-refresh')).thenAnswer((_) async => const RotationRefused());
       when(() => sessionRepository.clear()).thenAnswer((_) async => const Failure(UnknownError('clear failed')));
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.refreshRefused));
       expect(errors, contains(contains('SsoSessionStartup')));
     });
 
@@ -279,7 +279,7 @@ void main() {
         return rotated;
       });
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.endedElsewhere));
       expect(storage.writes, isEmpty);
       verifyNever(() => sessionRepository.clear());
     });
@@ -291,7 +291,7 @@ void main() {
         return const RotationRefused();
       });
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.endedElsewhere));
       verifyNever(() => sessionRepository.clear());
     });
 
@@ -300,7 +300,7 @@ void main() {
       when(() => rotation.rotate('stored-refresh')).thenAnswer((_) async => rotated);
       storage.onWrite = () => SessionGeneration.wipe(() async {});
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.endedElsewhere));
       expect(storage.store.values, isNot(contains(startsWith('new-'))));
       expect(storage.store[SecureStorageKeys.accessTokenExpiresAt.key], isNot(encodeAccessTokenExpiry(_newExpiry)));
       verifyNever(() => sessionRepository.clear());
@@ -312,7 +312,7 @@ void main() {
       storage.onWrite = () => SessionGeneration.wipe(() async {});
       storage.failDeletes = true;
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.refreshNotStored));
       verify(() => sessionRepository.clear()).called(1);
     });
 
@@ -321,7 +321,7 @@ void main() {
       storage.onRead = () => SessionGeneration.wipe(() async {});
       when(() => rotation.rotate(any())).thenAnswer((_) async => const RotationRefused());
 
-      expect(await newStartup().run(), isA<SsoStartupSessionEnded>());
+      expect(await newStartup().run(), _ended(SsoSessionEndReason.endedElsewhere));
       verifyNever(() => rotation.rotate(any()));
       verifyNever(() => sessionRepository.clear());
     });
@@ -339,3 +339,7 @@ List<String> _recordLogs(Level level) {
   addTearDown(() => Logger.removeOutputListener(record));
   return lines;
 }
+
+/// A [SsoStartupSessionEnded] for [reason].
+Matcher _ended(SsoSessionEndReason reason) =>
+    isA<SsoStartupSessionEnded>().having((ended) => ended.reason, 'reason', reason);

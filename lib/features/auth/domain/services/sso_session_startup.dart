@@ -18,9 +18,29 @@ final class SsoStartupSignInFailed extends SsoStartupResult {
   final AppErrorCode errorCode;
 }
 
-/// The stored session could not be kept, and is cleared: the user starts signed out.
+/// The stored session could not be kept, and is cleared: the user starts signed out. [reason] says why.
 final class SsoStartupSessionEnded extends SsoStartupResult {
-  const SsoStartupSessionEnded();
+  const SsoStartupSessionEnded(this.reason);
+
+  final SsoSessionEndReason reason;
+}
+
+/// Why [SsoStartupSessionEnded] ended the stored session.
+enum SsoSessionEndReason {
+  /// The stored session could not be read.
+  storeUnreadable,
+
+  /// The access token has expired and no refresh token is stored.
+  noRefreshToken,
+
+  /// The identity provider refused the refresh.
+  refreshRefused,
+
+  /// The refreshed tokens could not be stored, or taken back after the session ended meanwhile.
+  refreshNotStored,
+
+  /// The session ended elsewhere, by a wipe, while the step ran.
+  endedElsewhere,
 }
 
 /// The startup step of an `oidc` build: it refreshes an expired stored access token before the router picks the first

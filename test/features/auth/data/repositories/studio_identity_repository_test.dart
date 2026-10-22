@@ -54,7 +54,9 @@ void main() {
       expect(request.method, 'POST');
       expect(request.path, '/auth/logout');
       expect(request.data, <String, Object?>{});
+      // Studio accepts a POST without an Origin header only with this Content-Type, else 403 ORIGIN_MISMATCH.
       expect(request.contentType, startsWith('application/json'));
+      expect(request.headers[Headers.contentTypeHeader], startsWith('application/json'));
       expect(request.headers['Authorization'], startsWith('Bearer '));
     });
 

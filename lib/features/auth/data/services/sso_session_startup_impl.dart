@@ -47,18 +47,18 @@ class SsoSessionStartup implements ISsoSessionStartup {
       refreshToken = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
     } catch (error) {
       _logUnreadable(error);
-      return _endSession();
+      return _endSession(SsoSessionEndReason.storeUnreadable);
     }
     // The wipe that ended the session cleared it, and a session signed in to since must stay: nothing is ended again.
-    if (SessionGeneration.hasEnded(generation)) return const SsoStartupSessionEnded();
+    if (SessionGeneration.hasEnded(generation)) return const SsoStartupSessionEnded(SsoSessionEndReason.endedElsewhere);
     if (refreshToken == null || refreshToken.isEmpty) {
       _log.info('startup: the access token has expired and no refresh token is stored, so the session ends');
-      return _endSession();
+      return _endSession(SsoSessionEndReason.noRefreshToken);
     }
     final result = await _rotation.rotate(refreshToken);
     if (SessionGeneration.hasEnded(generation)) {
       _log.warn('startup: the session ended while the refresh was on its way, so its answer is dropped');
-      return const SsoStartupSessionEnded();
+      return const SsoStartupSessionEnded(SsoSessionEndReason.endedElsewhere);
     }
     switch (result) {
       case final TokensRotated rotated:
@@ -69,14 +69,14 @@ class SsoSessionStartup implements ISsoSessionStartup {
           _log.error('startup: the refreshed tokens could not be stored, so the session is cleared: {}', [
             error.runtimeType,
           ]);
-          return _endSession();
+          return _endSession(SsoSessionEndReason.refreshNotStored);
         }
         if (SessionGeneration.hasEnded(generation)) return _takeBackStored(stored);
         _log.info('startup: the expired access token was refreshed');
         return const SsoStartupUseStoredSession();
       case RotationRefused():
         _log.info('startup: the identity provider refused the refresh, so the session ends');
-        return _endSession();
+        return _endSession(SsoSessionEndReason.refreshRefused);
       case RotationUnavailable():
         _log.warn('startup: the identity provider could not be reached to refresh, so the stored session is kept');
         return const SsoStartupUseStoredSession();
@@ -132,12 +132,12 @@ class SsoSessionStartup implements ISsoSessionStartup {
       _log.error('startup: the refreshed tokens could not be taken back, so the session is cleared: {}', [
         error.runtimeType,
       ]);
-      return _endSession();
+      return _endSession(SsoSessionEndReason.refreshNotStored);
     }
-    return const SsoStartupSessionEnded();
+    return const SsoStartupSessionEnded(SsoSessionEndReason.endedElsewhere);
   }
 
-  Future<SsoStartupResult> _endSession() async {
+  Future<SsoStartupResult> _endSession(SsoSessionEndReason reason) async {
     switch (await _sessionRepository.clear()) {
       case Success():
         break;
@@ -145,7 +145,7 @@ class SsoSessionStartup implements ISsoSessionStartup {
         // Only the type: AuthSessionRepository.clear has logged the storage errors themselves.
         _log.error('startup: the stored session was not fully cleared: {}', [error.runtimeType]);
     }
-    return const SsoStartupSessionEnded();
+    return SsoStartupSessionEnded(reason);
   }
 }
 

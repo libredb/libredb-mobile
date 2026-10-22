@@ -27,6 +27,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
     required this._studioIdentity,
     required this._sessionRefresh,
     this._studioSignOutTimeout = defaultStudioSignOutTimeout,
+    this._now = DateTime.now,
   });
 
   /// How long a sign-out waits for the refresh of an expired access token and for Studio to record it, together,
@@ -44,6 +45,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   /// The startup step's refresh of an expired stored access token, which also ends a session it cannot refresh.
   final ISsoSessionStartup _sessionRefresh;
   final Duration _studioSignOutTimeout;
+  final DateTime Function() _now;
 
   @override
   Future<Result<AuthTokenEntity>> authenticate(AuthCredentialsEntity userJWT) => _inner.authenticate(userJWT);
@@ -86,30 +88,63 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   }
 
   /// Refreshes an expired stored access token, then asks Studio once to record the sign-out in its audit trail, and
-  /// gives up on both after [_studioSignOutTimeout]. A refresh still on its way after that drops its answer once the
-  /// wipe has ended the session, and a request still on its way is left to end on its own.
+  /// gives up on both after [_studioSignOutTimeout].
+  ///
+  /// A sign-out that leaves Studio without a record writes exactly one warn line naming the reason, never a token, a
+  /// header, an answer body or Studio's error text. Once the budget has passed the attempt is abandoned: a refresh
+  /// still on its way neither sends the record nor logs, and a request still on its way is left to end on its own.
   Future<void> _recordSignOutAtStudio() async {
+    final attempt = _RecordAttempt();
+    String? missed;
     try {
-      await _refreshThenRecord().timeout(_studioSignOutTimeout);
+      missed = await _refreshThenRecord(attempt).timeout(_studioSignOutTimeout);
     } on TimeoutException {
-      _log.debug('logout: the sign-out record at Studio did not end within {}', [_studioSignOutTimeout]);
+      attempt.abandoned = true;
+      missed = 'budget passed';
+    }
+    if (missed != null) _log.warn('logout: Studio has no record of this sign-out: {}', [missed]);
+  }
+
+  /// Answers null when Studio accepted the record, else the reason it has none. Never throws.
+  Future<String?> _refreshThenRecord(_RecordAttempt attempt) async {
+    try {
+      switch (await _sessionRefresh.run()) {
+        case SsoStartupUseStoredSession():
+          break;
+        case SsoStartupSessionEnded(:final reason):
+          return _endReason(reason);
+        case SsoStartupSignInFailed(:final errorCode):
+          return errorCode.key;
+      }
+      // The startup step keeps an expired session when the provider cannot be reached, and Studio records nothing
+      // for an expired bearer, so the expiry is read again and such a bearer is never sent.
+      final DateTime? expiresAt;
+      try {
+        expiresAt = readAccessTokenExpiry(await _secureStorage.read(SecureStorageKeys.accessTokenExpiresAt.key));
+      } catch (_) {
+        return 'store unreadable';
+      }
+      if (expiresAt != null && !expiresAt.isAfter(_now())) return 'provider unreachable';
+      if (attempt.abandoned) return null;
+      switch (await _studioIdentity.recordSignOut()) {
+        case Success():
+          return null;
+        case Failure(:final error):
+          return error.code ?? error.runtimeType.toString();
+      }
     } catch (error) {
       // Only the type: the sign-out goes on without Studio's record.
-      _log.debug('logout: recording the sign-out at Studio failed: {}', [error.runtimeType]);
+      return error.runtimeType.toString();
     }
   }
 
-  Future<void> _refreshThenRecord() async {
-    switch (await _sessionRefresh.run()) {
-      case SsoStartupUseStoredSession():
-        break;
-      case SsoStartupSessionEnded() || SsoStartupSignInFailed():
-        _log.debug('logout: the expired access token could not be refreshed, so Studio cannot record the sign-out');
-        return;
-    }
-    final recorded = await _studioIdentity.recordSignOut();
-    if (recorded is Failure) _log.debug('logout: Studio did not record the sign-out');
-  }
+  static String _endReason(SsoSessionEndReason reason) => switch (reason) {
+    SsoSessionEndReason.storeUnreadable => 'store unreadable',
+    SsoSessionEndReason.noRefreshToken => 'no refresh token',
+    SsoSessionEndReason.refreshRefused => 'refresh refused',
+    SsoSessionEndReason.refreshNotStored => 'refresh not stored',
+    SsoSessionEndReason.endedElsewhere => 'session already ended',
+  };
 
   Future<Result<void>> _endProviderSession(String? idTokenHint) async {
     switch (await _client.endProviderSession(idTokenHint: idTokenHint)) {
@@ -131,4 +166,9 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
     final providerLogout = await signedOut.providerLogout;
     return signedOut.cleared is Failure ? signedOut.cleared : providerLogout;
   }
+}
+
+/// One try at Studio's sign-out record, [abandoned] once its budget has passed.
+class _RecordAttempt {
+  bool abandoned = false;
 }
