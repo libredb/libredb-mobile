@@ -1,0 +1,12 @@
+{
+  "stream": {
+    "unavailable": "Other queue types fill this virtual host's listing page, so Studio cannot list its streams; a stream is still readable by a typed read."
+  },
+  "queue": {
+    "count": 380,
+    "sampledFrom": "one 500-name page of 1,200 queues and streams, by name"
+  },
+  "exchange": {
+    "count": 7
+  }
+}

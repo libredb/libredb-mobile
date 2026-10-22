@@ -1,0 +1,29 @@
+[
+  {
+    "path": [
+      "app",
+      "dbo"
+    ],
+    "name": "dbo",
+    "level": 1,
+    "isSessionDefault": true
+  },
+  {
+    "path": [
+      "app",
+      "guest"
+    ],
+    "name": "guest",
+    "level": 1,
+    "isSessionDefault": false
+  },
+  {
+    "path": [
+      "app",
+      "sales"
+    ],
+    "name": "sales",
+    "level": 1,
+    "isSessionDefault": false
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "path": [
+    "customers/alice"
+  ],
+  "kind": "document",
+  "parts": [
+    {
+      "id": "data",
+      "label": "Data",
+      "text": "{\n  \"name\": \"Alice\",\n  \"tier\": \"gold\",\n  \"orders\": 12\n}",
+      "language": "json",
+      "form": "complete",
+      "origin": "rendered"
+    },
+    {
+      "id": "document",
+      "label": "Document",
+      "text": "{\n  \"name\": \"projects/demo-shop/databases/(default)/documents/customers/alice\",\n  \"fields\": {\n    \"name\": {\n      \"stringValue\": \"Alice\"\n    },\n    \"tier\": {\n      \"stringValue\": \"gold\"\n    },\n    \"orders\": {\n      \"integerValue\": \"12\"\n    }\n  },\n  \"createTime\": \"2026-09-01T08:00:00.000000Z\",\n  \"updateTime\": \"2026-10-20T09:30:00.000000Z\"\n}",
+      "language": "json",
+      "form": "complete",
+      "origin": "rendered"
+    },
+    {
+      "id": "subcollections",
+      "label": "Subcollections",
+      "text": "[\n  \"invoices_01\",\n  \"invoices_02\",\n  \"invoices_03\",\n  \"invoices_04\",\n  \"invoices_05\",\n  \"invoices_06\",\n  \"invoices_07\",\n  \"invoices_08\",\n  \"invoices_09\",\n  \"invoices_10\",\n  \"notes_01\",\n  \"notes_02\",\n  \"notes_03\",\n  \"notes_04\",\n  \"notes_05\",\n  \"notes_06\",\n  \"notes_07\",\n  \"notes_08\",\n  \"notes_09\",\n  \"notes_10\"\n]",
+      "language": "json",
+      "form": "complete",
+      "origin": "rendered",
+      "truncated": {
+        "limit": 20,
+        "reason": "Studio stopped listing collection ids after 10 requests"
+      }
+    }
+  ]
+}

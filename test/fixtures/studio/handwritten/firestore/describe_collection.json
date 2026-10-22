@@ -1,0 +1,43 @@
+{
+  "path": [
+    "customers"
+  ],
+  "columns": [
+    {
+      "name": "__name__",
+      "type": "reference",
+      "nullable": false,
+      "isPrimary": true
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "nullable": false,
+      "isPrimary": false,
+      "provenance": "sampled"
+    },
+    {
+      "name": "orders",
+      "type": "mixed(double|integer)",
+      "nullable": false,
+      "isPrimary": false,
+      "provenance": "sampled"
+    },
+    {
+      "name": "referrer",
+      "type": "null",
+      "nullable": true,
+      "isPrimary": false,
+      "provenance": "sampled"
+    },
+    {
+      "name": "tier",
+      "type": "string",
+      "nullable": true,
+      "isPrimary": false,
+      "provenance": "sampled"
+    }
+  ],
+  "indexes": [],
+  "foreignKeys": []
+}

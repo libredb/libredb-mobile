@@ -1,0 +1,91 @@
+{
+  "capabilities": {
+    "queryLanguage": "json",
+    "supportsExplain": false,
+    "supportsExternalQueryLimiting": false,
+    "supportsInlineRowEdit": false,
+    "supportsTestDataGeneration": true,
+    "supportsResultPagination": false,
+    "supportsTransactions": false,
+    "declaresForeignKeys": false,
+    "supportsMaintenance": true,
+    "maintenanceOperations": [
+      "vacuum",
+      "analyze",
+      "check",
+      "kill"
+    ],
+    "maintenanceOperationSpecs": {
+      "vacuum": {
+        "label": "Compact Collection",
+        "perEntity": true,
+        "global": true
+      },
+      "analyze": {
+        "label": "Validate Collection",
+        "perEntity": true,
+        "global": true
+      },
+      "check": {
+        "label": "Check Collection",
+        "perEntity": true,
+        "global": false
+      },
+      "kill": {
+        "label": "Kill Operation",
+        "perEntity": false,
+        "global": false
+      }
+    },
+    "supportsConnectionString": true,
+    "defaultPort": 27017,
+    "containerLevels": [
+      {
+        "id": "schema",
+        "label": "Database",
+        "labelPlural": "Databases"
+      }
+    ],
+    "containerPathShapes": "exact",
+    "objectKinds": [
+      {
+        "id": "collection",
+        "role": "relation",
+        "label": "Collection",
+        "labelPlural": "Collections",
+        "acceptsRowWrites": true,
+        "hasColumns": true
+      },
+      {
+        "id": "view",
+        "role": "relation",
+        "label": "View",
+        "labelPlural": "Views",
+        "hasSource": true,
+        "sourceLanguage": "json",
+        "hasColumns": true
+      }
+    ],
+    "schemaRefreshPattern": "\"operation\"\\s*:\\s*\"(insert|delete|update)",
+    "supportsQueryCancel": false
+  },
+  "labels": {
+    "entityName": "Collection",
+    "entityNamePlural": "Collections",
+    "rowName": "document",
+    "rowNamePlural": "documents",
+    "selectAction": "Find Documents",
+    "generateAction": "Generate Find",
+    "analyzeAction": "Validate Collection",
+    "vacuumAction": "Compact Collection",
+    "searchPlaceholder": "Search collections or fields...",
+    "analyzeGlobalLabel": "Run Validate",
+    "analyzeGlobalTitle": "Validate Collections",
+    "analyzeGlobalDesc": "Checks collection structure and indexes integrity for all collections.",
+    "vacuumGlobalLabel": "Run Compact",
+    "vacuumGlobalTitle": "Compact Storage",
+    "vacuumGlobalDesc": "Defragments and compacts collection storage to reclaim disk space.",
+    "statementLanguage": "the JSON command object this editor executes, one of {\"collection\": \"<name>\", \"operation\": \"find\", \"filter\": {...}, \"options\": {\"projection\": {...}, \"sort\": {...}, \"skip\": N, \"limit\": N}}, {\"collection\": \"<name>\", \"operation\": \"findOne\", \"filter\": {...}, \"options\": {\"projection\": {...}}}, {\"collection\": \"<name>\", \"operation\": \"aggregate\", \"pipeline\": [...]} (an aggregate takes no \"filter\" and no \"options\": write them as $match, $sort, $skip, $limit and $project stages), {\"collection\": \"<name>\", \"operation\": \"count\", \"filter\": {...}} and {\"collection\": \"<name>\", \"operation\": \"distinct\", \"field\": \"<name>\", \"filter\": {...}}, each with an optional \"database\": \"<name>\" (in the editor another database than the connected one; an agent run reads only the database its connection is bound to). A date is written {\"$date\": \"2026-03-01T00:00:00Z\"} and an ObjectId {\"$oid\": \"<24 hex digits>\"}, in a filter and in a pipeline alike: a plain string never equals a date or an ObjectId, so a filter that compares one with a string matches nothing. It is NOT mongosh shell syntax: a statement that starts with `db.`, or writes ISODate(...) or ObjectId(...), cannot be run here",
+    "slowQueriesEmptyState": "Query stats come from the database profiler - run db.setProfilingLevel() to start recording into system.profile."
+  }
+}

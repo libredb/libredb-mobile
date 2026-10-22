@@ -1,0 +1,25 @@
+{
+  "path": [
+    "APP",
+    "APP_ORDERS_PKG"
+  ],
+  "kind": "package",
+  "parts": [
+    {
+      "id": "spec",
+      "label": "Package specification",
+      "text": "\n  CREATE OR REPLACE EDITIONABLE PACKAGE \"APP\".\"APP_ORDERS_PKG\" IS\n  FUNCTION total(p NUMBER) RETURN NUMBER;\nEND app_orders_pkg;",
+      "language": "sql",
+      "form": "complete",
+      "origin": "regenerated"
+    },
+    {
+      "id": "body",
+      "label": "Package body",
+      "text": "\n  CREATE OR REPLACE EDITIONABLE PACKAGE BODY \"APP\".\"APP_ORDERS_PKG\" IS\n  FUNCTION total(p NUMBER) RETURN NUMBER IS BEGIN RETURN p; END;\nEND app_orders_pkg;",
+      "language": "sql",
+      "form": "complete",
+      "origin": "regenerated"
+    }
+  ]
+}
