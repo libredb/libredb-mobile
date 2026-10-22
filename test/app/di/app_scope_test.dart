@@ -298,10 +298,7 @@ class _FakeOidcClient implements IOidcClient {
   final OidcSignInOutcome outcome;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async => outcome;
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => null;
+  Future<OidcSignInOutcome> signIn() async => outcome;
 
   @override
   Future<TokenRotationResult> refresh({
@@ -832,7 +829,7 @@ void main() {
       final scope = await _pumpScope(tester, dependencies);
 
       final login = scope.read<LoginBloc>();
-      login.add(const SsoSignInRequested(browserDoneMessage: 'done'));
+      login.add(const SsoSignInRequested());
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
 
       expect(login.state, const LoginLoadedState(username: 'jdoe@example.com', roles: ['ROLE_USER']));

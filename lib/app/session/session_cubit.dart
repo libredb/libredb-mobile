@@ -232,7 +232,6 @@ class SessionCubit extends Cubit<SessionState> {
           onLateAnswer: (late) => unawaited(_settleLateSsoStartup(late, settledAfterLimit.future)),
         );
         settled = switch (result) {
-          SsoStartupSignedIn(:final roles) => SessionAuthenticated(roles: roles.toSet()),
           SsoStartupSignInFailed(:final errorCode) => SessionUnauthenticated(
             reason: SessionExpiredReason.signInFailed,
             signInError: errorCode,
@@ -313,9 +312,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// once [settledAfterLimit] gives the emit count at which the stored read
   /// after the limit settled the state, and only while nothing has been
   /// emitted since. A late [SsoStartupSessionEnded] has already cleared the
-  /// stored session, so the session ends; a late [SsoStartupSignedIn] has
-  /// stored a session the cubit has not read, so it is read now and the
-  /// roles match the stored bearer. Any other late answer, or one that
+  /// stored session, so the session ends. Any other late answer, or one that
   /// comes after the state has changed, is only logged: the automatic
   /// redirect gate closed at the limit.
   Future<void> _settleLateSsoStartup(SsoStartupResult late, Future<int> settledAfterLimit) async {
@@ -330,15 +327,6 @@ class SessionCubit extends Cubit<SessionState> {
     switch (late) {
       case SsoStartupSessionEnded():
         await endSession(reason: SessionExpiredReason.expired);
-      case SsoStartupSignedIn():
-        final stored = await _readStoredSession(checkJwtExpiry: false);
-        if (isClosed || _emitCount != settledAt) {
-          _log.warn('restore: the session stored after the time limit was read after the state changed, ignored: {}', [
-            stored,
-          ]);
-          return;
-        }
-        emit(stored);
       case SsoStartupSignInFailed() || SsoStartupUseStoredSession():
         break;
     }

@@ -144,13 +144,10 @@ class _FakeSsoAuthRepository implements ISsoAuthRepository {
   int signIns = 0;
 
   @override
-  Future<SsoSignInResult> signIn({String? webReturnPath, required String browserDoneMessage}) async {
+  Future<SsoSignInResult> signIn() async {
     signIns++;
     return pending?.future ?? result;
   }
-
-  @override
-  Future<SsoSignInResult?> completePendingSignIn() => throw UnimplementedError('LoginBloc never completes a sign-in');
 }
 
 LoginBloc _buildSsoBloc(_FakeSsoAuthRepository ssoRepository, _FakeAccountRepository accountRepository) => LoginBloc(
@@ -807,7 +804,7 @@ void main() {
         roles: ['ROLE_ADMIN', 'ROLE_USER'],
       ),
       build: () => _buildSsoBloc(ssoRepository, accountRepository),
-      act: (bloc) => bloc.add(const SsoSignInRequested(browserDoneMessage: 'done')),
+      act: (bloc) => bloc.add(const SsoSignInRequested()),
       expect: () => [
         const LoginLoadingState(),
         const LoginLoadedState(username: 'admin@example.com', roles: ['ROLE_ADMIN', 'ROLE_USER']),
@@ -819,7 +816,7 @@ void main() {
       'returns to the blank sign-in when the user cancels',
       setUp: () => ssoRepository.result = const SsoSignInCancelled(),
       build: () => _buildSsoBloc(ssoRepository, accountRepository),
-      act: (bloc) => bloc.add(const SsoSignInRequested(browserDoneMessage: 'done')),
+      act: (bloc) => bloc.add(const SsoSignInRequested()),
       expect: () => [const LoginLoadingState(), const LoginInitialState()],
     );
 
@@ -827,17 +824,9 @@ void main() {
       'emits the error code of a rejected sign-in',
       setUp: () => ssoRepository.result = const SsoSignInRejected(AppErrorCode.authOidcNoRole),
       build: () => _buildSsoBloc(ssoRepository, accountRepository),
-      act: (bloc) => bloc.add(const SsoSignInRequested(browserDoneMessage: 'done')),
+      act: (bloc) => bloc.add(const SsoSignInRequested()),
       expect: () => [const LoginLoadingState(), const LoginErrorState(errorCode: AppErrorCode.authOidcNoRole)],
       verify: (_) => expect(accountRepository.getAccountCalls, 0),
-    );
-
-    blocTest<LoginBloc, LoginState>(
-      'stays loading while the web tab is on its way to the provider',
-      setUp: () => ssoRepository.result = const SsoSignInNavigatedAway(),
-      build: () => _buildSsoBloc(ssoRepository, accountRepository),
-      act: (bloc) => bloc.add(const SsoSignInRequested(webReturnPath: '/users', browserDoneMessage: 'done')),
-      expect: () => [const LoginLoadingState()],
     );
 
     blocTest<LoginBloc, LoginState>(
@@ -845,9 +834,9 @@ void main() {
       setUp: () => ssoRepository.pending = Completer<SsoSignInResult>(),
       build: () => _buildSsoBloc(ssoRepository, accountRepository),
       act: (bloc) async {
-        bloc.add(const SsoSignInRequested(browserDoneMessage: 'done'));
+        bloc.add(const SsoSignInRequested());
         await Future<void>.delayed(Duration.zero);
-        bloc.add(const SsoSignInRequested(browserDoneMessage: 'done'));
+        bloc.add(const SsoSignInRequested());
         await Future<void>.delayed(Duration.zero);
         ssoRepository.pending!.complete(const SsoSignInSucceeded(username: 'jdoe', roles: ['ROLE_USER']));
       },
@@ -861,22 +850,11 @@ void main() {
     blocTest<LoginBloc, LoginState>(
       'throws when the build has no single sign-on',
       build: () => _buildBloc(repository),
-      act: (bloc) => bloc.add(const SsoSignInRequested(browserDoneMessage: 'done')),
+      act: (bloc) => bloc.add(const SsoSignInRequested()),
       expect: () => <LoginState>[],
       errors: () => [
         isA<StateError>().having((e) => e.message, 'message', 'single sign-on is not enabled in this build'),
       ],
     );
-
-    test('SsoSignInRequested compares by its return path and browser message', () {
-      expect(
-        const SsoSignInRequested(webReturnPath: '/users', browserDoneMessage: 'done'),
-        const SsoSignInRequested(webReturnPath: '/users', browserDoneMessage: 'done'),
-      );
-      expect(
-        const SsoSignInRequested(webReturnPath: '/users', browserDoneMessage: 'done'),
-        isNot(const SsoSignInRequested(browserDoneMessage: 'done')),
-      );
-    });
   });
 }

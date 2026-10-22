@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
 import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
@@ -10,9 +10,20 @@ import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
 
 import 'app_oidc_user_manager.dart';
-import 'oidc_page_restore.dart';
-import 'oidc_redirect_uris.dart';
 import 'oidc_transaction_store.dart';
+
+/// The platforms an `oidc` build signs in on.
+enum OidcPlatformKind {
+  android,
+  ios;
+
+  /// The platform this build runs on. Throws [UnsupportedError] on any other: the app ships on Android and iOS only.
+  static OidcPlatformKind current() => switch (defaultTargetPlatform) {
+    TargetPlatform.android => android,
+    TargetPlatform.iOS => ios,
+    final other => throw UnsupportedError('OIDC sign-in runs on Android and iOS only, not on ${other.name}'),
+  };
+}
 
 /// The tokens of a sign-in.
 final class OidcTokens {
@@ -72,12 +83,6 @@ final class OidcSignInFailed extends OidcSignInOutcome {
   final OidcFailure failure;
 }
 
-/// The web tab is on its way to the provider; the sign-in completes after the tab comes back, through
-/// [IOidcClient.completePendingSignIn].
-final class OidcSignInNavigatedAway extends OidcSignInOutcome {
-  const OidcSignInNavigatedAway();
-}
-
 /// How a provider logout ended.
 sealed class OidcLogoutOutcome {
   const OidcLogoutOutcome();
@@ -97,21 +102,10 @@ final class ProviderLogoutFailed extends OidcLogoutOutcome {
   const ProviderLogoutFailed();
 }
 
-/// The web tab is on its way to the provider's logout page.
-final class ProviderLogoutNavigatedAway extends OidcLogoutOutcome {
-  const ProviderLogoutNavigatedAway();
-}
-
-/// The OpenID Connect protocol of an `oidc` build: sign-in, the same-tab web completion, refresh and provider logout.
+/// The OpenID Connect protocol of an `oidc` build: sign-in, refresh and provider logout.
 abstract interface class IOidcClient {
-  /// Signs the user in through the provider's page. On web the tab leaves for the provider, and the answer is
-  /// [OidcSignInNavigatedAway]; [webReturnPath] is where the tab lands when it comes back. [browserDoneMessage] is the
-  /// page a desktop browser shows once the app has the answer.
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage});
-
-  /// Completes a same-tab web sign-in from the transaction store after the tab came back from the provider. Null when
-  /// nothing is pending; until then it reads only the store.
-  Future<OidcSignInOutcome?> completePendingSignIn();
+  /// Signs the user in through the provider's page, in a Custom Tab on Android and the shared browser session on iOS.
+  Future<OidcSignInOutcome> signIn();
 
   /// Trades [refreshToken] for new tokens at the provider's token endpoint. The stored session's tokens are handed to
   /// the package for this one call; [idToken] may have expired.
@@ -129,67 +123,43 @@ abstract interface class IOidcClient {
 /// [IOidcClient] over the oidc package's user manager.
 ///
 /// One [AppOidcUserManager] serves the whole run. It is created on first use, and a failed `init()` drops it, so the
-/// next call fetches discovery again. Each sign-in, web completion and refresh ends with the manager forgetting its
-/// user and the store dropping this tab's transaction, so the app's session storage is the only place tokens live.
-/// The one exception is the web tap: the state and the PKCE verifier must stay for `web/redirect.html` and for the
-/// tab that comes back.
+/// next call fetches discovery again. Each sign-in and refresh ends with the manager forgetting its user and the store
+/// dropping the transaction, so the app's session storage is the only place tokens live.
 ///
 /// The operations run one at a time, each after the previous one has ended, because they share the manager: a code
 /// exchange that lands while a refresh holds the adopted user would replace that user's token, whose ID token the
 /// package then reads without checking the signature, and the provider error flag would belong to two operations.
 final class OidcClient implements IOidcClient {
-  /// [launchUrl] opens the browser on Linux and Windows. It must throw rather than answer false, since the package
-  /// logs the authorization URL when a launcher answers false. [pageUri] is the page a web build runs in, which the
-  /// web redirect URIs are built from; it defaults to `Uri.base`. [reloadOnPageRestore] registers the web page's
-  /// back-forward cache listener, `reloadWhenRestoredFromCache` by default. [onManagerCreated] lets a test see each
-  /// manager the client builds.
+  /// [platform] defaults to the platform the build runs on. [onManagerCreated] lets a test see each manager the client
+  /// builds.
   OidcClient({
     required this._settings,
-    required this._loginPath,
-    required this._launchUrl,
     OidcTransactionStore? store,
     http.Client? httpClient,
     OidcPlatformKind? platform,
-    Uri? pageUri,
     Future<void> Function()? cancelAndroidFlow,
-    void Function()? reloadOnPageRestore,
     @visibleForTesting this._onManagerCreated,
-  }) : _store = store ?? OidcTransactionStore.forPlatform(),
+  }) : _store = store ?? OidcTransactionStore(),
        _http = _ProviderHttpClient(httpClient ?? http.Client()),
        _platform = platform ?? OidcPlatformKind.current(),
-       _pageUri = pageUri ?? Uri.base,
-       _cancelAndroidFlow = cancelAndroidFlow ?? (() => OidcAndroidHostApi().cancel()),
-       _reloadOnPageRestore = reloadOnPageRestore ?? reloadWhenRestoredFromCache;
+       _cancelAndroidFlow = cancelAndroidFlow ?? (() => OidcAndroidHostApi().cancel());
 
   static final _log = AppLogger.getLogger('OidcClient');
 
-  /// How long a Linux or Windows sign-in waits for the browser. The package has no way to cancel the loopback
-  /// listener, so a user who closes the browser can sign in again only after this.
-  static const _desktopFlowTimeoutSeconds = 300;
-
-  /// The page a desktop browser shows after a logout. A provider logout takes no message, and the package's default
-  /// page sends the browser to google.com.
-  static const _blankPage =
-      '<!DOCTYPE html><html><head><meta charset="utf-8"><title></title></head><body></body></html>';
+  /// The browser of each platform: a Custom Tab on Android and the shared browser session on iOS.
+  static const _platformOptions = OidcPlatformSpecificOptions(
+    android: OidcNativeOptionsAndroid(useAuthTab: OidcAuthTabMode.never),
+  );
 
   final OidcSettings _settings;
-  final String _loginPath;
-  final Future<bool> Function(Uri) _launchUrl;
   final OidcTransactionStore _store;
   final _ProviderHttpClient _http;
   final OidcPlatformKind _platform;
-  final Uri _pageUri;
   final Future<void> Function() _cancelAndroidFlow;
-  final void Function() _reloadOnPageRestore;
   final void Function(AppOidcUserManager manager)? _onManagerCreated;
-
-  late final _redirectUris = OidcRedirectUris.forPlatform(_settings, platform: _platform, pageUri: _pageUri);
 
   /// The run's manager once its `init()` has started, or null before that and after a failed `init()`.
   Future<AppOidcUserManager>? _ready;
-
-  /// Whether the web page's back-forward cache listener is registered; one serves the whole run.
-  bool _watchingPageRestore = false;
 
   /// Completes when the last operation queued has ended, whatever its result.
   Future<void> _idle = Future<void>.value();
@@ -203,10 +173,9 @@ final class OidcClient implements IOidcClient {
   }
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) =>
-      _oneAtATime(() => _signIn(webReturnPath: webReturnPath, browserDoneMessage: browserDoneMessage));
+  Future<OidcSignInOutcome> signIn() => _oneAtATime(_signIn);
 
-  Future<OidcSignInOutcome> _signIn({String? webReturnPath, required String browserDoneMessage}) async {
+  Future<OidcSignInOutcome> _signIn() async {
     _http.getFailed = false;
     final AppOidcUserManager manager;
     try {
@@ -216,12 +185,12 @@ final class OidcClient implements IOidcClient {
       return const OidcSignInFailed(OidcFailure.discovery);
     }
     manager.startSignIn();
-    final options = _platformOptions(successfulPageResponse: _browserDonePage(browserDoneMessage));
-    if (_platform == OidcPlatformKind.web) return _startWebSignIn(manager, options, webReturnPath);
-
     final lifecycle = _cancelOnResume();
     try {
-      final user = await manager.loginAuthorizationCodeFlow(includeIdTokenHintFromCurrentUser: false, options: options);
+      final user = await manager.loginAuthorizationCodeFlow(
+        includeIdTokenHintFromCurrentUser: false,
+        options: _platformOptions,
+      );
       if (user == null) {
         if (!manager.authorizationResponseReceived) {
           _log.info('The sign-in was cancelled at the identity provider');
@@ -232,88 +201,9 @@ final class OidcClient implements IOidcClient {
       }
       return _signedIn(user);
     } on Object catch (error) {
-      return _signInFailed(error, manager);
+      return _signInFailed(error);
     } finally {
       lifecycle?.dispose();
-      await _store.clearTransactions();
-      await manager.forgetUser();
-    }
-  }
-
-  /// Writes the transaction and sends the tab to the provider. The package answers null once the navigation has
-  /// started; the transaction stays in the store for the tab that comes back.
-  ///
-  /// The login page stays in its loading state after the tab leaves, so the page is reloaded when the browser brings
-  /// it back from the back-forward cache: the reload's startup step then reports the abandoned sign-in as a cancel.
-  Future<OidcSignInOutcome> _startWebSignIn(
-    AppOidcUserManager manager,
-    OidcPlatformSpecificOptions options,
-    String? webReturnPath,
-  ) async {
-    if (!_watchingPageRestore) {
-      _reloadOnPageRestore();
-      _watchingPageRestore = true;
-    }
-    final OidcUser? user;
-    try {
-      user = await manager.loginAuthorizationCodeFlow(
-        originalUri: webAppEntryUri(_pageUri, returnPath: webReturnPath, loginPath: _loginPath),
-        includeIdTokenHintFromCurrentUser: false,
-        options: options,
-      );
-    } on Object catch (error) {
-      await _store.clearTransactions();
-      await manager.forgetUser();
-      return _signInFailed(error, manager);
-    }
-    if (user != null) {
-      await _store.clearTransactions();
-      await manager.forgetUser();
-      throw StateError('The same-tab web sign-in answered a user instead of leaving the page');
-    }
-    return const OidcSignInNavigatedAway();
-  }
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() => _oneAtATime(_completePendingSignIn);
-
-  Future<OidcSignInOutcome?> _completePendingSignIn() async {
-    // A verifier with no response: the tab left for the provider and came back without an answer (Back button).
-    if (_store.hasAbandonedSignIn()) {
-      await _store.clearTransactions();
-      _log.info('The tab came back from the identity provider without an answer, so the sign-in is cancelled');
-      return const OidcSignInCancelled();
-    }
-    final bool pending;
-    try {
-      pending = await _store.hasPendingResponse();
-    } on FormatException {
-      // A malformed index would fail every later sign-in too, since the manager's init() reads it; clearing removes it.
-      await _store.clearTransactions();
-      rethrow;
-    }
-    if (!pending) return null;
-
-    _http.getFailed = false;
-    // The manager's init() exchanges the stored response. A manager that already ran init() in this run would not
-    // read the store again, so the completion always starts a new one, which then serves the rest of the run.
-    final replaced = _ready;
-    final manager = _newManager();
-    try {
-      // The queue lets no other operation use the replaced manager any more, and a manager in _ready is initialized.
-      await (await replaced)?.dispose();
-      await _initialize(manager);
-      final user = manager.currentUser;
-      if (user == null) {
-        _log.warn('The ID token of the web sign-in failed a claim check');
-        return const OidcSignInFailed(OidcFailure.failed);
-      }
-      return _signedIn(user);
-    } on Object catch (error) {
-      return _signInFailed(error, manager);
-    } finally {
-      // The package keeps the state and the response of an error answer, which every later init() would fail on
-      // again, and it keeps the verifier, which would make the next start look like an abandoned sign-in.
       await _store.clearTransactions();
       await manager.forgetUser();
     }
@@ -405,7 +295,6 @@ final class OidcClient implements IOidcClient {
         _log.info('The identity provider has no logout endpoint, so only the app session ended');
         return const NoProviderLogout();
       }
-      final options = _platformOptions(successfulPageResponse: _blankPage);
       final OidcEndSessionResponse? response;
       final lifecycle = _cancelOnResume();
       try {
@@ -413,17 +302,16 @@ final class OidcClient implements IOidcClient {
           metadata: endpoint.metadata,
           request: OidcEndSessionRequest(
             clientId: _settings.clientId,
-            postLogoutRedirectUri: _redirectUris.postLogout,
+            postLogoutRedirectUri: _settings.redirectUri,
             idTokenHint: idTokenHint,
             extra: endpoint.extra,
           ),
-          options: options,
-          preparationResult: OidcFlutter.prepareForRedirectFlow(options),
+          options: _platformOptions,
+          preparationResult: OidcFlutter.prepareForRedirectFlow(_platformOptions),
         );
       } finally {
         lifecycle?.dispose();
       }
-      if (_platform == OidcPlatformKind.web) return const ProviderLogoutNavigatedAway();
       if (response == null) {
         _log.warn('The provider logout was cancelled');
         return const ProviderLogoutFailed();
@@ -444,7 +332,7 @@ final class OidcClient implements IOidcClient {
     final auth0Logout = _settings.issuer.replace(path: '/v2/logout');
     return (
       metadata: OidcProviderMetadata.fromJson({...discovered.src, 'end_session_endpoint': auth0Logout.toString()}),
-      extra: {'returnTo': _redirectUris.postLogout.toString()},
+      extra: {'returnTo': _settings.redirectUri.toString()},
     );
   }
 
@@ -475,8 +363,8 @@ final class OidcClient implements IOidcClient {
     store: _store,
     httpClient: _http,
     settings: OidcUserManagerSettings(
-      redirectUri: _redirectUris.signIn,
-      postLogoutRedirectUri: _redirectUris.postLogout,
+      redirectUri: _settings.redirectUri,
+      postLogoutRedirectUri: _settings.redirectUri,
       scope: _settings.scopes,
       prompt: [?_settings.prompt.parameter],
       extraAuthenticationParameters: {'audience': ?_settings.audience},
@@ -487,33 +375,9 @@ final class OidcClient implements IOidcClient {
       supportOfflineAuth: false,
       initMode: OidcInitMode.blockingValidate,
       discoveryDocumentMaxAge: const Duration(minutes: 5),
-      options: _platformOptions(successfulPageResponse: _blankPage),
+      options: _platformOptions,
     ),
   );
-
-  /// The browser of every platform: a Custom Tab on Android, the shared browser session on iOS and macOS, the same
-  /// tab on web, and [_launchUrl] with a loopback listener on Linux and Windows, which shows [successfulPageResponse].
-  OidcPlatformSpecificOptions _platformOptions({required String successfulPageResponse}) {
-    final desktop = OidcPlatformSpecificOptions_Native(
-      launchUrl: _launchUrl,
-      successfulPageResponse: successfulPageResponse,
-      flowTimeoutSeconds: _desktopFlowTimeoutSeconds,
-    );
-    return OidcPlatformSpecificOptions(
-      android: const OidcNativeOptionsAndroid(useAuthTab: OidcAuthTabMode.never),
-      ios: const OidcNativeOptionsApple(),
-      macos: const OidcNativeOptionsApple(),
-      web: const OidcPlatformSpecificOptions_Web(
-        navigationMode: OidcPlatformSpecificOptions_Web_NavigationMode.samePage,
-      ),
-      linux: desktop,
-      windows: desktop,
-    );
-  }
-
-  static String _browserDonePage(String message) =>
-      '<!DOCTYPE html><html><head><meta charset="utf-8"><title></title></head>'
-      '<body><p>${htmlEscape.convert(message)}</p></body></html>';
 
   /// On Android, cancels the pending browser flow whenever the app comes back to the foreground. A closed Custom Tab
   /// tells the app nothing, so without this the flow would wait forever. After a redirect the plugin has already
@@ -561,18 +425,9 @@ final class OidcClient implements IOidcClient {
   static const _protocolClaims = {'nonce', 'at_hash', 'c_hash'};
 
   /// A transport failure, or a discovery or JWKS failure, is [OidcFailure.discovery]; an error answer or a failed
-  /// check, such as a bad signature or a nonce mismatch, is [OidcFailure.failed]. A Linux or Windows browser step that
-  /// timed out is the user not finishing at the provider, so it is a cancel.
-  OidcSignInOutcome _signInFailed(Object error, AppOidcUserManager manager) {
-    if (manager.browserFlowTimedOut) {
-      _log.info('The sign-in was not finished in the browser within {} seconds, so it is cancelled', [
-        _desktopFlowTimeoutSeconds,
-      ]);
-      return const OidcSignInCancelled();
-    }
-    final failure = !manager.discoveryLoaded || _http.getFailed || _isTransportError(error)
-        ? OidcFailure.discovery
-        : OidcFailure.failed;
+  /// check, such as a bad signature or a nonce mismatch, is [OidcFailure.failed].
+  OidcSignInOutcome _signInFailed(Object error) {
+    final failure = _http.getFailed || _isTransportError(error) ? OidcFailure.discovery : OidcFailure.failed;
     _log.warn('The sign-in failed ({}): {}', [failure.name, () => _describe(error)]);
     return OidcSignInFailed(failure);
   }

@@ -1,9 +1,6 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
 import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
 import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/services/sso_session_startup.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
@@ -12,11 +9,9 @@ import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart'
 import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
 
-/// [ISsoSessionStartup] over the single sign-on, the token rotation and the stored session.
+/// [ISsoSessionStartup] over the token rotation and the stored session.
 ///
-/// [run] first completes a pending same-tab web sign-in. A rejected or cancelled one closes [_gate], so the login
-/// page does not send the user straight back to the provider. Then it checks the stored access token expiry: an
-/// access token that has expired is refreshed through [_rotation] when a refresh token is stored, and the session
+/// [run] checks the stored access token expiry: an access token that has expired is refreshed through [_rotation] when a refresh token is stored, and the session
 /// ends when none is, or when the refresh is refused. A provider that cannot be reached keeps the stored session.
 ///
 /// Only the expiry the sign-in stored is checked, never a JWT `exp`, since a provider's access token need not be a
@@ -30,7 +25,6 @@ import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.d
 /// [_refreshExpiredSession]; a turn it cannot get keeps the stored session.
 class SsoSessionStartup implements ISsoSessionStartup {
   SsoSessionStartup({
-    required this._auth,
     required this._rotation,
     required this._secureStorage,
     required this._sessionRepository,
@@ -47,7 +41,6 @@ class SsoSessionStartup implements ISsoSessionStartup {
 
   static final _log = AppLogger.getLogger('SsoSessionStartup');
 
-  final ISsoAuthRepository _auth;
   final TokenRotation _rotation;
   final ISecureStorage _secureStorage;
   final IAuthSessionRepository _sessionRepository;
@@ -58,33 +51,7 @@ class SsoSessionStartup implements ISsoSessionStartup {
   final ITokenRefreshLock _refreshLock;
 
   @override
-  Future<SsoStartupResult> run() async {
-    final SsoSignInResult? pending;
-    try {
-      pending = await _auth.completePendingSignIn();
-    } catch (error) {
-      // Only the type: a corrupt transaction store's exception may carry what it holds.
-      _log.error('startup: the pending web sign-in could not be completed: {}', [error.runtimeType]);
-      _gate.close();
-      return const SsoStartupSignInFailed(AppErrorCode.authOidcFailed);
-    }
-    switch (pending) {
-      case SsoSignInSucceeded(:final roles):
-        return SsoStartupSignedIn(roles: roles);
-      case SsoSignInRejected(:final errorCode):
-        _gate.close();
-        return SsoStartupSignInFailed(errorCode);
-      case SsoSignInCancelled():
-        // The tab came back without an answer, such as with Back: no automatic redirect may take it there again.
-        _gate.close();
-      case SsoSignInNavigatedAway():
-        _gate.close();
-        throw StateError('A pending web sign-in completed by leaving the page');
-      case null:
-        break;
-    }
-    return _refreshExpiredSession();
-  }
+  Future<SsoStartupResult> run() => _refreshExpiredSession();
 
   @override
   void giveUp() => _gate.close();

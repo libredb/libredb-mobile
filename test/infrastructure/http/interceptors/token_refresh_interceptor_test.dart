@@ -2986,11 +2986,7 @@ class _OidcClientOf implements IOidcClient {
   }) => _provider.refresh(refreshToken);
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) =>
-      throw UnimplementedError();
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() => throw UnimplementedError();
+  Future<OidcSignInOutcome> signIn() => throw UnimplementedError();
 
   @override
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) => throw UnimplementedError();

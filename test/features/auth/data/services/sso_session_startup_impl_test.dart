@@ -1,10 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
 import 'package:flutter_bloc_advance/core/result/result.dart';
 import 'package:flutter_bloc_advance/features/auth/data/services/sso_session_startup_impl.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/services/sso_session_startup.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
@@ -70,7 +68,6 @@ final _newExpiry = DateTime.utc(2026, 10, 21, 12, 5);
 const _opaqueBearer = 'opaque-access-token';
 
 void main() {
-  late MockISsoAuthRepository auth;
   late MockTokenRotation rotation;
   late _MemorySecureStorage storage;
   late MockIAuthSessionRepository sessionRepository;
@@ -82,7 +79,6 @@ void main() {
     ITokenRefreshLock refreshLock = const InProcessTokenRefreshLock(),
     ISecureStorage? secureStorage,
   }) => SsoSessionStartup(
-    auth: auth,
     rotation: rotation,
     secureStorage: secureStorage ?? storage,
     sessionRepository: sessionRepository,
@@ -100,12 +96,10 @@ void main() {
   }
 
   setUp(() {
-    auth = MockISsoAuthRepository();
     rotation = MockTokenRotation();
     storage = _MemorySecureStorage();
     sessionRepository = MockIAuthSessionRepository();
     gate = SsoAutoRedirectGate();
-    when(() => auth.completePendingSignIn()).thenAnswer((_) async => null);
     when(() => sessionRepository.clear()).thenAnswer((_) async => const Success(null));
   });
 
@@ -122,73 +116,14 @@ void main() {
     });
   });
 
-  group('a pending web sign-in', () {
-    test('that succeeds gives SsoStartupSignedIn with its roles and leaves the gate open', () async {
-      when(() => auth.completePendingSignIn())
-          .thenAnswer((_) async => const SsoSignInSucceeded(username: 'jdoe', roles: ['ROLE_USER']));
-      storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)));
-
-      final result = await newStartup().run();
-
-      expect(result, isA<SsoStartupSignedIn>().having((r) => r.roles, 'roles', ['ROLE_USER']));
-      expect(gate.isOpen, isTrue);
-      verifyNever(() => rotation.rotate(any()));
-    });
-
-    test('that is rejected gives SsoStartupSignInFailed with its code and closes the gate', () async {
-      when(() => auth.completePendingSignIn())
-          .thenAnswer((_) async => const SsoSignInRejected(AppErrorCode.authOidcNoRole));
-
-      final result = await newStartup().run();
-
-      expect(
-        result,
-        isA<SsoStartupSignInFailed>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcNoRole),
-      );
-      expect(gate.isOpen, isFalse);
-    });
-
-    test('that was cancelled closes the gate and goes on to the stored expiry', () async {
-      when(() => auth.completePendingSignIn()).thenAnswer((_) async => const SsoSignInCancelled());
-      storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)));
-      when(() => rotation.rotate('stored-refresh')).thenAnswer((_) async => const RotationUnavailable());
-
-      final result = await newStartup().run();
-
-      expect(result, isA<SsoStartupUseStoredSession>());
-      expect(gate.isOpen, isFalse);
-      verify(() => rotation.rotate('stored-refresh')).called(1);
-    });
-
-    test('that throws gives SsoStartupSignInFailed(authOidcFailed), closes the gate and logs only the type', () async {
-      final errors = _recordLogs(Level.error);
-      when(() => auth.completePendingSignIn()).thenThrow(const FormatException('oidc.keys.state secret-state-id'));
-
-      final result = await newStartup().run();
-
-      expect(
-        result,
-        isA<SsoStartupSignInFailed>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcFailed),
-      );
-      expect(gate.isOpen, isFalse);
-      expect(errors, contains(allOf(contains('SsoSessionStartup'), contains('FormatException'))));
-      expect(errors.join('\n'), isNot(contains('secret-state-id')));
-    });
-
-    test('that answers SsoSignInNavigatedAway is a StateError, since a completion never leaves the page', () async {
-      when(() => auth.completePendingSignIn()).thenAnswer((_) async => const SsoSignInNavigatedAway());
-
-      await expectLater(newStartup().run(), throwsStateError);
-      expect(gate.isOpen, isFalse);
-    });
-
+  group('the automatic redirect gate', () {
     test('giveUp closes the gate', () {
       newStartup().giveUp();
 
       expect(gate.isOpen, isFalse);
     });
 
-    test('that is not there goes on to the stored expiry and leaves the gate open', () async {
+    test('stays open after a startup that keeps the stored session', () async {
       storeSession(expiresAt: _now.add(const Duration(minutes: 1)));
 
       final result = await newStartup().run();

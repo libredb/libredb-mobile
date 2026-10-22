@@ -22,18 +22,10 @@ import 'package:flutter_bloc_advance/infrastructure/storage/session_end_signal.d
 
 final _oidcSettings = OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app');
 
-/// Completes a pending web sign-in with [pending], as the tab that came back from the provider would.
-class _PendingSignInClient implements IOidcClient {
-  _PendingSignInClient(this.pending);
-
-  final OidcSignInOutcome? pending;
-
+/// An identity provider these tests never sign in, refresh or log out with.
+class _IdleOidcClient implements IOidcClient {
   @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => pending;
-
-  @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) =>
-      throw UnimplementedError('these tests never tap the sign-in button');
+  Future<OidcSignInOutcome> signIn() => throw UnimplementedError('these tests never tap the sign-in button');
 
   @override
   Future<TokenRotationResult> refresh({
@@ -196,7 +188,7 @@ void main() {
 
     testWidgets('gives the ApiClient this tab\'s lock', (tester) async {
       final lock = _CountingLock();
-      final dependencies = _OidcDependencies(_PendingSignInClient(null));
+      final dependencies = _OidcDependencies(_IdleOidcClient());
       late BuildContext scope;
       await tester.pumpWidget(
         AppScope(
@@ -219,48 +211,8 @@ void main() {
   });
 
   group('AppScope startup in an oidc build', () {
-    testWidgets('a pending web sign-in completes while the session is restored', (tester) async {
-      final expiresAt = DateTime.utc(2100);
-      final scope = await _pumpScope(
-        tester,
-        _OidcDependencies(
-          _PendingSignInClient(
-            OidcSignedIn(
-              tokens: OidcTokens(
-                accessToken: 'sso-access-token',
-                idToken: 'sso-id-token',
-                refreshToken: 'sso-refresh-token',
-                accessTokenExpiresAt: expiresAt,
-              ),
-              claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'subject-1'},
-            ),
-          ),
-        ),
-      );
-
-      expect(await _restoredSession(tester, scope), const SessionAuthenticated(roles: {'ROLE_USER'}));
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), 'sso-access-token');
-      expect(scope.read<SsoAutoRedirectGate>().isOpen, isTrue);
-    });
-
-    testWidgets('a pending web sign-in that fails signs out with its error and closes the gate', (tester) async {
-      final scope = await _pumpScope(
-        tester,
-        _OidcDependencies(_PendingSignInClient(const OidcSignInFailed(OidcFailure.discovery))),
-      );
-
-      expect(
-        await _restoredSession(tester, scope),
-        const SessionUnauthenticated(
-          reason: SessionExpiredReason.signInFailed,
-          signInError: AppErrorCode.authOidcDiscovery,
-        ),
-      );
-      expect(scope.read<SsoAutoRedirectGate>().isOpen, isFalse);
-    });
-
     testWidgets('the ApiClient refreshes through the one TokenRotation the scope provides', (tester) async {
-      final dependencies = _OidcDependencies(_PendingSignInClient(null));
+      final dependencies = _OidcDependencies(_IdleOidcClient());
       final scope = await _pumpScope(tester, dependencies);
 
       scope.read<ApiClient>();
@@ -354,8 +306,8 @@ class _CountingLock implements ITokenRefreshLock {
 
 /// Refreshes the stored session at the provider, rotating every token, with a new access token that expires at
 /// [expiresAt].
-class _RefreshingClient extends _PendingSignInClient {
-  _RefreshingClient(this.expiresAt) : super(null);
+class _RefreshingClient extends _IdleOidcClient {
+  _RefreshingClient(this.expiresAt);
 
   final DateTime expiresAt;
 

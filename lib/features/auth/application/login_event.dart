@@ -59,16 +59,12 @@ class VerifyOtpSubmitted extends LoginEvent {
   String toString() => 'VerifyOtpSubmitted(email: $email, otpCode: $secretMask)';
 }
 
-/// Starts a sign-in through the OpenID Connect provider. On web the tab lands on [webReturnPath] when it comes back
-/// from the provider; [browserDoneMessage] is the page a desktop browser shows once the app has the answer.
+/// Starts a sign-in through the OpenID Connect provider.
 final class SsoSignInRequested extends LoginEvent {
-  const SsoSignInRequested({this.webReturnPath, required this.browserDoneMessage});
-
-  final String? webReturnPath;
-  final String browserDoneMessage;
+  const SsoSignInRequested();
 
   @override
-  List<Object?> get props => [webReturnPath, browserDoneMessage];
+  List<Object?> get props => [];
 }
 
 /// Returns to a blank sign-in when the session ends: the next user must not inherit the signed-out user's name and

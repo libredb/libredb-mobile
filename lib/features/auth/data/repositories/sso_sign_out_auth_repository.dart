@@ -67,7 +67,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
       case ProviderLogoutFailed():
         _log.warn('logout: signed out of the app, but the session at the identity provider may still be active');
         return Failure(AuthError('provider logout incomplete', code: AppErrorCode.authOidcLogoutIncomplete.key));
-      case ProviderSessionEnded() || NoProviderLogout() || ProviderLogoutNavigatedAway():
+      case ProviderSessionEnded() || NoProviderLogout():
         return const Success(null);
     }
   }

@@ -147,7 +147,6 @@ class AppScope extends StatelessWidget {
               appConfig: context.read<AppConfig>(),
               ssoStartup: switch (dependencies.authMode) {
                 OidcAuthMode() => SsoSessionStartup(
-                  auth: context.read<ISsoAuthRepository>(),
                   rotation: context.read<TokenRotation>(),
                   secureStorage: context.read<ISecureStorage>(),
                   sessionRepository: context.read<IAuthSessionRepository>(),

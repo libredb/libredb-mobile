@@ -291,9 +291,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "OTP kodunu almak için e-posta adresinizi girin",
     ),
     "login_password": MessageLookupByLibrary.simpleMessage("Şifre"),
-    "login_sso_browser_done": MessageLookupByLibrary.simpleMessage(
-      "Giriş tamamlandı. Bu sekmeyi kapatıp uygulamaya dönebilirsiniz.",
-    ),
     "login_sso_button": MessageLookupByLibrary.simpleMessage("SSO ile giriş yap"),
     "login_sso_subtitle": MessageLookupByLibrary.simpleMessage("Kurumsal hesabınızla giriş yapın."),
     "login_switch_to_dark_mode": MessageLookupByLibrary.simpleMessage("Koyu temaya geç"),

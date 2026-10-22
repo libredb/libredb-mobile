@@ -17,7 +17,6 @@ final class AuthDefines {
     this._oidcAutoRedirect = const String.fromEnvironment('OIDC_AUTO_REDIRECT'),
     this._oidcLogoutHint = const String.fromEnvironment('OIDC_LOGOUT_HINT'),
     this._oidcRedirectScheme = const String.fromEnvironment('OIDC_REDIRECT_SCHEME'),
-    this._oidcLoopbackPort = const String.fromEnvironment('OIDC_LOOPBACK_PORT'),
   });
 
   final String _authProvider;
@@ -32,7 +31,6 @@ final class AuthDefines {
   final String _oidcAutoRedirect;
   final String _oidcLogoutHint;
   final String _oidcRedirectScheme;
-  final String _oidcLoopbackPort;
 }
 
 /// How the user signs in, chosen at build time by `AUTH_PROVIDER` and injected through `AppDependencies`.
@@ -132,10 +130,9 @@ final class OidcSettings {
     this.autoRedirect = false,
     this.logoutHint = true,
     this.redirectScheme = defaultRedirectScheme,
-    this.loopbackPort = 0,
   });
 
-  /// The custom URI scheme of the native redirect. It must equal the Android manifest placeholder.
+  /// The custom URI scheme of the redirect. It must equal the Android manifest placeholder.
   static const String defaultRedirectScheme = 'org.libredb.mobile';
 
   static const List<String> defaultScopes = ['openid', 'profile', 'email'];
@@ -176,7 +173,6 @@ final class OidcSettings {
       autoRedirect: _flag('OIDC_AUTO_REDIRECT', defines._oidcAutoRedirect, whenUnset: false),
       logoutHint: _flag('OIDC_LOGOUT_HINT', defines._oidcLogoutHint, whenUnset: true),
       redirectScheme: _redirectScheme(defines._oidcRedirectScheme.trim()),
-      loopbackPort: _loopbackPort(defines._oidcLoopbackPort.trim()),
     );
   }
 
@@ -228,15 +224,6 @@ final class OidcSettings {
     return value;
   }
 
-  static int _loopbackPort(String value) {
-    if (value.isEmpty) return 0;
-    final port = RegExp(r'^\d{1,5}$').hasMatch(value) ? int.parse(value) : null;
-    if (port == null || port > 65535) {
-      throw OidcConfigException('OIDC_LOOPBACK_PORT must be a port from 0 to 65535, but it is "$value"');
-    }
-    return port;
-  }
-
   /// The trimmed [value], or null when it is empty.
   static String? _optional(String value) {
     final trimmed = value.trim();
@@ -271,11 +258,15 @@ final class OidcSettings {
   /// Whether the provider logout sends the `id_token_hint`.
   final bool logoutHint;
 
-  /// The custom URI scheme of the redirect on Android, iOS and macOS.
+  /// The custom URI scheme of the redirect.
   final String redirectScheme;
 
-  /// The port of the loopback redirect on Linux and Windows, where 0 means any free port.
-  final int loopbackPort;
+  /// The redirect URI of a sign-in and of a provider logout, `<redirectScheme>:/oauth2redirect`, which the provider
+  /// must list for the client.
+  Uri get redirectUri => Uri(scheme: redirectScheme, path: redirectPath);
+
+  /// The path of [redirectUri], which the router must never show as a location.
+  static const redirectPath = '/oauth2redirect';
 }
 
 /// Thrown by [OidcSettings.parse] for settings that break a rule.

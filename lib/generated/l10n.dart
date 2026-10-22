@@ -1547,16 +1547,6 @@ class S {
     return Intl.message('Sign in with your organization account.', name: 'login_sso_subtitle', desc: '', args: []);
   }
 
-  /// `Sign-in is complete. You can close this tab and return to the app.`
-  String get login_sso_browser_done {
-    return Intl.message(
-      'Sign-in is complete. You can close this tab and return to the app.',
-      name: 'login_sso_browser_done',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Connections`
   String get connections {
     return Intl.message('Connections', name: 'connections', desc: '', args: []);

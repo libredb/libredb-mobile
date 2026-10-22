@@ -193,10 +193,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     if (signInWithSso == null) throw StateError('single sign-on is not enabled in this build');
     _log.debug('BEGIN: onSsoSignInRequested');
     emit(LoginLoadingState(loginMethod: state.loginMethod, passwordVisible: state.passwordVisible));
-    final result = await signInWithSso(
-      webReturnPath: event.webReturnPath,
-      browserDoneMessage: event.browserDoneMessage,
-    );
+    final result = await signInWithSso();
     switch (result) {
       case SsoSignInSucceeded(:final username, :final roles):
         emit(
@@ -216,9 +213,6 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           LoginErrorState(errorCode: errorCode, loginMethod: state.loginMethod, passwordVisible: state.passwordVisible),
         );
         _log.error('END: onSsoSignInRequested error: {}', [errorCode.key]);
-      case SsoSignInNavigatedAway():
-        // The tab is leaving for the provider; the sign-in completes when it comes back.
-        _log.debug('END: onSsoSignInRequested on the way to the provider');
     }
   }
 

@@ -393,7 +393,7 @@ void main() {
         expect(app.read<SsoAutoRedirectGate>().isOpen, isTrue);
 
         // As the single sign-on button does.
-        app.read<LoginBloc>().add(const SsoSignInRequested(browserDoneMessage: 'done'));
+        app.read<LoginBloc>().add(const SsoSignInRequested());
         await tester.pumpAndSettle();
 
         expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
@@ -513,7 +513,7 @@ class _FakeOidcClient implements IOidcClient {
   var logouts = 0;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async => OidcSignedIn(
+  Future<OidcSignInOutcome> signIn() async => OidcSignedIn(
     tokens: OidcTokens(
       accessToken: 'sso-access-token',
       idToken: 'sso-id-token',
@@ -526,9 +526,6 @@ class _FakeOidcClient implements IOidcClient {
       'roles': ['admin'],
     },
   );
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => null;
 
   @override
   Future<TokenRotationResult> refresh({

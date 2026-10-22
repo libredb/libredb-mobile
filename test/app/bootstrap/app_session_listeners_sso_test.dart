@@ -43,13 +43,10 @@ class _FakeOidcClient implements IOidcClient {
   var signIns = 0;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async {
+  Future<OidcSignInOutcome> signIn() async {
     signIns++;
     return const OidcSignInCancelled();
   }
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => null;
 
   @override
   Future<TokenRotationResult> refresh({

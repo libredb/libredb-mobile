@@ -97,26 +97,20 @@ final _signedIn = OidcSignedIn(
 );
 
 /// The identity provider of an oidc build. Each sign-in answers with the next of [outcomes], and with [_signedIn] once
-/// they have run out; the startup completion answers with [pending].
+/// they have run out.
 class _ScriptedOidcClient implements IOidcClient {
-  _ScriptedOidcClient({List<FutureOr<OidcSignInOutcome>>? outcomes, this.pending}) : outcomes = outcomes ?? [];
+  _ScriptedOidcClient({List<FutureOr<OidcSignInOutcome>>? outcomes}) : outcomes = outcomes ?? [];
 
   final List<FutureOr<OidcSignInOutcome>> outcomes;
-  final OidcSignInOutcome? pending;
 
-  /// The `webReturnPath` of every sign-in, in order.
-  final webReturnPaths = <String?>[];
-
-  int get signIns => webReturnPaths.length;
+  /// How many sign-ins were started.
+  int signIns = 0;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async {
-    webReturnPaths.add(webReturnPath);
+  Future<OidcSignInOutcome> signIn() async {
+    signIns++;
     return outcomes.isEmpty ? _signedIn : await outcomes.removeAt(0);
   }
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => pending;
 
   @override
   Future<TokenRotationResult> refresh({
@@ -475,31 +469,6 @@ void main() {
       });
     }
 
-    testWidgets('shows a startup sign-in error until the first tap, and nothing while the sign-in runs', (
-      tester,
-    ) async {
-      final answer = Completer<OidcSignInOutcome>();
-      final client = _ScriptedOidcClient(
-        pending: const OidcSignInFailed(OidcFailure.discovery),
-        outcomes: [answer.future],
-      );
-      await pumpOidcApp(tester, _OidcDependencies(client));
-      expect(find.text(_discoveryMessage), findsOneWidget);
-
-      await tester.tap(ssoButton);
-      // The spinner runs until the provider answers, so the frames are pumped one by one.
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.descendant(of: ssoButton, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
-      expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
-      expect(find.text(_discoveryMessage), findsNothing);
-
-      answer.complete(const OidcSignInCancelled());
-      await tester.pumpAndSettle();
-
-      expect(find.text(_discoveryMessage), findsNothing);
-      expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
-    });
-
     testWidgets('a misconfigured build says so and shows no button', (tester) async {
       await pumpOidcApp(
         tester,
@@ -523,14 +492,14 @@ void main() {
       expect(find.text('Kurumsal hesabınızla giriş yapın.'), findsOneWidget);
     });
 
-    testWidgets('a tap signs in and opens the dashboard, with no web return path off the web', (tester) async {
+    testWidgets('a tap signs in and opens the dashboard', (tester) async {
       final client = _ScriptedOidcClient();
       await pumpOidcApp(tester, _OidcDependencies(client));
 
       await tester.tap(ssoButton);
       await tester.pumpAndSettle();
 
-      expect(client.webReturnPaths, [null]);
+      expect(client.signIns, 1);
       expect(find.byType(ResponsiveScaffold), findsOneWidget);
       expect(location(tester), ApplicationRoutesConstants.home);
     });
@@ -573,24 +542,6 @@ void main() {
       testWidgets('does not run when it is turned off', (tester) async {
         final client = _ScriptedOidcClient();
         await pumpOidcApp(tester, _OidcDependencies(client));
-
-        expect(client.signIns, 0);
-        expect(ssoButton, findsOneWidget);
-      });
-
-      testWidgets('does not run after a startup sign-in error', (tester) async {
-        final client = _ScriptedOidcClient(pending: const OidcSignInFailed(OidcFailure.failed));
-        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true));
-
-        expect(client.signIns, 0);
-        expect(find.text(_failedMessage), findsOneWidget);
-      });
-
-      // Back from the provider's page brings a web tab back with no answer, which the startup completion reports as a
-      // cancel.
-      testWidgets('does not run after the user came back from the provider without signing in', (tester) async {
-        final client = _ScriptedOidcClient(pending: const OidcSignInCancelled());
-        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true));
 
         expect(client.signIns, 0);
         expect(ssoButton, findsOneWidget);

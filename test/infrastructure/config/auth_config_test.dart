@@ -272,12 +272,25 @@ void main() {
       expect(settings.adminRoles, ['Admin', 'superadmin']);
     });
 
-    test('uses the template redirect scheme and any free loopback port when they are unset', () {
+    test('uses the app redirect scheme when it is unset', () {
       final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.redirectScheme, OidcSettings.defaultRedirectScheme);
       expect(settings.redirectScheme, 'org.libredb.mobile');
-      expect(settings.loopbackPort, 0);
+    });
+
+    test('redirects sign-in and logout to <scheme>:/oauth2redirect', () {
+      final settings = _settings(
+        const AuthDefines(
+          authProvider: 'oidc',
+          oidcIssuer: _issuer,
+          oidcClientId: _clientId,
+          oidcRedirectScheme: 'com.acme.db',
+        ),
+      );
+
+      expect(settings.redirectUri.toString(), 'com.acme.db:/oauth2redirect');
+      expect(settings.redirectUri.path, OidcSettings.redirectPath);
     });
 
     for (final scheme in ['com.example_app', '9app', 'Com.Example.App']) {
@@ -289,32 +302,6 @@ void main() {
         expect(
           mode,
           isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_REDIRECT_SCHEME')),
-        );
-      });
-    }
-
-    test('reads the loopback port 53682', () {
-      final settings = _settings(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcLoopbackPort: '53682',
-        ),
-      );
-
-      expect(settings.loopbackPort, 53682);
-    });
-
-    for (final port in ['abc', '-1', '70000']) {
-      test('is misconfigured for the loopback port $port', () {
-        final mode = AuthMode.fromDefines(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcLoopbackPort: port),
-        );
-
-        expect(
-          mode,
-          isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_LOOPBACK_PORT')),
         );
       });
     }

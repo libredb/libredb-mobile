@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:clock/clock.dart';
 import 'package:oidc/oidc.dart';
 
@@ -18,29 +16,14 @@ final class AppOidcUserManager extends OidcUserManager {
   }) : super.lazy();
 
   bool _responseReceived = false;
-  bool _flowTimedOut = false;
-  bool _discoveryLoaded = false;
 
   /// Whether the last sign-in got an authorization response from the platform. The manager answers null both for a
   /// cancel, which has no response, and for an ID token that fails a claim check after one.
   bool get authorizationResponseReceived => _responseReceived;
 
-  /// Whether the last sign-in's browser step ended because the Linux or Windows loopback listener got no redirect
-  /// within the flow timeout: the platform throws an [OidcException] that wraps a [TimeoutException]. That is the
-  /// user not finishing at the provider, not the provider being out of reach.
-  bool get browserFlowTimedOut => _flowTimedOut;
-
-  /// Whether `init()` got as far as a valid discovery document, which tells a discovery failure of the same-tab web
-  /// completion apart from a failure of its code exchange: both happen inside `init()`.
-  bool get discoveryLoaded => _discoveryLoaded;
-
-  /// Forgets what the previous sign-in's browser step left in [authorizationResponseReceived] and
-  /// [browserFlowTimedOut]. The run's manager serves every sign-in, and one that fails before its browser step must
-  /// not be read as the previous one's timeout.
-  void startSignIn() {
-    _responseReceived = false;
-    _flowTimedOut = false;
-  }
+  /// Forgets what the previous sign-in's browser step left in [authorizationResponseReceived]. The run's manager serves
+  /// every sign-in, and one that fails before its browser step must not be read as the previous one's answer.
+  void startSignIn() => _responseReceived = false;
 
   @override
   Future<void> listenToTokenRefreshIfSupported(OidcTokenEventsManager tokenEventsManager, OidcUser? user) async {}
@@ -50,25 +33,13 @@ final class AppOidcUserManager extends OidcUserManager {
   Future<void> clearUnusedStates() => OidcState.clearStaleState(store: store, age: const Duration(minutes: 5));
 
   @override
-  Future<void> ensureDiscoveryDocument() async {
-    await super.ensureDiscoveryDocument();
-    _discoveryLoaded = true;
-  }
-
-  @override
   Future<OidcAuthorizeResponse?> getAuthorizationResponse(
     OidcProviderMetadata metadata,
     OidcAuthorizeRequest request,
     OidcPlatformSpecificOptions options,
     Map<String, dynamic> preparationResult,
   ) async {
-    final OidcAuthorizeResponse? response;
-    try {
-      response = await super.getAuthorizationResponse(metadata, request, options, preparationResult);
-    } on OidcException catch (error) {
-      _flowTimedOut = error.internalException is TimeoutException;
-      rethrow;
-    }
+    final response = await super.getAuthorizationResponse(metadata, request, options, preparationResult);
     _responseReceived = response != null;
     return response;
   }

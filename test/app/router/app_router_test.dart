@@ -76,11 +76,7 @@ class _FakeBrowserHistory {
 /// The identity provider of an oidc build that has no web sign-in pending. The router tests never sign in through it.
 class _IdleOidcClient implements IOidcClient {
   @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => null;
-
-  @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) =>
-      throw UnimplementedError('these tests never sign in through the provider');
+  Future<OidcSignInOutcome> signIn() => throw UnimplementedError('these tests never sign in through the provider');
 
   @override
   Future<TokenRotationResult> refresh({
@@ -390,7 +386,7 @@ void main() {
       ),
     ]) {
       // A pushed or crafted link may carry a trailing slash.
-      for (final path in ['/oauth2redirect', '/logout', '/oauth2redirect/', '/logout/']) {
+      for (final path in ['/oauth2redirect', '/oauth2redirect/']) {
         testWidgets('in $mode mode, signed out, $path lands on /login with no returnUrl', (tester) async {
           setDesktopViewport(tester);
           await tester.pumpWidget(App(language: 'en', dependencies: dependencies));

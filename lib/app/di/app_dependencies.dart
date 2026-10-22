@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
 import 'package:flutter_bloc_advance/features/users/data/repositories/authority_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_session_repository_impl.dart';
@@ -47,7 +46,6 @@ import 'package:flutter_bloc_advance/infrastructure/storage/session_end_signal_p
 import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock_platform.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/shared_preferences_activity_store.dart';
-import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
 
 class AppDependencies {
   const AppDependencies({
@@ -135,10 +133,8 @@ class AppDependencies {
     sessionEndSignal: sessionEndSignal,
   );
 
-  /// The OpenID Connect client of an `oidc` build. The provider redirects back to the login page, and Linux and
-  /// Windows open the provider's page in the external browser.
-  IOidcClient createOidcClient(OidcSettings settings) =>
-      OidcClient(settings: settings, loginPath: ApplicationRoutesConstants.login, launchUrl: launchExternalUri);
+  /// The OpenID Connect client of an `oidc` build.
+  IOidcClient createOidcClient(OidcSettings settings) => OidcClient(settings: settings);
 
   /// The single sign-on of an `oidc` build, which stores the session through [sessionRepository].
   ISsoAuthRepository createSsoAuthRepository(

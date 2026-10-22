@@ -24,8 +24,3 @@ final class SsoSignInRejected extends SsoSignInResult {
 
   final AppErrorCode errorCode;
 }
-
-/// The web tab is on its way to the provider; the sign-in completes after the tab comes back.
-final class SsoSignInNavigatedAway extends SsoSignInResult {
-  const SsoSignInNavigatedAway();
-}
