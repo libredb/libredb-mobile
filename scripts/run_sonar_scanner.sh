@@ -42,7 +42,7 @@ export PATH=$SONAR_SCANNER_DIR/bin:$PATH
 
 # Run SonarQube scanner
 $SONAR_SCANNER_DIR/bin/sonar-scanner \
-  -Dsonar.projectKey=cevheri_flutter-bloc-advanced \
-  -Dsonar.organization=cevheri-open-source \
+  -Dsonar.projectKey=libredb_libredb-mobile \
+  -Dsonar.organization=libredb \
   -Dsonar.sources=. \
   -Dsonar.host.url=https://sonarcloud.io

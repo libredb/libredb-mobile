@@ -2,7 +2,7 @@
 #
 # All tags used with `flutter test --tags` / `--exclude-tags` must be declared
 # here, otherwise the runner warns about unrecognized tags. Declaring a tag
-# needs no body.
+# needs nobody.
 tags:
   # Widget tests (use `testWidgets`) — need a binding + pump; heavier than pure
   # unit tests. Applied via a file-level `@Tags(['widget'])` annotation.
