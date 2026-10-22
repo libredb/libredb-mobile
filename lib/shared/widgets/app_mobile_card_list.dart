@@ -61,16 +61,25 @@ class AppMobileCardList<T> extends StatelessWidget {
       );
     }
 
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(emptyIcon, size: 48, color: cs.onSurfaceVariant.withAlpha(102)),
-          if (emptyText != null) ...[
-            const SizedBox(height: 12),
-            Text(emptyText!, style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ],
+    // Scrollable although it fits, so a pull to refresh above the list works on an empty list too.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(emptyIcon, size: 48, color: cs.onSurfaceVariant.withAlpha(102)),
+                if (emptyText != null) ...[
+                  const SizedBox(height: 12),
+                  Text(emptyText!, style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

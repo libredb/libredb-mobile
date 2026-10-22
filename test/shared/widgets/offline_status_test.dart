@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,22 +65,56 @@ void main() {
   });
 
   group('OfflineStaleMarker', () {
+    final sameDay = Clock.fixed(DateTime(2026, 10, 22, 18));
+    final nextDay = Clock.fixed(DateTime(2026, 10, 23, 9));
+
     testWidgets('offline, says the data on screen is what was loaded at its time', (tester) async {
-      await tester.pumpWidget(app(isOffline: true, child: OfflineStaleMarker(loadedAt: loadedAt)));
+      await withClock(
+        sameDay,
+        () => tester.pumpWidget(app(isOffline: true, child: OfflineStaleMarker(loadedAt: loadedAt))),
+      );
 
       expect(find.text('Offline: showing what was loaded at 2:05 PM'), findsOneWidget);
     });
 
     testWidgets('offline, says it in Turkish', (tester) async {
-      await tester.pumpWidget(
-        app(
-          isOffline: true,
-          locale: const Locale('tr'),
-          child: OfflineStaleMarker(loadedAt: loadedAt),
+      await withClock(
+        sameDay,
+        () => tester.pumpWidget(
+          app(
+            isOffline: true,
+            locale: const Locale('tr'),
+            child: OfflineStaleMarker(loadedAt: loadedAt),
+          ),
         ),
       );
 
       expect(find.text('Çevrimdışı: 14:05 itibarıyla yüklenenler gösteriliyor'), findsOneWidget);
+    });
+
+    // Data loaded on an earlier day must not read as loaded today.
+    testWidgets('offline, names the date when the data was loaded on an earlier day', (tester) async {
+      await withClock(
+        nextDay,
+        () => tester.pumpWidget(app(isOffline: true, child: OfflineStaleMarker(loadedAt: loadedAt))),
+      );
+
+      expect(find.text('Offline: showing what was loaded at Oct 22, 2026 2:05 PM'), findsOneWidget);
+    });
+
+    testWidgets('offline, names the date in Turkish too', (tester) async {
+      await withClock(
+        nextDay,
+        () => tester.pumpWidget(
+          app(
+            isOffline: true,
+            locale: const Locale('tr'),
+            child: OfflineStaleMarker(loadedAt: loadedAt),
+          ),
+        ),
+      );
+
+      expect(find.text('Çevrimdışı: 22 Eki 2026 14:05 itibarıyla yüklenenler gösteriliyor'), findsOneWidget);
     });
 
     testWidgets('online, shows nothing', (tester) async {

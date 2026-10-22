@@ -7,9 +7,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
+import 'package:libredb_mobile/features/studio_status/domain/entities/governance_outage.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:mocktail/mocktail.dart';
@@ -72,11 +74,27 @@ void main() {
   });
 
   // The unreachable page shown while the device was offline clears without a manual Retry.
-  testWidgets('checks Studio again once when the device comes back online', (tester) async {
+  testWidgets('checks Studio again once when the device comes back online while Studio is unreachable', (tester) async {
+    when(() => studioStatus.state).thenReturn(StudioUnreachable(error: NetworkError('offline')));
+
     await pumpScope(tester, initial: online, then: [offline, online, online]);
 
     verify(() => studioStatus.add(reconnectCheck)).called(1);
   });
+
+  // One probe that fails right after a reconnect must not cover a screen that was working.
+  for (final (name, state) in [
+    ('reachable', const StudioReachable()),
+    ('in a governance outage', const StudioGovernanceUnavailable(outage: GovernanceOutage.temporary())),
+  ]) {
+    testWidgets('does not check Studio when the device comes back online while Studio is $name', (tester) async {
+      when(() => studioStatus.state).thenReturn(state);
+
+      await pumpScope(tester, initial: online, then: [offline, online]);
+
+      verifyNever(() => studioStatus.add(any()));
+    });
+  }
 
   testWidgets('does not check Studio when the device goes offline or opens online', (tester) async {
     await pumpScope(tester, initial: online, then: [offline]);

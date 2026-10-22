@@ -102,11 +102,12 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
 
 - `AppShell` shows a thin offline banner above every tab, which a screen reader announces as a live region.
 - `ConnectivityInterceptor` refuses a request that would reach the network while the device is offline, and `studioError` reports it with `AppErrorCode.networkOffline`.
-- A screen that holds loaded data keeps it on such a failure instead of showing an error, and `OfflineStaleMarker` shows it as "Offline: showing what was loaded at <time>".
+- A screen that holds loaded data keeps it on such a failure instead of showing an error, and `OfflineStaleMarker` shows it as "Offline: showing what was loaded at <time>", with the date before the time when the data was loaded on an earlier day.
   The connection list does this today; the browser levels and the result view follow the same rule.
 - A pull to refresh while offline shows the banner's message and sends nothing.
 - An action that needs Studio, such as Run or Check, is built with `OnlineOnlyAction`, which disables it offline and shows why.
-- When the device comes back online, `OnReconnect` refreshes the visible screen once and `AppConnectivityScope` checks Studio's liveness again, so the unreachable page shown while offline clears without a Retry.
+- When the device comes back online, `OnReconnect` refreshes the visible screen once and, while the unreachable page is up, `AppConnectivityScope` checks Studio's liveness again, so that page clears without a Retry.
+  A Studio that was answering is not checked again on reconnect, so one failed probe cannot cover a working screen.
 
 ## Sessions
 

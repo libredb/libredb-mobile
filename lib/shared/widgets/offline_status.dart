@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
@@ -35,7 +36,8 @@ class OfflineStatus extends InheritedWidget {
 /// and nothing while it is online.
 ///
 /// A screen that holds loaded data, such as the connection list, a browser level or a result view, keeps it offline
-/// rather than refreshing to an error, and shows this marker with the time the data was loaded.
+/// rather than refreshing to an error, and shows this marker with the time the data was loaded, and its date when that
+/// was not today.
 class OfflineStaleMarker extends StatelessWidget {
   const OfflineStaleMarker({super.key, required this.loadedAt});
 
@@ -46,10 +48,16 @@ class OfflineStaleMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!OfflineStatus.isOfflineOf(context)) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
-    final time = MaterialLocalizations.of(context).formatTimeOfDay(
-      TimeOfDay.fromDateTime(loadedAt.toLocal()),
+    final localizations = MaterialLocalizations.of(context);
+    final loaded = loadedAt.toLocal();
+    final now = clock.now().toLocal();
+    final time = localizations.formatTimeOfDay(
+      TimeOfDay.fromDateTime(loaded),
       alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
     );
+    // Data from an earlier day names its date, so it cannot read as loaded today.
+    final loadedToday = loaded.year == now.year && loaded.month == now.month && loaded.day == now.day;
+    final when = loadedToday ? time : '${localizations.formatShortDate(loaded)} $time';
     return Container(
       width: double.infinity,
       color: cs.surfaceContainerHighest,
@@ -60,7 +68,7 @@ class OfflineStaleMarker extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              S.of(context).offline_stale_data(time),
+              S.of(context).offline_stale_data(when),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ),

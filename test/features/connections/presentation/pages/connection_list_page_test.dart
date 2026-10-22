@@ -155,7 +155,7 @@ void main() {
     testWidgets('shows the banner and keeps the rows, marked as stale with the time they were loaded', (tester) async {
       await pumpLoaded(tester);
 
-      await goTo(tester, offline);
+      await withClock(Clock.fixed(loadedAt.add(const Duration(hours: 1))), () => goTo(tester, offline));
 
       expect(find.text(S.current.connectivity_offline), findsOneWidget);
       expect(find.text('Sales'), findsOneWidget);
@@ -175,6 +175,39 @@ void main() {
       expect(find.widgetWithText(SnackBar, S.current.connectivity_offline), findsOneWidget);
       expect(find.text(S.current.connection_list_load_failed), findsNothing);
       expect(find.text('Sales'), findsOneWidget);
+    });
+
+    // The pull works where there are no rows to drag, too.
+    testWidgets('on an empty list, a pull to refresh says the device is offline', (tester) async {
+      when(() => repository.listManaged())
+          .thenAnswer((_) async => const Success(ManagedConnections(connections: <StudioConnection>[])));
+      await pumpPage(tester);
+      await goTo(tester, offline);
+
+      await tester.fling(find.text(S.current.connection_list_empty), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => repository.listManaged()).called(1);
+      expect(find.widgetWithText(SnackBar, S.current.connectivity_offline), findsOneWidget);
+    });
+
+    testWidgets('on a failed list, a pull to refresh says the device is offline', (tester) async {
+      when(() => connectivity.state).thenReturn(offline);
+      whenListen(connectivity, connectivityChanges.stream, initialState: offline);
+      when(
+        () => repository.listManaged(),
+      ).thenAnswer((_) async => Failure(NetworkError('No Internet connection', code: AppErrorCode.networkOffline.key)));
+      await pumpPage(tester);
+
+      await tester.fling(find.text(S.current.error_network_offline), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => repository.listManaged()).called(1);
+      expect(find.widgetWithText(SnackBar, S.current.connectivity_offline), findsOneWidget);
     });
 
     testWidgets('refreshes the list once when the device comes back online, and drops the stale marker', (
