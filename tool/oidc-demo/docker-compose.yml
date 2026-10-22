@@ -75,14 +75,14 @@ configs:
             "serviceAccountsEnabled": false,
             "frontchannelLogout": false,
             "redirectUris": [
-              "com.example.flutterblocadvance:/oauth2redirect",
+              "org.libredb.mobile:/oauth2redirect",
               "http://localhost:8081/redirect.html",
               "http://127.0.0.1/*"
             ],
             "webOrigins": ["+"],
             "attributes": {
               "pkce.code.challenge.method": "S256",
-              "post.logout.redirect.uris": "com.example.flutterblocadvance:/oauth2redirect##http://localhost:8081/##http://localhost:8081/redirect.html##http://127.0.0.1/*"
+              "post.logout.redirect.uris": "org.libredb.mobile:/oauth2redirect##http://localhost:8081/##http://localhost:8081/redirect.html##http://127.0.0.1/*"
             },
             "protocolMappers": [
               {

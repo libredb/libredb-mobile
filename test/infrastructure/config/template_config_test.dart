@@ -28,4 +28,12 @@ void main() {
       }
     });
   });
+
+  // Run with and without `--dart-define=PROD_API_URL=...` to cover both branches.
+  group('TemplateConfig.prodApiUrl', () {
+    test('is the PROD_API_URL define when one is given, and the placeholder otherwise', () {
+      const define = String.fromEnvironment('PROD_API_URL');
+      expect(TemplateConfig.prodApiUrl, define.isEmpty ? '__PROD_API_URL__' : define);
+    });
+  });
 }

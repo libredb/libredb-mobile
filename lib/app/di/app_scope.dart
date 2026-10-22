@@ -13,6 +13,7 @@ import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_bloc.dart';
 import 'package:flutter_bloc_advance/app/session/session_cubit.dart';
 import 'package:flutter_bloc_advance/app/theme/theme_bloc.dart';
 import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
+import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
 import 'package:flutter_bloc_advance/features/account/application/usecases/get_account_usecase.dart';
 import 'package:flutter_bloc_advance/features/account/application/usecases/update_account_usecase.dart';
@@ -196,6 +197,9 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IAuthorityRepository>(
           create: (context) => dependencies.createAuthorityRepository(context.read<ApiClient>()),
+        ),
+        RepositoryProvider<IConnectionRepository>(
+          create: (context) => dependencies.createConnectionRepository(context.read<ApiClient>()),
         ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(

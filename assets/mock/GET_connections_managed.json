@@ -1,0 +1,27 @@
+{
+  "connections": [
+    {
+      "id": "seed:libredb-sample",
+      "name": "LibreDB Sample (SQLite)",
+      "type": "sqlite",
+      "database": "/app/data/sample.db",
+      "environment": "development",
+      "group": "Samples",
+      "managed": true,
+      "createdAt": "2026-10-22T00:00:00.000Z"
+    },
+    {
+      "id": "seed:sales-db",
+      "name": "Sales",
+      "type": "postgres",
+      "host": "db.example.com",
+      "port": 5432,
+      "database": "sales",
+      "environment": "production",
+      "managed": true,
+      "createdAt": "2026-10-22T00:00:00.000Z"
+    }
+  ],
+  "cacheHint": 60000,
+  "pendingSeeds": []
+}

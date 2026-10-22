@@ -348,11 +348,12 @@ class S {
     return Intl.message('Send Email', name: 'email_send', desc: '', args: []);
   }
 
-  /// `{translate, select, account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}`
+  /// `{translate, select, connections{Connections} account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}`
   String translate_menu_title(String translate) {
     return Intl.select(
       translate,
       {
+        'connections': 'Connections',
         'account': 'Account',
         'userManagement': 'User Management',
         'settings': 'Settings',
@@ -1554,6 +1555,46 @@ class S {
       desc: '',
       args: [],
     );
+  }
+
+  /// `Connections`
+  String get connections {
+    return Intl.message('Connections', name: 'connections', desc: '', args: []);
+  }
+
+  /// `Databases Studio offers you`
+  String get connection_list_subtitle {
+    return Intl.message('Databases Studio offers you', name: 'connection_list_subtitle', desc: '', args: []);
+  }
+
+  /// `Studio offers you no connection yet`
+  String get connection_list_empty {
+    return Intl.message('Studio offers you no connection yet', name: 'connection_list_empty', desc: '', args: []);
+  }
+
+  /// `Could not load the connections`
+  String get connection_list_load_failed {
+    return Intl.message('Could not load the connections', name: 'connection_list_load_failed', desc: '', args: []);
+  }
+
+  /// `Name`
+  String get connection_name {
+    return Intl.message('Name', name: 'connection_name', desc: '', args: []);
+  }
+
+  /// `Engine`
+  String get connection_type {
+    return Intl.message('Engine', name: 'connection_type', desc: '', args: []);
+  }
+
+  /// `Environment`
+  String get connection_environment {
+    return Intl.message('Environment', name: 'connection_environment', desc: '', args: []);
+  }
+
+  /// `Target`
+  String get connection_target {
+    return Intl.message('Target', name: 'connection_target', desc: '', args: []);
   }
 }
 

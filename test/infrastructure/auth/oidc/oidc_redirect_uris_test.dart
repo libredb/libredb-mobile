@@ -12,8 +12,8 @@ void main() {
       test('${platform.name} uses the custom scheme for both URIs', () {
         final uris = OidcRedirectUris.forPlatform(_settings, platform: platform);
 
-        expect(uris.signIn.toString(), 'com.example.flutterblocadvance:/oauth2redirect');
-        expect(uris.postLogout.toString(), 'com.example.flutterblocadvance:/oauth2redirect');
+        expect(uris.signIn.toString(), 'org.libredb.mobile:/oauth2redirect');
+        expect(uris.postLogout.toString(), 'org.libredb.mobile:/oauth2redirect');
       });
     }
 

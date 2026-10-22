@@ -20,8 +20,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// The logic is held equal by `test/fixtures/native_scrub_cases.json`, which the Dart scrubber test and
 /// `NativeSentryScrubberTest.kt` both run.
 void main() {
-  const patternsPath = 'android/app/src/main/kotlin/com/cevheri/flutter/flutter_bloc_advance/NativeScrubPatterns.kt';
-  const scrubberPath = 'android/app/src/main/kotlin/com/cevheri/flutter/flutter_bloc_advance/NativeSentryScrubber.kt';
+  const patternsPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeScrubPatterns.kt';
+  const scrubberPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentryScrubber.kt';
 
   final dartPatterns = {
     'JWT_PATTERN': jwtPattern,
@@ -160,8 +160,7 @@ void main() {
   });
 
   test('MainActivity answers on the channel that nativeSdkReady asks', () {
-    final activity = File('android/app/src/main/kotlin/com/cevheri/flutter/flutter_bloc_advance/MainActivity.kt')
-        .readAsStringSync();
+    final activity = File('android/app/src/main/kotlin/org/libredb/mobile/MainActivity.kt').readAsStringSync();
 
     expect(activity, contains('"$nativeSentryChannelName"'));
     expect(activity, contains('"isEnabled" -> result.success(Sentry.isEnabled())'));

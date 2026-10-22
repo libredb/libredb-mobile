@@ -13,6 +13,7 @@ import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
 import 'package:flutter_bloc_advance/features/account/navigation/account_routes.dart';
 import 'package:flutter_bloc_advance/features/auth/navigation/auth_routes.dart';
 import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
+import 'package:flutter_bloc_advance/features/connections/navigation/connections_routes.dart';
 import 'package:flutter_bloc_advance/features/dashboard/navigation/dashboard_routes.dart';
 import 'package:flutter_bloc_advance/features/settings/navigation/settings_routes.dart';
 import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
@@ -69,6 +70,7 @@ class AppRouterFactory {
           routes: [
             ...DashboardFeatureRoutes.routes,
             ...AccountFeatureRoutes.routes,
+            ...ConnectionsFeatureRoutes.routes,
             ...UsersFeatureRoutes.routes,
             ...SettingsFeatureRoutes.routes,
             ...DynamicFormsFeatureRoutes.routes,

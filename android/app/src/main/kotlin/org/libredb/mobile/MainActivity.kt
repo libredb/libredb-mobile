@@ -1,4 +1,4 @@
-package com.cevheri.flutter.flutter_bloc_advance
+package org.libredb.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

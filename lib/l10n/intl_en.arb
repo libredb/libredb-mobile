@@ -69,7 +69,7 @@
   "login_button": "Login",
   "loading": "Loading...",
   "email_send": "Send Email",
-  "translate_menu_title": "{translate, select, account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}",
+  "translate_menu_title": "{translate, select, connections{Connections} account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}",
   "@translate_menu_title": {
     "placeholders": {
       "translate": {
@@ -525,5 +525,13 @@
   "login_sso_subtitle": "Sign in with your organization account.",
   "@login_sso_subtitle": {},
   "login_sso_browser_done": "Sign-in is complete. You can close this tab and return to the app.",
-  "@login_sso_browser_done": {}
+  "@login_sso_browser_done": {},
+  "connections": "Connections",
+  "connection_list_subtitle": "Databases Studio offers you",
+  "connection_list_empty": "Studio offers you no connection yet",
+  "connection_list_load_failed": "Could not load the connections",
+  "connection_name": "Name",
+  "connection_type": "Engine",
+  "connection_environment": "Environment",
+  "connection_target": "Target"
 }

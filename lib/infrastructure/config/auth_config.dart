@@ -136,7 +136,7 @@ final class OidcSettings {
   });
 
   /// The custom URI scheme of the native redirect. It must equal the Android manifest placeholder.
-  static const String defaultRedirectScheme = 'com.example.flutterblocadvance';
+  static const String defaultRedirectScheme = 'org.libredb.mobile';
 
   static const List<String> defaultScopes = ['openid', 'profile', 'email'];
 

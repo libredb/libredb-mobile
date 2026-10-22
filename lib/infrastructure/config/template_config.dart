@@ -7,8 +7,9 @@ class TemplateConfig {
   // App identity
   static const String appName = '__APP_NAME__';
 
-  // API
-  static const String prodApiUrl = '__PROD_API_URL__';
+  // API, given at build time with `--dart-define=PROD_API_URL=https://studio.example.com/api`, or by replacing the
+  // placeholder here.
+  static const String prodApiUrl = String.fromEnvironment('PROD_API_URL', defaultValue: '__PROD_API_URL__');
 
   // Links the app shows, given at build time, for example with
   // `--dart-define=GITHUB_REPO_URL=https://github.com/acme/dashboard`, or by replacing the placeholder here.

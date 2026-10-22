@@ -525,7 +525,7 @@ These platform identifiers still name the template and its author, so rename the
 - **Issue templates**: the Discussions links in `.github/ISSUE_TEMPLATE/config.yml` and `.github/ISSUE_TEMPLATE/tech_debt.yml`.
 - **SonarCloud**: `sonar.projectKey` and `sonar.organization` in `sonar-project.properties` and `scripts/run_sonar_scanner.sh`.
 - **GitHub Pages**: `--base-href` in `.github/workflows/build-web.yml` and `scripts/deploy_web.sh`, the same path as `__WEB_BASE_PATH__`.
-- **Single sign-on**: the redirect scheme `com.example.flutterblocadvance` in `OidcSettings.defaultRedirectScheme` (`lib/infrastructure/config/auth_config.dart`) and in `manifestPlaceholders["oidcRedirectScheme"]` (`android/app/build.gradle.kts`), which must stay equal, and in the demo realm of `tool/oidc-demo/docker-compose.yml`.
+- **Single sign-on**: the redirect scheme `org.libredb.mobile` in `OidcSettings.defaultRedirectScheme` (`lib/infrastructure/config/auth_config.dart`) and in `manifestPlaceholders["oidcRedirectScheme"]` (`android/app/build.gradle.kts`), which must stay equal, and in the demo realm of `tool/oidc-demo/docker-compose.yml`.
   The URIs registered at your provider change with it; see [docs/oidc.md](docs/oidc.md#configuration-reference).
 
 `lib/infrastructure/config/template_config.dart` holds the template values the Dart code reads: the app name shown in the developer console, the production API URL, and the repository, docs and sponsor links.

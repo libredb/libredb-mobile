@@ -51,7 +51,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m14(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   static String m15(translate) =>
-      "${Intl.select(translate, {'account': 'Hesabım', 'userManagement': 'Kullanıcı Yönetimi', 'settings': 'Ayarlar', 'logout': 'Çıkış', 'info': 'Bilgiler', 'language': 'Diller', 'theme': 'Tema', 'new_user': 'Yeni Kullanıcı Ekle', 'list_user': 'Kullanıcılar', 'other': 'Diğer'})}";
+      "${Intl.select(translate, {'connections': 'Bağlantılar', 'account': 'Hesabım', 'userManagement': 'Kullanıcı Yönetimi', 'settings': 'Ayarlar', 'logout': 'Çıkış', 'info': 'Bilgiler', 'language': 'Diller', 'theme': 'Tema', 'new_user': 'Yeni Kullanıcı Ekle', 'list_user': 'Kullanıcılar', 'other': 'Diğer'})}";
 
   static String m16(error) => "Kaydedilemedi: ${error}";
 
@@ -90,6 +90,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "community_title": MessageLookupByLibrary.simpleMessage("Topluluğa Katılın"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Çeviriye Yardım Et"),
+    "connection_environment": MessageLookupByLibrary.simpleMessage("Ortam"),
+    "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio size henüz bir bağlantı sunmuyor"),
+    "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Bağlantılar yüklenemedi"),
+    "connection_list_subtitle": MessageLookupByLibrary.simpleMessage("Studio\'nun size sunduğu veritabanları"),
+    "connection_name": MessageLookupByLibrary.simpleMessage("Ad"),
+    "connection_target": MessageLookupByLibrary.simpleMessage("Hedef"),
+    "connection_type": MessageLookupByLibrary.simpleMessage("Motor"),
+    "connections": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı yok"),
     "create_user": MessageLookupByLibrary.simpleMessage("Kullanıcı Oluştur"),
     "current_password": MessageLookupByLibrary.simpleMessage("Mevcut Şifre"),

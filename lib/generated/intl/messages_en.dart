@@ -53,7 +53,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m14(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   static String m15(translate) =>
-      "${Intl.select(translate, {'account': 'Account', 'userManagement': 'User Management', 'settings': 'Settings', 'logout': 'Logout', 'info': 'Info', 'language': 'Language', 'theme': 'Theme', 'new_user': 'New', 'list_user': 'List', 'other': 'Other'})}";
+      "${Intl.select(translate, {'connections': 'Connections', 'account': 'Account', 'userManagement': 'User Management', 'settings': 'Settings', 'logout': 'Logout', 'info': 'Info', 'language': 'Language', 'theme': 'Theme', 'new_user': 'New', 'list_user': 'List', 'other': 'Other'})}";
 
   static String m16(error) => "Save failed: ${error}";
 
@@ -92,6 +92,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "community_title": MessageLookupByLibrary.simpleMessage("Join the Community"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Translate"),
+    "connection_environment": MessageLookupByLibrary.simpleMessage("Environment"),
+    "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio offers you no connection yet"),
+    "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Could not load the connections"),
+    "connection_list_subtitle": MessageLookupByLibrary.simpleMessage("Databases Studio offers you"),
+    "connection_name": MessageLookupByLibrary.simpleMessage("Name"),
+    "connection_target": MessageLookupByLibrary.simpleMessage("Target"),
+    "connection_type": MessageLookupByLibrary.simpleMessage("Engine"),
+    "connections": MessageLookupByLibrary.simpleMessage("Connections"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("No internet connection"),
     "create_user": MessageLookupByLibrary.simpleMessage("Create User"),
     "current_password": MessageLookupByLibrary.simpleMessage("Current Password"),

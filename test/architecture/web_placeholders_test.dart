@@ -56,7 +56,7 @@ void main() {
     final values = _readValues(valuesPath);
 
     final missing = [
-      for (final key in _environmentKeysWithPlaceholderIn(templateConfigPath))
+      for (final key in _environmentKeysWithPlaceholderIn(templateConfigPath).difference(keysLeftUnfilled))
         if ((values[key] ?? '').isEmpty) '$templateConfigPath: $key',
     ];
 

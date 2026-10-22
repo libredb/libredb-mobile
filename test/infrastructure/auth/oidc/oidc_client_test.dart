@@ -298,7 +298,7 @@ void main() {
       expect(query['nonce'], isNotEmpty);
       expect(query['audience'], 'https://api.example.test');
       expect(query['client_id'], fakeClientId);
-      expect(query['redirect_uri'], 'com.example.flutterblocadvance:/oauth2redirect');
+      expect(query['redirect_uri'], 'org.libredb.mobile:/oauth2redirect');
       expect(query, isNot(contains('id_token_hint')));
     });
 
@@ -899,7 +899,7 @@ void main() {
       expect(uri.replace(query: ''), provider.logoutUri.replace(query: ''));
       expect(uri.queryParameters, {
         'client_id': fakeClientId,
-        'post_logout_redirect_uri': 'com.example.flutterblocadvance:/oauth2redirect',
+        'post_logout_redirect_uri': 'org.libredb.mobile:/oauth2redirect',
         'id_token_hint': 'id-token-value',
       });
     });
@@ -924,8 +924,8 @@ void main() {
       final uri = platform.lastEndSessionUri;
       expect(uri.replace(query: ''), Uri.parse('https://tenant.eu.auth0.com/v2/logout?'));
       expect(uri.queryParameters['client_id'], fakeClientId);
-      expect(uri.queryParameters['returnTo'], 'com.example.flutterblocadvance:/oauth2redirect');
-      expect(uri.queryParameters['post_logout_redirect_uri'], 'com.example.flutterblocadvance:/oauth2redirect');
+      expect(uri.queryParameters['returnTo'], 'org.libredb.mobile:/oauth2redirect');
+      expect(uri.queryParameters['post_logout_redirect_uri'], 'org.libredb.mobile:/oauth2redirect');
     });
 
     test('the auth0.com host itself also uses /v2/logout', () async {

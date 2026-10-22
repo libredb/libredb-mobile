@@ -16,6 +16,32 @@
     "parent": null
   },
   {
+    "id": "menu-004",
+    "name": "connections",
+    "description": "connections",
+    "url": "/connections",
+    "icon": "database",
+    "orderPriority": 5,
+    "active": true,
+    "level": 1,
+    "leaf": true,
+    "authorities": [
+      "ROLE_USER",
+      "ROLE_ADMIN"
+    ],
+    "parent": {
+      "id": "menu-000",
+      "name": "home",
+      "description": "home",
+      "url": "/",
+      "icon": "home",
+      "orderPriority": 0,
+      "active": true,
+      "level": 0,
+      "leaf": false
+    }
+  },
+  {
     "id": "menu-001",
     "name": "account",
     "description": "account",
