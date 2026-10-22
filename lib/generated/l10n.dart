@@ -740,9 +740,14 @@ class S {
     return Intl.message('Environment', name: 'connection_environment', desc: '', args: []);
   }
 
-  /// `Target`
-  String get connection_target {
-    return Intl.message('Target', name: 'connection_target', desc: '', args: []);
+  /// `Host`
+  String get connection_host {
+    return Intl.message('Host', name: 'connection_host', desc: '', args: []);
+  }
+
+  /// `Database`
+  String get connection_database {
+    return Intl.message('Database', name: 'connection_database', desc: '', args: []);
   }
 
   /// `Group`
@@ -808,6 +813,66 @@ class S {
   /// `Remove from favorites`
   String get connection_unstar {
     return Intl.message('Remove from favorites', name: 'connection_unstar', desc: '', args: []);
+  }
+
+  /// `Status`
+  String get connection_status {
+    return Intl.message('Status', name: 'connection_status', desc: '', args: []);
+  }
+
+  /// `Status: {status}`
+  String connection_status_semantics(String status) {
+    return Intl.message('Status: $status', name: 'connection_status_semantics', desc: '', args: [status]);
+  }
+
+  /// `Check`
+  String get connection_check {
+    return Intl.message('Check', name: 'connection_check', desc: '', args: []);
+  }
+
+  /// `Check anyway`
+  String get connection_check_anyway {
+    return Intl.message('Check anyway', name: 'connection_check_anyway', desc: '', args: []);
+  }
+
+  /// `Not checked yet`
+  String get connection_check_idle {
+    return Intl.message('Not checked yet', name: 'connection_check_idle', desc: '', args: []);
+  }
+
+  /// `Checking`
+  String get connection_check_checking {
+    return Intl.message('Checking', name: 'connection_check_checking', desc: '', args: []);
+  }
+
+  /// `Reachable, {latency} ms`
+  String connection_check_online(int latency) {
+    return Intl.message('Reachable, $latency ms', name: 'connection_check_online', desc: '', args: [latency]);
+  }
+
+  /// `Reachable`
+  String get connection_check_online_no_latency {
+    return Intl.message('Reachable', name: 'connection_check_online_no_latency', desc: '', args: []);
+  }
+
+  /// `Reachable, without health data`
+  String get connection_check_degraded {
+    return Intl.message('Reachable, without health data', name: 'connection_check_degraded', desc: '', args: []);
+  }
+
+  /// `Not checked: checking would start billed compute`
+  String get connection_check_not_checked {
+    return Intl.message(
+      'Not checked: checking would start billed compute',
+      name: 'connection_check_not_checked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not reachable`
+  String get connection_check_failed {
+    return Intl.message('Not reachable', name: 'connection_check_failed', desc: '', args: []);
   }
 
   /// `The database refused the connection's credentials. Ask your administrator to check them.`

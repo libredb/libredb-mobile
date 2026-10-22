@@ -24,7 +24,9 @@ import 'package:libredb_mobile/features/connections/application/usecases/list_ma
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/favorite_connections_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
@@ -33,6 +35,8 @@ import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
@@ -53,12 +57,14 @@ void main() {
   const offline = ConnectivityState(status: ConnectivityStatus.offline);
 
   late MockIConnectionRepository repository;
+  late MockIProviderMetaRepository providerMeta;
   late MockConnectivityCubit connectivity;
   late MockStudioStatusBloc studioStatus;
   late StreamController<ConnectivityState> connectivityChanges;
 
   setUp(() {
     repository = MockIConnectionRepository();
+    providerMeta = MockIProviderMetaRepository();
     connectivity = MockConnectivityCubit();
     studioStatus = MockStudioStatusBloc();
     when(() => studioStatus.state).thenReturn(const StudioReachable());
@@ -97,50 +103,56 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MultiBlocProvider(
+      MultiRepositoryProvider(
         providers: [
-          BlocProvider<ConnectivityCubit>.value(value: connectivity),
-          BlocProvider<StudioStatusBloc>.value(value: studioStatus),
+          RepositoryProvider<IConnectionRepository>.value(value: repository),
+          RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
         ],
-        child: AppConnectivityScope(
-          child: MaterialApp(
-            theme: theme ?? AppTheme.light(),
-            localizationsDelegates: const [
-              S.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: S.delegate.supportedLocales,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
-              child: child!,
-            ),
-            home: Scaffold(
-              body: Column(
-                children: [
-                  const ConnectivityBanner(),
-                  Expanded(
-                    child: MultiBlocProvider(
-                      providers: [
-                        BlocProvider(
-                          create: (_) => ConnectionListBloc(
-                            listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<ConnectivityCubit>.value(value: connectivity),
+            BlocProvider<StudioStatusBloc>.value(value: studioStatus),
+          ],
+          child: AppConnectivityScope(
+            child: MaterialApp(
+              theme: theme ?? AppTheme.light(),
+              localizationsDelegates: const [
+                S.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: S.delegate.supportedLocales,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+                child: child!,
+              ),
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    const ConnectivityBanner(),
+                    Expanded(
+                      child: MultiBlocProvider(
+                        providers: [
+                          BlocProvider(
+                            create: (_) => ConnectionListBloc(
+                              listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository),
+                            ),
                           ),
-                        ),
-                        BlocProvider(
-                          create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
-                        ),
-                        BlocProvider(
-                          create: (_) =>
-                              FavoriteConnectionsBloc(repository: FavoriteConnectionsRepository())
-                                ..add(FavoriteConnectionsSubjectChanged(subject)),
-                        ),
-                      ],
-                      child: const ConnectionListPage(),
+                          BlocProvider(
+                            create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
+                          ),
+                          BlocProvider(
+                            create: (_) =>
+                                FavoriteConnectionsBloc(repository: FavoriteConnectionsRepository())
+                                  ..add(FavoriteConnectionsSubjectChanged(subject)),
+                          ),
+                        ],
+                        child: const ConnectionListPage(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -412,18 +424,56 @@ void main() {
     expect(find.text(AppErrorCode.networkCertInvalid.resolve(context)), findsOneWidget);
   });
 
-  testWidgets('tapping a row opens its details', (tester) async {
-    answer(_mockAnswer());
-    await pumpPage(tester);
-
-    await tester.tap(row('seed:billing-mysql'));
+  Future<void> expectBillingDetails(WidgetTester tester) async {
     await tester.pumpAndSettle();
-
     final sheet = find.byType(BottomSheet);
     expect(find.descendant(of: sheet, matching: find.text('Billing (MySQL)')), findsOneWidget);
     expect(find.descendant(of: sheet, matching: find.text('mysql')), findsOneWidget);
     expect(find.descendant(of: sheet, matching: find.text('Finance')), findsOneWidget);
-    expect(find.descendant(of: sheet, matching: find.text('mysql.billing.internal:3306/billing')), findsOneWidget);
+    expect(find.descendant(of: sheet, matching: find.text('mysql.billing.internal:3306')), findsOneWidget);
+    expect(find.descendant(of: sheet, matching: find.text('billing')), findsOneWidget);
+    expect(find.descendant(of: sheet, matching: find.byKey(const ValueKey('connection-check'))), findsOneWidget);
+    verifyNever(() => repository.test(any()));
+    verifyZeroInteractions(providerMeta);
+  }
+
+  testWidgets('tapping a row opens its details, without checking the connection', (tester) async {
+    answer(_mockAnswer());
+    await pumpPage(tester);
+
+    await tester.tap(row('seed:billing-mysql'));
+    await expectBillingDetails(tester);
+  });
+
+  testWidgets('a long press on a row opens its details', (tester) async {
+    answer(_mockAnswer());
+    await pumpPage(tester);
+
+    await tester.longPress(row('seed:billing-mysql'));
+    await expectBillingDetails(tester);
+  });
+
+  testWidgets('the Check of the details sheet shows the latency Studio measured', (tester) async {
+    answer(_mockAnswer());
+    when(() => providerMeta.providerMeta('seed:billing-mysql')).thenAnswer(
+      (_) async => const Success(
+        ProviderMeta(queryLanguage: 'sql', schemaRefreshPattern: 'x', containerLevels: [], objectKinds: []),
+      ),
+    );
+    when(() => repository.test('seed:billing-mysql')).thenAnswer(
+      (_) async =>
+          const Success(ConnectionTestResult(message: 'Connection successful', latency: Duration(milliseconds: 42))),
+    );
+    await pumpPage(tester);
+    await tester.longPress(row('seed:billing-mysql'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('connection-check')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Reachable, 42 ms'), findsOneWidget);
+    verify(() => repository.test('seed:billing-mysql')).called(1);
   });
 
   group('favorites', () {

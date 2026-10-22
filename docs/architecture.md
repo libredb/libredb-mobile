@@ -193,6 +193,8 @@ Studio counts requests per user in buckets, per Studio process (`src/lib/api/rat
 - Both caches are emptied when the session ends, and an answer still on its way is stored only while the session generation it was sent under has not ended and no invalidation covering it ran since it was sent, so it never refills a cache after a sign-out or brings back a dropped table.
   Nothing is written to disk.
 - A refused request answers 429 with `Retry-After`, which reaches the caller as `studio.rate_limited`.
+- `POST /api/db/test-connection` spends a slot and opens a connection to the database, so the app checks a connection only when the user taps Check in its details sheet, never on the list or on open, and drops a second tap while a check runs.
+  Like Studio, it does not check a connection whose `provider-meta` declares `resumesBilledCompute`, since the check would wake compute the engine bills for, unless the user chooses Check anyway.
 
 ### The object tree
 

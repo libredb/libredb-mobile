@@ -26,6 +26,7 @@ class ProviderMeta extends Equatable {
     this.supportsSqlFormat,
     this.catalogSessions = false,
     this.tablesAreDerivedGroupings = false,
+    this.resumesBilledCompute = false,
     this.identifierQuoting,
     this.containerPathShapes = 'exact',
     this.rowActions = const [],
@@ -70,6 +71,10 @@ class ProviderMeta extends Equatable {
 
   /// Whether the engine's tables are groupings Studio derives rather than objects the engine stores.
   final bool tablesAreDerivedGroupings;
+
+  /// Whether a request to the connection can resume compute the engine bills for, such as a suspended Snowflake or
+  /// Databend Cloud warehouse, so the app sends it no check the user did not ask for.
+  final bool resumesBilledCompute;
 
   /// How the engine quotes an identifier: `double`, `backtick`, `double-always` or `backtick-always`.
   final String? identifierQuoting;
@@ -124,6 +129,7 @@ class ProviderMeta extends Equatable {
     supportsSqlFormat,
     catalogSessions,
     tablesAreDerivedGroupings,
+    resumesBilledCompute,
     identifierQuoting,
     containerPathShapes,
     rowActions,

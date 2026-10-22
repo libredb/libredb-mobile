@@ -210,7 +210,8 @@
   "connection_list_load_failed": "Could not load the connections",
   "connection_type": "Engine",
   "connection_environment": "Environment",
-  "connection_target": "Target",
+  "connection_host": "Host",
+  "connection_database": "Database",
   "connection_group": "Group",
   "connection_group_other": "Other",
   "connection_environment_other": "Other",
@@ -231,6 +232,31 @@
   "connection_recent": "Recent",
   "connection_star": "Add to favorites",
   "connection_unstar": "Remove from favorites",
+  "connection_status": "Status",
+  "connection_status_semantics": "Status: {status}",
+  "@connection_status_semantics": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "connection_check": "Check",
+  "connection_check_anyway": "Check anyway",
+  "connection_check_idle": "Not checked yet",
+  "connection_check_checking": "Checking",
+  "connection_check_online": "Reachable, {latency} ms",
+  "@connection_check_online": {
+    "placeholders": {
+      "latency": {
+        "type": "int"
+      }
+    }
+  },
+  "connection_check_online_no_latency": "Reachable",
+  "connection_check_degraded": "Reachable, without health data",
+  "connection_check_not_checked": "Not checked: checking would start billed compute",
+  "connection_check_failed": "Not reachable",
   "error_studio_database_auth": "The database refused the connection's credentials. Ask your administrator to check them.",
   "@error_studio_database_auth": {},
   "error_studio_connection_not_available": "This connection is not available to you.",

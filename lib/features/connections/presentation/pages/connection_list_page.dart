@@ -4,6 +4,8 @@ import 'package:libredb_mobile/features/connections/application/collapsed_sectio
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/connection_sections.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/connection_details_sheet.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/connection_star_button.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_empty_state.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
@@ -346,8 +348,10 @@ class _ConnectionRow extends StatelessWidget {
     ).strip;
     final secondary = connection.database ?? connection.host;
     final showsBadge = EnvironmentBadge.showsFor(environment);
+    // Until the active connection (#26) lands, a tap shows the details too.
     return InkWell(
       onTap: () => _open(context, connection),
+      onLongPress: () => showConnectionDetailsSheet(context, connection),
       child: Container(
         constraints: const BoxConstraints(minHeight: 48),
         decoration: BoxDecoration(
@@ -382,30 +386,14 @@ class _ConnectionRow extends StatelessWidget {
               ),
             ),
             if (starred != null)
-              _StarButton(key: ValueKey('connection-star-${connection.id}'), connection: connection, starred: starred!),
+              ConnectionStarButton(
+                key: ValueKey('connection-star-${connection.id}'),
+                connection: connection,
+                starred: starred!,
+              ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Stars the connection on this device, or removes its star.
-class _StarButton extends StatelessWidget {
-  const _StarButton({super.key, required this.connection, required this.starred});
-
-  final StudioConnection connection;
-  final bool starred;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = S.of(context);
-    return IconButton(
-      tooltip: starred ? l10n.connection_unstar : l10n.connection_star,
-      isSelected: starred,
-      icon: const Icon(Icons.star_border),
-      selectedIcon: const Icon(Icons.star),
-      onPressed: () => context.read<FavoriteConnectionsBloc>().add(FavoriteConnectionStarToggled(connection.id)),
     );
   }
 }
@@ -455,72 +443,5 @@ class _RecentStrip extends StatelessWidget {
 /// sheet shows what the app knows about it.
 void _open(BuildContext context, StudioConnection connection) {
   context.read<FavoriteConnectionsBloc>().add(FavoriteConnectionOpened(connection.id));
-  _showDetails(context, connection);
-}
-
-void _showDetails(BuildContext context, StudioConnection connection) {
-  final l10n = S.of(context);
-  final environment = connection.environment;
-  final target = _target(connection);
-  final favorites = context.read<FavoriteConnectionsBloc>();
-  showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    // The sheet's route sits above the page, so it gets the page's favorites itself.
-    builder: (context) => BlocProvider.value(
-      value: favorites,
-      child: SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          children: [
-            ListTile(
-              leading: Icon(engineIcon(connection.type), semanticLabel: connection.type),
-              title: Text(connection.name, style: Theme.of(context).textTheme.titleMedium),
-              subtitle: connection.readOnlyForUser
-                  ? const Align(alignment: AlignmentDirectional.centerStart, child: ReadOnlyChip())
-                  : null,
-              trailing: BlocBuilder<FavoriteConnectionsBloc, FavoriteConnectionsState>(
-                builder: (context, state) => switch (state) {
-                  FavoriteConnectionsReady(:final favorites) => _StarButton(
-                    key: const ValueKey('connection-detail-star'),
-                    connection: connection,
-                    starred: favorites.starred.contains(connection.id),
-                  ),
-                  FavoriteConnectionsNone() ||
-                  FavoriteConnectionsLoading() ||
-                  FavoriteConnectionsUnavailable() => const SizedBox.shrink(),
-                },
-              ),
-            ),
-            _Detail(label: l10n.connection_type, value: connection.type),
-            if (environment != null)
-              _Detail(
-                label: l10n.connection_environment,
-                value: StudioEnvironment.label(environment) ?? l10n.connection_environment_other,
-              ),
-            if (connection.group != null) _Detail(label: l10n.connection_group, value: connection.group!),
-            if (target.isNotEmpty) _Detail(label: l10n.connection_target, value: target),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _Detail extends StatelessWidget {
-  const _Detail({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => ListTile(dense: true, title: Text(label), subtitle: Text(value));
-}
-
-/// `host:port/database`, or whichever of them Studio sent.
-String _target(StudioConnection c) {
-  final address = [if (c.host != null) c.host!, if (c.port != null) '${c.port}'].join(':');
-  return [if (address.isNotEmpty) address, if (c.database != null) c.database!].join('/');
+  showConnectionDetailsSheet(context, connection);
 }

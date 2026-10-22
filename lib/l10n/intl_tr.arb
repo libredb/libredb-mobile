@@ -210,7 +210,8 @@
   "connection_list_load_failed": "Bağlantılar yüklenemedi",
   "connection_type": "Motor",
   "connection_environment": "Ortam",
-  "connection_target": "Hedef",
+  "connection_host": "Sunucu",
+  "connection_database": "Veritabanı",
   "connection_group": "Grup",
   "connection_group_other": "Diğer",
   "connection_environment_other": "Diğer",
@@ -231,6 +232,31 @@
   "connection_recent": "Son açılanlar",
   "connection_star": "Favorilere ekle",
   "connection_unstar": "Favorilerden çıkar",
+  "connection_status": "Durum",
+  "connection_status_semantics": "Durum: {status}",
+  "@connection_status_semantics": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "connection_check": "Kontrol et",
+  "connection_check_anyway": "Yine de kontrol et",
+  "connection_check_idle": "Henüz kontrol edilmedi",
+  "connection_check_checking": "Kontrol ediliyor",
+  "connection_check_online": "Erişilebilir, {latency} ms",
+  "@connection_check_online": {
+    "placeholders": {
+      "latency": {
+        "type": "int"
+      }
+    }
+  },
+  "connection_check_online_no_latency": "Erişilebilir",
+  "connection_check_degraded": "Erişilebilir, sağlık bilgisi yok",
+  "connection_check_not_checked": "Kontrol edilmedi: kontrol, ücretli işlem gücünü başlatır",
+  "connection_check_failed": "Erişilemiyor",
   "error_studio_database_auth": "Veritabanı bağlantının kimlik bilgilerini reddetti. Yöneticinizden bunları kontrol etmesini isteyin.",
   "@error_studio_database_auth": {},
   "error_studio_connection_not_available": "Bu bağlantı sizin kullanımınıza açık değil.",

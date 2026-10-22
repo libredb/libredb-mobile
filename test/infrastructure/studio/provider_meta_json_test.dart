@@ -125,6 +125,13 @@ void main() {
       expect(read({'supportsResultPagination': 'yes'}).supportsResultPagination, isFalse);
     });
 
+    test('resumesBilledCompute is true only when Studio declares the literal true', () {
+      expect(read({'resumesBilledCompute': true}).resumesBilledCompute, isTrue);
+      expect(read({}).resumesBilledCompute, isFalse);
+      expect(read({'resumesBilledCompute': false}).resumesBilledCompute, isFalse);
+      expect(read({'resumesBilledCompute': 'yes'}).resumesBilledCompute, isFalse);
+    });
+
     test('supportsColumnProfiling can only withhold profiling; absent keeps the language rule', () {
       expect(read({'supportsColumnProfiling': false}).supportsColumnProfiling, isFalse);
       expect(read({}).supportsColumnProfiling, isNull);
