@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// governed profile of tool/studio-dev, Studio main at dbfea263 in governance mode, recorded with a libredb-mobile access
 /// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
 /// status. docs/studio.md describes the profile and how the unavailable source was produced.
+/// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -57,6 +58,11 @@ void main() {
     expect(connections.map((c) => c.environment), ['development', 'production']);
     expect(connections.map((c) => c.group), ['Sales', 'Sales']);
     expect(connections.first.type, 'postgres');
+    final raw = (jsonDecode(fixture('managed_governed')) as Map<String, dynamic>)['connections'] as List;
+    expect(raw.map((c) => (c as Map)['user']), [
+      'sales_writer',
+      'sales_reader',
+    ], reason: 'sales-prod is bound for read');
   });
 
   test('GET /api/connections/policy under governance', () {
