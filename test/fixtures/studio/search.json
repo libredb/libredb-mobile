@@ -1,0 +1,1 @@
+[{"path":["dept_emp"],"name":"dept_emp","kind":"table"},{"path":["employee"],"name":"employee","kind":"table"},{"path":["current_dept_emp"],"name":"current_dept_emp","kind":"view"},{"path":["dept_emp_latest_date"],"name":"dept_emp_latest_date","kind":"view"}]

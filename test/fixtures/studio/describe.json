@@ -1,0 +1,1 @@
+{"path":["department"],"columns":[{"name":"dept_no","type":"TEXT","nullable":false,"isPrimary":true},{"name":"dept_name","type":"TEXT","nullable":false,"isPrimary":false}],"indexes":[],"foreignKeys":[]}

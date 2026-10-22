@@ -40,7 +40,7 @@ class StatementResult extends Equatable {
   final int index;
   final String sql;
 
-  /// The line of the script the statement starts on, from 1.
+  /// The line of the script the statement starts on, as Studio reports it.
   final int startLine;
   final Duration executionTime;
   final QueryResult? result;

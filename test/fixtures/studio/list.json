@@ -1,0 +1,1 @@
+[{"path":["department"],"name":"department","kind":"table"},{"path":["dept_emp"],"name":"dept_emp","kind":"table"},{"path":["dept_manager"],"name":"dept_manager","kind":"table"},{"path":["employee"],"name":"employee","kind":"table"},{"path":["salary"],"name":"salary","kind":"table"},{"path":["title"],"name":"title","kind":"table"}]
