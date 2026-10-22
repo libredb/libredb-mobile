@@ -123,7 +123,7 @@ Every request follows these rules:
 | Studio endpoint | Repository method | Answer |
 | --- | --- | --- |
 | `GET /api/auth/me` | `IStudioIdentityRepository.fetch` | `StudioIdentity` |
-| `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `List<StudioConnection>` |
+| `GET /api/connections/managed` | `IConnectionRepository.listManaged` | `ManagedConnections` (`StudioConnection` list and `cacheHint`) |
 | `GET /api/connections/policy` | `IConnectionRepository.fetchPolicy` | `ConnectionPolicy` |
 | `POST /api/db/test-connection` | `IConnectionRepository.test` | `ConnectionTestResult` |
 | `POST /api/db/provider-meta` | `IProviderMetaRepository.providerMeta` | `ProviderMeta` |

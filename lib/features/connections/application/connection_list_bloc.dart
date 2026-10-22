@@ -26,8 +26,8 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
     final result = await _listManagedConnectionsUseCase();
     switch (result) {
       case Success(:final data):
-        emit(ConnectionListLoaded(connections: data));
-        _log.debug('END: onRequested connections: {}', [data.length]);
+        emit(ConnectionListLoaded(connections: data.connections, cacheHint: data.cacheHint));
+        _log.debug('END: onRequested connections: {}', [data.connections.length]);
       case Failure(:final error):
         emit(ConnectionListFailure(errorCode: AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic));
         _log.error('END: onRequested error: {}', [error.message]);

@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -50,10 +51,14 @@ void main() {
 
   testWidgets('asks for the connections on open and lists them', (tester) async {
     when(() => repository.listManaged()).thenAnswer(
-      (_) async => const Success([
-        StudioConnection(id: 'seed:sales', name: 'Sales', type: 'postgres', environment: 'production'),
-        StudioConnection(id: 'seed:sample', name: 'Sample', type: 'sqlite'),
-      ]),
+      (_) async => const Success(
+        ManagedConnections(
+          connections: [
+            StudioConnection(id: 'seed:sales', name: 'Sales', type: 'postgres', environment: 'production'),
+            StudioConnection(id: 'seed:sample', name: 'Sample', type: 'sqlite'),
+          ],
+        ),
+      ),
     );
 
     await pumpPage(tester);
@@ -65,7 +70,8 @@ void main() {
   });
 
   testWidgets('shows the empty text when Studio answers no connection', (tester) async {
-    when(() => repository.listManaged()).thenAnswer((_) async => const Success(<StudioConnection>[]));
+    when(() => repository.listManaged())
+        .thenAnswer((_) async => const Success(ManagedConnections(connections: <StudioConnection>[])));
 
     await pumpPage(tester);
 

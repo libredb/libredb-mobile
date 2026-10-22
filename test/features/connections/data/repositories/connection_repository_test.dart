@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -5,16 +6,17 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
-import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../../support/printed_lines.dart';
 import '../../../../support/test_env.dart';
 
 void main() {
@@ -30,9 +32,10 @@ void main() {
 
       final result = await repository.listManaged();
 
-      expect(result, isA<Success<List<StudioConnection>>>());
-      final connections = (result as Success<List<StudioConnection>>).data;
-      expect(connections, const [
+      expect(result, isA<Success<ManagedConnections>>());
+      final managed = (result as Success<ManagedConnections>).data;
+      expect(managed.cacheHint, const Duration(minutes: 1));
+      expect(managed.connections, const [
         StudioConnection(
           id: 'seed:sales-postgres',
           name: 'Sales (PostgreSQL)',
@@ -42,6 +45,9 @@ void main() {
           database: 'sales',
           environment: 'production',
           group: 'Sales',
+          color: '#dc2626',
+          managed: true,
+          seedId: 'sales-postgres',
         ),
         StudioConnection(
           id: 'seed:catalog-mongo',
@@ -52,6 +58,8 @@ void main() {
           database: 'catalog',
           environment: 'staging',
           group: 'Catalog',
+          managed: true,
+          seedId: 'catalog-mongo',
         ),
         StudioConnection(
           id: 'seed:billing-mysql',
@@ -62,6 +70,9 @@ void main() {
           database: 'billing',
           environment: 'production',
           group: 'Finance',
+          readOnly: true,
+          managed: true,
+          seedId: 'billing-mysql',
         ),
         // Oracle names a service, not a database.
         StudioConnection(
@@ -72,6 +83,8 @@ void main() {
           port: 1521,
           environment: 'production',
           group: 'Finance',
+          managed: true,
+          seedId: 'erp-oracle',
         ),
         StudioConnection(
           id: 'seed:reporting-mssql',
@@ -82,6 +95,8 @@ void main() {
           database: 'reporting',
           environment: 'development',
           group: 'Analytics',
+          managed: true,
+          seedId: 'reporting-mssql',
         ),
       ]);
     });
@@ -89,20 +104,7 @@ void main() {
     test('fails with an AuthError without a session', () async {
       final result = await repository.listManaged();
 
-      expect(result, isA<Failure<List<StudioConnection>>>().having((f) => f.error, 'error', isA<AuthError>()));
-    });
-  });
-
-  group('ManagedConnections.fromJsonString', () {
-    test('refuses a body without a connections list', () {
-      expect(() => ManagedConnections.fromJsonString('{"error":"x"}'), throwsFormatException);
-    });
-
-    test('refuses a connection without an id, a name or a type', () {
-      expect(
-        () => ManagedConnections.fromJsonString('{"connections":[{"id":"seed:a","name":"A"}]}'),
-        throwsFormatException,
-      );
+      expect(result, isA<Failure<ManagedConnections>>().having((f) => f.error, 'error', isA<AuthError>()));
     });
   });
 
@@ -164,6 +166,37 @@ void main() {
     test('refuses an answer that is not a success', () {
       expect(() => ConnectionTestResultModel.fromJsonString('{"success":false,"error":"x"}'), throwsFormatException);
     });
+  });
+
+  // Studio before libredb-studio#1922 sends the credentials of an unmanaged seed to a bearer client (S-12).
+  test('ConnectionRepository.listManaged logs no part of a body that carries credentials', () async {
+    final adapter = _RecordingAdapter()
+      ..answer = jsonEncode({
+        'connections': [
+          {
+            'id': 'seed:sample',
+            'name': 'Sample',
+            'type': 'postgres',
+            'managed': false,
+            'user': 'reader-user',
+            'password': 'pw-value-1',
+            'connectionString': 'postgres://reader-user:pw-value-1@db/sample',
+            'apiKeySecret': 'api-key-value-2',
+          },
+        ],
+        'cacheHint': 60000,
+      });
+    final client = ApiClient(appConfig: _prodConfig);
+    client.instance.httpClientAdapter = adapter;
+
+    late Result<ManagedConnections> result;
+    final lines = await printedLines(() async => result = await ConnectionRepository(client).listManaged());
+
+    expect(result, isA<Success<ManagedConnections>>());
+    expect(lines, isNotEmpty, reason: 'the test reads no log line');
+    for (final secret in ['reader-user', 'pw-value-1', 'postgres://', 'api-key-value-2', 'connectionString']) {
+      expect(lines.where((line) => line.contains(secret)), isEmpty, reason: secret);
+    }
   });
 
   group('ConnectionRepository waits for the answer', () {

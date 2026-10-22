@@ -13,6 +13,10 @@ class StudioConnection extends Equatable {
     this.database,
     this.environment,
     this.group,
+    this.color,
+    this.readOnly = false,
+    this.managed = false,
+    this.seedId,
   });
 
   final String id;
@@ -28,6 +32,31 @@ class StudioConnection extends Equatable {
   final String? environment;
   final String? group;
 
+  /// The operator's color for the connection, as `#rrggbb`.
+  final String? color;
+
+  /// Whether Studio refuses every statement that writes on this connection.
+  final bool readOnly;
+
+  /// Whether Studio keeps the connection's credentials to itself; an unmanaged seed is copied into Studio's browser.
+  final bool managed;
+
+  /// The id in Studio's seed configuration, without the `seed:` prefix; a governed connection may send none.
+  final String? seedId;
+
   @override
-  List<Object?> get props => [id, name, type, host, port, database, environment, group];
+  List<Object?> get props => [
+    id,
+    name,
+    type,
+    host,
+    port,
+    database,
+    environment,
+    group,
+    color,
+    readOnly,
+    managed,
+    seedId,
+  ];
 }

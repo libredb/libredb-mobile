@@ -16,12 +16,15 @@ final class ConnectionListLoading extends ConnectionListState {
 }
 
 final class ConnectionListLoaded extends ConnectionListState {
-  const ConnectionListLoaded({required this.connections});
+  const ConnectionListLoaded({required this.connections, this.cacheHint});
 
   final List<StudioConnection> connections;
 
+  /// How often Studio expects the list to be asked again, when it sent a hint.
+  final Duration? cacheHint;
+
   @override
-  List<Object?> get props => [connections];
+  List<Object?> get props => [connections, cacheHint];
 }
 
 final class ConnectionListFailure extends ConnectionListState {
