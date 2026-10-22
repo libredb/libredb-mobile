@@ -1772,8 +1772,9 @@ void main() {
     ({_UnauthorizedServerStub server, _FakeRotation rotation}) studioClient(
       String body, {
       TokenRotationResult rotated = const TokensRotated(accessToken: 'new-access'),
+      Future<void> Function()? beforeFirstAnswer,
     }) {
-      final server = _UnauthorizedServerStub(body);
+      final server = _UnauthorizedServerStub(body, beforeFirstAnswer);
       final rotation = _FakeRotation(rotated);
       dio.interceptors.addAll([
         AuthInterceptor(secureStorage: secureStorage),
@@ -1824,6 +1825,34 @@ void main() {
 
       expect(rotation.sent, ['valid-refresh']);
       expect(server.authorizations, ['Bearer old-access'], reason: 'nothing to send the request again with');
+      expect(sessionExpiredCalls, 1);
+    });
+
+    // Another request rotated the token while this one was on its way, so it is sent again with the stored token and
+    // without a refresh of its own; a second 401 there follows the same rule.
+    Future<void> rotateWhileInFlight() => secureStorage.write(SecureStorageKeys.jwtToken.key, 'new-access');
+
+    test('keeps the session when the retry with a token rotated meanwhile gets 401 without a code again', () async {
+      final (:server, :rotation) = studioClient('{"authenticated":false}', beforeFirstAnswer: rotateWhileInFlight);
+
+      await expectUnauthorized('/auth/me');
+
+      expect(rotation.sent, isEmpty, reason: 'the stored token was already rotated');
+      expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
+      expect(sessionExpiredCalls, 0);
+      expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), 'new-access');
+    });
+
+    test('ends the session when the retry with a token rotated meanwhile gets 401 AUTH_REQUIRED again', () async {
+      final (:server, :rotation) = studioClient(
+        '{"error":"Invalid access token","code":"AUTH_REQUIRED"}',
+        beforeFirstAnswer: rotateWhileInFlight,
+      );
+
+      await expectUnauthorized('/connections/managed');
+
+      expect(rotation.sent, isEmpty, reason: 'the stored token was already rotated');
+      expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
       expect(sessionExpiredCalls, 1);
     });
 
@@ -1952,16 +1981,20 @@ class _CapturingSuccessStub extends Interceptor {
 /// Answers every request with 401 the way a server response does: the rejection runs the error
 /// interceptors, so the 401 reaches [TokenRefreshInterceptor.onError]. Records each Authorization header.
 class _UnauthorizedServerStub extends Interceptor {
-  _UnauthorizedServerStub([this.body]);
+  _UnauthorizedServerStub([this.body, this.beforeFirstAnswer]);
 
   /// The body of every 401.
   final String? body;
 
+  /// Runs once, after the first request is recorded and before it is answered.
+  final Future<void> Function()? beforeFirstAnswer;
+
   final authorizations = <String?>[];
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     authorizations.add(options.headers['Authorization'] as String?);
+    if (authorizations.length == 1) await beforeFirstAnswer?.call();
     handler.reject(
       DioException(
         requestOptions: options,
