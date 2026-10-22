@@ -35,6 +35,11 @@ import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dar
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
 import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
+import 'package:libredb_mobile/features/studio_status/application/usecases/check_studio_liveness_usecase.dart';
+import 'package:libredb_mobile/features/studio_status/application/usecases/read_studio_readiness_usecase.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
@@ -196,6 +201,9 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<ILifecycleRepository>(
           create: (context) => dependencies.createLifecycleRepository(context.read<ApiClient>()),
         ),
+        RepositoryProvider<IStudioStatusRepository>(
+          create: (context) => dependencies.createStudioStatusRepository(context.read<ApiClient>()),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -220,6 +228,14 @@ class AppScope extends StatelessWidget {
               fetchAppConfigUseCase: FetchAppConfigUseCase(context.read<ILifecycleRepository>()),
               featureFlagService: FeatureFlagService.instance,
             )..add(const LifecycleCheckEvent()),
+          ),
+          // Created, and the first liveness check sent, when App's StudioStatusGate first builds, which is before the
+          // stored session is restored.
+          BlocProvider<StudioStatusBloc>(
+            create: (context) => StudioStatusBloc(
+              checkLivenessUseCase: CheckStudioLivenessUseCase(context.read<IStudioStatusRepository>()),
+              readReadinessUseCase: ReadStudioReadinessUseCase(context.read<IStudioStatusRepository>()),
+            )..add(const StudioLivenessCheckRequested()),
           ),
           BlocProvider<LocaleCubit>(
             create: (_) =>

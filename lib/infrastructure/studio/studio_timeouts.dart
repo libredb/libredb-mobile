@@ -7,3 +7,9 @@
 /// gave up sooner would both fail and kill a statement Studio was still allowed to finish. The 15 second margin covers
 /// Studio's own work around the statement and the network. Every other request keeps [ApiClient]'s 30 seconds.
 const Duration studioStatementReceiveTimeout = Duration(seconds: 60 + 15);
+
+/// How long the app waits to connect to Studio and for the answer of `GET /api/health` and `GET /api/ready`.
+///
+/// Both answer from Studio's memory and touch no database, so a Studio that has not answered in 10 seconds is treated
+/// as unreachable rather than kept waiting for the 30 seconds of an ordinary request.
+const Duration studioProbeTimeout = Duration(seconds: 10);

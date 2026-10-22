@@ -1881,6 +1881,66 @@ void main() {
       );
     });
   });
+
+  // Studio's probes: GET /api/health must give up sooner than an ordinary request, and GET /api/ready answers 503 with
+  // a body the caller reads.
+  group('ApiClient.get per request options', () {
+    late _OptionsRecordingAdapter adapter;
+    late ApiClient client;
+
+    setUp(() {
+      ResilienceInterceptor.instance.resetAll();
+      adapter = _OptionsRecordingAdapter();
+      client = ApiClient(
+        appConfig: const AppConfig(
+          environment: Environment.prod,
+          apiBaseUrl: 'https://studio.example.test/api',
+          certificatePins: [],
+          idleTimeout: null,
+        ),
+      );
+      client.instance.httpClientAdapter = adapter;
+    });
+
+    tearDown(ResilienceInterceptor.instance.resetAll);
+
+    test('sends the timeout it is given as the connect and the receive timeout', () async {
+      adapter.replies.add((200, '{}'));
+
+      await client.get('/health', timeout: const Duration(seconds: 7));
+
+      expect(adapter.requests.single.connectTimeout, const Duration(seconds: 7));
+      expect(adapter.requests.single.receiveTimeout, const Duration(seconds: 7));
+    });
+
+    test('keeps the 30 seconds of every other request without a timeout', () async {
+      adapter.replies.add((200, '{}'));
+
+      await client.get('/connections/managed');
+
+      expect(adapter.requests.single.connectTimeout, const Duration(seconds: 30));
+      expect(adapter.requests.single.receiveTimeout, const Duration(seconds: 30));
+    });
+
+    test('answers a status the caller accepts with the response, after one request', () async {
+      adapter.replies.add((503, '{"status":"loading"}'));
+
+      final response = await client.get('/ready', acceptedStatuses: const {503});
+
+      expect(response.statusCode, 503);
+      expect(response.data, '{"status":"loading"}');
+      expect(adapter.requests, hasLength(1));
+    });
+
+    test('still throws for a status the caller did not accept', () async {
+      adapter.replies.addAll([for (var i = 0; i < 4; i++) (500, '{}')]);
+
+      await expectLater(
+        client.get('/ready', acceptedStatuses: const {503}),
+        throwsA(isA<FetchDataException>().having((e) => e.statusCode, 'statusCode', 500)),
+      );
+    });
+  });
 }
 
 /// A platform store that refuses every cache entry, as localStorage does once the origin has used up its quota.
@@ -1902,4 +1962,30 @@ List<String> _capturePrintedLines() {
   Logger.addOutputListener(collect);
   addTearDown(() => Logger.removeOutputListener(collect));
   return lines;
+}
+
+/// Answers each request with the next queued status code and body and keeps the options it was sent.
+class _OptionsRecordingAdapter implements HttpClientAdapter {
+  final List<(int, String)> replies = [];
+  final List<RequestOptions> requests = [];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    final (status, body) = replies.removeAt(0);
+    return ResponseBody.fromString(
+      body,
+      status,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

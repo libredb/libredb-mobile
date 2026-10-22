@@ -20,6 +20,11 @@ import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_
 import 'package:libredb_mobile/features/lifecycle/presentation/pages/force_update_screen.dart';
 import 'package:libredb_mobile/features/lifecycle/presentation/pages/maintenance_screen.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_unreachable_page.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
@@ -30,6 +35,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mocks/mock_classes.dart';
+import '../support/answering_studio_status_repository.dart';
 import '../support/url_launcher_stub.dart';
 
 /// Device preferences whose stored language arrives only when [language] completes, like a slow device.
@@ -379,9 +385,118 @@ void main() {
       expect(lifecycle.state, isA<LifecycleReady>().having((s) => s.config?.minimumVersion, 'minimumVersion', '0.1.0'));
     });
   });
+  // The gate sits beside the lifecycle gate in the MaterialApp builder. These tests replace the Studio status
+  // repository; the last one reads the answer the mock serves.
+  group('App Studio status gate', () {
+    const offline = NetworkError('No Internet connection');
+    late MockIStudioStatusRepository repository;
+    late MockISecureStorage secureStorage;
+
+    setUp(() {
+      repository = MockIStudioStatusRepository();
+      when(() => repository.liveness()).thenAnswer((_) async => const Success(null));
+      secureStorage = MockISecureStorage();
+      when(() => secureStorage.read(any())).thenAnswer((_) async => null);
+    });
+
+    Future<void> pumpApp(WidgetTester tester, {AppConfig appConfig = const AppConfig.dev()}) async {
+      await tester.pumpWidget(
+        App(
+          language: 'en',
+          secureStorage: secureStorage,
+          dependencies: _StudioStatusDependencies(repository, appConfig: appConfig),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    // Airplane mode at start: the session is stored, Studio cannot be reached, and the user must not sign in again.
+    testWidgets('shows the unreachable page at start, and Retry opens the app without a new sign-in', (tester) async {
+      tester.platformDispatcher.defaultRouteNameTestValue = ApplicationRoutesConstants.settings;
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+      when(() => secureStorage.read(any())).thenAnswer((_) async => 'MOCK_TOKEN');
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+
+      await pumpApp(tester);
+
+      expect(find.byType(StudioUnreachablePage), findsOneWidget);
+      expect(find.byType(SettingsScreen), findsNothing);
+      final session = tester.element(find.byType(StudioUnreachablePage)).read<SessionCubit>();
+      expect(session.state, isA<SessionAuthenticated>());
+
+      when(() => repository.liveness()).thenAnswer((_) async => const Success(null));
+      await tester.tap(find.byType(AppButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+      expect(session.state, isA<SessionAuthenticated>());
+    });
+
+    testWidgets('names the configured Studio host on the unreachable page', (tester) async {
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+
+      await pumpApp(
+        tester,
+        appConfig: const AppConfig(
+          environment: Environment.test,
+          apiBaseUrl: 'https://studio.example.test:9443/api',
+          certificatePins: [],
+          idleTimeout: null,
+        ),
+      );
+
+      expect(find.textContaining('studio.example.test:9443'), findsOneWidget);
+    });
+
+    testWidgets('checks Studio when the app starts, while the stored session is still read', (tester) async {
+      final storedToken = Completer<String?>();
+      when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+
+      await tester.pumpWidget(
+        App(language: 'en', secureStorage: secureStorage, dependencies: _StudioStatusDependencies(repository)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      verify(() => repository.liveness()).called(1);
+      expect(find.byType(StudioUnreachablePage), findsOneWidget);
+
+      storedToken.complete(null);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('checks Studio again on resume only after more than five minutes in the background', (tester) async {
+      await pumpApp(tester);
+      verify(() => repository.liveness()).called(1);
+
+      await _sendToBackgroundAndBack(tester, away: StudioStatusBloc.defaultRecheckAfter);
+      verifyNever(() => repository.liveness());
+      expect(find.byType(LoginScreen), findsOneWidget);
+
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+      await _sendToBackgroundAndBack(tester, away: StudioStatusBloc.defaultRecheckAfter + const Duration(seconds: 1));
+
+      verify(() => repository.liveness()).called(1);
+      expect(find.byType(StudioUnreachablePage), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+    });
+
+    // GET /health is a public endpoint, so the mock answers it before sign-in.
+    testWidgets('reads the liveness answer from the mock before sign-in', (tester) async {
+      await tester.pumpWidget(App(language: 'en', secureStorage: secureStorage));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(tester.element(find.byType(LoginScreen)).read<StudioStatusBloc>().state, const StudioReachable());
+    });
+  });
 }
 
 /// The app's dependencies with [repository] in place of the lifecycle repository that AppDependencies creates.
+/// Studio answers its liveness check at once, so the check sends no request through the mock.
 class _LifecycleDependencies extends AppDependencies {
   const _LifecycleDependencies(this.repository);
 
@@ -389,18 +504,40 @@ class _LifecycleDependencies extends AppDependencies {
 
   @override
   ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => repository;
+
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
 }
 
-/// Sends the app to the background and back, through every state Flutter reports on the way.
-Future<void> _sendToBackgroundAndBack(WidgetTester tester) async {
-  for (final state in [
-    AppLifecycleState.inactive,
-    AppLifecycleState.hidden,
-    AppLifecycleState.paused,
-    AppLifecycleState.hidden,
-    AppLifecycleState.inactive,
-    AppLifecycleState.resumed,
-  ]) {
+/// The app's dependencies with [repository] in place of the Studio status repository that AppDependencies creates.
+/// The app config opens the app at once, so the lifecycle check sends no request through the mock.
+class _StudioStatusDependencies extends AppDependencies {
+  const _StudioStatusDependencies(this.repository, {super.appConfig});
+
+  final IStudioStatusRepository repository;
+
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => repository;
+
+  @override
+  ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => const _OpenLifecycleRepository();
+}
+
+/// The app config lets the app open.
+class _OpenLifecycleRepository implements ILifecycleRepository {
+  const _OpenLifecycleRepository();
+
+  @override
+  Future<Result<AppConfigEntity>> fetchAppConfig() async => const Success(AppConfigEntity());
+}
+
+/// Sends the app to the background for [away] and back, through every state Flutter reports on the way.
+Future<void> _sendToBackgroundAndBack(WidgetTester tester, {Duration away = Duration.zero}) async {
+  for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+    tester.binding.handleAppLifecycleStateChanged(state);
+  }
+  if (away > Duration.zero) await tester.pump(away);
+  for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
     tester.binding.handleAppLifecycleStateChanged(state);
   }
   await tester.pumpAndSettle();

@@ -200,5 +200,6 @@ DOCKER_CONFIG=/tmp/empty-docker-config docker compose -f tool/studio-dev/docker-
 
 `test/fixtures/studio/managed_governed.json`, `policy_governed.json` and `governance_unavailable.json` were recorded as `user` with a `libredb-mobile` access token, and `admin_governance.json` as `admin`, from Studio main at `dbfea263`.
 The seed in `tool/studio-dev/governed/` was generated from Studio `02dc26057`, which has the same governance contract as `dbfea263`.
+`ready_governed.json` is the governed Studio's `GET /api/ready`, and `ready_degraded.json` the same about 15 seconds after `governance-source` was stopped; both were recorded without a token, as were `health.json` and `ready.json` from the first Studio.
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads them.
 The app was also walked through on the Android emulator (API 30 Google APIs image) against the governed Studio: the SSO sign-in as `user` and the connection list with both granted connections.

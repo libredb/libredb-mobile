@@ -11,6 +11,7 @@ No other method is repeated: a `POST` to Studio may run a statement, and the oth
 
 An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`) is Studio's own answer, such as a 503 `GOVERNANCE_UNAVAILABLE` or `IDENTITY_PROVIDER_UNAVAILABLE`, or a 504 `TIMEOUT_ERROR`.
 It reaches the repository after one request, so the user sees what Studio said, and it is never repeated.
+A status the caller accepts (`ApiClient.get` with `acceptedStatuses`, which `GET /api/ready` uses for its 503 answers) is a response, not an error, so it is neither repeated nor counted.
 
 After five failures in a row the interceptor opens the endpoint's circuit and refuses its requests for 30 seconds with `CircuitBreakerOpenException`.
 Only a timeout, a connection error and a 5xx without a Studio error code count as failures.

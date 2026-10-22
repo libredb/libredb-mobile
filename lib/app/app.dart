@@ -11,6 +11,7 @@ import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/features/lifecycle/presentation/pages/lifecycle_gate.dart';
+import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_status_gate.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -146,19 +147,23 @@ class _AppViewState extends State<_AppView> {
             // to its redirect. It also waits for the stored language, so the first page shows in it.
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
             // LifecycleGate shows the maintenance or update screen in place of all of it when the app config asks for
-            // one, and mounts the router again once the app may open.
+            // one, and mounts the router again once the app may open. StudioStatusGate, inside it, shows the
+            // unreachable page in its place while Studio does not answer, and mounts the router again once it does,
+            // with the session untouched.
             builder: (context, router) => RepositoryProvider<UnsavedChangesRegistry>.value(
               value: _unsavedChanges!,
               child: LifecycleGate(
-                child: BlocBuilder<SessionCubit, SessionState>(
-                  buildWhen: (previous, current) => previous is SessionUnknown,
-                  builder: (context, session) => switch (session) {
-                    SessionUnknown() => const _RestoreView(),
-                    SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
-                      LocaleRestoring() => const _RestoreView(),
-                      LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                child: StudioStatusGate(
+                  child: BlocBuilder<SessionCubit, SessionState>(
+                    buildWhen: (previous, current) => previous is SessionUnknown,
+                    builder: (context, session) => switch (session) {
+                      SessionUnknown() => const _RestoreView(),
+                      SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
+                        LocaleRestoring() => const _RestoreView(),
+                        LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                      },
                     },
-                  },
+                  ),
                 ),
               ),
             ),

@@ -74,6 +74,9 @@ void main() {
         ('POST', '/token/refresh'),
         // The lifecycle checks read the app config before sign-in.
         ('GET', '/app/config'),
+        // Studio's liveness and readiness, which the app checks before sign-in.
+        ('GET', '/health'),
+        ('GET', '/ready'),
       ]) {
         final handler = _CapturingRequestHandler();
 

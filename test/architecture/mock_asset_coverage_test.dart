@@ -10,6 +10,7 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
@@ -80,6 +81,8 @@ void main() {
     'ISqlEditorRepository.transactionStatus': (client) =>
         SqlEditorRepository(client).transactionStatus('seed:sales-db'),
     'ILifecycleRepository.fetchAppConfig': (client) => LifecycleRepository(client).fetchAppConfig(),
+    'IStudioStatusRepository.liveness': (client) => StudioStatusRepository(client).liveness(),
+    'IStudioStatusRepository.readiness': (client) => StudioStatusRepository(client).readiness(),
   };
 
   for (final MapEntry(key: name, value: send) in requests.entries) {
@@ -92,8 +95,8 @@ void main() {
     });
   }
 
-  // Sent before sign-in: sign-in, the OTP sign-in, registration and password reset, and the app config the lifecycle
-  // checks read.
+  // Sent before sign-in: sign-in, the OTP sign-in, registration and password reset, the app config the lifecycle
+  // checks read, and Studio's liveness and readiness.
   const sentBeforeSignIn = [
     'IAuthRepository.authenticate',
     'IAuthRepository.sendOtp',
@@ -101,6 +104,8 @@ void main() {
     'IAccountRepository.register',
     'IAccountRepository.resetPassword',
     'ILifecycleRepository.fetchAppConfig',
+    'IStudioStatusRepository.liveness',
+    'IStudioStatusRepository.readiness',
   ];
   for (final name in sentBeforeSignIn) {
     test('$name succeeds through the mock-backed client without a stored token', () async {

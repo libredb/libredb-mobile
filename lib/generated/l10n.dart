@@ -1184,6 +1184,51 @@ class S {
   String studio_error_semantics(String message) {
     return Intl.message('Error: $message', name: 'studio_error_semantics', desc: '', args: [message]);
   }
+
+  /// `Can't reach Studio`
+  String get studio_unreachable_title {
+    return Intl.message('Can\'t reach Studio', name: 'studio_unreachable_title', desc: '', args: []);
+  }
+
+  /// `LibreDB Studio does not answer. Check your internet connection, then try again.`
+  String get studio_unreachable_message {
+    return Intl.message(
+      'LibreDB Studio does not answer. Check your internet connection, then try again.',
+      name: 'studio_unreachable_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio address: {host}`
+  String studio_unreachable_host(String host) {
+    return Intl.message('Studio address: $host', name: 'studio_unreachable_host', desc: '', args: [host]);
+  }
+
+  /// `Connections are temporarily unavailable. Try again in a moment.`
+  String get studio_governance_temporarily_unavailable {
+    return Intl.message(
+      'Connections are temporarily unavailable. Try again in a moment.',
+      name: 'studio_governance_temporarily_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio cannot serve connections right now. An administrator needs to check its governance setup.`
+  String get studio_governance_cannot_serve {
+    return Intl.message(
+      'Studio cannot serve connections right now. An administrator needs to check its governance setup.',
+      name: 'studio_governance_cannot_serve',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Details: {detail}`
+  String studio_governance_detail(String detail) {
+    return Intl.message('Details: $detail', name: 'studio_governance_detail', desc: '', args: [detail]);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
