@@ -58,6 +58,7 @@ In mock mode (`main_local.dart`) `MockInterceptor` answers every request from `a
 ### Maintenance and forced updates
 
 At start the app reads `GET /app/config` under `PROD_API_URL`, an endpoint that needs no session (mock: `assets/mock/GET_app_config.json`).
+Studio has no `/api/app/config` today, so against a real Studio the check fails open on every start and logs an error; only the mock answers it.
 `LifecycleGate` (`lib/features/lifecycle/`) sits in the `MaterialApp` builder, around the session restore and the router, and shows a full-screen page in their place when the answer asks for one.
 
 - `maintenanceMode: true` shows the maintenance page with the answer's `maintenanceMessage` (or a translated default), the `maintenanceEstimatedEnd` time in the user's language and time zone, and a retry button.
@@ -192,3 +193,4 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
 - Whether a dropped mobile connection cancels the statement on the server is not verified; the editor cancels explicitly.
 - Granting a connection needs an API in Platform that does not exist yet (milestone M5).
+- Studio has no `/api/app/config`, so maintenance mode, forced updates and remote feature flags work only against the mock (milestone M6).

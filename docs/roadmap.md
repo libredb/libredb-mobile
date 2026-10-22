@@ -91,6 +91,7 @@ Studio alone cannot do this: without Platform it gives connections to roles from
 
 - The full walkthrough on a physical Android phone and on iOS.
 - Certificate pinning and Sentry configured for the release build.
+- A decision on the start-up app config check: a Studio endpoint for it, or its removal, since Studio has no `/api/app/config` today.
 - Store listings, signing and a release pipeline.
 
 ## Not planned
