@@ -391,9 +391,7 @@ class SessionCubit extends Cubit<SessionState> {
       //
       // An expired session stays stored until a sign-in replaces it. The
       // screens a signed-out user can reach only call public endpoints,
-      // which never receive it, and clearing it here would sign out other
-      // browser tabs, which share the stored session and refresh it on
-      // their next request.
+      // which never receive it.
       if (!checkJwtExpiry) {
         _log.info('restore: token found, its expiry checked by the startup step → authenticated');
         return SessionAuthenticated(roles: await _readRoles());

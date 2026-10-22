@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
@@ -16,9 +14,6 @@ import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_end_signal.dart';
 
 final _oidcSettings = OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app');
 
@@ -46,36 +41,22 @@ class _OidcDependencies extends AppDependencies {
 
   final IOidcClient client;
   final apiClientRotations = <TokenRotation>[];
-  final apiClientLocks = <ITokenRefreshLock?>[];
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
 
   @override
-  ApiClient createApiClient(
-    ISecureStorage secureStorage, {
-    required OnSessionExpired onSessionExpired,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
-  }) => throw StateError('an oidc build must create its ApiClient through createOidcApiClient');
+  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
+      throw StateError('an oidc build must create its ApiClient through createOidcApiClient');
 
   @override
   ApiClient createOidcApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     required TokenRotation tokenRotation,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
   }) {
     apiClientRotations.add(tokenRotation);
-    apiClientLocks.add(tokenRefreshLock);
-    return super.createOidcApiClient(
-      secureStorage,
-      onSessionExpired: onSessionExpired,
-      tokenRotation: tokenRotation,
-      tokenRefreshLock: tokenRefreshLock,
-      rotatedTokensTakeBack: rotatedTokensTakeBack,
-    );
+    return super.createOidcApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
   }
 }
 
@@ -90,29 +71,17 @@ class _MisconfiguredDependencies extends AppDependencies {
   final apiClientRotations = <TokenRotation>[];
 
   @override
-  ApiClient createApiClient(
-    ISecureStorage secureStorage, {
-    required OnSessionExpired onSessionExpired,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
-  }) => throw StateError('a misconfigured oidc build must never refresh through the backend refresh endpoint');
+  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
+      throw StateError('a misconfigured oidc build must never refresh through the backend refresh endpoint');
 
   @override
   ApiClient createOidcApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     required TokenRotation tokenRotation,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
   }) {
     apiClientRotations.add(tokenRotation);
-    return super.createOidcApiClient(
-      secureStorage,
-      onSessionExpired: onSessionExpired,
-      tokenRotation: tokenRotation,
-      tokenRefreshLock: tokenRefreshLock,
-      rotatedTokensTakeBack: rotatedTokensTakeBack,
-    );
+    return super.createOidcApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
   }
 }
 
@@ -144,11 +113,8 @@ Future<SessionState> _restoredSession(WidgetTester tester, BuildContext scope) a
 }
 
 void main() {
-  // The startup refresh of an oidc build takes its turn at the lock the tabs share, and records what it stored for
-  // the take-back, like the token refresh of its ApiClient.
-  group('AppScope in an oidc build and the other browser tabs', () {
-    testWidgets('the startup refresh takes its turn at this tab\'s lock, and another tab\'s end takes back what it '
-        'stored', (tester) async {
+  group('AppScope startup in an oidc build', () {
+    testWidgets('refreshes an expired stored session through the provider before the router starts', (tester) async {
       for (final (key, value) in [
         (SecureStorageKeys.jwtToken, 'expired-access-token'),
         (SecureStorageKeys.refreshToken, 'stored-refresh-token'),
@@ -157,60 +123,13 @@ void main() {
       ]) {
         await FlutterSecureStorageAdapter().write(key.key, value);
       }
-      final signal = _ManualSessionEndSignal();
-      final lock = _CountingLock();
-      final dependencies = _OidcDependencies(_RefreshingClient(DateTime.utc(2100)));
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: dependencies,
-          defaultLocale: const Locale('en'),
-          sessionEndSignal: signal,
-          tokenRefreshLock: lock,
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
+      final scope = await _pumpScope(tester, _OidcDependencies(_RefreshingClient(DateTime.utc(2100))));
+
       await _restoredSession(tester, scope);
-      expect(lock.turns, 1);
+
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), 'refreshed-access-token');
-
-      signal.endInAnotherTab();
-      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
     });
 
-    testWidgets('gives the ApiClient this tab\'s lock', (tester) async {
-      final lock = _CountingLock();
-      final dependencies = _OidcDependencies(_IdleOidcClient());
-      late BuildContext scope;
-      await tester.pumpWidget(
-        AppScope(
-          dependencies: dependencies,
-          defaultLocale: const Locale('en'),
-          tokenRefreshLock: lock,
-          child: Builder(
-            builder: (context) {
-              scope = context;
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
-
-      scope.read<ApiClient>();
-
-      expect(dependencies.apiClientLocks, [same(lock)]);
-    });
-  });
-
-  group('AppScope startup in an oidc build', () {
     testWidgets('the ApiClient refreshes through the one TokenRotation the scope provides', (tester) async {
       final dependencies = _OidcDependencies(_IdleOidcClient());
       final scope = await _pumpScope(tester, dependencies);
@@ -266,42 +185,6 @@ void main() {
 
     expect(() => scope.read<SsoAutoRedirectGate>(), throwsA(isA<ProviderNotFoundException>()));
   });
-}
-
-/// This tab's [ISessionEndSignal], whose other tab ends the session when the test says so, and which counts the ends
-/// this tab tells.
-class _ManualSessionEndSignal implements ISessionEndSignal {
-  final _endedElsewhere = StreamController<DateTime>.broadcast(sync: true);
-  int told = 0;
-
-  @override
-  void notifyEnded() => told++;
-
-  @override
-  Stream<DateTime> get endedElsewhere => _endedElsewhere.stream;
-
-  @override
-  Stream<void> get storeChanges => const Stream.empty();
-
-  /// Another tab begins to end the session now.
-  void endInAnotherTab() => _endedElsewhere.add(DateTime.now());
-
-  @override
-  void dispose() {}
-}
-
-/// This tab's [ITokenRefreshLock], which runs each refresh at once and counts them.
-class _CountingLock implements ITokenRefreshLock {
-  int turns = 0;
-
-  @override
-  Future<T> hold<T>(Future<T> Function() body) {
-    turns++;
-    return body();
-  }
-
-  @override
-  void dispose() {}
 }
 
 /// Refreshes the stored session at the provider, rotating every token, with a new access token that expires at

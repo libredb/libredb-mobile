@@ -28,8 +28,6 @@ import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart'
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
 
 /// Production chain (no MockInterceptor) with certificate pinning configured.
 const _pinnedProdConfig = AppConfig(
@@ -65,17 +63,8 @@ class _PinnedDependencies extends AppDependencies {
   final _PinMismatchAdapter adapter;
 
   @override
-  ApiClient createApiClient(
-    ISecureStorage secureStorage, {
-    required OnSessionExpired onSessionExpired,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
-  }) => super.createApiClient(
-    secureStorage,
-    onSessionExpired: onSessionExpired,
-    tokenRefreshLock: tokenRefreshLock,
-    rotatedTokensTakeBack: rotatedTokensTakeBack,
-  )..instance.httpClientAdapter = adapter;
+  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
+      super.createApiClient(secureStorage, onSessionExpired: onSessionExpired)..instance.httpClientAdapter = adapter;
 }
 
 const _insecureConnectionMessage =
