@@ -46,7 +46,9 @@ The full list of steps for a feature is under "Adding a New Feature" in [CLAUDE.
 
 ## CI
 
-Two GitHub Actions workflows run on pushes and pull requests:
+Two GitHub Actions workflows run:
 
-- `build_and_test.yml` checks formatting, analyzes, runs the tests with coverage and fails below 65 percent (`scripts/check_coverage.sh`), builds the release APK and app bundle, and runs the Android JVM unit tests.
-- `sonar_scanner.yml` sends the analysis and the coverage to SonarCloud; it needs the `SONAR_TOKEN` secret on the repository or the organization.
+- `build_and_test.yml` runs on pull requests to `main` and on pushes to `main`, `dev`, `feature/*`, `bugfix/*`, `hotfix/*` and `release/v*`.
+  It checks formatting, analyzes, runs the tests with coverage and fails below 65 percent (`scripts/check_coverage.sh`), builds the release APK and app bundle, and runs the Android JVM unit tests.
+- `sonar_scanner.yml` runs only for pushes to and pull requests against the `sonar` branch.
+  It sends the analysis and the coverage to SonarCloud; it needs the `SONAR_TOKEN` secret on the repository or the organization.

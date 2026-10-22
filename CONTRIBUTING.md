@@ -11,7 +11,7 @@ Report a security problem privately, as [SECURITY.md](SECURITY.md) describes, no
 
 ## Suggesting enhancements
 
-Open an issue with the "Enhancement" label.
+Open an issue with the Feature request form, which adds the `enhancement` label.
 Describe the change and why it would be valuable.
 
 ## Submitting code

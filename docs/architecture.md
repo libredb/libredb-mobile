@@ -182,7 +182,8 @@ Grants refer to the Keycloak subject, so the app must sign in to the same realm 
 - Studio sends the credentials of an unmanaged seed connection in the connection list; the app's reader does not read them.
 - The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
   The repositories never log statement text or database error text.
-- Certificate pinning and screen capture protection are built in and off; milestone M6 configures them for the release build.
+- Certificate pinning is built in and off; milestone M6 configures it and Sentry for the release build.
+  Screen capture protection is built in, and no screen uses it yet.
   [security.md](security.md) describes them, the token storage and the inactivity sign-out, and [crash-reporting.md](crash-reporting.md) what a crash report may carry.
 
 ## Known gaps

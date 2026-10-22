@@ -9,7 +9,7 @@ The rules for Studio's endpoints are in [architecture.md](architecture.md#talkin
 `ResilienceInterceptor` repeats a request that failed with a timeout, a connection error or a 502, 503 or 504, up to three times, and only when the request is safe to send twice.
 `GET`, `HEAD`, `OPTIONS`, `PUT` and `DELETE` are idempotent by HTTP semantics and are repeated.
 A `POST` or `PATCH` may already have been processed by the server, so it is repeated only when it carries an `Idempotency-Key` header; without one, the caller gets the error.
-No Studio request carries that header, so nothing that runs a statement is ever repeated.
+Only `UserRepository.create` (`POST /admin/users`, inherited from the template, not a Studio endpoint) carries that header; no request to a Studio endpoint does, so nothing that runs a statement is ever repeated.
 
 After five failures in a row the interceptor opens the endpoint's circuit and refuses its requests for 30 seconds with `CircuitBreakerOpenException`.
 
@@ -25,7 +25,8 @@ await apiClient.patch<User>('/admin/users', user, pathParams: '42', idempotent: 
 
 The header is a contract, not a guarantee: the server must deduplicate by it (the IETF draft `idempotency-key-header`, with Stripe as the worked example).
 Against a server that ignores it, opting in is worse than leaving it off, because the key is what lets `ResilienceInterceptor` repeat a `POST` or `PATCH`, and every repeat the server processes creates another record.
-No Studio request opts in.
+`UserRepository.create` (`POST /admin/users`, inherited from the template, not a Studio endpoint) opts in.
+No request to a Studio endpoint opts in, so no statement is ever repeated.
 
 Once generated, the key is kept in `RequestOptions.extra['_idempotency_key']` and reused on every later pass, which covers both a `ResilienceInterceptor` retry and the resend by `TokenRefreshInterceptor` after a 401 and a refresh.
 `GET`, `HEAD`, `OPTIONS` and `DELETE` never get the header.

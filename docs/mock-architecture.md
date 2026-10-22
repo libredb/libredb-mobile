@@ -508,7 +508,7 @@ A GET, POST, PUT or PATCH whose file is missing fails with 501 and the name of t
 | Mock interceptor | `lib/infrastructure/http/interceptors/mock_interceptor.dart` |
 | Logging interceptor | `lib/infrastructure/http/interceptors/logging_interceptor.dart` |
 | Public endpoints | `lib/infrastructure/http/public_endpoint.dart` |
-| Mock JSON files | `assets/mock/*.json` (22 files) |
+| Mock JSON files | `assets/mock/*.json` |
 | DI (ApiClient + repository factories) | `lib/app/di/app_dependencies.dart` |
 | Test utilities | `test/support/test_env.dart` |
 | Mock classes | `test/mocks/mock_classes.dart` |
