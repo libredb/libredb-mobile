@@ -344,6 +344,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "settings_account_subtitle": MessageLookupByLibrary.simpleMessage("View or edit your profile information"),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Appearance"),
     "settings_change_password_subtitle": MessageLookupByLibrary.simpleMessage("Update your password securely"),
+    "settings_licenses": MessageLookupByLibrary.simpleMessage("Licenses"),
+    "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
+      "The licenses of LibreDB Mobile and the code it includes",
+    ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
     "sidebar_collapse": MessageLookupByLibrary.simpleMessage("Collapse"),

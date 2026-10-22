@@ -554,5 +554,9 @@
   "error_studio_transaction_credential_changed": "Bu bağlantıya erişiminiz değişti, bu yüzden işlem geri alındı.",
   "@error_studio_transaction_credential_changed": {},
   "error_studio_unreadable_answer": "Studio bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın ya da Studio'nun güncellenmesi gerekebilir.",
-  "@error_studio_unreadable_answer": {}
+  "@error_studio_unreadable_answer": {},
+  "settings_licenses": "Lisanslar",
+  "@settings_licenses": {},
+  "settings_licenses_subtitle": "LibreDB Mobile'ın ve içerdiği kodun lisansları",
+  "@settings_licenses_subtitle": {}
 }

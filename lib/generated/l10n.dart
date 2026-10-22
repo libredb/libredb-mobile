@@ -1701,6 +1701,21 @@ class S {
       args: [],
     );
   }
+
+  /// `Licenses`
+  String get settings_licenses {
+    return Intl.message('Licenses', name: 'settings_licenses', desc: '', args: []);
+  }
+
+  /// `The licenses of LibreDB Mobile and the code it includes`
+  String get settings_licenses_subtitle {
+    return Intl.message(
+      'The licenses of LibreDB Mobile and the code it includes',
+      name: 'settings_licenses_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

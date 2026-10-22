@@ -83,6 +83,7 @@ String get _flutter => '$_flutterRoot/bin/flutter${Platform.isWindows ? '.bat' :
 void _copyProject(Directory target) {
   const files = [
     'pubspec.yaml',
+    'NOTICE',
     'pubspec.lock',
     'analysis_options.yaml',
     'dart_test.yaml',

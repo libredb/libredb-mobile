@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
+import 'package:libredb_mobile/app/bootstrap/app_licenses.dart';
 import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/analytics/crash_reporter.dart';
@@ -23,6 +24,7 @@ class AppBootstrap {
     @visibleForTesting SentryStart sentry = const SentryStart(),
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
+    registerAppLicenses();
 
     await AppConstants.initPackageInfo();
 

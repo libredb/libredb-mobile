@@ -106,3 +106,4 @@ You may not provide it to third parties as a hosted or managed service, or alter
 This is a summary: the [LICENSE](LICENSE) file holds the full terms.
 
 The app includes code from the [flutter-bloc-advanced](https://github.com/cevheri/flutter-bloc-advanced) template, which is licensed under the MIT License; [NOTICE](NOTICE) reproduces that license.
+The app bundles NOTICE and shows it under Settings, Licenses.

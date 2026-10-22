@@ -128,6 +128,7 @@ void main() {
       expect(find.byKey(settingsChangePasswordButtonKey), findsOneWidget);
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
+      expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
       // Logout intentionally lives only in the sidebar / topbar shell —
       // settings does not own auth-session lifecycle (cross-feature).
     });
@@ -143,6 +144,23 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Read the documentation and guides on GitHub'), findsOneWidget);
+    });
+
+    // The licences page shows the NOTICE that carries the MIT notice of the template the app grew from.
+    testWidgets('opens the licences page from Help & Resources', (WidgetTester tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: find.byKey(settingsLicensesButtonKey), matching: find.text('Licenses')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.byKey(settingsLicensesButtonKey));
+      await tester.tap(find.byKey(settingsLicensesButtonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LicensePage), findsOneWidget);
     });
 
     testWidgets('navigates to change password screen when button is pressed', (WidgetTester tester) async {
@@ -191,6 +209,7 @@ void main() {
         'Görünüm',
         'Tema',
         'Tercih ettiğiniz tema stilini seçin',
+        'Lisanslar',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }

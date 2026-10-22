@@ -346,6 +346,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Görünüm"),
     "settings_change_password_subtitle": MessageLookupByLibrary.simpleMessage("Şifrenizi güvenle güncelleyin"),
+    "settings_licenses": MessageLookupByLibrary.simpleMessage("Lisanslar"),
+    "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
+      "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
+    ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "sidebar_collapse": MessageLookupByLibrary.simpleMessage("Daralt"),

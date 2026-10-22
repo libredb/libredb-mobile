@@ -554,5 +554,9 @@
   "error_studio_transaction_credential_changed": "Your access to this connection changed, so the transaction was rolled back.",
   "@error_studio_transaction_credential_changed": {},
   "error_studio_unreadable_answer": "Studio sent an answer this app cannot read. The app or Studio may need an update.",
-  "@error_studio_unreadable_answer": {}
+  "@error_studio_unreadable_answer": {},
+  "settings_licenses": "Licenses",
+  "@settings_licenses": {},
+  "settings_licenses_subtitle": "The licenses of LibreDB Mobile and the code it includes",
+  "@settings_licenses_subtitle": {}
 }
