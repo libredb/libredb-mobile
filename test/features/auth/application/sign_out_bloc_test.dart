@@ -63,6 +63,26 @@ void main() {
       expect: () => const [SignOutInProgress(), SignedOutWithProviderSessionLeft()],
     );
 
+    // A second tap while the sign-out waits for Studio's record would post a second record and start a second provider
+    // logout.
+    blocTest<SignOutBloc, SignOutState>(
+      'drops a second request while the first sign-out runs',
+      setUp: () {
+        final logout = Completer<Result<void>>();
+        when(() => authRepository.logout()).thenAnswer((_) => logout.future);
+        addTearDown(() => logout.isCompleted ? null : logout.complete(const Success<void>(null)));
+      },
+      build: build,
+      act: (bloc) async {
+        bloc.add(const SignOutRequested());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const SignOutRequested());
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => const [SignOutInProgress()],
+      verify: (_) => verify(() => authRepository.logout()).called(1),
+    );
+
     blocTest<SignOutBloc, SignOutState>(
       'signs out again after an earlier sign-out',
       setUp: () => when(() => authRepository.logout()).thenAnswer((_) async => const Success<void>(null)),
@@ -119,6 +139,20 @@ void main() {
       expect: () => const [SignOutInProgress(), SignedOut()],
     );
 
+    // The provider logout waits for the browser, so it must not keep a later sign-out from running.
+    blocTest<SignOutBloc, SignOutState>(
+      'takes a new request once signed out, while the provider logout is still on its way',
+      build: build,
+      act: (bloc) async {
+        bloc.add(const SignOutRequested());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const SignOutRequested());
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => const [SignOutInProgress(), SignedOut(), SignOutInProgress(), SignedOut()],
+      verify: (_) => expect(signOut.calls, 2),
+    );
+
     // The data left on this device is the more serious of the two, and the user can only be told one of them.
     blocTest<SignOutBloc, SignOutState>(
       'keeps the stored data left state of a failed wipe when the provider logout fails too',
@@ -135,11 +169,15 @@ void main() {
 }
 
 /// The logout of an oidc build: the session on this device is cleared with [cleared], and the provider logout ends
-/// when the test completes [providerLogout].
+/// when the test completes [providerLogout]; [calls] counts the sign-outs.
 class _FakeSsoSignOutRepository implements ISsoSignOutRepository {
   Result<void> cleared = const Success(null);
   final providerLogout = Completer<Result<void>>();
+  var calls = 0;
 
   @override
-  Future<SsoSignOut> signOut() async => SsoSignOut(cleared: cleared, providerLogout: providerLogout.future);
+  Future<SsoSignOut> signOut() async {
+    calls++;
+    return SsoSignOut(cleared: cleared, providerLogout: providerLogout.future);
+  }
 }

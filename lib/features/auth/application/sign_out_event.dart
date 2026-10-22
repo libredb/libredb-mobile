@@ -11,3 +11,8 @@ sealed class SignOutEvent extends Equatable {
 final class SignOutRequested extends SignOutEvent {
   const SignOutRequested();
 }
+
+/// The provider logout of an `oidc` sign-out failed after the session on this device was cleared.
+final class _ProviderLogoutFailed extends SignOutEvent {
+  const _ProviderLogoutFailed();
+}

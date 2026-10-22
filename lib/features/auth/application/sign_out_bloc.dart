@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sso_sign_out_usecase.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'sign_out_event.dart';
 part 'sign_out_state.dart';
@@ -14,7 +15,10 @@ part 'sign_out_state.dart';
 /// The sign-out the user starts.
 class SignOutBloc extends Bloc<SignOutEvent, SignOutState> {
   SignOutBloc({required this._logoutUseCase, this._ssoSignOutUseCase}) : super(const SignOutInitial()) {
-    on<SignOutRequested>(_onSignOutRequested);
+    // A sign-out waits for Studio's record, so a second tap meanwhile would post a second record and start a second
+    // provider logout.
+    on<SignOutRequested>(_onSignOutRequested, transformer: EventTransformers.dropConcurrent());
+    on<_ProviderLogoutFailed>((event, emit) => emit(const SignedOutWithProviderSessionLeft()));
   }
 
   static final _log = AppLogger.getLogger('SignOutBloc');
@@ -49,7 +53,8 @@ class SignOutBloc extends Bloc<SignOutEvent, SignOutState> {
   /// The sign-out of an `oidc` build ends as soon as the session on this device is cleared, so the login page shows
   /// while the provider logout goes on, which waits for the browser and the provider. When the provider logout then
   /// fails, [SignedOutWithProviderSessionLeft] follows, unless the wipe failed: [SignedOutWithDataLeft] stays, since
-  /// data left on this device matters more.
+  /// data left on this device matters more. The handler ends with the local sign-out, so the provider logout, which
+  /// waits for the browser, does not keep a later sign-out from running.
   Future<void> _onSsoSignOut(SsoSignOutUseCase signOut, Emitter<SignOutState> emit) async {
     final signedOut = await signOut();
     switch (signedOut.cleared) {
@@ -61,9 +66,11 @@ class SignOutBloc extends Bloc<SignOutEvent, SignOutState> {
           error.message,
         ]);
     }
-    final providerLogout = await signedOut.providerLogout;
-    if (providerLogout is Failure && signedOut.cleared is Success) {
-      emit(const SignedOutWithProviderSessionLeft());
-    }
+    if (signedOut.cleared is Failure) return;
+    unawaited(
+      signedOut.providerLogout.then((providerLogout) {
+        if (providerLogout is Failure && !isClosed) add(const _ProviderLogoutFailed());
+      }),
+    );
   }
 }

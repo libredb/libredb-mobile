@@ -548,12 +548,15 @@ In `oidc` mode the refresh goes through `OidcTokenRotation`:
 A logout the user starts goes through `SsoSignOutUseCase` and `SsoSignOutAuthRepository.signOut`:
 1. It reads the stored ID token, before anything that could delete it: a refresh that ends the session clears the OIDC keys as well.
 2. It refreshes an expired access token and records the sign-out at Studio, for at most three seconds, whatever they answer.
+   It never sends an access token it knows has expired, such as when the provider could not be reached, and a refresh that answers after the three seconds sends nothing.
+   A sign-out that leaves Studio without a record writes one `warn` line naming the reason: budget passed, refresh refused, no refresh token, provider unreachable, store unreadable, or Studio's error code; the user sees nothing for it.
 3. It clears the local session exactly as in `jwt` mode, including the OIDC keys, and answers at once with that result and the provider logout started (`SsoSignOut`).
 4. `SignOutBloc` signs the app out on that answer, so the login page shows while the provider logout goes on.
 5. `OidcClient.endProviderSession` uses the discovered `end_session_endpoint`, else Auth0's `/v2/logout` for an issuer on `auth0.com`, else no provider logout.
 6. It opens that endpoint with `client_id`, the `post_logout_redirect_uri` `<scheme>:/oauth2redirect`, and the ID token as `id_token_hint` while `OIDC_LOGOUT_HINT` is on.
 7. A failed, cancelled or unopenable provider logout leaves the user signed out; `SignOutBloc` then emits `SignedOutWithProviderSessionLeft`, and `AppSessionListeners` shows the `oidc_logout_incomplete` sentence as a notice over the login page; when the local clear failed, only the notice about stored data left behind shows.
 
+The shell shows a blocking progress indicator until the sign-out is done (`SignOutProgressBarrier`), and `SignOutBloc` drops a second request meanwhile.
 No automatic redirect fires in the same run after a user logout.
 An idle timeout or an unrefreshable 401 clears the local session only, through `SessionCubit`, because a provider logout needs a browser and the user is not there.
 
