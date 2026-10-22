@@ -1188,7 +1188,7 @@ void main() {
     });
   });
 
-  // The startup step of an oidc build refreshes through the same rotation and goes on after its time limit, so the
+  // The startup step refreshes through the same rotation and goes on after its time limit, so the
   // stored session can be rotated or cleared while this refresh is on its way. The refresh reads the stored refresh
   // token again before it acts on the answer.
   group('TokenRefreshInterceptor - the stored session changes during the refresh', () {
@@ -1360,7 +1360,7 @@ void main() {
       );
     }
 
-    /// What the wipe of an oidc session does: it deletes every stored key inside [SessionGeneration.wipe].
+    /// What the wipe of a session does: it deletes every stored key inside [SessionGeneration.wipe].
     Future<void> endSession() => SessionGeneration.wipe(() async {
       for (final key in SecureStorageKeys.values) {
         await storage.delete(key.key);

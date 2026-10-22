@@ -41,7 +41,7 @@ final _signedIn = OidcSignedIn(
   claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'subject-1'},
 );
 
-/// The identity provider of an oidc build. Each sign-in answers with the next of [outcomes], and with [_signedIn] once
+/// The identity provider. Each sign-in answers with the next of [outcomes], and with [_signedIn] once
 /// they have run out.
 class _ScriptedOidcClient implements IOidcClient {
   _ScriptedOidcClient({List<FutureOr<OidcSignInOutcome>>? outcomes}) : outcomes = outcomes ?? [];
@@ -116,13 +116,13 @@ class _RefusingStudio implements IStudioIdentityRepository {
   Future<Result<void>> recordSignOut() => throw UnimplementedError('these tests never sign out');
 }
 
-/// A token refresh that fails with an error no rotation expects, so the startup step of an oidc build throws.
+/// A token refresh that fails with an error no rotation expects, so the startup step throws.
 class _ThrowingRotation implements TokenRotation {
   @override
   Future<TokenRotationResult> rotate(String refreshToken) async => throw StateError('rotation failed');
 }
 
-/// Stores a session whose access token has expired, so the startup step of an oidc build refreshes it.
+/// Stores a session whose access token has expired, so the startup step refreshes it.
 Future<void> _storeExpiredSession() async {
   final storage = FlutterSecureStorageAdapter();
   await storage.write(SecureStorageKeys.jwtToken.key, 'expired-access-token');

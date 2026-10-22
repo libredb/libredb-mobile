@@ -456,7 +456,7 @@ void main() {
     });
   });
 
-  group('restore in oidc mode', () {
+  group('restore with the startup step', () {
     const timeLimit = Duration(seconds: 3);
 
     SessionCubit cubitWith(
@@ -510,7 +510,7 @@ void main() {
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)],
     );
 
-    // The startup step owns the expiry in oidc mode, and a provider's access token need not be a JWT.
+    // The startup step owns the expiry, and a provider's access token need not be a JWT.
     blocTest<SessionCubit, SessionState>(
       'the stored session is not checked for a JWT exp in production',
       build: () {

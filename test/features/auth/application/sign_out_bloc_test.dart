@@ -51,7 +51,7 @@ void main() {
       expect: () => const [SignOutInProgress(), SignedOutWithDataLeft()],
     );
 
-    // In an oidc build the app session has ended, but the provider logout failed.
+    // The app session has ended, but the provider logout failed.
     blocTest<SignOutBloc, SignOutState>(
       'signs out with the provider session left when the provider logout is incomplete',
       setUp: () => when(() => authRepository.logout()).thenAnswer(
@@ -93,8 +93,8 @@ void main() {
     );
   });
 
-  // In an oidc build the provider logout can wait for the browser for minutes, so the sign-out does not wait for it.
-  group('SignOutBloc in an oidc build', () {
+  // The provider logout can wait for the browser for minutes, so the sign-out does not wait for it.
+  group('SignOutBloc and the provider logout', () {
     late _FakeSsoSignOutRepository signOut;
     late MockIAuthRepository passwordLogout;
     final incomplete = Failure<void>(
@@ -168,7 +168,7 @@ void main() {
   });
 }
 
-/// The logout of an oidc build: the session on this device is cleared with [cleared], and the provider logout ends
+/// The logout: the session on this device is cleared with [cleared], and the provider logout ends
 /// when the test completes [providerLogout]; [calls] counts the sign-outs.
 class _FakeSsoSignOutRepository implements ISsoSignOutRepository {
   Result<void> cleared = const Success(null);

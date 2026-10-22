@@ -58,7 +58,7 @@ Future<void> _logOut(WidgetTester tester) async {
   await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
   await tester.pumpAndSettle();
-  // An oidc build waits for Studio to record the sign-out, which the mock answers after its simulated latency.
+  // The app waits for Studio to record the sign-out, which the mock answers after its simulated latency.
   await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
   await tester.pumpAndSettle();
 }
@@ -269,7 +269,7 @@ void main() {
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
     });
 
-    group('in an oidc build', () {
+    group('with the identity provider', () {
       testWidgets('a logout whose provider logout fails signs out and says the provider session may be active', (
         tester,
       ) async {
@@ -361,7 +361,7 @@ void main() {
   });
 }
 
-/// The identity provider of an oidc build: a sign-in succeeds as a user, and a provider
+/// The identity provider: a sign-in succeeds as a user, and a provider
 /// logout ends with [logoutOutcome], counted in [logouts].
 class _FakeOidcClient implements IOidcClient {
   OidcLogoutOutcome logoutOutcome = const ProviderSessionEnded();
@@ -397,7 +397,7 @@ class _FakeOidcClient implements IOidcClient {
   }
 }
 
-/// The dependencies of [_app] in an oidc build over [client].
+/// The dependencies of [_app] over [client].
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client)
     : super(

@@ -111,7 +111,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             context.read<SessionCubit>().markLoggedOut();
             _closeSsoAutoRedirect(context);
             // SignOutBloc signs out with stored data left when the logout could not remove all stored data, and with
-            // the provider session left when an oidc build could not end the session at the identity provider.
+            // the provider session left when the app could not end the session at the identity provider.
             switch (state) {
               case SignedOutWithDataLeft():
                 _showNotice((strings) => strings.logout_stored_data_left);
@@ -122,7 +122,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             }
           },
         ),
-        // The sign-out of an oidc build ends before the provider logout has ended, and tells afterwards when the
+        // The sign-out ends before the provider logout has ended, and tells afterwards when the
         // provider logout failed.
         BlocListener<SignOutBloc, SignOutState>(
           listenWhen: (previous, current) => previous is SignedOut && current is SignedOutWithProviderSessionLeft,

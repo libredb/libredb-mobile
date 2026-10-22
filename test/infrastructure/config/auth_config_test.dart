@@ -14,7 +14,7 @@ OidcSettings _settings(AuthDefines defines) {
 
 void main() {
   group('AuthMode.fromDefines', () {
-    test('has no password sign-in: a build without OIDC settings fails closed as a misconfigured oidc build', () {
+    test('has no password sign-in: a build without OIDC settings fails closed as a misconfigured build', () {
       final mode = AuthMode.fromDefines(const AuthDefines());
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));

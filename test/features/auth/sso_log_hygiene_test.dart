@@ -32,7 +32,7 @@ import '../../support/printed_lines.dart';
 
 final _settings = OidcSettings(issuer: Uri.parse(fakeIssuer), clientId: fakeClientId);
 
-/// The test config in an oidc build whose client talks to [provider] through the fake platform.
+/// The test config whose client talks to [provider] through the fake platform.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.provider) : super(appConfig: const AppConfig.test(), authMode: OidcAuthMode(_settings));
 

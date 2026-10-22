@@ -25,7 +25,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../mocks/mock_classes.dart';
 import '../../support/test_env.dart';
 
-/// The identity provider of an oidc build. The router tests never sign in through it.
+/// The identity provider. The router tests never sign in through it.
 class _IdleOidcClient implements IOidcClient {
   @override
   Future<OidcSignInOutcome> signIn() => throw UnimplementedError('these tests never sign in through the provider');
@@ -43,7 +43,7 @@ class _IdleOidcClient implements IOidcClient {
       throw UnimplementedError('these tests never log out');
 }
 
-/// The test config in an oidc build.
+/// The test config.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies()
     : super(
@@ -336,7 +336,7 @@ void main() {
         expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.login);
       });
 
-      // A misconfigured oidc build can neither sign in nor restore a stored session.
+      // A misconfigured build can neither sign in nor restore a stored session.
       if (dependencies.authMode is OidcAuthMode) {
         testWidgets('in $mode mode, signed in, /oauth2redirect lands on the connection list', (tester) async {
           setDesktopViewport(tester);

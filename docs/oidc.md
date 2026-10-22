@@ -460,7 +460,7 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
   The scrubber masks the exact keys `code`, `code_verifier`, `state`, `nonce`, `session_state` and `id_token_hint` in bodies and query strings, while names such as `statusCode` keep their values.
   The package's own `package:logging` records do not reach the app's dev console, but go_router's root logging subscription (`debugLogDiagnostics` is on) sends them, unscrubbed, to `dart:developer`, which is the IDE and DevTools log, and a SEVERE one to `FlutterError.dumpErrorToConsole`.
   So the client avoids every record that carries a secret: UserInfo is off.
-  `AuthInterceptor`'s request log keeps its existing masked preview of the bearer, the first and last four characters through `maskToken`, which predates this feature and applies in both modes.
+  `AuthInterceptor`'s request log keeps its existing masked preview of the bearer, the first and last four characters through `maskToken`, which predates this feature.
 - **Router:** `/oauth2redirect` always goes to `/login` with no `returnUrl`, so a callback URL never becomes a router location or a return path.
 - **Misconfigured build:** fails closed on a stored session: it never restores it and never refreshes it.
 - **Return path:** checked on the way in and on the way out with `safeReturnPath`: a local path only, at most 1024 UTF-8 bytes, no control characters, and not the login route; an unsafe value becomes `/`.
