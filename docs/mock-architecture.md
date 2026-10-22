@@ -113,7 +113,7 @@ flowchart LR
 ## Interceptor Chain
 
 The Dio HTTP client is created in `lib/infrastructure/http/api_client.dart`.
-`ApiClient._createDio()` pairs each interceptor with the metadata the system dashboard shows; without that metadata, the chain is:
+`ApiClient._createDio()` pairs each interceptor with its descriptive metadata; without that metadata, the chain is:
 
 ```dart
 dio.interceptors.addAll([
@@ -148,7 +148,7 @@ When `CacheInterceptor` answers a GET that went out and failed, it ends the erro
 
 Reads the JWT from `ISecureStorage` on every request to a private path on the API origin and adds it as a Bearer token when one is stored.
 A request to a public endpoint (see [Public vs. Private Endpoints](#public-vs-private-endpoints)) never gets a token.
-Dio sends a request whose path is an absolute URL to that URL instead of to the base URL, so a path a server supplies, such as the submit endpoint of a dynamic form, can name any host.
+Dio sends a request whose path is an absolute URL to that URL instead of to the base URL, so a path a server supplies can name any host.
 `isApiOriginRequest` in `lib/infrastructure/http/api_origin.dart` compares the scheme, host and port of the request with those of the base URL, and a request to another origin never gets a token either: `AuthInterceptor` removes an `Authorization` header already on it and records no session generation for it.
 A relative path with an empty base URL, as in dev/test mode, counts as the API origin, so `MockInterceptor` still sees the token:
 

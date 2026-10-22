@@ -23,9 +23,8 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 /// Metadata describing one entry in the [ApiClient] interceptor chain.
 ///
-/// Used by the system dashboard and other observers that want to render
-/// the chain without hard-coding names/descriptions. Order matches the
-/// order in which the interceptor was added to Dio.
+/// Used by observers that want to render the chain without hard-coding
+/// names/descriptions. Order matches the order in which the interceptor was added to Dio.
 class InterceptorChainEntry {
   const InterceptorChainEntry({required this.name, required this.detail, this.active = true});
 
@@ -142,8 +141,8 @@ class ApiClient {
     }
 
     // Single source of truth for the chain: each entry pairs the live
-    // [Interceptor] with the human-readable metadata that the dashboard
-    // shows. Adding/removing an interceptor here automatically updates
+    // [Interceptor] with the human-readable metadata that observers
+    // show. Adding/removing an interceptor here automatically updates
     // [interceptorChainSnapshot] — no separate hardcoded list to drift.
     final chain = <({Interceptor interceptor, InterceptorChainEntry meta})>[
       (
@@ -179,8 +178,8 @@ class ApiClient {
         ),
       ),
       (
-        // Share the singleton's circuit breakers so dashboard metrics
-        // and reset actions see real HTTP traffic (fixes #60). forDio
+        // Share the singleton's circuit breakers so metrics and reset
+        // actions read through it see real HTTP traffic (fixes #60). forDio
         // sends retries through this Dio's adapter, pins included.
         interceptor: ResilienceInterceptor.instance.forDio(dio),
         meta: const InterceptorChainEntry(name: 'ResilienceInterceptor', detail: 'Retry + circuit breaker'),

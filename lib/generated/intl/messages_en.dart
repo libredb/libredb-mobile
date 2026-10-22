@@ -69,7 +69,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "connections": MessageLookupByLibrary.simpleMessage("Connections"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("No internet connection"),
     "current_password": MessageLookupByLibrary.simpleMessage("Current Password"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("Dashboard"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Are you sure you want to delete?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Documentation"),
     "edit": MessageLookupByLibrary.simpleMessage("Edit"),

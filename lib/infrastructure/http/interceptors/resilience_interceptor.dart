@@ -112,8 +112,8 @@ class ResilienceInterceptor extends Interceptor {
   /// Returns an interceptor for [dio] that shares this instance's circuit breakers and retry policy
   /// and sends every retry through [dio]'s adapter, so retries keep its certificate pinning.
   ///
-  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio)` to its chain, so the breakers the
-  /// dashboard reads through [instance] are the ones real traffic updates.
+  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio)` to its chain, so the breakers
+  /// read through [instance] are the ones real traffic updates.
   ResilienceInterceptor forDio(Dio dio) => ResilienceInterceptor._forDio(this, dio);
 
   // ---------------------------------------------------------------------------

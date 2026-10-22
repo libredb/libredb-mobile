@@ -69,7 +69,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "connections": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı yok"),
     "current_password": MessageLookupByLibrary.simpleMessage("Mevcut Şifre"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("Panel"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "edit": MessageLookupByLibrary.simpleMessage("Düzenle"),

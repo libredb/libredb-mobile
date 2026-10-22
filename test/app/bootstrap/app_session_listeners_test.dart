@@ -217,7 +217,7 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
@@ -234,7 +234,7 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await _logOut(tester);
       expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
@@ -256,7 +256,7 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await _logOut(tester);
 
