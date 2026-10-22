@@ -61,6 +61,9 @@ class InterceptorChainEntry {
 /// request carries them in its extra ([sensitiveKeysOf]), so the dev
 /// console, the verbose log and the error text mask those values too.
 ///
+/// [post] takes `receiveTimeout`, which replaces the 30 seconds the client waits for the answer of that one request,
+/// for a Studio route that runs a statement (`studioStatementReceiveTimeout`).
+///
 /// `tokenRotation` replaces the backend's refresh endpoint ([BackendTokenRotation]) as the way
 /// [TokenRefreshInterceptor] refreshes the session, and `isSessionExpired` decides which 401 starts
 /// that refresh ([isUnauthorized], every 401, when it is null).
@@ -244,10 +247,12 @@ class ApiClient {
     String? pathParams,
     bool idempotent = false,
     Set<String> sensitiveKeys = const {},
+    Duration? receiveTimeout,
   }) async {
     final fullPath = pathParams != null ? '$path/$pathParams' : path;
     final serialized = _serializeData(data);
     final options = Options(
+      receiveTimeout: receiveTimeout,
       extra: {
         '_basePath': path,
         '_pathParams': pathParams,

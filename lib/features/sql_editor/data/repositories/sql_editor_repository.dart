@@ -8,9 +8,11 @@ import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_s
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 
 /// Studio's statement routes, all `POST` with the connection named in the body. The paths are relative to
-/// `PROD_API_URL`, which ends in Studio's `/api`. The statement text is never logged.
+/// `PROD_API_URL`, which ends in Studio's `/api`. The statement text is never logged. A request that runs a statement
+/// waits [studioStatementReceiveTimeout] for its answer; `cancel` runs none and keeps the client's default.
 class SqlEditorRepository implements ISqlEditorRepository {
   SqlEditorRepository(this._apiClient);
 
@@ -44,8 +46,13 @@ class SqlEditorRepository implements ISqlEditorRepository {
   );
 
   @override
-  Future<Result<bool>> cancel(String connectionId, String queryId) =>
-      _post('cancel', '/db/cancel', {'connectionId': connectionId, 'queryId': queryId}, SqlEditorJson.cancelled);
+  Future<Result<bool>> cancel(String connectionId, String queryId) => _post(
+    'cancel',
+    '/db/cancel',
+    {'connectionId': connectionId, 'queryId': queryId},
+    SqlEditorJson.cancelled,
+    receiveTimeout: null,
+  );
 
   @override
   Future<Result<bool?>> beginTransaction(String connectionId, {String? catalog}) => _post(
@@ -91,10 +98,11 @@ class SqlEditorRepository implements ISqlEditorRepository {
     String operation,
     String path,
     Map<String, Object?> body,
-    T Function(String body) read,
-  ) async {
+    T Function(String body) read, {
+    Duration? receiveTimeout = studioStatementReceiveTimeout,
+  }) async {
     try {
-      final response = await _apiClient.post(path, body);
+      final response = await _apiClient.post(path, body, receiveTimeout: receiveTimeout);
       return Success(read(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       final error = studioError(e);

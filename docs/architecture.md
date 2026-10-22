@@ -97,6 +97,8 @@ Every request follows these rules:
 - Every `POST` sends `Content-Type: application/json` and no `Origin` header, which is how Studio's CSRF check lets a native client through.
 - A managed connection is named in the body as `{"connectionId": "seed:<id>"}`, never inline; the app never sends or stores database credentials.
 - Nothing that runs a statement is retried on its own: a statement may have changed data.
+- The app waits 30 seconds for an answer, and 75 seconds (`studioStatementReceiveTimeout`) for the routes that run a statement or reach a database host: `/db/query`, `/db/multi-query`, `/db/transaction`, `/db/profile`, `/db/monitoring`, `/db/maintenance` and `/db/test-connection`.
+  That is Studio's default statement timeout of 60 seconds plus a margin, because Studio cancels a run whose request the phone gives up on.
 - Every `/api/db/*` request spends a slot of the user's request budget, 120 per minute by default, shared with the same user's Studio sessions in the browser: the object browser caches metadata per connection.
 - Requests stay well under 10 MiB, above which Studio truncates the body and reads it as malformed.
 

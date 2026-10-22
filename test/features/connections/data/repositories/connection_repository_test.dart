@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
@@ -7,6 +10,9 @@ import 'package:libredb_mobile/features/connections/data/repositories/connection
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';
@@ -159,4 +165,76 @@ void main() {
       expect(() => ConnectionTestResultModel.fromJsonString('{"success":false,"error":"x"}'), throwsFormatException);
     });
   });
+
+  group('ConnectionRepository waits for the answer', () {
+    late _RecordingAdapter adapter;
+    late ConnectionRepository repository;
+
+    setUp(() {
+      adapter = _RecordingAdapter();
+      final client = ApiClient(appConfig: _prodConfig);
+      client.instance.httpClientAdapter = adapter;
+      repository = ConnectionRepository(client);
+    });
+
+    test('as long as Studio lets a statement run, for test, which may reach a slow database host', () async {
+      adapter.answer = '{"success":true,"latency":42,"message":"Connection successful"}';
+
+      await repository.test('seed:sales-db');
+
+      expect(adapter.lastPath, '/db/test-connection');
+      expect(adapter.lastReceiveTimeout, studioStatementReceiveTimeout);
+    });
+
+    test('the default 30 seconds for listManaged', () async {
+      adapter.answer = '[]';
+
+      await repository.listManaged();
+
+      expect(adapter.lastPath, '/connections/managed');
+      expect(adapter.lastReceiveTimeout, const Duration(seconds: 30));
+    });
+
+    test('the default 30 seconds for fetchPolicy', () async {
+      await repository.fetchPolicy();
+
+      expect(adapter.lastPath, '/connections/policy');
+      expect(adapter.lastReceiveTimeout, const Duration(seconds: 30));
+    });
+  });
+}
+
+/// The production chain, without a stored token.
+const _prodConfig = AppConfig(
+  environment: Environment.prod,
+  apiBaseUrl: 'https://studio.example.test/api',
+  certificatePins: [],
+  idleTimeout: null,
+);
+
+/// Answers every request with 200 and [answer] and records the last one.
+class _RecordingAdapter implements HttpClientAdapter {
+  String answer = '{}';
+  String? lastPath;
+  Duration? lastReceiveTimeout;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastPath = options.path;
+    lastReceiveTimeout = options.receiveTimeout;
+    return ResponseBody.fromString(
+      answer,
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
