@@ -330,13 +330,13 @@ class _ConnectionRow extends StatelessWidget {
                       secondary,
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
-                  if (showsBadge || connection.readOnly)
+                  if (showsBadge || connection.readOnlyForUser)
                     Wrap(
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
                       children: [
                         if (showsBadge) EnvironmentBadge(environment: environment!, color: connection.color),
-                        if (connection.readOnly) const ReadOnlyChip(),
+                        if (connection.readOnlyForUser) const ReadOnlyChip(),
                       ],
                     ),
                 ],
@@ -366,7 +366,7 @@ void _showDetails(BuildContext context, StudioConnection connection) {
           ListTile(
             leading: Icon(engineIcon(connection.type), semanticLabel: connection.type),
             title: Text(connection.name, style: Theme.of(context).textTheme.titleMedium),
-            subtitle: connection.readOnly
+            subtitle: connection.readOnlyForUser
                 ? const Align(alignment: AlignmentDirectional.centerStart, child: ReadOnlyChip())
                 : null,
           ),

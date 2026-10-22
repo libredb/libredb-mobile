@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:libredb_mobile/shared/models/studio_access.dart';
 
 /// A database connection Studio offers the signed-in user, without its credentials.
 ///
@@ -17,6 +18,7 @@ class StudioConnection extends Equatable {
     this.readOnly = false,
     this.managed = false,
     this.seedId,
+    this.access,
   });
 
   final String id;
@@ -35,7 +37,7 @@ class StudioConnection extends Equatable {
   /// The operator's color for the connection, as `#rrggbb`.
   final String? color;
 
-  /// Whether Studio refuses every statement that writes on this connection.
+  /// Whether the operator set the connection read only in Studio's seed configuration, for every user.
   final bool readOnly;
 
   /// Whether Studio keeps the connection's credentials to itself; an unmanaged seed is copied into Studio's browser.
@@ -43,6 +45,18 @@ class StudioConnection extends Equatable {
 
   /// The id in Studio's seed configuration, without the `seed:` prefix; a governed connection may send none.
   final String? seedId;
+
+  /// The level of the signed-in user's grant under governance; null without governance or from an older Studio.
+  final StudioAccess? access;
+
+  /// Whether Studio refuses every statement that writes on this connection for the signed-in user.
+  ///
+  /// The lock in the list and the app bar and the write confirmation read this, never [readOnly] or [access] alone.
+  bool get readOnlyForUser => switch (access) {
+    StudioAccess.read => true,
+    StudioAccess.write => readOnly,
+    null => readOnly,
+  };
 
   @override
   List<Object?> get props => [
@@ -58,5 +72,6 @@ class StudioConnection extends Equatable {
     readOnly,
     managed,
     seedId,
+    access,
   ];
 }

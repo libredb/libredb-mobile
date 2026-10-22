@@ -30,6 +30,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:mocktail/mocktail.dart';
@@ -222,6 +223,37 @@ void main() {
       find.descendant(of: row('seed:billing-mysql'), matching: find.text(S.current.connection_read_only)),
       findsOneWidget,
     );
+  });
+
+  testWidgets('shows the read-only chip on a read grant of a governed Studio', (tester) async {
+    answer(
+      const ManagedConnections(
+        connections: [
+          StudioConnection(
+            id: 'seed:sales-dev',
+            name: 'Sales (development)',
+            type: 'postgres',
+            access: StudioAccess.write,
+          ),
+          StudioConnection(
+            id: 'seed:sales-prod',
+            name: 'Sales (production)',
+            type: 'postgres',
+            access: StudioAccess.read,
+          ),
+        ],
+      ),
+    );
+
+    await pumpPage(tester);
+
+    expect(find.descendant(of: row('seed:sales-prod'), matching: find.byType(ReadOnlyChip)), findsOneWidget);
+    expect(find.byType(ReadOnlyChip), findsOneWidget);
+
+    await tester.tap(row('seed:sales-prod'));
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: find.byType(BottomSheet), matching: find.byType(ReadOnlyChip)), findsOneWidget);
   });
 
   testWidgets('collapses a section, remembers it on the device and expands it again', (tester) async {
