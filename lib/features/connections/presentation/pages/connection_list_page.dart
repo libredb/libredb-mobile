@@ -12,9 +12,13 @@ import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 /// The connections Studio offers the signed-in user, in sections by the operator's group, with a search and an
 /// environment filter. It never offers to add a connection: Studio's operator configures them.
+///
+/// Offline it keeps the list it loaded, marked with the time it was loaded, a pull to refresh says the device is
+/// offline instead of asking Studio, and the list is asked again once the device is back online.
 class ConnectionListPage extends StatefulWidget {
   const ConnectionListPage({super.key});
 
@@ -37,15 +41,24 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
     super.dispose();
   }
 
-  /// Asks Studio again and completes once the answer, or its failure, is on screen, which ends the pull indicator.
+  /// Asks Studio again and completes once the answer, or its failure, is on screen, which ends the pull indicator;
+  /// offline it says so with the banner's words instead.
   Future<void> _refresh() async {
+    if (OfflineStatus.isOfflineOf(context)) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(S.of(context).connectivity_offline)));
+      return;
+    }
     final bloc = context.read<ConnectionListBloc>();
+    // Leaving the page closes the bloc, which ends its stream: that ends the refresh too, it is no error.
     final done = bloc.stream.firstWhere(
       (state) => switch (state) {
         ConnectionListLoaded(:final isRefreshing) => !isRefreshing,
         ConnectionListFailure() => true,
         ConnectionListInitial() || ConnectionListLoading() => false,
       },
+      orElse: () => bloc.state,
     );
     bloc.add(const ConnectionListRefreshed());
     await done;
@@ -53,6 +66,13 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
 
   @override
   Widget build(BuildContext context) {
+    return OnReconnect(
+      onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRefreshed()),
+      child: _buildState(context),
+    );
+  }
+
+  Widget _buildState(BuildContext context) {
     return BlocConsumer<ConnectionListBloc, ConnectionListState>(
       listenWhen: (previous, current) =>
           previous is ConnectionListLoaded &&
@@ -67,11 +87,22 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
       builder: (context, state) => switch (state) {
         ConnectionListInitial() || ConnectionListLoading() => const Center(child: CircularProgressIndicator()),
         ConnectionListLoaded() => _buildLoaded(context, state),
-        ConnectionListFailure(:final errorCode) => AppErrorState(
-          title: S.of(context).connection_list_load_failed,
-          description: errorCode.resolve(context),
-          retryLabel: S.of(context).refresh,
-          onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+        ConnectionListFailure(:final errorCode) => RefreshIndicator(
+          onRefresh: _refresh,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: AppErrorState(
+                  title: S.of(context).connection_list_load_failed,
+                  description: errorCode.resolve(context),
+                  retryLabel: S.of(context).refresh,
+                  onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+                ),
+              ),
+            ),
+          ),
         ),
       },
     );
@@ -79,14 +110,22 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
 
   Widget _buildLoaded(BuildContext context, ConnectionListLoaded state) {
     final l10n = S.of(context);
+    final staleMarker = OfflineStaleMarker(loadedAt: state.loadedAt);
     if (state.connections.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          key: const ValueKey('connection-sections'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [AppEmptyState(icon: Icons.storage_outlined, title: l10n.connection_list_empty)],
-        ),
+      return Column(
+        children: [
+          staleMarker,
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                key: const ValueKey('connection-sections'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [AppEmptyState(icon: Icons.storage_outlined, title: l10n.connection_list_empty)],
+              ),
+            ),
+          ),
+        ],
       );
     }
     final sections = state.sections;
@@ -94,6 +133,7 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
     final searching = state.isSearching;
     return Column(
       children: [
+        staleMarker,
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
           child: _SearchField(controller: _search),

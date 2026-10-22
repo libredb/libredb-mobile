@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -34,6 +35,9 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
   String _query = '';
   String? _environment;
 
+  /// The last list Studio answered, which an offline load keeps on screen even when it restarted another load.
+  ConnectionListLoaded? _lastLoaded;
+
   FutureOr<void> _onLoad(ConnectionListLoadEvent event, Emitter<ConnectionListState> emit) async {
     _log.debug('BEGIN: onLoad {}', [event.runtimeType]);
     final previous = switch ((event, state)) {
@@ -44,24 +48,35 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
     final result = await _listManagedConnectionsUseCase();
     switch (result) {
       case Success(:final data):
-        emit(
-          ConnectionListLoaded(
-            connections: data.connections,
-            cacheHint: data.cacheHint,
-            query: _query,
-            environment: _environment,
-          ),
+        final loaded = ConnectionListLoaded(
+          connections: data.connections,
+          cacheHint: data.cacheHint,
+          loadedAt: clock.now(),
+          query: _query,
+          environment: _environment,
         );
+        _lastLoaded = loaded;
+        emit(loaded);
         _log.debug('END: onLoad connections: {}', [data.connections.length]);
       case Failure(:final error):
         final errorCode = AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic;
-        // A failed refresh starts from the current state, not from [previous], so a search or a filter chosen while
-        // Studio was answering stays applied.
-        emit(
-          previous == null
-              ? ConnectionListFailure(errorCode: errorCode)
-              : (state as ConnectionListLoaded)._with(refreshErrorCode: errorCode),
-        );
+        // A request refused because the device is offline never reached Studio, so what was loaded stays on screen,
+        // marked stale by the page, instead of turning into an error; the search and the filter chosen meanwhile stay.
+        final kept = _lastLoaded;
+        if (errorCode == AppErrorCode.networkOffline && kept != null) {
+          emit(kept._with(query: _query, environment: () => _environment));
+          _log.info('END: onLoad offline, keeping the {} connections loaded before', [kept.connections.length]);
+          return;
+        }
+        if (previous == null) {
+          // Studio refused or failed the list, so the rows loaded before are no longer shown and are not brought back.
+          _lastLoaded = null;
+          emit(ConnectionListFailure(errorCode: errorCode));
+        } else {
+          // A failed refresh starts from the current state, not from [previous], so a search or a filter chosen while
+          // Studio was answering stays applied.
+          emit((state as ConnectionListLoaded)._with(refreshErrorCode: errorCode));
+        }
         _log.error('END: onLoad error: {}', [error.message]);
     }
   }

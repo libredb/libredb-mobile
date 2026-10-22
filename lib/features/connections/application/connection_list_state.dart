@@ -23,6 +23,7 @@ final class ConnectionListLoaded extends ConnectionListState {
   const ConnectionListLoaded({
     required this.connections,
     this.cacheHint,
+    required this.loadedAt,
     this.query = '',
     this.environment,
     this.isRefreshing = false,
@@ -34,6 +35,9 @@ final class ConnectionListLoaded extends ConnectionListState {
 
   /// How often Studio expects the list to be asked again, when it sent a hint.
   final Duration? cacheHint;
+
+  /// When Studio answered with [connections]; offline, the page shows the list as what was loaded at this time.
+  final DateTime loadedAt;
 
   /// The search text as typed; see [filterConnections].
   final String query;
@@ -69,6 +73,7 @@ final class ConnectionListLoaded extends ConnectionListState {
   }) => ConnectionListLoaded(
     connections: connections ?? this.connections,
     cacheHint: cacheHint,
+    loadedAt: loadedAt,
     query: query ?? this.query,
     environment: environment == null ? this.environment : environment(),
     isRefreshing: isRefreshing,
@@ -76,7 +81,7 @@ final class ConnectionListLoaded extends ConnectionListState {
   );
 
   @override
-  List<Object?> get props => [connections, cacheHint, query, environment, isRefreshing, refreshErrorCode];
+  List<Object?> get props => [connections, cacheHint, loadedAt, query, environment, isRefreshing, refreshErrorCode];
 }
 
 final class ConnectionListFailure extends ConnectionListState {
