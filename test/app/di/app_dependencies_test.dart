@@ -4,12 +4,14 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -233,5 +235,10 @@ void main() {
 
   test('app dependencies expose provider meta repository contract', () {
     expect(dependencies.createProviderMetaRepository(TestEnv.apiClient()), isA<IProviderMetaRepository>());
+  });
+
+  test('every feature reads provider-meta and the object routes through the in-memory caches', () {
+    expect(dependencies.createProviderMetaRepository(TestEnv.apiClient()), isA<CachedProviderMetaRepository>());
+    expect(dependencies.createObjectBrowserRepository(TestEnv.apiClient()), isA<CachedObjectBrowserRepository>());
   });
 }

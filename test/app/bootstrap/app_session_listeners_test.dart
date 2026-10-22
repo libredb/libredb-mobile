@@ -13,11 +13,13 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
@@ -26,6 +28,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -169,6 +172,27 @@ void main() {
 
       expect(errors, [isA<StateError>()]);
     });
+
+    for (final MapEntry(key: ending, value: end) in _sessionEndings.entries) {
+      testWidgets('$ending drops the object browser and provider-meta answers kept in memory', (tester) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(_app);
+        await tester.pumpAndSettle();
+        final scope = tester.element(find.byType(ResponsiveScaffold));
+        final browser = scope.read<CachedObjectBrowserRepository>();
+        final providerMeta = scope.read<CachedProviderMetaRepository>();
+        final answers = await tester.runAsync(
+          () => Future.wait([browser.containers('seed:sales-db'), providerMeta.providerMeta('seed:sales-db')]),
+        );
+        expect(answers, everyElement(isA<Success<Object>>()));
+        expect((browser.entryCount, providerMeta.entryCount), (1, 1));
+
+        await end(tester);
+
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        expect((browser.entryCount, providerMeta.entryCount), (0, 0));
+      });
+    }
 
     for (final MapEntry(key: input, value: use) in _inputsWithoutPointerMoves.entries) {
       testWidgets('$input counts as activity, so the idle timeout waits for the full threshold after it', (

@@ -5,7 +5,7 @@ import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_r
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
-import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
@@ -16,7 +16,6 @@ import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_re
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
-import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
@@ -29,6 +28,7 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
@@ -112,11 +112,13 @@ class AppDependencies {
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);
 
-  /// What the engine of a connection can do, which several features read.
-  IProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) => ProviderMetaRepository(apiClient);
+  /// What the engine of a connection can do, which several features read, kept in memory for the session.
+  CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>
+      CachedProviderMetaRepository(ProviderMetaRepository(apiClient));
 
-  /// Studio's read-only object routes.
-  IObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) => ObjectBrowserRepository(apiClient);
+  /// Studio's read-only object routes, with their answers kept in memory for ten minutes.
+  CachedObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) =>
+      CachedObjectBrowserRepository(ObjectBrowserRepository(apiClient));
 
   /// Studio's statement routes.
   ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient) => SqlEditorRepository(apiClient);

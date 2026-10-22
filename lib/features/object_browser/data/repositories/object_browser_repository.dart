@@ -12,7 +12,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 
 /// Studio's object routes, all `POST` with the connection named in the body. The paths are relative to
-/// `PROD_API_URL`, which ends in Studio's `/api`.
+/// `PROD_API_URL`, which ends in Studio's `/api`. It keeps no answer, so every read, a refresh or not, is a request.
 class ObjectBrowserRepository implements IObjectBrowserRepository {
   ObjectBrowserRepository(this._apiClient);
 
@@ -21,26 +21,28 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
   static final _log = AppLogger.getLogger('ObjectBrowserRepository');
 
   @override
-  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent}) => _post(
-    'containers',
-    '/db/objects/containers',
-    {'connectionId': connectionId, 'parent': ?parent},
-    ObjectBrowserJson.containers,
-  );
+  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent, bool refresh = false}) =>
+      _post('containers', '/db/objects/containers', {
+        'connectionId': connectionId,
+        'parent': ?parent,
+      }, ObjectBrowserJson.containers);
 
   @override
-  Future<Result<Map<String, KindCount>>> counts(String connectionId, {required List<String> container}) => _post(
-    'counts',
-    '/db/objects/counts',
-    {'connectionId': connectionId, 'container': container},
-    ObjectBrowserJson.counts,
-  );
+  Future<Result<Map<String, KindCount>>> counts(
+    String connectionId, {
+    required List<String> container,
+    bool refresh = false,
+  }) => _post('counts', '/db/objects/counts', {
+    'connectionId': connectionId,
+    'container': container,
+  }, ObjectBrowserJson.counts);
 
   @override
   Future<Result<List<DatabaseObject>>> list(
     String connectionId, {
     required List<String> container,
     required String kind,
+    bool refresh = false,
   }) => _post('list', '/db/objects/list', {
     'connectionId': connectionId,
     'container': container,
@@ -48,12 +50,16 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
   }, ObjectBrowserJson.objects);
 
   @override
-  Future<Result<ObjectDetail>> describe(String connectionId, {required List<String> path, required String kind}) =>
-      _post('describe', '/db/objects/describe', {
-        'connectionId': connectionId,
-        'path': path,
-        'kind': kind,
-      }, ObjectBrowserJson.detail);
+  Future<Result<ObjectDetail>> describe(
+    String connectionId, {
+    required List<String> path,
+    required String kind,
+    bool refresh = false,
+  }) => _post('describe', '/db/objects/describe', {
+    'connectionId': connectionId,
+    'path': path,
+    'kind': kind,
+  }, ObjectBrowserJson.detail);
 
   @override
   Future<Result<ObjectSource>> source(String connectionId, {required List<String> path, required String kind}) => _post(
