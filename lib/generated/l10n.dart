@@ -1402,9 +1402,9 @@ class S {
     return Intl.message('No users to show', name: 'user_list_empty', desc: '', args: []);
   }
 
-  /// `Flutter BLoC Advance Template`
+  /// `LibreDB`
   String get app_title {
-    return Intl.message('Flutter BLoC Advance Template', name: 'app_title', desc: '', args: []);
+    return Intl.message('LibreDB', name: 'app_title', desc: '', args: []);
   }
 
   /// `Closed`

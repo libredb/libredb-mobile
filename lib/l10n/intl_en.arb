@@ -484,7 +484,7 @@
   "@password_hide": {},
   "user_list_empty": "No users to show",
   "@user_list_empty": {},
-  "app_title": "Flutter BLoC Advance Template",
+  "app_title": "LibreDB",
   "@app_title": {},
   "dashboard_circuit_state_closed": "Closed",
   "@dashboard_circuit_state_closed": {},

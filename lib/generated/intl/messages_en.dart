@@ -62,7 +62,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "account": MessageLookupByLibrary.simpleMessage("Account"),
     "active": MessageLookupByLibrary.simpleMessage("Active"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
-    "app_title": MessageLookupByLibrary.simpleMessage("Flutter BLoC Advance Template"),
+    "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Apply"),
     "authorities": MessageLookupByLibrary.simpleMessage("Authorities"),
     "authorities_load_failed": MessageLookupByLibrary.simpleMessage("Roles unavailable"),

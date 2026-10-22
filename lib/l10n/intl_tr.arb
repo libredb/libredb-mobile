@@ -484,7 +484,7 @@
   "@password_hide": {},
   "user_list_empty": "Gösterilecek kullanıcı yok",
   "@user_list_empty": {},
-  "app_title": "Flutter BLoC Advance Şablonu",
+  "app_title": "LibreDB",
   "@app_title": {},
   "dashboard_circuit_state_closed": "Kapalı",
   "@dashboard_circuit_state_closed": {},
