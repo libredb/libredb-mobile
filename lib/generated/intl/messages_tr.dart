@@ -32,7 +32,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m5(min) => "Şifre en az ${min} karakter uzunluğunda olmalıdır";
 
-  static String m6(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m6(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+
+  static String m7(message) => "Hata: ${message}";
+
+  static String m8(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -258,9 +262,19 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
+    "studio_error_copy_statement": MessageLookupByLibrary.simpleMessage("İfadeyi kopyala"),
+    "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
+      "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
+    ),
+    "studio_error_governance_retrying": MessageLookupByLibrary.simpleMessage(
+      "Studio şu anda erişiminizi denetleyemiyor. Otomatik olarak yeniden deneniyor.",
+    ),
+    "studio_error_retry_in": m6,
+    "studio_error_semantics": m7,
+    "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "submit": MessageLookupByLibrary.simpleMessage("Gönder"),
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
-    "table_rows_listed": m6,
+    "table_rows_listed": m8,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),

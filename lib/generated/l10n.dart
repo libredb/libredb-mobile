@@ -1154,6 +1154,46 @@ class S {
       args: [],
     );
   }
+
+  /// `You can try again in {seconds} s.`
+  String studio_error_retry_in(int seconds) {
+    return Intl.message('You can try again in $seconds s.', name: 'studio_error_retry_in', desc: '', args: [seconds]);
+  }
+
+  /// `Studio cannot check your access right now. Retrying automatically.`
+  String get studio_error_governance_retrying {
+    return Intl.message(
+      'Studio cannot check your access right now. Retrying automatically.',
+      name: 'studio_error_governance_retrying',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `An administrator can run this statement to fix it:`
+  String get studio_error_fix_statement {
+    return Intl.message(
+      'An administrator can run this statement to fix it:',
+      name: 'studio_error_fix_statement',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Copy statement`
+  String get studio_error_copy_statement {
+    return Intl.message('Copy statement', name: 'studio_error_copy_statement', desc: '', args: []);
+  }
+
+  /// `Statement copied`
+  String get studio_error_statement_copied {
+    return Intl.message('Statement copied', name: 'studio_error_statement_copied', desc: '', args: []);
+  }
+
+  /// `Error: {message}`
+  String studio_error_semantics(String message) {
+    return Intl.message('Error: $message', name: 'studio_error_semantics', desc: '', args: [message]);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

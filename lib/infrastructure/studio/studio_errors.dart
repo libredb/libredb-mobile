@@ -23,7 +23,7 @@ AppError studioError(Object error) {
       return AuthError(message, code: AppErrorCode.authInvalidAccessToken.key);
     case 'AUTH_ERROR':
       final code = status == 403 ? AppErrorCode.studioConnectionNotAvailable : AppErrorCode.studioDatabaseAuth;
-      return AuthError(message, code: code.key);
+      return AuthError(message, code: code.key, fixStatement: error.fixStatement);
     case 'CONNECTION_NOT_FOUND':
       return NotFoundError(message, code: AppErrorCode.studioConnectionNotAvailable.key);
     case 'PERMISSION_DENIED':

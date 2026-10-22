@@ -584,6 +584,47 @@ void main() {
         );
       });
 
+      test('a refused database credential keeps the fixStatement of its JSON body', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 401,
+          data: '{"error":"refused","code":"AUTH_ERROR","statusCode":401,"fixStatement":"GRANT ROLE R TO USER U"}',
+        );
+        await expectLater(
+          client.post('/db/test-connection', {'connectionId': 'seed:pg'}),
+          throwsA(isA<UnauthorizedException>().having((e) => e.fixStatement, 'fixStatement', 'GRANT ROLE R TO USER U')),
+        );
+      });
+
+      test('the fixStatement is scrubbed of the secrets the request sent', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 401,
+          data: '{"error":"refused","code":"AUTH_ERROR","fixStatement":"ALTER USER u PASSWORD \'hunter2-secret\'"}',
+        );
+        await expectLater(
+          client.post('/db/test-connection', {'password': 'hunter2-secret'}),
+          throwsA(
+            isA<UnauthorizedException>().having(
+              (e) => e.fixStatement,
+              'fixStatement',
+              allOf(isNot(contains('hunter2-secret')), contains('[REDACTED]')),
+            ),
+          ),
+        );
+      });
+
+      test('a body without a string fixStatement gives none', () async {
+        for (final body in ['Unauthorized', '{"code":"AUTH_ERROR"}', '{"fixStatement":7}']) {
+          stub.stubDioError(DioExceptionType.badResponse, statusCode: 401, data: body);
+          await expectLater(
+            client.get('/test'),
+            throwsA(isA<UnauthorizedException>().having((e) => e.fixStatement, 'fixStatement', isNull)),
+            reason: body,
+          );
+        }
+      });
+
       test('a body without a string error gives no error text', () async {
         for (final body in ['Bad Request', '{"code":"X"}', '{"error":7}']) {
           stub.stubDioError(DioExceptionType.badResponse, statusCode: 400, data: body);

@@ -314,5 +314,29 @@
   "settings_licenses": "Lisanslar",
   "@settings_licenses": {},
   "settings_licenses_subtitle": "LibreDB Mobile'ın ve içerdiği kodun lisansları",
-  "@settings_licenses_subtitle": {}
+  "@settings_licenses_subtitle": {},
+  "studio_error_retry_in": "{seconds} sn sonra yeniden deneyebilirsiniz.",
+  "@studio_error_retry_in": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "studio_error_governance_retrying": "Studio şu anda erişiminizi denetleyemiyor. Otomatik olarak yeniden deneniyor.",
+  "@studio_error_governance_retrying": {},
+  "studio_error_fix_statement": "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
+  "@studio_error_fix_statement": {},
+  "studio_error_copy_statement": "İfadeyi kopyala",
+  "@studio_error_copy_statement": {},
+  "studio_error_statement_copied": "İfade kopyalandı",
+  "@studio_error_statement_copied": {},
+  "studio_error_semantics": "Hata: {message}",
+  "@studio_error_semantics": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
 }

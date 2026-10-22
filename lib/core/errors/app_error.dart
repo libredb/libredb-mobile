@@ -22,8 +22,12 @@ final class NetworkError extends AppError {
 }
 
 /// Authentication/authorization error (401, 403, expired token).
+///
+/// [fixStatement] is a statement the server offers to fix a refused database credential, for the user to copy.
 final class AuthError extends AppError {
-  const AuthError(super.message, {super.code});
+  const AuthError(super.message, {super.code, this.fixStatement});
+
+  final String? fixStatement;
 }
 
 /// Input validation error (invalid form data, bad request params).

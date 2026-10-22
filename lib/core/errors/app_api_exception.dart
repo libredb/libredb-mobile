@@ -23,9 +23,22 @@ abstract class AppException implements Exception {
   /// other screen shows a translated message for [errorCode] instead.
   final String? serverMessage;
 
-  AppException(String? message, String? prefix, {this.statusCode, this.errorCode, this.retryAfter, this.serverMessage})
-    : _message = message,
-      _prefix = prefix;
+  /// The string `fixStatement` of a JSON error body, scrubbed like [serverMessage], or null.
+  ///
+  /// LibreDB Studio sends it with a 401 `AUTH_ERROR` when the database names a statement that fixes the refusal, for
+  /// the user to copy (`src/lib/api/error-body.ts` in Studio).
+  final String? fixStatement;
+
+  AppException(
+    String? message,
+    String? prefix, {
+    this.statusCode,
+    this.errorCode,
+    this.retryAfter,
+    this.serverMessage,
+    this.fixStatement,
+  }) : _message = message,
+       _prefix = prefix;
 
   @override
   String toString() {
@@ -58,7 +71,7 @@ final class BadRequestException extends AppException {
 }
 
 final class UnauthorizedException extends AppException {
-  UnauthorizedException(String? message, {super.statusCode, super.errorCode, super.serverMessage})
+  UnauthorizedException(String? message, {super.statusCode, super.errorCode, super.serverMessage, super.fixStatement})
     : super(message, "Unauthorized: ");
 }
 
