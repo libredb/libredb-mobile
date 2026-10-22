@@ -1,16 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_origin.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/public_endpoint.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart' as token_rotation show defaultRefreshDio;
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/infrastructure/http/api_origin.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart' as token_rotation show defaultRefreshDio;
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
-export 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart' show RefreshDioFactory;
+export 'package:libredb_mobile/infrastructure/http/token_rotation.dart' show RefreshDioFactory;
 
 /// HTTP auth header shape, isolated as named constants: these are how
 /// this layer writes the header, not a cross-feature contract.

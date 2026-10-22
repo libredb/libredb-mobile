@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

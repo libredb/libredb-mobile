@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_card.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/l10n/locale_l10n.dart';
-import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
-import 'package:flutter_bloc_advance/shared/widgets/language_selection_dialog.dart';
-import 'package:flutter_bloc_advance/shared/widgets/theme_selection_dialog.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/locale_l10n.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/shared/utils/external_link.dart';
+import 'package:libredb_mobile/shared/widgets/language_selection_dialog.dart';
+import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../generated/l10n.dart';
@@ -89,22 +90,31 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
 
-              // Help & Resources section, when the project has a documentation website
-              if (context.read<ProjectLinks>().docsUrl case final docsUrl?) ...[
-                const SizedBox(height: AppSpacing.lg),
-                _SettingsSection(
-                  title: S.of(context).help_resources,
-                  children: [
-                    _SettingsTile(
-                      key: settingsWebsiteButtonKey,
-                      icon: Icons.language,
-                      title: S.of(context).website,
-                      subtitle: S.of(context).help_resources_subtitle,
-                      onTap: () => openExternalLink(context, Uri.parse(docsUrl)),
+              // Help & Resources section
+              const SizedBox(height: AppSpacing.lg),
+              _SettingsSection(
+                title: S.of(context).help_resources,
+                children: [
+                  _SettingsTile(
+                    key: settingsWebsiteButtonKey,
+                    icon: Icons.language,
+                    title: S.of(context).documentation,
+                    subtitle: S.of(context).help_resources_subtitle,
+                    onTap: () => openExternalLink(context, Uri.parse(context.read<ProjectLinks>().docsUrl)),
+                  ),
+                  _SettingsTile(
+                    key: settingsLicensesButtonKey,
+                    icon: Icons.gavel_outlined,
+                    title: S.of(context).settings_licenses,
+                    subtitle: S.of(context).settings_licenses_subtitle,
+                    onTap: () => showLicensePage(
+                      context: context,
+                      applicationName: AppConstants.appName,
+                      applicationVersion: AppConstants.appVersion,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
               // Logout intentionally lives only in the sidebar / topbar
               // shell, not here. Settings is feature-scoped and an
               // auth-session lifecycle action would cross feature

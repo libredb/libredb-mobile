@@ -7,26 +7,25 @@ import '../../../../generated/l10n.dart';
 import '../../../../infrastructure/config/project_links.dart';
 import '../../../../shared/utils/external_link.dart';
 
-/// The pages the community section links to: the project's repository and the pages in it, and the sponsor and
-/// documentation pages when the project has them.
+/// The pages the community section links to: the repository and the pages in it, and the sponsor and documentation
+/// pages.
 class CommunityUrls {
-  const CommunityUrls({required this.repo, this.sponsor, this.docs});
+  const CommunityUrls({required this.repo, required this.sponsor, required this.docs});
 
-  /// The community links of [links], or null when [links] has no repository: the section is about the repository.
-  static CommunityUrls? of(ProjectLinks links) => switch (links.repositoryUrl) {
-    final repo? => CommunityUrls(repo: repo, sponsor: links.sponsorUrl, docs: links.docsUrl),
-    null => null,
-  };
+  /// The community links of [links].
+  CommunityUrls.of(ProjectLinks links)
+    : this(repo: links.repositoryUrl, sponsor: links.sponsorUrl, docs: links.docsUrl);
 
-  /// The repository, such as `https://github.com/acme/dashboard`, without a trailing `/`.
+  /// The repository, such as `https://github.com/libredb/libredb-mobile`, without a trailing `/`.
   final String repo;
-  final String? sponsor;
-  final String? docs;
+  final String sponsor;
+  final String docs;
 
   String get issues => '$repo/issues';
-  String get discussions => '$repo/discussions';
   String get contributing => '$repo/blob/main/CONTRIBUTING.md';
-  String get translate => '$repo/tree/main/lib/l10n';
+
+  /// Translations come in as issues, as CONTRIBUTING.md asks, so this opens the issue form chooser.
+  String get translate => '$repo/issues/new/choose';
 }
 
 class _CommunityAction {
@@ -65,14 +64,6 @@ List<_CommunityAction> _communityActions(CommunityUrls urls) => [
     url: urls.issues,
   ),
   _CommunityAction(
-    key: communityDiscussionsKey,
-    icon: Icons.forum_outlined,
-    iconBackground: const Color(0xFF06B6D4),
-    iconColor: const Color(0xFF67E8F9),
-    label: (l10n) => l10n.community_discussions,
-    url: urls.discussions,
-  ),
-  _CommunityAction(
     key: communityContributeKey,
     icon: Icons.code_rounded,
     iconBackground: const Color(0xFF8B5CF6),
@@ -88,24 +79,22 @@ List<_CommunityAction> _communityActions(CommunityUrls urls) => [
     label: (l10n) => l10n.community_translate,
     url: urls.translate,
   ),
-  if (urls.sponsor case final sponsor?)
-    _CommunityAction(
-      key: communitySponsorKey,
-      icon: Icons.favorite_border_rounded,
-      iconBackground: const Color(0xFFEC4899),
-      iconColor: const Color(0xFFF9A8D4),
-      label: (l10n) => l10n.community_sponsor,
-      url: sponsor,
-    ),
-  if (urls.docs case final docs?)
-    _CommunityAction(
-      key: communityDocsKey,
-      icon: Icons.menu_book_rounded,
-      iconBackground: const Color(0xFFF59E0B),
-      iconColor: const Color(0xFFFCD34D),
-      label: (l10n) => l10n.community_docs,
-      url: docs,
-    ),
+  _CommunityAction(
+    key: communitySponsorKey,
+    icon: Icons.favorite_border_rounded,
+    iconBackground: const Color(0xFFEC4899),
+    iconColor: const Color(0xFFF9A8D4),
+    label: (l10n) => l10n.community_sponsor,
+    url: urls.sponsor,
+  ),
+  _CommunityAction(
+    key: communityDocsKey,
+    icon: Icons.menu_book_rounded,
+    iconBackground: const Color(0xFFF59E0B),
+    iconColor: const Color(0xFFFCD34D),
+    label: (l10n) => l10n.community_docs,
+    url: urls.docs,
+  ),
 ];
 
 class CommunitySectionWidget extends StatelessWidget {
@@ -159,7 +148,7 @@ class _DesktopCommunitySection extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            _openSourcePill(l10n),
+            _sourceAvailablePill(l10n),
           ],
         ),
         const SizedBox(height: 16),
@@ -172,7 +161,7 @@ class _DesktopCommunitySection extends StatelessWidget {
     );
   }
 
-  Widget _openSourcePill(S l10n) {
+  Widget _sourceAvailablePill(S l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
@@ -186,7 +175,7 @@ class _DesktopCommunitySection extends StatelessWidget {
           const Icon(Icons.lock_open_rounded, size: 13, color: Color(0xFF6EE7B7)),
           const SizedBox(width: 6),
           Text(
-            l10n.community_open_source,
+            l10n.community_source_available,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

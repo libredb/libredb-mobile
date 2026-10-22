@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A [BackendTokenRotation] whose refresh request [stub] answers instead of the network, and the requests it sent.

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io' show HandshakeException, HttpException, OSError, RedirectException, SocketException;
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/cache_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

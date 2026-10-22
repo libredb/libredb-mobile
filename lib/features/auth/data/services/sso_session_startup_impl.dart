@@ -1,11 +1,11 @@
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/services/sso_auto_redirect_gate.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/services/sso_session_startup.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
 /// [ISsoSessionStartup] over the token rotation and the stored session.
 ///

@@ -2,13 +2,13 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/app/analytics/analytics_route_observer.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/router/forbidden_page.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/theme_selection_dialog.dart';
+import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/router/forbidden_page.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';

@@ -1,5 +1,5 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 
 /// Persists / clears the authenticated session as one logical unit.
 ///

@@ -4,11 +4,11 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/app_bootstrap.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/app_bootstrap_config.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/sentry_start.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/bootstrap/app_bootstrap.dart';
+import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
+import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -47,6 +47,7 @@ void main() {
         buildNumber: '1',
         buildSignature: '',
       );
+      addTearDown(LicenseRegistry.reset);
     });
 
     // The gate decides before anything reads the config, so a release build whose host did not start the native SDK
@@ -115,6 +116,35 @@ void main() {
       Bloc.observer = observer;
 
       expect(await AppLocalStorage().read(StorageKeys.language.key), isNull);
+    });
+
+    // The app ships code of the MIT-licensed template, whose licence must travel with every copy, so the store build
+    // carries the NOTICE and the licences page shows it.
+    testWidgets('registers the NOTICE, with the MIT notice of the template, among the app licences', (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+        (call) async => ['none'],
+      );
+      tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+        const EventChannel('dev.fluttercommunity.plus/connectivity_status'),
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+      final flutterErrorHandler = FlutterError.onError;
+      final platformErrorHandler = PlatformDispatcher.instance.onError;
+      final observer = Bloc.observer;
+
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test)));
+      FlutterError.onError = flutterErrorHandler;
+      PlatformDispatcher.instance.onError = platformErrorHandler;
+      Bloc.observer = observer;
+
+      final licenses = (await tester.runAsync(() => LicenseRegistry.licenses.toList()))!;
+      final notice = licenses.where((license) => license.packages.contains('libredb_mobile')).toList();
+      expect(notice, hasLength(1));
+      final text = notice.single.paragraphs.map((paragraph) => paragraph.text).join('\n');
+      expect(text, contains('LibreDB Mobile is licensed under the Elastic License 2.0'));
+      expect(text, contains('Copyright (c) 2025 Mehmet Cevheri BOZOGLAN'));
+      expect(text, contains('Permission is hereby granted, free of charge'));
     });
   });
 }

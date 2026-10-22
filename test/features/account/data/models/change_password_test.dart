@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
+import 'package:libredb_mobile/features/account/data/models/change_password.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../mocks/fake_data.dart';

@@ -1,8 +1,8 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/studio_identity_model.dart';
-import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/data/models/studio_identity_model.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';

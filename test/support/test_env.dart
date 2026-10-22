@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/core/feature_flags/feature_flag_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -28,7 +28,7 @@ class TestEnv {
   /// In-memory backing for the mocked flutter_secure_storage channel.
   /// Production code instantiates [FlutterSecureStorageAdapter] in several
   /// places (AuthInterceptor, TokenRefreshInterceptor, SessionCubit,
-  /// AuthSessionRepository, LoginRepository.logout, SessionMigration); each
+  /// AuthSessionRepository, LoginRepository.logout); each
   /// routes through this MethodChannel. Without the mock those paths throw
   /// MissingPluginException.
   static final Map<String, String> _secureStore = {};

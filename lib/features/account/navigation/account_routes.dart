@@ -1,6 +1,6 @@
-import 'package:flutter_bloc_advance/features/account/presentation/pages/account_page.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/features/account/presentation/pages/account_page.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:go_router/go_router.dart';
 
 class AccountFeatureRoutes {

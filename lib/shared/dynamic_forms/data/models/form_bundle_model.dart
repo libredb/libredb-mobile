@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/models/form_schema_model.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/models/form_schema_model.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_bundle_entity.dart';
 
 /// Parses a `{ "schema": {...}, "values": {...} }` response body into a
 /// [FormBundleEntity]. The schema is delegated to [FormSchemaModel.fromJson]

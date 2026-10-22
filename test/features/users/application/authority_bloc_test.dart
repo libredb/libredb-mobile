@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/application/authority_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/list_authorities_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/data/models/authority.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
+import 'package:libredb_mobile/features/users/application/usecases/list_authorities_usecase.dart';
+import 'package:libredb_mobile/features/users/data/models/authority.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

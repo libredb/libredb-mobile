@@ -2,10 +2,9 @@ import 'dart:async';
 
 /// An explicit time limit on the storage work that startup waits for.
 ///
-/// Startup waits for secure storage twice. AppBootstrap.run awaits `runSessionMigration` before runApp, so the launch
-/// screen stays up until the migration is done, and App shows a spinner instead of the router until
-/// SessionCubit.restore has read the stored session. A secure storage that never answers would keep the user on one of
-/// them for good, so each of them waits for its work at most [duration], then logs an error and goes on without it.
+/// Startup waits for secure storage: App shows a spinner instead of the router until SessionCubit.restore has read the
+/// stored session. A secure storage that never answers would keep the user on that spinner for good, so the restore
+/// waits for its work at most [duration], then logs an error and goes on without it.
 final class StartupStorageTimeLimit<T> {
   /// Starts waiting for [work], for at most [duration].
   StartupStorageTimeLimit(Future<T> work, {this.duration = defaultDuration}) {

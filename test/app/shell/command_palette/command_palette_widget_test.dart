@@ -3,9 +3,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/command_palette/command_palette_widget.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/app/shell/command_palette/command_palette_widget.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 

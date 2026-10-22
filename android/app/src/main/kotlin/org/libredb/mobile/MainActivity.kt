@@ -10,7 +10,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         // nativeSdkReady (lib/infrastructure/analytics/native_sentry_start.dart) asks whether MainApplication started
         // the native Sentry SDK before the Dart side starts its own.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "flutter_bloc_advance/native_sentry")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "org.libredb.mobile/native_sentry")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "isEnabled" -> result.success(Sentry.isEnabled())

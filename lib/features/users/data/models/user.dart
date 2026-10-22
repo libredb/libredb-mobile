@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 
 /// ApplicationUser model that represents the user entity in this application.
 ///

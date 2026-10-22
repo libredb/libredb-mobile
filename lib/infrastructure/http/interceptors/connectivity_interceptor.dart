@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/cache_interceptor.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
 
 /// Exception thrown when a request is attempted while offline.
 ///

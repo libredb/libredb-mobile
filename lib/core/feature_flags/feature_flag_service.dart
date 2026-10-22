@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 
 /// Runtime feature flag service.
 ///

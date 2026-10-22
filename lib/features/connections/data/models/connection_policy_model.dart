@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/connections/domain/entities/connection_policy.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 
 /// Reads `GET /api/connections/policy`: `{customConnections, governance?: true, statementCapture?}`.
 final class ConnectionPolicyModel {

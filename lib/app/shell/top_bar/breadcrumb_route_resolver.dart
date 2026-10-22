@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 
 /// A single breadcrumb item with a display label and optional navigation route.
 class BreadcrumbItem {

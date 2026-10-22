@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_transaction_store.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_transaction_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oidc/oidc.dart';
 

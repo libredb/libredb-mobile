@@ -8,33 +8,33 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/di/app_scope.dart';
-import 'package:flutter_bloc_advance/app/session/session_cubit.dart';
-import 'package:flutter_bloc_advance/app/shell/menu_bloc/menu_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/application/login_bloc.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
 
-/// Production behavior (no mock interceptor, token expiry enforced) with a valid base URL instead of the template
-/// placeholder in [AppConfig.prod].
+/// Production behavior (no mock interceptor, token expiry enforced) with a valid base URL, which [AppConfig.prod] has
+/// only when the build gives `PROD_API_URL`.
 const _prodConfig = AppConfig(
   environment: Environment.prod,
   apiBaseUrl: 'https://api.example.test',

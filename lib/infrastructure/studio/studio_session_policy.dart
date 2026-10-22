@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 
 /// The [SessionExpiredPredicate] of LibreDB Studio: a 401 whose body carries `AUTH_REQUIRED`, or no code at all.
 ///

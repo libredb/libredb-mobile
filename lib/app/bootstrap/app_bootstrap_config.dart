@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 
 class AppBootstrapConfig {
   const AppBootstrapConfig({

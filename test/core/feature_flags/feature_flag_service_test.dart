@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_radius.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/semantic_colors.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 import 'package:go_router/go_router.dart';
 
 class EnvironmentTab extends StatelessWidget {

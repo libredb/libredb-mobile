@@ -3,7 +3,7 @@
 The app talks to [LibreDB Studio](https://github.com/libredb/libredb-studio) as its backend.
 It signs in to Keycloak itself, as the public client `libredb-mobile` with the authorization code flow and PKCE, and sends Keycloak's access token to Studio as `Authorization: Bearer`.
 Studio accepts that token through its bearer channel for native clients, which `OIDC_BEARER_AUDIENCE` turns on (Studio's `docs/OIDC.md`, "Bearer access tokens for native clients").
-The sign-in itself is the template's `oidc` mode, described in [oidc.md](oidc.md).
+The sign-in itself is the app's `oidc` mode, described in [oidc.md](oidc.md).
 
 The bearer channel came with libredb/libredb-studio#1914, which is on Studio's main branch; Studio 1.0.0 does not have it.
 Until a Studio release contains it, build the Studio image from main, as shown below.
@@ -40,6 +40,7 @@ PROD_API_URL=https://studio.example.com/api
 ```
 
 Studio's API lives under `/api`, so `PROD_API_URL` ends with it and the repositories use paths such as `/connections/managed`.
+A prod build without `PROD_API_URL` stops at start with `ProdApiUrlConfigError`.
 In a Platform install the role claim is `libredb_roles` instead of `realm_access.roles`.
 
 ## Try it locally

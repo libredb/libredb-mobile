@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/fetch_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/save_user_usecase.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/application/usecases/fetch_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/usecases/save_user_usecase.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'user_editor_event.dart';
 part 'user_editor_state.dart';

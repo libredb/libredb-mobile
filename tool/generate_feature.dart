@@ -80,11 +80,9 @@ void _printNextSteps(_FeatureNames f) {
   print('NEXT STEPS:');
   print('');
   print('1. Register the repository in lib/app/di/app_dependencies.dart:');
+  print("   import 'package:libredb_mobile/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';");
   print(
-    "   import 'package:flutter_bloc_advance/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';",
-  );
-  print(
-    "   import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';",
+    "   import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';",
   );
   print('');
   print(
@@ -94,7 +92,7 @@ void _printNextSteps(_FeatureNames f) {
   print('');
   print('2. Provide it in lib/app/di/app_scope.dart, in MultiRepositoryProvider after the ApiClient provider:');
   print(
-    "   import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';",
+    "   import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';",
   );
   print('');
   print('   RepositoryProvider<I${f.singularPascal}Repository>(');
@@ -102,7 +100,7 @@ void _printNextSteps(_FeatureNames f) {
   print('   ),');
   print('');
   print('3. Register the routes in lib/app/router/app_router.dart, inside ShellRoute.routes:');
-  print("   import 'package:flutter_bloc_advance/features/${f.snake}/navigation/${f.snake}_routes.dart';");
+  print("   import 'package:libredb_mobile/features/${f.snake}/navigation/${f.snake}_routes.dart';");
   print('   ...${f.pascal}FeatureRoutes.routes,');
   print('');
   print('4. Add the paths to lib/app/router/app_routes_constants.dart for app-level links:');
@@ -264,8 +262,8 @@ class ${f.singularPascal}Entity extends Equatable {
 
   // Repository interface
   _writeFile('lib/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart', '''
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
 
 abstract class I${f.singularPascal}Repository {
   Future<Result<${f.singularPascal}Entity>> retrieve(String id);
@@ -292,7 +290,7 @@ void _generateData(_FeatureNames f) {
   _writeFile('lib/features/${f.snake}/data/models/${f.singularSnake}_model.dart', '''
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
 
 class ${f.singularPascal}Model extends ${f.singularPascal}Entity {
   const ${f.singularPascal}Model({super.id, super.name, super.description, super.createdDate, super.lastModifiedDate});
@@ -337,14 +335,14 @@ class ${f.singularPascal}Model extends ${f.singularPascal}Entity {
 
   // Repository implementation
   _writeFile('lib/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart', '''
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/data/models/${f.singularSnake}_model.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/data/models/${f.singularSnake}_model.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 
 /// HTTP-backed [I${f.singularPascal}Repository].
 ///
@@ -496,9 +494,9 @@ void _generateApplication(_FeatureNames f) {
 
   // Use cases
   _writeFile('lib/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart', '''
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 
 class List${f.pascal}UseCase {
   const List${f.pascal}UseCase(this._repository);
@@ -512,9 +510,9 @@ class List${f.pascal}UseCase {
 ''');
 
   _writeFile('lib/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart', '''
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 
 class Fetch${f.singularPascal}UseCase {
   const Fetch${f.singularPascal}UseCase(this._repository);
@@ -528,9 +526,9 @@ class Fetch${f.singularPascal}UseCase {
 ''');
 
   _writeFile('lib/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart', '''
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 
 /// Creates the ${f.singularTitle.toLowerCase()} when it has no id, updates it otherwise.
 class Save${f.singularPascal}UseCase {
@@ -548,8 +546,8 @@ class Save${f.singularPascal}UseCase {
 ''');
 
   _writeFile('lib/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart', '''
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 
 class Delete${f.singularPascal}UseCase {
   const Delete${f.singularPascal}UseCase(this._repository);
@@ -568,12 +566,12 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part '${f.singularSnake}_list_event.dart';
 part '${f.singularSnake}_list_state.dart';
@@ -704,12 +702,12 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part '${f.singularSnake}_editor_event.dart';
 part '${f.singularSnake}_editor_state.dart';
@@ -870,17 +868,17 @@ void _generateNavigation(_FeatureNames f) {
   _writeFile('lib/features/${f.snake}/navigation/${f.snake}_routes.dart', '''
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/presentation/pages/${f.singularSnake}_editor_page.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/presentation/pages/${f.singularSnake}_list_page.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/editor_form_mode.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/features/${f.snake}/presentation/pages/${f.singularSnake}_editor_page.dart';
+import 'package:libredb_mobile/features/${f.snake}/presentation/pages/${f.singularSnake}_list_page.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/editor_form_mode.dart';
 import 'package:go_router/go_router.dart';
 
 /// Routes of the ${f.title.toLowerCase()} feature, for the ShellRoute in lib/app/router/app_router.dart.
@@ -962,14 +960,14 @@ void _generatePresentation(_FeatureNames f) {
   _writeFile('lib/features/${f.snake}/presentation/pages/${f.singularSnake}_list_page.dart', '''
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_empty_state.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/widgets/confirmation_dialog_widget.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_empty_state.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
 import 'package:go_router/go_router.dart';
 
 class ${f.singularPascal}ListPage extends StatefulWidget {
@@ -1090,13 +1088,13 @@ class _${f.singularPascal}ListView extends StatelessWidget {
   _writeFile('lib/features/${f.snake}/presentation/pages/${f.singularSnake}_editor_page.dart', '''
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/widgets/editor_form_mode.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/widgets/editor_form_mode.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
@@ -1297,13 +1295,13 @@ void _generateTests(_FeatureNames f) {
   // List BLoC test
   _writeFile('test/features/${f.snake}/application/${f.singularSnake}_list_bloc_test.dart', '''
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_list_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/delete_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/list_${f.snake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -1373,13 +1371,13 @@ void main() {
   // Editor BLoC test
   _writeFile('test/features/${f.snake}/application/${f.singularSnake}_editor_bloc_test.dart', '''
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/${f.singularSnake}_editor_bloc.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/fetch_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/application/usecases/save_${f.singularSnake}_usecase.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -1464,8 +1462,8 @@ void main() {
   _writeFile('test/features/${f.snake}/data/models/${f.singularSnake}_model_test.dart', '''
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/${f.snake}/data/models/${f.singularSnake}_model.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/features/${f.snake}/data/models/${f.singularSnake}_model.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -1517,10 +1515,10 @@ void main() {
 
   // Repository test, through the real ApiClient chain
   _writeFile('test/features/${f.snake}/data/repositories/${f.singularSnake}_repository_test.dart', '''
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/entities/${f.singularSnake}_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';
@@ -1595,10 +1593,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
-import 'package:flutter_bloc_advance/features/${f.snake}/navigation/${f.snake}_routes.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/features/${f.snake}/data/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/features/${f.snake}/domain/repositories/${f.singularSnake}_repository.dart';
+import 'package:libredb_mobile/features/${f.snake}/navigation/${f.snake}_routes.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

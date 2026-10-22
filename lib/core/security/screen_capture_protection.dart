@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:screen_protector/screen_protector.dart';
 
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 
 /// Opt-in screen capture protection for sensitive screens.
 ///

@@ -79,14 +79,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "command_palette_settings_description": MessageLookupByLibrary.simpleMessage("Uygulama tercihleri"),
     "command_palette_users_description": MessageLookupByLibrary.simpleMessage("Kullanıcıları yönetin"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Katkıda Bulun"),
-    "community_discussions": MessageLookupByLibrary.simpleMessage("Tartışmalar"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Sorun Bildir"),
-    "community_open_source": MessageLookupByLibrary.simpleMessage("Açık Kaynak"),
+    "community_source_available": MessageLookupByLibrary.simpleMessage("Kaynak Kodu Erişilebilir"),
     "community_sponsor": MessageLookupByLibrary.simpleMessage("Sponsor Ol"),
     "community_star": MessageLookupByLibrary.simpleMessage("Yıldız & Fork"),
     "community_subtitle": MessageLookupByLibrary.simpleMessage(
-      "Bu proje açık kaynaktır. Katkılarınız onu daha iyi yapar!",
+      "LibreDB\'nin kaynak kodu herkese açıktır. Katkılarınız onu daha iyi yapar!",
     ),
     "community_title": MessageLookupByLibrary.simpleMessage("Topluluğa Katılın"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Çeviriye Yardım Et"),
@@ -149,6 +148,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "dashboard_title": MessageLookupByLibrary.simpleMessage("Sistem Paneli"),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "delete_user": MessageLookupByLibrary.simpleMessage("Kullanıcı Sil"),
+    "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "dynamic_form_field_max_length": m5,
     "dynamic_form_field_min_length": m6,
     "dynamic_form_field_numeric": MessageLookupByLibrary.simpleMessage("Sayı olmalıdır"),
@@ -251,9 +251,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "guest": MessageLookupByLibrary.simpleMessage("Kullanıcı"),
     "help_resources": MessageLookupByLibrary.simpleMessage("Yardım ve Kaynaklar"),
-    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage(
-      "Dokümantasyon ve rehberler için web sitemizi ziyaret edin",
-    ),
+    "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("GitHub\'daki dokümantasyonu ve rehberleri okuyun"),
     "home": MessageLookupByLibrary.simpleMessage("Ana Sayfa"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("Hareketsizlik nedeniyle oturumunuz kapatıldı."),
     "inactive": MessageLookupByLibrary.simpleMessage("Pasif"),
@@ -266,25 +264,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "loading": MessageLookupByLibrary.simpleMessage("Yükleniyor..."),
     "login": MessageLookupByLibrary.simpleMessage("Kullanıcı Adı"),
     "login_brand_description": MessageLookupByLibrary.simpleMessage(
-      "Kimlik doğrulama, rol tabanlı erişim, kullanıcı yönetimi,\ntema ve çoklu ortam desteği tek bir sağlam başlangıç projesinde.",
+      "LibreDB Studio\'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
     ),
-    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Prototipten\nüretime ölçeklenin."),
-    "login_brand_stat_bloc_ready": MessageLookupByLibrary.simpleMessage("BLoC Hazır"),
-    "login_brand_stat_layers": MessageLookupByLibrary.simpleMessage("Temel Katman"),
-    "login_brand_stat_platforms": MessageLookupByLibrary.simpleMessage("Platform"),
+    "login_brand_headline": MessageLookupByLibrary.simpleMessage("Veritabanlarınız\ncebinizde."),
     "login_button": MessageLookupByLibrary.simpleMessage("Giriş Yap"),
-    "login_feature_architecture_description": MessageLookupByLibrary.simpleMessage(
-      "Sorumlulukları net biçimde ayıran BLoC + Repository deseni.",
-    ),
-    "login_feature_architecture_title": MessageLookupByLibrary.simpleMessage("Temiz Mimari"),
     "login_feature_auth_description": MessageLookupByLibrary.simpleMessage(
-      "Rol tabanlı yönlendirme korumalarıyla şifre ve OTP ile giriş akışları.",
+      "Kurumunuzun Keycloak\'ta yönettiği hesapla oturum açın.",
     ),
-    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Kimlik Doğrulama ve Erişim Kontrolü"),
-    "login_feature_mock_api_description": MessageLookupByLibrary.simpleMessage(
-      "Yerelde sahte verilerle geliştirin, ardından üretim uç noktalarına geçin.",
+    "login_feature_auth_title": MessageLookupByLibrary.simpleMessage("Kurum hesabıyla giriş"),
+    "login_feature_credentials_description": MessageLookupByLibrary.simpleMessage(
+      "Her veritabanı kimlik bilgisini Studio tutar, uygulama hiçbirini saklamaz.",
     ),
-    "login_feature_mock_api_title": MessageLookupByLibrary.simpleMessage("Sahte Veriden Gerçek API\'ye"),
+    "login_feature_credentials_title": MessageLookupByLibrary.simpleMessage("Telefonda parola yok"),
+    "login_feature_query_description": MessageLookupByLibrary.simpleMessage(
+      "Size verilen bağlantılarda şemalara göz atın ve sorgu çalıştırın.",
+    ),
+    "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Göz atın ve sorgulayın"),
     "login_no_account": MessageLookupByLibrary.simpleMessage("Hesabınız yok mu? "),
     "login_or": MessageLookupByLibrary.simpleMessage("veya"),
     "login_otp_email_instructions": MessageLookupByLibrary.simpleMessage(
@@ -351,6 +346,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Görünüm"),
     "settings_change_password_subtitle": MessageLookupByLibrary.simpleMessage("Şifrenizi güvenle güncelleyin"),
+    "settings_licenses": MessageLookupByLibrary.simpleMessage("Lisanslar"),
+    "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
+      "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
+    ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "sidebar_collapse": MessageLookupByLibrary.simpleMessage("Daralt"),
@@ -407,7 +406,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "verify_otp_code": MessageLookupByLibrary.simpleMessage("OTP Kodu Doğrula"),
     "view_user": MessageLookupByLibrary.simpleMessage("Kullanıcı Görüntüle"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
-    "website": MessageLookupByLibrary.simpleMessage("Web Sitesi"),
     "yes": MessageLookupByLibrary.simpleMessage("Evet"),
   };
 }

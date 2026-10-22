@@ -5,26 +5,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/session/session_cubit.dart';
-import 'package:flutter_bloc_advance/app/shell/responsive_scaffold.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_state.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/force_update_screen.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/maintenance_screen.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_migration.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/startup_storage_time_limit.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_state.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/force_update_screen.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/maintenance_screen.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart' show Level, Logger, OutputEvent;
@@ -103,27 +101,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.bySemanticsLabel('Loading...'), findsNothing);
-      expect(find.byType(LoginScreen), findsOneWidget);
-    });
-
-    testWidgets('shows the login page when secure storage never answers, from the session migration at startup on', (
-      tester,
-    ) async {
-      final secureStorage = MockISecureStorage();
-      when(() => secureStorage.read(any())).thenAnswer((_) => Completer<String?>().future);
-
-      // AppBootstrap.run awaits the session migration, which reads secure storage first, and only then runs App.
-      var migrated = false;
-      unawaited(
-        runSessionMigration(secureStorage: secureStorage, localStorage: AppLocalStorage()).then((_) => migrated = true),
-      );
-      await tester.pump(StartupStorageTimeLimit.defaultDuration);
-      expect(migrated, isTrue, reason: 'the launch screen stays up until the migration is done');
-
-      await tester.pumpWidget(App(language: 'en', secureStorage: secureStorage));
-      await tester.pump(SessionCubit.defaultRestoreTimeLimit);
-      await tester.pumpAndSettle();
-
       expect(find.byType(LoginScreen), findsOneWidget);
     });
 

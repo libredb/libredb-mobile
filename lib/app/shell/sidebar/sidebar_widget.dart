@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/menu_bloc/menu_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/models/menu.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_bloc.dart';
-import 'package:flutter_bloc_advance/app/theme/theme_bloc.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
-import 'package:flutter_bloc_advance/shared/utils/icon_utils.dart';
-import 'package:flutter_bloc_advance/shared/widgets/confirmation_dialog_widget.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_breakpoints.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_durations.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_radius.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
+import 'package:libredb_mobile/app/shell/models/menu.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/utils/external_link.dart';
+import 'package:libredb_mobile/shared/utils/icon_utils.dart';
+import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:go_router/go_router.dart';
 
 import 'sidebar_nav_item.dart';
@@ -222,19 +222,18 @@ class _SidebarFooter extends StatelessWidget {
               );
             },
           ),
-          // Website link, when the project has a documentation website
-          if (context.read<ProjectLinks>().docsUrl case final docsUrl?)
-            SidebarNavItem(
-              key: sidebarWebsiteButtonKey,
-              icon: Icons.language,
-              label: S.of(context).website,
-              isCollapsed: isCollapsed,
-              onTap: () {
-                // A link that does not open is reported in a snack bar, which an open drawer would cover.
-                _closeMobileDrawer(context);
-                openExternalLink(context, Uri.parse(docsUrl));
-              },
-            ),
+          // Documentation link
+          SidebarNavItem(
+            key: sidebarWebsiteButtonKey,
+            icon: Icons.language,
+            label: S.of(context).documentation,
+            isCollapsed: isCollapsed,
+            onTap: () {
+              // A link that does not open is reported in a snack bar, which an open drawer would cover.
+              _closeMobileDrawer(context);
+              openExternalLink(context, Uri.parse(context.read<ProjectLinks>().docsUrl));
+            },
+          ),
           // Collapse toggle
           SidebarNavItem(
             icon: isCollapsed ? Icons.chevron_right : Icons.chevron_left,

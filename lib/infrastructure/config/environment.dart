@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/template_config.dart';
+import 'package:flutter/foundation.dart';
 
 /// This file is used to set the environment
 enum Environment { dev, prod, test }
@@ -26,18 +26,29 @@ final class AppConfig {
       idleTimeout = null,
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
-  const AppConfig.prod()
+  const AppConfig.prod({String this.apiBaseUrl = prodApiUrl})
     : environment = Environment.prod,
-      apiBaseUrl = TemplateConfig.prodApiUrl,
       certificatePins = const <String>[],
       idleTimeout = const Duration(minutes: 15),
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
-  factory AppConfig.fromEnvironment(Environment environment) => switch (environment) {
+  /// The config the app starts with in [environment].
+  ///
+  /// Throws [ProdApiUrlConfigError] in the prod environment when [prodApiUrlDefine], the `PROD_API_URL` define unless
+  /// a test passes its own, is empty: such a build has no server to call.
+  factory AppConfig.fromEnvironment(
+    Environment environment, {
+    @visibleForTesting String prodApiUrlDefine = prodApiUrl,
+  }) => switch (environment) {
     Environment.dev => const AppConfig.dev(),
-    Environment.prod => const AppConfig.prod(),
+    Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
+    Environment.prod => AppConfig.prod(apiBaseUrl: prodApiUrlDefine),
     Environment.test => const AppConfig.test(),
   };
+
+  /// LibreDB Studio's API, its origin plus `/api`, given at build time with
+  /// `--dart-define=PROD_API_URL=https://studio.example.com/api` (docs/studio.md).
+  static const String prodApiUrl = String.fromEnvironment('PROD_API_URL');
 
   final Environment environment;
   final String? apiBaseUrl;
@@ -54,7 +65,7 @@ final class AppConfig {
 
   /// Production-only DSN passed via `--dart-define=SENTRY_DSN=...`.
   /// Returns null in non-prod, or when the define is absent / empty.
-  /// **Never** commit a DSN to source (public template).
+  /// **Never** commit a DSN to source: the repository is public.
   String? get sentryDsn {
     if (!isProduction) return null;
     return sentryDsnDefine.isEmpty ? null : sentryDsnDefine;
@@ -70,4 +81,10 @@ final class AppConfig {
     idleTimeout: idleTimeout,
     sentryDsnDefine: '',
   );
+}
+
+/// A prod build without `PROD_API_URL`, which stops the app at start instead of calling an empty base URL.
+final class ProdApiUrlConfigError extends Error {
+  @override
+  String toString() => "PROD_API_URL is empty, but a prod build needs LibreDB Studio's API URL (docs/studio.md)";
 }

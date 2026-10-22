@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/authority_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/domain/user_roles.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
+import 'package:libredb_mobile/features/users/domain/user_roles.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 

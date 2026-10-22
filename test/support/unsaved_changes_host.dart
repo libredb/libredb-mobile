@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:go_router/go_router.dart';
 
 /// Provides the [UnsavedChangesRegistry] that a page with an `UnsavedChangesScope` needs, as `App` does above its

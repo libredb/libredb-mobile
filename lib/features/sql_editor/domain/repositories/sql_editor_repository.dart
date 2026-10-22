@@ -1,8 +1,8 @@
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_page.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/script_result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/transaction_state.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
 
 /// Runs statements on a managed connection, named by its id (`seed:<id>`). Each call spends a slot of the user's
 /// Studio request budget, and none is ever retried on its own: a statement may have changed data.

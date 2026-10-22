@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 
 /// Column definition for [AppDataTable].
 class AppTableColumn<T> {

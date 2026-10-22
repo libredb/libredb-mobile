@@ -1,16 +1,16 @@
 import 'dart:io';
 
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/studio_identity_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_policy_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/connection_test_result_model.dart';
-import 'package:flutter_bloc_advance/features/connections/data/models/managed_connections.dart';
-import 'package:flutter_bloc_advance/features/object_browser/data/models/object_browser_json.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/data/models/sql_editor_json.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_errors.dart';
-import 'package:flutter_bloc_advance/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/features/auth/data/models/studio_identity_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
+import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Reads answers recorded from a real Studio, so the readers are held to what Studio sends rather than to the

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/theme/theme_bloc.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme_palette.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
 
 class ThemeSelectionDialog extends StatelessWidget {
   const ThemeSelectionDialog({super.key});

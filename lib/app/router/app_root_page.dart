@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:go_router/go_router.dart';
 
 /// Creates a [MaterialPage] for a root page outside the shell that appears without an entering transition and leaves

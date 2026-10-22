@@ -2,8 +2,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/utils/external_link.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/utils/external_link.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 

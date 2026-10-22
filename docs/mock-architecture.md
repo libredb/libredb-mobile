@@ -60,7 +60,7 @@ flowchart TB
         NETWORK["Real HTTP Request"]
         NETWORK --> REAL_API
 
-        REAL_API[("Production API<br/><code>__PROD_API_URL__</code>")]
+        REAL_API[("LibreDB Studio API<br/><code>PROD_API_URL</code>")]
         REAL_API --> RESPONSE
     end
 
@@ -502,14 +502,13 @@ A GET, POST, PUT or PATCH whose file is missing fails with 501 and the name of t
 
 | Purpose | Path |
 | --- | --- |
-| Environment config | `lib/infrastructure/config/environment.dart` |
+| Environment config (API URL) | `lib/infrastructure/config/environment.dart` |
 | API client + Dio factory | `lib/infrastructure/http/api_client.dart` |
 | Auth interceptor | `lib/infrastructure/http/interceptors/auth_interceptor.dart` |
 | Mock interceptor | `lib/infrastructure/http/interceptors/mock_interceptor.dart` |
 | Logging interceptor | `lib/infrastructure/http/interceptors/logging_interceptor.dart` |
 | Public endpoints | `lib/infrastructure/http/public_endpoint.dart` |
-| Template config (API URL) | `lib/infrastructure/config/template_config.dart` |
-| Mock JSON files | `assets/mock/*.json` (22 files) |
+| Mock JSON files | `assets/mock/*.json` |
 | DI (ApiClient + repository factories) | `lib/app/di/app_dependencies.dart` |
 | Test utilities | `test/support/test_env.dart` |
 | Mock classes | `test/mocks/mock_classes.dart` |

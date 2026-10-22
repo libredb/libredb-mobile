@@ -9,20 +9,20 @@ import 'package:dio/dio.dart'
     show Headers, HttpClientAdapter, Interceptor, RequestInterceptorHandler, RequestOptions, Response, ResponseBody;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
-import 'package:flutter_bloc_advance/features/account/presentation/pages/account_page.dart';
-import 'package:flutter_bloc_advance/features/users/data/models/user.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/shared/widgets/submit_button_widget.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/features/account/application/account_bloc.dart';
+import 'package:libredb_mobile/features/account/presentation/pages/account_page.dart';
+import 'package:libredb_mobile/features/users/data/models/user.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/widgets/submit_button_widget.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +32,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../../../mocks/mock_classes.dart';
 import '../../../../support/test_env.dart';
 
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 
 import '../../../../support/unsaved_changes_host.dart';
 

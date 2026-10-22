@@ -1,7 +1,7 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
 
 /// Login of the protected admin account that the system must never
 /// delete. The API deletes a user by login (`DELETE /admin/users/{login}`),

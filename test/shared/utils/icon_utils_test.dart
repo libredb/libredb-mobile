@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/shared/utils/icon_utils.dart';
+import 'package:libredb_mobile/shared/utils/icon_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

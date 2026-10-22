@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/features/auth/domain/services/sso_auto_redirect_gate.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

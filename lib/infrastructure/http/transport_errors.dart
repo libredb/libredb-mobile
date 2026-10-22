@@ -6,7 +6,7 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 
 /// Whether [error], the `error` of a `DioException`, means that the connection was closed or reset before the whole
 /// response arrived, or that dart:io could not parse the response.

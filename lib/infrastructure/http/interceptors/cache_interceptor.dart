@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/shared_prefs_cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/dev_console_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/transport_errors.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/dev_console_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
 /// Dio interceptor that caches successful GET responses and serves them
 /// when offline or when a [CachePolicy] is specified.

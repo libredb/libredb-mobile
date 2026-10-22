@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 
 /// A sealed Result type for typed error handling without exceptions.
 ///

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/connectivity_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

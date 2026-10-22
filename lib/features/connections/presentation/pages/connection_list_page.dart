@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/connections/application/connection_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
-import 'package:flutter_bloc_advance/shared/widgets/app_data_table.dart';
-import 'package:flutter_bloc_advance/shared/widgets/app_responsive_list_view.dart';
+import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/widgets/app_data_table.dart';
+import 'package:libredb_mobile/shared/widgets/app_responsive_list_view.dart';
 
 /// The connections Studio offers the signed-in user.
 class ConnectionListPage extends StatefulWidget {

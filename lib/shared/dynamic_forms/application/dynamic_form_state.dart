@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
 
 /// Sealed state for the dynamic-form flow.
 ///

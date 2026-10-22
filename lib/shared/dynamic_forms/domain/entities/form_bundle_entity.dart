@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
 
 /// A schema bundled with its prefilled values, returned by endpoints that
 /// serve server-driven forms whose values live next to their schema

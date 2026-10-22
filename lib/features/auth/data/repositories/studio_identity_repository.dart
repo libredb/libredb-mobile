@@ -1,10 +1,10 @@
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/data/models/studio_identity_model.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/studio_identity_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_errors.dart';
-import 'package:flutter_bloc_advance/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/data/models/studio_identity_model.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 /// Studio's session endpoint. The path is relative to `PROD_API_URL`, which ends in Studio's `/api`.
 class StudioIdentityRepository implements IStudioIdentityRepository {

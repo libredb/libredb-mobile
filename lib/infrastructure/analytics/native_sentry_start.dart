@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// The channel on which `MainActivity.kt` answers whether the host app
 /// started the native Sentry SDK.
-const String nativeSentryChannelName = 'flutter_bloc_advance/native_sentry';
+const String nativeSentryChannelName = 'org.libredb.mobile/native_sentry';
 
 final _log = AppLogger.getLogger('NativeSentryStart');
 
@@ -43,11 +43,11 @@ void configureNativeSdkStart(SentryFlutterOptions options, {bool? hostStarts}) {
 /// every event while it looks configured. The host starts it only for a
 /// `lib/main/main_prod.dart` build with a `SENTRY_DSN` (the gate in
 /// `android/app/build.gradle.kts`), the Dart side for the prod environment
-/// with one (`AppConfig.sentryDsn`), and the two gates disagree when a fork
-/// changes one of them. A debug or profile build then throws a [StateError]
+/// with one (`AppConfig.sentryDsn`), and the two gates disagree when a change
+/// touches only one of them. A debug or profile build then throws a [StateError]
 /// that names the mismatch; a release build logs it and returns false, so the
 /// app runs without Sentry. A host app that does not answer on
-/// [nativeSentryChannelName], such as a fork without the handler, or whose
+/// [nativeSentryChannelName], such as a host without the handler, or whose
 /// handler fails, is treated the same way.
 Future<bool> nativeSdkReady({
   bool? hostStarts,

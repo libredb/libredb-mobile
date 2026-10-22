@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 
 /// How the startup step of an `oidc` build settled the session, before the stored session is read.
 sealed class SsoStartupResult {

@@ -1,7 +1,7 @@
 # Testing Architecture
 
-This document explains how tests are structured, bootstrapped, and written in
-this template. If you are new to the project, read this before adding tests.
+This document explains how tests are structured, bootstrapped, and written in this app.
+If you are new to the project, read this before adding tests.
 
 For the HTTP **mock data** layer (how `assets/mock/*.json` is served to the app
 at dev/test time), see [`mock-architecture.md`](mock-architecture.md). This

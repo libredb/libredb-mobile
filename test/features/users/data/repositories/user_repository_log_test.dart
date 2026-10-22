@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/features/users/data/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/features/users/data/repositories/user_repository.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/printed_lines.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_sign_out_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/sso_sign_out_repository.dart';
 
 /// The logout the user starts in an `oidc` build, see [ISsoSignOutRepository.signOut].
 class SsoSignOutUseCase {

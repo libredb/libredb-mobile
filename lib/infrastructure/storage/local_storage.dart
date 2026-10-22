@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory cache for fields that are read synchronously across the app.
@@ -36,10 +36,8 @@ class AppLocalStorageCached {
 /// LocalStorage predefined keys.
 ///
 /// Each enum value carries an explicit [key] string used as the
-/// SharedPreferences key. Renaming an enum value will NOT change the
-/// stored key, so user data survives refactors safely. Add new entries
-/// by appending — do not change existing [key] strings without a
-/// migration.
+/// SharedPreferences key, so renaming an enum value does not change the
+/// stored key.
 ///
 /// Each value also has a [scope], which decides whether ending a session removes it.
 enum StorageKeys {
@@ -48,14 +46,7 @@ enum StorageKeys {
   username('username'),
   theme('theme'),
   brightness('brightness'),
-  sidebarCollapsed('sidebarCollapsed'),
-
-  /// The JWT in plaintext, where releases before the move to secure storage kept it. `runSessionMigration` moves it
-  /// to secure storage, and it stays here only when the migration cannot remove it.
-  legacyJwtToken('jwtToken'),
-
-  /// The refresh token in plaintext, left behind like [legacyJwtToken].
-  legacyRefreshToken('refreshToken');
+  sidebarCollapsed('sidebarCollapsed');
 
   const StorageKeys(this.key);
 
@@ -70,8 +61,6 @@ enum StorageKeys {
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
     StorageKeys.sidebarCollapsed => StorageScope.device,
-    StorageKeys.legacyJwtToken => StorageScope.session,
-    StorageKeys.legacyRefreshToken => StorageScope.session,
   };
 }
 

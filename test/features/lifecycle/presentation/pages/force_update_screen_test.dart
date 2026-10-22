@@ -3,18 +3,18 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/feature_flags/feature_flag_service.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_event.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/force_update_screen.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/lifecycle_gate.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
+import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/force_update_screen.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/lifecycle_gate.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -23,7 +23,7 @@ import '../../../../mocks/mock_classes.dart';
 import '../../../../support/url_launcher_stub.dart';
 
 void main() {
-  const storeUrl = 'https://play.google.com/store/apps/details?id=com.example.app';
+  const storeUrl = 'https://play.google.com/store/apps/details?id=org.libredb.mobile';
   final updateButton = find.descendant(of: find.byType(ForceUpdateScreen), matching: find.byType(AppButton));
 
   // The gate is pumped on its own, with the app theme; test/app/app_test.dart covers it inside App. The server asks for
@@ -90,8 +90,8 @@ void main() {
 
   group('ForceUpdateScreen - store URL that is not https', () {
     for (final rejectedUrl in [
-      'http://play.google.com/store/apps/details?id=com.example.app',
-      'market://details?id=com.example.app',
+      'http://play.google.com/store/apps/details?id=org.libredb.mobile',
+      'market://details?id=org.libredb.mobile',
       'https:///store/apps/details',
       'https://[::1',
     ]) {

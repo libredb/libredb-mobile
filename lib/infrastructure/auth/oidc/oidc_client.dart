@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/logging/log_sanitizer.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
 

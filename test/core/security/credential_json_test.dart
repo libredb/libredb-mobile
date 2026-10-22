@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/security/credential_json.dart';
+import 'package:libredb_mobile/core/security/credential_json.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

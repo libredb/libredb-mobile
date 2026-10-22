@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/features/sql_editor/data/models/sql_editor_json.dart';
+import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

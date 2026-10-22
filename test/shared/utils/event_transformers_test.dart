@@ -1,6 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // --- Test scaffold ---------------------------------------------------------

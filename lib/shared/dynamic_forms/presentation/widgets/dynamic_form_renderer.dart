@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_button.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 /// Renders a [FormSchemaEntity] into a fully functional Flutter form.

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 
 /// Callback fired when the user has been inactive past the configured
 /// idle threshold. Wiring layer translates this to
@@ -28,8 +28,8 @@ typedef OnIdleTimeout = void Function();
 /// resumes the timer with the remaining duration.
 ///
 /// **Disabled mode.** Passing `idleThreshold: null` makes every method
-/// a no-op so a template fork can ship with idle-timeout off without
-/// per-call-site conditionals.
+/// a no-op, so a build whose config sets no idle timeout (every environment
+/// but prod) needs no per-call-site conditionals.
 class IdleTimeoutObserver with WidgetsBindingObserver {
   IdleTimeoutObserver({required this.idleThreshold, required this.onTimeout, DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;

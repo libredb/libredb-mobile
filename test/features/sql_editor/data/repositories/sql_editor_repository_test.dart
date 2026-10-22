@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/data/repositories/sql_editor_repository.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_page.dart';
-import 'package:flutter_bloc_advance/features/sql_editor/domain/entities/query_result.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';

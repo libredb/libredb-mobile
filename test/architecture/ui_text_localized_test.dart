@@ -12,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// value of such a parameter; the right side of `??`; a branch of a conditional; and a `return`.
 ///
 /// It guards these common shapes and is not a proof: a literal handed to a helper by position, such as
-/// `_statItem('5', 'Core Layers')`, an enum argument, or a literal in a file that builds no widget is not read. The
+/// `_glassPill('Beta', color)`, an enum argument, or a literal in a file that builds no widget is not read. The
 /// widget tests that show each screen in Turkish cover those. The developer console in `lib/app/dev_console/` opens
 /// only in debug builds and is not read.
 void main() {

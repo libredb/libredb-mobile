@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/sensitive_keys.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 
 /// Structured request/response logging via AppLogger.
 ///

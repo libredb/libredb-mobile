@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_event.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/application/dynamic_form_state.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/presentation/widgets/dynamic_form_renderer.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_bloc.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_event.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/application/dynamic_form_state.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/domain/entities/form_schema_entity.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/presentation/widgets/dynamic_form_renderer.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
 

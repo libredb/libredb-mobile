@@ -1,9 +1,9 @@
 @Tags(['widget'])
 library;
 
-import 'package:flutter_bloc_advance/app/shell/responsive_scaffold.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
+import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// End-to-end smoke: boots the full app in mock mode (`AppConfig.dev()` —

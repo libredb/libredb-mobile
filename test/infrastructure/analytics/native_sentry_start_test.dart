@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/infrastructure/analytics/native_sentry_start.dart';
+import 'package:libredb_mobile/infrastructure/analytics/native_sentry_start.dart';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: implementation_imports
 import 'package:sentry/src/platform/platform.dart';
@@ -89,7 +89,7 @@ void main() {
       );
     });
 
-    // A fork or a headless engine without the channel, or a host whose handler fails, must not crash a release start.
+    // A host or a headless engine without the channel, or a host whose handler fails, must not crash a release start.
     for (final (name, handler) in [
       ('does not answer on the channel', null),
       ('fails to answer', (MethodCall call) async => throw PlatformException(code: 'boom', message: 'secret detail')),

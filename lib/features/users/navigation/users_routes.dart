@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/shared/dynamic_forms/navigation/dynamic_forms_routes.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/delete_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/fetch_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/save_user_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/usecases/search_users_usecase.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_editor_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/application/user_list_bloc.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/pages/user_editor_page.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/pages/user_extended_info_page.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/pages/user_list_page.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_page_transition.dart';
-import 'package:flutter_bloc_advance/shared/widgets/editor_form_mode.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/navigation/dynamic_forms_routes.dart';
+import 'package:libredb_mobile/features/users/application/usecases/delete_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/usecases/fetch_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/usecases/save_user_usecase.dart';
+import 'package:libredb_mobile/features/users/application/usecases/search_users_usecase.dart';
+import 'package:libredb_mobile/features/users/application/user_editor_bloc.dart';
+import 'package:libredb_mobile/features/users/application/user_list_bloc.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/features/users/presentation/pages/user_editor_page.dart';
+import 'package:libredb_mobile/features/users/presentation/pages/user_extended_info_page.dart';
+import 'package:libredb_mobile/features/users/presentation/pages/user_list_page.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
+import 'package:libredb_mobile/shared/widgets/editor_form_mode.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:go_router/go_router.dart';
 
 class UsersFeatureRoutes {

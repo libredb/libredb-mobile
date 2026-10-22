@@ -7,24 +7,23 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/shell/responsive_scaffold.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_nav_item.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/services/sso_auto_redirect_gate.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
-import 'package:flutter_bloc_advance/features/auth/presentation/widgets/community_section_widget.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/auth/presentation/widgets/community_section_widget.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -113,17 +112,11 @@ class _ScriptedOidcClient implements IOidcClient {
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const ProviderSessionEnded();
 }
 
-/// The test config in an oidc build over [client], for a project that gives all its links. Only the `admin` and
-/// `user` roles of the `roles` claim are allowed.
+/// The test config in an oidc build over [client]. Only the `admin` and `user` roles of the `roles` claim are allowed.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation})
     : super(
         appConfig: const AppConfig.test(),
-        projectLinks: const ProjectLinks(
-          repository: 'https://github.com/acme/dashboard',
-          docs: 'https://docs.acme.example',
-          sponsor: 'https://github.com/sponsors/acme',
-        ),
         authMode: OidcAuthMode(
           OidcSettings(
             issuer: Uri.parse('https://id.example.com/realms/demo'),
@@ -176,21 +169,9 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
   }
 
-  // The real app starts unauthenticated after the global reset, so it lands on /login. The project gives all its
-  // links, so the page shows its community section.
+  // The real app starts unauthenticated after the global reset, so it lands on /login.
   Future<void> pumpLogin(WidgetTester tester, {String language = 'en'}) async {
-    await tester.pumpWidget(
-      App(
-        language: language,
-        dependencies: const AppDependencies(
-          projectLinks: ProjectLinks(
-            repository: 'https://github.com/acme/dashboard',
-            docs: 'https://docs.acme.example',
-            sponsor: 'https://github.com/sponsors/acme',
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(App(language: language));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
   }
@@ -225,13 +206,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    // The app ships on Android and iOS.
-    testWidgets('counts two platforms', (tester) async {
+    // The panel speaks to someone signing in to LibreDB, not to a developer choosing a starter project.
+    testWidgets('describes LibreDB, not the template it grew from', (tester) async {
       setViewport(tester, const Size(1600, 1600));
       await pumpLogin(tester);
 
-      expect(find.text('2'), findsOneWidget);
-      expect(find.text('7+'), findsNothing);
+      expect(find.text('Your databases,\nin your pocket.'), findsOneWidget);
+      expect(find.text('Organization sign-in'), findsOneWidget);
+      expect(find.text('No passwords on the phone'), findsOneWidget);
+      expect(find.text('Browse and query'), findsOneWidget);
+      for (final templateText in ['Flutter 3.47.7', 'Core Layers', 'BLoC Ready', 'Clean Architecture', 'Platforms']) {
+        expect(find.text(templateText), findsNothing, reason: templateText);
+      }
     });
   });
 
@@ -306,14 +292,11 @@ void main() {
         'Hesabınıza erişmek için bilgilerinizi girin',
         'veya',
         'Hesabınız yok mu? ',
-        'Prototipten\nüretime ölçeklenin.',
-        'Platform',
-        'Temel Katman',
-        '%100',
-        'BLoC Hazır',
-        'Kimlik Doğrulama ve Erişim Kontrolü',
-        'Temiz Mimari',
-        "Sahte Veriden Gerçek API'ye",
+        'Veritabanlarınız\ncebinizde.',
+        "LibreDB Studio'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
+        'Kurum hesabıyla giriş',
+        'Telefonda parola yok',
+        'Göz atın ve sorgulayın',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }

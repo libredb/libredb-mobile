@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/users/data/models/user.dart';
+import 'package:libredb_mobile/features/users/data/models/user.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../mocks/fake_data.dart';

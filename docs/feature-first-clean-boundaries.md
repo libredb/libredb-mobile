@@ -1,13 +1,12 @@
 # Feature-First Clean Boundaries
 
-This document defines the target architecture for `flutter_bloc_advance`.
+This document defines the target architecture for LibreDB Mobile.
 
 ## Goals
 
 - Keep the codebase feature-oriented.
 - Make dependency direction explicit and enforceable.
 - Preserve the current Flutter stack: `flutter_bloc`, `go_router`, manual JSON models.
-- Support incremental migration without breaking the existing app.
 
 ## Top-Level Ownership
 
@@ -118,13 +117,6 @@ Do not place theme, routes, widgets, or screens under `core/`.
 - Session/auth state is app-level.
 - Shell state is app-level.
 - Feature state remains inside the feature module.
-
-## Migration Strategy
-
-- Prefer additive migration first.
-- New code must target the new folders.
-- Legacy folders may temporarily re-export new modules during migration.
-- Delete legacy implementations only after imports have been redirected.
 
 ## Review Checklist
 

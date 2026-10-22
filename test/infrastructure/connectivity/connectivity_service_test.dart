@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

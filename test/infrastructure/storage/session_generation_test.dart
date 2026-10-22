@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

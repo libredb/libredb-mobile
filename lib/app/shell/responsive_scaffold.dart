@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/bottom_nav/bottom_nav_widget.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_bloc.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_widget.dart';
-import 'package:flutter_bloc_advance/app/shell/top_bar/breadcrumb_route_resolver.dart';
-import 'package:flutter_bloc_advance/app/shell/top_bar/top_bar_widget.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_breakpoints.dart';
+import 'package:libredb_mobile/app/shell/bottom_nav/bottom_nav_widget.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_widget.dart';
+import 'package:libredb_mobile/app/shell/top_bar/breadcrumb_route_resolver.dart';
+import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({super.key, required this.child, required this.activeRoute});

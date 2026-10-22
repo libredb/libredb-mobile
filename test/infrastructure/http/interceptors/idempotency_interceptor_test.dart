@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/idempotency_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/idempotency_interceptor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Fake handler that captures the [RequestOptions] passed to [next]/[resolve].

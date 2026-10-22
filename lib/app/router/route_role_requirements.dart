@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 
 /// Central audit point for per-route role requirements.
 ///

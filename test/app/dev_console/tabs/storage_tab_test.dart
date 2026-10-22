@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/app/dev_console/tabs/storage_tab.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/storage_tab.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

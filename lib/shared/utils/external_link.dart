@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final _log = AppLogger.getLogger('ExternalLink');

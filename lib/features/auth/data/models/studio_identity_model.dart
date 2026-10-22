@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 /// Reads Studio's `GET /api/auth/me`: `{"authenticated": true, "user": {role, username, idpSubject?, idpIssuer?, iat,
 /// exp, channel?}}`.

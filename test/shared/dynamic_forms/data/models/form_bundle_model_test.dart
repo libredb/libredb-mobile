@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/shared/dynamic_forms/data/models/form_bundle_model.dart';
+import 'package:libredb_mobile/shared/dynamic_forms/data/models/form_bundle_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
 /// The fewest characters a password field accepts.

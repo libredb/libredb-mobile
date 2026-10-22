@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/cache/shared_prefs_cache_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/cache_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/printed_lines.dart';

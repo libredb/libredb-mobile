@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 
 /// State representing the current connectivity status.
 class ConnectivityState extends Equatable {

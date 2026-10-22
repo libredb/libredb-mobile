@@ -1,18 +1,18 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/api_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_session_policy.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/features/account/domain/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';

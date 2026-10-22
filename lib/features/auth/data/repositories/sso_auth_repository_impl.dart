@@ -1,13 +1,13 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/core/security/oidc_role_mapping.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/sso_sign_in_result.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/oidc_role_mapping.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 
 /// [ISsoAuthRepository] over [IOidcClient].
 ///

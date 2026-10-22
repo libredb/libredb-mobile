@@ -1,10 +1,10 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/account/application/usecases/change_password_usecase.dart';
-import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/application/change_password_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/account/application/usecases/change_password_usecase.dart';
+import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
+import 'package:libredb_mobile/features/auth/application/change_password_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

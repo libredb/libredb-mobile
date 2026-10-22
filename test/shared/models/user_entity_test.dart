@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/shared/models/user_entity.dart';
+import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/analytics/analytics_route_observer.dart';
-import 'package:flutter_bloc_advance/app/bootstrap/app_session_listeners.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/app/di/app_scope.dart';
-import 'package:flutter_bloc_advance/app/localization/locale_cubit.dart';
-import 'package:flutter_bloc_advance/app/theme/theme_bloc.dart';
-import 'package:flutter_bloc_advance/app/router/app_router.dart';
-import 'package:flutter_bloc_advance/app/session/session_cubit.dart';
-import 'package:flutter_bloc_advance/core/analytics/analytics_service.dart';
-import 'package:flutter_bloc_advance/core/analytics/log_analytics_service.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/presentation/pages/lifecycle_gate.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
+import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/localization/locale_cubit.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
+import 'package:libredb_mobile/app/router/app_router.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/core/analytics/analytics_service.dart';
+import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
+import 'package:libredb_mobile/features/lifecycle/presentation/pages/lifecycle_gate.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme.dart';
-import 'package:flutter_bloc_advance/shared/widgets/unsaved_changes_guard.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,10 +35,10 @@ class App extends StatefulWidget {
   final AppDependencies dependencies;
 
   /// Single [ISecureStorage] instance created in bootstrap. Threaded
-  /// through so the same adapter handles bootstrap-time migration AND
-  /// runtime consumers (repositories, interceptors, SessionCubit) —
-  /// avoids divergent instances if adapter configuration ever varies
-  /// and makes overriding for tests / alternate environments trivial.
+  /// through so every runtime consumer (repositories, interceptors,
+  /// SessionCubit) uses the same adapter, which avoids divergent instances
+  /// if adapter configuration ever varies and makes overriding for tests
+  /// or alternate environments trivial.
   /// When null, [AppScope] falls back to [AppDependencies.createSecureStorage].
   final ISecureStorage? secureStorage;
   final IAnalyticsService? _analytics;

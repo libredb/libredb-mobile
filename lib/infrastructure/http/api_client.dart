@@ -1,25 +1,25 @@
 import 'dart:convert' show jsonDecode, utf8;
 
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinner.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/certificate_pinning_adapter.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/connectivity_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/cache_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/logging_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/dev_console_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/idempotency_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/mock_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/resilience_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/interceptors/token_refresh_interceptor.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/sensitive_keys.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/transport_errors.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/logging_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/dev_console_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/idempotency_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/mock_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 /// Metadata describing one entry in the [ApiClient] interceptor chain.
 ///

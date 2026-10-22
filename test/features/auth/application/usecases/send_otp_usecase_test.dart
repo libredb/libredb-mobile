@@ -1,7 +1,7 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/application/usecases/send_otp_usecase.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/entities/auth_entity.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/send_otp_usecase.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

@@ -3,16 +3,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/di/app_dependencies.dart';
-import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_nav_item.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -50,7 +50,7 @@ class _LocalStorageDependencies extends AppDependencies {
 }
 
 void main() {
-  // The build gives the documentation website [docs] and signs in as [authMode] says.
+  // The app links to the documentation [docs] and signs in as [authMode] says.
   Widget buildTestableWidget({
     String docs = _docs,
     Locale locale = const Locale('en'),
@@ -90,8 +90,8 @@ void main() {
   }
 
   // The real app, signed in, on settings. The shell shows the account name in the top bar once the mock API answers
-  // after its 500 ms delay, so let that land before the screen is compared. The build gives the documentation website
-  // [docs] and, when given, the device preferences [localStorage].
+  // after its 500 ms delay, so let that land before the screen is compared. The app links to the documentation [docs]
+  // and, when given, the device preferences [localStorage].
   Future<void> pumpAppOnSettings(WidgetTester tester, {String docs = _docs, AppLocalStorage? localStorage}) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(1600, 1600);
@@ -128,19 +128,39 @@ void main() {
       expect(find.byKey(settingsChangePasswordButtonKey), findsOneWidget);
       expect(find.byKey(settingsChangeLanguageButtonKey), findsOneWidget);
       expect(find.byKey(settingsWebsiteButtonKey), findsOneWidget);
+      expect(find.byKey(settingsLicensesButtonKey), findsOneWidget);
       // Logout intentionally lives only in the sidebar / topbar shell —
       // settings does not own auth-session lifecycle (cross-feature).
     });
 
-    // A made-up key: replacing the template's real placeholders across a project leaves this test as it is.
-    testWidgets('shows no Help & Resources section while the docs URL is a placeholder', (WidgetTester tester) async {
+    testWidgets('names the Help & Resources link Documentation', (WidgetTester tester) async {
       TestEnv.authenticate();
-      await tester.pumpWidget(buildTestableWidget(docs: '__DOCS__'));
+      await tester.pumpWidget(buildTestableWidget());
       await tester.pumpAndSettle();
 
-      expect(find.byKey(settingsChangePasswordButtonKey), findsOneWidget);
-      expect(find.byKey(settingsWebsiteButtonKey), findsNothing);
-      expect(find.text('Help & Resources'), findsNothing);
+      expect(find.text('Help & Resources'), findsOneWidget);
+      expect(
+        find.descendant(of: find.byKey(settingsWebsiteButtonKey), matching: find.text('Documentation')),
+        findsOneWidget,
+      );
+      expect(find.text('Read the documentation and guides on GitHub'), findsOneWidget);
+    });
+
+    // The licences page shows the NOTICE that carries the MIT notice of the template the app grew from.
+    testWidgets('opens the licences page from Help & Resources', (WidgetTester tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: find.byKey(settingsLicensesButtonKey), matching: find.text('Licenses')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.byKey(settingsLicensesButtonKey));
+      await tester.tap(find.byKey(settingsLicensesButtonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LicensePage), findsOneWidget);
     });
 
     testWidgets('navigates to change password screen when button is pressed', (WidgetTester tester) async {
@@ -189,15 +209,16 @@ void main() {
         'Görünüm',
         'Tema',
         'Tercih ettiğiniz tema stilini seçin',
+        'Lisanslar',
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }
     });
   });
 
-  group('SettingsScreen - website link that does not open', () {
+  group('SettingsScreen - documentation link that does not open', () {
     for (final failure in UrlLauncherFailure.values) {
-      testWidgets('tapping Website shows a message when ${failure.description}', (WidgetTester tester) async {
+      testWidgets('tapping Documentation shows a message when ${failure.description}', (WidgetTester tester) async {
         final calls = stubFailingUrlLauncher(failure);
         await pumpAppOnSettings(tester);
 
@@ -274,9 +295,9 @@ void main() {
     });
   });
 
-  group('SettingsScreen - website link that opens', () {
+  group('SettingsScreen - documentation link that opens', () {
     for (final canLaunch in [true, false]) {
-      testWidgets('tapping Website opens it and shows no message when canLaunchUrl answers $canLaunch', (
+      testWidgets('tapping Documentation opens it and shows no message when canLaunchUrl answers $canLaunch', (
         WidgetTester tester,
       ) async {
         final calls = stubOpeningUrlLauncher(canLaunch: canLaunch);

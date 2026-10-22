@@ -2,8 +2,8 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme_palette.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
 
 part 'theme_event.dart';
 part 'theme_state.dart';

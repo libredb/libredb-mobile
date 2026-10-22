@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/http/circuit_breaker.dart';
+import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

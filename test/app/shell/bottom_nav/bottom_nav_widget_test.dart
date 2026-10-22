@@ -2,12 +2,12 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc_advance/app/router/app_routes_constants.dart';
-import 'package:flutter_bloc_advance/features/dashboard/presentation/pages/dashboard_home_page.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
-import 'package:flutter_bloc_advance/features/users/presentation/pages/user_list_page.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/local_storage.dart';
-import 'package:flutter_bloc_advance/app/app.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_home_page.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/features/users/presentation/pages/user_list_page.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 

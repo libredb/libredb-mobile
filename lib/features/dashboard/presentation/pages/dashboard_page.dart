@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/dashboard/application/dashboard_cubit.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/connectivity/connectivity_service.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/circuit_breaker.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_card.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_error_state.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_responsive_builder.dart';
-import 'package:flutter_bloc_advance/shared/design_system/components/app_skeleton.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/semantic_colors.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_responsive_builder.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_skeleton.dart';
+import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import 'package:go_router/go_router.dart';
 
 /// System Dashboard page — displays infrastructure metrics, circuit breaker

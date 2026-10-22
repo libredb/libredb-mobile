@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/app/shell/menu_list_cache.dart';
-import 'package:flutter_bloc_advance/app/shell/models/menu.dart';
-import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/auth/application/usecases/logout_usecase.dart';
-import 'package:flutter_bloc_advance/features/auth/application/usecases/sso_sign_out_usecase.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/app/shell/menu_list_cache.dart';
+import 'package:libredb_mobile/app/shell/models/menu.dart';
+import 'package:libredb_mobile/app/shell/repositories/menu_repository.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/sso_sign_out_usecase.dart';
 
 part 'menu_event.dart';
 part 'menu_state.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
-import 'package:flutter_bloc_advance/shared/design_system/tokens/app_radius.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/semantic_colors.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 
 class BlocTab extends StatefulWidget {
   const BlocTab({super.key});

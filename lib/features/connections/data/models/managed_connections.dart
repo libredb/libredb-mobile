@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_bloc_advance/features/connections/domain/entities/studio_connection.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/studio_connection.dart';
 
 /// Reads the body of Studio's `GET /api/connections/managed`: `{"connections": [...], "cacheHint": ..., ...}`.
 final class ManagedConnections {

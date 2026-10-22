@@ -1,11 +1,11 @@
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/settings/presentation/pages/settings_screen.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/project_links.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -39,10 +39,9 @@ void main() {
       ],
     );
 
-    // A project with a documentation website, so the screen shows its Help & Resources section.
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks(docs: 'https://docs.acme.example')),
+        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
         RepositoryProvider<AuthMode>.value(value: const JwtAuthMode()),
       ],
       child: MaterialApp.router(

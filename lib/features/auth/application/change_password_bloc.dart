@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
-import 'package:flutter_bloc_advance/features/account/application/usecases/change_password_usecase.dart';
-import 'package:flutter_bloc_advance/features/account/data/models/change_password.dart';
-import 'package:flutter_bloc_advance/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/features/account/application/usecases/change_password_usecase.dart';
+import 'package:libredb_mobile/features/account/data/models/change_password.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'change_password_event.dart';
 part 'change_password_state.dart';

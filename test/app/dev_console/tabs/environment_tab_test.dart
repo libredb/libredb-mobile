@@ -3,9 +3,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/dev_console/tabs/environment_tab.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/app/dev_console/tabs/environment_tab.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,5 +52,19 @@ void main() {
     expect(tester.takeException(), isNull, reason: 'must not throw GoError from a context outside any route builder');
     expect(find.text('Current Route'), findsOneWidget);
     expect(find.text('/'), findsWidgets, reason: 'current location path is shown');
+  });
+
+  testWidgets('EnvironmentTab shows the app name LibreDB', (tester) async {
+    await tester.pumpWidget(
+      RepositoryProvider<AppConfig>.value(
+        value: const AppConfig.test(),
+        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: buildRouter()),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('LibreDB'), findsOneWidget);
   });
 }

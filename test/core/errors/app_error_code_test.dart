@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

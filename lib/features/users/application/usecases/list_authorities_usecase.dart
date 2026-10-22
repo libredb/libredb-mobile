@@ -1,7 +1,7 @@
-import 'package:flutter_bloc_advance/core/errors/app_error.dart';
-import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
-import 'package:flutter_bloc_advance/core/result/result.dart';
-import 'package:flutter_bloc_advance/features/users/domain/repositories/authority_repository.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
 
 /// Loads the authority catalog. Returns a [ValidationError] failure
 /// when the catalog is empty — an unusable authority dropdown should

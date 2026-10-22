@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The issuer and client id of a valid `oidc` build, which a row changes one field of.
@@ -293,7 +293,7 @@ void main() {
       expect(settings.redirectUri.path, OidcSettings.redirectPath);
     });
 
-    for (final scheme in ['com.example_app', '9app', 'Com.Example.App']) {
+    for (final scheme in ['org.libredb_mobile', '9app', 'Org.Libredb.Mobile']) {
       test('is misconfigured for the redirect scheme $scheme', () {
         final mode = AuthMode.fromDefines(
           AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcRedirectScheme: scheme),

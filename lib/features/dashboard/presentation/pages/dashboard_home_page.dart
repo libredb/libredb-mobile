@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
-import 'package:flutter_bloc_advance/features/dashboard/application/dashboard_cubit.dart';
-import 'package:flutter_bloc_advance/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/application/lifecycle_state.dart';
-import 'package:flutter_bloc_advance/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
-import 'package:flutter_bloc_advance/shared/utils/app_constants.dart';
+import 'package:libredb_mobile/features/account/application/account_bloc.dart';
+import 'package:libredb_mobile/features/dashboard/application/dashboard_cubit.dart';
+import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
+import 'package:libredb_mobile/features/lifecycle/application/lifecycle_state.dart';
+import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 /// Home page wrapper for the system dashboard.
 ///

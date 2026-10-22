@@ -2,7 +2,7 @@
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS-2E7D32)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-005571.svg)](LICENSE)
 
 The mobile client of [LibreDB Studio](https://github.com/libredb/libredb-studio), for Android and iOS.
 Sign in with your organization's Keycloak account, see the databases Studio offers you, look inside them, and run SQL from your phone.
@@ -84,13 +84,26 @@ The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUD
 | [docs/architecture.md](docs/architecture.md) | App layers, the Studio contract, errors, sessions and security |
 | [docs/studio.md](docs/studio.md) | Keycloak and Studio settings, the local stack, device setup |
 | [docs/oidc.md](docs/oidc.md) | The OpenID Connect sign-in in depth |
+| [docs/http-client.md](docs/http-client.md) | Retries, idempotency keys and the response cache |
+| [docs/security.md](docs/security.md) | Token storage, certificate pinning, screen capture protection and the inactivity sign-out |
+| [docs/crash-reporting.md](docs/crash-reporting.md) | Sentry and what it masks before an event leaves the device |
+| [docs/development.md](docs/development.md) | Toolchain, test slices, the feature generator and CI |
 | [docs/testing-architecture.md](docs/testing-architecture.md) | Test layers, doubles and guard tests |
-| [docs/template.md](docs/template.md) | The Flutter template this app grew from: Sentry, certificate pinning, caching and other building blocks |
+| [docs/mock-architecture.md](docs/mock-architecture.md) | How recorded answers in `assets/mock/` are served |
+| [docs/feature-first-clean-boundaries.md](docs/feature-first-clean-boundaries.md) | Layer boundaries and dependency rules |
 
 ## Contributing
 
-Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Issues are welcome: report a bug or propose a change in [GitHub Issues](https://github.com/libredb/libredb-mobile/issues).
+Pull requests from outside the team are not accepted at this time, as [CONTRIBUTING.md](CONTRIBUTING.md) explains, and [SECURITY.md](SECURITY.md) says how to report a vulnerability.
+For licensing, write to [info@libredb.org](mailto:info@libredb.org).
 
 ## License
 
-[MIT](LICENSE).
+LibreDB Mobile is source-available under the [Elastic License 2.0](LICENSE), with SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ as the licensor.
+You may use, copy, distribute and modify it.
+You may not provide it to third parties as a hosted or managed service, or alter, remove or obscure any licensing, copyright or other notices of the licensor.
+This is a summary: the [LICENSE](LICENSE) file holds the full terms.
+
+The app includes code from the [flutter-bloc-advanced](https://github.com/cevheri/flutter-bloc-advanced) template, which is licensed under the MIT License; [NOTICE](NOTICE) reproduces that license.
+The app bundles NOTICE and shows it under Settings, Licenses.

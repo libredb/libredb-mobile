@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_bloc_advance/infrastructure/studio/studio_session_policy.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

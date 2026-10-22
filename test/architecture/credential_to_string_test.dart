@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_bloc_advance/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/dart_code.dart';

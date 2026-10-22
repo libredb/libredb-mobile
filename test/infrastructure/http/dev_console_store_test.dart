@@ -1,4 +1,4 @@
-import 'package:flutter_bloc_advance/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

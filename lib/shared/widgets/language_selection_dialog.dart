@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_advance/app/localization/locale_cubit.dart';
-import 'package:flutter_bloc_advance/generated/l10n.dart';
-import 'package:flutter_bloc_advance/shared/l10n/app_error_code_l10n.dart';
-import 'package:flutter_bloc_advance/shared/l10n/locale_l10n.dart';
+import 'package:libredb_mobile/app/localization/locale_cubit.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/l10n/locale_l10n.dart';
 
 /// Lets the user pick the language of the app among the languages it supports, each named in its own language. A pick
 /// shows the app in that language at once, is stored for the next start, and closes the dialog. When it cannot be
