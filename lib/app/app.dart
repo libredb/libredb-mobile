@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
+import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/localization/locale_cubit.dart';
@@ -55,7 +56,9 @@ class _AppState extends State<App> {
       defaultLocale: Locale(widget.language),
       child: AppSessionListeners(
         scaffoldMessengerKey: _scaffoldMessengerKey,
-        child: _AppView(analytics: analytics, scaffoldMessengerKey: _scaffoldMessengerKey),
+        child: AppConnectivityScope(
+          child: _AppView(analytics: analytics, scaffoldMessengerKey: _scaffoldMessengerKey),
+        ),
       ),
     );
   }

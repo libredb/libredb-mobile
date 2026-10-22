@@ -21,6 +21,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.userNoAuthorities => s.error_user_no_authorities,
       AppErrorCode.settingsChangeLanguageFailed => s.error_settings_change_language_failed,
       AppErrorCode.networkCertInvalid => s.error_network_cert_invalid,
+      AppErrorCode.networkOffline => s.error_network_offline,
       AppErrorCode.studioDatabaseAuth => s.error_studio_database_auth,
       AppErrorCode.studioConnectionNotAvailable => s.error_studio_connection_not_available,
       AppErrorCode.studioPermissionDenied => s.error_studio_permission_denied,

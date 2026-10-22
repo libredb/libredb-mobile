@@ -371,6 +371,8 @@ class ApiClient {
       case DioExceptionType.transformTimeout:
         return FetchDataException('TimeoutException');
       case DioExceptionType.connectionError:
+        // ConnectivityInterceptor refused it because the device is offline, so it never left the device.
+        if (e.error is ConnectivityException) return OfflineException();
         return FetchDataException('No Internet connection');
       case DioExceptionType.badResponse:
         return _mapBadResponse(e);

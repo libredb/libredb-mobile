@@ -73,6 +73,19 @@ void main() {
         expect(find.text('İnternet bağlantısı yok'), findsOneWidget);
       });
 
+      testWidgets('announces that the device is offline to a screen reader', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.offline)),
+        );
+        await tester.pump();
+
+        const label = 'Offline: no internet connection. What is on screen was loaded earlier.';
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+        expect(tester.getSemantics(find.bySemanticsLabel(label)), isSemantics(label: label, isLiveRegion: true));
+        semantics.dispose();
+      });
+
       testWidgets('should display cloud_off icon', (tester) async {
         await tester.pumpWidget(
           buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.offline)),

@@ -82,7 +82,7 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
 
 `StudioStatusGate` (`lib/features/studio_status/`) sits beside `LifecycleGate` in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
 
-- `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, and when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`).
+- `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`), and when the device comes back online.
 - A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, over the session restore and the router.
   They stay mounted underneath, offstage and without tickers, focus or semantics, so the open pages keep their state, unsaved input included.
   It fails on no connection (an offline device fails at once), a timeout of 10 seconds (`studioProbeTimeout`), an untrusted certificate (the page adds why), or an answer that is not Studio's.
@@ -95,6 +95,19 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
   200 `degraded` and 503 `loading` read as "temporarily unavailable", and 503 `misconfigured` or `incompatible` as "Studio cannot serve connections right now", with Studio's `detail` shown to admins only (`StudioGovernanceNotice`).
   200 `degraded` never reads as healthy: a stale snapshot answers it while every connection route answers 503.
   A readiness that cannot be read still shows the outage, worded as temporary, and is logged.
+
+### Offline
+
+`ConnectivityCubit` (`lib/app/connectivity/`) follows the device's connectivity, and `AppConnectivityScope` passes it to every screen as the shared `OfflineStatus` (`lib/shared/widgets/offline_status.dart`), so a feature reads it without importing the app layer.
+
+- `AppShell` shows a thin offline banner above every tab, which a screen reader announces as a live region.
+- `ConnectivityInterceptor` refuses a request that would reach the network while the device is offline, and `studioError` reports it with `AppErrorCode.networkOffline`.
+- A screen that holds loaded data keeps it on such a failure instead of showing an error, and `OfflineStaleMarker` shows it as "Offline: showing what was loaded at <time>", with the date before the time when the data was loaded on an earlier day.
+  The connection list does this today; the browser levels and the result view follow the same rule.
+- A pull to refresh while offline shows the banner's message and sends nothing.
+- An action that needs Studio, such as Run or Check, is built with `OnlineOnlyAction`, which disables it offline and shows why.
+- When the device comes back online, `OnReconnect` refreshes the visible screen once and, while the unreachable page is up, `AppConnectivityScope` checks Studio's liveness again, so that page clears without a Retry.
+  A Studio that was answering is not checked again on reconnect, so one failed probe cannot cover a working screen.
 
 ## Sessions
 

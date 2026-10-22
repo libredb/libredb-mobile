@@ -90,7 +90,9 @@ class AppResponsiveListView<T> extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
+    // Scrollable although it fits, so a pull to refresh above the list works on a short list too.
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -168,7 +170,7 @@ class AppResponsiveListView<T> extends StatelessWidget {
           Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: mobileSearchWidget!),
         Expanded(
           child:
-              errorWidget ??
+              _fillScrollable(errorWidget) ??
               AppMobileCardList<T>(
                 items: items,
                 cardBuilder: mobileCardBuilder,
@@ -180,6 +182,21 @@ class AppResponsiveListView<T> extends StatelessWidget {
       ],
     );
   }
+}
+
+/// [child], scrollable although it fits and centred in the space it is given, so a pull to refresh above the list
+/// works on an error too.
+Widget? _fillScrollable(Widget? child) {
+  if (child == null) return null;
+  return LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: Center(child: child),
+      ),
+    ),
+  );
 }
 
 /// Placeholder rows shown in place of the desktop table while a request runs.

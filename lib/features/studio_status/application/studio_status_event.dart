@@ -10,6 +10,9 @@ enum StudioLivenessCheckTrigger {
 
   /// The app came back after more than `StudioStatusBloc.defaultRecheckAfter` in the background.
   resume,
+
+  /// The device came back online, so an unreachable page shown while it was offline can clear without a Retry.
+  reconnect,
 }
 
 sealed class StudioStatusEvent extends Equatable {

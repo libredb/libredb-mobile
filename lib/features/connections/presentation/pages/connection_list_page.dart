@@ -7,8 +7,12 @@ import 'package:libredb_mobile/shared/design_system/components/app_error_state.d
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/widgets/app_data_table.dart';
 import 'package:libredb_mobile/shared/widgets/app_responsive_list_view.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 /// The connections Studio offers the signed-in user.
+///
+/// Offline it keeps the list it loaded, marked with the time it was loaded, a pull to refresh says the device is
+/// offline instead of asking Studio, and the list is asked again once the device is back online.
 class ConnectionListPage extends StatefulWidget {
   const ConnectionListPage({super.key});
 
@@ -25,22 +29,46 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConnectionListBloc, ConnectionListState>(
-      builder: (context, state) => switch (state) {
-        ConnectionListInitial() => _buildList(context),
-        ConnectionListLoading() => _buildList(context, isLoading: true),
-        ConnectionListLoaded(:final connections) => _buildList(context, items: connections),
-        ConnectionListFailure(:final errorCode) => _buildList(
-          context,
-          errorWidget: AppErrorState(
-            title: S.of(context).connection_list_load_failed,
-            description: errorCode.resolve(context),
-            retryLabel: S.of(context).refresh,
-            onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
-          ),
+    return OnReconnect(
+      onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+      child: RefreshIndicator(
+        onRefresh: () => _refresh(context),
+        child: BlocBuilder<ConnectionListBloc, ConnectionListState>(
+          builder: (context, state) => switch (state) {
+            ConnectionListInitial() => _buildList(context),
+            ConnectionListLoading() => _buildList(context, isLoading: true),
+            ConnectionListLoaded(:final connections, :final loadedAt) => Column(
+              children: [
+                OfflineStaleMarker(loadedAt: loadedAt),
+                Expanded(child: _buildList(context, items: connections)),
+              ],
+            ),
+            ConnectionListFailure(:final errorCode) => _buildList(
+              context,
+              errorWidget: AppErrorState(
+                title: S.of(context).connection_list_load_failed,
+                description: errorCode.resolve(context),
+                retryLabel: S.of(context).refresh,
+                onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+              ),
+            ),
+          },
         ),
-      },
+      ),
     );
+  }
+
+  /// Asks Studio for the list again and waits for the answer; offline it says so with the banner's words instead.
+  Future<void> _refresh(BuildContext context) async {
+    if (OfflineStatus.isOfflineOf(context)) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(S.of(context).connectivity_offline)));
+      return;
+    }
+    final bloc = context.read<ConnectionListBloc>()..add(const ConnectionListRequested());
+    // Leaving the page closes the bloc, which ends its stream: that ends the refresh too, it is no error.
+    await bloc.stream.firstWhere((state) => state is! ConnectionListLoading, orElse: () => bloc.state);
   }
 
   Widget _buildList(

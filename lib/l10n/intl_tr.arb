@@ -48,6 +48,8 @@
   "error_generic": "Bir şeyler ters gitti",
   "error_network_cert_invalid": "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
   "@error_network_cert_invalid": {},
+  "error_network_offline": "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
+  "@error_network_offline": {},
   "idle_timeout_signed_out": "Hareketsizlik nedeniyle oturumunuz kapatıldı.",
   "@idle_timeout_signed_out": {},
   "error_link_open_failed": "{url} açılamadı",
@@ -105,6 +107,18 @@
   "@edit": {},
   "connectivity_offline": "İnternet bağlantısı yok",
   "@connectivity_offline": {},
+  "connectivity_offline_semantics": "Çevrimdışı: internet bağlantısı yok. Ekrandakiler daha önce yüklendi.",
+  "@connectivity_offline_semantics": {},
+  "offline_stale_data": "Çevrimdışı: {time} itibarıyla yüklenenler gösteriliyor",
+  "@offline_stale_data": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "offline_action_unavailable": "İnternet bağlantısı gerekiyor",
+  "@offline_action_unavailable": {},
   "not_found_title": "Sayfa Bulunamadı",
   "@not_found_title": {},
   "not_found_message": "İstediğiniz sayfa bulunamadı.",

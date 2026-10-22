@@ -26,15 +26,17 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m2(time) => "Estimated end: ${time}";
 
-  static String m3(seconds) => "You can try again in ${seconds} s.";
+  static String m3(time) => "Offline: showing what was loaded at ${time}";
 
-  static String m4(message) => "Error: ${message}";
+  static String m4(seconds) => "You can try again in ${seconds} s.";
 
-  static String m5(detail) => "Details: ${detail}";
+  static String m5(message) => "Error: ${message}";
 
-  static String m6(host) => "Studio address: ${host}";
+  static String m6(detail) => "Details: ${detail}";
 
-  static String m7(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m7(host) => "Studio address: ${host}";
+
+  static String m8(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -66,6 +68,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_type": MessageLookupByLibrary.simpleMessage("Engine"),
     "connections": MessageLookupByLibrary.simpleMessage("Connections"),
     "connectivity_offline": MessageLookupByLibrary.simpleMessage("No internet connection"),
+    "connectivity_offline_semantics": MessageLookupByLibrary.simpleMessage(
+      "Offline: no internet connection. What is on screen was loaded earlier.",
+    ),
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Are you sure you want to delete?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Documentation"),
     "edit": MessageLookupByLibrary.simpleMessage("Edit"),
@@ -86,6 +91,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_link_open_failed": m0,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(
       "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
+    ),
+    "error_network_offline": MessageLookupByLibrary.simpleMessage(
+      "No internet connection. Check your network and try again.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Could not change the language"),
     "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
@@ -200,6 +208,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "no_data": MessageLookupByLibrary.simpleMessage("No Data"),
     "not_found_message": MessageLookupByLibrary.simpleMessage("The page you requested could not be found."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Page Not Found"),
+    "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("Needs an internet connection"),
+    "offline_stale_data": m3,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Pick a connection first"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",
@@ -227,17 +237,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m3,
-    "studio_error_semantics": m4,
+    "studio_error_retry_in": m4,
+    "studio_error_semantics": m5,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m5,
+    "studio_governance_detail": m6,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connections are temporarily unavailable. Try again in a moment.",
     ),
-    "studio_unreachable_host": m6,
+    "studio_unreachable_host": m7,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -246,7 +256,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m7,
+    "table_rows_listed": m8,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),

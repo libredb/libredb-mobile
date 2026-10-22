@@ -65,6 +65,14 @@ final class UntrustedCertificateException extends FetchDataException {
   UntrustedCertificateException(super.message);
 }
 
+/// Thrown for a request that was never sent because the device is offline (`ConnectivityInterceptor`).
+///
+/// A repository should report it with `AppErrorCode.networkOffline`, so a screen keeps the data it loaded and says that
+/// the device is offline instead of showing a connection failure.
+final class OfflineException extends FetchDataException {
+  OfflineException() : super('No Internet connection');
+}
+
 final class BadRequestException extends AppException {
   BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage})
     : super(message, "Invalid Request: ");

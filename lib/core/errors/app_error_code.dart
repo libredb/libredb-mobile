@@ -34,6 +34,9 @@ enum AppErrorCode {
   // --- network ---
   networkCertInvalid('network.cert_invalid'),
 
+  /// The request was not sent because the device is offline.
+  networkOffline('network.offline'),
+
   // --- LibreDB Studio (lib/infrastructure/studio/studio_errors.dart maps Studio's codes to these) ---
   studioDatabaseAuth('studio.database_auth'),
   studioConnectionNotAvailable('studio.connection_not_available'),

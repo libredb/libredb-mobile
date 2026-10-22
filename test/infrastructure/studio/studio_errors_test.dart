@@ -141,6 +141,13 @@ void main() {
       expect(studioError(FetchDataException('No Internet connection')), isA<NetworkError>());
     });
 
+    test('a request refused because the device is offline is a NetworkError with the offline code', () {
+      expect(
+        studioError(OfflineException()),
+        isA<NetworkError>().having((e) => e.code, 'code', AppErrorCode.networkOffline.key),
+      );
+    });
+
     test('an answer that does not have the documented shape is a ServerError', () {
       expect(
         studioError(const FormatException('no connections list')),

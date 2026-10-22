@@ -313,6 +313,16 @@ class S {
     );
   }
 
+  /// `No internet connection. Check your network and try again.`
+  String get error_network_offline {
+    return Intl.message(
+      'No internet connection. Check your network and try again.',
+      name: 'error_network_offline',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `You were signed out due to inactivity.`
   String get idle_timeout_signed_out {
     return Intl.message('You were signed out due to inactivity.', name: 'idle_timeout_signed_out', desc: '', args: []);
@@ -431,6 +441,31 @@ class S {
   /// `No internet connection`
   String get connectivity_offline {
     return Intl.message('No internet connection', name: 'connectivity_offline', desc: '', args: []);
+  }
+
+  /// `Offline: no internet connection. What is on screen was loaded earlier.`
+  String get connectivity_offline_semantics {
+    return Intl.message(
+      'Offline: no internet connection. What is on screen was loaded earlier.',
+      name: 'connectivity_offline_semantics',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Offline: showing what was loaded at {time}`
+  String offline_stale_data(String time) {
+    return Intl.message(
+      'Offline: showing what was loaded at $time',
+      name: 'offline_stale_data',
+      desc: '',
+      args: [time],
+    );
+  }
+
+  /// `Needs an internet connection`
+  String get offline_action_unavailable {
+    return Intl.message('Needs an internet connection', name: 'offline_action_unavailable', desc: '', args: []);
   }
 
   /// `Page Not Found`
