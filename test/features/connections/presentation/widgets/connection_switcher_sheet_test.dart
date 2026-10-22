@@ -56,6 +56,8 @@ void main() {
   Finder row(String id) => find.byKey(ValueKey('connection-row-$id'));
   Finder inSheet(Finder finder) => find.descendant(of: find.byType(ConnectionSwitcherSheet), matching: finder);
 
+  Finder header(String key) => find.byKey(ValueKey('connection-section-$key'));
+
   /// A page with a button that opens the switcher, as the shell's top bar does, under the app-scoped favorites of
   /// [subject], who Studio says signed in.
   Future<void> openSheet(WidgetTester tester, {String? subject = 'subject-alice'}) async {
@@ -131,6 +133,54 @@ void main() {
 
     expect(cubit.state, isA<ActiveConnectionSelected>().having((s) => s.connection.id, 'id', 'seed:billing-mysql'));
     expect(find.byType(ConnectionSwitcherSheet), findsNothing);
+  });
+
+  testWidgets('shows the starred connections first, in a Favorites section with their stars', (tester) async {
+    when(() => favoritesStore.read('subject-alice'))
+        .thenAnswer((_) async => const ConnectionFavorites(starred: {'seed:billing-mysql'}, recent: []));
+    await openSheet(tester);
+
+    final favoritesHeader = inSheet(header('favorites'));
+    expect(find.descendant(of: favoritesHeader, matching: find.text(S.current.connection_favorites)), findsOneWidget);
+    expect(find.descendant(of: favoritesHeader, matching: find.text('1')), findsOneWidget);
+    expect(tester.getTopLeft(favoritesHeader).dy, lessThan(tester.getTopLeft(inSheet(row('seed:billing-mysql'))).dy));
+    expect(
+      tester.getTopLeft(inSheet(row('seed:billing-mysql'))).dy,
+      lessThan(tester.getTopLeft(inSheet(header('group:Analytics'))).dy),
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: inSheet(find.byKey(const ValueKey('connection-star-seed:billing-mysql'))),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .tooltip,
+      S.current.connection_unstar,
+    );
+  });
+
+  testWidgets('shows no Favorites section and no star while no favorites can be read', (tester) async {
+    when(() => favoritesStore.read(any())).thenThrow(const FormatException('not JSON'));
+    await openSheet(tester);
+
+    expect(inSheet(row('seed:billing-mysql')), findsOneWidget);
+    expect(inSheet(header('favorites')), findsNothing);
+    expect(inSheet(find.byKey(const ValueKey('connection-star-seed:billing-mysql'))), findsNothing);
+  });
+
+  testWidgets('a tap makes the connection the first of the recent ones', (tester) async {
+    when(() => favoritesStore.read('subject-alice'))
+        .thenAnswer((_) async => const ConnectionFavorites(starred: {}, recent: ['seed:sales-postgres']));
+    await openSheet(tester);
+
+    await tester.tap(row('seed:billing-mysql'));
+    await tester.pumpAndSettle();
+
+    const opened = ConnectionFavorites(starred: {}, recent: ['seed:billing-mysql', 'seed:sales-postgres']);
+    expect(favorites.state, const FavoriteConnectionsReady(opened));
+    verify(() => favoritesStore.write('subject-alice', opened)).called(1);
   });
 
   testWidgets('a list without the active connection makes it vanish', (tester) async {

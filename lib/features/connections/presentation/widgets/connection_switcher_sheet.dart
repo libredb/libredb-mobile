@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/active_connection_feed.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_list_providers.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_list_view.dart';
@@ -12,12 +13,14 @@ import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 /// The bottom sheet that switches the active connection without leaving the page: the grouped, searchable list of the
-/// connection list page, asked afresh from Studio, with the active connection marked. A tap opens that connection and
-/// closes the sheet; so does a list that no longer holds the active connection.
+/// connection list page, asked afresh from Studio, with the user's Favorites section on top and the active connection
+/// marked. A tap opens that connection, makes it the first of the recent ones, and closes the sheet; a list that no
+/// longer holds the active connection closes it too.
 class ConnectionSwitcherSheet extends StatefulWidget {
   const ConnectionSwitcherSheet({super.key});
 
-  /// Opens the sheet over [context], which must reach the connection repositories and [ActiveConnectionCubit].
+  /// Opens the sheet over [context], which must reach the connection repositories, [ActiveConnectionCubit] and the
+  /// app-scoped [FavoriteConnectionsBloc].
   static Future<void> show(BuildContext context) {
     final active = context.read<ActiveConnectionCubit>();
     return showModalBottomSheet<void>(
@@ -51,6 +54,7 @@ class _ConnectionSwitcherSheetState extends State<ConnectionSwitcherSheet> {
   }
 
   void _open(StudioConnection connection) {
+    context.read<FavoriteConnectionsBloc>().add(FavoriteConnectionOpened(connection.id));
     context.read<ActiveConnectionCubit>().select(connection);
     Navigator.of(context).pop();
   }
