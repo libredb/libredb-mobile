@@ -391,13 +391,19 @@ class ApiClient {
       sensitiveKeys: sensitiveKeysOf(e.requestOptions),
     );
     final code = errorCodeOf(e.response?.data);
-    final serverMessage = _errorMessageOf(body);
+    final serverMessage = _stringFieldOf(body, 'error');
     final retryAfter = _retryAfterOf(e.response?.headers);
     switch (statusCode) {
       case 400:
         return BadRequestException(body, statusCode: statusCode, errorCode: code, serverMessage: serverMessage);
       case 401 || 403:
-        return UnauthorizedException(body, statusCode: statusCode, errorCode: code, serverMessage: serverMessage);
+        return UnauthorizedException(
+          body,
+          statusCode: statusCode,
+          errorCode: code,
+          serverMessage: serverMessage,
+          fixStatement: _stringFieldOf(body, 'fixStatement'),
+        );
       case 404:
         return FetchDataException(
           'Not found: $body',
@@ -424,11 +430,11 @@ class ApiClient {
     }
   }
 
-  /// The string `error` of the scrubbed body text [scrubbedBody], when it is a JSON object.
-  static String? _errorMessageOf(String scrubbedBody) {
+  /// The string [field] of the scrubbed body text [scrubbedBody], when it is a JSON object.
+  static String? _stringFieldOf(String scrubbedBody, String field) {
     try {
       final decoded = jsonDecode(scrubbedBody);
-      return decoded is Map && decoded['error'] is String ? decoded['error'] as String : null;
+      return decoded is Map && decoded[field] is String ? decoded[field] as String : null;
     } on FormatException {
       return null;
     }

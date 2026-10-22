@@ -314,5 +314,27 @@
   "settings_licenses": "Licenses",
   "@settings_licenses": {},
   "settings_licenses_subtitle": "The licenses of LibreDB Mobile and the code it includes",
-  "@settings_licenses_subtitle": {}
+  "@settings_licenses_subtitle": {},
+  "studio_error_retry_in": "You can try again in {seconds} s.",
+  "@studio_error_retry_in": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "studio_error_fix_statement": "An administrator can run this statement to fix it:",
+  "@studio_error_fix_statement": {},
+  "studio_error_copy_statement": "Copy statement",
+  "@studio_error_copy_statement": {},
+  "studio_error_statement_copied": "Statement copied",
+  "@studio_error_statement_copied": {},
+  "studio_error_semantics": "Error: {message}",
+  "@studio_error_semantics": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
 }

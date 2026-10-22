@@ -49,6 +49,20 @@ void main() {
         const error = AuthError('test');
         expect(error, isA<AppError>());
       });
+
+      test('should compare the fixStatement', () {
+        const statement = AuthError('refused', code: 'studio.database_auth', fixStatement: 'GRANT R TO U');
+        expect(statement, const AuthError('refused', code: 'studio.database_auth', fixStatement: 'GRANT R TO U'));
+        expect(
+          statement.hashCode,
+          const AuthError('refused', code: 'studio.database_auth', fixStatement: 'GRANT R TO U').hashCode,
+        );
+        expect(
+          statement,
+          isNot(const AuthError('refused', code: 'studio.database_auth', fixStatement: 'GRANT S TO U')),
+        );
+        expect(statement, isNot(const AuthError('refused', code: 'studio.database_auth')));
+      });
     });
 
     group('ValidationError', () {

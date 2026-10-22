@@ -5,9 +5,21 @@ import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  AppException response(int status, String? code, {String? serverMessage, Duration? retryAfter}) => switch (status) {
+  AppException response(
+    int status,
+    String? code, {
+    String? serverMessage,
+    Duration? retryAfter,
+    String? fixStatement,
+  }) => switch (status) {
     400 => BadRequestException('body', statusCode: status, errorCode: code, serverMessage: serverMessage),
-    401 || 403 => UnauthorizedException('body', statusCode: status, errorCode: code, serverMessage: serverMessage),
+    401 || 403 => UnauthorizedException(
+      'body',
+      statusCode: status,
+      errorCode: code,
+      serverMessage: serverMessage,
+      fixStatement: fixStatement,
+    ),
     _ => FetchDataException(
       'body',
       statusCode: status,
@@ -56,6 +68,24 @@ void main() {
       isA<RateLimitedError>()
           .having((e) => e.code, 'code', AppErrorCode.studioRateLimited.key)
           .having((e) => e.retryAfter, 'retryAfter', const Duration(seconds: 12)),
+    );
+  });
+
+  test('a refused database credential carries the fixStatement Studio sent', () {
+    final error = studioError(response(401, 'AUTH_ERROR', fixStatement: 'GRANT ROLE R TO USER U'));
+
+    expect(
+      error,
+      isA<AuthError>()
+          .having((e) => e.code, 'code', AppErrorCode.studioDatabaseAuth.key)
+          .having((e) => e.fixStatement, 'fixStatement', 'GRANT ROLE R TO USER U'),
+    );
+  });
+
+  test('a refused database credential without a fixStatement carries none', () {
+    expect(
+      studioError(response(401, 'AUTH_ERROR')),
+      isA<AuthError>().having((e) => e.fixStatement, 'fixStatement', isNull),
     );
   });
 

@@ -32,7 +32,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m5(min) => "Password must be at least ${min} characters long";
 
-  static String m6(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m6(seconds) => "You can try again in ${seconds} s.";
+
+  static String m7(message) => "Error: ${message}";
+
+  static String m8(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -260,9 +264,16 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
+    "studio_error_copy_statement": MessageLookupByLibrary.simpleMessage("Copy statement"),
+    "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
+      "An administrator can run this statement to fix it:",
+    ),
+    "studio_error_retry_in": m6,
+    "studio_error_semantics": m7,
+    "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "submit": MessageLookupByLibrary.simpleMessage("Submit"),
     "success": MessageLookupByLibrary.simpleMessage("Success"),
-    "table_rows_listed": m6,
+    "table_rows_listed": m8,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),
