@@ -8,6 +8,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
@@ -141,6 +142,9 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IConnectionRepository>(
           create: (context) => dependencies.createConnectionRepository(context.read<ApiClient>()),
+        ),
+        RepositoryProvider<ICollapsedSectionsRepository>(
+          create: (_) => dependencies.createCollapsedSectionsRepository(),
         ),
         RepositoryProvider<IStudioIdentityRepository>(
           create: (context) => dependencies.createStudioIdentityRepository(context.read<ApiClient>()),

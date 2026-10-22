@@ -161,4 +161,155 @@ void main() {
     act: (bloc) => bloc.add(const ConnectionListRequested()),
     expect: () => const [ConnectionListLoading(), ConnectionListFailure(errorCode: AppErrorCode.generic)],
   );
+
+  group('refresh', () {
+    const fresh = [
+      StudioConnection(id: 'seed:a', name: 'A', type: 'postgres'),
+      StudioConnection(id: 'seed:b', name: 'B', type: 'mysql'),
+    ];
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'keeps the list on screen while it asks again, then shows the new answer',
+      setUp: () =>
+          when(() => repository.listManaged())
+              .thenAnswer((_) async => const Success(ManagedConnections(connections: fresh))),
+      build: build,
+      seed: () => const ConnectionListLoaded(connections: connections, cacheHint: Duration(seconds: 10)),
+      act: (bloc) => bloc.add(const ConnectionListRefreshed()),
+      expect: () => const [
+        ConnectionListLoaded(connections: connections, cacheHint: Duration(seconds: 10), isRefreshing: true),
+        ConnectionListLoaded(connections: fresh),
+      ],
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'keeps the previous list and carries the error code when the refresh fails',
+      setUp: () =>
+          when(() => repository.listManaged())
+              .thenAnswer((_) async => Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key))),
+      build: build,
+      seed: () => const ConnectionListLoaded(connections: connections),
+      act: (bloc) => bloc.add(const ConnectionListRefreshed()),
+      expect: () => const [
+        ConnectionListLoaded(connections: connections, isRefreshing: true),
+        ConnectionListLoaded(connections: connections, refreshErrorCode: AppErrorCode.networkCertInvalid),
+      ],
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'loads from scratch when there is no list to keep',
+      setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed)),
+      build: build,
+      act: (bloc) => bloc.add(const ConnectionListRefreshed()),
+      expect: () => const [
+        ConnectionListLoading(),
+        ConnectionListLoaded(connections: connections, cacheHint: Duration(seconds: 10)),
+      ],
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'keeps the search and the environment filter across a refresh',
+      setUp: () =>
+          when(() => repository.listManaged())
+              .thenAnswer((_) async => const Success(ManagedConnections(connections: fresh))),
+      build: build,
+      act: (bloc) async {
+        bloc.add(const ConnectionListRequested());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ConnectionListSearchChanged('b'));
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        bloc.add(const ConnectionListEnvironmentFilterChanged('production'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ConnectionListRefreshed());
+      },
+      skip: 4,
+      expect: () => const [
+        ConnectionListLoaded(connections: fresh, query: 'b', environment: 'production', isRefreshing: true),
+        ConnectionListLoaded(connections: fresh, query: 'b', environment: 'production'),
+      ],
+    );
+  });
+
+  group('search', () {
+    const rows = [
+      StudioConnection(id: 'seed:a', name: 'Orders', type: 'postgres', group: 'Sales', environment: 'production'),
+      StudioConnection(id: 'seed:b', name: 'Ledger', type: 'mysql', group: 'Finance', environment: 'staging'),
+    ];
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'applies only the last query typed within 200 ms',
+      build: build,
+      seed: () => const ConnectionListLoaded(connections: rows),
+      act: (bloc) async {
+        bloc.add(const ConnectionListSearchChanged('o'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(const ConnectionListSearchChanged('or'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc.add(const ConnectionListSearchChanged('ord'));
+      },
+      wait: const Duration(milliseconds: 300),
+      expect: () => const [ConnectionListLoaded(connections: rows, query: 'ord')],
+      verify: (bloc) {
+        final state = bloc.state as ConnectionListLoaded;
+        expect(state.sections.single.group, 'Sales');
+        expect(state.sections.single.connections.map((c) => c.id), ['seed:a']);
+      },
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'does not apply a query before 200 ms have passed',
+      build: build,
+      seed: () => const ConnectionListLoaded(connections: rows),
+      act: (bloc) => bloc.add(const ConnectionListSearchChanged('ord')),
+      wait: const Duration(milliseconds: 150),
+      expect: () => const <ConnectionListState>[],
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'applies a query typed before the list arrived once it arrives',
+      setUp: () {
+        final answer = Completer<Success<ManagedConnections>>();
+        when(() => repository.listManaged()).thenAnswer((_) => answer.future);
+        Future<void>.delayed(
+          const Duration(milliseconds: 300),
+          () => answer.complete(const Success(ManagedConnections(connections: rows))),
+        );
+      },
+      build: build,
+      act: (bloc) {
+        bloc.add(const ConnectionListRequested());
+        bloc.add(const ConnectionListSearchChanged('ledger'));
+      },
+      wait: const Duration(milliseconds: 400),
+      expect: () => const [ConnectionListLoading(), ConnectionListLoaded(connections: rows, query: 'ledger')],
+    );
+
+    blocTest<ConnectionListBloc, ConnectionListState>(
+      'filters by environment at once, and clears the filter with null',
+      build: build,
+      seed: () => const ConnectionListLoaded(connections: rows),
+      act: (bloc) async {
+        bloc.add(const ConnectionListEnvironmentFilterChanged('staging'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ConnectionListEnvironmentFilterChanged(null));
+      },
+      expect: () => const [
+        ConnectionListLoaded(connections: rows, environment: 'staging'),
+        ConnectionListLoaded(connections: rows),
+      ],
+    );
+  });
+
+  test('a loaded state offers the environments of every row, the filtered ones included', () {
+    const state = ConnectionListLoaded(
+      connections: [
+        StudioConnection(id: 'seed:a', name: 'A', type: 'postgres', environment: 'staging'),
+        StudioConnection(id: 'seed:b', name: 'B', type: 'postgres', environment: 'production'),
+      ],
+      environment: 'staging',
+    );
+
+    expect(state.environments, ['production', 'staging']);
+    expect(state.sections.single.connections.map((c) => c.id), ['seed:a']);
+  });
 }

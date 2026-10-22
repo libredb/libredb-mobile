@@ -2,7 +2,9 @@ import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_i
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
@@ -108,6 +110,9 @@ class AppDependencies {
 
   /// Studio's connection API.
   IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
+
+  /// The sections of the connection list the user collapsed on this device.
+  ICollapsedSectionsRepository createCollapsedSectionsRepository() => CollapsedSectionsRepository();
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);

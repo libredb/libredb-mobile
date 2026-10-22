@@ -99,6 +99,16 @@ void main() {
           managed: true,
           seedId: 'reporting-mssql',
         ),
+        // A file engine names only its database, and this row has no group.
+        StudioConnection(
+          id: 'seed:sandbox-sqlite',
+          name: 'Sandbox (SQLite)',
+          type: 'sqlite',
+          database: '/data/sandbox.db',
+          environment: 'local',
+          managed: true,
+          seedId: 'sandbox-sqlite',
+        ),
       ]);
     });
 

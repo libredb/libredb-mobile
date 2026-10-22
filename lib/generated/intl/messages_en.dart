@@ -20,23 +20,25 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'en';
 
-  static String m0(url) => "Could not open ${url}";
+  static String m0(label) => "Environment: ${label}";
 
-  static String m1(currentVersion, minimumVersion) => "Current: ${currentVersion}  •  Required: ${minimumVersion}";
+  static String m1(url) => "Could not open ${url}";
 
-  static String m2(time) => "Estimated end: ${time}";
+  static String m2(currentVersion, minimumVersion) => "Current: ${currentVersion}  •  Required: ${minimumVersion}";
 
-  static String m3(time) => "Offline: showing what was loaded at ${time}";
+  static String m3(time) => "Estimated end: ${time}";
 
-  static String m4(seconds) => "You can try again in ${seconds} s.";
+  static String m4(time) => "Offline: showing what was loaded at ${time}";
 
-  static String m5(message) => "Error: ${message}";
+  static String m5(seconds) => "You can try again in ${seconds} s.";
 
-  static String m6(detail) => "Details: ${detail}";
+  static String m6(message) => "Error: ${message}";
 
-  static String m7(host) => "Studio address: ${host}";
+  static String m7(detail) => "Details: ${detail}";
 
-  static String m8(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m8(host) => "Studio address: ${host}";
+
+  static String m9(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -60,10 +62,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "community_title": MessageLookupByLibrary.simpleMessage("Join the Community"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Translate"),
     "connection_environment": MessageLookupByLibrary.simpleMessage("Environment"),
+    "connection_environment_badge": m0,
+    "connection_environment_filter": MessageLookupByLibrary.simpleMessage("Filter by environment"),
+    "connection_environment_other": MessageLookupByLibrary.simpleMessage("Other"),
+    "connection_group": MessageLookupByLibrary.simpleMessage("Group"),
+    "connection_group_other": MessageLookupByLibrary.simpleMessage("Other"),
     "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio offers you no connection yet"),
     "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Could not load the connections"),
-    "connection_list_subtitle": MessageLookupByLibrary.simpleMessage("Databases Studio offers you"),
-    "connection_name": MessageLookupByLibrary.simpleMessage("Name"),
+    "connection_read_only": MessageLookupByLibrary.simpleMessage("Read only"),
+    "connection_search_clear": MessageLookupByLibrary.simpleMessage("Clear search"),
+    "connection_search_hint": MessageLookupByLibrary.simpleMessage("Search connections"),
+    "connection_search_no_match": MessageLookupByLibrary.simpleMessage("No connections match"),
     "connection_target": MessageLookupByLibrary.simpleMessage("Target"),
     "connection_type": MessageLookupByLibrary.simpleMessage("Engine"),
     "connections": MessageLookupByLibrary.simpleMessage("Connections"),
@@ -88,7 +97,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
     "error_generic": MessageLookupByLibrary.simpleMessage("Something went wrong"),
-    "error_link_open_failed": m0,
+    "error_link_open_failed": m1,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(
       "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
     ),
@@ -158,7 +167,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The update link is not valid. Open your app store to install the latest version.",
     ),
     "force_update_title": MessageLookupByLibrary.simpleMessage("Update Required"),
-    "force_update_versions": m1,
+    "force_update_versions": m2,
     "help_resources": MessageLookupByLibrary.simpleMessage("Help & Resources"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("Read the documentation and guides on GitHub"),
     "home": MessageLookupByLibrary.simpleMessage("Home"),
@@ -195,7 +204,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "You were signed out, but some stored data could not be removed from this device.",
     ),
     "logout_sure": MessageLookupByLibrary.simpleMessage("Are you sure you want to logout?"),
-    "maintenance_estimated_end": m2,
+    "maintenance_estimated_end": m3,
     "maintenance_message": MessageLookupByLibrary.simpleMessage(
       "We are performing scheduled maintenance. Please check back soon.",
     ),
@@ -209,7 +218,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_message": MessageLookupByLibrary.simpleMessage("The page you requested could not be found."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Page Not Found"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("Needs an internet connection"),
-    "offline_stale_data": m3,
+    "offline_stale_data": m4,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Pick a connection first"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",
@@ -237,17 +246,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m4,
-    "studio_error_semantics": m5,
+    "studio_error_retry_in": m5,
+    "studio_error_semantics": m6,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m6,
+    "studio_governance_detail": m7,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connections are temporarily unavailable. Try again in a moment.",
     ),
-    "studio_unreachable_host": m7,
+    "studio_unreachable_host": m8,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -256,7 +265,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m8,
+    "table_rows_listed": m9,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),

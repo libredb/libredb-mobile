@@ -34,7 +34,10 @@ class AppLocalStorageCached {
 enum StorageKeys {
   language('language'),
   theme('theme'),
-  brightness('brightness');
+  brightness('brightness'),
+
+  /// The sections of the connection list the user collapsed, by `ConnectionSection.key`.
+  connectionSectionsCollapsed('connection_sections_collapsed');
 
   const StorageKeys(this.key);
 
@@ -46,6 +49,7 @@ enum StorageKeys {
     StorageKeys.language => StorageScope.device,
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
+    StorageKeys.connectionSectionsCollapsed => StorageScope.device,
   };
 }
 
