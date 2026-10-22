@@ -17,14 +17,14 @@ GoldenTestGroup _grid() => GoldenTestGroup(
       name: 'idle',
       child: SizedBox(
         width: 200,
-        child: ResponsiveSubmitButton(buttonText: 'Save', onPressed: () {}, isLoading: false, isWebPlatform: false),
+        child: ResponsiveSubmitButton(buttonText: 'Save', onPressed: () {}, isLoading: false),
       ),
     ),
     GoldenTestScenario(
       name: 'loading',
       child: SizedBox(
         width: 200,
-        child: ResponsiveSubmitButton(buttonText: 'Save', onPressed: () {}, isLoading: true, isWebPlatform: false),
+        child: ResponsiveSubmitButton(buttonText: 'Save', onPressed: () {}, isLoading: true),
       ),
     ),
   ],

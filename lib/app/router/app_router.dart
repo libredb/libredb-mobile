@@ -33,10 +33,6 @@ class AppRouterFactory {
 
   static final _log = AppLogger.getLogger('AppRouterFactory');
 
-  /// The paths the identity provider sends its answer to: the native sign-in redirect and the desktop logout
-  /// redirect (see OidcRedirectUris). Their query carries the authorization code and state.
-  static const _appRedirectPaths = {'/oauth2redirect', '/logout'};
-
   final SessionCubit _sessionCubit;
 
   /// An `oidc` build leaves out the password routes: the identity provider owns the password.
@@ -100,10 +96,10 @@ class AppRouterFactory {
 
         _log.debug('redirect - location: {}, session: {}', [location, sessionState.runtimeType]);
 
-        // In an oidc build, a callback URL reaching the router, such as a custom scheme link the platform pushes, must
+        // In an oidc build, the callback URL reaching the router, such as a custom scheme link the platform pushes, must
         // never become a router location or a returnUrl: its query holds the authorization code and state. A jwt build
-        // has no such paths and keeps its usual handling of them.
-        if (_authMode.usesOidc && _appRedirectPaths.contains(location)) return ApplicationRoutesConstants.login;
+        // has no such path and keeps its usual handling of it.
+        if (_authMode.usesOidc && location == OidcSettings.redirectPath) return ApplicationRoutesConstants.login;
 
         // Authenticated user landing on a public route (login / register
         // / forgot-password / OTP), for example by opening /login while

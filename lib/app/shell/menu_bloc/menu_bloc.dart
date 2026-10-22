@@ -52,7 +52,7 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
   }
 
   /// The logout of an `oidc` build signs out as soon as the session on this device is cleared, so the login page shows
-  /// while the provider logout goes on, which on desktop can wait for the browser for minutes. When the provider
+  /// while the provider logout goes on, which waits for the browser and the provider. When the provider
   /// logout then fails, the providerSessionLeft status follows, unless the wipe failed: the error status stays, since
   /// data left on this device matters more.
   Future<void> _onSsoLogout(SsoSignOutUseCase signOut, Emitter<MenuState> emit) async {

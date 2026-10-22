@@ -19,9 +19,8 @@ void main() {
       );
     });
 
-    // On the web the message of that FormatException is the browser's text for the error, which repeats up to ten
-    // characters on each side of an unexpected token, or the whole body when it is short. A test on the VM, where the
-    // parser's message names no characters, sees that only through an exact message.
+    // The FormatException of the parser carries the body as its source, and its message can name characters around
+    // the error, so the test checks the exact message.
     test('throws a FormatException whose message is fixed instead of the text of the parser', () {
       expect(
         () => decodeCredentialJson('{"id_token":at-opaque-0a1b2c3d,"refresh_token":"rt-9f8e7d6c"}'),

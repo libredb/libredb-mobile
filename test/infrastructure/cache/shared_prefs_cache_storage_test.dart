@@ -29,8 +29,8 @@ class _KeepingStore extends InMemorySharedPreferencesStore {
   }
 }
 
-/// A platform store that refuses to store a value whose key ends with [refused], as a browser does when the
-/// localStorage of the origin is full: [setValue] throws [error].
+/// A platform store that refuses to store a value whose key ends with [refused], as a full store does: [setValue]
+/// throws [error].
 class _FullStore extends InMemorySharedPreferencesStore {
   _FullStore({required this.refused, required this.error, Map<String, Object> data = const {}}) : super.withData(data);
 
@@ -44,7 +44,7 @@ class _FullStore extends InMemorySharedPreferencesStore {
   }
 }
 
-/// A platform store that cannot load its values, as a browser that blocks localStorage: loading throws [error].
+/// A platform store that cannot load its values: loading throws [error].
 class _UnloadableStore extends InMemorySharedPreferencesStore {
   _UnloadableStore(this.error) : super.empty();
 
@@ -309,16 +309,6 @@ void main() {
 
         expect((await store.getAll()).keys, ['flutter._cache_GET_/account']);
       });
-
-      // On web every browser tab writes to the same localStorage, which SharedPreferences reads once per tab.
-      test('removes an entry that another browser tab cached after this tab loaded', () async {
-        await storage.write('GET_/account', '{"login":"admin"}');
-        await SharedPreferencesStorePlatform.instance.setValue('String', 'flutter._cache_GET_/admin/users', '[]');
-
-        await storage.clear();
-
-        expect(await SharedPreferencesStorePlatform.instance.getAll(), isEmpty);
-      });
     });
 
     group('TTL expiry', () {
@@ -447,8 +437,7 @@ void main() {
     });
 
     // Regression: an entry was deleted only when it was read past its maximum stale age, so the entry of every
-    // distinct search or page stayed until logout. On web they fill the localStorage quota that the stored session
-    // and the preferences share, and then a session or preference write fails.
+    // distinct search or page stayed until logout, growing the store that the preferences share.
     group('eviction', () {
       test('deletes the entries past their maximum stale age when it starts', () async {
         SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.withData(
@@ -542,7 +531,7 @@ void main() {
       });
     });
 
-    // On web localStorage refuses a write once the origin has used up its quota.
+    // A platform store can refuse a write, such as on a full disk.
     group('when the platform store is full', () {
       test('logs the key and the size as an error and skips the entry', () async {
         SharedPreferencesStorePlatform.instance = _FullStore(
@@ -559,7 +548,11 @@ void main() {
             matches(RegExp(r'Cache write error for key GET_/admin/users \(\d+ characters\): .*QuotaExceededError')),
           ),
         );
-        expect(await storage.read('GET_/admin/users'), isNull, reason: 'the tab must not answer from an unsaved entry');
+        expect(
+          await storage.read('GET_/admin/users'),
+          isNull,
+          reason: 'the storage must not answer from an unsaved entry',
+        );
         expect(await storage.count(), 0);
       });
 
@@ -580,7 +573,7 @@ void main() {
       );
     });
 
-    // On web localStorage throws when the browser blocks it, such as for a third-party frame.
+    // A platform store can fail to load.
     group('when the platform store cannot be loaded', () {
       test('logs the write as an error, and the GET it caches still succeeds', () async {
         SharedPreferencesStorePlatform.instance = _UnloadableStore(

@@ -55,7 +55,7 @@ void main() {
   });
 
   // Regression: a line that carried an email, such as a request path with a login in it, was printed as it was, so
-  // the address reached the console, and on web with a Sentry DSN the breadcrumbs made from it.
+  // the address reached the console.
   group('AppLogger email masking', () {
     for (final format in LogFormat.values) {
       test('masks an email in the message (${format.name})', () {

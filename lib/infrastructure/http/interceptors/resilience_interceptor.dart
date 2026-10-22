@@ -15,8 +15,7 @@ import 'package:flutter_bloc_advance/infrastructure/http/transport_errors.dart';
 ///
 /// **Retry logic:**
 /// - Retryable errors: timeout, connection error, HTTP 502/503/504.
-///   On dart:io, a connection that closed before a full response header arrived is not retried. On web the
-///   browser reports it as a generic network error, which is retried like any other connection error.
+///   A connection that closed before a full response header arrived is not retried.
 /// - Only requests that are safe to send twice are retried: GET, HEAD, OPTIONS, PUT and DELETE, and any other
 ///   method, POST and PATCH included, only when it carries an `Idempotency-Key` header (see
 ///   [IdempotencyInterceptor]). Otherwise the error passes through, because the server may already have
@@ -399,23 +398,20 @@ class ResilienceInterceptor extends Interceptor {
     }
   }
 
-  /// Whether the connection closed before a full response header arrived (dart:io adapter only).
+  /// Whether the connection closed before a full response header arrived.
   ///
   /// dio 5.10+ reports this as a connection error (dio 5.9 reported it as unknown). The server may
   /// or may not have read and processed the request, so it is not retried. The check matches the
-  /// message dio itself keys on, because `HttpException` lives in `dart:io`, which web builds cannot
-  /// import. The web adapter reports the same failure as a connection error without an error object.
+  /// message dio itself keys on.
   bool _isClosedAfterRequestSent(DioException err) =>
       err.error?.toString().contains('Connection closed before full header was received') ?? false;
 
   /// Whether sending [options] a second time cannot apply the request twice on the server.
   ///
-  /// One rule covers every error type and platform. On dart:io a refused connection or a connect timeout
-  /// does prove that the request was never sent, but dio's web adapter reports every XMLHttpRequest network
-  /// failure as a connection error, and a request that was sent but got no response header in time as a
-  /// connection timeout; dio has also moved a failure after sending into connection errors before (5.10).
-  /// So a POST or PATCH is repeated only with an `Idempotency-Key`: a retry sends this same [RequestOptions],
-  /// so the server sees the same key again and can drop the duplicate.
+  /// One rule covers every error type. A refused connection or a connect timeout does prove that the
+  /// request was never sent, but dio has moved a failure after sending into connection errors before
+  /// (5.10). So a POST or PATCH is repeated only with an `Idempotency-Key`: a retry sends this same
+  /// [RequestOptions], so the server sees the same key again and can drop the duplicate.
   bool _isSafeToRepeat(RequestOptions options) {
     if (_idempotentMethods.contains(options.method.toUpperCase())) return true;
     final key = options.headers[IdempotencyInterceptor.headerName]?.toString();

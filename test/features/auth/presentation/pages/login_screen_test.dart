@@ -28,8 +28,6 @@ import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart'
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
 
 /// Production chain (no MockInterceptor) with certificate pinning configured.
 const _pinnedProdConfig = AppConfig(
@@ -65,17 +63,8 @@ class _PinnedDependencies extends AppDependencies {
   final _PinMismatchAdapter adapter;
 
   @override
-  ApiClient createApiClient(
-    ISecureStorage secureStorage, {
-    required OnSessionExpired onSessionExpired,
-    required ITokenRefreshLock? tokenRefreshLock,
-    required RotatedTokensTakeBack? rotatedTokensTakeBack,
-  }) => super.createApiClient(
-    secureStorage,
-    onSessionExpired: onSessionExpired,
-    tokenRefreshLock: tokenRefreshLock,
-    rotatedTokensTakeBack: rotatedTokensTakeBack,
-  )..instance.httpClientAdapter = adapter;
+  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
+      super.createApiClient(secureStorage, onSessionExpired: onSessionExpired)..instance.httpClientAdapter = adapter;
 }
 
 const _insecureConnectionMessage =
@@ -97,26 +86,20 @@ final _signedIn = OidcSignedIn(
 );
 
 /// The identity provider of an oidc build. Each sign-in answers with the next of [outcomes], and with [_signedIn] once
-/// they have run out; the startup completion answers with [pending].
+/// they have run out.
 class _ScriptedOidcClient implements IOidcClient {
-  _ScriptedOidcClient({List<FutureOr<OidcSignInOutcome>>? outcomes, this.pending}) : outcomes = outcomes ?? [];
+  _ScriptedOidcClient({List<FutureOr<OidcSignInOutcome>>? outcomes}) : outcomes = outcomes ?? [];
 
   final List<FutureOr<OidcSignInOutcome>> outcomes;
-  final OidcSignInOutcome? pending;
 
-  /// The `webReturnPath` of every sign-in, in order.
-  final webReturnPaths = <String?>[];
-
-  int get signIns => webReturnPaths.length;
+  /// How many sign-ins were started.
+  int signIns = 0;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async {
-    webReturnPaths.add(webReturnPath);
+  Future<OidcSignInOutcome> signIn() async {
+    signIns++;
     return outcomes.isEmpty ? _signedIn : await outcomes.removeAt(0);
   }
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => pending;
 
   @override
   Future<TokenRotationResult> refresh({
@@ -133,7 +116,7 @@ class _ScriptedOidcClient implements IOidcClient {
 /// The test config in an oidc build over [client], for a project that gives all its links. Only the `admin` and
 /// `user` roles of the `roles` claim are allowed.
 class _OidcDependencies extends AppDependencies {
-  _OidcDependencies(this.client, {bool autoRedirect = false})
+  _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation})
     : super(
         appConfig: const AppConfig.test(),
         projectLinks: const ProjectLinks(
@@ -154,8 +137,30 @@ class _OidcDependencies extends AppDependencies {
 
   final IOidcClient client;
 
+  /// The token refresh in place of the one through [client], when given.
+  final TokenRotation? rotation;
+
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
+
+  @override
+  TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
+      rotation ?? super.createOidcTokenRotation(client, secureStorage);
+}
+
+/// A token refresh that fails with an error no rotation expects, so the startup step of an oidc build throws.
+class _ThrowingRotation implements TokenRotation {
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async => throw StateError('rotation failed');
+}
+
+/// Stores a session whose access token has expired, so the startup step of an oidc build refreshes it.
+Future<void> _storeExpiredSession() async {
+  final storage = FlutterSecureStorageAdapter();
+  await storage.write(SecureStorageKeys.jwtToken.key, 'expired-access-token');
+  await storage.write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+  await storage.write(SecureStorageKeys.oidcIdToken.key, 'stored-id-token');
+  await storage.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2000)));
 }
 
 const _discoveryMessage =
@@ -218,6 +223,15 @@ void main() {
       await pumpLogin(tester);
 
       expect(tester.takeException(), isNull);
+    });
+
+    // The app ships on Android and iOS.
+    testWidgets('counts two platforms', (tester) async {
+      setViewport(tester, const Size(1600, 1600));
+      await pumpLogin(tester);
+
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('7+'), findsNothing);
     });
   });
 
@@ -475,28 +489,26 @@ void main() {
       });
     }
 
+    // A startup step that throws signs the user out with authOidcFailed, which the router hands to the page.
     testWidgets('shows a startup sign-in error until the first tap, and nothing while the sign-in runs', (
       tester,
     ) async {
+      await _storeExpiredSession();
       final answer = Completer<OidcSignInOutcome>();
-      final client = _ScriptedOidcClient(
-        pending: const OidcSignInFailed(OidcFailure.discovery),
-        outcomes: [answer.future],
-      );
-      await pumpOidcApp(tester, _OidcDependencies(client));
-      expect(find.text(_discoveryMessage), findsOneWidget);
+      final client = _ScriptedOidcClient(outcomes: [answer.future]);
+      await pumpOidcApp(tester, _OidcDependencies(client, rotation: _ThrowingRotation()));
+      expect(find.text(_failedMessage), findsOneWidget);
 
       await tester.tap(ssoButton);
       // The spinner runs until the provider answers, so the frames are pumped one by one.
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.descendant(of: ssoButton, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
-      expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
-      expect(find.text(_discoveryMessage), findsNothing);
+      expect(find.text(_failedMessage), findsNothing);
 
       answer.complete(const OidcSignInCancelled());
       await tester.pumpAndSettle();
 
-      expect(find.text(_discoveryMessage), findsNothing);
+      expect(find.text(_failedMessage), findsNothing);
       expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
     });
 
@@ -523,14 +535,14 @@ void main() {
       expect(find.text('Kurumsal hesabınızla giriş yapın.'), findsOneWidget);
     });
 
-    testWidgets('a tap signs in and opens the dashboard, with no web return path off the web', (tester) async {
+    testWidgets('a tap signs in and opens the dashboard', (tester) async {
       final client = _ScriptedOidcClient();
       await pumpOidcApp(tester, _OidcDependencies(client));
 
       await tester.tap(ssoButton);
       await tester.pumpAndSettle();
 
-      expect(client.webReturnPaths, [null]);
+      expect(client.signIns, 1);
       expect(find.byType(ResponsiveScaffold), findsOneWidget);
       expect(location(tester), ApplicationRoutesConstants.home);
     });
@@ -570,27 +582,18 @@ void main() {
         expect(gate(tester).isOpen, isFalse);
       });
 
-      testWidgets('does not run when it is turned off', (tester) async {
-        final client = _ScriptedOidcClient();
-        await pumpOidcApp(tester, _OidcDependencies(client));
-
-        expect(client.signIns, 0);
-        expect(ssoButton, findsOneWidget);
-      });
-
       testWidgets('does not run after a startup sign-in error', (tester) async {
-        final client = _ScriptedOidcClient(pending: const OidcSignInFailed(OidcFailure.failed));
-        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true));
+        await _storeExpiredSession();
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true, rotation: _ThrowingRotation()));
 
         expect(client.signIns, 0);
         expect(find.text(_failedMessage), findsOneWidget);
       });
 
-      // Back from the provider's page brings a web tab back with no answer, which the startup completion reports as a
-      // cancel.
-      testWidgets('does not run after the user came back from the provider without signing in', (tester) async {
-        final client = _ScriptedOidcClient(pending: const OidcSignInCancelled());
-        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true));
+      testWidgets('does not run when it is turned off', (tester) async {
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client));
 
         expect(client.signIns, 0);
         expect(ssoButton, findsOneWidget);

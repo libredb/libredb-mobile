@@ -524,8 +524,6 @@
   "@login_sso_button": {},
   "login_sso_subtitle": "Sign in with your organization account.",
   "@login_sso_subtitle": {},
-  "login_sso_browser_done": "Sign-in is complete. You can close this tab and return to the app.",
-  "@login_sso_browser_done": {},
   "connections": "Connections",
   "connection_list_subtitle": "Databases Studio offers you",
   "connection_list_empty": "Studio offers you no connection yet",

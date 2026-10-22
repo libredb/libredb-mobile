@@ -293,7 +293,6 @@ void main() {
       });
     });
 
-    // On macOS a read waits while the login keychain asks for its password, which the user may enter after the limit.
     test('opens a stored session that secure storage answers after the time limit, and logs it', () {
       final infos = _recordLogs(Level.info);
       fakeAsync((async) {
@@ -486,15 +485,6 @@ void main() {
     });
 
     blocTest<SessionCubit, SessionState>(
-      'a startup sign-in gives SessionAuthenticated with its roles',
-      build: () => cubitWith(const SsoStartupSignedIn(roles: ['ROLE_ADMIN', 'ROLE_USER', 'ROLE_USER'])),
-      act: (cubit) => cubit.restore(),
-      expect: () => [
-        const SessionAuthenticated(roles: {'ROLE_ADMIN', 'ROLE_USER'}),
-      ],
-    );
-
-    blocTest<SessionCubit, SessionState>(
       'a failed startup sign-in gives SessionUnauthenticated(signInFailed) with its error',
       build: () => cubitWith(const SsoStartupSignInFailed(AppErrorCode.authOidcNoRole)),
       act: (cubit) => cubit.restore(),
@@ -538,14 +528,11 @@ void main() {
         .._store[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
           DateTime.now().add(const Duration(minutes: 5)),
         );
-      final auth = MockISsoAuthRepository();
-      when(() => auth.completePendingSignIn()).thenAnswer((_) async => null);
       final rotation = MockTokenRotation();
       final cubit = SessionCubit(
         secureStorage: storage,
         appConfig: const AppConfig.prod(),
         ssoStartup: SsoSessionStartup(
-          auth: auth,
           rotation: rotation,
           secureStorage: storage,
           sessionRepository: MockIAuthSessionRepository(),
@@ -608,15 +595,19 @@ void main() {
 
     test('a startup step that does not answer in time closes the automatic redirect gate', () {
       fakeAsync((async) {
-        final auth = MockISsoAuthRepository();
-        when(() => auth.completePendingSignIn()).thenAnswer((_) => Completer<Never>().future);
-        final storage = _MemorySecureStorage();
+        // An expired stored access token whose refresh never answers.
+        final storage = _MemorySecureStorage()
+          .._store[SecureStorageKeys.refreshToken.key] = 'stored-refresh'
+          .._store[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
+            DateTime.now().subtract(const Duration(minutes: 5)),
+          );
+        final rotation = MockTokenRotation();
+        when(() => rotation.rotate(any())).thenAnswer((_) => Completer<Never>().future);
         final gate = SsoAutoRedirectGate();
         final cubit = SessionCubit(
           secureStorage: storage,
           ssoStartup: SsoSessionStartup(
-            auth: auth,
-            rotation: MockTokenRotation(),
+            rotation: rotation,
             secureStorage: storage,
             sessionRepository: MockIAuthSessionRepository(),
             gate: gate,
@@ -647,7 +638,7 @@ void main() {
 
         unawaited(cubit.restore());
         async.elapse(timeLimit);
-        startup.complete(const SsoStartupSignedIn(roles: ['ROLE_USER']));
+        startup.complete(const SsoStartupUseStoredSession());
         async.flushMicrotasks();
 
         expect(states, [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)]);
@@ -690,31 +681,6 @@ void main() {
         });
       });
 
-      test('a late SignedIn reads the session the step stored, so the roles match the stored bearer', () async {
-        await AppLocalStorage().save(StorageKeys.roles.key, ['ROLE_ADMIN']);
-        fakeAsync((async) {
-          final storage = _MemorySecureStorage();
-          final startup = Completer<SsoStartupResult>();
-          final cubit = lateCubit(storage, startup);
-          final states = <SessionState>[];
-          cubit.stream.listen(states.add);
-
-          unawaited(cubit.restore());
-          async.elapse(timeLimit);
-          expect(states, [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)]);
-
-          storage._store[SecureStorageKeys.jwtToken.key] = 'opaque-access-token';
-          startup.complete(const SsoStartupSignedIn(roles: ['ROLE_USER']));
-          async.flushMicrotasks();
-
-          expect(states, [
-            const SessionUnauthenticated(reason: SessionExpiredReason.noToken),
-            const SessionAuthenticated(roles: {'ROLE_ADMIN'}),
-          ]);
-          unawaited(cubit.close());
-        });
-      });
-
       for (final (name, late) in [
         ('SignInFailed', const SsoStartupSignInFailed(AppErrorCode.authOidcNoRole) as SsoStartupResult),
         ('UseStoredSession', const SsoStartupUseStoredSession()),
@@ -742,7 +708,7 @@ void main() {
 
       for (final (name, late) in [
         ('SessionEnded', const SsoStartupSessionEnded() as SsoStartupResult),
-        ('SignedIn', const SsoStartupSignedIn(roles: ['ROLE_USER'])),
+        ('UseStoredSession', const SsoStartupUseStoredSession()),
       ]) {
         test('a late $name after the user has signed in or out only logs', () {
           final warnings = _recordLogs(Level.warning);

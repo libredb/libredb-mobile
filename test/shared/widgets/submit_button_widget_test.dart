@@ -63,28 +63,14 @@ void main() {
       expect(find.text(customText), findsOneWidget);
     });
 
-    testWidgets('should align right on web platform', (tester) async {
+    testWidgets('is not wrapped in an Align', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: ResponsiveSubmitButton(buttonText: 'Save', isWebPlatform: true)),
+          home: Scaffold(body: ResponsiveSubmitButton(buttonText: 'Save')),
         ),
       );
 
-      final alignFinder = find.ancestor(of: find.byType(FilledButton), matching: find.byType(Align));
-
-      expect(alignFinder, findsOneWidget);
-      final align = tester.widget<Align>(alignFinder);
-      expect(align.alignment, Alignment.centerRight);
-    });
-
-    testWidgets('should not align on mobile platform', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: ResponsiveSubmitButton(buttonText: 'Save', isWebPlatform: false)),
-        ),
-      );
-
-      // FilledButton'ı içeren Align widget'ını kontrol et
+      // An Align around the FilledButton.
       final alignFinder = find.ancestor(of: find.byType(FilledButton), matching: find.byType(Align));
 
       expect(alignFinder, findsNothing);

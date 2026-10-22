@@ -224,9 +224,8 @@ void main() {
     });
   });
 
-  // On web the SDK attaches the page location to every error: it splits window.location into url, query string and
-  // fragment, and names the event after the path. go_router keeps the location in the fragment under the default hash
-  // URL strategy and in the path under the path strategy, so `/login-otp-verify/:email` exposes the user's email.
+  // A request URL or an event name can carry a route location, and `/login-otp-verify/:email` exposes the user's email,
+  // in the path or in the fragment.
   group('sentryBeforeSend - page location', () {
     test('redacts an email in the fragment (hash URL strategy)', () {
       final result = sentryBeforeSend(
@@ -365,8 +364,8 @@ void main() {
   });
 
   // Regression: no beforeBreadcrumb was installed, so a breadcrumb that did not come from AppLogger output reached
-  // Sentry as it was: the breadcrumbs of SentryAnalyticsService, the navigation breadcrumbs, debugPrint lines, which on
-  // web include the text of an uncaught error, and on web every other printed line. The http and ui breadcrumbs below
+  // Sentry as it was: the breadcrumbs of SentryAnalyticsService, the navigation breadcrumbs and debugPrint lines. The
+  // http and ui breadcrumbs below
   // stand for the ones a fork adds through sentry_dio or SentryUserInteractionWidget.
   group('sentryBeforeBreadcrumb', () {
     const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart';
@@ -515,8 +514,8 @@ void main() {
     });
   });
 
-  // Regression: on web SentryFlutter.init runs the app in the zone of sentryRunZonedGuarded, whose print hook turned
-  // every printed line into a console breadcrumb, and AppLogger prints each line it logs. beforeBreadcrumb masks only
+  // Regression: SentryFlutter.init can run the app in the zone of sentryRunZonedGuarded, whose print hook turned every
+  // printed line into a console breadcrumb, and AppLogger prints each line it logs. beforeBreadcrumb masks only
   // emails and JWTs, so a password or a code that an error line carried went out with the next error event.
   // Sentry.init with an appRunner takes the same zone.
   test('sends no line the app prints as a breadcrumb when the app runs in the Sentry zone', () async {

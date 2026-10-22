@@ -348,7 +348,7 @@ void main() {
     });
 
     // Regression: the request URI was logged as it was, so an email in a path or a query string reached the
-    // console, and on web with a Sentry DSN the breadcrumbs made from it.
+    // console.
     group('email in the request URI', () {
       test('is masked on the request and response lines when it is in the path', () async {
         TestEnv.authenticate();

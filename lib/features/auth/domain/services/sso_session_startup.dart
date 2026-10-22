@@ -10,14 +10,8 @@ final class SsoStartupUseStoredSession extends SsoStartupResult {
   const SsoStartupUseStoredSession();
 }
 
-/// A same-tab web sign-in completed at startup, and its session is stored.
-final class SsoStartupSignedIn extends SsoStartupResult {
-  const SsoStartupSignedIn({required this.roles});
-
-  final List<String> roles;
-}
-
-/// A same-tab web sign-in failed at startup; [errorCode] is shown on the login page.
+/// Single sign-on cannot run, such as in a build whose OIDC settings break a rule; [errorCode] is shown on the login
+/// page.
 final class SsoStartupSignInFailed extends SsoStartupResult {
   const SsoStartupSignInFailed(this.errorCode);
 
@@ -29,12 +23,12 @@ final class SsoStartupSessionEnded extends SsoStartupResult {
   const SsoStartupSessionEnded();
 }
 
-/// The startup step of an `oidc` build: it completes a pending same-tab web sign-in, and refreshes an expired stored
-/// access token, before the router picks the first screen.
+/// The startup step of an `oidc` build: it refreshes an expired stored access token before the router picks the first
+/// screen.
 abstract interface class ISsoSessionStartup {
   Future<SsoStartupResult> run();
 
-  /// The caller gave up on [run]: it did not answer in time, and may still be completing a sign-in, or it failed.
-  /// Closes the automatic redirect gate, so a redirect can neither race that completion nor follow the failure.
+  /// The caller gave up on [run]: it did not answer in time, and may still be refreshing, or it failed. Closes the
+  /// automatic redirect gate, so a redirect can neither race that refresh nor follow the failure.
   void giveUp();
 }

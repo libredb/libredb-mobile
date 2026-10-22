@@ -514,9 +514,8 @@ void main() {
         });
       });
 
-      // A refused connection on dart:io proves the POST was never sent, but on web dio reports every XMLHttpRequest
-      // network failure, including one after the server received the request, as the same connection error. One
-      // rule applies on every platform, so a POST without an Idempotency-Key is not retried here either.
+      // A refused connection proves the POST was never sent, but dio has reported a failure after sending as a
+      // connection error before, so a POST without an Idempotency-Key is not retried here either.
       test('does not retry a POST without an Idempotency-Key after a connection error', () {
         fakeAsync((async) {
           final interceptor = ResilienceInterceptor(

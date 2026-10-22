@@ -289,9 +289,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "login_or": MessageLookupByLibrary.simpleMessage("or"),
     "login_otp_email_instructions": MessageLookupByLibrary.simpleMessage("Enter your email to receive OTP code"),
     "login_password": MessageLookupByLibrary.simpleMessage("Password"),
-    "login_sso_browser_done": MessageLookupByLibrary.simpleMessage(
-      "Sign-in is complete. You can close this tab and return to the app.",
-    ),
     "login_sso_button": MessageLookupByLibrary.simpleMessage("Sign in with SSO"),
     "login_sso_subtitle": MessageLookupByLibrary.simpleMessage("Sign in with your organization account."),
     "login_switch_to_dark_mode": MessageLookupByLibrary.simpleMessage("Switch to dark mode"),

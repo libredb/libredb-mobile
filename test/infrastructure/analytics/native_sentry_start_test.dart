@@ -15,14 +15,6 @@ class _AndroidPlatform extends Platform {
   OperatingSystem get operatingSystem => OperatingSystem.android;
 }
 
-/// The platform sentry_flutter reports in a browser on an Android phone.
-class _BrowserOnAndroidPlatform extends _AndroidPlatform {
-  const _BrowserOnAndroidPlatform();
-
-  @override
-  bool get isWeb => true;
-}
-
 void main() {
   group('configureNativeSdkStart', () {
     test('turns the native auto-init off where the host app starts the native SDK', () {
@@ -50,16 +42,7 @@ void main() {
       expect(options.autoInitializeNativeSdk, isFalse);
     });
 
-    test('keeps the native auto-init on in a browser on Android', () {
-      final options = SentryFlutterOptions(platform: const _BrowserOnAndroidPlatform());
-
-      configureNativeSdkStart(options);
-
-      expect(hostStartsNativeSdk(options), isFalse);
-      expect(options.autoInitializeNativeSdk, isTrue);
-    });
-
-    // The test host is Linux, where sentry_flutter starts sentry-native itself, as it does on iOS and macOS.
+    // The test host is not Android, so sentry_flutter starts the native SDK itself, as it does on iOS.
     test('reads the platform of the options when the caller does not say', () {
       final options = SentryFlutterOptions();
 
@@ -67,23 +50,6 @@ void main() {
 
       expect(hostStartsNativeSdk(options), isFalse);
       expect(options.autoInitializeNativeSdk, isTrue);
-    });
-  });
-
-  group('hostStartsNativeSdkOn', () {
-    test('is true on Android', () {
-      expect(hostStartsNativeSdkOn(isWeb: false, isAndroid: true), isTrue);
-    });
-
-    // On web the options report the operating system of the browser, Android in a phone browser, and the flag
-    // controls the JavaScript SDK.
-    test('is false in a browser on Android, where sentry_flutter starts the JavaScript SDK', () {
-      expect(hostStartsNativeSdkOn(isWeb: true, isAndroid: true), isFalse);
-    });
-
-    test('is false on every other platform', () {
-      expect(hostStartsNativeSdkOn(isWeb: false, isAndroid: false), isFalse);
-      expect(hostStartsNativeSdkOn(isWeb: true, isAndroid: false), isFalse);
     });
   });
 

@@ -21,7 +21,7 @@ import '../../../../support/unsaved_changes_host.dart';
 
 /// Drives the sample form that the dashboard opens at `/dynamic-forms/sample` with the real bloc and repository on
 /// the mock-backed [TestEnv.apiClient], so `MockInterceptor` serves both the schema and the submission from
-/// `assets/mock`, as it does in `main_local` and the web demo.
+/// `assets/mock`, as it does in `main_local`.
 ///
 /// Regression: the form submits `POST /leads`, which had no mock file, so the mock answered "OK" and the demo reported
 /// success for a submission it could not answer.

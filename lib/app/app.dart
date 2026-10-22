@@ -52,24 +52,6 @@ class _AppState extends State<App> {
   /// no ScaffoldMessenger, so it shows its notices through this key.
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-  /// The activity that the browser tabs share for the idle timeout, on web; see
-  /// [AppDependencies.createSharedActivityStore].
-  late final _sharedActivity = widget.dependencies.createSharedActivityStore();
-
-  /// This tab's session end signal and token refresh lock, one of each per tab; see
-  /// [AppDependencies.createSessionEndSignal] and [AppDependencies.createTokenRefreshLock].
-  late final _sessionEndSignal = widget.dependencies.createSessionEndSignal();
-  late final _tokenRefreshLock = widget.dependencies.createTokenRefreshLock();
-
-  /// Releases the tab's signal and lock, so an App mounted again in this tab does not leave the listeners of this one,
-  /// which would run a second wipe for one end.
-  @override
-  void dispose() {
-    _sessionEndSignal?.dispose();
-    _tokenRefreshLock.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final analytics = widget._analytics ?? LogAnalyticsService();
@@ -77,11 +59,8 @@ class _AppState extends State<App> {
       dependencies: widget.dependencies,
       secureStorage: widget.secureStorage,
       defaultLocale: Locale(widget.language),
-      sessionEndSignal: _sessionEndSignal,
-      tokenRefreshLock: _tokenRefreshLock,
       child: AppSessionListeners(
         scaffoldMessengerKey: _scaffoldMessengerKey,
-        sharedActivity: _sharedActivity,
         child: _AppView(analytics: analytics, scaffoldMessengerKey: _scaffoldMessengerKey),
       ),
     );
@@ -145,7 +124,7 @@ class _AppViewState extends State<_AppView> {
         builder: (context, themeState) {
           return MaterialApp.router(
             scaffoldMessengerKey: widget.scaffoldMessengerKey,
-            // The name the task switcher and the browser tab show, in the app language.
+            // The name the task switcher shows, in the app language.
             onGenerateTitle: (context) => S.of(context).app_title,
             theme: AppTheme.light(themeState.palette),
             darkTheme: AppTheme.dark(themeState.palette),
@@ -190,9 +169,8 @@ class _AppViewState extends State<_AppView> {
   }
 }
 
-/// Shown while [SessionCubit.restore] reads the stored session and [LocaleCubit.restore] the stored language.
-/// Continues the web startup screen (`#loading` in web/index.html): a 56 px ring spinner with a 4 px stroke, centered
-/// on the theme background.
+/// Shown while [SessionCubit.restore] reads the stored session and [LocaleCubit.restore] the stored language: a 56 px
+/// ring spinner with a 4 px stroke, centered on the theme background.
 class _RestoreView extends StatelessWidget {
   const _RestoreView();
 

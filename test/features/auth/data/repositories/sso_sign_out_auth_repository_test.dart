@@ -86,11 +86,7 @@ class _FakeOidcClient implements IOidcClient {
   }
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) =>
-      throw UnimplementedError('a logout never signs in');
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() => throw UnimplementedError('a logout completes no sign-in');
+  Future<OidcSignInOutcome> signIn() => throw UnimplementedError('a logout never signs in');
 
   @override
   Future<TokenRotationResult> refresh({
@@ -101,8 +97,8 @@ class _FakeOidcClient implements IOidcClient {
   }) => throw UnimplementedError('a logout never refreshes');
 }
 
-/// Ends the provider session when the test completes [logout], as a desktop browser flow does once the loopback
-/// redirect arrives; records each call in [calls].
+/// Ends the provider session when the test completes [logout], as a browser flow does once the provider answers;
+/// records each call in [calls].
 class _PendingLogoutClient extends _FakeOidcClient {
   _PendingLogoutClient(super.calls);
 
@@ -196,7 +192,6 @@ void main() {
       for (final (name, outcome) in <(String, OidcLogoutOutcome)>[
         ('the provider session ended', const ProviderSessionEnded()),
         ('the provider has no logout', const NoProviderLogout()),
-        ('the web tab left for the provider logout', const ProviderLogoutNavigatedAway()),
       ]) {
         test('the local result when $name', () async {
           client.outcome = outcome;
@@ -232,7 +227,7 @@ void main() {
     });
   });
 
-  // On Linux and Windows the provider logout waits for the browser for up to five minutes.
+  // The provider logout waits for the browser and for the provider.
   group('SsoSignOutAuthRepository.signOut', () {
     late _PendingLogoutClient pending;
 
@@ -281,17 +276,12 @@ void main() {
       );
     });
 
-    for (final (name, outcome) in <(String, OidcLogoutOutcome)>[
-      ('the provider has no logout', const NoProviderLogout()),
-      ('the web tab left for the provider logout', const ProviderLogoutNavigatedAway()),
-    ]) {
-      test('ends the provider logout with success when $name', () async {
-        final signedOut = await pendingRepository().signOut();
-        pending.logout.complete(outcome);
+    test('ends the provider logout with success when the provider has no logout', () async {
+      final signedOut = await pendingRepository().signOut();
+      pending.logout.complete(const NoProviderLogout());
 
-        expect(await signedOut.providerLogout, const Success<void>(null));
-      });
-    }
+      expect(await signedOut.providerLogout, const Success<void>(null));
+    });
   });
 
   group('SsoSignOutAuthRepository delegates the password sign-in to the repository it wraps', () {

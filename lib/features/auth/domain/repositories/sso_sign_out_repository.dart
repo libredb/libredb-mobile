@@ -5,9 +5,8 @@ import 'package:flutter_bloc_advance/core/result/result.dart';
 abstract interface class ISsoSignOutRepository {
   /// Clears the session on this device and answers as soon as that has returned, with the provider logout started.
   ///
-  /// The provider logout can take long: on Linux and Windows it waits for the browser until its flow times out, and
-  /// on every platform for as long as the provider does not answer. So the app signs out on [SsoSignOut.cleared]
-  /// instead of waiting for [SsoSignOut.providerLogout].
+  /// The provider logout can take long: it waits for the browser, and for as long as the provider does not answer. So
+  /// the app signs out on [SsoSignOut.cleared] instead of waiting for [SsoSignOut.providerLogout].
   Future<SsoSignOut> signOut();
 }
 

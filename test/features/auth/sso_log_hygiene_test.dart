@@ -14,8 +14,6 @@ import 'package:flutter_bloc_advance/features/auth/data/repositories/sso_sign_ou
 import 'package:flutter_bloc_advance/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:flutter_bloc_advance/features/auth/presentation/pages/login_page.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_key_value.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_redirect_uris.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_transaction_store.dart';
 import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
 import 'package:flutter_bloc_advance/infrastructure/config/environment.dart';
@@ -40,12 +38,9 @@ class _OidcDependencies extends AppDependencies {
   @override
   IOidcClient createOidcClient(OidcSettings settings) => OidcClient(
     settings: settings,
-    loginPath: ApplicationRoutesConstants.login,
-    launchUrl: (_) async => fail('an iOS sign-in never launches a URL itself'),
-    store: OidcTransactionStore(persistent: MemoryKeyValue(), tab: MemoryKeyValue()),
+    store: OidcTransactionStore(),
     httpClient: provider.client,
     platform: OidcPlatformKind.ios,
-    pageUri: Uri.parse('http://localhost:8081/'),
     cancelAndroidFlow: () async => fail('an iOS sign-in never cancels an Android flow'),
   );
 }
@@ -128,7 +123,7 @@ void main() {
     final dependencies = _OidcDependencies(provider);
     final secureStorage = FlutterSecureStorageAdapter();
     final client = dependencies.createOidcClient(_settings);
-    final sessions = dependencies.createAuthSessionRepository(secureStorage, sessionEndSignal: null);
+    final sessions = dependencies.createAuthSessionRepository(secureStorage);
     final rotation = dependencies.createOidcTokenRotation(client, secureStorage);
     var sessionsExpired = 0;
     final apiClient = dependencies.createOidcApiClient(
@@ -138,8 +133,6 @@ void main() {
         await sessions.clear();
       },
       tokenRotation: rotation,
-      tokenRefreshLock: null,
-      rotatedTokensTakeBack: null,
     );
     final server = _ServerStub();
     final dio = apiClient.instance;
@@ -159,11 +152,11 @@ void main() {
       // A code exchange the provider refuses.
       final defaultCodeAnswer = provider.codeAnswer;
       provider.codeAnswer = () => FakeProvider.errorAnswer('invalid_grant');
-      expect(await ssoRepository.signIn(browserDoneMessage: 'done'), isA<SsoSignInRejected>());
+      expect(await ssoRepository.signIn(), isA<SsoSignInRejected>());
       provider.codeAnswer = defaultCodeAnswer;
 
       // A sign-in, then a 401 that a refresh fixes.
-      expect(await ssoRepository.signIn(browserDoneMessage: 'done'), isA<SsoSignInSucceeded>());
+      expect(await ssoRepository.signIn(), isA<SsoSignInSucceeded>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
       expect((await apiClient.get('/account')).statusCode, 200);
       expect(provider.tokenRequests, hasLength(3));
@@ -173,7 +166,7 @@ void main() {
       expect(issued, contains(platform.endSessionRequests.single.idTokenHint));
 
       // A sign-in, then a 401 whose refresh the provider refuses, which ends the session.
-      expect(await ssoRepository.signIn(browserDoneMessage: 'done'), isA<SsoSignInSucceeded>());
+      expect(await ssoRepository.signIn(), isA<SsoSignInSucceeded>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
       provider.refreshAnswer = () => FakeProvider.errorAnswer('invalid_grant');
       apiError = await apiClient.get('/account').then<Object?>((_) => null, onError: (Object error) => error);

@@ -192,15 +192,8 @@ enum FakeAuthorization {
   /// Redirects back with `error=access_denied`.
   accessDenied,
 
-  /// Answers null, as the same-tab web navigation does.
-  navigateAway,
-
   /// Waits until [FakeOidcPlatform.completePending] answers.
   pending,
-
-  /// Throws what the Linux and Windows platform throws when the loopback listener gets no redirect within the flow
-  /// timeout: an [OidcException] that wraps a [TimeoutException].
-  flowTimeout,
 }
 
 /// How [FakeOidcPlatform] answers an end-session request.
@@ -249,7 +242,7 @@ final class FakeOidcPlatform extends OidcPlatform {
     authorizeOptions.add(options);
     provider.nonce = request.nonce;
     switch (authorization) {
-      case FakeAuthorization.cancel || FakeAuthorization.navigateAway:
+      case FakeAuthorization.cancel:
         return null;
       case FakeAuthorization.pending:
         final pending = _pending = Completer<Object?>();
@@ -259,11 +252,6 @@ final class FakeOidcPlatform extends OidcPlatform {
         return redirect(request, {'code': code, 'state': request.state!});
       case FakeAuthorization.accessDenied:
         return redirect(request, {'error': 'access_denied', 'state': request.state!});
-      case FakeAuthorization.flowTimeout:
-        throw OidcException(
-          'The authorization flow timed out after 300 seconds without receiving a redirect on the loopback listener.',
-          internalException: TimeoutException('Loopback listener timed out', const Duration(seconds: 300)),
-        );
     }
   }
 

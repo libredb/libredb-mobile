@@ -32,7 +32,6 @@ import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart
 import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
-import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/users/domain/repositories/user_repository.dart';
 // Entity/model imports for fallback values
@@ -54,8 +53,6 @@ class MockIAccountRepository extends Mock implements IAccountRepository {}
 class MockIAuthRepository extends Mock implements IAuthRepository {}
 
 class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository {}
-
-class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
 
 class MockIUserRepository extends Mock implements IUserRepository {}
 

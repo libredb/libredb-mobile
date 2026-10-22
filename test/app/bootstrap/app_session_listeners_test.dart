@@ -18,7 +18,6 @@ import 'package:flutter_bloc_advance/app/shell/responsive_scaffold.dart';
 import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_bloc.dart';
 import 'package:flutter_bloc_advance/app/shell/sidebar/sidebar_nav_item.dart';
 import 'package:flutter_bloc_advance/app/shell/top_bar/top_bar_widget.dart';
-import 'package:flutter_bloc_advance/core/security/idle_timeout_observer.dart';
 import 'package:flutter_bloc_advance/core/testing/app_key_constants.dart';
 import 'package:flutter_bloc_advance/features/account/application/account_bloc.dart';
 import 'package:flutter_bloc_advance/features/auth/application/login_bloc.dart';
@@ -203,7 +202,6 @@ void main() {
             defaultLocale: const Locale('en'),
             child: AppSessionListeners(
               scaffoldMessengerKey: GlobalKey<ScaffoldMessengerState>(),
-              sharedActivity: null,
               child: const SizedBox(),
             ),
           ),
@@ -216,27 +214,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(errors, [isA<StateError>()]);
-    });
-
-    // On web every browser tab shares the session, and AppDependencies gives the idle timeout the activity of all tabs.
-    testWidgets('an idle timeout records and checks the activity of every tab in the store from AppDependencies', (
-      tester,
-    ) async {
-      final store = _MemoryActivityStore();
-      TestEnv.authenticate();
-      await tester.pumpWidget(App(language: 'en', dependencies: _SharedActivityDependencies(store)));
-      await tester.pumpAndSettle();
-      expect(find.byType(ResponsiveScaffold), findsOneWidget);
-      expect(store.writes, hasLength(1));
-
-      // IdleTimeoutObserver reads the wall clock, which the fake time of the test does not move, so the record is set
-      // back by the threshold: no tab has seen activity for that long.
-      store.lastActivity = DateTime.now().subtract(const Duration(minutes: 5));
-      await tester.pump(const Duration(minutes: 5));
-      await tester.pumpAndSettle();
-
-      expect(store.reads, 1);
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
     });
 
     for (final MapEntry(key: input, value: use) in _inputsWithoutPointerMoves.entries) {
@@ -393,7 +370,7 @@ void main() {
         expect(app.read<SsoAutoRedirectGate>().isOpen, isTrue);
 
         // As the single sign-on button does.
-        app.read<LoginBloc>().add(const SsoSignInRequested(browserDoneMessage: 'done'));
+        app.read<LoginBloc>().add(const SsoSignInRequested());
         await tester.pumpAndSettle();
 
         expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
@@ -506,14 +483,14 @@ void main() {
   });
 }
 
-/// The identity provider of an oidc build: a sign-in succeeds as a user, no web sign-in is pending, and a provider
+/// The identity provider of an oidc build: a sign-in succeeds as a user, and a provider
 /// logout ends with [logoutOutcome], counted in [logouts].
 class _FakeOidcClient implements IOidcClient {
   OidcLogoutOutcome logoutOutcome = const ProviderSessionEnded();
   var logouts = 0;
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async => OidcSignedIn(
+  Future<OidcSignInOutcome> signIn() async => OidcSignedIn(
     tokens: OidcTokens(
       accessToken: 'sso-access-token',
       idToken: 'sso-id-token',
@@ -526,9 +503,6 @@ class _FakeOidcClient implements IOidcClient {
       'roles': ['admin'],
     },
   );
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => null;
 
   @override
   Future<TokenRotationResult> refresh({
@@ -559,36 +533,6 @@ class _OidcDependencies extends AppDependencies {
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
-}
-
-/// The dependencies of [_app], with [store] as the activity that the browser tabs share, as on web.
-class _SharedActivityDependencies extends AppDependencies {
-  _SharedActivityDependencies(this.store) : super(appConfig: _app.dependencies.appConfig);
-
-  final ISharedActivityStore store;
-
-  @override
-  ISharedActivityStore? createSharedActivityStore() => store;
-}
-
-/// One activity record in memory, as window.localStorage holds it for every tab on web, that keeps the writes and
-/// counts the reads.
-class _MemoryActivityStore implements ISharedActivityStore {
-  DateTime? lastActivity;
-  final writes = <DateTime>[];
-  var reads = 0;
-
-  @override
-  Future<DateTime?> readLastActivity() async {
-    reads++;
-    return lastActivity;
-  }
-
-  @override
-  Future<void> writeLastActivity(DateTime time) async {
-    writes.add(time);
-    lastActivity = time;
-  }
 }
 
 /// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or

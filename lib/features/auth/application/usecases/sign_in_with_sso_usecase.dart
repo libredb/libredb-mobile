@@ -6,6 +6,5 @@ class SignInWithSsoUseCase {
 
   final ISsoAuthRepository _repository;
 
-  Future<SsoSignInResult> call({String? webReturnPath, required String browserDoneMessage}) =>
-      _repository.signIn(webReturnPath: webReturnPath, browserDoneMessage: browserDoneMessage);
+  Future<SsoSignInResult> call() => _repository.signIn();
 }

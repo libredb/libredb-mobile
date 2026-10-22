@@ -62,8 +62,8 @@ final class SessionAuthenticated extends SessionState {
 /// tests — it MUST NOT be surfaced to the user as a localized error
 /// because the categories are deliberately coarse.
 ///
-/// [signInError] is the error of a web sign-in that failed at startup,
-/// with [SessionExpiredReason.signInFailed]; the login page shows it.
+/// [signInError] says why single sign-on cannot run, with
+/// [SessionExpiredReason.signInFailed]; the login page shows it.
 final class SessionUnauthenticated extends SessionState {
   const SessionUnauthenticated({this.reason = SessionExpiredReason.unknown, this.signInError});
 
@@ -113,8 +113,8 @@ enum SessionExpiredReason {
   /// notice so the user understands why they were signed out.
   idleTimeout,
 
-  /// A same-tab web sign-in failed while an `oidc` build started;
-  /// [SessionUnauthenticated.signInError] says why.
+  /// Single sign-on cannot run in this `oidc` build, such as when its
+  /// settings break a rule; [SessionUnauthenticated.signInError] says why.
   signInFailed,
 
   /// Initial or otherwise uncategorized — e.g. an explicit logout
@@ -147,9 +147,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// [StartupStorageTimeLimit.defaultDuration].
   ///
   /// An answer that comes after the limit still settles the session while
-  /// the user is signed out by it. On macOS a read waits while the login
-  /// keychain asks for its password, so a password entered after ten
-  /// seconds still opens the stored session.
+  /// the user is signed out by it.
   static const defaultRestoreTimeLimit = StartupStorageTimeLimit.defaultDuration;
 
   /// How long [restore] waits for the startup step of an `oidc` build
@@ -208,8 +206,7 @@ class SessionCubit extends Cubit<SessionState> {
   ///
   /// In an `oidc` build the startup step runs first, under its own time
   /// limit ([defaultSsoStartupTimeLimit] unless the constructor is given
-  /// another): it completes a pending web sign-in and refreshes an
-  /// expired access token. Only when it keeps the stored session is that
+  /// another): it refreshes an expired access token. Only when it keeps the stored session is that
   /// session read, and then without the JWT `exp` check, because the
   /// step owns the expiry. A step that does not answer in time is taken
   /// as a provider that cannot be reached: the stored session is read as
@@ -232,7 +229,6 @@ class SessionCubit extends Cubit<SessionState> {
           onLateAnswer: (late) => unawaited(_settleLateSsoStartup(late, settledAfterLimit.future)),
         );
         settled = switch (result) {
-          SsoStartupSignedIn(:final roles) => SessionAuthenticated(roles: roles.toSet()),
           SsoStartupSignInFailed(:final errorCode) => SessionUnauthenticated(
             reason: SessionExpiredReason.signInFailed,
             signInError: errorCode,
@@ -313,9 +309,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// once [settledAfterLimit] gives the emit count at which the stored read
   /// after the limit settled the state, and only while nothing has been
   /// emitted since. A late [SsoStartupSessionEnded] has already cleared the
-  /// stored session, so the session ends; a late [SsoStartupSignedIn] has
-  /// stored a session the cubit has not read, so it is read now and the
-  /// roles match the stored bearer. Any other late answer, or one that
+  /// stored session, so the session ends. Any other late answer, or one that
   /// comes after the state has changed, is only logged: the automatic
   /// redirect gate closed at the limit.
   Future<void> _settleLateSsoStartup(SsoStartupResult late, Future<int> settledAfterLimit) async {
@@ -330,15 +324,6 @@ class SessionCubit extends Cubit<SessionState> {
     switch (late) {
       case SsoStartupSessionEnded():
         await endSession(reason: SessionExpiredReason.expired);
-      case SsoStartupSignedIn():
-        final stored = await _readStoredSession(checkJwtExpiry: false);
-        if (isClosed || _emitCount != settledAt) {
-          _log.warn('restore: the session stored after the time limit was read after the state changed, ignored: {}', [
-            stored,
-          ]);
-          return;
-        }
-        emit(stored);
       case SsoStartupSignInFailed() || SsoStartupUseStoredSession():
         break;
     }
@@ -403,9 +388,7 @@ class SessionCubit extends Cubit<SessionState> {
       //
       // An expired session stays stored until a sign-in replaces it. The
       // screens a signed-out user can reach only call public endpoints,
-      // which never receive it, and clearing it here would sign out other
-      // browser tabs, which share the stored session and refresh it on
-      // their next request.
+      // which never receive it.
       if (!checkJwtExpiry) {
         _log.info('restore: token found, its expiry checked by the startup step → authenticated');
         return SessionAuthenticated(roles: await _readRoles());
@@ -503,8 +486,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// Re-run [restore] from current secure-storage state. Fire-and-
   /// forget safe: see [restore] for the failure semantics. In an `oidc`
   /// build this runs the startup step again first, through [restore]: it
-  /// completes a pending web sign-in, normally none by then, and refreshes
-  /// the access token when it has expired.
+  /// refreshes the access token when it has expired.
   Future<void> refresh() => restore();
 
   @override

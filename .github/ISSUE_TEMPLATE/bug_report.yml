@@ -61,10 +61,6 @@ body:
       options:
         - Android
         - iOS
-        - Web
-        - macOS
-        - Linux
-        - Windows
     validations:
       required: true
 

@@ -1,33 +1,18 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc_advance/shared/design_system/tokens/app_spacing.dart';
 
 class ResponsiveSubmitButton extends StatelessWidget {
-  const ResponsiveSubmitButton({
-    super.key,
-    required this.buttonText,
-    this.onPressed,
-    this.isLoading = false,
-    this.isWebPlatform,
-  });
+  const ResponsiveSubmitButton({super.key, required this.buttonText, this.onPressed, this.isLoading = false});
 
   final String buttonText;
   final VoidCallback? onPressed;
   final bool isLoading;
-  @visibleForTesting
-  final bool? isWebPlatform;
 
   @override
-  Widget build(BuildContext context) {
-    final submitButton = FilledButton(
-      onPressed: isLoading ? null : onPressed,
-      child: ButtonContent(text: buttonText, isLoading: isLoading),
-    );
-    if (isWebPlatform ?? kIsWeb) {
-      return Align(alignment: Alignment.centerRight, child: submitButton);
-    }
-    return submitButton;
-  }
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: isLoading ? null : onPressed,
+    child: ButtonContent(text: buttonText, isLoading: isLoading),
+  );
 }
 
 class ButtonContent extends StatelessWidget {

@@ -1,8 +1,0 @@
-# RFC 9116 discovery reads only the host root, so this copy is informational when the app is served under a path.
-# Renew Expires before it passes: RFC 9116 requires the field and recommends less than a year ahead.
-Contact: __GITHUB_REPO_URL__/security/advisories/new
-Contact: mailto:__SECURITY_CONTACT__
-Expires: 2027-10-01T00:00:00.000Z
-Preferred-Languages: en, tr
-Canonical: __WEB_BASE_URL__.well-known/security.txt
-Policy: __GITHUB_REPO_URL__/security/policy

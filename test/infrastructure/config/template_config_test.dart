@@ -20,8 +20,6 @@ void main() {
       }
     });
 
-    // The deploy check (scripts/check_web_placeholders.sh) matches the same pattern, so a value that passes the check
-    // is shown by the app.
     test('only an upper-case key between double underscores is a placeholder', () {
       for (final value in ['__key__', '_KEY_', '__1KEY__', '____', ' __KEY__', '__KEY__ ']) {
         expect(TemplateConfig.isUnfilled(value), isFalse, reason: "'$value'");

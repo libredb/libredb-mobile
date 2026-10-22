@@ -9,7 +9,6 @@ import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
 /// switcher (`FLAG_SECURE`).
 /// iOS: cannot block screenshots (no public API); overlays a blurred view on
 /// `applicationWillResignActive` so the task-switcher snapshot is blurred.
-/// Web / Desktop: no-op (unsupported platforms).
 ///
 /// Protection is reference-counted: it stays engaged while any caller holds a
 /// lease (via [enable]) and is only disengaged once the last lease is released
@@ -24,18 +23,13 @@ class ScreenCaptureProtection {
   /// Number of active protection leases. Protection is engaged while > 0.
   static int _leases = 0;
 
-  /// Test seam — flip to true to simulate a web platform without a kIsWeb const.
-  @visibleForTesting
-  static bool debugWebOverride = false;
-
   /// Whether protection is currently active (at least one active lease).
   static bool get isEnabled => _leases > 0;
 
   /// Acquires a protection lease. The first lease engages platform protection
   /// on Android (block) and iOS (task-switcher blur); subsequent leases only
-  /// bump the reference count. No-op on unsupported platforms (web/desktop).
+  /// bump the reference count.
   static Future<void> enable() async {
-    if (!_isSupported) return;
     // Increment before awaiting so concurrent callers cannot both trigger the
     // initial plugin engagement (re-entrancy-safe idempotency).
     final wasInactive = _leases == 0;
@@ -50,10 +44,8 @@ class ScreenCaptureProtection {
   }
 
   /// Releases a protection lease. Platform protection is disengaged only when
-  /// the last lease is released. No-op on unsupported platforms (web/desktop)
-  /// and when no lease is held.
+  /// the last lease is released. No-op when no lease is held.
   static Future<void> disable() async {
-    if (!_isSupported) return;
     if (_leases == 0) return;
     _leases--;
     if (_leases > 0) return;
@@ -65,16 +57,8 @@ class ScreenCaptureProtection {
     }
   }
 
-  /// Only Android and iOS support the underlying plugin; web and desktop are
-  /// explicit no-ops so [isEnabled] never reports a false positive there.
-  static bool get _isSupported {
-    if (debugWebOverride || kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
-  }
-
   @visibleForTesting
   static void resetForTesting() {
     _leases = 0;
-    debugWebOverride = false;
   }
 }

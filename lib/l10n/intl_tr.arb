@@ -524,8 +524,6 @@
   "@login_sso_button": {},
   "login_sso_subtitle": "Kurumsal hesabınızla giriş yapın.",
   "@login_sso_subtitle": {},
-  "login_sso_browser_done": "Giriş tamamlandı. Bu sekmeyi kapatıp uygulamaya dönebilirsiniz.",
-  "@login_sso_browser_done": {},
   "connections": "Bağlantılar",
   "connection_list_subtitle": "Studio'nun size sunduğu veritabanları",
   "connection_list_empty": "Studio size henüz bir bağlantı sunmuyor",

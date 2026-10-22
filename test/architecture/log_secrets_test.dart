@@ -8,7 +8,7 @@ import '../support/dart_code.dart';
 /// Guards the arguments of the AppLogger calls in `lib/`.
 ///
 /// AppLogger prints the text of every argument it puts into a line, and the console of a build keeps that line: the
-/// IDE console, logcat, the browser console or the iOS device log. `AccountRepository.changePassword` passed the
+/// IDE console, logcat or the iOS device log. `AccountRepository.changePassword` passed the
 /// `PasswordChangeDTO` it was sending, so every debug build of main_local printed both passwords.
 ///
 /// This meta-test reads every AppLogger call in `lib/` and fails when an argument, or an interpolation in the message,

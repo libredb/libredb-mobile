@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc_advance/core/logging/app_logger.dart';
 
 /// Connectivity status enum representing online/offline state.
@@ -82,22 +81,13 @@ class ConnectivityService {
     return ConnectivityStatus.online;
   }
 
-  /// Verify real internet connectivity.
-  ///
-  /// On web: trust the platform (Navigator.onLine) since dart:io is unavailable.
-  /// On native: perform a lightweight DNS lookup to catch captive portals.
+  /// Verify real internet connectivity with a lightweight DNS lookup, which catches captive portals.
   Future<ConnectivityStatus> _verifyConnectivity() async {
-    if (kIsWeb) {
-      // dart:io (InternetAddress, SocketException) is not available on web.
-      // connectivity_plus already uses Navigator.onLine on web, so trust it.
-      return ConnectivityStatus.online;
-    }
-
     final hasInternet = await _nativeLookup();
     return hasInternet ? ConnectivityStatus.online : ConnectivityStatus.offline;
   }
 
-  /// Native-only DNS lookup. Guarded by kIsWeb check — never called on web.
+  /// The DNS lookup of [_verifyConnectivity].
   Future<bool> _nativeLookup() async {
     try {
       final result = await InternetAddress.lookup('example.com').timeout(const Duration(seconds: 3));

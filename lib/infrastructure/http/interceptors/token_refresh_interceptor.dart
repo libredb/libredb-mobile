@@ -7,10 +7,8 @@ import 'package:flutter_bloc_advance/infrastructure/http/interceptors/auth_inter
 import 'package:flutter_bloc_advance/infrastructure/http/public_endpoint.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart' as token_rotation show defaultRefreshDio;
-import 'package:flutter_bloc_advance/infrastructure/storage/rotated_tokens_take_back.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_bloc_advance/infrastructure/storage/session_generation.dart';
-import 'package:flutter_bloc_advance/infrastructure/storage/token_refresh_lock.dart';
 
 export 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart' show RefreshDioFactory;
 
@@ -33,8 +31,8 @@ sealed class _RefreshOutcome {
   const _RefreshOutcome();
 }
 
-/// The session has a new JWT, [idToken]: the one this refresh stored or, on web, the one another browser tab stored
-/// while this refresh was on its way, when that tab refreshed the session or signed in.
+/// The session has a new JWT, [idToken]: the one this refresh stored, or the one another refresh, such as the startup
+/// step's, stored while this refresh was on its way.
 final class _Refreshed extends _RefreshOutcome {
   const _Refreshed(this.idToken);
 
@@ -57,18 +55,10 @@ final class _RefreshUnavailable extends _RefreshOutcome {
   const _RefreshUnavailable();
 }
 
-/// A logout or the end of the session wiped, or is wiping, the session the refresh was asked for, in this tab or, on
-/// web, in another browser tab, so the answer of the refresh was dropped.
+/// A logout or the end of the session wiped, or is wiping, the session the refresh was asked for, so the answer of the
+/// refresh was dropped.
 final class _SessionEnded extends _RefreshOutcome {
   const _SessionEnded();
-}
-
-/// On web, the refresh did not get its turn at the lock the browser tabs share, or the turn could not be prepared
-/// ([TokenRefreshLockException]), so nothing was sent: the session is kept, and the request fails.
-final class _RefreshTurnFailed extends _RefreshOutcome {
-  const _RefreshTurnFailed(this.error);
-
-  final TokenRefreshLockException error;
 }
 
 /// Intercepts 401 responses and attempts a silent token refresh.
@@ -91,44 +81,21 @@ final class _RefreshTurnFailed extends _RefreshOutcome {
 /// with the already-rotated token instead of triggering a refresh
 /// storm against the refresh endpoint.
 ///
-/// Below that coalescing the refresh takes its turn at an
-/// [ITokenRefreshLock], which on web the token refreshes of every browser
-/// tab share, so one tab at a time reads the refresh token, sends it and
-/// stores the answer, and a server that accepts each refresh token once
-/// never sees it twice. Once granted, the refresh checks this tab's
-/// generation and the stored JWT again, and a JWT another tab stored
-/// meanwhile is sent instead of a refresh. A turn the lock cannot give
-/// or prepare fails the request and keeps the session: nothing was sent,
-/// so nothing refused it.
-///
 /// A 401 for a request sent under a session that a logout or the end of
 /// the session has wiped since, or is wiping, is neither sent again nor
-/// refreshed, so within one app process, which on web is one browser tab,
-/// a request one user sent never goes out again with the token of a user
-/// who signed in since. A refresh still on its way when the wipe starts
-/// drops the rotated tokens, so a relaunch cannot restore the session the
-/// user ended. The requests fail with their 401 ([SessionGeneration]).
+/// refreshed, so a request one user sent never goes out again with the
+/// token of a user who signed in since. A refresh still on its way when
+/// the wipe starts drops the rotated tokens, so a relaunch cannot restore
+/// the session the user ended. The requests fail with their 401
+/// ([SessionGeneration]).
 ///
-/// On web every browser tab of the app shares the stored session but
-/// counts its own [SessionGeneration], so another tab can sign out or
-/// refresh the session while this tab's refresh is on its way. Before it
-/// acts on the answer, success or failure, the refresh reads the stored
-/// refresh token again: when it is gone, the session ended and the answer
-/// is dropped; when it is another one, another tab refreshed the session
-/// or signed in, so its tokens stay and the requests are sent again with
-/// its JWT, even when the server refused this tab's refresh token because
-/// that tab had already used it. Each tab reads its own copy of the
-/// browser's storage, which takes another tab's change a moment later, so
-/// a sign-out in another tab just before or while this tab stores the
-/// rotated tokens can reach the storage before them. That tab tells this
-/// one of the end (`ISessionEndSignal`), and [RotatedTokensTakeBack] ends
-/// this tab's generation and takes back what the refresh stored. A
-/// sign-out in another tab ends this tab's generation only once its
-/// message arrives, so a request this tab sent before that sign-out can
-/// still go out again with the JWT of a different user who signed in
-/// since: when its 401 comes after that sign-in and before the message,
-/// and when that sign-in comes while this tab's refresh is on its way or
-/// waits for its turn at the lock, a wait that makes this window longer.
+/// The startup step of an `oidc` build refreshes through the same
+/// [TokenRotation], and it goes on after its time limit, so it can rotate
+/// the session while this refresh is on its way. Before it acts on the
+/// answer, success or failure, the refresh reads the stored refresh token
+/// again: when it is gone, the session ended and the answer is dropped;
+/// when it is another one, the session was refreshed meanwhile, so those
+/// tokens stay and the requests are sent again with their JWT.
 ///
 /// Deliberately not a [QueuedInterceptor]: the retry goes back through
 /// the client's [Dio], so a failed retry reaches [onError] while the
@@ -149,8 +116,6 @@ class TokenRefreshInterceptor extends Interceptor {
   final ISecureStorage _secureStorage;
   final TokenRotation _rotation;
   final SessionExpiredPredicate _isSessionExpired;
-  final RotatedTokensTakeBack? _takeBack;
-  final ITokenRefreshLock _refreshLock;
 
   /// Shared in-flight refresh. Non-null while a refresh is in progress;
   /// concurrent 401s await the same Future. Cleared on completion (success
@@ -164,8 +129,6 @@ class TokenRefreshInterceptor extends Interceptor {
     RefreshDioFactory? refreshDioFactory,
     TokenRotation? rotation,
     SessionExpiredPredicate isSessionExpired = isUnauthorized,
-    RotatedTokensTakeBack? takeBack,
-    ITokenRefreshLock? refreshLock,
     // ignore: prefer_initializing_formals
   }) : _dio = dio,
        // ignore: prefer_initializing_formals
@@ -175,10 +138,7 @@ class TokenRefreshInterceptor extends Interceptor {
        _rotation =
            rotation ?? BackendTokenRotation(dio: dio, refreshDioFactory: refreshDioFactory ?? defaultRefreshDio),
        // ignore: prefer_initializing_formals
-       _isSessionExpired = isSessionExpired,
-       // ignore: prefer_initializing_formals
-       _takeBack = takeBack,
-       _refreshLock = refreshLock ?? const InProcessTokenRefreshLock();
+       _isSessionExpired = isSessionExpired;
 
   /// The default [RefreshDioFactory], which [BackendTokenRotation] uses unless it is given another one: see
   /// [token_rotation.defaultRefreshDio].
@@ -326,7 +286,7 @@ class TokenRefreshInterceptor extends Interceptor {
       return;
     }
 
-    switch (await _refreshOnce(sentUnder, requestToken)) {
+    switch (await _refreshOnce(sentUnder)) {
       case _Refreshed(:final idToken):
         await _retryWithToken(err, idToken, handler);
       case _RefreshFailed():
@@ -347,16 +307,6 @@ class TokenRefreshInterceptor extends Interceptor {
         // The session is already over, so there is no token to send the request again with. It is not ended again:
         // the user may have signed in since, and that session must stay.
         handler.next(err);
-      case _RefreshTurnFailed(:final error):
-        // Nothing was sent, so nothing refused the session, and it is kept. Rejected, so that ResilienceInterceptor
-        // does not send the request again behind the same lock.
-        handler.reject(
-          DioException(
-            requestOptions: err.requestOptions,
-            error: error,
-            message: 'The token refresh did not get its turn across the browser tabs',
-          ),
-        );
     }
   }
 
@@ -404,47 +354,24 @@ class TokenRefreshInterceptor extends Interceptor {
 
   /// Returns a single in-flight refresh Future. The first caller starts
   /// the refresh; concurrent callers await the same Future. Cleared on
-  /// completion so subsequent refresh windows start fresh. [requestToken]
-  /// is the JWT the first caller's request was sent with.
-  Future<_RefreshOutcome> _refreshOnce(int generation, String? requestToken) {
-    return _inFlightRefresh ??= _refreshInTurn(generation, requestToken).whenComplete(() {
+  /// completion so subsequent refresh windows start fresh.
+  Future<_RefreshOutcome> _refreshOnce(int generation) {
+    return _inFlightRefresh ??= _performRefresh(generation).whenComplete(() {
       _inFlightRefresh = null;
     });
   }
 
-  /// Runs the refresh while this tab holds [_refreshLock], which on web the token refreshes of every browser tab take
-  /// turns at, so a refresh token is sent by one tab at a time.
-  Future<_RefreshOutcome> _refreshInTurn(int generation, String? requestToken) async {
-    try {
-      return await _refreshLock.hold(() => _performRefresh(generation, requestToken));
-    } on TokenRefreshLockException catch (e) {
-      _log.error('Token refresh did not get its turn across the browser tabs, so the session is kept: {}', [e]);
-      return _RefreshTurnFailed(e);
-    }
-  }
-
   /// Performs the actual refresh call + persistence. Returns [_Refreshed]
-  /// with the new idToken on success, or with the JWT of another browser
-  /// tab that refreshed the session meanwhile, [_SessionEnded] when the
-  /// session of [generation] has ended before the rotated tokens are
-  /// stored or while they are, [_RefreshUnavailable] when the rotation
-  /// could not reach its server, and [_RefreshFailed] on any other failure
-  /// (missing refresh token, refused rotation, failed persist) of the
-  /// session that is still stored. [generation] is the session generation
-  /// of the request that asked for the refresh, and [requestToken] the JWT
-  /// it was sent with.
-  Future<_RefreshOutcome> _performRefresh(int generation, String? requestToken) async {
+  /// with the new idToken on success, or with the JWT of another refresh
+  /// that rotated the session meanwhile, [_SessionEnded] when the session
+  /// of [generation] has ended before the rotated tokens are stored or
+  /// while they are, [_RefreshUnavailable] when the rotation could not
+  /// reach its server, and [_RefreshFailed] on any other failure (missing
+  /// refresh token, refused rotation, failed persist) of the session that
+  /// is still stored. [generation] is the session generation of the
+  /// request that asked for the refresh.
+  Future<_RefreshOutcome> _performRefresh(int generation) async {
     try {
-      // On web another tab may have held the lock while this refresh waited for it: what the 401 checked before the
-      // refresh is checked again. The lock hands over that tab's writes, so this tab's copy shows them.
-      if (SessionGeneration.hasEnded(generation)) return const _SessionEnded();
-      final storedIdToken = await _readStoredJwt();
-      if (SessionGeneration.hasEnded(generation)) return const _SessionEnded();
-      if (storedIdToken != null && storedIdToken.isNotEmpty && requestToken != null && storedIdToken != requestToken) {
-        _log.info('JWT rotated while this refresh waited for its turn: retrying with it, no refresh is sent');
-        return _Refreshed(storedIdToken);
-      }
-
       final refreshToken = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
       if (refreshToken == null || refreshToken.isEmpty) {
         _log.warn('No refresh token available — session expired');
@@ -474,7 +401,7 @@ class TokenRefreshInterceptor extends Interceptor {
       final hasNewOidcIdToken = newOidcIdToken != null && newOidcIdToken.isNotEmpty;
       final expiresAt = rotated.accessTokenExpiresAt;
       final newExpiry = expiresAt == null ? null : encodeAccessTokenExpiry(expiresAt);
-      // What this refresh writes, in the order it writes it, for the take-backs: the JWT first, as a wipe deletes it.
+      // What this refresh writes, in the order it writes it, for the take-back: the JWT first, as a wipe deletes it.
       final stored = <(SecureStorageKeys, String)>[
         (SecureStorageKeys.jwtToken, newIdToken),
         if (hasNewRefreshToken) (SecureStorageKeys.refreshToken, newRefreshToken),
@@ -528,24 +455,12 @@ class TokenRefreshInterceptor extends Interceptor {
         }
         return const _SessionEnded();
       }
-      // No await since the check above, so an end that another tab reports from here on finds these tokens.
-      _takeBack?.record(stored, onTakeBackFailed: _triggerLogout);
 
       _log.info('Token refresh successful');
       return _Refreshed(newIdToken);
     } catch (e) {
       _log.error('Unexpected error during token refresh: {}', [e]);
       return const _RefreshFailed();
-    }
-  }
-
-  /// The stored JWT for the check of a stale header, or null when it cannot be read, as in [onError].
-  Future<String?> _readStoredJwt() async {
-    try {
-      return await _secureStorage.read(SecureStorageKeys.jwtToken.key);
-    } catch (e) {
-      _log.warn('Stale-header check after the wait for the lock skipped, the secure read failed: {}', [e]);
-      return null;
     }
   }
 
@@ -563,34 +478,33 @@ class TokenRefreshInterceptor extends Interceptor {
   /// The outcome for a refresh whose session ended or moved on while the refresh was on its way, or null while the
   /// session it sent [sentRefreshToken] for, under [generation], is still the stored one.
   ///
-  /// The session can end or move on in this tab or, on web, in another browser tab, which shares the stored session
-  /// but counts its own [SessionGeneration]. The checks run in this order: this tab's generation, the stored refresh
-  /// token, then the stored JWT. They hold for a failed refresh too, which must not end a session it was not sent for.
+  /// The checks run in this order: the session generation, the stored refresh token, then the stored JWT. They hold for
+  /// a failed refresh too, which must not end a session it was not sent for.
   Future<_RefreshOutcome?> _sessionMovedOn({required String sentRefreshToken, required int generation}) async {
-    // A logout or the end of the session in this tab wiped, or is wiping, the stored session. Storing the rotated
-    // tokens now would bring back the session the user ended, and a relaunch would restore it.
+    // A logout or the end of the session wiped, or is wiping, the stored session. Storing the rotated tokens now would
+    // bring back the session the user ended, and a relaunch would restore it.
     if (SessionGeneration.hasEnded(generation)) {
       _log.warn('Session ended during the token refresh: its answer is dropped');
       return const _SessionEnded();
     }
     final storedRefreshToken = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
-    // Another tab ended the session. What is stored now is not this session, so it is not ended again either.
+    // The session is no longer stored. What is stored now is not this session, so it is not ended again either.
     if (storedRefreshToken == null || storedRefreshToken.isEmpty) {
-      _log.warn('Session ended in another tab during the token refresh: its answer is dropped');
+      _log.warn('Session ended during the token refresh: its answer is dropped');
       return const _SessionEnded();
     }
     if (storedRefreshToken == sentRefreshToken) return null;
-    // Another tab refreshed the session, or signed in. Its tokens stay: this answer stored over them could pair this
-    // JWT with that tab's refresh token, and a server that accepts a refresh token once has refused this refresh. The
-    // requests are sent again with the JWT that tab stored. A tab stores its JWT before its refresh token, so this
-    // read, after the refresh token's, sees that JWT or a later one.
+    // Another refresh rotated the session. Its tokens stay: this answer stored over them could pair this JWT with that
+    // refresh's refresh token, and a server that accepts a refresh token once has refused this refresh. The requests
+    // are sent again with the JWT it stored. A refresh stores its JWT before its refresh token, so this read, after the
+    // refresh token's, sees that JWT or a later one.
     final storedIdToken = await _secureStorage.read(SecureStorageKeys.jwtToken.key);
-    // A sign-out deletes the JWT before the refresh token, so a missing JWT is another tab's sign-out under way.
+    // A wipe deletes the JWT before the refresh token, so a missing JWT is a wipe under way.
     if (storedIdToken == null || storedIdToken.isEmpty) {
-      _log.warn('Session ended in another tab during the token refresh: its answer is dropped');
+      _log.warn('Session ended during the token refresh: its answer is dropped');
       return const _SessionEnded();
     }
-    _log.info('Session refreshed in another tab during the token refresh: using its tokens');
+    _log.info('Session refreshed by another refresh during this one: using its tokens');
     return _Refreshed(storedIdToken);
   }
 

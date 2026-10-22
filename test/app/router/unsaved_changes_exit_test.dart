@@ -46,51 +46,20 @@ const _app = App(
   ),
 );
 
-/// Boots the app on a desktop window, signed in when [signedIn], and records what the router reports to the
-/// browser history.
-Future<List<MethodCall>> _pumpApp(WidgetTester tester, {bool signedIn = true}) async {
+/// Boots the app on a wide window, signed in when [signedIn].
+Future<void> _pumpApp(WidgetTester tester, {bool signedIn = true}) async {
   addTearDown(tester.view.reset);
   tester.view.physicalSize = const Size(1600, 1600);
   tester.view.devicePixelRatio = 1.0;
-  final history = <MethodCall>[];
-  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, (call) async {
-    history.add(call);
-    return null;
-  });
-  addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.navigation, null));
   if (signedIn) {
     TestEnv.authenticate();
     await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
   }
   await tester.pumpWidget(_app);
   await tester.pumpAndSettle();
-  return history;
 }
 
 GoRouter _router(WidgetTester tester) => tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
-
-/// The URL the router last wrote to the browser history.
-String _lastReportedUrl(List<MethodCall> history) =>
-    (history.lastWhere((call) => call.method == 'routeInformationUpdated').arguments as Map)['uri'] as String;
-
-/// What a browser back or forward button does: the engine reports the location and state of the history entry the
-/// browser moved to.
-Future<void> _browserMovesTo(WidgetTester tester, List<MethodCall> history, String location) async {
-  final entry = history.lastWhere(
-    (call) => call.method == 'routeInformationUpdated' && (call.arguments as Map)['uri'] == location,
-  );
-  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
-    SystemChannels.navigation.name,
-    SystemChannels.navigation.codec.encodeMethodCall(
-      MethodCall('pushRouteInformation', <String, Object?>{
-        'location': location,
-        'state': (entry.arguments as Map)['state'],
-      }),
-    ),
-    (_) {},
-  );
-  await tester.pumpAndSettle();
-}
 
 /// What the Android back button does: the engine asks the framework to pop a route.
 Future<void> _androidBack(WidgetTester tester) async {
@@ -157,24 +126,6 @@ Future<void> _openExtendedInfo(WidgetTester tester) async {
 
 void main() {
   group('A dirty account form', () {
-    testWidgets('asks before the browser back button leaves it', (tester) async {
-      final history = await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
-
-      await _browserMovesTo(tester, history, ApplicationRoutesConstants.home);
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: false);
-      expect(find.byType(AccountScreen), findsOneWidget);
-      expect(find.text('Changed'), findsOneWidget);
-      expect(_lastReportedUrl(history), ApplicationRoutesConstants.account);
-
-      await _browserMovesTo(tester, history, ApplicationRoutesConstants.home);
-      await _answer(tester, leave: true);
-      expect(find.byType(AccountScreen), findsNothing);
-      expect(_router(tester).state.uri.path, ApplicationRoutesConstants.home);
-    });
-
     testWidgets('asks before the sidebar leaves it, and keeps the sidebar on the page when the user stays', (
       tester,
     ) async {
@@ -254,9 +205,9 @@ void main() {
     });
 
     testWidgets('gives way to an idle timeout while the unsaved-changes dialog is open', (tester) async {
-      final history = await _pumpApp(tester);
+      await _pumpApp(tester);
       await _openDirtyAccountForm(tester);
-      await _browserMovesTo(tester, history, ApplicationRoutesConstants.home);
+      await _androidBack(tester);
       expect(_unsavedChangesDialog, findsOneWidget);
 
       await tester.pump(const Duration(minutes: 5));
@@ -289,15 +240,17 @@ void main() {
   });
 
   group('A dirty register form', () {
-    testWidgets('asks before the browser back button returns to the login page', (tester) async {
-      final history = await _pumpApp(tester, signedIn: false);
+    testWidgets('asks before the Android back button returns to the login page', (tester) async {
+      await _pumpApp(tester, signedIn: false);
       await tester.tap(find.byKey(loginButtonRegisterKey));
       await tester.pumpAndSettle();
       expect(find.byType(RegisterScreen), findsOneWidget);
       await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'New');
       await tester.pumpAndSettle();
 
-      await _browserMovesTo(tester, history, ApplicationRoutesConstants.login);
+      _expectBackHeld(tester, find.byType(RegisterScreen));
+
+      await _androidBack(tester);
       expect(_unsavedChangesDialog, findsOneWidget);
 
       await _answer(tester, leave: false);
@@ -338,8 +291,8 @@ void main() {
   });
 
   group('A dirty user editor', () {
-    testWidgets('asks before the browser back button leaves it', (tester) async {
-      final history = await _pumpApp(tester);
+    testWidgets('asks before the Android back button leaves it', (tester) async {
+      await _pumpApp(tester);
       _router(tester).go(ApplicationRoutesConstants.userList);
       await tester.pumpAndSettle();
       _router(tester).go(ApplicationRoutesConstants.userNew);
@@ -348,7 +301,7 @@ void main() {
       await tester.pumpAndSettle();
       _expectBackHeld(tester, find.byType(UserEditorScreen));
 
-      await _browserMovesTo(tester, history, ApplicationRoutesConstants.userList);
+      await _androidBack(tester);
       expect(_unsavedChangesDialog, findsOneWidget);
       await _answer(tester, leave: false);
       expect(find.byType(UserEditorScreen), findsOneWidget);

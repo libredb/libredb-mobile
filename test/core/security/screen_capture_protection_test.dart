@@ -67,20 +67,6 @@ void main() {
       expect(ScreenCaptureProtection.isEnabled, isTrue);
     });
 
-    test('web override: enable() is a true no-op, no plugin call, isEnabled stays false', () async {
-      ScreenCaptureProtection.debugWebOverride = true;
-      await ScreenCaptureProtection.enable();
-      expect(calls, isEmpty);
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
-    });
-
-    test('web override: disable() is also a no-op', () async {
-      ScreenCaptureProtection.debugWebOverride = true;
-      await ScreenCaptureProtection.disable();
-      expect(calls, isEmpty);
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
-    });
-
     test('nested leases: protection stays on until the last lease is released', () async {
       // Two protected screens mounted (e.g. A pushes B).
       await ScreenCaptureProtection.enable();

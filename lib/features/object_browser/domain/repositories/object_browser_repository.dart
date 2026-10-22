@@ -10,7 +10,7 @@ import 'package:flutter_bloc_advance/features/object_browser/domain/entities/pro
 /// Read-only browsing of a managed connection, named by its id (`seed:<id>`).
 ///
 /// Every request but [providerMeta] opens the connection, and every one of them spends a slot of the user's Studio
-/// request budget, which the user's browser tabs share: cache the answers.
+/// request budget, which the user's Studio sessions in the browser share: cache the answers.
 abstract class IObjectBrowserRepository {
   Future<Result<ProviderMeta>> providerMeta(String connectionId);
 

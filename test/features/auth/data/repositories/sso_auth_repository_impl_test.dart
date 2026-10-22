@@ -12,20 +12,12 @@ import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart' show Logger, OutputEvent;
 
-/// Answers [signIn] and [completePendingSignIn] with the configured outcomes, and records the arguments of each sign-in.
+/// Answers [signIn] with the configured outcome.
 class _FakeOidcClient implements IOidcClient {
   OidcSignInOutcome signInOutcome = const OidcSignInCancelled();
-  OidcSignInOutcome? pendingOutcome;
-  final signIns = <({String? webReturnPath, String browserDoneMessage})>[];
 
   @override
-  Future<OidcSignInOutcome> signIn({String? webReturnPath, required String browserDoneMessage}) async {
-    signIns.add((webReturnPath: webReturnPath, browserDoneMessage: browserDoneMessage));
-    return signInOutcome;
-  }
-
-  @override
-  Future<OidcSignInOutcome?> completePendingSignIn() async => pendingOutcome;
+  Future<OidcSignInOutcome> signIn() async => signInOutcome;
 
   @override
   Future<TokenRotationResult> refresh({
@@ -91,7 +83,7 @@ void main() {
 
   Future<SsoSignInResult> signInWith(Map<String, Object?> claims) {
     client.signInOutcome = OidcSignedIn(tokens: _tokens, claims: claims);
-    return repository.signIn(browserDoneMessage: 'done');
+    return repository.signIn();
   }
 
   group('SsoAuthRepository.signIn', () {
@@ -122,15 +114,9 @@ void main() {
         claims: _claims(),
       );
 
-      expect(await repository.signIn(browserDoneMessage: 'done'), isA<SsoSignInSucceeded>());
+      expect(await repository.signIn(), isA<SsoSignInSucceeded>());
 
       expect(sessions.persisted.single.refreshToken, isNull);
-    });
-
-    test('hands the return path and the browser message to the client', () async {
-      await repository.signIn(webReturnPath: '/users', browserDoneMessage: 'You can close this window.');
-
-      expect(client.signIns, [(webReturnPath: '/users', browserDoneMessage: 'You can close this window.')]);
     });
 
     test('an admin claim persists the admin and user roles', () async {
@@ -243,7 +229,7 @@ void main() {
     test('a provider that could not be reached is rejected with the discovery code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.discovery);
 
-      final result = await repository.signIn(browserDoneMessage: 'done');
+      final result = await repository.signIn();
 
       expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcDiscovery));
       expect(sessions.persisted, isEmpty);
@@ -252,7 +238,7 @@ void main() {
     test('a failed sign-in is rejected with the failed code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.failed);
 
-      final result = await repository.signIn(browserDoneMessage: 'done');
+      final result = await repository.signIn();
 
       expect(result, isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcFailed));
       expect(sessions.persisted, isEmpty);
@@ -261,14 +247,7 @@ void main() {
     test('a cancel passes through', () async {
       client.signInOutcome = const OidcSignInCancelled();
 
-      expect(await repository.signIn(browserDoneMessage: 'done'), isA<SsoSignInCancelled>());
-      expect(sessions.persisted, isEmpty);
-    });
-
-    test('a web tab on its way to the provider passes through', () async {
-      client.signInOutcome = const OidcSignInNavigatedAway();
-
-      expect(await repository.signIn(browserDoneMessage: 'done'), isA<SsoSignInNavigatedAway>());
+      expect(await repository.signIn(), isA<SsoSignInCancelled>());
       expect(sessions.persisted, isEmpty);
     });
 
@@ -281,44 +260,6 @@ void main() {
         result,
         isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authSessionPersistFailed),
       );
-    });
-  });
-
-  group('SsoAuthRepository.completePendingSignIn', () {
-    test('answers null when no sign-in is pending', () async {
-      client.pendingOutcome = null;
-
-      expect(await repository.completePendingSignIn(), isNull);
-      expect(sessions.persisted, isEmpty);
-    });
-
-    test('persists a pending sign-in and answers its username and roles', () async {
-      client.pendingOutcome = OidcSignedIn(
-        tokens: _tokens,
-        claims: _claims(extra: {'preferred_username': 'jdoe'}),
-      );
-
-      final result = await repository.completePendingSignIn();
-
-      expect(
-        result,
-        isA<SsoSignInSucceeded>().having((r) => r.username, 'username', 'jdoe').having((r) => r.roles, 'roles', [
-          'ROLE_USER',
-        ]),
-      );
-      expect(sessions.persisted.single.oidcIdToken, 'id-token');
-      expect(client.signIns, isEmpty);
-    });
-
-    test('maps a pending failure and a pending cancel like a sign-in', () async {
-      client.pendingOutcome = const OidcSignInFailed(OidcFailure.discovery);
-      expect(
-        await repository.completePendingSignIn(),
-        isA<SsoSignInRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcDiscovery),
-      );
-
-      client.pendingOutcome = const OidcSignInCancelled();
-      expect(await repository.completePendingSignIn(), isA<SsoSignInCancelled>());
     });
   });
 

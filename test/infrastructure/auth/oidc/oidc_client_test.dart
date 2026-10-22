@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/app_oidc_user_manager.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_client.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_key_value.dart';
-import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_redirect_uris.dart';
 import 'package:flutter_bloc_advance/infrastructure/auth/oidc/oidc_transaction_store.dart';
 import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
 import 'package:flutter_bloc_advance/infrastructure/http/token_rotation.dart';
@@ -16,25 +14,15 @@ import 'package:oidc/oidc.dart';
 
 import 'support/fake_provider.dart';
 
-const _loginPath = '/login';
-const _doneMessage = 'Signed in. You can close this tab & go back to <the app>.';
-final _pageUri = Uri.parse('http://localhost:8081/');
-
 void main() {
   late FakeProvider provider;
   late FakeOidcPlatform platform;
-  late MemoryKeyValue persistent;
-  late MemoryKeyValue tab;
   late OidcTransactionStore store;
-  late List<Uri> launchedUrls;
 
   setUp(() {
     provider = FakeProvider();
     platform = installFakePlatform(provider);
-    persistent = MemoryKeyValue();
-    tab = MemoryKeyValue();
-    store = OidcTransactionStore(persistent: persistent, tab: tab);
-    launchedUrls = [];
+    store = OidcTransactionStore();
   });
 
   OidcSettings settingsFor(FakeProvider provider, {String? audience, OidcPrompt prompt = OidcPrompt.login}) =>
@@ -47,28 +35,19 @@ void main() {
     FakeProvider? at,
     Future<void> Function()? cancelAndroidFlow,
     void Function(AppOidcUserManager manager)? onManagerCreated,
-    void Function()? reloadOnPageRestore,
   }) {
     final idp = at ?? provider;
     return OidcClient(
       settings: settings ?? settingsFor(idp),
-      loginPath: _loginPath,
-      launchUrl: (uri) async {
-        launchedUrls.add(uri);
-        return true;
-      },
       store: transactionStore ?? store,
       httpClient: idp.client,
       platform: platformKind,
-      pageUri: _pageUri,
       cancelAndroidFlow: cancelAndroidFlow ?? () async => fail('cancelAndroidFlow was not expected'),
       onManagerCreated: onManagerCreated,
-      reloadOnPageRestore: reloadOnPageRestore,
     );
   }
 
-  Future<OidcSignInOutcome> signIn(OidcClient client) =>
-      client.signIn(webReturnPath: '/users', browserDoneMessage: _doneMessage);
+  Future<OidcSignInOutcome> signIn(OidcClient client) => client.signIn();
 
   Future<void> expectStoreEmpty() async {
     expect(await store.getAllKeys(OidcStoreNamespace.state), isEmpty, reason: 'states left in the store');
@@ -186,47 +165,6 @@ void main() {
       expect(managers.single.isDisposed, isTrue, reason: 'the failed manager was left running');
     });
 
-    test('a Linux browser flow that times out is OidcSignInCancelled', () async {
-      platform.authorization = FakeAuthorization.flowTimeout;
-
-      expect(await signIn(newClient(platformKind: OidcPlatformKind.linux)), isA<OidcSignInCancelled>());
-      expect(provider.tokenRequests, isEmpty);
-      await expectStoreEmpty();
-    });
-
-    test('a token endpoint that times out after the Linux browser answered is discovery', () async {
-      provider.codeAnswer = () => throw TimeoutException('no answer');
-
-      expect(await signIn(newClient(platformKind: OidcPlatformKind.linux)), _failed(OidcFailure.discovery));
-    });
-
-    test('a timeout after a flow that timed out is still discovery', () async {
-      final client = newClient(platformKind: OidcPlatformKind.linux);
-      platform.authorization = FakeAuthorization.flowTimeout;
-      expect(await signIn(client), isA<OidcSignInCancelled>());
-
-      platform.authorization = FakeAuthorization.code;
-      provider.codeAnswer = () => throw TimeoutException('no answer');
-
-      expect(await signIn(client), _failed(OidcFailure.discovery));
-    });
-
-    test('a sign-in that fails before the browser after a flow that timed out is failed, not cancelled', () async {
-      final writes = _BreakableKeyValue();
-      final client = newClient(
-        platformKind: OidcPlatformKind.linux,
-        transactionStore: OidcTransactionStore(persistent: writes, tab: writes),
-      );
-      platform.authorization = FakeAuthorization.flowTimeout;
-      expect(await signIn(client), isA<OidcSignInCancelled>());
-
-      platform.authorization = FakeAuthorization.code;
-      writes.failWrites = true;
-
-      expect(await signIn(client), _failed(OidcFailure.failed));
-      expect(platform.authorizeRequests, hasLength(1), reason: 'the second sign-in reached the browser');
-    });
-
     test('discovery naming another issuer is discovery', () async {
       provider.discoveryIssuer = 'https://evil.test/realms/demo';
 
@@ -338,179 +276,19 @@ void main() {
       expect(form['code_verifier'], isNotEmpty);
     });
 
-    test('Linux opens the browser through the given launcher and shows the escaped message', () async {
-      await signIn(newClient(platformKind: OidcPlatformKind.linux));
-
-      final options = platform.authorizeOptions.single;
-      for (final native in [options.linux, options.windows]) {
-        expect(native.flowTimeoutSeconds, 300);
-        expect(native.launchUrl, isNotNull);
-        expect(native.successfulPageResponse, contains('Signed in. You can close this tab &amp; go back to &lt;the'));
-        expect(native.successfulPageResponse, isNot(contains('<the app>')));
-      }
-      final target = Uri.parse('https://idp.test/auth');
-      expect(await options.linux.launchUrl!(target), isTrue);
-      expect(launchedUrls, [target]);
-      expect(platform.lastAuthorizeUri.queryParameters['redirect_uri'], 'http://127.0.0.1:0/oauth2redirect');
-    });
-
-    test('the platform options keep the Custom Tab, the shared Apple session and the same-tab web flow', () async {
+    test('the platform options keep the Custom Tab and the shared Apple session', () async {
       await signIn(newClient());
 
       final options = platform.authorizeOptions.single;
       expect(options.android.useAuthTab, OidcAuthTabMode.never);
       expect(options.ios.prefersEphemeralWebBrowserSession, isFalse);
-      expect(options.macos.prefersEphemeralWebBrowserSession, isFalse);
-      expect(options.web.navigationMode, OidcPlatformSpecificOptions_Web_NavigationMode.samePage);
-    });
-  });
-
-  group('web', () {
-    test('signIn returns OidcSignInNavigatedAway and leaves the state and the verifier in the store', () async {
-      platform.authorization = FakeAuthorization.navigateAway;
-
-      final outcome = await signIn(newClient(platformKind: OidcPlatformKind.web));
-
-      expect(outcome, isA<OidcSignInNavigatedAway>());
-      expect(await store.getAllKeys(OidcStoreNamespace.state), hasLength(1));
-      expect(
-        await store.getAllKeys(OidcStoreNamespace.secureTokens),
-        contains(startsWith('code_verifier.')),
-        reason: 'redirect.html and the reloaded tab need the state and the verifier',
-      );
-      expect(store.hasAbandonedSignIn(), isTrue);
     });
 
-    test('signIn watches for a back-forward cache restore once, before the tab leaves', () async {
-      platform.authorization = FakeAuthorization.navigateAway;
-      final authorizeRequestsWhenWatched = <int>[];
-      final client = newClient(
-        platformKind: OidcPlatformKind.web,
-        reloadOnPageRestore: () => authorizeRequestsWhenWatched.add(platform.authorizeRequests.length),
-      );
+    test('the redirect URI is the custom scheme of the app', () async {
+      await signIn(newClient());
 
-      await signIn(client);
-      await signIn(client);
-
-      expect(authorizeRequestsWhenWatched, [0], reason: 'one pageshow listener, registered before the navigation');
+      expect(platform.lastAuthorizeUri.queryParameters['redirect_uri'], 'org.libredb.mobile:/oauth2redirect');
     });
-
-    test('a native sign-in does not watch for a back-forward cache restore', () async {
-      await signIn(newClient(reloadOnPageRestore: () => fail('a native sign-in has no page to restore')));
-    });
-
-    test('signIn sends the app entry URI with the return path and no id_token_hint', () async {
-      platform.authorization = FakeAuthorization.navigateAway;
-
-      await signIn(newClient(platformKind: OidcPlatformKind.web));
-
-      final request = platform.authorizeRequests.single;
-      expect(request.redirectUri, Uri.parse('http://localhost:8081/redirect.html'));
-      expect(request.idTokenHint, isNull);
-      final stateData = await store.getStateData(request.state!);
-      expect(jsonDecode(stateData!)['original_uri'], 'http://localhost:8081/#/users');
-    });
-
-    test('completePendingSignIn returns null and reads nothing but the store when nothing is pending', () async {
-      expect(await newClient(platformKind: OidcPlatformKind.web).completePendingSignIn(), isNull);
-      expect(provider.requests, isEmpty);
-    });
-
-    test('an abandoned transaction is OidcSignInCancelled, with no request, and the store is emptied', () async {
-      await store.setStateCodeVerifier(state: 'state-1', codeVerifier: 'verifier-1');
-      await store.setStateData(state: 'state-1', stateData: '{"id":"state-1"}');
-      await store.setCurrentNonce('nonce-1');
-
-      final outcome = await newClient(platformKind: OidcPlatformKind.web).completePendingSignIn();
-
-      expect(outcome, isA<OidcSignInCancelled>());
-      expect(provider.requests, isEmpty);
-      await expectStoreEmpty();
-    });
-
-    /// Starts a web sign-in, then stores the provider's redirect the way redirect.html does, and returns a new client
-    /// over a new store on the same storage, as the reloaded tab builds them.
-    Future<OidcClient> reloadAfterRedirect(
-      Map<String, String> Function(OidcAuthorizeRequest request) parameters,
-    ) async {
-      platform.authorization = FakeAuthorization.navigateAway;
-      await signIn(newClient(platformKind: OidcPlatformKind.web));
-      final request = platform.authorizeRequests.single;
-      await store.setStateResponseData(
-        state: request.state!,
-        stateData: request.redirectUri.replace(queryParameters: parameters(request)).toString(),
-      );
-      provider.requests.clear();
-      store = OidcTransactionStore(persistent: persistent, tab: tab);
-      return newClient(platformKind: OidcPlatformKind.web);
-    }
-
-    test('completePendingSignIn completes the same-tab sign-in from the store', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-
-      final outcome = await reloaded.completePendingSignIn();
-
-      expect(outcome, isA<OidcSignedIn>());
-      expect((outcome as OidcSignedIn).tokens.accessToken, 'access-1-value');
-      expect(outcome.claims['sub'], fakeSubject);
-      await expectStoreEmpty();
-    });
-
-    test('a provider error response is failed and cleared, so the next sign-in starts clean', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'error': 'access_denied', 'state': request.state!});
-
-      expect(await reloaded.completePendingSignIn(), _failed(OidcFailure.failed));
-      await expectStoreEmpty();
-      expect(await reloaded.completePendingSignIn(), isNull);
-    });
-
-    test('a completion whose ID token fails a claim check is failed and cleared', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-      provider.audience = 'someone-else';
-
-      expect(await reloaded.completePendingSignIn(), _failed(OidcFailure.failed));
-      await expectStoreEmpty();
-    });
-
-    test('a completion whose code exchange is refused is failed and cleared', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-      provider.codeAnswer = () => FakeProvider.errorAnswer('invalid_grant');
-
-      expect(await reloaded.completePendingSignIn(), _failed(OidcFailure.failed));
-      await expectStoreEmpty();
-    });
-
-    test('a completion whose discovery is unreachable is discovery and cleared', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-      provider.discoveryAnswer = () => throw http.ClientException('connection refused');
-
-      expect(await reloaded.completePendingSignIn(), _failed(OidcFailure.discovery));
-      await expectStoreEmpty();
-    });
-
-    test('a completion whose code exchange is unreachable is discovery and cleared', () async {
-      final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-      provider.codeAnswer = () => throw http.ClientException('connection reset');
-
-      expect(await reloaded.completePendingSignIn(), _failed(OidcFailure.discovery));
-      await expectStoreEmpty();
-    });
-
-    test(
-      'a malformed response index escapes the completion, which clears the store so the next sign-in starts',
-      () async {
-        final reloaded = await reloadAfterRedirect((request) => {'code': 'code-value', 'state': request.state!});
-        persistent.write('oidc.keys.response.state', '["state-secret-1",');
-
-        await expectLater(reloaded.completePendingSignIn(), throwsFormatException);
-
-        expect(persistent.read('oidc.keys.response.state'), isNull);
-        await expectStoreEmpty();
-        expect(provider.requests, isEmpty);
-        expect(await reloaded.completePendingSignIn(), isNull);
-        expect(await signIn(reloaded), isA<OidcSignInNavigatedAway>());
-      },
-    );
   });
 
   group('Android', () {
@@ -800,14 +578,47 @@ void main() {
       // A refused refresh ends the package's refresh loop, which would otherwise never stop for a 0 second token.
       provider.refreshAnswer = () => FakeProvider.errorAnswer('invalid_grant');
 
-      expect(await newClient().signIn(browserDoneMessage: _doneMessage), isA<OidcSignedIn>());
+      expect(await newClient().signIn(), isA<OidcSignedIn>());
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
       expect(provider.tokenRequests, hasLength(1), reason: 'a package timer refreshed the token during the sign-in');
     },
   );
 
+  group('OidcPlatformKind.current', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('maps Android and iOS to their kind', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(OidcPlatformKind.current(), OidcPlatformKind.android);
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      expect(OidcPlatformKind.current(), OidcPlatformKind.ios);
+    });
+
+    test('refuses every other platform', () {
+      for (final platform in [
+        TargetPlatform.macOS,
+        TargetPlatform.linux,
+        TargetPlatform.windows,
+        TargetPlatform.fuchsia,
+      ]) {
+        debugDefaultTargetPlatformOverride = platform;
+        expect(OidcPlatformKind.current, throwsUnsupportedError, reason: platform.name);
+      }
+    });
+  });
+
   group('one operation at a time', () {
+    test('an operation that throws does not stop the next one', () async {
+      final breaking = _ClearFailsOnceStore();
+      final client = newClient(transactionStore: breaking);
+
+      await expectLater(client.signIn(), throwsStateError);
+
+      expect(await client.signIn(), isA<OidcSignedIn>());
+      expect(await client.endProviderSession(idTokenHint: 'id-token-value'), isA<ProviderSessionEnded>());
+    });
+
     test('a sign-in started during a refresh runs after it, and its ID token signature is still checked', () async {
       final refreshAnswer = Completer<http.Response>();
       provider.refreshAnswer = () => refreshAnswer.future;
@@ -859,35 +670,6 @@ void main() {
       expect(await signingIn, isA<OidcSignInCancelled>());
       expect(await refreshing, isA<TokensRotated>());
     });
-
-    test('an operation that throws does not stop the next one', () async {
-      // A web sign-in that answers a user instead of leaving the page throws.
-      final client = newClient(platformKind: OidcPlatformKind.web);
-
-      await expectLater(signIn(client), throwsStateError);
-
-      expect(await client.endProviderSession(), isA<ProviderLogoutNavigatedAway>());
-    });
-  });
-
-  test('a web completion disposes the manager it replaces', () async {
-    final managers = <AppOidcUserManager>[];
-    platform.authorization = FakeAuthorization.navigateAway;
-    final client = newClient(platformKind: OidcPlatformKind.web, onManagerCreated: managers.add);
-    await signIn(client);
-    final request = platform.authorizeRequests.single;
-    await store.setStateResponseData(
-      state: request.state!,
-      stateData: request.redirectUri
-          .replace(queryParameters: {'code': 'code-value', 'state': request.state!})
-          .toString(),
-    );
-
-    expect(await client.completePendingSignIn(), isA<OidcSignedIn>());
-
-    expect(managers, hasLength(2));
-    expect(managers.first.isDisposed, isTrue, reason: 'the replaced manager was left running');
-    expect(managers.last.isDisposed, isFalse);
   });
 
   group('endProviderSession', () {
@@ -902,6 +684,14 @@ void main() {
         'post_logout_redirect_uri': 'org.libredb.mobile:/oauth2redirect',
         'id_token_hint': 'id-token-value',
       });
+    });
+
+    test('the provider logout keeps the Custom Tab and the shared Apple session', () async {
+      await newClient().endProviderSession(idTokenHint: 'id-token-value');
+
+      final options = platform.endSessionOptions.single;
+      expect(options.android.useAuthTab, OidcAuthTabMode.never);
+      expect(options.ios.prefersEphemeralWebBrowserSession, isFalse);
     });
 
     test('without a hint, the URL has no id_token_hint, even after a sign-in', () async {
@@ -969,47 +759,22 @@ void main() {
 
       expect(await newClient().endProviderSession(), isA<ProviderLogoutFailed>());
     });
-
-    test('on web, the same-tab navigation gives ProviderLogoutNavigatedAway', () async {
-      platform.endSession = FakeEndSession.nullAnswer;
-
-      final outcome = await newClient(platformKind: OidcPlatformKind.web).endProviderSession();
-
-      expect(outcome, isA<ProviderLogoutNavigatedAway>());
-      expect(platform.lastEndSessionUri.queryParameters['post_logout_redirect_uri'], 'http://localhost:8081/');
-    });
-
-    test('Linux logs out through the given launcher with the loopback logout URI', () async {
-      await newClient(platformKind: OidcPlatformKind.linux).endProviderSession();
-
-      final options = platform.endSessionOptions.single;
-      expect(options.linux.launchUrl, isNotNull);
-      expect(options.linux.flowTimeoutSeconds, 300);
-      expect(platform.lastEndSessionUri.queryParameters['post_logout_redirect_uri'], 'http://127.0.0.1:0/logout');
-    });
   });
 }
 
 Matcher _failed(OidcFailure failure) =>
     isA<OidcSignInFailed>().having((outcome) => outcome.failure, 'failure', failure);
 
-/// A [MemoryKeyValue] whose writes throw while [failWrites] is set, so a sign-in fails before its browser step.
-final class _BreakableKeyValue implements OidcKeyValue {
-  final _values = MemoryKeyValue();
-  bool failWrites = false;
+/// A transaction store whose first clear throws, as a sign-in ends, so that sign-in rejects with it.
+final class _ClearFailsOnceStore extends OidcTransactionStore {
+  bool _failed = false;
 
   @override
-  String? read(String key) => _values.read(key);
-
-  @override
-  void write(String key, String value) {
-    if (failWrites) throw StateError('The store is not writable');
-    _values.write(key, value);
+  Future<void> clearTransactions() async {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('The store could not be cleared');
+    }
+    await super.clearTransactions();
   }
-
-  @override
-  void delete(String key) => _values.delete(key);
-
-  @override
-  Iterable<String> get keys => _values.keys;
 }

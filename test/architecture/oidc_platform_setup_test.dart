@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_bloc_advance/infrastructure/config/auth_config.dart';
@@ -9,11 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// - The `oidc_android` plugin merges an `OidcRedirectActivity` whose intent filter uses the `oidcRedirectScheme`
 ///   manifest placeholder. The placeholder has no default, so the manifest merge fails without it, and it must match
 ///   the scheme the Dart side sends as its redirect URI.
-/// - `web/redirect.html` is the page the package ships at `example/web/redirect.html`. Its channel names and store
-///   namespaces must match the package code, so it is copied and carries three documented patches only: the error
-///   branch shows fixed copy instead of the provider's `error_description` and `error_uri`, because a crafted link to
-///   the page sets both and provider text must never reach the screen; a missing state is logged without its value;
-///   and the page returns to the app with `location.replace`, so the callback URL never stays in the tab history.
 /// - The app is a public PKCE client, so nothing in `lib/` names a client secret and every client authentication is
 ///   `OidcClientAuthentication.none`.
 /// - No app manifest declares an intent filter for the redirect scheme: a second one would let Android offer
@@ -32,29 +26,6 @@ void main() {
             'defaultConfig in $gradlePath must set the oidcRedirectScheme manifest placeholder to '
             '${OidcSettings.defaultRedirectScheme}, or the oidc_android manifest merge fails and the redirect '
             'never reaches the app',
-      );
-    });
-
-    test('web/redirect.html is the oidc package page with the documented patches', () {
-      final packagePath = '${_packageRoot('oidc').toFilePath()}example/web/redirect.html';
-      final packagePage = File(packagePath).readAsStringSync();
-
-      for (final patch in _redirectPagePatches) {
-        expect(
-          patch.original.allMatches(packagePage).length,
-          1,
-          reason:
-              '$packagePath must contain the snippet the ${patch.name} patch replaces exactly once. After an oidc '
-              'upgrade, find that snippet in the new page and update the patch in _redirectPagePatches.',
-        );
-      }
-      expect(
-        File('web/redirect.html').readAsStringSync(),
-        _redirectPagePatches.fold(packagePage, (page, patch) => page.replaceFirst(patch.original, patch.replacement)),
-        reason:
-            'web/redirect.html must be $packagePath with the patches ${_redirectPagePatches.map((p) => p.name).join(', ')} '
-            'of _redirectPagePatches applied. After an oidc upgrade, copy example/web/redirect.html again with cp and '
-            're-apply those replacements; never edit the page otherwise.',
       );
     });
 
@@ -148,41 +119,6 @@ const _scrubberPath = 'lib/core/security/sensitive_data_scrubber.dart';
 Iterable<File> _dartFiles(String root) =>
     Directory(root).listSync(recursive: true).whereType<File>().where((file) => file.path.endsWith('.dart'));
 
-/// One documented replacement that turns the package's redirect page into `web/redirect.html`.
-typedef _Patch = ({String name, String original, String replacement});
-
-/// The patches of `web/redirect.html`, applied in order to the package page.
-const List<_Patch> _redirectPagePatches = [
-  // The package page renders the provider's `error_description` (or `error`) and `error_uri`; the patched branch
-  // shows fixed copy and no link, since a crafted URL sets both values.
-  (
-    name: 'error-branch',
-    original:
-        "                    finish('error', messages.errorTitle, errorInfo.description || errorInfo.error, "
-        'errorInfo.uri, true);\n',
-    replacement:
-        '                    // A crafted link sets error_description and error_uri, so show fixed copy and no link.\n'
-        "                    finish('error', messages.errorTitle, messages.appError, null, true);\n",
-  ),
-  // The package page prints the state value it could not find; the patched line logs the fact only.
-  (
-    name: 'state-log',
-    original: "                    console.error('state not found, key: ' + state);\n",
-    replacement:
-        '                    // The state value never reaches the console.\n'
-        "                    console.error('state not found');\n",
-  ),
-  // The package page returns with `assign`, which keeps the callback URL with its code and state in the tab history;
-  // `replace` drops that entry, so Back never reaches the page again.
-  (
-    name: 'history-replace',
-    original: '                window.location.assign(original_uri);\n',
-    replacement:
-        '                // replace, not assign: the callback URL with its code and state leaves the tab history.\n'
-        '                window.location.replace(original_uri);\n',
-  ),
-];
-
 /// Removes `//` comments that start a line or follow whitespace, so a `://` inside a string survives.
 String _stripLineComments(String source) =>
     source.replaceAllMapped(RegExp(r'(^|\s)//[^\n]*', multiLine: true), (match) => match[1]!);
@@ -198,17 +134,4 @@ String? _block(String source, String name) {
     if (source[i] == '}' && --depth == 0) return source.substring(open.end, i);
   }
   fail('the $name block has no closing brace');
-}
-
-/// The root folder of [package], read from `.dart_tool/package_config.json`, with a trailing slash.
-Uri _packageRoot(String package) {
-  const configPath = '.dart_tool/package_config.json';
-  final config = jsonDecode(File(configPath).readAsStringSync()) as Map<String, dynamic>;
-  final entry = (config['packages'] as List<dynamic>).cast<Map<String, dynamic>>().where(
-    (entry) => entry['name'] == package,
-  );
-  if (entry.isEmpty) fail('$configPath has no entry for $package; run fvm flutter pub get');
-
-  final root = File(configPath).absolute.uri.resolve(entry.single['rootUri'] as String);
-  return root.path.endsWith('/') ? root : root.replace(path: '${root.path}/');
 }

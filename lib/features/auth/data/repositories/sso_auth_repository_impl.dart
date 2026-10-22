@@ -25,19 +25,11 @@ class SsoAuthRepository implements ISsoAuthRepository {
   final OidcSettings _settings;
 
   @override
-  Future<SsoSignInResult> signIn({String? webReturnPath, required String browserDoneMessage}) async =>
-      _toResult(await _client.signIn(webReturnPath: webReturnPath, browserDoneMessage: browserDoneMessage));
-
-  @override
-  Future<SsoSignInResult?> completePendingSignIn() async {
-    final outcome = await _client.completePendingSignIn();
-    return outcome == null ? null : _toResult(outcome);
-  }
+  Future<SsoSignInResult> signIn() async => _toResult(await _client.signIn());
 
   Future<SsoSignInResult> _toResult(OidcSignInOutcome outcome) async => switch (outcome) {
     OidcSignedIn(:final tokens, :final claims) => await _persist(tokens, claims),
     OidcSignInCancelled() => const SsoSignInCancelled(),
-    OidcSignInNavigatedAway() => const SsoSignInNavigatedAway(),
     OidcSignInFailed(failure: OidcFailure.discovery) => const SsoSignInRejected(AppErrorCode.authOidcDiscovery),
     OidcSignInFailed(failure: OidcFailure.failed) => const SsoSignInRejected(AppErrorCode.authOidcFailed),
   };

@@ -17,7 +17,6 @@ class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
     super.key,
     required this.scaffoldMessengerKey,
-    required this.sharedActivity,
     required this.child,
     this.idleTimeoutOverride,
   });
@@ -27,11 +26,6 @@ class AppSessionListeners extends StatefulWidget {
   /// all stored data. This widget sits above MaterialApp, where its context
   /// finds no ScaffoldMessenger.
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
-
-  /// The activity of every browser tab, which the idle timeout counts on
-  /// web, where all tabs share the session. Null on mobile and desktop;
-  /// see `AppDependencies.createSharedActivityStore`.
-  final ISharedActivityStore? sharedActivity;
 
   final Widget child;
 
@@ -73,7 +67,6 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
     final cubit = context.read<SessionCubit>();
     final observer = IdleTimeoutObserver(
       idleThreshold: threshold,
-      sharedActivity: widget.sharedActivity,
       onTimeout: () {
         _log.info('idle timeout fired — signing out');
         cubit.endSession(reason: SessionExpiredReason.idleTimeout);
@@ -83,8 +76,8 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
     _idleObserver = observer;
   }
 
-  /// Counts a key the user pressed as activity, as typing in a form or moving the focus with the keyboard does on
-  /// desktop and web. Returns false, so the key still reaches the focused widget. A key event Flutter synthesized to
+  /// Counts a key the user pressed as activity, as typing in a form or moving the focus with a hardware keyboard
+  /// does. Returns false, so the key still reaches the focused widget. A key event Flutter synthesized to
   /// match the keyboard state, such as the release of a key held down when the window lost focus, is no activity.
   bool _onKeyEvent(KeyEvent event) {
     if (!event.synthesized) _idleObserver?.recordActivity();
@@ -170,7 +163,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => _idleObserver?.recordActivity(),
         onPointerMove: (_) => _idleObserver?.recordActivity(),
-        // A mouse wheel and a trackpad scroll the page on desktop and web without a pointer down or move.
+        // A mouse wheel and a trackpad scroll the page without a pointer down or move.
         onPointerSignal: (_) => _idleObserver?.recordActivity(),
         onPointerPanZoomStart: (_) => _idleObserver?.recordActivity(),
         onPointerPanZoomUpdate: (_) => _idleObserver?.recordActivity(),

@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_bloc_advance/core/errors/app_error_code.dart';
@@ -34,7 +33,7 @@ class LoginScreen extends StatefulWidget {
   /// Wired by the router; null = non-interactive badge (features cannot import app/theme).
   final VoidCallback? onToggleTheme;
 
-  /// Why the web sign-in that the app completed at startup failed, or null. Passed in by the router, which reads the
+  /// Why single sign-on cannot run, as the startup step found, or null. Passed in by the router, which reads the
   /// session (features cannot import app/session). The single sign-on page shows it until the first tap.
   final AppErrorCode? startupSignInError;
 
@@ -272,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       crossAxisAlignment: WrapCrossAlignment.center,
       runSpacing: 8,
       children: [
-        _statItem('7+', l10n.login_brand_stat_platforms),
+        _statItem('2', l10n.login_brand_stat_platforms),
         _statDot(),
         _statItem('5', l10n.login_brand_stat_layers),
         _statDot(),
@@ -567,17 +566,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _requestSso(context);
   }
 
-  /// Starts the single sign-on. On web the tab comes back to the route's `returnUrl`, which the client checks before
-  /// it builds the entry URI; elsewhere the page reads it on the way out, as the password sign-in does.
-  void _requestSso(BuildContext context) {
-    final returnUrl = GoRouterState.of(context).uri.queryParameters['returnUrl'];
-    context.read<LoginBloc>().add(
-      SsoSignInRequested(
-        webReturnPath: kIsWeb ? returnUrl : null,
-        browserDoneMessage: S.of(context).login_sso_browser_done,
-      ),
-    );
-  }
+  /// Starts the single sign-on. The page reads the route's `returnUrl` on the way out, as the password sign-in does.
+  void _requestSso(BuildContext context) => context.read<LoginBloc>().add(const SsoSignInRequested());
 
   /// The links of the community section, or null when the project has no repository to link to.
   CommunityUrls? _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
