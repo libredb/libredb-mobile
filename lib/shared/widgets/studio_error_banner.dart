@@ -38,7 +38,8 @@ Future<void> _copyStatement(ScaffoldMessengerState? messenger, String confirmati
 /// - A rate limit counts down from [RateLimitedError.retryAfter]: the retry action stays disabled until zero, and
 ///   [onRetryAvailable] is called once when it reaches zero. Without a delay the retry action is available at once and
 ///   [onRetryAvailable] is not called. The banner never retries by itself, so it never runs a statement again.
-/// - Governance unavailable says Studio is retrying; the screen that shows the banner does the retrying.
+/// - Governance unavailable is shown as transient and asks the user to try again; nothing retries on its own, so the
+///   banner never claims a retry.
 /// - A refused database credential shows its `fixStatement`, when Studio sent one, as copyable monospace text.
 /// - Any other error shows the translated message of its code.
 ///
@@ -103,7 +104,7 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
     final transient = error is RateLimitedError || _isGovernanceUnavailable(error);
     final background = transient ? colorScheme.secondaryContainer : colorScheme.errorContainer;
     final foreground = transient ? colorScheme.onSecondaryContainer : colorScheme.onErrorContainer;
-    final message = _isGovernanceUnavailable(error) ? s.studio_error_governance_retrying : _messageOf(context, error);
+    final message = _messageOf(context, error);
     final fixStatement = _fixStatementOf(error);
     final onRetry = widget.onRetry;
 
@@ -191,7 +192,7 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
 void showStudioErrorSnackBar(BuildContext context, AppError error) {
   final s = S.of(context);
   final retryAfter = error is RateLimitedError ? error.retryAfter : null;
-  final message = _isGovernanceUnavailable(error) ? s.studio_error_governance_retrying : _messageOf(context, error);
+  final message = _messageOf(context, error);
   final text = retryAfter != null && retryAfter.inSeconds > 0
       ? '$message ${s.studio_error_retry_in(retryAfter.inSeconds)}'
       : message;

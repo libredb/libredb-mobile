@@ -105,11 +105,17 @@ void main() {
     });
   });
 
-  testWidgets('governance unavailable says Studio is retrying', (tester) async {
-    await tester.pumpWidget(_app(StudioErrorBanner(error: _error(AppErrorCode.studioGovernanceUnavailable))));
+  testWidgets('governance unavailable asks to try again and never claims a retry nothing runs', (tester) async {
+    var retried = 0;
+    await tester.pumpWidget(
+      _app(StudioErrorBanner(error: _error(AppErrorCode.studioGovernanceUnavailable), onRetry: () => retried++)),
+    );
 
-    expect(find.text('Studio cannot check your access right now. Retrying automatically.'), findsOneWidget);
-    expect(_retryButton, findsNothing, reason: 'no retry action is given');
+    expect(find.text('Studio cannot check your access right now. Try again in a moment.'), findsOneWidget);
+    expect(find.textContaining('Retrying automatically'), findsNothing);
+    expect(find.byIcon(Icons.sync_problem), findsOneWidget);
+    await tester.tap(_retryButton);
+    expect(retried, 1);
   });
 
   group('database auth', () {
@@ -268,6 +274,19 @@ void main() {
         find.descendant(of: find.byType(SnackBar), matching: find.text('This connection is not available to you.')),
         findsOneWidget,
       );
+    });
+
+    testWidgets('governance unavailable never claims a retry nothing runs', (tester) async {
+      await show(tester, _error(AppErrorCode.studioGovernanceUnavailable));
+
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text('Studio cannot check your access right now. Try again in a moment.'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Retrying automatically'), findsNothing);
     });
 
     testWidgets('says how long a rate limit asks to wait', (tester) async {

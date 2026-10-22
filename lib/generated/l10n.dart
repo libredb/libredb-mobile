@@ -1160,16 +1160,6 @@ class S {
     return Intl.message('You can try again in $seconds s.', name: 'studio_error_retry_in', desc: '', args: [seconds]);
   }
 
-  /// `Studio cannot check your access right now. Retrying automatically.`
-  String get studio_error_governance_retrying {
-    return Intl.message(
-      'Studio cannot check your access right now. Retrying automatically.',
-      name: 'studio_error_governance_retrying',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `An administrator can run this statement to fix it:`
   String get studio_error_fix_statement {
     return Intl.message(

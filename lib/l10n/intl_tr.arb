@@ -323,8 +323,6 @@
       }
     }
   },
-  "studio_error_governance_retrying": "Studio şu anda erişiminizi denetleyemiyor. Otomatik olarak yeniden deneniyor.",
-  "@studio_error_governance_retrying": {},
   "studio_error_fix_statement": "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
   "@studio_error_fix_statement": {},
   "studio_error_copy_statement": "İfadeyi kopyala",

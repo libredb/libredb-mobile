@@ -323,8 +323,6 @@
       }
     }
   },
-  "studio_error_governance_retrying": "Studio cannot check your access right now. Retrying automatically.",
-  "@studio_error_governance_retrying": {},
   "studio_error_fix_statement": "An administrator can run this statement to fix it:",
   "@studio_error_fix_statement": {},
   "studio_error_copy_statement": "Copy statement",

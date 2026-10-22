@@ -268,9 +268,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_governance_retrying": MessageLookupByLibrary.simpleMessage(
-      "Studio cannot check your access right now. Retrying automatically.",
-    ),
     "studio_error_retry_in": m6,
     "studio_error_semantics": m7,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),

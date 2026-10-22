@@ -266,9 +266,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_governance_retrying": MessageLookupByLibrary.simpleMessage(
-      "Studio şu anda erişiminizi denetleyemiyor. Otomatik olarak yeniden deneniyor.",
-    ),
     "studio_error_retry_in": m6,
     "studio_error_semantics": m7,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
