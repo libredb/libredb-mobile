@@ -58,14 +58,17 @@ const _prodConfig = AppConfig(
   idleTimeout: null,
 );
 
-/// A TokenRotation that records each refresh token it is asked to rotate and refuses it.
+/// A TokenRotation that records each refresh token it is asked to rotate and answers [result], a refusal by default.
 class _FakeRotation implements TokenRotation {
+  _FakeRotation([this.result = const RotationRefused()]);
+
+  final TokenRotationResult result;
   final sent = <String>[];
 
   @override
   Future<TokenRotationResult> rotate(String refreshToken) async {
     sent.add(refreshToken);
-    return const RotationRefused();
+    return result;
   }
 }
 
@@ -106,10 +109,10 @@ Future<_MemorySecureStorage> _signedInStorage() async {
   return storage;
 }
 
-/// Sends a GET through [client], whose server answers [adapter]'s 401, and waits for it to fail.
-Future<void> _getUnauthorized(ApiClient client, _UnauthorizedAdapter adapter) async {
+/// Sends a GET of [path] through [client], whose server answers [adapter]'s 401, and waits for it to fail.
+Future<void> _getUnauthorized(ApiClient client, _UnauthorizedAdapter adapter, [String path = '/api/users']) async {
   client.instance.httpClientAdapter = adapter;
-  await expectLater(client.get('/api/users').timeout(const Duration(seconds: 5)), throwsA(anything));
+  await expectLater(client.get(path).timeout(const Duration(seconds: 5)), throwsA(anything));
 }
 
 final _oidcSession = AuthSession(
@@ -213,6 +216,44 @@ void main() {
     expect(rotation.sent, ['REFRESH']);
     expect(adapter.requests, ['GET /api/users'], reason: 'the backend refresh endpoint is not called');
     expect(sessionExpiredCalls, 1, reason: 'the fake rotation refuses');
+  });
+
+  // GET /api/auth/me also answers 401 without a code when Studio cannot reach Keycloak, which a new session would not fix.
+  test('the predicate of a 401 after a refresh is Studio\'s', () {
+    expect(dependencies.sessionRefusedPredicate, same(isStudioSessionRefused));
+  });
+
+  test('createOidcApiClient keeps the session when /auth/me answers 401 without a code after a refresh', () async {
+    final adapter = _UnauthorizedAdapter('{"authenticated":false}');
+    final rotation = _FakeRotation(const TokensRotated(accessToken: 'NEW_ACCESS'));
+    var sessionExpiredCalls = 0;
+    final client = const AppDependencies(appConfig: _prodConfig).createOidcApiClient(
+      await _signedInStorage(),
+      onSessionExpired: () => sessionExpiredCalls++,
+      tokenRotation: rotation,
+    );
+
+    await _getUnauthorized(client, adapter, '/auth/me');
+
+    expect(rotation.sent, ['REFRESH']);
+    expect(adapter.requests, ['GET /auth/me', 'GET /auth/me'], reason: 'sent again once with the new token');
+    expect(sessionExpiredCalls, 0);
+  });
+
+  test('createOidcApiClient ends the session when Studio answers 401 AUTH_REQUIRED after a refresh', () async {
+    final adapter = _UnauthorizedAdapter('{"error":"Invalid access token","code":"AUTH_REQUIRED"}');
+    final rotation = _FakeRotation(const TokensRotated(accessToken: 'NEW_ACCESS'));
+    var sessionExpiredCalls = 0;
+    final client = const AppDependencies(appConfig: _prodConfig).createOidcApiClient(
+      await _signedInStorage(),
+      onSessionExpired: () => sessionExpiredCalls++,
+      tokenRotation: rotation,
+    );
+
+    await _getUnauthorized(client, adapter, '/connections/managed');
+
+    expect(adapter.requests, ['GET /connections/managed', 'GET /connections/managed']);
+    expect(sessionExpiredCalls, 1);
   });
 
   test('createOidcApiClient uses sessionExpiredPredicate', () async {

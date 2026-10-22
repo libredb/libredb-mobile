@@ -10,6 +10,7 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_in
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 
@@ -1756,6 +1757,95 @@ void main() {
       expect(sessionExpiredCalls, 0);
     });
   });
+  // GET /api/auth/me answers 401 without a code both for a refused token and when Studio cannot reach Keycloak. After
+  // a refresh at Keycloak succeeded, only a refusal predicate's 401 ends the session; any other 401 reaches the caller.
+  group('TokenRefreshInterceptor - a 401 again after a refresh', () {
+    late int sessionExpiredCalls;
+
+    setUp(() async {
+      await secureStorage.write(SecureStorageKeys.jwtToken.key, 'old-access');
+      await secureStorage.write(SecureStorageKeys.refreshToken.key, 'valid-refresh');
+      sessionExpiredCalls = 0;
+    });
+
+    /// A client with Studio's 401 rules whose server answers every request with 401 and [body].
+    ({_UnauthorizedServerStub server, _FakeRotation rotation}) studioClient(
+      String body, {
+      TokenRotationResult rotated = const TokensRotated(accessToken: 'new-access'),
+    }) {
+      final server = _UnauthorizedServerStub(body);
+      final rotation = _FakeRotation(rotated);
+      dio.interceptors.addAll([
+        AuthInterceptor(secureStorage: secureStorage),
+        TokenRefreshInterceptor(
+          dio: dio,
+          secureStorage: secureStorage,
+          onSessionExpired: () => sessionExpiredCalls++,
+          rotation: rotation,
+          isSessionExpired: isStudioSessionExpired,
+          isSessionRefused: isStudioSessionRefused,
+        ),
+        server,
+      ]);
+      return (server: server, rotation: rotation);
+    }
+
+    Future<void> expectUnauthorized(String path) => expectLater(
+      dio.get<String>(path).timeout(const Duration(seconds: 5)),
+      throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', 401)),
+    );
+
+    test('keeps the session and passes the 401 on when the retry gets 401 without a code again', () async {
+      final (:server, :rotation) = studioClient('{"authenticated":false}');
+
+      await expectUnauthorized('/auth/me');
+
+      expect(rotation.sent, ['valid-refresh'], reason: 'exactly one refresh');
+      expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
+      expect(sessionExpiredCalls, 0);
+      expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), 'new-access');
+      expect(await secureStorage.read(SecureStorageKeys.refreshToken.key), 'valid-refresh');
+    });
+
+    test('ends the session when the retry gets 401 AUTH_REQUIRED again', () async {
+      final (:server, :rotation) = studioClient('{"error":"Invalid access token","code":"AUTH_REQUIRED"}');
+
+      await expectUnauthorized('/connections/managed');
+
+      expect(rotation.sent, ['valid-refresh'], reason: 'exactly one refresh');
+      expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
+      expect(sessionExpiredCalls, 1);
+    });
+
+    test('ends the session when the refresh fails at the identity provider', () async {
+      final (:server, :rotation) = studioClient('{"authenticated":false}', rotated: const RotationRefused());
+
+      await expectUnauthorized('/auth/me');
+
+      expect(rotation.sent, ['valid-refresh']);
+      expect(server.authorizations, ['Bearer old-access'], reason: 'nothing to send the request again with');
+      expect(sessionExpiredCalls, 1);
+    });
+
+    test('ends the session on any 401 after a refresh by default', () async {
+      final server = _UnauthorizedServerStub('{"authenticated":false}');
+      dio.interceptors.addAll([
+        AuthInterceptor(secureStorage: secureStorage),
+        TokenRefreshInterceptor(
+          dio: dio,
+          secureStorage: secureStorage,
+          onSessionExpired: () => sessionExpiredCalls++,
+          rotation: _FakeRotation(const TokensRotated(accessToken: 'new-access')),
+        ),
+        server,
+      ]);
+
+      await expectUnauthorized('/auth/me');
+
+      expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
+      expect(sessionExpiredCalls, 1);
+    });
+  });
 }
 
 /// In-memory ISecureStorage that records its writes as `key=value` and runs [onWrite], once, after it applies a write
@@ -1862,6 +1952,11 @@ class _CapturingSuccessStub extends Interceptor {
 /// Answers every request with 401 the way a server response does: the rejection runs the error
 /// interceptors, so the 401 reaches [TokenRefreshInterceptor.onError]. Records each Authorization header.
 class _UnauthorizedServerStub extends Interceptor {
+  _UnauthorizedServerStub([this.body]);
+
+  /// The body of every 401.
+  final String? body;
+
   final authorizations = <String?>[];
 
   @override
@@ -1871,7 +1966,7 @@ class _UnauthorizedServerStub extends Interceptor {
       DioException(
         requestOptions: options,
         type: DioExceptionType.badResponse,
-        response: Response(requestOptions: options, statusCode: 401),
+        response: Response(requestOptions: options, statusCode: 401, data: body),
       ),
       true,
     );

@@ -82,24 +82,25 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
 1. "Sign in with SSO" runs the authorization code flow with PKCE in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
    The tokens go to the platform's secure storage.
 2. `AuthInterceptor` adds the access token to every request as `Authorization: Bearer`.
-3. When Studio refuses the token, `TokenRefreshInterceptor` refreshes it at Keycloak once and repeats the request; if that does not help, the session ends.
+3. When Studio refuses the token, `TokenRefreshInterceptor` refreshes it at Keycloak once and repeats the request.
+   The session ends when the refresh fails at Keycloak, or when Studio answers the repeated request with 401 `AUTH_REQUIRED` (`isStudioSessionRefused`).
 4. Logout ends the Keycloak session (RP-initiated logout) and deletes the app's tokens.
    Once [#18](https://github.com/libredb/libredb-mobile/issues/18) lands, the app first posts `POST /api/auth/logout`, so Studio writes a logout line in its audit trail as it does for a web sign-out.
    That revokes nothing: Studio keeps no state for a bearer session.
 
-Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`:
+Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`, and which 401 after the refresh ends the session is the rule of `isStudioSessionRefused`:
 
 | Studio answers | The app |
 | --- | --- |
-| 401 `AUTH_REQUIRED` | refreshes the token and repeats the request once |
-| 401 without a code (`/api/auth/me`'s `{"authenticated":false}`) | the same |
+| 401 `AUTH_REQUIRED` | refreshes the token and repeats the request once; a second 401 `AUTH_REQUIRED` ends the session |
+| 401 without a code (`/api/auth/me`'s `{"authenticated":false}`) | refreshes the token and repeats the request once; a second 401 without a code shows the error with a retry, and the session stays |
+| a failed refresh at Keycloak (expired or revoked refresh token) | ends the session |
 | 401 `AUTH_ERROR` (the database refused its credential) | shows the error; the session stays |
 | 401 `LLM_AUTH` | the same; the AI routes are not used |
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
 
 `GET /api/auth/me` answers 401 without a code both for a refused token and when Studio cannot reach Keycloak, so a 401 there does not prove the session is over.
-Today `TokenRefreshInterceptor` ends the session when the request still answers 401 after a refresh, whether it carries `AUTH_REQUIRED` or no code.
-The rule [#12](https://github.com/libredb/libredb-mobile/issues/12) implements:
+The rule after a refresh ([#12](https://github.com/libredb/libredb-mobile/issues/12)):
 
 - A 401 without a code that comes back after a successful refresh leaves the session alone; the error reaches the screen, which offers a retry.
 - A 401 `AUTH_REQUIRED` that comes back after a successful refresh ends the session, because Studio refused a token Keycloak has just issued.

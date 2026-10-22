@@ -65,6 +65,9 @@ final class _SessionEnded extends _RefreshOutcome {
 ///
 /// Which 401 means an expired bearer is [SessionExpiredPredicate]'s call,
 /// [isUnauthorized] (every 401) by default; any other error is passed on.
+/// Which 401 for a request sent again after a refresh ends the session is
+/// [SessionRefusedPredicate]'s call, also [isUnauthorized] by default; any
+/// other 401 then reaches the caller and the session is kept.
 /// The refresh itself is a [TokenRotation]: [BackendTokenRotation], the
 /// backend's refresh endpoint, unless another one is given. A rotation
 /// whose server cannot be reached ([RotationUnavailable]) keeps the
@@ -116,6 +119,7 @@ class TokenRefreshInterceptor extends Interceptor {
   final ISecureStorage _secureStorage;
   final TokenRotation _rotation;
   final SessionExpiredPredicate _isSessionExpired;
+  final SessionRefusedPredicate _isSessionRefused;
 
   /// Shared in-flight refresh. Non-null while a refresh is in progress;
   /// concurrent 401s await the same Future. Cleared on completion (success
@@ -129,6 +133,7 @@ class TokenRefreshInterceptor extends Interceptor {
     RefreshDioFactory? refreshDioFactory,
     TokenRotation? rotation,
     SessionExpiredPredicate isSessionExpired = isUnauthorized,
+    SessionRefusedPredicate isSessionRefused = isUnauthorized,
     // ignore: prefer_initializing_formals
   }) : _dio = dio,
        // ignore: prefer_initializing_formals
@@ -138,7 +143,9 @@ class TokenRefreshInterceptor extends Interceptor {
        _rotation =
            rotation ?? BackendTokenRotation(dio: dio, refreshDioFactory: refreshDioFactory ?? defaultRefreshDio),
        // ignore: prefer_initializing_formals
-       _isSessionExpired = isSessionExpired;
+       _isSessionExpired = isSessionExpired,
+       // ignore: prefer_initializing_formals
+       _isSessionRefused = isSessionRefused;
 
   /// The default [RefreshDioFactory], which [BackendTokenRotation] uses unless it is given another one: see
   /// [token_rotation.defaultRefreshDio].
@@ -146,10 +153,10 @@ class TokenRefreshInterceptor extends Interceptor {
 
   /// Typed marker that flags a [RequestOptions] as "already retried
   /// once after a successful refresh." A second 401 on the same
-  /// request short-circuits to logout instead of attempting another
-  /// refresh — prevents infinite refresh loops when the backend keeps
-  /// rejecting freshly-rotated tokens (revoked session, clock skew,
-  /// backend bug, etc.).
+  /// request is never refreshed again, which prevents infinite refresh
+  /// loops when the backend keeps rejecting freshly-rotated tokens
+  /// (revoked session, clock skew, backend bug, etc.); it ends the
+  /// session only when [SessionRefusedPredicate] accepts it.
   ///
   /// Uses [Expando] keyed on the [RequestOptions] instance instead of
   /// the prior stringly-typed `extra['_tokenRefresh_retried']`. The
@@ -237,12 +244,18 @@ class TokenRefreshInterceptor extends Interceptor {
     }
 
     // Second 401 on the same request after a refresh+retry round
-    // already happened — refusing to refresh again. The newly-rotated
-    // token is being rejected; another refresh would just produce
-    // another rejected token. Surface the failure and log out.
+    // already happened: refusing to refresh again, since another refresh
+    // would just produce another rejected token. The session ends only
+    // when the server refuses the token just issued; any other 401, such
+    // as Studio's /auth/me when it cannot reach the identity provider,
+    // reaches the caller with the session kept.
     if (_retriedAfterRefresh[err.requestOptions] == true) {
-      _log.warn('401 again after refresh+retry for {} — giving up to avoid loop', [requestPath]);
-      _triggerLogout();
+      if (_isSessionRefused(err)) {
+        _log.warn('401 again after refresh+retry for {}: the token was refused, ending the session', [requestPath]);
+        _triggerLogout();
+      } else {
+        _log.warn('401 again after refresh+retry for {}: not a refusal of the session, which is kept', [requestPath]);
+      }
       handler.next(err);
       return;
     }
@@ -324,7 +337,7 @@ class TokenRefreshInterceptor extends Interceptor {
   /// (not the original 401) to the handler so the real cause surfaces.
   ///
   /// Marks the request with [_retriedAfterRefresh] so a second 401 on
-  /// the retry short-circuits to logout when it reaches [onError] (see
+  /// the retry is not refreshed again when it reaches [onError] (see
   /// the loop-prevention check there).
   Future<void> _retryWithToken(DioException err, String token, ErrorInterceptorHandler handler) async {
     try {

@@ -72,12 +72,18 @@ class AppDependencies {
   /// so only its `AUTH_REQUIRED` code, or a 401 without a code, counts.
   SessionExpiredPredicate get sessionExpiredPredicate => isStudioSessionExpired;
 
+  /// Which 401 for a request sent again after a refresh ends the session. Studio's `GET /api/auth/me` also answers 401
+  /// without a code when Studio cannot reach the identity provider, which a new session would not fix, so only its
+  /// `AUTH_REQUIRED` code counts; any other 401 reaches the caller with the session kept.
+  SessionRefusedPredicate get sessionRefusedPredicate => isStudioSessionRefused;
+
   /// [onSessionExpired] runs when a 401 cannot be fixed by a token refresh; the caller ends the session there.
   ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) => ApiClient(
     appConfig: appConfig,
     secureStorage: secureStorage,
     onSessionExpired: onSessionExpired,
     isSessionExpired: sessionExpiredPredicate,
+    isSessionRefused: sessionRefusedPredicate,
   );
 
   /// The [ApiClient] of an `oidc` build, which refreshes the session through [tokenRotation] instead of the backend's
@@ -92,6 +98,7 @@ class AppDependencies {
     onSessionExpired: onSessionExpired,
     tokenRotation: tokenRotation,
     isSessionExpired: sessionExpiredPredicate,
+    isSessionRefused: sessionRefusedPredicate,
   );
 
   IAccountRepository createAccountRepository(ApiClient apiClient) => AccountRepository(apiClient);
