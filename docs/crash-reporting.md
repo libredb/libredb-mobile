@@ -58,7 +58,7 @@ The lifecycle breadcrumbs of sentry-android keep their `state` (such as `resumed
 | iOS | Scrubbed | Not scrubbed | Not scrubbed |
 
 Native scrubbing is not done on iOS yet: sentry_flutter starts sentry-cocoa there, and what it records itself leaves the device unmasked.
-The fix is tracked in the template's [cevheri/flutter-bloc-advanced#177](https://github.com/cevheri/flutter-bloc-advanced/issues/177); until it lands here, do not give an iOS release build a Sentry DSN (roadmap M6).
+Until a native scrubber covers iOS (roadmap M6), do not give an iOS release build a Sentry DSN.
 Sentry's server-side data scrubbing (Advanced Data Scrubbing in the project settings) is a useful complement on every platform, but it runs after the data has left the device, so it does not replace the hooks.
 
 On Android, Gradle passes the DSN to the native SDK only for a `lib/main/main_prod.dart` build (`android/app/build.gradle.kts`), the only entry point that selects the prod environment in which the Dart side starts Sentry.
