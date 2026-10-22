@@ -26,6 +26,12 @@ docker compose -f tool/oidc-demo/docker-compose.yml up -d --wait
 fvm flutter run -d chrome --web-port 8081 --target lib/main/main_local.dart --dart-define-from-file=tool/oidc-demo/oidc-demo.env
 docker compose -f tool/oidc-demo/docker-compose.yml down -v
 
+# Against a local LibreDB Studio and Keycloak over TLS (docs/studio.md); an Android emulator also needs
+# tool/studio-dev/trust-android-emulator.sh after every boot
+STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev.env
+docker compose -f tool/studio-dev/docker-compose.yml down -v
+
 # Analysis & formatting
 fvm dart analyze
 fvm dart fix --apply
@@ -161,6 +167,7 @@ When in doubt, prefer sealed and split the BLoC instead of growing the single st
 - **prod** → real API (configured in `lib/infrastructure/config/environment.dart`)
 - **Sign-in mode** is a separate build-time switch, `AUTH_PROVIDER`: unset or `jwt` is the password and OTP sign-in against the backend, and `oidc` signs in through an OpenID Connect provider configured by the `OIDC_*` defines (`lib/infrastructure/config/auth_config.dart`, [`docs/oidc.md`](docs/oidc.md)).
   Both entry points accept both modes, and `jwt` mode must never construct or call anything from the OIDC path.
+- **Backend:** the app's backend is LibreDB Studio, called with the Keycloak access token as bearer; `PROD_API_URL` is Studio's `/api` ([`docs/studio.md`](docs/studio.md)).
 
 ## Adding a New Feature
 

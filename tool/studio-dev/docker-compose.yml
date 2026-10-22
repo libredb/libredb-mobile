@@ -1,0 +1,263 @@
+# LibreDB Studio and Keycloak for running the app against a real Studio. NOT A PRODUCTION CONFIGURATION.
+#
+#   docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+#   fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev.env
+#   docker compose -f tool/studio-dev/docker-compose.yml down -v
+#
+# Walkthrough, device setup and the CA certificate: docs/studio.md.
+#
+# Layout, all on loopback and served by Caddy with its own local CA (`tls internal`):
+#   https://localhost:8443  Keycloak, realm libredb; the issuer is https://localhost:8443/realms/libredb
+#   https://localhost:9443  LibreDB Studio; the app's API is https://localhost:9443/api
+# Studio requires an https issuer, and the browser, the app on a device (through `adb reverse`) and Studio itself
+# must all name the issuer with the same URL. Studio therefore shares Caddy's network namespace, so its own
+# localhost:8443 reaches the same Keycloak as everyone else's.
+#
+# Sign in as admin / admin (realm role admin) or user / user (realm role user).
+# The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
+#
+# The Studio image needs the bearer channel of libredb/libredb-studio#1914. Until a release contains it, build the
+# image from that branch and point STUDIO_IMAGE at it (see docs/studio.md).
+#
+# Unfit for production on purpose: start-dev with the embedded H2 store (all state is lost when the containers are
+# removed), a short-lived self-signed CA, and the client secret, the user passwords and the Keycloak admin account
+# committed in this file.
+# Needs Docker Compose v2.23.1 or newer for inline `configs` content.
+
+name: libredb-mobile-studio-dev
+
+services:
+  proxy:
+    image: caddy:2.10-alpine
+    ports:
+      # Loopback only, so the Keycloak admin console, whose password is in this file, is not offered to the network.
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:9443:9443"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy-data:/data
+    healthcheck:
+      # Caddy writes its local CA the first time it issues the site certificate.
+      test: ["CMD", "test", "-s", "/data/caddy/pki/authorities/local/root.crt"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # Caddy keeps its CA as root, mode 0600, next to the CA private key. Studio runs as uid 1001 and Node ignores an
+  # unreadable NODE_EXTRA_CA_CERTS, so only the public root certificate is copied, world-readable, to its own volume.
+  ca-export:
+    image: caddy:2.10-alpine
+    depends_on:
+      proxy:
+        condition: service_healthy
+    volumes:
+      - caddy-data:/caddy:ro
+      - dev-ca:/ca
+    entrypoint:
+      - sh
+      - -c
+      - install -m 0644 /caddy/caddy/pki/authorities/local/root.crt /ca/root.crt
+    restart: "no"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command:
+      - start-dev
+      - --import-realm
+      # Caddy terminates TLS and forwards plain http; trust its X-Forwarded headers.
+      - --proxy-headers=xforwarded
+      # One issuer for every client: the browser, the app on a device and Studio all use https://localhost:8443.
+      - --hostname=https://localhost:8443
+      - --health-enabled=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: kcadmin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: kcadmin
+    configs:
+      - source: keycloak-realm
+        target: /opt/keycloak/data/import/libredb-realm.json
+    healthcheck:
+      # The image has no curl; ask the management port's readiness endpoint over bash.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  libredb-studio:
+    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:latest}
+    # Studio's localhost is Caddy's, so https://localhost:8443 reaches Keycloak through the same proxy and
+    # certificate as the app does, and Caddy reaches Studio on localhost:3000.
+    network_mode: service:proxy
+    depends_on:
+      ca-export:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_AUTH_PROVIDER: oidc
+      OIDC_ISSUER: https://localhost:8443/realms/libredb
+      OIDC_CLIENT_ID: libredb-studio
+      OIDC_CLIENT_SECRET: libredb-dev-secret-not-for-production
+      OIDC_ROLE_CLAIM: realm_access.roles
+      OIDC_ADMIN_ROLES: admin
+      OIDC_USER_ROLES: user
+      # The bearer channel for the app: tokens of client libredb-mobile that carry this audience.
+      OIDC_BEARER_AUDIENCE: libredb-studio-api
+      OIDC_BEARER_CLIENT_IDS: libredb-mobile
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+    volumes:
+      - dev-ca:/ca:ro
+    healthcheck:
+      # The image has no curl; ask Studio's health endpoint over Node.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+configs:
+  caddyfile:
+    content: |
+      {
+      	# Nothing to trust inside a container; skip the attempt and its warning.
+      	skip_install_trust
+      }
+
+      localhost:8443 {
+      	tls internal
+      	reverse_proxy keycloak:8080
+      }
+
+      # Caddy forwards the original Host, port included, which Studio's origin check, OIDC redirect URI and
+      # post-logout URI compare against.
+      localhost:9443 {
+      	tls internal
+      	reverse_proxy localhost:3000
+      }
+
+  keycloak-realm:
+    content: |
+      {
+        "realm": "libredb",
+        "enabled": true,
+        "sslRequired": "external",
+        "accessTokenLifespan": 60,
+        "roles": {
+          "realm": [
+            { "name": "admin", "description": "LibreDB admin" },
+            { "name": "user", "description": "LibreDB user" }
+          ]
+        },
+        "clients": [
+          {
+            "clientId": "libredb-studio",
+            "name": "LibreDB Studio",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "libredb-dev-secret-not-for-production",
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "rootUrl": "https://localhost:9443",
+            "redirectUris": ["https://localhost:9443/api/auth/oidc/callback"],
+            "webOrigins": ["https://localhost:9443"],
+            "attributes": {
+              "post.logout.redirect.uris": "https://localhost:9443/login"
+            },
+            "protocolMappers": [
+              {
+                "name": "realm roles in every token",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "claim.name": "realm_access.roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true",
+                  "id.token.claim": "true",
+                  "access.token.claim": "true",
+                  "userinfo.token.claim": "true"
+                }
+              }
+            ]
+          },
+          {
+            "clientId": "libredb-mobile",
+            "name": "LibreDB Mobile",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": true,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": false,
+            "frontchannelLogout": false,
+            "redirectUris": ["org.libredb.mobile:/oauth2redirect"],
+            "attributes": {
+              "pkce.code.challenge.method": "S256",
+              "post.logout.redirect.uris": "org.libredb.mobile:/oauth2redirect"
+            },
+            "protocolMappers": [
+              {
+                "name": "realm roles in every token",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "claim.name": "realm_access.roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true",
+                  "id.token.claim": "true",
+                  "access.token.claim": "true",
+                  "userinfo.token.claim": "true"
+                }
+              },
+              {
+                "name": "studio api audience",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-audience-mapper",
+                "consentRequired": false,
+                "config": {
+                  "included.custom.audience": "libredb-studio-api",
+                  "id.token.claim": "false",
+                  "access.token.claim": "true"
+                }
+              }
+            ]
+          }
+        ],
+        "users": [
+          {
+            "username": "admin",
+            "enabled": true,
+            "email": "admin@example.com",
+            "emailVerified": true,
+            "firstName": "Demo",
+            "lastName": "Admin",
+            "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+            "realmRoles": ["admin", "default-roles-libredb"]
+          },
+          {
+            "username": "user",
+            "enabled": true,
+            "email": "user@example.com",
+            "emailVerified": true,
+            "firstName": "Demo",
+            "lastName": "User",
+            "credentials": [{ "type": "password", "value": "user", "temporary": false }],
+            "realmRoles": ["user", "default-roles-libredb"]
+          }
+        ]
+      }
+
+volumes:
+  caddy-data:
+  dev-ca:
