@@ -1,0 +1,1 @@
+{"rows":[{"index":1,"value":"login"},{"index":2,"value":"run-query"},{"index":3,"value":"logout"}],"fields":["index","value"],"rowCount":3,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":3,"wasLimited":false}}

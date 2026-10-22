@@ -1,0 +1,1 @@
+{"rows":[{"field":"name","value":"Grace Hopper"},{"field":"email","value":"grace@example.com"},{"field":"plan","value":"team"}],"fields":["field","value"],"rowCount":3,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":3,"wasLimited":false}}

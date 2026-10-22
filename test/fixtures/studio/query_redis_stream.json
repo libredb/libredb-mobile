@@ -1,0 +1,1 @@
+{"rows":[{"action":"login","device":"tablet","id":"1700000000000-0"},{"action":"run-query","device":"tablet","id":"1700000000001-0"}],"fields":["id","action","device"],"rowCount":2,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":2,"wasLimited":false}}

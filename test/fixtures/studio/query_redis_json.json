@@ -1,0 +1,1 @@
+{"rows":[{"result":"{\"name\":\"Grace Hopper\",\"languages\":[\"en\"],\"active\":true}"}],"fields":["result"],"rowCount":1,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}

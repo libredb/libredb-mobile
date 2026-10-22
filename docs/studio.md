@@ -97,7 +97,7 @@ This step was not run, since the stack was verified on Linux.
 
 1. "Sign in with SSO" opens Keycloak in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
 2. After the sign-in the app asks Studio's `GET /api/auth/me` and opens the connection list only on its 200; `norole` / `norole` stays on the login page with "Studio did not accept this sign-in.", and nothing is stored.
-3. The connection list shows what Studio offers the user: the seeds of [Postgres seeds](#postgres-seeds) and Studio's sample connections (the SQLite one only to `admin`).
+3. The connection list shows what Studio offers the user: the seeds of [Postgres seeds](#postgres-seeds) and [Redis seed](#redis-seed) and Studio's sample connections (the SQLite one only to `admin`).
    That request carries the access token, so the list proves the bearer channel.
 4. A minute later the access token has expired: Studio answers the next request with 401, and the app refreshes at Keycloak and repeats it.
 5. Logout ends the Keycloak session as well, and the app is back on the login page.
@@ -132,6 +132,28 @@ The first two seeds sign in as `app_owner`, which owns every object, and the thi
 Studio reads a table's keys from `information_schema` views, which show foreign keys only to the owner, and primary keys only to the owner or a role with a non-SELECT privilege on the table, so its describe of `public.orders` names them through the first seed and not through the third.
 Both passwords are only in the compose file, and every seed is managed, so `GET /api/connections/managed` sends neither.
 A server-level seed exists only without governance: a governed Studio refuses it at admission with `SERVER_LEVEL_NOT_ALLOWED`.
+
+## Redis seed
+
+The default stack also runs `redis`, Redis 8.10 with a password and no persistence, which the one-shot `redis-seed` service loads from `tool/studio-dev/redis/seed.redis` before Studio starts.
+Studio offers it as `seed:dev-redis`, "Dev Redis" (`development`, `Dev databases`), managed like the Postgres seeds, so its password stays in the compose file.
+The seed names no database, so a request without `database` reads database 0, and the tree lists the server's 16 numbered databases.
+
+Databases 0 and 1 each hold one key of every type the key browser reads, under `user:*`, `session:*` and `cache:*`:
+
+| Type | Database 0 | Database 1 |
+| --- | --- | --- |
+| string | `cache:greeting` | `cache:greeting` |
+| string holding JSON | `user:1:profile` | `user:2:profile` |
+| hash | `user:1` | `user:2` |
+| list | `session:1:events` | `session:2:events` |
+| set | `user:1:roles` | `user:2:roles` |
+| sorted set | `cache:leaderboard` | `cache:leaderboard` |
+| stream | `session:1:log` | `session:2:log` |
+
+Database 1 also holds 1,200 strings `user:0001` to `user:1200`, so a walk of `user:*` there takes several pages; it holds 1,207 keys in all.
+A stream entry has a fixed id, so a recorded read of it does not change with the clock.
+`redis-seed` exits non-zero on any reply but `OK`, a number or a stream id, and when databases 0 and 1 do not hold 7 and 1,207 keys, so Studio never starts on an empty Redis.
 
 ## Governed Studio
 
@@ -209,7 +231,7 @@ Run it again when Studio publishes a new governance contract.
 
 ### Docker Hub on this machine
 
-Where the stored Docker Hub credentials are rejected, pulls of `postgres` and `caddy` fail even though the images are public.
+Where the stored Docker Hub credentials are rejected, pulls of `postgres`, `redis` and `caddy` fail even though the images are public.
 Point `DOCKER_CONFIG` at an empty directory for the command, so Docker pulls anonymously:
 
 ```shell
@@ -257,6 +279,47 @@ record source_postgres_function /db/objects/source '{"connectionId":"seed:dev-po
 record search_postgres /db/objects/search '{"connectionId":"seed:dev-postgres","term":"ord"}'
 record query_types_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM public.column_types","options":{"limit":50,"offset":0}}'
 record describe_postgres_orders_readonly /db/objects/describe '{"connectionId":"seed:dev-postgres-readonly","path":["public","orders"],"kind":"table"}'
+```
+
+The Redis answers were recorded as `admin` from the same image.
+The key-scan pages walk `user:*` in database 1 with Studio's default batch: the first page is asked without a cursor, every later page with the cursor of the page before, and `keyscan_next.json` is the second page and `keyscan_last.json` the one whose cursor is back at `0`.
+`keyscan_requests.json` keeps the body each of the three was asked with, so a test can check that they chain.
+Redis picks a random hash seed at every start, so a re-recording gets other cursors and splits the keys into pages differently.
+The test expects exactly three pages, which this recording gave; a re-recording that takes another number of pages needs the test adjusted along with the fixtures.
+
+```shell
+record meta_redis /db/provider-meta '{"connectionId":"seed:dev-redis"}'
+record containers_redis /db/objects/containers '{"connectionId":"seed:dev-redis"}'
+record counts_redis /db/objects/counts '{"connectionId":"seed:dev-redis","container":["1"]}'
+scan='{"connectionId":"seed:dev-redis","pattern":"user:*","database":1}'
+requests='{}'
+page=0
+while :; do
+  page=$((page + 1))
+  case $page in 1) name=keyscan_first ;; 2) name=keyscan_next ;; *) name=keyscan_page ;; esac
+  record "$name" /db/keys/scan "$scan"
+  requests=$(jq --arg name "$name" --argjson body "$scan" '.[$name] = $body' <<<"$requests")
+  cursor=$(jq -r .cursor "test/fixtures/studio/$name.json")
+  if [ "$cursor" = 0 ]; then break; fi
+  scan=$(jq -c --arg cursor "$cursor" '.cursor = $cursor' <<<"$scan")
+done
+mv test/fixtures/studio/keyscan_page.json test/fixtures/studio/keyscan_last.json
+jq '.keyscan_last = .keyscan_page | del(.keyscan_page)' <<<"$requests" > test/fixtures/studio/keyscan_requests.json
+```
+
+One typed read per key type in database 1, each the statement Studio's key browser generates for that type (`REDIS_COMMANDS` in Studio's `src/lib/query-generators.ts`), for the key reads of #32:
+
+```shell
+read_key() { # read_key <fixture> <command>
+  record "$1" /db/query "$(jq -nc --arg sql "$2" '{connectionId: "seed:dev-redis", sql: $sql, database: 1}')"
+}
+read_key query_redis_string 'GET cache:greeting'
+read_key query_redis_json 'GET user:2:profile'
+read_key query_redis_hash 'HGETALL user:2'
+read_key query_redis_list 'LRANGE session:2:events 0 -1'
+read_key query_redis_set 'SMEMBERS user:2:roles'
+read_key query_redis_zset 'ZRANGE cache:leaderboard 0 -1 WITHSCORES'
+read_key query_redis_stream 'XRANGE session:2:log - + COUNT 100'
 ```
 
 The transaction answers come from one database of the server-level seed, recorded last because the `UPDATE` changes a row:
