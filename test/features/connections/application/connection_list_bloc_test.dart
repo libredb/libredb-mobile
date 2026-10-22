@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -16,6 +17,7 @@ void main() {
 
   const connections = [StudioConnection(id: 'seed:a', name: 'A', type: 'postgres')];
   const managed = ManagedConnections(connections: connections, cacheHint: Duration(seconds: 10));
+  final loadedAt = DateTime(2026, 10, 22, 14, 5);
 
   setUp(() {
     repository = MockIConnectionRepository();
@@ -28,15 +30,69 @@ void main() {
     expect(build().state, const ConnectionListInitial());
   });
 
+  test('loads the connections and the cache hint, with the time they were loaded', () async {
+    when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed));
+
+    await withClock(Clock.fixed(loadedAt), () async {
+      final bloc = build();
+      final states = bloc.stream.take(2).toList();
+      bloc.add(const ConnectionListRequested());
+
+      expect(await states, [
+        const ConnectionListLoading(),
+        ConnectionListLoaded(connections: connections, cacheHint: const Duration(seconds: 10), loadedAt: loadedAt),
+      ]);
+      await bloc.close();
+    });
+  });
+
+  // A refresh sent while the device is offline, such as a pull or a timer, never reaches Studio: the rows stay on
+  // screen with the time they were loaded, and the screen marks them stale.
+  test('keeps the loaded connections when a refresh fails because the device is offline', () async {
+    when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed));
+    await withClock(Clock.fixed(loadedAt), () async {
+      final bloc = build();
+      bloc.add(const ConnectionListRequested());
+      await bloc.stream.firstWhere((state) => state is ConnectionListLoaded);
+      when(
+        () => repository.listManaged(),
+      ).thenAnswer((_) async => Failure(NetworkError('No Internet connection', code: AppErrorCode.networkOffline.key)));
+
+      await withClock(Clock.fixed(loadedAt.add(const Duration(minutes: 3))), () async {
+        final states = bloc.stream.take(2).toList();
+        bloc.add(const ConnectionListRequested());
+
+        expect(await states, [
+          const ConnectionListLoading(),
+          ConnectionListLoaded(connections: connections, cacheHint: const Duration(seconds: 10), loadedAt: loadedAt),
+        ]);
+      });
+      await bloc.close();
+    });
+  });
+
+  test('fails a refresh for any other reason even with connections loaded', () async {
+    when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed));
+    final bloc = build();
+    bloc.add(const ConnectionListRequested());
+    await bloc.stream.firstWhere((state) => state is ConnectionListLoaded);
+    when(() => repository.listManaged()).thenAnswer((_) async => const Failure(NetworkError('reset')));
+
+    final states = bloc.stream.take(2).toList();
+    bloc.add(const ConnectionListRequested());
+
+    expect(await states, const [ConnectionListLoading(), ConnectionListFailure(errorCode: AppErrorCode.generic)]);
+    await bloc.close();
+  });
+
   blocTest<ConnectionListBloc, ConnectionListState>(
-    'loads the connections and the cache hint',
-    setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed)),
+    'says the device is offline when nothing was loaded yet',
+    setUp: () => when(
+      () => repository.listManaged(),
+    ).thenAnswer((_) async => Failure(NetworkError('No Internet connection', code: AppErrorCode.networkOffline.key))),
     build: build,
     act: (bloc) => bloc.add(const ConnectionListRequested()),
-    expect: () => const [
-      ConnectionListLoading(),
-      ConnectionListLoaded(connections: connections, cacheHint: Duration(seconds: 10)),
-    ],
+    expect: () => const [ConnectionListLoading(), ConnectionListFailure(errorCode: AppErrorCode.networkOffline)],
   );
 
   blocTest<ConnectionListBloc, ConnectionListState>(

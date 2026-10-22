@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -22,14 +23,25 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
 
   FutureOr<void> _onRequested(ConnectionListRequested event, Emitter<ConnectionListState> emit) async {
     _log.debug('BEGIN: onRequested');
+    final previous = state;
     emit(const ConnectionListLoading());
     final result = await _listManagedConnectionsUseCase();
     switch (result) {
       case Success(:final data):
-        emit(ConnectionListLoaded(connections: data.connections, cacheHint: data.cacheHint));
+        emit(ConnectionListLoaded(connections: data.connections, cacheHint: data.cacheHint, loadedAt: clock.now()));
         _log.debug('END: onRequested connections: {}', [data.connections.length]);
       case Failure(:final error):
-        emit(ConnectionListFailure(errorCode: AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic));
+        final errorCode = AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic;
+        // A request refused because the device is offline never reached Studio, so what was loaded stays on screen,
+        // marked stale by the page, instead of turning into an error.
+        if (errorCode == AppErrorCode.networkOffline && previous is ConnectionListLoaded) {
+          emit(previous);
+          _log.info('END: onRequested offline, keeping the {} connections loaded before', [
+            previous.connections.length,
+          ]);
+          return;
+        }
+        emit(ConnectionListFailure(errorCode: errorCode));
         _log.error('END: onRequested error: {}', [error.message]);
     }
   }

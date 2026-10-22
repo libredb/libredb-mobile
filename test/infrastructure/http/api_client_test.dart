@@ -1526,24 +1526,25 @@ void main() {
       expect(adapter.requests, hasLength(1));
     });
 
-    // Repositories map this message to a NetworkError, which the screens show as a connection problem.
-    test('fails a GET with nothing cached with the no-connection error', () async {
+    // studioError maps it to a NetworkError with AppErrorCode.networkOffline, so a screen keeps what it loaded and says
+    // that the device is offline instead of showing a connection failure.
+    test('fails a GET with nothing cached with the offline error', () async {
       status = ConnectivityStatus.offline;
 
       await expectLater(
         client.get('/api/offline/uncached'),
-        throwsA(isA<FetchDataException>().having((e) => e.toString(), 'message', contains('No Internet connection'))),
+        throwsA(isA<OfflineException>().having((e) => e.toString(), 'message', contains('No Internet connection'))),
       );
       expect(adapter.requests, isEmpty);
       expect(sessionExpiredCalls, 0);
     });
 
-    test('fails a POST with the no-connection error', () async {
+    test('fails a POST with the offline error', () async {
       status = ConnectivityStatus.offline;
 
       await expectLater(
         client.post('/api/offline/post', {'name': 'test'}),
-        throwsA(isA<FetchDataException>().having((e) => e.toString(), 'message', contains('No Internet connection'))),
+        throwsA(isA<OfflineException>().having((e) => e.toString(), 'message', contains('No Internet connection'))),
       );
       expect(adapter.requests, isEmpty);
     });

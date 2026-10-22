@@ -36,6 +36,16 @@ class _OfflineBannerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    // A screen reader announces the change, with what it means for the data on screen, and reads the label once.
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: S.of(context).connectivity_offline_semantics,
+      child: ExcludeSemantics(child: _content(context, colorScheme)),
+    );
+  }
+
+  Widget _content(BuildContext context, ColorScheme colorScheme) {
     return Material(
       elevation: 2,
       child: Container(

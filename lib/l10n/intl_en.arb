@@ -48,6 +48,8 @@
   "error_generic": "Something went wrong",
   "error_network_cert_invalid": "The connection could not be verified as secure, so it was blocked. Try again later or on another network.",
   "@error_network_cert_invalid": {},
+  "error_network_offline": "No internet connection. Check your network and try again.",
+  "@error_network_offline": {},
   "idle_timeout_signed_out": "You were signed out due to inactivity.",
   "@idle_timeout_signed_out": {},
   "error_link_open_failed": "Could not open {url}",
@@ -105,6 +107,18 @@
   "@edit": {},
   "connectivity_offline": "No internet connection",
   "@connectivity_offline": {},
+  "connectivity_offline_semantics": "Offline: no internet connection. What is on screen was loaded earlier.",
+  "@connectivity_offline_semantics": {},
+  "offline_stale_data": "Offline: showing what was loaded at {time}",
+  "@offline_stale_data": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "offline_action_unavailable": "Needs an internet connection",
+  "@offline_action_unavailable": {},
   "not_found_title": "Page Not Found",
   "@not_found_title": {},
   "not_found_message": "The page you requested could not be found.",

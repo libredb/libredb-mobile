@@ -1,0 +1,86 @@
+@Tags(['widget'])
+library;
+
+import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
+import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
+import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:mocktail/mocktail.dart';
+
+import '../../mocks/mock_classes.dart';
+
+void main() {
+  const online = ConnectivityState(status: ConnectivityStatus.online);
+  const offline = ConnectivityState(status: ConnectivityStatus.offline);
+  const reconnectCheck = StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.reconnect);
+
+  late MockConnectivityCubit connectivity;
+  late MockStudioStatusBloc studioStatus;
+
+  setUpAll(() => registerFallbackValue(const StudioAppPaused()));
+
+  setUp(() {
+    connectivity = MockConnectivityCubit();
+    studioStatus = MockStudioStatusBloc();
+    when(() => studioStatus.state).thenReturn(const StudioReachable());
+  });
+
+  Future<List<bool>> pumpScope(
+    WidgetTester tester, {
+    required ConnectivityState initial,
+    List<ConnectivityState>? then,
+  }) async {
+    whenListen(connectivity, Stream.fromIterable(then ?? const <ConnectivityState>[]), initialState: initial);
+    final seen = <bool>[];
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<ConnectivityCubit>.value(value: connectivity),
+          BlocProvider<StudioStatusBloc>.value(value: studioStatus),
+        ],
+        child: AppConnectivityScope(
+          child: Builder(
+            builder: (context) {
+              seen.add(OfflineStatus.isOfflineOf(context));
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    return seen;
+  }
+
+  testWidgets('tells the screens below it that the device is offline', (tester) async {
+    final seen = await pumpScope(tester, initial: offline);
+
+    expect(seen.last, isTrue);
+  });
+
+  testWidgets('tells the screens below it when the device comes back online', (tester) async {
+    final seen = await pumpScope(tester, initial: offline, then: [online]);
+
+    expect(seen, [true, false]);
+  });
+
+  // The unreachable page shown while the device was offline clears without a manual Retry.
+  testWidgets('checks Studio again once when the device comes back online', (tester) async {
+    await pumpScope(tester, initial: online, then: [offline, online, online]);
+
+    verify(() => studioStatus.add(reconnectCheck)).called(1);
+  });
+
+  testWidgets('does not check Studio when the device goes offline or opens online', (tester) async {
+    await pumpScope(tester, initial: online, then: [offline]);
+
+    verifyNever(() => studioStatus.add(any()));
+  });
+}
