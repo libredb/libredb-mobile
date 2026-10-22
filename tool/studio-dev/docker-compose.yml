@@ -174,8 +174,9 @@ services:
       timeout: 3s
       retries: 30
 
-  # Loads redis/seed.redis into the Redis above, once it answers. redis-cli goes on after a failed command, so a reply
-  # that is an error fails the service, and with it the stack.
+  # Loads redis/seed.redis into the Redis above, once it answers. redis-cli goes on after a failed command and exits 0,
+  # so the service fails on any reply but OK, a number or a stream id (an error, NOAUTH or a refused write), and on a key
+  # count other than the seed's, and Studio, which waits for it, does not start.
   redis-seed:
     image: redis:8.10.2-alpine
     depends_on:
@@ -188,9 +189,18 @@ services:
     entrypoint:
       - sh
       - -c
-      - >-
-        grep -v -e '^#' -e '^$$' /seed/seed.redis | redis-cli -h redis > /tmp/replies &&
-        if grep -E '^(ERR|WRONGTYPE)' /tmp/replies; then exit 1; fi
+      - |
+        set -e
+        grep -v -e '^#' -e '^$$' /seed/seed.redis | redis-cli -h redis > /tmp/replies 2>&1
+        if grep -v -E '^(OK|[0-9]+|[0-9]+-[0-9]+)$$' /tmp/replies >&2; then
+          echo 'redis-seed: Redis refused the seed with the replies above' >&2
+          exit 1
+        fi
+        keys="$$(redis-cli -h redis -n 0 dbsize 2>&1) $$(redis-cli -h redis -n 1 dbsize 2>&1)"
+        if [ "$$keys" != '7 1207' ]; then
+          echo "redis-seed: databases 0 and 1 hold $$keys keys, not 7 1207" >&2
+          exit 1
+        fi
     restart: "no"
 
   # The governed profile (--profile governed) adds a second Studio in governance mode beside the first one, at

@@ -153,6 +153,7 @@ Databases 0 and 1 each hold one key of every type the key browser reads, under `
 
 Database 1 also holds 1,200 strings `user:0001` to `user:1200`, so a walk of `user:*` there takes several pages; it holds 1,207 keys in all.
 A stream entry has a fixed id, so a recorded read of it does not change with the clock.
+`redis-seed` exits non-zero on any reply but `OK`, a number or a stream id, and when databases 0 and 1 do not hold 7 and 1,207 keys, so Studio never starts on an empty Redis.
 
 ## Governed Studio
 
@@ -282,7 +283,9 @@ record describe_postgres_orders_readonly /db/objects/describe '{"connectionId":"
 
 The Redis answers were recorded as `admin` from the same image.
 The key-scan pages walk `user:*` in database 1 with Studio's default batch: the first page is asked without a cursor, every later page with the cursor of the page before, and `keyscan_next.json` is the second page and `keyscan_last.json` the one whose cursor is back at `0`.
-`keyscan_requests.json` keeps the body each of the three was asked with, so a test can check that they chain:
+`keyscan_requests.json` keeps the body each of the three was asked with, so a test can check that they chain.
+Redis picks a random hash seed at every start, so a re-recording gets other cursors and splits the keys into pages differently.
+The test expects exactly three pages, which this recording gave; a re-recording that takes another number of pages needs the test adjusted along with the fixtures.
 
 ```shell
 record meta_redis /db/provider-meta '{"connectionId":"seed:dev-redis"}'

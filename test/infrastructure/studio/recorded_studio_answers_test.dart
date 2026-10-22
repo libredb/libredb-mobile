@@ -540,7 +540,7 @@ void main() {
 
     test('POST /api/db/keys/scan pages chain by the cursor of the page before', () {
       expect(request('keyscan_next')['cursor'], page('keyscan_first').cursor);
-      expect(request('keyscan_last')['cursor'], isNot('0'));
+      expect(request('keyscan_last')['cursor'], page('keyscan_next').cursor);
       expect(page('keyscan_next').keys.toSet().intersection(page('keyscan_first').keys.toSet()), isEmpty);
     });
 
