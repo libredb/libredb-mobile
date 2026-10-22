@@ -81,7 +81,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "command_palette_settings_description": MessageLookupByLibrary.simpleMessage("App preferences"),
     "command_palette_users_description": MessageLookupByLibrary.simpleMessage("Manage users"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Contribute"),
-    "community_discussions": MessageLookupByLibrary.simpleMessage("Discussions"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Documentation"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Open an Issue"),
     "community_source_available": MessageLookupByLibrary.simpleMessage("Source Available"),

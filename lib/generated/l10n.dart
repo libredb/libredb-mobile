@@ -461,11 +461,6 @@ class S {
     return Intl.message('Open an Issue', name: 'community_issue', desc: '', args: []);
   }
 
-  /// `Discussions`
-  String get community_discussions {
-    return Intl.message('Discussions', name: 'community_discussions', desc: '', args: []);
-  }
-
   /// `Contribute`
   String get community_contribute {
     return Intl.message('Contribute', name: 'community_contribute', desc: '', args: []);

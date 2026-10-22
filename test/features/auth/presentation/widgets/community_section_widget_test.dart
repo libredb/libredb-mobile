@@ -25,7 +25,6 @@ const _allUrls = CommunityUrls(repo: _repo, sponsor: _sponsor, docs: _docs);
 const _communityKeys = [
   communityStarKey,
   communityIssueKey,
-  communityDiscussionsKey,
   communityContributeKey,
   communityTranslateKey,
   communitySponsorKey,
@@ -111,7 +110,7 @@ void main() {
 
       expect(find.text('Star & Fork'), findsOneWidget);
       expect(find.text('Open an Issue'), findsOneWidget);
-      expect(find.text('Discussions'), findsOneWidget);
+      expect(find.text('Discussions'), findsNothing);
       expect(find.text('Contribute'), findsOneWidget);
       expect(find.text('Translate'), findsOneWidget);
       expect(find.text('Sponsor'), findsOneWidget);
@@ -156,7 +155,7 @@ void main() {
 
       expect(find.text('Star & Fork'), findsOneWidget);
       expect(find.text('Open an Issue'), findsOneWidget);
-      expect(find.text('Discussions'), findsOneWidget);
+      expect(find.text('Discussions'), findsNothing);
       expect(find.text('Contribute'), findsOneWidget);
       expect(find.text('Translate'), findsOneWidget);
       expect(find.text('Sponsor'), findsOneWidget);
@@ -170,7 +169,6 @@ void main() {
 
       expect(urls.repo, 'https://github.com/acme/dashboard');
       expect(urls.issues, 'https://github.com/acme/dashboard/issues');
-      expect(urls.discussions, 'https://github.com/acme/dashboard/discussions');
       expect(urls.contributing, 'https://github.com/acme/dashboard/blob/main/CONTRIBUTING.md');
       expect(urls.translate, 'https://github.com/acme/dashboard/tree/main/lib/l10n');
     });

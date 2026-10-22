@@ -22,7 +22,6 @@ class CommunityUrls {
   final String docs;
 
   String get issues => '$repo/issues';
-  String get discussions => '$repo/discussions';
   String get contributing => '$repo/blob/main/CONTRIBUTING.md';
   String get translate => '$repo/tree/main/lib/l10n';
 }
@@ -61,14 +60,6 @@ List<_CommunityAction> _communityActions(CommunityUrls urls) => [
     iconColor: const Color(0xFFFCA5A5),
     label: (l10n) => l10n.community_issue,
     url: urls.issues,
-  ),
-  _CommunityAction(
-    key: communityDiscussionsKey,
-    icon: Icons.forum_outlined,
-    iconBackground: const Color(0xFF06B6D4),
-    iconColor: const Color(0xFF67E8F9),
-    label: (l10n) => l10n.community_discussions,
-    url: urls.discussions,
   ),
   _CommunityAction(
     key: communityContributeKey,

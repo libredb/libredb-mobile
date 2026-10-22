@@ -64,4 +64,4 @@ By contributing to this project, you agree to follow its [Code of Conduct](CODE_
 
 ## Contact
 
-Ask questions in the repository's [Discussions](https://github.com/libredb/libredb-mobile/discussions) or open an issue.
+Ask questions in the [issue tracker](https://github.com/libredb/libredb-mobile/issues).

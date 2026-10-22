@@ -79,7 +79,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "command_palette_settings_description": MessageLookupByLibrary.simpleMessage("Uygulama tercihleri"),
     "command_palette_users_description": MessageLookupByLibrary.simpleMessage("Kullanıcıları yönetin"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Katkıda Bulun"),
-    "community_discussions": MessageLookupByLibrary.simpleMessage("Tartışmalar"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Sorun Bildir"),
     "community_source_available": MessageLookupByLibrary.simpleMessage("Kaynak Kodu Erişilebilir"),

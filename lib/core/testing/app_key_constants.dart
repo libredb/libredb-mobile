@@ -24,7 +24,6 @@ const Key changePasswordTextFieldNewPasswordKey = Key("changePasswordTextFieldNe
 // community section
 const Key communityStarKey = Key("communityStarKey");
 const Key communityIssueKey = Key("communityIssueKey");
-const Key communityDiscussionsKey = Key("communityDiscussionsKey");
 const Key communityContributeKey = Key("communityContributeKey");
 const Key communityTranslateKey = Key("communityTranslateKey");
 const Key communitySponsorKey = Key("communitySponsorKey");

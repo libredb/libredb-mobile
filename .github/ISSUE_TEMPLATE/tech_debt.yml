@@ -10,7 +10,6 @@ body:
 
         - For runtime bugs reported by users, please use the **Bug Report** template.
         - For new feature proposals, please use the **Feature Request** template.
-        - For open-ended questions or discussions, please use [GitHub Discussions](https://github.com/libredb/libredb-mobile/discussions).
 
   - type: textarea
     id: summary
