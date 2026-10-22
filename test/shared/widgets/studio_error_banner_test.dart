@@ -197,8 +197,8 @@ void main() {
     testWidgets('an error without a known code shows the generic message', (tester) async {
       await tester.pumpWidget(_app(const StudioErrorBanner(error: UnknownError('boom'))));
 
+      expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('boom'), findsNothing);
-      expect(find.byType(StudioErrorBanner), findsOneWidget);
     });
   });
 
