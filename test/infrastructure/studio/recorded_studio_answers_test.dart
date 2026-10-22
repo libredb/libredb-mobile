@@ -17,6 +17,7 @@ import 'package:libredb_mobile/features/studio_status/domain/entities/studio_rea
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -251,6 +252,54 @@ void main() {
       expect(meta.containerLevels.map((l) => l.id), ['catalog', 'schema']);
       expect(meta.catalogSessions, isTrue);
     });
+
+    for (final name in ['meta_postgres', 'meta_postgres_server']) {
+      test('POST /api/db/provider-meta of $name reads the labels and the schema refresh rule', () {
+        final meta = ProviderMetaJson.read(fixture(name));
+
+        expect(meta.schemaRefreshPattern, r'(CREATE|DROP|ALTER|TRUNCATE)\b');
+        expect(meta.refreshesSchema('alter table public.orders add column x int'), isTrue);
+        expect(meta.refreshesSchema('SELECT * FROM public.orders'), isFalse);
+        expect(
+          meta.labels,
+          const ProviderLabels(
+            entityName: 'Table',
+            entityNamePlural: 'Tables',
+            rowName: 'row',
+            rowNamePlural: 'rows',
+            selectAction: 'Select Top 50',
+            generateAction: 'Generate Query',
+            searchPlaceholder: 'Search tables or columns...',
+          ),
+        );
+      });
+
+      test('POST /api/db/provider-meta of $name reads the capability and kind fields', () {
+        final meta = ProviderMetaJson.read(fixture(name));
+        ObjectKind kind(String id) => meta.objectKinds.singleWhere((k) => k.id == id);
+
+        expect(meta.explainFormat, 'postgres-json');
+        expect(meta.queryDialect, isNull);
+        expect(meta.maskingExemptColumns, isNull);
+        expect(meta.supportsColumnProfiling, isNull);
+        expect(meta.supportsSqlFormat, isNull);
+        expect(meta.tablesAreDerivedGroupings, isFalse);
+        expect(meta.identifierQuoting, isNull);
+        expect(meta.containerPathShapes, 'exact');
+        expect(meta.rowActions, isEmpty);
+        expect(meta.keyScan, isNull);
+        expect(kind('table').acceptsRowWrites, isTrue);
+        expect(kind('view').sourceLanguage, 'pgsql');
+        expect(kind('view').acceptsSourceEdits, isFalse);
+        expect(kind('function').acceptsSourceEdits, isTrue);
+        expect(kind('procedure').acceptsSourceEdits, isTrue);
+        expect(kind('sequence').hasSource, isFalse);
+        expect(kind('trigger').attachedTo, 'table');
+        expect(meta.objectKinds.map((k) => k.childKinds), everyElement(isEmpty));
+        expect(meta.objectKinds.map((k) => k.group), everyElement(isNull));
+        expect(meta.objectKinds.where((k) => k.countIsListing || k.machineNamesWithheld || k.keyBrowserOnly), isEmpty);
+      });
+    }
 
     test('POST /api/db/objects/containers of a database-level seed lists its schemas', () {
       final containers = ObjectBrowserJson.containers(fixture('containers_postgres'));
