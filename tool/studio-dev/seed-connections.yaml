@@ -1,0 +1,49 @@
+# The seed file of the default Studio in tool/studio-dev/docker-compose.yml. NOT A PRODUCTION CONFIGURATION.
+# Format: Studio's docs/SEED_CONNECTIONS.md. The passwords come from the Studio service's environment in the compose
+# file; managed: true keeps them on the server, so GET /api/connections/managed sends no seed's password.
+# The built-in samples stay on beside these seeds, since the recorded SQLite fixtures come from them.
+version: "1"
+
+connections:
+  # Names a database, so Studio opens app and the tree starts at its schemas.
+  - id: dev-postgres
+    name: "Dev Postgres"
+    type: postgres
+    host: postgres
+    port: 5432
+    database: app
+    user: app_owner
+    password: "${APP_OWNER_PASSWORD}"
+    environment: development
+    group: "Dev databases"
+    roles: ["*"]
+    managed: true
+
+  # Names no database, so Studio opens the whole server: the tree starts at its databases, and a request names the
+  # database in catalog (Studio's docs/providers/postgres.md, server-level connections).
+  - id: dev-postgres-server
+    name: "Dev Postgres server"
+    type: postgres
+    host: postgres
+    port: 5432
+    user: app_owner
+    password: "${APP_OWNER_PASSWORD}"
+    environment: staging
+    group: "Dev databases"
+    roles: ["*"]
+    managed: true
+
+  # The database of dev-postgres through a role that may only read and owns nothing, for which Studio's describe
+  # reports no primary or foreign key.
+  - id: dev-postgres-readonly
+    name: "Dev Postgres (read-only role)"
+    type: postgres
+    host: postgres
+    port: 5432
+    database: app
+    user: studio_reader
+    password: "${STUDIO_READER_PASSWORD}"
+    environment: development
+    group: "Dev databases"
+    roles: ["*"]
+    managed: true

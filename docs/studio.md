@@ -97,7 +97,7 @@ This step was not run, since the stack was verified on Linux.
 
 1. "Sign in with SSO" opens Keycloak in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).
 2. After the sign-in the app asks Studio's `GET /api/auth/me` and opens the connection list only on its 200; `norole` / `norole` stays on the login page with "Studio did not accept this sign-in.", and nothing is stored.
-3. The connection list shows what Studio offers the user: without a seed file, Studio's two sample connections.
+3. The connection list shows what Studio offers the user: the seeds of [Postgres seeds](#postgres-seeds) and Studio's sample connections (the SQLite one only to `admin`).
    That request carries the access token, so the list proves the bearer channel.
 4. A minute later the access token has expired: Studio answers the next request with 401, and the app refreshes at Keycloak and repeats it.
 5. Logout ends the Keycloak session as well, and the app is back on the login page.
@@ -109,6 +109,29 @@ How far this was verified:
 | Android emulator, API 30 Google APIs image | Walked through as above with Studio built from libredb/libredb-studio#1914 at `d8d1b4970`: sign-in, the connection list, the refresh after expiry and the logout all worked |
 | Android emulator, API 30 Google APIs image, Studio main `dbfea26` | The Keycloak-only sign-in of #11: `admin` and `user` land on the connection list, `norole` is refused at sign-in with `studio.account_refused` and a relaunch finds no session, and the logout ends the Keycloak session |
 | iOS simulator | Not run |
+
+## Postgres seeds
+
+The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:
+
+| Connection | Environment, group | What it opens |
+| --- | --- | --- |
+| `seed:dev-postgres`, "Dev Postgres" | `development`, `Dev databases` | The database `app`, so the tree starts at its schemas |
+| `seed:dev-postgres-server`, "Dev Postgres server" | `staging`, `Dev databases` | The whole server, so the tree starts at its databases (`app`, `archive`, `postgres`) and a request names the database in `catalog` |
+| `seed:dev-postgres-readonly`, "Dev Postgres (read-only role)" | `development`, `Dev databases` | The database `app` through a role that may only read |
+
+`app` holds the schemas `public` and `sales`:
+
+- `public.customers`, `public.orders` and `public.order_items`, with primary keys, the foreign keys `orders.customer_id` and `order_items.order_id`, and the index `orders_customer_id_idx`.
+- Columns of `bytea`, `numeric`, `bigint` and `jsonb`, rows with many NULLs, and the `email` and `card_number` columns the masking work of M4 masks.
+- `public.column_types`, one row of every column type a query result renders.
+- The view `sales.order_totals`, the function `sales.order_total(bigint)`, the procedure `sales.mark_shipped(bigint)` and the trigger `orders_touch_updated_at` on `public.orders`.
+
+`archive` holds one table, so the server-level seed lists more than one database.
+The first two seeds sign in as `app_owner`, which owns every object, and the third as `studio_reader`, which may only read and owns nothing.
+Studio reads a table's primary and foreign keys from `information_schema` views that show them only to a role that owns the table, so its describe of `public.orders` names them through the first seed and not through the third.
+Both passwords are only in the compose file, and every seed is managed, so `GET /api/connections/managed` sends neither.
+A server-level seed exists only without governance: a governed Studio refuses it at admission with `SERVER_LEVEL_NOT_ALLOWED`.
 
 ## Governed Studio
 
@@ -201,3 +224,47 @@ The seed in `tool/studio-dev/governed/` was generated from Studio `02dc26057`, w
 `ready_governed.json` is the governed Studio's `GET /api/ready`, and `ready_degraded.json` the same about 15 seconds after `governance-source` was stopped; both were recorded without a token, as were `health.json` and `ready.json` from the first Studio.
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads them.
 The app was also walked through on the Android emulator (API 30 Google APIs image) against the governed Studio: the SSO sign-in as `user` and the connection list with both granted connections.
+
+## Recording Studio answers
+
+The answers under `test/fixtures/studio/` are recorded with curl against the running stack, with an access token of the `libredb-mobile` client that `tool/studio-dev/access-token.sh` gets the way the app does, through Keycloak's login form with PKCE.
+The token lives 60 seconds, so fetch a new one for each batch:
+
+```shell
+token=$(tool/studio-dev/access-token.sh admin)
+record() { # record <fixture> <route> [json body], a POST when a body is given
+  local body=()
+  if [ -n "${3:-}" ]; then body=(-H 'Content-Type: application/json' --data "$3"); fi
+  curl -sk -o "test/fixtures/studio/$1.json" -w "$1 %{http_code}\n" "https://localhost:9443/api$2" \
+    -H "Authorization: Bearer $token" "${body[@]}"
+}
+```
+
+The Postgres answers were recorded as `admin` from Studio main at `c9989a6b5` (`libredb-studio:main-c9989a6`):
+
+```shell
+record managed_postgres /connections/managed
+record meta_postgres /db/provider-meta '{"connectionId":"seed:dev-postgres"}'
+record meta_postgres_server /db/provider-meta '{"connectionId":"seed:dev-postgres-server"}'
+record containers_postgres /db/objects/containers '{"connectionId":"seed:dev-postgres"}'
+record containers_postgres_server /db/objects/containers '{"connectionId":"seed:dev-postgres-server"}'
+record containers_postgres_catalog /db/objects/containers '{"connectionId":"seed:dev-postgres-server","parent":["app"]}'
+record counts_postgres /db/objects/counts '{"connectionId":"seed:dev-postgres","container":["public"]}'
+record list_postgres /db/objects/list '{"connectionId":"seed:dev-postgres","container":["public"],"kind":"table"}'
+record describe_postgres_orders /db/objects/describe '{"connectionId":"seed:dev-postgres","path":["public","orders"],"kind":"table"}'
+record source_postgres_view /db/objects/source '{"connectionId":"seed:dev-postgres","path":["sales","order_totals"],"kind":"view"}'
+record source_postgres_function /db/objects/source '{"connectionId":"seed:dev-postgres","path":["sales","order_total(bigint)"],"kind":"function"}'
+record search_postgres /db/objects/search '{"connectionId":"seed:dev-postgres","term":"ord"}'
+record query_types_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM public.column_types","options":{"limit":50,"offset":0}}'
+record describe_postgres_orders_readonly /db/objects/describe '{"connectionId":"seed:dev-postgres-readonly","path":["public","orders"],"kind":"table"}'
+```
+
+The transaction answers come from one database of the server-level seed, recorded last because the `UPDATE` changes a row:
+
+```shell
+record txbegin /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"begin","catalog":"app"}'
+record txquery /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"query","sql":"UPDATE public.orders SET status = '"'"'paid'"'"' WHERE id = 2","options":{"limit":50,"offset":0},"catalog":"app"}'
+record txcommit /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"commit","catalog":"app"}'
+```
+
+`test/infrastructure/studio/recorded_studio_answers_test.dart` reads every one of them.
