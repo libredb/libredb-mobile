@@ -6,11 +6,13 @@ import 'package:libredb_mobile/features/studio_status/application/studio_status_
 import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_unreachable_page.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 
-/// Shows [StudioUnreachablePage] in place of [child] while Studio does not answer its liveness check, and [child]
-/// otherwise, also before the first answer arrives.
+/// Shows [StudioUnreachablePage] over [child] while Studio does not answer its liveness check, and [child] otherwise,
+/// also before the first answer arrives.
 ///
+/// [child] stays mounted under the page, offstage and without tickers, focus or semantics, so the open pages keep
+/// their state, unsaved input included, and show again as they were once Studio answers.
 /// `App` places it beside `LifecycleGate` in the `MaterialApp` builder, around the session restore and the router, so
-/// the page has no Navigator above it and the router is mounted again once Studio answers. It tells
+/// the page has no Navigator above it. It tells
 /// [StudioStatusBloc] when the app goes to the background and comes back; the bloc decides whether to check again.
 class StudioStatusGate extends StatefulWidget {
   const StudioStatusGate({super.key, required this.child});
@@ -49,13 +51,33 @@ class _StudioStatusGateState extends State<StudioStatusGate> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StudioStatusBloc, StudioStatusState>(
-      builder: (context, state) => switch (state) {
-        StudioUnreachable(:final error, :final retrying) => StudioUnreachablePage(
-          host: _hostOf(context.read<AppConfig>().apiBaseUrl),
-          error: error,
-          retrying: retrying,
-        ),
-        StudioStatusUnknown() || StudioReachable() || StudioGovernanceUnavailable() => widget.child,
+      builder: (context, state) {
+        final unreachable = switch (state) {
+          StudioUnreachable(:final error, :final retrying) => StudioUnreachablePage(
+            host: _hostOf(context.read<AppConfig>().apiBaseUrl),
+            error: error,
+            retrying: retrying,
+          ),
+          StudioStatusUnknown() || StudioReachable() || StudioGovernanceUnavailable() => null,
+        };
+        final hidden = unreachable != null;
+        // The child stays first in the stack in every state, so its element, and every page state under it, is kept.
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Offstage(
+              offstage: hidden,
+              child: TickerMode(
+                enabled: !hidden,
+                child: ExcludeFocus(
+                  excluding: hidden,
+                  child: ExcludeSemantics(excluding: hidden, child: widget.child),
+                ),
+              ),
+            ),
+            ?unreachable,
+          ],
+        );
       },
     );
   }

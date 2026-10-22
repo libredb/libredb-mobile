@@ -21,14 +21,18 @@ final class StudioReachable extends StudioStatusState {
 
 /// Studio did not answer its liveness check, for [error]. [retrying] is true while the user's retry runs, so the page
 /// stays until the answer arrives.
+///
+/// [outage] is the governance outage that was shown when Studio stopped answering: liveness says nothing about
+/// governance, so it shows again when Studio answers, until a connection route answers again.
 final class StudioUnreachable extends StudioStatusState {
-  const StudioUnreachable({required this.error, this.retrying = false});
+  const StudioUnreachable({required this.error, this.retrying = false, this.outage});
 
   final AppError error;
   final bool retrying;
+  final GovernanceOutage? outage;
 
   @override
-  List<Object?> get props => [error, retrying];
+  List<Object?> get props => [error, retrying, outage];
 }
 
 /// Studio answers, but a connection route answered 503 `GOVERNANCE_UNAVAILABLE`; [outage] carries the wording.

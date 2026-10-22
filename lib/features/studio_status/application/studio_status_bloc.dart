@@ -16,7 +16,8 @@ import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 /// It checks Studio's liveness when the app starts, without waiting for the session restore, when the user retries
 /// from the unreachable page, and when the app comes back after more than [defaultRecheckAfter] in the background. A
 /// check that arrives while another runs is dropped. A failed check is [StudioUnreachable] and never touches the
-/// session, so a retry that succeeds opens the app where it was, signed in as before.
+/// session, so a retry that succeeds opens the app where it was, signed in as before, with the governance outage it
+/// showed before, if any.
 ///
 /// The trigger for a governance outage is a connection route's own 503 `GOVERNANCE_UNAVAILABLE`, reported with
 /// [StudioGovernanceOutageReported]; readiness only chooses the wording. A readiness that cannot be read still shows
@@ -49,26 +50,26 @@ class StudioStatusBloc extends Bloc<StudioStatusEvent, StudioStatusState> {
   FutureOr<void> _onCheck(StudioLivenessCheckRequested event, Emitter<StudioStatusState> emit) async {
     _log.debug('Checking Studio liveness ({})', [event.trigger.name]);
     switch (state) {
-      case StudioUnreachable(:final error):
-        emit(StudioUnreachable(error: error, retrying: true));
+      case StudioUnreachable(:final error, :final outage):
+        emit(StudioUnreachable(error: error, retrying: true, outage: outage));
       case StudioStatusUnknown() || StudioReachable() || StudioGovernanceUnavailable():
         break;
     }
 
     final result = await _checkLivenessUseCase();
 
+    // Liveness says nothing about governance, so an outage stays, under the unreachable page too, until a connection
+    // route answers again.
+    final outage = switch (state) {
+      StudioGovernanceUnavailable(:final outage) || StudioUnreachable(:final outage?) => outage,
+      StudioStatusUnknown() || StudioReachable() || StudioUnreachable() => null,
+    };
     switch (result) {
       case Success():
-        switch (state) {
-          // Liveness says nothing about governance, so an outage stays until a connection route answers again.
-          case StudioGovernanceUnavailable():
-            break;
-          case StudioStatusUnknown() || StudioReachable() || StudioUnreachable():
-            emit(const StudioReachable());
-        }
+        emit(outage == null ? const StudioReachable() : StudioGovernanceUnavailable(outage: outage));
       case Failure(:final error):
         _log.warn('Studio is unreachable ({}): {}', [event.trigger.name, error.code ?? error.runtimeType]);
-        emit(StudioUnreachable(error: error));
+        emit(StudioUnreachable(error: error, outage: outage));
     }
   }
 
@@ -106,6 +107,8 @@ class StudioStatusBloc extends Bloc<StudioStatusEvent, StudioStatusState> {
     switch (state) {
       case StudioGovernanceUnavailable():
         emit(const StudioReachable());
+      case StudioUnreachable(:final error, :final retrying, outage: _?):
+        emit(StudioUnreachable(error: error, retrying: retrying));
       case StudioStatusUnknown() || StudioReachable() || StudioUnreachable():
         break;
     }

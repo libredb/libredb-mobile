@@ -30,8 +30,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
 /// status. docs/studio.md describes the profile and how the unavailable source was produced.
 /// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
-/// `health.json`, `ready.json`, `ready_governed.json` and `ready_degraded.json` (the governed Studio with its source stopped)
-/// were recorded without a token, as the app sends them.
+/// `health.json`, `ready.json`, `ready_governed.json` and `ready_degraded.json` (the governed Studio with its source
+/// stopped) were recorded without a token, as the app sends them.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 

@@ -111,6 +111,39 @@ void main() {
       act: (bloc) => bloc.add(const StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.resume)),
       expect: () => const <StudioStatusState>[],
     );
+
+    // An unreachable Studio says nothing about governance either, so the outage waits under the unreachable page.
+    blocTest<StudioStatusBloc, StudioStatusState>(
+      'a failed check keeps a governance outage under the unreachable state',
+      setUp: () => when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline)),
+      build: build,
+      seed: () => const StudioGovernanceUnavailable(outage: temporarilyUnavailable),
+      act: (bloc) => bloc.add(const StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.resume)),
+      expect: () => [const StudioUnreachable(error: offline, outage: temporarilyUnavailable)],
+    );
+
+    blocTest<StudioStatusBloc, StudioStatusState>(
+      'a failed retry keeps the governance outage',
+      setUp: () => when(() => repository.liveness()).thenAnswer((_) async => const Failure(TimeoutError('timeout'))),
+      build: build,
+      seed: () => const StudioUnreachable(error: offline, outage: temporarilyUnavailable),
+      act: (bloc) => bloc.add(const StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.retry)),
+      expect: () => [
+        const StudioUnreachable(error: offline, retrying: true, outage: temporarilyUnavailable),
+        const StudioUnreachable(error: TimeoutError('timeout'), outage: temporarilyUnavailable),
+      ],
+    );
+
+    blocTest<StudioStatusBloc, StudioStatusState>(
+      'a retry that succeeds shows the governance outage again, since no connection route has answered since',
+      build: build,
+      seed: () => const StudioUnreachable(error: offline, outage: temporarilyUnavailable),
+      act: (bloc) => bloc.add(const StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.retry)),
+      expect: () => [
+        const StudioUnreachable(error: offline, retrying: true, outage: temporarilyUnavailable),
+        const StudioGovernanceUnavailable(outage: temporarilyUnavailable),
+      ],
+    );
   });
 
   group('resume', () {
@@ -233,6 +266,14 @@ void main() {
       seed: () => const StudioGovernanceUnavailable(outage: temporarilyUnavailable),
       act: (bloc) => bloc.add(const StudioGovernanceRecovered()),
       expect: () => [const StudioReachable()],
+    );
+
+    blocTest<StudioStatusBloc, StudioStatusState>(
+      'a recovery while Studio is unreachable drops the outage it keeps',
+      build: build,
+      seed: () => const StudioUnreachable(error: offline, outage: temporarilyUnavailable),
+      act: (bloc) => bloc.add(const StudioGovernanceRecovered()),
+      expect: () => [const StudioUnreachable(error: offline)],
     );
 
     blocTest<StudioStatusBloc, StudioStatusState>(

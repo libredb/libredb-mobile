@@ -148,8 +148,8 @@ class _AppViewState extends State<_AppView> {
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
             // LifecycleGate shows the maintenance or update screen in place of all of it when the app config asks for
             // one, and mounts the router again once the app may open. StudioStatusGate, inside it, shows the
-            // unreachable page in its place while Studio does not answer, and mounts the router again once it does,
-            // with the session untouched.
+            // unreachable page over it while Studio does not answer and keeps it mounted underneath, so the open pages
+            // and the session are as they were once Studio answers.
             builder: (context, router) => RepositoryProvider<UnsavedChangesRegistry>.value(
               value: _unsavedChanges!,
               child: LifecycleGate(
