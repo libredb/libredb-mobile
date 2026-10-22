@@ -65,7 +65,8 @@ What the walkthrough shows:
 - The realm gives access tokens a 60 second life, so an API call a minute after sign-in gets a 401 from Studio, and the app refreshes at Keycloak and retries without signing out.
 - Logout ends the Keycloak session as well: the next sign-in asks for the password again.
 - Logout first tells Studio at `POST /api/auth/logout`, so Studio's audit trail shows the sign-out as it shows a web sign-out.
-  The app waits for that answer for at most three seconds, never sends it twice, and signs out whatever Studio answers.
+  An access token that has expired is refreshed first, since Studio records nothing for an expired token and still answers success.
+  The app waits for the refresh and that answer for at most three seconds, never sends the record twice, and signs out whatever they answer.
 
 A protocol mapper writes the realm roles to `realm_access.roles`, and an audience mapper puts Studio's API audience into the access token; [studio.md](studio.md) describes the client.
 

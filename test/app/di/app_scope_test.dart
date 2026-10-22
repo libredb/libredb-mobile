@@ -318,13 +318,17 @@ class _OidcClientDependencies extends AppDependencies {
   }
 }
 
-/// Counts the sign-outs recorded at Studio.
+/// Counts the sign-outs recorded at Studio, noting each one in [events] with the bearer stored when it was sent.
 class _CountingStudioIdentity implements IStudioIdentityRepository {
+  _CountingStudioIdentity(this.events);
+
+  final List<String> events;
   int signOutsRecorded = 0;
 
   @override
   Future<Result<void>> recordSignOut() async {
     signOutsRecorded++;
+    events.add('recordSignOut ${await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key)}');
     return const Success(null);
   }
 
@@ -340,14 +344,33 @@ class _NoLogoutOidcClient extends _FakeOidcClient {
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const NoProviderLogout();
 }
 
-/// The test config in [authMode], whose Studio identity repository is [studioIdentity].
+/// Rotates every refresh token into the access token `refreshed-access-token`, noting each rotation in [events].
+class _RecordingTokenRotation implements TokenRotation {
+  _RecordingTokenRotation(this.events);
+
+  final List<String> events;
+
+  @override
+  Future<TokenRotationResult> rotate(String refreshToken) async {
+    events.add('rotate $refreshToken');
+    return TokensRotated(accessToken: 'refreshed-access-token', accessTokenExpiresAt: DateTime.utc(2100));
+  }
+}
+
+/// The test config in [authMode], whose Studio identity repository is [studioIdentity] and whose oidc token rotation
+/// notes each rotation in [events].
 class _StudioIdentityDependencies extends AppDependencies {
   _StudioIdentityDependencies({required super.authMode}) : super(appConfig: const AppConfig.test());
 
-  final studioIdentity = _CountingStudioIdentity();
+  final events = <String>[];
+  late final studioIdentity = _CountingStudioIdentity(events);
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) => _NoLogoutOidcClient();
+
+  @override
+  TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
+      _RecordingTokenRotation(events);
 
   @override
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => studioIdentity;
@@ -807,6 +830,25 @@ void main() {
       expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
 
       expect(dependencies.studioIdentity.signOutsRecorded, 1);
+    });
+
+    testWidgets('an oidc build refreshes an expired access token before it records the sign-out at Studio', (
+      tester,
+    ) async {
+      final dependencies = _StudioIdentityDependencies(authMode: OidcAuthMode(_oidcSettings));
+      final scope = await _pumpScope(tester, dependencies);
+      final session = scope.read<SessionCubit>();
+      await _pumpUntil(tester, () => session.state is! SessionUnknown);
+      // Stored after startup, as a token that expired while the app was open.
+      final secure = FlutterSecureStorageAdapter();
+      await secure.write(SecureStorageKeys.jwtToken.key, 'expired-access-token');
+      await secure.write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      await secure.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2020)));
+
+      expect(await scope.read<IAuthRepository>().logout(), isA<Success<void>>());
+
+      expect(dependencies.events, ['rotate stored-refresh-token', 'recordSignOut refreshed-access-token']);
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
     });
 
     testWidgets('a jwt build never records the sign-out at Studio', (tester) async {

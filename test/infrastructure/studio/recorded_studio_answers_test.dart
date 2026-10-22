@@ -39,7 +39,7 @@ void main() {
   });
 
   test('POST /api/auth/logout of a bearer session', () {
-    expect(() => StudioIdentityModel.readSignOutRecorded(fixture('logout')), returnsNormally);
+    expect(() => StudioIdentityModel.readSignOutAccepted(fixture('logout')), returnsNormally);
   });
 
   test('GET /api/connections/managed', () {

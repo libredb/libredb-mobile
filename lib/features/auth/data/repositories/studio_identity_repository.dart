@@ -36,7 +36,7 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
         const <String, Object?>{},
         contentType: 'application/json',
       );
-      StudioIdentityModel.readSignOutRecorded(ApiClient.decodeUTF8(response.data!));
+      StudioIdentityModel.readSignOutAccepted(ApiClient.decodeUTF8(response.data!));
       return const Success(null);
     } catch (e) {
       final error = studioError(e);

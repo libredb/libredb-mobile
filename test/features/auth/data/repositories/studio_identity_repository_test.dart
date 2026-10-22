@@ -73,7 +73,7 @@ void main() {
       });
     }
 
-    test('fails on an answer that does not say the sign-out was recorded', () async {
+    test('fails on an answer that does not say the logout succeeded', () async {
       TestEnv.authenticate();
       final client = TestEnv.apiClient();
       client.instance.interceptors.insert(0, _AnswerInterceptor('{"success":false}'));

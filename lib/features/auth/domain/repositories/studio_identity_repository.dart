@@ -10,7 +10,8 @@ abstract class IStudioIdentityRepository {
 
   /// Tells Studio the user signs out, so the sign-out shows in its audit trail as a web sign-out does.
   ///
-  /// Studio holds no state for a bearer session, so this only records the sign-out; it must be sent while the access
-  /// token is still stored. It is never retried.
+  /// Studio holds no state for a bearer session, so this only records the sign-out. It must be sent with a valid
+  /// access token: for an expired one Studio writes no audit line and still answers success, so a [Success] only
+  /// says Studio accepted the request. It is never retried.
   Future<Result<void>> recordSignOut();
 }

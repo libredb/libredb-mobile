@@ -12,7 +12,9 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_transaction_store.dart';
@@ -145,6 +147,12 @@ void main() {
       secureStorage: secureStorage,
       settings: _settings,
       studioIdentity: StudioIdentityRepository(apiClient),
+      sessionRefresh: SsoSessionStartup(
+        rotation: rotation,
+        secureStorage: secureStorage,
+        sessionRepository: sessions,
+        gate: SsoAutoRedirectGate(),
+      ),
     );
     Future<String?> stored(SecureStorageKeys key) => secureStorage.read(key.key);
     // The error a caller of the API gets, which a page or a BLoC may log in turn.
