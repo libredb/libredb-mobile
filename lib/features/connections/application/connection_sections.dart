@@ -17,8 +17,8 @@ final class ConnectionSection extends Equatable {
   List<Object?> get props => [group, connections];
 }
 
-/// Splits [connections] into sections by `group`: sections and rows sorted by name, case and the Turkish i ignored,
-/// with the Other section, for rows without a group or with a blank one, last.
+/// Splits [connections] into sections by `group`: sections and rows sorted by name, case and the Turkish i ignored and
+/// a Turkish letter next to its base letter, with the Other section, for rows without a group or with a blank one, last.
 List<ConnectionSection> groupConnections(Iterable<StudioConnection> connections) {
   final byGroup = <String?, List<StudioConnection>>{};
   for (final connection in connections) {
@@ -55,8 +55,24 @@ List<String> environmentsOf(Iterable<StudioConnection> connections) {
   return [...StudioEnvironment.ordered.where(present.contains), ...unknown];
 }
 
+/// Studio sorts with `localeCompare` (libredb-studio `src/lib/governance/visible.ts`), which places a Turkish letter
+/// next to its base letter, so `Çanakkale` comes before `Denizli`; the folded code units alone would put it after `z`.
+/// Other accented letters keep their code-unit order.
+const _turkishBaseLetters = {'ç': 'c', 'ğ': 'g', 'ö': 'o', 'ş': 's', 'ü': 'u'};
+
+String _sortKey(String folded) {
+  var key = folded;
+  _turkishBaseLetters.forEach((letter, base) => key = key.replaceAll(letter, base));
+  return key;
+}
+
+/// By the base letters first, then by the folded name (a plain letter before its Turkish one), then as written.
 int _compareNames(String a, String b) {
-  final folded = foldForSearch(a).compareTo(foldForSearch(b));
+  final foldedA = foldForSearch(a);
+  final foldedB = foldForSearch(b);
+  final byBase = _sortKey(foldedA).compareTo(_sortKey(foldedB));
+  if (byBase != 0) return byBase;
+  final folded = foldedA.compareTo(foldedB);
   return folded != 0 ? folded : a.compareTo(b);
 }
 

@@ -48,6 +48,41 @@ void main() {
       expect(sections.last.connections.map((c) => c.id), ['seed:c', 'seed:a', 'seed:b']);
     });
 
+    test('sorts a Turkish letter by its base letter, as Studio localeCompare does', () {
+      final sections = groupConnections([
+        _c('seed:1', 'Tokat', group: 'Zeta'),
+        _c('seed:2', 'Şube', group: 'Zeta'),
+        _c('seed:3', 'Sakarya', group: 'Zeta'),
+        _c('seed:4', 'x', group: 'Üretim'),
+        _c('seed:5', 'x', group: 'Urla'),
+        _c('seed:6', 'x', group: 'Çanakkale'),
+        _c('seed:7', 'x', group: 'Denizli'),
+        _c('seed:8', 'x', group: 'Ordu'),
+        _c('seed:9', 'x', group: 'Ödemiş'),
+        _c('seed:10', 'x', group: 'Ğ'),
+        _c('seed:11', 'x', group: 'Hatay'),
+      ]);
+
+      expect(sections.map((s) => s.group), [
+        'Çanakkale',
+        'Denizli',
+        'Ğ',
+        'Hatay',
+        'Ödemiş',
+        'Ordu',
+        'Üretim',
+        'Urla',
+        'Zeta',
+      ]);
+      expect(sections.last.connections.map((c) => c.name), ['Sakarya', 'Şube', 'Tokat']);
+    });
+
+    test('puts a plain letter before the same Turkish letter when the names are otherwise equal', () {
+      final sections = groupConnections([_c('seed:1', 'x', group: 'Şa'), _c('seed:2', 'x', group: 'Sa')]);
+
+      expect(sections.map((s) => s.group), ['Sa', 'Şa']);
+    });
+
     test('treats a blank group as no group', () {
       final sections = groupConnections([_c('seed:1', 'A', group: '  '), _c('seed:2', 'B', group: '')]);
 
