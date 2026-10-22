@@ -11,6 +11,10 @@ const Key profileSettingsKey = Key("profileSettingsKey");
 const Key profileSignOutKey = Key("profileSignOutKey");
 const Key profileIdentityRetryKey = Key("profileIdentityRetryKey");
 
+// the page the shell shows when Studio refuses the signed-in account
+const Key accountRefusalRetryKey = Key("accountRefusalRetryKey");
+const Key accountRefusalSignOutKey = Key("accountRefusalSignOutKey");
+
 // settings screen
 const Key settingsChangeLanguageButtonKey = Key("settingsChangeLanguageButtonKey");
 // Logout is intentionally not exposed from settings — it lives in the

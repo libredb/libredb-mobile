@@ -28,6 +28,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
@@ -74,11 +75,17 @@ class AppDependencies {
   /// `AUTH_REQUIRED` code counts; any other 401 reaches the caller with the session kept.
   SessionRefusedPredicate get sessionRefusedPredicate => isStudioSessionRefused;
 
+  /// Which answer refuses the signed-in account itself: Studio's 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY`, on any
+  /// route, from libredb-studio#1922 on. No refresh fixes it, so the session stays and the shell shows the refusal page.
+  AccountRefusal get accountRefusal => studioAccountRefusal;
+
   /// The [ApiClient], which refreshes the session through [tokenRotation] at the identity provider. [onSessionExpired]
-  /// runs when a 401 cannot be fixed by a token refresh; the caller ends the session there.
+  /// runs when a 401 cannot be fixed by a token refresh; the caller ends the session there. [onAccountRefused] is told
+  /// every answer that refuses the signed-in account ([accountRefusal]).
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) => ApiClient(
     appConfig: appConfig,
@@ -87,6 +94,8 @@ class AppDependencies {
     tokenRotation: tokenRotation,
     isSessionExpired: sessionExpiredPredicate,
     isSessionRefused: sessionRefusedPredicate,
+    onAccountRefused: onAccountRefused,
+    accountRefusal: accountRefusal,
   );
 
   /// The logout clears the session through [sessionRepository], as the idle timeout and an unrefreshable 401 do.

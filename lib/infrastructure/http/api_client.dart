@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
@@ -39,6 +40,8 @@ class InterceptorChainEntry {
 /// 1. [ConnectivityInterceptor] — rejects requests immediately when offline
 /// 2. [AuthInterceptor] — injects JWT token
 /// 3. [TokenRefreshInterceptor] — handles 401 responses with token refresh
+///    then [AccountRefusalInterceptor] — reports an answer that refuses the signed-in account (only with
+///    `onAccountRefused`)
 /// 4. [IdempotencyInterceptor] — opt-in Idempotency-Key header for mutating
 ///    verbs (default off; a resend after a token refresh reuses the same key)
 /// 5. [ResilienceInterceptor] — retry of a GET + circuit breaker
@@ -67,6 +70,9 @@ class InterceptorChainEntry {
 /// `tokenRotation` is how [TokenRefreshInterceptor] refreshes the session, at the identity provider; `isSessionExpired`
 /// decides which 401 starts that refresh, and `isSessionRefused` which 401 after it ends the session
 /// ([isUnauthorized], every 401, when either is null).
+///
+/// `onAccountRefused` is told the code of every answer that `accountRefusal` reads as a refusal of the signed-in
+/// account, whichever request met it; without `onAccountRefused` no request reports one.
 class ApiClient {
   ApiClient({
     required this._appConfig,
@@ -76,7 +82,9 @@ class ApiClient {
     this._dio,
     this._isSessionExpired,
     this._isSessionRefused,
-  });
+    this._onAccountRefused,
+    this._accountRefusal,
+  }) : assert(_onAccountRefused == null || _accountRefusal != null, 'onAccountRefused needs an accountRefusal');
 
   static final _log = AppLogger.getLogger('ApiClient');
 
@@ -88,6 +96,8 @@ class ApiClient {
   final TokenRotation _tokenRotation;
   final SessionExpiredPredicate? _isSessionExpired;
   final SessionRefusedPredicate? _isSessionRefused;
+  final OnAccountRefused? _onAccountRefused;
+  final AccountRefusal? _accountRefusal;
   Dio? _dio;
   List<InterceptorChainEntry> _chainSnapshot = const [];
 
@@ -164,6 +174,14 @@ class ApiClient {
         ),
         meta: const InterceptorChainEntry(name: 'TokenRefreshInterceptor', detail: 'Refreshes expired access tokens'),
       ),
+      if (_onAccountRefused case final onAccountRefused?)
+        (
+          interceptor: AccountRefusalInterceptor(refusalOf: _accountRefusal!, onRefused: onAccountRefused),
+          meta: const InterceptorChainEntry(
+            name: 'AccountRefusalInterceptor',
+            detail: 'Reports an answer that refuses the signed-in account',
+          ),
+        ),
       (
         // Idempotency runs before Resilience so the key is set on the very
         // first outbound request and is then reused on the resend after a

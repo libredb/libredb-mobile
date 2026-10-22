@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,6 +70,31 @@ void main() {
     test('refuses another status, or no response', () {
       expect(isStudioSessionRefused(errorWith(403, '{"error":"x","code":"AUTH_REQUIRED"}')), isFalse);
       expect(isStudioSessionRefused(errorWith(null)), isFalse);
+    });
+  });
+
+  // From libredb-studio#1922 on, a verified token whose account Studio does not accept is refused with 403 and its own
+  // code on every route that reads the bearer; the shell shows the refusal page for it.
+  group('studioAccountRefusal', () {
+    test('gives the code of a 403 BEARER_NO_ROLE or BEARER_NO_IDENTITY, as text or as a decoded map', () {
+      expect(
+        studioAccountRefusal(errorWith(403, '{"error":"x","code":"BEARER_NO_ROLE"}')),
+        AppErrorCode.studioAccountHasNoRole,
+      );
+      expect(
+        studioAccountRefusal(errorWith(403, {'error': 'x', 'code': 'BEARER_NO_IDENTITY'})),
+        AppErrorCode.studioAccountHasNoIdentity,
+      );
+    });
+
+    test('gives nothing for any other answer', () {
+      expect(studioAccountRefusal(errorWith(401, '{"error":"x","code":"BEARER_NO_ROLE"}')), isNull);
+      expect(studioAccountRefusal(errorWith(403, '{"error":"x","code":"AUTH_ERROR"}')), isNull);
+      expect(studioAccountRefusal(errorWith(403, '{"error":"x","code":"PERMISSION_DENIED"}')), isNull);
+      expect(studioAccountRefusal(errorWith(403, 'Forbidden')), isNull);
+      expect(studioAccountRefusal(errorWith(401, '{"error":"x","code":"AUTH_REQUIRED"}')), isNull);
+      expect(studioAccountRefusal(errorWith(503, '{"error":"x","code":"IDENTITY_PROVIDER_UNAVAILABLE"}')), isNull);
+      expect(studioAccountRefusal(errorWith(null)), isNull);
     });
   });
 }

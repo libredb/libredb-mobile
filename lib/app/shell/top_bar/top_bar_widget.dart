@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
+import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
-import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
 import 'package:go_router/go_router.dart';
 
 /// The one top bar of the shell: a back arrow on a page that is no tab, the page title, and the avatar that opens the
@@ -64,23 +62,7 @@ class TopBarWidget extends StatelessWidget {
           router.push(ApplicationRoutesConstants.settings);
         }
       case ProfileSheetAction.signOut:
-        await _handleLogout(context);
+        await confirmAndSignOut(context);
     }
-  }
-
-  Future<void> _handleLogout(BuildContext context) async {
-    final shouldLogout = await ConfirmationDialog.show(context: context, type: DialogType.logout) ?? false;
-    if (!shouldLogout || !context.mounted) return;
-    // AWAIT the end of the sign-out before navigating: navigating
-    // immediately would race the async logout work and (with the
-    // router's "authenticated user on public route → home" rule)
-    // momentarily bounce back to home until SessionCubit catches up.
-    final signOutBloc = context.read<SignOutBloc>();
-    signOutBloc.add(const SignOutRequested());
-    await signOutBloc.stream.firstWhere((state) => state is SignOutDone);
-    if (!context.mounted) return;
-    context.go(ApplicationRoutesConstants.login);
-    // A logout that cannot remove all stored data signs out too, and
-    // AppSessionListeners tells the user so.
   }
 }

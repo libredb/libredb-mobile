@@ -15,6 +15,7 @@ import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.d
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
@@ -790,6 +791,19 @@ void main() {
         // (DevConsole capture + verbose logging) like a real round-trip.
         'MockInterceptor',
       ]);
+    });
+
+    test('reports refusals of the account right after the token refresh, when told where to', () {
+      final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
+        appConfig: const AppConfig.test(),
+        onAccountRefused: (_) {},
+        accountRefusal: studioAccountRefusal,
+      );
+      client.instance;
+      final names = client.interceptorChainSnapshot.map((e) => e.name).toList();
+
+      expect(names.indexOf('AccountRefusalInterceptor'), names.indexOf('TokenRefreshInterceptor') + 1);
     });
 
     test('MockInterceptor entry is flagged active=false (dev/test fallback)', () {

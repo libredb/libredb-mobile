@@ -12,7 +12,9 @@ import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
@@ -382,6 +384,20 @@ void main() {
         expect(tester.element(find.byType(MaterialApp)).read<LoginBloc>().state, const LoginInitialState());
       });
     }
+
+    // The logout from the refusal page is tested with the page, in app_shell_test.dart.
+    testWidgets('after an idle timeout, the refusal of the signed-out account is forgotten', (tester) async {
+      await tester.pumpWidget(_app);
+      await tester.pumpAndSettle();
+      await _signIn(tester);
+      final refusal = tester.element(find.byType(MaterialApp)).read<StudioAccountRefusalCubit>();
+      refusal.refuse(AppErrorCode.studioAccountHasNoRole);
+
+      await _idle(tester);
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(refusal.state, const StudioAccountAccepted());
+    });
   });
 }
 

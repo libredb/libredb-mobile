@@ -127,14 +127,14 @@ Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`, and wh
 | Studio answers | The app |
 | --- | --- |
 | 401 `AUTH_REQUIRED` | refreshes the token and repeats the request once; a second 401 `AUTH_REQUIRED` ends the session |
-| 401 without a code (`/api/auth/me`'s `{"authenticated":false}`) | refreshes the token and repeats the request once; a second 401 without a code shows the error with a retry, and the session stays |
+| 401 without a code (`/api/auth/me`'s `{"authenticated":false}`, Studio before libredb-studio#1922) | refreshes the token and repeats the request once; a second 401 without a code shows the error with a retry, and the session stays |
 | a failed refresh at Keycloak (expired or revoked refresh token) | ends the session |
 | 401 `AUTH_ERROR` (the database refused its credential) | shows the error; the session stays |
 | 401 `LLM_AUTH` | the same; the AI routes are not used |
-| 503 `IDENTITY_PROVIDER_UNAVAILABLE` | shows the error; the token stays |
-| 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | shows the error, no refresh, the session stays; at sign-in the sign-in is refused |
+| 503 `IDENTITY_PROVIDER_UNAVAILABLE`, on any route and from libredb-studio#1922 on also on `GET /api/auth/me` | shows the error as transient with the screen's retry; no refresh, the token stays |
+| 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | no refresh, the session stays; signed in, the shell covers every screen with the refusal page, which offers Retry and Logout; at sign-in the sign-in is refused |
+| 401 `AUTH_REQUIRED` on `POST /api/auth/logout` (from libredb-studio#1922 on) | refreshes the token and posts the sign-out record again, within the sign-out's 3 seconds; the sign-out goes on either way |
 
-`GET /api/auth/me` answers 401 without a code both for a refused token and when Studio cannot reach Keycloak, so a 401 there does not prove the session is over.
 The rule after a refresh ([#12](https://github.com/libredb/libredb-mobile/issues/12)):
 
 - A 401 without a code that comes back after a successful refresh leaves the session alone; the error reaches the screen, which offers a retry.
@@ -275,7 +275,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
 
 ## Known gaps
 
-- Studio's `/api/auth/me` cannot tell a refused token from an unreachable identity provider (both 401).
+- Under governance, Studio still refuses a session as 401 when a route cannot read its account registry (`getSession`, `src/lib/auth.ts:81-86` at libredb-studio c9989a6b5), which the app reads as a refused token.
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
 - Studio cancels a run when its request is aborted (`src/lib/api/abort-cancel.ts`, used by `src/lib/api/editor-query.ts:135` and `src/app/api/db/multi-query/route.ts:297`).
   So a client receive timeout shorter than Studio's query timeout kills the statement on the server ([#15](https://github.com/libredb/libredb-mobile/issues/15)), and so may the app going to the background during a run (M5-09, in [#33](https://github.com/libredb/libredb-mobile/issues/33)).

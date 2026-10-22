@@ -330,5 +330,7 @@
   "pick_connection_first": "Pick a connection first",
   "@pick_connection_first": {},
   "pick_connection_first_description": "Open a connection from the Connections tab to use this tab.",
-  "@pick_connection_first_description": {}
+  "@pick_connection_first_description": {},
+  "account_refusal_title": "Your account has no access to Studio",
+  "@account_refusal_title": {}
 }

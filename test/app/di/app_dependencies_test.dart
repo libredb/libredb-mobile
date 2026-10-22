@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
@@ -76,10 +77,13 @@ class _FakeRotation implements TokenRotation {
 
 /// Answers every request with 401, and records each request as `METHOD path`.
 class _UnauthorizedAdapter implements HttpClientAdapter {
-  _UnauthorizedAdapter([this.body = '']);
+  _UnauthorizedAdapter([this.body = '', this.statusCode = 401]);
 
-  /// The body of every 401.
+  /// The body of every answer.
   final String body;
+
+  /// The status of every answer, 401 unless a test asks for another refusal.
+  final int statusCode;
 
   final requests = <String>[];
 
@@ -92,7 +96,7 @@ class _UnauthorizedAdapter implements HttpClientAdapter {
     requests.add('${options.method} ${options.path}');
     return ResponseBody.fromString(
       body,
-      401,
+      statusCode,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
@@ -212,6 +216,37 @@ void main() {
     expect(adapter.requests, ['GET /connections/managed', 'GET /connections/managed']);
     expect(sessionExpiredCalls, 1);
   });
+
+  // From libredb-studio#1922 on, Studio refuses an account it does not accept with 403 and its own code.
+  test('the account refusal is Studio\'s', () {
+    expect(dependencies.accountRefusal, same(studioAccountRefusal));
+  });
+
+  test(
+    'createApiClient reports a 403 BEARER_NO_ROLE to onAccountRefused, with no refresh and the session kept',
+    () async {
+      final adapter = _UnauthorizedAdapter(
+        '{"error":"This account has no role in Studio.","code":"BEARER_NO_ROLE"}',
+        403,
+      );
+      final rotation = _FakeRotation();
+      var sessionExpiredCalls = 0;
+      final refusals = <AppErrorCode>[];
+      final client = AppDependencies(appConfig: _prodConfig, authMode: _oidcMode).createApiClient(
+        await _signedInStorage(),
+        onSessionExpired: () => sessionExpiredCalls++,
+        onAccountRefused: refusals.add,
+        tokenRotation: rotation,
+      );
+
+      await _getUnauthorized(client, adapter, '/connections/managed');
+
+      expect(refusals, [AppErrorCode.studioAccountHasNoRole]);
+      expect(adapter.requests, ['GET /connections/managed']);
+      expect(rotation.sent, isEmpty);
+      expect(sessionExpiredCalls, 0);
+    },
+  );
 
   test('createApiClient uses sessionExpiredPredicate', () async {
     final adapter = _UnauthorizedAdapter();

@@ -13,6 +13,7 @@ import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -32,6 +33,7 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -169,6 +171,7 @@ class _CountingDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) => super.createApiClient(
     secureStorage,
@@ -176,6 +179,7 @@ class _CountingDependencies extends AppDependencies {
       sessionExpiredCalls++;
       onSessionExpired();
     },
+    onAccountRefused: onAccountRefused,
     tokenRotation: tokenRotation,
   );
 }
@@ -716,6 +720,69 @@ void main() {
     }
   });
 
+  // From libredb-studio#1922 on, Studio refuses a signed-in account it no longer accepts, such as one whose role an
+  // administrator removed, on every route once the access token is next refreshed. Whichever request meets the refusal
+  // first tells the shell, which shows the refusal page; nothing refreshes and the session stays.
+  group('AppScope account refusal, signed in', () {
+    for (final (code, expected) in [
+      ('BEARER_NO_ROLE', AppErrorCode.studioAccountHasNoRole),
+      ('BEARER_NO_IDENTITY', AppErrorCode.studioAccountHasNoIdentity),
+    ]) {
+      for (final route in ['GET /auth/me', 'GET /connections/managed']) {
+        testWidgets('a 403 $code on $route refuses the account and keeps the session', (tester) async {
+          await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+          await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+          final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+          final dependencies = _CountingDependencies(rotation: rotation);
+          final scope = await _pumpScope(tester, dependencies);
+          final session = scope.read<SessionCubit>();
+          expect(session.state, isA<SessionAuthenticated>());
+          final server = _ServerAdapter({
+            route: (403, {'error': 'refused', 'code': code}),
+          });
+          final apiClient = scope.read<ApiClient>();
+          apiClient.instance.httpClientAdapter = server;
+
+          Object? outcome;
+          apiClient
+              .get(route.split(' ').last)
+              .then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
+          await _pumpUntil(tester, () => outcome != null);
+
+          expect(outcome, isA<AppException>());
+
+          expect(scope.read<StudioAccountRefusalCubit>().state, StudioAccountRefused(expected));
+          expect(server.requests, hasLength(1), reason: 'sent once, never again');
+          expect(rotation.rotations, 0);
+          expect(dependencies.sessionExpiredCalls, 0);
+          expect(session.state, isA<SessionAuthenticated>());
+          expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNotNull);
+        });
+      }
+    }
+
+    testWidgets('a 503 IDENTITY_PROVIDER_UNAVAILABLE refuses nothing', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      final scope = await _pumpScope(tester, _CountingDependencies());
+      final apiClient = scope.read<ApiClient>();
+      apiClient.instance.httpClientAdapter = _ServerAdapter({
+        'GET /connections/managed': (503, {'error': 'unreachable', 'code': 'IDENTITY_PROVIDER_UNAVAILABLE'}),
+      });
+
+      Object? outcome;
+      apiClient
+          .get('/connections/managed')
+          .then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
+      await _pumpUntil(tester, () => outcome != null);
+
+      expect(outcome, isA<AppException>());
+
+      expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+      expect(scope.read<SessionCubit>().state, isA<SessionAuthenticated>());
+    });
+  });
+
   // Studio decides at sign-in whether it accepts the account, through GET /api/auth/me. Studio main answers a refused
   // account with 401 and no code; libredb-studio#1922 answers 403 BEARER_NO_ROLE, and 401 AUTH_REQUIRED for a token it
   // refuses itself.
@@ -779,6 +846,11 @@ void main() {
         }
         expect(sessionStates, isEmpty, reason: 'a refused sign-in signs nobody in and ends no session');
         expect(session.state, isA<SessionUnauthenticated>());
+        expect(
+          scope.read<StudioAccountRefusalCubit>().state,
+          const StudioAccountAccepted(),
+          reason: 'the login page tells a refused sign-in, so no refusal waits for the next user to sign in',
+        );
       });
     }
   });

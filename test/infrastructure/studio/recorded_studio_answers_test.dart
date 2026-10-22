@@ -70,6 +70,7 @@ void main() {
       );
       expect(isStudioSessionExpired(answer(403, body)), isFalse);
       expect(isStudioSessionRefused(answer(403, body)), isFalse);
+      expect(studioAccountRefusal(answer(403, body)), AppErrorCode.studioAccountHasNoRole, reason: 'the refusal page');
     });
 
     test('for an expired access token: a refresh, and the end of the session if it comes again', () {
@@ -78,6 +79,7 @@ void main() {
       expect(mapped(401, body).code, AppErrorCode.authInvalidAccessToken.key);
       expect(isStudioSessionExpired(answer(401, body)), isTrue);
       expect(isStudioSessionRefused(answer(401, body)), isTrue);
+      expect(studioAccountRefusal(answer(401, body)), isNull);
     });
 
     test('while Studio cannot reach the identity provider: no refresh, a transient error', () {
@@ -86,6 +88,7 @@ void main() {
       expect(mapped(503, body).code, AppErrorCode.studioIdentityProviderUnavailable.key);
       expect(isStudioSessionExpired(answer(503, body)), isFalse);
       expect(isStudioSessionRefused(answer(503, body)), isFalse);
+      expect(studioAccountRefusal(answer(503, body)), isNull);
     });
   });
 
