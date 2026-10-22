@@ -170,7 +170,7 @@ void main() {
       expect(urls.repo, 'https://github.com/acme/dashboard');
       expect(urls.issues, 'https://github.com/acme/dashboard/issues');
       expect(urls.contributing, 'https://github.com/acme/dashboard/blob/main/CONTRIBUTING.md');
-      expect(urls.translate, 'https://github.com/acme/dashboard/tree/main/lib/l10n');
+      expect(urls.translate, 'https://github.com/acme/dashboard/issues/new/choose');
     });
 
     test('takes the repository, sponsor and documentation URLs from the project links', () {

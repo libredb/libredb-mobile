@@ -23,7 +23,9 @@ class CommunityUrls {
 
   String get issues => '$repo/issues';
   String get contributing => '$repo/blob/main/CONTRIBUTING.md';
-  String get translate => '$repo/tree/main/lib/l10n';
+
+  /// Translations come in as issues, as CONTRIBUTING.md asks, so this opens the issue form chooser.
+  String get translate => '$repo/issues/new/choose';
 }
 
 class _CommunityAction {
