@@ -10,7 +10,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
 
-const _admin = StudioIdentity(username: 'admin@example.com', role: StudioRole.admin, viaBearer: true);
+const _admin = StudioIdentity(username: 'admin@example.com', role: StudioAdminRole(), viaBearer: true);
 
 void main() {
   late MockSignInWithSsoUseCase signInWithSso;

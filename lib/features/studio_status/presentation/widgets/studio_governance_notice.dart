@@ -23,8 +23,9 @@ class StudioGovernanceNotice extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final l10n = S.of(context);
     final showsDetail = switch (role) {
-      StudioRole.admin => true,
-      StudioRole.user => false,
+      StudioAdminRole() => true,
+      // An unknown role gets the least the app grants.
+      StudioUserRole() || StudioUnknownRole() => false,
     };
     final detail = showsDetail ? outage.detail : null;
 

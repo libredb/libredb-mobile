@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
-import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -19,32 +20,60 @@ void main() {
   Finder inBottomNav(String label) => find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
   // The real app on a phone, signed in, on [location].
-  Future<void> pumpSignedInOnPhone(WidgetTester tester, {String location = ApplicationRoutesConstants.home}) async {
+  Future<void> pumpSignedInOnPhone(
+    WidgetTester tester, {
+    String location = ApplicationRoutesConstants.home,
+    String language = 'en',
+  }) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
     await tester.pumpAndSettle();
     routerOf(tester).go(location);
     await tester.pumpAndSettle();
   }
 
   group('BottomNavWidget', () {
-    testWidgets('tapping Settings opens /settings in place of the connection list', (tester) async {
+    testWidgets('shows the three tabs Connections, Browse and SQL, in that order', (tester) async {
       await pumpSignedInOnPhone(tester);
 
-      await tester.tap(inBottomNav('Settings'));
-      await tester.pumpAndSettle();
-
-      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.settings);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
+      final labels = tester
+          .widget<NavigationBar>(find.byType(NavigationBar))
+          .destinations
+          .map((destination) => (destination as NavigationDestination).label)
+          .toList();
+      expect(labels, ['Connections', 'Browse', 'SQL']);
     });
 
-    testWidgets('tapping Connections opens the connection list in place of settings', (tester) async {
-      await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.settings);
+    testWidgets('shows the tabs in Turkish', (tester) async {
+      await pumpSignedInOnPhone(tester, language: 'tr');
+
+      for (final label in ['Bağlantılar', 'Gözat', 'SQL']) {
+        expect(inBottomNav(label), findsOneWidget, reason: label);
+      }
+    });
+
+    for (final (label, location, page) in <(String, String, Type)>[
+      ('Browse', ApplicationRoutesConstants.browse, BrowsePage),
+      ('SQL', ApplicationRoutesConstants.sql, SqlPage),
+    ]) {
+      testWidgets('tapping $label opens $location in place of the connection list', (tester) async {
+        await pumpSignedInOnPhone(tester);
+
+        await tester.tap(inBottomNav(label));
+        await tester.pumpAndSettle();
+
+        expect(routerOf(tester).state.uri.path, location);
+        expect(find.byType(page), findsOneWidget);
+        expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
+      });
+    }
+
+    testWidgets('tapping Connections opens the connection list in place of Browse', (tester) async {
+      await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.browse);
 
       await tester.tap(inBottomNav('Connections'));
       await tester.pumpAndSettle();
@@ -54,10 +83,35 @@ void main() {
       expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
     });
 
-    testWidgets('marks the destination of the open page', (tester) async {
+    for (final (location, index) in const [
+      (ApplicationRoutesConstants.connectionList, 0),
+      (ApplicationRoutesConstants.browse, 1),
+      (ApplicationRoutesConstants.sql, 2),
+    ]) {
+      testWidgets('marks the destination of $location', (tester) async {
+        await pumpSignedInOnPhone(tester, location: location);
+
+        expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, index);
+      });
+    }
+
+    for (final location in const [ApplicationRoutesConstants.browse, ApplicationRoutesConstants.sql]) {
+      testWidgets('$location asks to pick a connection first and offers the connection list', (tester) async {
+        await pumpSignedInOnPhone(tester, location: location);
+
+        expect(find.text('Pick a connection first'), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Connections'));
+        await tester.pumpAndSettle();
+
+        expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+      });
+    }
+
+    testWidgets('the settings page has no bottom navigation bar, since it is no tab', (tester) async {
       await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.settings);
 
-      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
+      expect(find.byType(NavigationBar), findsNothing);
     });
   });
 }

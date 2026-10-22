@@ -23,7 +23,7 @@ void main() {
           'data',
           StudioIdentity(
             username: 'admin@example.com',
-            role: StudioRole.admin,
+            role: const StudioAdminRole(),
             subject: '6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10',
             issuer: 'https://localhost:8443/realms/libredb',
             expiresAt: DateTime.fromMillisecondsSinceEpoch(1792620060 * 1000, isUtc: true),
@@ -31,6 +31,49 @@ void main() {
           ),
         ),
       );
+    });
+
+    test("reads a role this app does not know as StudioUnknownRole, keeping Studio's string", () async {
+      TestEnv.authenticate();
+      final client = TestEnv.apiClient();
+      client.instance.interceptors.insert(
+        0,
+        _AnswerInterceptor(
+          '{"authenticated":true,"user":{"role":"auditor","username":"a@example.com","iat":1,"exp":2}}',
+        ),
+      );
+
+      final result = await StudioIdentityRepository(client).fetch();
+
+      final role = (result as Success<StudioIdentity>).data.role;
+      expect(role, const StudioUnknownRole('auditor'));
+      expect(role.name, 'auditor');
+    });
+
+    test('writes one warn line for an unknown role that carries only the role string', () async {
+      TestEnv.authenticate();
+      final client = TestEnv.apiClient();
+      client.instance.interceptors.insert(
+        0,
+        _AnswerInterceptor(
+          '{"authenticated":true,"user":{"role":"Auditor","username":"a@example.com","idpSubject":"sub-1","iat":1,'
+          '"exp":2}}',
+        ),
+      );
+
+      final lines = await printedLines(() => StudioIdentityRepository(client).fetch());
+
+      final warnings = lines.where((line) => line.contains('StudioIdentityRepository') && line.contains('[W]'));
+      expect(warnings, [contains('Auditor')]);
+      expect(lines.where((line) => line.contains('a@example.com') || line.contains('sub-1')), isEmpty);
+    });
+
+    test('writes no warn line for a known role', () async {
+      TestEnv.authenticate();
+
+      final lines = await printedLines(() => StudioIdentityRepository(TestEnv.apiClient()).fetch());
+
+      expect(lines.where((line) => line.contains('StudioIdentityRepository') && line.contains('[W]')), isEmpty);
     });
 
     test('fails with an AuthError without a session', () async {
@@ -92,17 +135,31 @@ void main() {
         '{"authenticated":true,"user":{"role":"user","username":"user","iat":1,"exp":2}}',
       );
 
-      expect(identity.role, StudioRole.user);
+      expect(identity.role, const StudioUserRole());
       expect(identity.viaBearer, isFalse);
       expect(identity.subject, isNull);
     });
 
-    test('refuses an answer that is not signed in, or names an unknown role', () {
+    test('keeps a role it does not know exactly as Studio sent it, never case-folded', () {
+      for (final name in ['owner', 'Admin', 'USER', ' admin']) {
+        final identity = StudioIdentityModel.fromJsonString(
+          '{"authenticated":true,"user":{"role":"$name","username":"x"}}',
+        );
+
+        expect(identity.role, StudioUnknownRole(name), reason: name);
+      }
+    });
+
+    test('refuses an answer that is not signed in, lacks the username, or has a missing, empty or non-string role', () {
       for (final body in [
         '{"authenticated":false}',
         '{"authenticated":true}',
-        '{"authenticated":true,"user":{"role":"owner","username":"x"}}',
         '{"authenticated":true,"user":{"role":"user"}}',
+        '{"authenticated":true,"user":{"username":"x"}}',
+        '{"authenticated":true,"user":{"role":"","username":"x"}}',
+        '{"authenticated":true,"user":{"role":null,"username":"x"}}',
+        '{"authenticated":true,"user":{"role":1,"username":"x"}}',
+        '{"authenticated":true,"user":{"role":["admin"],"username":"x"}}',
       ]) {
         expect(() => StudioIdentityModel.fromJsonString(body), throwsFormatException, reason: body);
       }

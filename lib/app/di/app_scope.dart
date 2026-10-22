@@ -39,6 +39,8 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
+import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 class AppScope extends StatelessWidget {
@@ -215,6 +217,14 @@ class AppScope extends StatelessWidget {
           BlocProvider<LocaleCubit>(
             create: (_) =>
                 LocaleCubit(storage: dependencies.createLocalStorage(), defaultLocale: defaultLocale)..restore(),
+          ),
+          // Above the router, so the shell, every feature and a route guard read the same answer; the shell loads them
+          // when it opens and AppSessionListeners clears them at the session's end.
+          BlocProvider<StudioIdentityCubit>(
+            create: (context) => StudioIdentityCubit(repository: context.read<IStudioIdentityRepository>()),
+          ),
+          BlocProvider<ConnectionPolicyCubit>(
+            create: (context) => ConnectionPolicyCubit(repository: context.read<IConnectionRepository>()),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

@@ -38,7 +38,7 @@ void main() {
   test('GET /api/auth/me of a bearer session', () {
     final identity = StudioIdentityModel.fromJsonString(fixture('me'));
 
-    expect(identity.role, StudioRole.admin);
+    expect(identity.role, const StudioAdminRole());
     expect(identity.username, 'admin@example.com');
     expect(identity.viaBearer, isTrue);
   });

@@ -3,37 +3,24 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:go_router/go_router.dart';
 
-/// Mobile bottom navigation bar.
+/// The tabs of the shell, as Studio's MobileNav has them: Connections, Browse and SQL.
 class BottomNavWidget extends StatelessWidget {
-  final String activeRoute;
+  /// The tab of [ApplicationRoutesConstants.tabs] that is open.
+  final String activeTab;
 
-  const BottomNavWidget({super.key, required this.activeRoute});
-
-  int get _currentIndex {
-    if (activeRoute == ApplicationRoutesConstants.settings) return 1;
-    return 0;
-  }
+  const BottomNavWidget({super.key, required this.activeTab});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = S.of(context);
     return NavigationBar(
-      selectedIndex: _currentIndex,
-      onDestinationSelected: (index) => _onTap(context, index),
+      selectedIndex: ApplicationRoutesConstants.tabs.indexOf(activeTab),
+      onDestinationSelected: (index) => context.go(ApplicationRoutesConstants.tabs[index]),
       destinations: [
-        NavigationDestination(icon: const Icon(Icons.storage_outlined), label: S.of(context).connections),
-        NavigationDestination(icon: const Icon(Icons.settings_outlined), label: S.of(context).settings),
+        NavigationDestination(icon: const Icon(Icons.storage_outlined), label: l10n.connections),
+        NavigationDestination(icon: const Icon(Icons.table_chart_outlined), label: l10n.tab_browse),
+        NavigationDestination(icon: const Icon(Icons.terminal), label: l10n.tab_sql),
       ],
     );
-  }
-
-  void _onTap(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        context.go(ApplicationRoutesConstants.connectionList);
-        break;
-      case 1:
-        context.go(ApplicationRoutesConstants.settings);
-        break;
-    }
   }
 }

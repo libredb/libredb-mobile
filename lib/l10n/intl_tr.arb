@@ -284,5 +284,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "profile": "Profil",
+  "@profile": {},
+  "profile_unknown_user": "Bilinmeyen kullanıcı",
+  "@profile_unknown_user": {},
+  "profile_role_admin": "Yönetici",
+  "@profile_role_admin": {},
+  "profile_role_user": "Kullanıcı",
+  "@profile_role_user": {},
+  "profile_governed_by_platform": "LibreDB Platform tarafından yönetiliyor",
+  "@profile_governed_by_platform": {},
+  "tab_browse": "Gözat",
+  "@tab_browse": {},
+  "tab_sql": "SQL",
+  "@tab_sql": {},
+  "pick_connection_first": "Önce bir bağlantı seçin",
+  "@pick_connection_first": {},
+  "pick_connection_first_description": "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
+  "@pick_connection_first_description": {}
 }

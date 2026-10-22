@@ -5,10 +5,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
@@ -158,6 +162,26 @@ void main() {
 
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
       expect(find.byType(ConnectionListPage), findsOneWidget);
+    });
+
+    testWidgets('a sign-in on the login page opens the shell on the connection list, with its tabs and avatar', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
+
+      // What a sign-in leaves behind: the stored session, and the session marked as signed in.
+      TestEnv.authenticate();
+      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated();
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.home);
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).destinations, hasLength(3));
+      expect(find.byKey(profileButtonKey), findsOneWidget);
     });
 
     testWidgets('signed out, / opens the login page with no returnUrl', (tester) async {

@@ -284,5 +284,23 @@
         "type": "String"
       }
     }
-  }
+  },
+  "profile": "Profile",
+  "@profile": {},
+  "profile_unknown_user": "Unknown user",
+  "@profile_unknown_user": {},
+  "profile_role_admin": "Administrator",
+  "@profile_role_admin": {},
+  "profile_role_user": "User",
+  "@profile_role_user": {},
+  "profile_governed_by_platform": "Governed by LibreDB Platform",
+  "@profile_governed_by_platform": {},
+  "tab_browse": "Browse",
+  "@tab_browse": {},
+  "tab_sql": "SQL",
+  "@tab_sql": {},
+  "pick_connection_first": "Pick a connection first",
+  "@pick_connection_first": {},
+  "pick_connection_first_description": "Open a connection from the Connections tab to use this tab.",
+  "@pick_connection_first_description": {}
 }

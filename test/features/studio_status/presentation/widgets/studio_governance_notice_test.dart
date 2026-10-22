@@ -39,7 +39,7 @@ void main() {
     await pumpNotice(
       tester,
       const GovernanceOutage(kind: GovernanceOutageKind.temporarilyUnavailable),
-      StudioRole.user,
+      const StudioUserRole(),
     );
 
     expect(find.textContaining('temporarily unavailable'), findsOneWidget);
@@ -47,20 +47,26 @@ void main() {
   });
 
   testWidgets('words a misconfigured or incompatible Studio as unable to serve connections', (tester) async {
-    await pumpNotice(tester, cannotServe, StudioRole.user);
+    await pumpNotice(tester, cannotServe, const StudioUserRole());
 
     expect(find.textContaining('Studio cannot serve connections right now'), findsOneWidget);
     expect(find.textContaining('temporarily unavailable'), findsNothing);
   });
 
   testWidgets("shows Studio's detail to an admin", (tester) async {
-    await pumpNotice(tester, cannotServe, StudioRole.admin);
+    await pumpNotice(tester, cannotServe, const StudioAdminRole());
 
     expect(find.textContaining('libredb_grants: permission denied (42501)'), findsOneWidget);
   });
 
   testWidgets("never shows Studio's detail to a user", (tester) async {
-    await pumpNotice(tester, cannotServe, StudioRole.user);
+    await pumpNotice(tester, cannotServe, const StudioUserRole());
+
+    expect(find.textContaining('libredb_grants'), findsNothing);
+  });
+
+  testWidgets("never shows Studio's detail to a role this app does not know", (tester) async {
+    await pumpNotice(tester, cannotServe, const StudioUnknownRole('auditor'));
 
     expect(find.textContaining('libredb_grants'), findsNothing);
   });

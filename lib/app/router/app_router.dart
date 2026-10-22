@@ -11,7 +11,9 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/auth/navigation/auth_routes.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
+import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
@@ -52,7 +54,12 @@ class AppRouterFactory {
             state: state,
             child: AppShell(state: state, child: child),
           ),
-          routes: [...ConnectionsFeatureRoutes.routes, ...SettingsFeatureRoutes.routes],
+          routes: [
+            ...ConnectionsFeatureRoutes.routes,
+            ...ObjectBrowserFeatureRoutes.routes,
+            ...SqlEditorFeatureRoutes.routes,
+            ...SettingsFeatureRoutes.routes,
+          ],
         ),
         ...AuthFeatureRoutes.publicRoutes(
           loginBuilder: (context) => LoginScreen(

@@ -14,6 +14,15 @@ class ApplicationRoutesConstants {
   // Connection routes
   static const connectionList = '/connections';
 
+  // The root of the Browse tab
+  static const browse = '/browse';
+
+  // The root of the SQL tab
+  static const sql = '/sql';
+
+  /// The tabs of the shell, in the order of its bottom navigation bar.
+  static const tabs = [connectionList, browse, sql];
+
   // Settings routes
   static const settings = '/settings';
 

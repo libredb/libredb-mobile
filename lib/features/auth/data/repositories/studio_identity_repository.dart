@@ -19,6 +19,13 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
     try {
       final response = await _apiClient.get('/auth/me');
       final identity = StudioIdentityModel.fromJsonString(ApiClient.decodeUTF8(response.data!));
+      switch (identity.role) {
+        case StudioAdminRole() || StudioUserRole():
+          break;
+        case StudioUnknownRole(:final name):
+          // The visible sign that the app is older than its server; the role gets the least the app grants.
+          _log.warn('fetch: Studio names a role this app does not know: {}', [name]);
+      }
       _log.debug('fetch: role {}, bearer {}', [identity.role.name, identity.viaBearer]);
       return Success(identity);
     } catch (e) {

@@ -4,9 +4,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,7 +29,7 @@ void main() {
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
   }
 
-  Finder userMenu() => find.descendant(of: find.byType(TopBarWidget), matching: find.byType(PopupMenuButton<String>));
+  Finder avatar() => find.byKey(profileButtonKey);
 
   // An Android phone with a 48 px status bar, as on an API 36 emulator.
   const statusBar = FakeViewPadding(top: 48);
@@ -38,19 +40,19 @@ void main() {
       ('tablet', Size(800, 1280)),
       ('desktop', Size(1280, 800)),
     ]) {
-      testWidgets('the $layout top bar starts below the status bar and its user menu takes a tap at its top', (
+      testWidgets('the $layout top bar starts below the status bar and its avatar takes a tap at its top', (
         tester,
       ) async {
         await pumpSignedIn(tester, size: size, insets: statusBar);
 
         expect(tester.getRect(find.byType(TopBarWidget)).top, greaterThanOrEqualTo(48));
-        final button = tester.getRect(userMenu());
+        final button = tester.getRect(avatar());
         expect(button.top, greaterThanOrEqualTo(48));
 
         await tester.tapAt(Offset(button.center.dx, button.top + 2));
         await tester.pumpAndSettle();
 
-        expect(find.byType(PopupMenuItem<String>), findsWidgets);
+        expect(find.byType(ProfileSheet), findsOneWidget);
       });
     }
   });
@@ -92,6 +94,8 @@ void main() {
   group('ResponsiveScaffold - page title', () {
     for (final (location, title) in const [
       (ApplicationRoutesConstants.connectionList, 'Bağlantılar'),
+      (ApplicationRoutesConstants.browse, 'Gözat'),
+      (ApplicationRoutesConstants.sql, 'SQL'),
       (ApplicationRoutesConstants.settings, 'Ayarlar'),
     ]) {
       testWidgets('shows $title for $location in Turkish', (tester) async {
