@@ -8,6 +8,7 @@ The code conventions are in [CLAUDE.md](../CLAUDE.md), and the test structure in
 - Flutter 3.47.7 and Dart 3.13.5, through [FVM](https://fvm.app/) (`fvm install` reads the version from `.fvmrc`).
 - The Android SDK for Android builds, and Xcode on macOS for iOS builds.
 - The app runs on Android 8.0 (API 26) and newer, and on iOS 15 and newer.
+- iOS plugins are linked through Swift Package Manager, which Flutter enables by default; the project has no Podfile and needs no CocoaPods.
 
 | Android component | Version |
 | --- | --- |

@@ -20,9 +20,7 @@ migrate_working_dir/
 
 .vscode/
 
-# unittest temp storage
-GetStorage.bak
-GetStorage.gs
+# Test coverage and scratch files
 coverage/
 tmp/
 
@@ -38,9 +36,7 @@ tmp/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
-.flutter-plugins
 .flutter-plugins-dependencies
-.packages
 .pub-cache/
 .pub/
 /build/
@@ -59,15 +55,8 @@ app.*.map.json
 # FVM Version Cache
 .fvm/
 
-# Oracle JDK (large files)
-Oracle_JDK-24/
-
 # Alchemist golden failure diffs
 test/**/failures/
-
-# Stray native-build artifacts (never commit)
-CMakeFiles/
-*.deb
 
 # Widget Preview related
 .widget_preview/
