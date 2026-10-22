@@ -79,4 +79,61 @@ void main() {
     expect: () => const [ConnectionPolicyLoading(), ConnectionPolicyLoaded(governed)],
     verify: (_) => verify(() => repository.fetchPolicy()).called(1),
   );
+
+  group('refresh', () {
+    const redacted = ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'redacted');
+
+    blocTest<ConnectionPolicyCubit, ConnectionPolicyState>(
+      'replaces a loaded policy without showing a load in between',
+      setUp: () => when(() => repository.fetchPolicy()).thenAnswer((_) async => const Success(redacted)),
+      build: build,
+      seed: () => const ConnectionPolicyLoaded(governed),
+      act: (cubit) => cubit.refresh(),
+      expect: () => const [ConnectionPolicyLoaded(redacted)],
+    );
+
+    blocTest<ConnectionPolicyCubit, ConnectionPolicyState>(
+      'keeps the loaded policy when the refresh fails',
+      setUp: () =>
+          when(() => repository.fetchPolicy())
+              .thenAnswer((_) async => Failure(ServerError('x', code: AppErrorCode.studioGovernanceUnavailable.key))),
+      build: build,
+      seed: () => const ConnectionPolicyLoaded(governed),
+      act: (cubit) => cubit.refresh(),
+      expect: () => const <ConnectionPolicyState>[],
+    );
+
+    blocTest<ConnectionPolicyCubit, ConnectionPolicyState>(
+      'loads a policy that failed before',
+      setUp: () => when(() => repository.fetchPolicy()).thenAnswer((_) async => const Success(governed)),
+      build: build,
+      seed: () => const ConnectionPolicyFailure(AppErrorCode.generic),
+      act: (cubit) => cubit.refresh(),
+      expect: () => const [ConnectionPolicyLoading(), ConnectionPolicyLoaded(governed)],
+    );
+
+    blocTest<ConnectionPolicyCubit, ConnectionPolicyState>(
+      'a second refresh while one is in flight sends no second request',
+      setUp: () => when(() => repository.fetchPolicy()).thenAnswer((_) async => const Success(redacted)),
+      build: build,
+      seed: () => const ConnectionPolicyLoaded(governed),
+      act: (cubit) => Future.wait([cubit.refresh(), cubit.refresh()]),
+      expect: () => const [ConnectionPolicyLoaded(redacted)],
+      verify: (_) => verify(() => repository.fetchPolicy()).called(1),
+    );
+
+    test('an answer that arrives after clear is dropped', () async {
+      final answer = Completer<Result<ConnectionPolicy>>();
+      when(() => repository.fetchPolicy()).thenAnswer((_) => answer.future);
+      final cubit = build()..emit(const ConnectionPolicyLoaded(governed));
+      addTearDown(cubit.close);
+
+      final refreshing = cubit.refresh();
+      cubit.clear();
+      answer.complete(const Success(redacted));
+      await refreshing;
+
+      expect(cubit.state, const ConnectionPolicyInitial());
+    });
+  });
 }

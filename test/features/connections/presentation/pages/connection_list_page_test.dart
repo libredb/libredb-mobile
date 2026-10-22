@@ -20,6 +20,8 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/collapsed_sections_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
@@ -40,9 +42,16 @@ import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
+import 'package:libredb_mobile/shared/widgets/governance_status.dart';
+import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+
+const _ungoverned = ConnectionPolicy(customConnections: true, governance: false);
+
+/// What the GovernanceStatus above the page words an outage as.
+const _outageNotice = 'Governance outage notice';
 
 /// The answer of `assets/mock/GET_connections_managed.json`, which the app shows in local mode.
 ManagedConnections _mockAnswer() =>
@@ -61,10 +70,15 @@ void main() {
   late MockConnectivityCubit connectivity;
   late MockStudioStatusBloc studioStatus;
   late StreamController<ConnectivityState> connectivityChanges;
+  late int outagesReported;
+  late int recoveriesReported;
 
   setUp(() {
+    outagesReported = 0;
+    recoveriesReported = 0;
     repository = MockIConnectionRepository();
     providerMeta = MockIProviderMetaRepository();
+    when(() => repository.fetchPolicy()).thenAnswer((_) async => const Success(_ungoverned));
     connectivity = MockConnectivityCubit();
     studioStatus = MockStudioStatusBloc();
     when(() => studioStatus.state).thenReturn(const StudioReachable());
@@ -134,6 +148,8 @@ void main() {
                     Expanded(
                       child: MultiBlocProvider(
                         providers: [
+                          // The shell asks for the policy when it opens.
+                          BlocProvider(create: (_) => ConnectionPolicyCubit(repository: repository)..load()),
                           BlocProvider(
                             create: (_) => ConnectionListBloc(
                               listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository),
@@ -148,7 +164,12 @@ void main() {
                                   ..add(FavoriteConnectionsSubjectChanged(subject)),
                           ),
                         ],
-                        child: const ConnectionListPage(),
+                        child: GovernanceStatus(
+                          reportOutage: () => outagesReported++,
+                          reportRecovered: () => recoveriesReported++,
+                          noticeBuilder: (_) => const Text(_outageNotice),
+                          child: const ConnectionListPage(),
+                        ),
                       ),
                     ),
                   ],
@@ -382,9 +403,9 @@ void main() {
     verify(() => repository.listManaged()).called(2);
   });
 
-  testWidgets('a failed refresh keeps the list and says why', (tester) async {
+  testWidgets('a failed refresh keeps the list and says why in the banner', (tester) async {
     answer(_mockAnswer());
-    await pumpPage(tester);
+    await pumpPage(tester, size: const Size(400, 1400));
     when(() => repository.listManaged())
         .thenAnswer((_) async => Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key)));
 
@@ -395,7 +416,14 @@ void main() {
 
     expect(row('seed:sales-postgres'), findsOneWidget);
     final context = tester.element(find.byType(ConnectionListPage));
-    expect(find.text(AppErrorCode.networkCertInvalid.resolve(context)), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(StudioErrorBanner),
+        matching: find.text(AppErrorCode.networkCertInvalid.resolve(context)),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('a search typed during a refresh that then fails keeps the pull indicator, the query and the message', (
@@ -832,6 +860,178 @@ void main() {
       await pumpPage(tester);
 
       expect(find.text(S.current.error_network_offline), findsOneWidget);
+    });
+  });
+
+  group('governance and live refresh', () {
+    const sales = StudioConnection(id: 'seed:sales', name: 'Sales', type: 'postgres');
+    const ledger = StudioConnection(id: 'seed:ledger', name: 'Ledger', type: 'postgres');
+    final governanceUnavailable = Failure<ManagedConnections>(
+      ServerError('Governance unavailable', code: AppErrorCode.studioGovernanceUnavailable.key),
+    );
+
+    void policy(ConnectionPolicy policy) =>
+        when(() => repository.fetchPolicy()).thenAnswer((_) async => Success(policy));
+
+    testWidgets('a 503 after a loaded list keeps the rows greyed under the notice and recovers by itself', (
+      tester,
+    ) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(row('seed:sales'), findsOneWidget);
+      expect(find.descendant(of: row('seed:sales'), matching: find.byType(Opacity)), findsOneWidget);
+      expect(find.text(_outageNotice), findsOneWidget);
+      expect(find.text(S.current.connection_list_empty), findsNothing);
+      expect(find.text(S.current.connection_list_empty_governed), findsNothing);
+      expect(outagesReported, 1);
+
+      // Another failed retry is the same outage.
+      await tester.pump(ConnectionListBloc.unavailableRetryInterval);
+      await tester.pump();
+      expect(outagesReported, 1);
+
+      answer(const ManagedConnections(connections: [sales, ledger], cacheHint: Duration(seconds: 10)));
+      await tester.pump(ConnectionListBloc.unavailableRetryInterval);
+      await tester.pump();
+
+      expect(find.text(_outageNotice), findsNothing);
+      expect(row('seed:ledger'), findsOneWidget);
+      expect(find.descendant(of: row('seed:sales'), matching: find.byType(Opacity)), findsNothing);
+      expect(recoveriesReported, 1);
+    });
+
+    testWidgets('a 503 on a cold start covers the page with the notice and a retry, never the empty-grants text', (
+      tester,
+    ) async {
+      policy(const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'none'));
+      when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
+
+      await pumpPage(tester);
+
+      expect(find.byKey(const ValueKey('connection-list-unavailable')), findsOneWidget);
+      expect(find.text(_outageNotice), findsOneWidget);
+      expect(find.text(S.current.connection_list_empty_governed), findsNothing);
+      expect(find.text(S.current.connection_list_empty), findsNothing);
+      expect(outagesReported, 1);
+
+      answer(const ManagedConnections(connections: [sales]));
+      await tester.tap(find.text(S.current.retry));
+      await tester.pump();
+      await tester.pump();
+
+      expect(row('seed:sales'), findsOneWidget);
+      expect(recoveriesReported, 1);
+    });
+
+    testWidgets('a governed empty list says no databases were granted yet', (tester) async {
+      policy(const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'none'));
+      answer(const ManagedConnections(connections: <StudioConnection>[]));
+
+      await pumpPage(tester);
+
+      expect(find.text(S.current.connection_list_empty_governed), findsOneWidget);
+      expect(find.text(S.current.connection_list_empty), findsNothing);
+    });
+
+    testWidgets('an empty list without governance says no connections are available', (tester) async {
+      answer(const ManagedConnections(connections: <StudioConnection>[]));
+
+      await pumpPage(tester);
+
+      expect(find.text(S.current.connection_list_empty), findsOneWidget);
+      expect(find.text(S.current.connection_list_empty_governed), findsNothing);
+    });
+
+    for (final (capture, shown) in [('full', true), ('redacted', false), ('none', false), (null, false)]) {
+      testWidgets('statementCapture $capture ${shown ? 'shows' : 'shows no'} statement capture note', (tester) async {
+        policy(ConnectionPolicy(customConnections: false, governance: true, statementCapture: capture));
+        answer(const ManagedConnections(connections: [sales]));
+
+        await pumpPage(tester);
+
+        expect(find.text(S.current.connection_statement_capture_full), shown ? findsOneWidget : findsNothing);
+      });
+    }
+
+    testWidgets('the statement capture note shows above an outage too', (tester) async {
+      policy(const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'full'));
+      when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
+
+      await pumpPage(tester);
+
+      expect(find.text(S.current.connection_statement_capture_full), findsOneWidget);
+    });
+
+    testWidgets('asks for the policy again with each refreshed list', (tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      clearInteractions(repository);
+      policy(const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'full'));
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      verify(() => repository.fetchPolicy()).called(1);
+      expect(find.text(S.current.connection_statement_capture_full), findsOneWidget);
+    });
+
+    testWidgets('a 429 on a refresh keeps the rows and shows the banner with the wait', (tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      when(() => repository.listManaged()).thenAnswer(
+        (_) async => Failure(
+          RateLimitedError(
+            'Too many',
+            code: AppErrorCode.studioRateLimited.key,
+            retryAfter: const Duration(seconds: 30),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(row('seed:sales'), findsOneWidget);
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expect(find.text(S.current.studio_error_retry_in(30)), findsOneWidget);
+    });
+
+    testWidgets('the timer stops when the app goes to the background and asks at once when it comes back', (
+      tester,
+    ) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      clearInteractions(repository);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump(const Duration(minutes: 2));
+      verifyNever(() => repository.listManaged());
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      // The return asks on a zero timer, which only a pump with a duration runs.
+      await tester.pump(Duration.zero);
+      await tester.pump();
+      verify(() => repository.listManaged()).called(1);
+    });
+
+    testWidgets('asks nothing by itself while the device is offline', (tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      await goTo(tester, offline);
+      clearInteractions(repository);
+
+      await tester.pump(const Duration(minutes: 2));
+
+      verifyNever(() => repository.listManaged());
     });
   });
 }

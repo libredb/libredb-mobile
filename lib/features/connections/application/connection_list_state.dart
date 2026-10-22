@@ -17,8 +17,8 @@ final class ConnectionListLoading extends ConnectionListState {
 
 /// The list Studio answered, with the search and the environment filter applied to it.
 ///
-/// A refresh keeps the list on screen: [isRefreshing] while it runs, and [refreshErrorCode] when it failed, so the
-/// page shows the failure next to the list it still has.
+/// A refresh keeps the list on screen: [isRefreshing] while it runs, and [refreshError] when it failed, so the page
+/// shows the failure next to the list it still has.
 final class ConnectionListLoaded extends ConnectionListState {
   const ConnectionListLoaded({
     required this.connections,
@@ -27,7 +27,7 @@ final class ConnectionListLoaded extends ConnectionListState {
     this.query = '',
     this.environment,
     this.isRefreshing = false,
-    this.refreshErrorCode,
+    this.refreshError,
   });
 
   /// Every connection Studio answered, before the search and the filter.
@@ -47,8 +47,8 @@ final class ConnectionListLoaded extends ConnectionListState {
 
   final bool isRefreshing;
 
-  /// Why the last refresh failed; shown via `errorCode.resolve(context)`, the raw message only goes to the log.
-  final AppErrorCode? refreshErrorCode;
+  /// Why the last refresh failed, shown by `StudioErrorBanner` from its code; the raw message only goes to the log.
+  final AppError? refreshError;
 
   /// Whether [query] filters the list at all; whitespace alone does not (see [normalizeSearchQuery]).
   bool get isSearching => normalizeSearchQuery(query).isNotEmpty;
@@ -69,7 +69,7 @@ final class ConnectionListLoaded extends ConnectionListState {
     String? query,
     String? Function()? environment,
     bool isRefreshing = false,
-    AppErrorCode? refreshErrorCode,
+    AppError? refreshError,
   }) => ConnectionListLoaded(
     connections: connections ?? this.connections,
     cacheHint: cacheHint,
@@ -77,11 +77,31 @@ final class ConnectionListLoaded extends ConnectionListState {
     query: query ?? this.query,
     environment: environment == null ? this.environment : environment(),
     isRefreshing: isRefreshing,
-    refreshErrorCode: refreshErrorCode,
+    refreshError: refreshError,
   );
 
   @override
-  List<Object?> get props => [connections, cacheHint, loadedAt, query, environment, isRefreshing, refreshErrorCode];
+  List<Object?> get props => [connections, cacheHint, loadedAt, query, environment, isRefreshing, refreshError];
+}
+
+/// Studio cannot serve the granted connections right now: `GET /api/connections/managed` answered 503
+/// `GOVERNANCE_UNAVAILABLE`. That says nothing about what was granted, so the page never shows it as an empty list.
+///
+/// [previous] is the list shown before the outage, which the page keeps greyed under the outage notice; without one
+/// the outage covers the page. The bloc asks again every [ConnectionListBloc.unavailableRetryInterval] while the list
+/// is in the foreground, and [isRetrying] is true while a retry the user asked for runs.
+final class ConnectionListUnavailable extends ConnectionListState {
+  const ConnectionListUnavailable({required this.errorCode, this.previous, this.isRetrying = false});
+
+  /// The code of Studio's answer, `studio.governance_unavailable`; the raw message only goes to the log.
+  final AppErrorCode errorCode;
+
+  final ConnectionListLoaded? previous;
+
+  final bool isRetrying;
+
+  @override
+  List<Object?> get props => [errorCode, previous, isRetrying];
 }
 
 final class ConnectionListFailure extends ConnectionListState {

@@ -205,7 +205,7 @@ void main() {
         ConnectionListLoaded(
           loadedAt: seededAt,
           connections: connections,
-          refreshErrorCode: AppErrorCode.networkCertInvalid,
+          refreshError: NetworkError('down', code: AppErrorCode.networkCertInvalid.key),
         ),
       ],
     );
@@ -310,7 +310,7 @@ void main() {
             loadedAt: seededAt,
             connections: connections,
             query: 'ledger',
-            refreshErrorCode: AppErrorCode.networkCertInvalid,
+            refreshError: NetworkError('down', code: AppErrorCode.networkCertInvalid.key),
           ),
         ],
       );
@@ -338,7 +338,7 @@ void main() {
             loadedAt: seededAt,
             connections: connections,
             environment: 'production',
-            refreshErrorCode: AppErrorCode.networkCertInvalid,
+            refreshError: NetworkError('down', code: AppErrorCode.networkCertInvalid.key),
           ),
         ],
       );

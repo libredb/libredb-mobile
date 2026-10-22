@@ -11,7 +11,11 @@ class ConnectionPolicy extends Equatable {
   /// Whether Platform governs this Studio: the connections are the user's grants, and statements are recorded.
   final bool governance;
 
-  /// How much of each statement governance records (`none`, or Platform's capture setting), shown to the user.
+  /// The [statementCapture] of a governance that records each statement in full, which the app tells the user.
+  static const statementCaptureFull = 'full';
+
+  /// How much of each statement governance records (`none`, `redacted` or `full`), shown to the user; Studio's other
+  /// values pass through unread.
   final String? statementCapture;
 
   @override
