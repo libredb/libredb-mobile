@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
@@ -34,6 +35,16 @@ void main() {
     // The mock API answers the managed connections after a delay.
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
+    // The sections come sorted by group name, so Analytics is first and Sales further down the list.
+    expect(find.text('Reporting (SQL Server)'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Sales (PostgreSQL)'),
+      200,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('connection-sections')),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
   });
 }

@@ -28,6 +28,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_reposi
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 // Entity/model imports for fallback values
+import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -42,6 +43,8 @@ class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
 class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepository {}
 
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
+
+class MockICollapsedSectionsRepository extends Mock implements ICollapsedSectionsRepository {}
 
 class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 
@@ -83,4 +86,5 @@ class FakeUri extends Fake implements Uri {}
 void registerAllFallbackValues() {
   registerFallbackValue(FakeLoginEvent());
   registerFallbackValue(FakeUri());
+  registerFallbackValue(<String>{});
 }

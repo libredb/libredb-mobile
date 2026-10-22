@@ -20,23 +20,25 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'tr';
 
-  static String m0(url) => "${url} açılamadı";
+  static String m0(label) => "Ortam: ${label}";
 
-  static String m1(currentVersion, minimumVersion) => "Mevcut: ${currentVersion}  •  Gerekli: ${minimumVersion}";
+  static String m1(url) => "${url} açılamadı";
 
-  static String m2(time) => "Tahmini bitiş: ${time}";
+  static String m2(currentVersion, minimumVersion) => "Mevcut: ${currentVersion}  •  Gerekli: ${minimumVersion}";
 
-  static String m3(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
+  static String m3(time) => "Tahmini bitiş: ${time}";
 
-  static String m4(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m4(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
 
-  static String m5(message) => "Hata: ${message}";
+  static String m5(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
 
-  static String m6(detail) => "Ayrıntı: ${detail}";
+  static String m6(message) => "Hata: ${message}";
 
-  static String m7(host) => "Studio adresi: ${host}";
+  static String m7(detail) => "Ayrıntı: ${detail}";
 
-  static String m8(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m8(host) => "Studio adresi: ${host}";
+
+  static String m9(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -60,10 +62,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "community_title": MessageLookupByLibrary.simpleMessage("Topluluğa Katılın"),
     "community_translate": MessageLookupByLibrary.simpleMessage("Çeviriye Yardım Et"),
     "connection_environment": MessageLookupByLibrary.simpleMessage("Ortam"),
+    "connection_environment_badge": m0,
+    "connection_environment_filter": MessageLookupByLibrary.simpleMessage("Ortama göre süz"),
+    "connection_environment_other": MessageLookupByLibrary.simpleMessage("Diğer"),
+    "connection_group": MessageLookupByLibrary.simpleMessage("Grup"),
+    "connection_group_other": MessageLookupByLibrary.simpleMessage("Diğer"),
     "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio size henüz bir bağlantı sunmuyor"),
     "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Bağlantılar yüklenemedi"),
-    "connection_list_subtitle": MessageLookupByLibrary.simpleMessage("Studio\'nun size sunduğu veritabanları"),
-    "connection_name": MessageLookupByLibrary.simpleMessage("Ad"),
+    "connection_read_only": MessageLookupByLibrary.simpleMessage("Salt okunur"),
+    "connection_search_clear": MessageLookupByLibrary.simpleMessage("Aramayı temizle"),
+    "connection_search_hint": MessageLookupByLibrary.simpleMessage("Bağlantılarda ara"),
+    "connection_search_no_match": MessageLookupByLibrary.simpleMessage("Eşleşen bağlantı yok"),
     "connection_target": MessageLookupByLibrary.simpleMessage("Hedef"),
     "connection_type": MessageLookupByLibrary.simpleMessage("Motor"),
     "connections": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
@@ -88,7 +97,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
     "error_generic": MessageLookupByLibrary.simpleMessage("Bir şeyler ters gitti"),
-    "error_link_open_failed": m0,
+    "error_link_open_failed": m1,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(
       "Bağlantının güvenli olduğu doğrulanamadığı için engellendi. Daha sonra ya da başka bir ağda tekrar deneyin.",
     ),
@@ -158,7 +167,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Güncelleme bağlantısı geçersiz. En son sürümü yüklemek için uygulama mağazanızı açın.",
     ),
     "force_update_title": MessageLookupByLibrary.simpleMessage("Güncelleme Gerekli"),
-    "force_update_versions": m1,
+    "force_update_versions": m2,
     "help_resources": MessageLookupByLibrary.simpleMessage("Yardım ve Kaynaklar"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("GitHub\'daki dokümantasyonu ve rehberleri okuyun"),
     "home": MessageLookupByLibrary.simpleMessage("Ana Sayfa"),
@@ -195,7 +204,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
     ),
     "logout_sure": MessageLookupByLibrary.simpleMessage("Çıkış yapmak istediğinize emin misiniz?"),
-    "maintenance_estimated_end": m2,
+    "maintenance_estimated_end": m3,
     "maintenance_message": MessageLookupByLibrary.simpleMessage(
       "Planlı bir bakım çalışması yapıyoruz. Lütfen kısa bir süre sonra tekrar deneyin.",
     ),
@@ -209,7 +218,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_message": MessageLookupByLibrary.simpleMessage("İstediğiniz sayfa bulunamadı."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Sayfa Bulunamadı"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı gerekiyor"),
-    "offline_stale_data": m3,
+    "offline_stale_data": m4,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Önce bir bağlantı seçin"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
@@ -237,17 +246,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m4,
-    "studio_error_semantics": m5,
+    "studio_error_retry_in": m5,
+    "studio_error_semantics": m6,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m6,
+    "studio_governance_detail": m7,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
     ),
-    "studio_unreachable_host": m7,
+    "studio_unreachable_host": m8,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
@@ -256,7 +265,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m8,
+    "table_rows_listed": m9,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),

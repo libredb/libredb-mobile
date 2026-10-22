@@ -206,13 +206,27 @@
   "login_sso_subtitle": "Kurumsal hesabınızla giriş yapın.",
   "@login_sso_subtitle": {},
   "connections": "Bağlantılar",
-  "connection_list_subtitle": "Studio'nun size sunduğu veritabanları",
   "connection_list_empty": "Studio size henüz bir bağlantı sunmuyor",
   "connection_list_load_failed": "Bağlantılar yüklenemedi",
-  "connection_name": "Ad",
   "connection_type": "Motor",
   "connection_environment": "Ortam",
   "connection_target": "Hedef",
+  "connection_group": "Grup",
+  "connection_group_other": "Diğer",
+  "connection_environment_other": "Diğer",
+  "connection_environment_badge": "Ortam: {label}",
+  "@connection_environment_badge": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "connection_environment_filter": "Ortama göre süz",
+  "connection_read_only": "Salt okunur",
+  "connection_search_hint": "Bağlantılarda ara",
+  "connection_search_clear": "Aramayı temizle",
+  "connection_search_no_match": "Eşleşen bağlantı yok",
   "error_studio_database_auth": "Veritabanı bağlantının kimlik bilgilerini reddetti. Yöneticinizden bunları kontrol etmesini isteyin.",
   "@error_studio_database_auth": {},
   "error_studio_connection_not_available": "Bu bağlantı sizin kullanımınıza açık değil.",

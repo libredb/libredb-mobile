@@ -720,11 +720,6 @@ class S {
     return Intl.message('Connections', name: 'connections', desc: '', args: []);
   }
 
-  /// `Databases Studio offers you`
-  String get connection_list_subtitle {
-    return Intl.message('Databases Studio offers you', name: 'connection_list_subtitle', desc: '', args: []);
-  }
-
   /// `Studio offers you no connection yet`
   String get connection_list_empty {
     return Intl.message('Studio offers you no connection yet', name: 'connection_list_empty', desc: '', args: []);
@@ -733,11 +728,6 @@ class S {
   /// `Could not load the connections`
   String get connection_list_load_failed {
     return Intl.message('Could not load the connections', name: 'connection_list_load_failed', desc: '', args: []);
-  }
-
-  /// `Name`
-  String get connection_name {
-    return Intl.message('Name', name: 'connection_name', desc: '', args: []);
   }
 
   /// `Engine`
@@ -753,6 +743,51 @@ class S {
   /// `Target`
   String get connection_target {
     return Intl.message('Target', name: 'connection_target', desc: '', args: []);
+  }
+
+  /// `Group`
+  String get connection_group {
+    return Intl.message('Group', name: 'connection_group', desc: '', args: []);
+  }
+
+  /// `Other`
+  String get connection_group_other {
+    return Intl.message('Other', name: 'connection_group_other', desc: '', args: []);
+  }
+
+  /// `Other`
+  String get connection_environment_other {
+    return Intl.message('Other', name: 'connection_environment_other', desc: '', args: []);
+  }
+
+  /// `Environment: {label}`
+  String connection_environment_badge(String label) {
+    return Intl.message('Environment: $label', name: 'connection_environment_badge', desc: '', args: [label]);
+  }
+
+  /// `Filter by environment`
+  String get connection_environment_filter {
+    return Intl.message('Filter by environment', name: 'connection_environment_filter', desc: '', args: []);
+  }
+
+  /// `Read only`
+  String get connection_read_only {
+    return Intl.message('Read only', name: 'connection_read_only', desc: '', args: []);
+  }
+
+  /// `Search connections`
+  String get connection_search_hint {
+    return Intl.message('Search connections', name: 'connection_search_hint', desc: '', args: []);
+  }
+
+  /// `Clear search`
+  String get connection_search_clear {
+    return Intl.message('Clear search', name: 'connection_search_clear', desc: '', args: []);
+  }
+
+  /// `No connections match`
+  String get connection_search_no_match {
+    return Intl.message('No connections match', name: 'connection_search_no_match', desc: '', args: []);
   }
 
   /// `The database refused the connection's credentials. Ask your administrator to check them.`

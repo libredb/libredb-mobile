@@ -78,6 +78,17 @@
       "managed": true,
       "roles": ["*"],
       "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": "seed:sandbox-sqlite",
+      "seedId": "sandbox-sqlite",
+      "name": "Sandbox (SQLite)",
+      "type": "sqlite",
+      "database": "/data/sandbox.db",
+      "environment": "local",
+      "managed": true,
+      "roles": ["*"],
+      "createdAt": "2026-10-01T08:00:00.000Z"
     }
   ],
   "cacheHint": 60000,
