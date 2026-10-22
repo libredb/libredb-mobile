@@ -67,7 +67,8 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
       return;
     }
     final bloc = context.read<ConnectionListBloc>()..add(const ConnectionListRequested());
-    await bloc.stream.firstWhere((state) => state is! ConnectionListLoading);
+    // Leaving the page closes the bloc, which ends its stream: that ends the refresh too, it is no error.
+    await bloc.stream.firstWhere((state) => state is! ConnectionListLoading, orElse: () => bloc.state);
   }
 
   Widget _buildList(

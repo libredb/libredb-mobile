@@ -201,6 +201,25 @@ void main() {
       verify(() => repository.listManaged()).called(2);
     });
 
+    testWidgets('leaving the page while a pull to refresh waits for Studio throws nothing', (tester) async {
+      await pumpLoaded(tester);
+      final answer = Completer<Result<ManagedConnections>>();
+      when(() => repository.listManaged()).thenAnswer((_) => answer.future);
+
+      await tester.fling(find.text('Sales'), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+      answer.complete(const Success(ManagedConnections(connections: [sales])));
+      await tester.pump(const Duration(seconds: 5));
+      // The closing bloc lets the pending request finish before its stream ends, outside the fake clock.
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(seconds: 5));
+
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('opened offline, says the device is offline instead of a generic failure', (tester) async {
       when(() => connectivity.state).thenReturn(offline);
       whenListen(connectivity, connectivityChanges.stream, initialState: offline);
