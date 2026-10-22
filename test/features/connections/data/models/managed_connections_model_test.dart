@@ -126,9 +126,12 @@ void main() {
 
   test('no connection model declares a credential field', () {
     final credential = RegExp(
-      r'\b(user|password|connectionString|apiKeyId|apiKeySecret|privateKey|privateKeyPassphrase|ssl|secret)\b',
+      r'(user|password|passphrase|secret|key|token|credential|connectionString|ssl)',
       caseSensitive: false,
     );
+    for (final renamed in ['username', 'userName', 'sslClientKey', 'dbPassword', 'apiKeyId', 'accessToken']) {
+      expect(credential.hasMatch(renamed), isTrue, reason: renamed);
+    }
     final fields = RegExp(r'^\s*final\s+[\w<>?, ]+\s+(\w+)\s*;', multiLine: true);
     final sources = [
       'lib/shared/models/studio_connection.dart',
