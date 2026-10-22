@@ -115,8 +115,7 @@ void _printNextSteps(_FeatureNames f) {
   print('');
   print('6. Move the literal strings in lib/features/${f.snake}/presentation/pages to lib/l10n/intl_en.arb and');
   print('   lib/l10n/intl_tr.arb, then run:');
-  print('   fvm dart run intl_utils:generate');
-  print('   fvm dart format lib/generated --line-length=120');
+  print('   scripts/generate_l10n.sh');
   print('');
   print('7. Add the repository methods to the table in test/architecture/mock_asset_coverage_test.dart:');
   print('   I${f.singularPascal}Repository.retrieve, create, update, list and delete.');

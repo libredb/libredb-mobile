@@ -10,7 +10,7 @@ echo "Running pub get"
 fvm flutter pub get
 
 echo "Running intl_utils"
-fvm dart run intl_utils:generate
+scripts/generate_l10n.sh
 
 echo dart fix --apply
 fvm dart fix --apply

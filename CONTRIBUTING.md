@@ -44,8 +44,7 @@ Offer a translation the same way, as an issue with the new or corrected texts.
 5. Before you open the pull request, sync your branch with `main`, resolve any conflicts and run:
 
    ```shell
-   fvm dart run intl_utils:generate
-   fvm dart format lib/generated --line-length=120
+   scripts/generate_l10n.sh
    fvm dart format . --line-length=120 --set-exit-if-changed
    fvm flutter analyze
    fvm flutter test --coverage
