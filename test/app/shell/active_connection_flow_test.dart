@@ -103,9 +103,10 @@ void main() {
     await tester.tap(inTopBar(find.text(billingName)));
     await tester.pumpAndSettle();
 
-    expect(find.text(S.current.connection_vanished(billingName)), findsOneWidget);
+    // The sheet closes, so the message is not hidden under it.
+    expect(find.byType(ConnectionSwitcherSheet), findsNothing);
+    expect(find.text(S.current.connection_vanished(billingName)).hitTestable(), findsOneWidget);
     expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
-    expect(find.descendant(of: find.byType(ConnectionSwitcherSheet), matching: row(billing)), findsNothing);
   });
 
   testWidgets('a pull to refresh on Connections without the open connection says it is no longer available', (

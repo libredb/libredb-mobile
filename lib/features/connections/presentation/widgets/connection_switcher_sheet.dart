@@ -13,7 +13,7 @@ import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 /// The bottom sheet that switches the active connection without leaving the page: the grouped, searchable list of the
 /// connection list page, asked afresh from Studio, with the active connection marked. A tap opens that connection and
-/// closes the sheet.
+/// closes the sheet; so does a list that no longer holds the active connection.
 class ConnectionSwitcherSheet extends StatefulWidget {
   const ConnectionSwitcherSheet({super.key});
 
@@ -59,63 +59,68 @@ class _ConnectionSwitcherSheetState extends State<ConnectionSwitcherSheet> {
   Widget build(BuildContext context) {
     final l10n = S.of(context);
     final activeId = context.select<ActiveConnectionCubit, String?>((cubit) => cubit.state.connection?.id);
-    return ActiveConnectionFeed(
-      child: SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.8,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text(l10n.connection_switcher_title, style: Theme.of(context).textTheme.titleMedium),
-              ),
-              Expanded(
-                child: BlocBuilder<ConnectionListBloc, ConnectionListState>(
-                  builder: (context, state) => switch (state) {
-                    ConnectionListInitial() ||
-                    ConnectionListLoading() => const Center(child: CircularProgressIndicator()),
-                    ConnectionListLoaded(:final connections) when connections.isEmpty => Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        child: Text(l10n.connection_list_empty, textAlign: TextAlign.center),
+    // A list without the active connection closes the sheet, so the shell's message about it is not hidden under it.
+    return BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
+      listenWhen: (previous, current) => current is ActiveConnectionVanished,
+      listener: (context, state) => Navigator.of(context).pop(),
+      child: ActiveConnectionFeed(
+        child: SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: Text(l10n.connection_switcher_title, style: Theme.of(context).textTheme.titleMedium),
+                ),
+                Expanded(
+                  child: BlocBuilder<ConnectionListBloc, ConnectionListState>(
+                    builder: (context, state) => switch (state) {
+                      ConnectionListInitial() ||
+                      ConnectionListLoading() => const Center(child: CircularProgressIndicator()),
+                      ConnectionListLoaded(:final connections) when connections.isEmpty => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          child: Text(l10n.connection_list_empty, textAlign: TextAlign.center),
+                        ),
                       ),
-                    ),
-                    ConnectionListLoaded() => ConnectionListView(
-                      state: state,
-                      search: _search,
-                      activeId: activeId,
-                      onOpen: _open,
-                    ),
-                    // An outage says nothing about what was granted: the list loaded before stays, greyed.
-                    ConnectionListUnavailable(:final previous?) when previous.connections.isNotEmpty =>
-                      ConnectionListView(
-                        state: previous,
+                      ConnectionListLoaded() => ConnectionListView(
+                        state: state,
                         search: _search,
                         activeId: activeId,
                         onOpen: _open,
-                        enabled: false,
                       ),
-                    ConnectionListUnavailable() => SingleChildScrollView(
-                      key: const ValueKey('connection-switcher-unavailable'),
-                      child: AppErrorState(
-                        title: l10n.connection_list_unavailable,
-                        retryLabel: l10n.retry,
-                        onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+                      // An outage says nothing about what was granted: the list loaded before stays, greyed.
+                      ConnectionListUnavailable(:final previous?) when previous.connections.isNotEmpty =>
+                        ConnectionListView(
+                          state: previous,
+                          search: _search,
+                          activeId: activeId,
+                          onOpen: _open,
+                          enabled: false,
+                        ),
+                      ConnectionListUnavailable() => SingleChildScrollView(
+                        key: const ValueKey('connection-switcher-unavailable'),
+                        child: AppErrorState(
+                          title: l10n.connection_list_unavailable,
+                          retryLabel: l10n.retry,
+                          onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+                        ),
                       ),
-                    ),
-                    ConnectionListFailure(:final errorCode) => SingleChildScrollView(
-                      child: AppErrorState(
-                        title: l10n.connection_list_load_failed,
-                        description: errorCode.resolve(context),
-                        retryLabel: l10n.refresh,
-                        onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+                      ConnectionListFailure(:final errorCode) => SingleChildScrollView(
+                        child: AppErrorState(
+                          title: l10n.connection_list_load_failed,
+                          description: errorCode.resolve(context),
+                          retryLabel: l10n.refresh,
+                          onRetry: () => context.read<ConnectionListBloc>().add(const ConnectionListRequested()),
+                        ),
                       ),
-                    ),
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
