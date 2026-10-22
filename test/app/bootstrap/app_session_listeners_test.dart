@@ -2,7 +2,6 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -12,18 +11,12 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
-import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
-import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -32,10 +25,10 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../support/test_env.dart';
+import '../../support/user_menu.dart';
 
 /// The app on the mock-backed development config, with the idle timeout turned on as production has it.
 const _app = App(
@@ -50,19 +43,17 @@ const _app = App(
   ),
 );
 
-/// Stores the language, theme and sidebar state a user chose on this device earlier.
+/// Stores the language, theme and brightness a user chose on this device earlier.
 Future<void> _choosePreferences() async {
   await AppLocalStorage().save(StorageKeys.language.key, 'tr');
   await AppLocalStorage().save(StorageKeys.theme.key, 'nature');
   await AppLocalStorage().save(StorageKeys.brightness.key, 'dark');
-  await AppLocalStorage().save(StorageKeys.sidebarCollapsed.key, 'true');
 }
 
-/// Signs out as the user does: Logout in the sidebar, then Yes in the confirmation dialog, in whichever language the
+/// Signs out as the user does: Logout in the user menu, then Yes in the confirmation dialog, in whichever language the
 /// app shows.
 Future<void> _logOut(WidgetTester tester) async {
-  await tester.tap(find.widgetWithIcon(SidebarNavItem, Icons.logout));
-  await tester.pumpAndSettle();
+  await selectFromUserMenu(tester, Icons.logout);
   await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
   await tester.pumpAndSettle();
 }
@@ -113,44 +104,6 @@ Future<void> _signIn(WidgetTester tester, String username) async {
   await tester.tap(find.byKey(loginButtonSubmitKey));
   await tester.pumpAndSettle();
 }
-
-/// From now on the mock API answers GET /account with [account] instead of assets/mock/GET_account.json, as it
-/// would for another user. Every other platform message still reaches the handler flutter_test registered for it.
-void _answerAccountWith(WidgetTester tester, Map<String, Object> account) {
-  const asset = 'assets/mock/GET_account.json';
-  final messenger = tester.binding.defaultBinaryMessenger;
-  messenger.allMessagesHandler = (channel, handler, message) {
-    if (channel == 'flutter/assets' && utf8.decode(Uint8List.sublistView(message!)) == asset) {
-      return Future.value(ByteData.sublistView(utf8.encode(jsonEncode(account))));
-    }
-    return handler != null ? handler(message) : messenger.delegate.send(channel, message);
-  };
-  addTearDown(() => messenger.allMessagesHandler = null);
-  rootBundle.evict(asset);
-}
-
-/// Opens [location] as a link does, then waits for the mock API, which answers after 500 ms.
-Future<void> _open(WidgetTester tester, String location) async {
-  (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(location);
-  await tester.pumpAndSettle();
-  await tester.pump(const Duration(seconds: 1));
-  await tester.pumpAndSettle();
-}
-
-/// [text] in the top bar, which shows the first name of the signed-in account on every page.
-Finder _inTopBar(String text) => find.descendant(of: find.byType(TopBarWidget), matching: find.text(text));
-
-/// An account other than the Admin User of assets/mock/GET_account.json.
-const _secondAccount = <String, Object>{
-  'id': 'user-2',
-  'login': 'second',
-  'email': 'second@sample.tech',
-  'firstName': 'Second',
-  'lastName': 'Person',
-  'activated': true,
-  'langKey': 'en',
-  'authorities': ['ROLE_USER'],
-};
 
 void main() {
   group('AppSessionListeners', () {
@@ -264,7 +217,7 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
@@ -273,7 +226,6 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
       expect(await AppLocalStorage().read(StorageKeys.brightness.key), 'dark');
-      expect(await AppLocalStorage().read(StorageKeys.sidebarCollapsed.key), 'true');
       expect(await SharedPrefsCacheStorage().count(), 0);
     });
 
@@ -282,7 +234,7 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await _logOut(tester);
       expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
@@ -290,15 +242,13 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
       expect(await AppLocalStorage().read(StorageKeys.brightness.key), 'dark');
-      expect(await AppLocalStorage().read(StorageKeys.sidebarCollapsed.key), 'true');
       expect(await SharedPrefsCacheStorage().count(), 0);
 
-      // A relaunch mounts a new App, which loads the theme and the sidebar state from storage.
+      // A relaunch mounts a new App, which loads the theme from storage.
       await tester.pumpWidget(const SizedBox());
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
       expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode, ThemeMode.dark);
-      expect(tester.element(find.byType(MaterialApp)).read<SidebarBloc>().state.isCollapsed, isTrue);
     });
 
     testWidgets('a logout that cannot remove all stored data still signs out and tells the user', (tester) async {
@@ -306,7 +256,7 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the dashboard caches its account request');
+      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await _logOut(tester);
 
@@ -384,10 +334,10 @@ void main() {
         final app = tester.element(find.byType(MaterialApp));
         expect(app.read<SsoAutoRedirectGate>().isOpen, isTrue);
 
-        app.read<MenuBloc>().add(Logout());
+        app.read<SignOutBloc>().add(const SignOutRequested());
         await tester.pumpAndSettle();
 
-        expect(app.read<MenuBloc>().state.isLogout, isTrue);
+        expect(app.read<SignOutBloc>().state, isA<SignOutDone>());
         expect(app.read<SsoAutoRedirectGate>().isOpen, isFalse);
       });
     });
@@ -419,33 +369,6 @@ void main() {
     }
 
     for (final MapEntry(key: ending, value: endSession) in _sessionEndings.entries) {
-      for (final (page, location) in [
-        ('the dashboard', ApplicationRoutesConstants.home),
-        ('the account page', ApplicationRoutesConstants.account),
-      ]) {
-        testWidgets('after $ending on $page, the next user to sign in sees their own account', (tester) async {
-          await tester.pumpWidget(_app);
-          await tester.pumpAndSettle();
-          await _signIn(tester, 'admin');
-          await _open(tester, location);
-          expect(_inTopBar('Admin'), findsOneWidget);
-          final account = tester.element(find.byType(ResponsiveScaffold)).read<AccountBloc>();
-
-          await endSession(tester);
-          expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
-          // Forgotten, and not requested again without a token.
-          expect(account.state, const AccountState());
-          _answerAccountWith(tester, _secondAccount);
-          // An idle timeout returns the next user to the page where it struck.
-          await _signIn(tester, 'second');
-          await tester.pump(const Duration(seconds: 1));
-          await tester.pumpAndSettle();
-
-          expect(_inTopBar('Second'), findsOneWidget);
-          expect(find.text('Admin'), findsNothing);
-        });
-      }
-
       testWidgets('after $ending, the next user types their password hidden', (tester) async {
         await tester.pumpWidget(_app);
         await tester.pumpAndSettle();
@@ -458,26 +381,6 @@ void main() {
 
         final password = find.descendant(of: find.byKey(loginTextFieldPasswordKey), matching: find.byType(TextField));
         expect(tester.widget<TextField>(password).obscureText, isTrue);
-      });
-
-      testWidgets('after $ending, the app forgets the authorities it loaded with the previous user rights', (
-        tester,
-      ) async {
-        // A desktop window, where the user list shows its role filter.
-        addTearDown(tester.view.reset);
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
-        await tester.pumpWidget(_app);
-        await tester.pumpAndSettle();
-        await _signIn(tester, 'admin');
-        // The role filter of the user list loads the authorities into the app-scoped AuthorityBloc.
-        await _open(tester, ApplicationRoutesConstants.userList);
-        final authorities = tester.element(find.byType(ResponsiveScaffold)).read<AuthorityBloc>();
-        expect(authorities.state, isA<AuthorityLoadSuccessState>());
-
-        await endSession(tester);
-
-        expect(authorities.state, const AuthorityInitialState());
       });
     }
   });

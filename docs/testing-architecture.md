@@ -76,7 +76,7 @@ test/
 ├── features/<feature>/        # application/ data/ domain/ navigation/ presentation/
 ├── infrastructure/            # config, http (+ interceptors), storage, cache, ...
 ├── integration/               # app_smoke_test.dart, the full-app smoke test
-└── shared/                    # design_system, dynamic_forms, models, utils, widgets
+└── shared/                    # design_system, l10n, models, utils, widgets
 ```
 
 ---
@@ -180,22 +180,21 @@ import 'package:mocktail/mocktail.dart';
 import '../../../../mocks/mock_classes.dart';
 
 void main() {
-  late MockIUserRepository mockRepo;
-  late SaveUserUseCase useCase;
+  late MockIConnectionRepository mockRepo;
+  late ListManagedConnectionsUseCase useCase;
 
   setUp(() {
-    mockRepo = MockIUserRepository();
-    useCase = SaveUserUseCase(mockRepo);
+    mockRepo = MockIConnectionRepository();
+    useCase = ListManagedConnectionsUseCase(mockRepo);
   });
 
-  test('calls create when user has no id', () async {
-    when(() => mockRepo.create(any())).thenAnswer((_) async => Success(newUser.copyWith(id: '2')));
+  test('returns the managed connections of the repository', () async {
+    when(() => mockRepo.listManaged()).thenAnswer((_) async => const Success(connections));
 
-    final result = await useCase.call(newUser);
+    final result = await useCase.call();
 
-    expect(result, isA<Success<UserEntity>>());
-    verify(() => mockRepo.create(newUser)).called(1);
-    verifyNever(() => mockRepo.update(any()));
+    expect(result, isA<Success<List<StudioConnection>>>());
+    verify(() => mockRepo.listManaged()).called(1);
   });
 }
 ```
@@ -205,18 +204,16 @@ void main() {
 Mock the use case (or repository), assert exact state transitions:
 
 ```dart
-blocTest<UserListBloc, UserListState>(
-  'emits [loading, loaded] when search succeeds',
-  build: () {
-    when(() => searchUsers(any())).thenAnswer((_) async => const Success(<UserEntity>[]));
-    return UserListBloc(searchUsersUseCase: searchUsers, deleteUserUseCase: deleteUser);
-  },
-  act: (bloc) => bloc.add(const UserListSearch()),
-  expect: () => [isA<UserListLoading>(), isA<UserListLoaded>()],
+blocTest<ConnectionListBloc, ConnectionListState>(
+  'emits [loading, loaded] when the list loads',
+  setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(connections)),
+  build: () => ConnectionListBloc(listManagedConnectionsUseCase: ListManagedConnectionsUseCase(repository)),
+  act: (bloc) => bloc.add(const ConnectionListRequested()),
+  expect: () => const [ConnectionListLoading(), ConnectionListLoaded(connections: connections)],
 );
 ```
 
-- Assert on sealed variants (`isA<UserListLoaded>()` or matching variant fields),
+- Assert on sealed variants (`isA<ConnectionListLoaded>()` or matching variant fields),
   not on a status enum.
 - `MockBloc` (from `bloc_test`, declared in `mock_classes.dart`) is used by
   **widget** tests that need to feed a BLoC a scripted state stream.
@@ -230,7 +227,7 @@ for failure paths.
 ### Widget tests — `MockBloc` + `TestEnv.authenticate`
 
 ```dart
-testWidgets('renders dashboard when authenticated', (tester) async {
+testWidgets('renders the shell when authenticated', (tester) async {
   TestEnv.authenticate();                 // in the test body, AFTER global reset
   await tester.pumpWidget(const App(language: 'en'));
   await tester.pumpAndSettle();
@@ -245,8 +242,8 @@ real business logic.
 with a type matcher and an explicit count:
 
 ```dart
-verify(() => bloc.add(any(that: isA<UserEditorSubmit>()))).called(1);   // action fired
-verifyNever(() => bloc.add(any(that: isA<UserEditorSubmit>())));        // must NOT fire (e.g. invalid form)
+verify(() => bloc.add(any(that: isA<ChangePasswordChanged>()))).called(1);   // action fired
+verifyNever(() => bloc.add(any(that: isA<ChangePasswordChanged>())));        // must NOT fire (e.g. invalid form)
 ```
 
 Do **not** use `verify(() => bloc.add(any())).called(...)` or `.called(greaterThan(0))`:
@@ -317,7 +314,7 @@ singleton or `setTestInstance`.
 
 `test/integration/app_smoke_test.dart` boots the **whole app** in mock mode
 (`App`'s default `AppDependencies` = `AppConfig.dev()`, which serves
-`assets/mock/*.json`) and drives cold-start → login → dashboard, exercising
+`assets/mock/*.json`) and drives cold-start → login → connection list, exercising
 routing + DI + BLoCs + the mock HTTP layer together. It is a full-app widget test
 (`TestWidgetsFlutterBinding`), so it runs headless under the normal
 `flutter test` — no device, no `integration_test` package, no CI changes. The
@@ -338,8 +335,8 @@ All shared doubles live in `test/mocks/`:
   - `Fake*` classes — fallback values for non-nullable `any()` arguments.
   - `registerAllFallbackValues()` — registers every fallback once; **called
     globally by the bootstrap**, so you do not call it per file.
-- **`fake_data.dart`** — shared fixtures (`mockUserFullPayload`,
-  `mockAuthorityPayload`, ...). Prefer these over building entities inline.
+- **`fake_data.dart`**: shared fixtures (`mockUserFullPayload`, `kTestInstant`,
+  ...). Prefer these over building entities inline.
 
 ### Choosing a test double
 
@@ -353,7 +350,7 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 2. **hand-written fake** — a private `_Fake*` / `_Memory*` class next to the test,
    when the double needs real stateful or behavioral logic that mocktail makes
    awkward: in-memory stores, throw-on-Nth-call, selective/sequenced failures,
-   return-driven branching (e.g. `_FakeUserRepository` in `user_list_bloc_test.dart`,
+   return-driven branching (e.g. `_FakeAuthRepository` in `login_bloc_test.dart`,
    `_MemorySecureStorage`). These are **purpose-built per test** — two same-named
    fakes in different files implement different surfaces and are *not* duplication;
    do not consolidate them into a shared "god" fake.
@@ -383,7 +380,7 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   CI builds the release APK, but that build succeeds without any of these.
 - **`mock_asset_naming_test.dart`** fails if a file under `assets/mock/` has a `-` in its name.
   `MockInterceptor` maps `-` in request paths to `_`, so such a file is never served and the request fails with 501.
-- **`mock_asset_coverage_test.dart`** drives every method of every repository that uses `ApiClient`, and submits each dynamic form the app opens, through `TestEnv.apiClient()`; it fails when one of them does not succeed.
+- **`mock_asset_coverage_test.dart`** drives every method of every repository that uses `ApiClient` through `TestEnv.apiClient()`; it fails when one of them does not succeed.
   `MockInterceptor` fails a GET, POST, PUT or PATCH whose mock file is missing with 501, so a missing file fails the test and the failure names it.
   A last test reads the repository interfaces under `lib/` and fails when a method is not driven, so a new repository method needs an entry in the test, and its mock file, before the build passes.
 - **`feature_generator_test.dart`** runs `tool/generate_feature.dart` in a temporary copy of the project and fails if the generated feature is not formatted, does not analyze cleanly or fails its own tests.
@@ -432,7 +429,7 @@ The `oidc` mode has more guards next to the code they guard:
   lives **next to the code it covers** (feature-first, mirroring `lib/` — same as
   every other test), with its images in a sibling `goldens/ci/` dir; e.g.
   `test/shared/design_system/components/app_button_golden_test.dart`,
-  `test/features/users/presentation/pages/user_list_page_golden_test.dart`. The
+  `test/features/auth/presentation/pages/login_screen_golden_test.dart`. The
   bootstrap sets a default `AlchemistConfig` (light theme) and **disables platform
   goldens**, so only the CI (Ahem-rendered) variant runs — identical on
   macOS/Linux/CI, no font flake. Golden files set `setUpAll(() => TestEnv.autoReset
@@ -478,7 +475,7 @@ scripts/check_coverage.sh coverage/lcov.info 65
 
 ```shell
 fvm flutter test                                   # whole suite
-fvm flutter test test/features/users               # a subtree
+fvm flutter test test/features/connections         # a subtree
 fvm flutter test test/path/to/specific_test.dart   # one file
 fvm flutter test --coverage                         # with coverage
 fvm flutter test --concurrency=1 --test-randomize-ordering-seed=random  # flush order/leak bugs

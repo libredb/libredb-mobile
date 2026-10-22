@@ -7,7 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/account/data/models/change_password.dart';
 import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
-import 'package:libredb_mobile/features/users/data/models/user.dart';
+import 'package:libredb_mobile/features/account/data/models/user.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
@@ -170,76 +170,6 @@ void main() {
     });
   });
 
-  //test saveAccount
-  group("AccountRepository Save Account", () {
-    //success
-    test("Given valid user when saveAccount then return Success", () async {
-      TestEnv.authenticate();
-      final entity = mockUserFullPayload;
-      final result = await repository.update(entity);
-      expect(result, isA<Success<UserEntity>>());
-    });
-
-    //fail: without AccessToken
-    test("Given valid user when saveAccount without AccessToken then return Failure with AuthError", () async {
-      final entity = mockUserFullPayload;
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<AuthError>());
-    });
-
-    test("Given user with empty id when saveAccount then return Failure with ValidationError", () async {
-      TestEnv.authenticate();
-      const entity = User();
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<ValidationError>());
-    });
-
-    test("Given user with blank id when saveAccount then return Failure with ValidationError", () async {
-      TestEnv.authenticate();
-      final entity = mockUserFullPayload.copyWith(id: "");
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<ValidationError>());
-    });
-  });
-
-  //test updateAccount
-  group("AccountRepository Update Account", () {
-    //success
-    test("Given valid user when updateAccount then return Success", () async {
-      TestEnv.authenticate();
-      final entity = mockUserFullPayload;
-      final result = await repository.update(entity);
-      expect(result, isA<Success<UserEntity>>());
-    });
-
-    //fail: without AccessToken
-    test("Given valid user when updateAccount without AccessToken then return Failure with AuthError", () async {
-      final entity = mockUserFullPayload;
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<AuthError>());
-    });
-
-    test("Given user with null id when updateAccount then return Failure with ValidationError", () async {
-      TestEnv.authenticate();
-      const entity = User();
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<ValidationError>());
-    });
-
-    test("Given user with blank id when updateAccount then return Failure with ValidationError", () async {
-      TestEnv.authenticate();
-      final entity = mockUserFullPayload.copyWith(id: "");
-      final result = await repository.update(entity);
-      expect(result, isA<Failure<UserEntity>>());
-      expect((result as Failure<UserEntity>).error, isA<ValidationError>());
-    });
-  });
-
   // Regression: a pin mismatch came back as an UnknownError without a code, so the account, registration and password
   // screens said "Failed" instead of telling the user that the connection was blocked.
   group('AccountRepository over a connection whose certificate matches no pin', () {
@@ -257,10 +187,6 @@ void main() {
 
     test('getAccount reports AppErrorCode.networkCertInvalid', () async {
       expect(await pinned.getAccount(), certInvalid);
-    });
-
-    test('update reports AppErrorCode.networkCertInvalid', () async {
-      expect(await pinned.update(const UserEntity(id: 'user-1', login: 'admin')), certInvalid);
     });
 
     test('register reports AppErrorCode.networkCertInvalid', () async {

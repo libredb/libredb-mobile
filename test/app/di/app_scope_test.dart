@@ -11,10 +11,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
-import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
@@ -586,9 +586,9 @@ void main() {
       (
         'the user logs out',
         (scope) async {
-          final menu = scope.read<MenuBloc>();
-          menu.add(const Logout());
-          await menu.stream.firstWhere((state) => state.isLogout);
+          final signOut = scope.read<SignOutBloc>();
+          signOut.add(const SignOutRequested());
+          await signOut.stream.firstWhere((state) => state is SignOutDone);
         },
       ),
       (
@@ -686,9 +686,9 @@ void main() {
           .post('/account', {'login': 'user-one', 'firstName': 'One'})
           .then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
       await _pumpUntil(tester, () => server.saveReceived.isCompleted);
-      final menu = scope.read<MenuBloc>();
-      menu.add(const Logout());
-      await _pumpUntil(tester, () => menu.state.isLogout);
+      final signOut = scope.read<SignOutBloc>();
+      signOut.add(const SignOutRequested());
+      await _pumpUntil(tester, () => signOut.state is SignOutDone);
       final login = scope.read<LoginBloc>();
       login.add(const LoginFormSubmitted(username: 'user-two', password: 'user-two-password'));
       await _pumpUntil(tester, () => login.state is LoginLoadedState);

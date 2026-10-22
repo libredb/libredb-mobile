@@ -10,6 +10,7 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 
+import '../../../support/mock_asset_stub.dart';
 import '../../../support/test_env.dart';
 
 void main() {
@@ -354,13 +355,13 @@ void main() {
         TestEnv.authenticate();
         final log = _captureHttpLog();
 
-        // The view and edit actions of the user list fetch the user by login through UserRepository.retrieve,
-        // which puts the login in the path, and registration makes the email the login of everyone who signs up.
-        await TestEnv.apiClient().get('/admin/users', pathParams: 'jane.doe@example.com');
+        // A login is often an email, and a request that names a user by login puts it in the path.
+        stubAsset('assets/mock/GET_users_pathParams.json', '{"login": "jane"}');
+        await TestEnv.apiClient().get('/users', pathParams: 'jane.doe@example.com');
 
         expect(log, [
-          contains('GET /admin/users/[REDACTED_EMAIL] (headers: '),
-          contains('GET /admin/users/[REDACTED_EMAIL] -> 200 '),
+          contains('GET /users/[REDACTED_EMAIL] (headers: '),
+          contains('GET /users/[REDACTED_EMAIL] -> 200 '),
         ]);
         expect(log.join('\n'), isNot(contains('jane.doe')));
       });
@@ -369,16 +370,14 @@ void main() {
         TestEnv.authenticate();
         final log = _captureHttpLog();
 
-        // UserRepository.listByNameAndRole, which the user list search sends with the name typed into it.
+        // A search sends the text typed into it, which can be an email, in the query string.
+        stubAsset('assets/mock/GET_users_filter_queryParams.json', '[]');
         await TestEnv.apiClient().get(
-          '/admin/users/filter',
+          '/users/filter',
           queryParams: {'page': '0', 'size': '10', 'name': 'jane.doe@example.com', 'authority': 'ROLE_USER'},
         );
 
-        expect(
-          log.first,
-          contains('GET /admin/users/filter?page=0&size=10&name=[REDACTED_EMAIL]&authority=ROLE_USER '),
-        );
+        expect(log.first, contains('GET /users/filter?page=0&size=10&name=[REDACTED_EMAIL]&authority=ROLE_USER '));
         expect(log.join('\n'), isNot(contains('jane.doe')));
       });
 
@@ -398,12 +397,9 @@ void main() {
         TestEnv.authenticate();
         final log = _captureHttpLog();
 
-        await expectLater(
-          client.get('/admin/users', pathParams: 'jane.doe@example.com'),
-          throwsA(isA<FetchDataException>()),
-        );
+        await expectLater(client.get('/users', pathParams: 'jane.doe@example.com'), throwsA(isA<FetchDataException>()));
 
-        expect(log.last, contains('GET /admin/users/[REDACTED_EMAIL] -> 404 '));
+        expect(log.last, contains('GET /users/[REDACTED_EMAIL] -> 404 '));
         expect(log.join('\n'), isNot(contains('jane.doe')));
       });
     });
@@ -424,7 +420,7 @@ void main() {
           // The request line turns the query parameters into text, the response line the response body, and the
           // verbose request line the request body as well.
           final value = _FormatCountingValue();
-          final options = RequestOptions(path: '/admin/users/filter', queryParameters: {'name': value}, data: value);
+          final options = RequestOptions(path: '/users/filter', queryParameters: {'name': value}, data: value);
 
           interceptor.onRequest(options, _TestRequestHandler());
           interceptor.onResponse(

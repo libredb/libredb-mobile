@@ -3,10 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
-import 'package:libredb_mobile/features/dashboard/presentation/pages/dashboard_home_page.dart';
+import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
-import 'package:libredb_mobile/features/users/presentation/pages/user_list_page.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -19,14 +17,12 @@ void main() {
 
   Finder inBottomNav(String label) => find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
-  // The real app on a phone, where the shell shows the bottom navigation bar, signed in as an admin, who may open the
-  // user list, on [location].
-  Future<void> pumpAdminOnPhone(WidgetTester tester, {String location = ApplicationRoutesConstants.home}) async {
+  // The real app on a phone, signed in, on [location].
+  Future<void> pumpSignedInOnPhone(WidgetTester tester, {String location = ApplicationRoutesConstants.home}) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     TestEnv.authenticate();
-    await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
 
     await tester.pumpWidget(const App(language: 'en'));
     await tester.pumpAndSettle();
@@ -35,31 +31,32 @@ void main() {
   }
 
   group('BottomNavWidget', () {
-    for (final (label, location, page) in const [
-      ('List User', ApplicationRoutesConstants.userList, ListUserScreen),
-      ('Settings', ApplicationRoutesConstants.settings, SettingsScreen),
-    ]) {
-      testWidgets('tapping $label opens $location in place of the dashboard', (tester) async {
-        await pumpAdminOnPhone(tester);
+    testWidgets('tapping Settings opens /settings in place of the connection list', (tester) async {
+      await pumpSignedInOnPhone(tester);
 
-        await tester.tap(inBottomNav(label));
-        await tester.pumpAndSettle();
-
-        expect(routerOf(tester).state.uri.path, location);
-        expect(find.byType(page), findsOneWidget);
-        expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
-      });
-    }
-
-    testWidgets('tapping Dashboard opens / in place of settings', (tester) async {
-      await pumpAdminOnPhone(tester, location: ApplicationRoutesConstants.settings);
-
-      await tester.tap(inBottomNav('Dashboard'));
+      await tester.tap(inBottomNav('Settings'));
       await tester.pumpAndSettle();
 
-      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.home);
-      expect(find.byType(DashboardHomePage), findsOneWidget);
+      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.settings);
+      expect(find.byType(SettingsScreen), findsOneWidget);
       expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
+    });
+
+    testWidgets('tapping Connections opens the connection list in place of settings', (tester) async {
+      await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.settings);
+
+      await tester.tap(inBottomNav('Connections'));
+      await tester.pumpAndSettle();
+
+      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
+      expect(routerOf(tester).canPop(), isFalse, reason: 'a destination replaces the page instead of stacking on it');
+    });
+
+    testWidgets('marks the destination of the open page', (tester) async {
+      await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.settings);
+
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
     });
   });
 }

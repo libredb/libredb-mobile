@@ -112,8 +112,8 @@ class ResilienceInterceptor extends Interceptor {
   /// Returns an interceptor for [dio] that shares this instance's circuit breakers and retry policy
   /// and sends every retry through [dio]'s adapter, so retries keep its certificate pinning.
   ///
-  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio)` to its chain, so the breakers the
-  /// dashboard reads through [instance] are the ones real traffic updates.
+  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio)` to its chain, so the breakers
+  /// read through [instance] are the ones real traffic updates.
   ResilienceInterceptor forDio(Dio dio) => ResilienceInterceptor._forDio(this, dio);
 
   // ---------------------------------------------------------------------------
@@ -355,7 +355,7 @@ class ResilienceInterceptor extends Interceptor {
   /// Extract a stable endpoint key from a request path.
   ///
   /// Strips trailing path segments that look like IDs (numeric, UUIDs, etc.)
-  /// so that `/admin/users/123` and `/admin/users/456` share the same breaker.
+  /// so that `/items/123` and `/items/456` share the same breaker.
   String _extractEndpointKey(String path) {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.isEmpty) return '/';

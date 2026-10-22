@@ -11,14 +11,10 @@ import 'package:libredb_mobile/features/connections/data/repositories/connection
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/users/data/repositories/authority_repository.dart';
-import 'package:libredb_mobile/features/users/data/repositories/user_repository.dart';
-import 'package:libredb_mobile/features/users/presentation/pages/user_extended_info_page.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
 import 'package:libredb_mobile/shared/models/user_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,9 +25,7 @@ import '../support/test_env.dart';
 /// `MockInterceptor` fails a GET, POST, PUT or PATCH whose file under `assets/mock/` is missing with 501, so each
 /// repository method is sent through the mock-backed [TestEnv.apiClient] and must succeed. Driving the real
 /// repositories, instead of deriving file names from their source, sends the paths and parameters the repositories
-/// build through the name resolution `MockInterceptor` uses, so the test cannot drift from either. A dynamic form
-/// submits to the endpoint its schema declares, so each form the app opens is submitted through the schema its mock
-/// serves.
+/// build through the name resolution `MockInterceptor` uses, so the test cannot drift from either.
 ///
 /// The methods sent before sign-in also run without a stored token: the mock answers a public endpoint without one, as
 /// the server does, and rejects any other request without one with 401.
@@ -48,8 +42,6 @@ void main() {
             .changePassword(const PasswordChangeDTO(currentPassword: 'password', newPassword: 'new_password')),
     'IAccountRepository.resetPassword': (client) => AccountRepository(client).resetPassword('admin@sample.tech'),
     'IAccountRepository.getAccount': (client) => AccountRepository(client).getAccount(),
-    'IAccountRepository.update': (client) =>
-        AccountRepository(client).update(const UserEntity(id: 'user-1', login: 'admin', email: 'admin@sample.tech')),
     'IAuthRepository.authenticate': (client) =>
         LoginRepository(apiClient: client)
             .authenticate(const AuthCredentialsEntity(username: 'admin', password: 'admin')),
@@ -58,7 +50,6 @@ void main() {
         LoginRepository(apiClient: client).sendOtp(const SendOtpEntity(email: 'admin@sample.tech')),
     'IAuthRepository.verifyOtp': (client) =>
         LoginRepository(apiClient: client).verifyOtp(const VerifyOtpEntity(email: 'admin@sample.tech', otp: '123456')),
-    'IAuthorityRepository.list': (client) => AuthorityRepositoryImpl(client).list(),
     'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
     'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
     'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
@@ -87,34 +78,6 @@ void main() {
     'ISqlEditorRepository.rollback': (client) => SqlEditorRepository(client).rollback('seed:sales-db'),
     'ISqlEditorRepository.transactionStatus': (client) =>
         SqlEditorRepository(client).transactionStatus('seed:sales-db'),
-    'IUserRepository.retrieve': (client) => UserRepository(client).retrieve('user-1'),
-    'IUserRepository.create': (client) =>
-        UserRepository(client).create(const UserEntity(login: 'new_user', email: 'new_user@sample.tech')),
-    'IUserRepository.update': (client) =>
-        UserRepository(client).update(const UserEntity(id: 'user-1', login: 'admin', email: 'admin@sample.tech')),
-    'IUserRepository.list': (client) => UserRepository(client).list(),
-    'IUserRepository.listByAuthority': (client) => UserRepository(client).listByAuthority(0, 10, 'ROLE_ADMIN'),
-    'IUserRepository.listByName': (client) => UserRepository(client).listByName(0, 10, 'admin'),
-    'IUserRepository.listByNameAndRole': (client) =>
-        UserRepository(client).listByNameAndRole(0, 10, 'admin', 'ROLE_ADMIN'),
-    'IUserRepository.delete': (client) => UserRepository(client).delete('user-1'),
-    'IDynamicFormRepository.fetchSchema': (client) => DynamicFormRepository(client).fetchSchema('sample'),
-    'IDynamicFormRepository.fetchBundle': (client) =>
-        DynamicFormRepository(client).fetchBundle(UserExtendedInfoPage.basePath, pathParams: 'user-1'),
-    'IDynamicFormRepository.submit of the sample form the dashboard opens': (client) async {
-      final repository = DynamicFormRepository(client);
-      final schema = (await repository.fetchSchema('sample')).dataOrNull!;
-      return repository.submit(schema.submitAction!, const {
-        'name': 'Jane Doe',
-        'email': 'jane.doe@example.com',
-        'source': 'Referral',
-      });
-    },
-    'IDynamicFormRepository.submit of the user extended info form': (client) async {
-      final repository = DynamicFormRepository(client);
-      final bundle = (await repository.fetchBundle(UserExtendedInfoPage.basePath, pathParams: 'user-1')).dataOrNull!;
-      return repository.submit(bundle.schema.submitAction!, bundle.values, pathParams: 'user-1');
-    },
     'ILifecycleRepository.fetchAppConfig': (client) => LifecycleRepository(client).fetchAppConfig(),
   };
 

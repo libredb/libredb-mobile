@@ -6,7 +6,6 @@ import 'package:libredb_mobile/features/account/domain/repositories/account_repo
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -278,9 +277,5 @@ void main() {
 
   test('app dependencies expose provider meta repository contract', () {
     expect(dependencies.createProviderMetaRepository(TestEnv.apiClient()), isA<IProviderMetaRepository>());
-  });
-
-  test('app dependencies expose user repository contract', () {
-    expect(dependencies.createUserRepository(TestEnv.apiClient()), isA<IUserRepository>());
   });
 }

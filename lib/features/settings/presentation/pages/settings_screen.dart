@@ -40,21 +40,8 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xl),
 
-              // Account section
-              _SettingsSection(
-                title: S.of(context).account,
-                children: [
-                  _SettingsTile(
-                    icon: Icons.person_outline,
-                    title: S.of(context).account,
-                    subtitle: S.of(context).settings_account_subtitle,
-                    onTap: () => context.push(ApplicationRoutesConstants.account),
-                  ),
-                ],
-              ),
               // Change password, unless the identity provider of an oidc build owns the password
               if (context.read<AuthMode>() is JwtAuthMode) ...[
-                const SizedBox(height: AppSpacing.sm),
                 _SettingsSection(
                   title: S.of(context).change_password,
                   children: [
@@ -115,11 +102,11 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              // Logout intentionally lives only in the sidebar / topbar
+              // Logout intentionally lives only in the top bar of the
               // shell, not here. Settings is feature-scoped and an
               // auth-session lifecycle action would cross feature
               // boundaries (architecture guard rejects features/settings
-              // → features/auth imports). Sidebar's MenuBloc.Logout
+              // → features/auth imports). The top bar's SignOutBloc
               // flow handles it correctly.
             ],
           ),

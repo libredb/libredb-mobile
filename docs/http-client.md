@@ -21,15 +21,14 @@ A 4xx, an answer with a Studio error code at any status, an offline rejection an
 `IdempotencyInterceptor` attaches `Idempotency-Key: <uuid-v4>` to a `POST`, `PUT` or `PATCH` whose caller opts in:
 
 ```dart
-await apiClient.post<User>('/admin/users', user, idempotent: true);
-await apiClient.put<User>('/admin/users', user, pathParams: '42', idempotent: true);
-await apiClient.patch<User>('/admin/users', user, pathParams: '42', idempotent: true);
+await apiClient.post<Item>('/items', item, idempotent: true);
+await apiClient.put<Item>('/items', item, pathParams: '42', idempotent: true);
+await apiClient.patch<Item>('/items', item, pathParams: '42', idempotent: true);
 ```
 
 The header is a contract, not a guarantee: the server must deduplicate by it (the IETF draft `idempotency-key-header`, with Stripe as the worked example).
 `ResilienceInterceptor` never repeats a request that carries it, since it repeats only a `GET`.
-`UserRepository.create` (`POST /admin/users`, inherited from the template, not a Studio endpoint) opts in.
-No request to a Studio endpoint opts in.
+No request the app sends opts in.
 
 Once generated, the key is kept in `RequestOptions.extra['_idempotency_key']` and reused on every later pass, which covers the resend by `TokenRefreshInterceptor` after a 401 and a refresh.
 `GET`, `HEAD`, `OPTIONS` and `DELETE` never get the header.

@@ -34,9 +34,6 @@ class _FakeAccountRepository implements IAccountRepository {
 
   @override
   Future<Result<void>> resetPassword(String mailAddress) async => const Success(null);
-
-  @override
-  Future<Result<UserEntity>> update(UserEntity user) async => Success(user);
 }
 
 void main() {

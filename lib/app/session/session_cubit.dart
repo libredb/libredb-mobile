@@ -43,7 +43,7 @@ final class SessionUnknown extends SessionState {
 /// User holds a valid session token in secure storage.
 ///
 /// [roles] is the **OR** set used by router guards: a route requiring
-/// `{'ROLE_ADMIN'}` accepts a user whose [roles] contains at least one
+/// `{'admin', 'auditor'}` accepts a user whose [roles] contains at least one
 /// of the listed values. Defaulting to the empty set preserves the
 /// pre-roles `const SessionAuthenticated()` callers while letting new
 /// code pass a real set. Stored as [Set] so membership checks at every

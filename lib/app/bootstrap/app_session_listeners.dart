@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
-import 'package:libredb_mobile/app/shell/menu_bloc/menu_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/idle_timeout_observer.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
-import 'package:libredb_mobile/features/users/application/authority_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -108,30 +106,27 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             }
           },
         ),
-        BlocListener<MenuBloc, MenuState>(
-          listenWhen: (previous, current) => previous.isLogout != current.isLogout,
+        BlocListener<SignOutBloc, SignOutState>(
+          listenWhen: (previous, current) => previous is! SignOutDone && current is SignOutDone,
           listener: (context, state) {
-            if (state.isLogout) {
-              context.read<SessionCubit>().markLoggedOut();
-              _closeSsoAutoRedirect(context);
-              // MenuBloc signs out with the error status when the logout could not remove all stored data, and with
-              // the providerSessionLeft status when an oidc build could not end the session at the identity provider.
-              if (state.status == MenuStateStatus.error) {
+            context.read<SessionCubit>().markLoggedOut();
+            _closeSsoAutoRedirect(context);
+            // SignOutBloc signs out with stored data left when the logout could not remove all stored data, and with
+            // the provider session left when an oidc build could not end the session at the identity provider.
+            switch (state) {
+              case SignedOutWithDataLeft():
                 _showNotice((strings) => strings.logout_stored_data_left);
-              } else if (state.status == MenuStateStatus.providerSessionLeft) {
+              case SignedOutWithProviderSessionLeft():
                 _showNotice((strings) => strings.error_auth_oidc_logout_incomplete);
-              }
+              case SignOutInitial() || SignOutInProgress() || SignedOut():
+                break;
             }
           },
         ),
-        // The logout of an oidc build signs out before the provider logout has ended, and sets the
-        // providerSessionLeft status afterwards when the provider logout failed.
-        BlocListener<MenuBloc, MenuState>(
-          listenWhen: (previous, current) =>
-              previous.isLogout &&
-              current.isLogout &&
-              previous.status != MenuStateStatus.providerSessionLeft &&
-              current.status == MenuStateStatus.providerSessionLeft,
+        // The sign-out of an oidc build ends before the provider logout has ended, and tells afterwards when the
+        // provider logout failed.
+        BlocListener<SignOutBloc, SignOutState>(
+          listenWhen: (previous, current) => previous is SignedOut && current is SignedOutWithProviderSessionLeft,
           listener: (context, state) => _showNotice((strings) => strings.error_auth_oidc_logout_incomplete),
         ),
         BlocListener<SessionCubit, SessionState>(
@@ -141,9 +136,6 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
               case SessionAuthenticated():
                 _startIdleObserver();
                 _closeSsoAutoRedirect(context);
-                // Loaded here rather than by one page, since a sign-in can return the user to any page and the top
-                // bar shows the account on all of them.
-                context.read<AccountBloc>().add(const AccountFetchEvent());
               case SessionUnauthenticated(:final reason):
                 _stopIdleObserver();
                 _forgetSignedOutUser(context);
@@ -173,11 +165,8 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
   }
 
   /// The app-scoped blocs outlive the session, so the next user to sign in would see what they hold about the one
-  /// who signed out: the account in the top bar and on the dashboard, the authorities loaded with that user's rights,
-  /// and the sign-in form state, a password shown in plain text among it.
+  /// who signed out: the sign-in form state, a password shown in plain text among it.
   void _forgetSignedOutUser(BuildContext context) {
-    context.read<AccountBloc>().add(const AccountResetEvent());
-    context.read<AuthorityBloc>().add(const AuthorityReset());
     context.read<LoginBloc>().add(const LoginReset());
   }
 

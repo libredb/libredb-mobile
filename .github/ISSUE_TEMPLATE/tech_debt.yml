@@ -100,11 +100,11 @@ body:
       options:
         - account
         - auth
-        - dashboard
-        - dynamic_forms
         - lifecycle
         - settings
-        - users
+        - connections
+        - object_browser
+        - sql_editor
         - shared
         - core
         - infrastructure

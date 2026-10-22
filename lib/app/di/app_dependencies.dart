@@ -1,9 +1,7 @@
-import 'package:libredb_mobile/features/users/data/repositories/authority_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/app/shell/repositories/menu_repository.dart';
 import 'package:libredb_mobile/features/account/data/repositories/account_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -18,12 +16,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_reposi
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/domain/repositories/dynamic_form_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
-import 'package:libredb_mobile/features/users/data/repositories/user_repository.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/authority_repository.dart';
-import 'package:libredb_mobile/features/users/domain/repositories/user_repository.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
@@ -129,8 +122,6 @@ class AppDependencies {
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
       OidcTokenRotation(client: client, secureStorage: secureStorage);
 
-  IAuthorityRepository createAuthorityRepository(ApiClient apiClient) => AuthorityRepositoryImpl(apiClient);
-
   /// Studio's connection API.
   IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
 
@@ -146,8 +137,6 @@ class AppDependencies {
   /// Studio's statement routes.
   ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient) => SqlEditorRepository(apiClient);
 
-  IDynamicFormRepository createDynamicFormRepository(ApiClient apiClient) => DynamicFormRepository(apiClient);
-
   /// Reads the remote app config that decides whether the app opens, shows the maintenance screen or asks for an
   /// update.
   ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => LifecycleRepository(apiClient);
@@ -155,9 +144,5 @@ class AppDependencies {
   /// The device preferences, such as the language the user picked.
   AppLocalStorage createLocalStorage() => AppLocalStorage();
 
-  MenuRepository createMenuRepository() => MenuRepository();
-
   ISecureStorage createSecureStorage() => FlutterSecureStorageAdapter();
-
-  IUserRepository createUserRepository(ApiClient apiClient) => UserRepository(apiClient);
 }

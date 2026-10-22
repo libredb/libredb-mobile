@@ -58,11 +58,6 @@ class S {
     return Intl.message('Admin', name: 'admin', desc: '', args: []);
   }
 
-  /// `Guest`
-  String get guest {
-    return Intl.message('Guest', name: 'guest', desc: '', args: []);
-  }
-
   /// `Role`
   String get role {
     return Intl.message('Role', name: 'role', desc: '', args: []);
@@ -138,39 +133,9 @@ class S {
     return Intl.message('Field cannot be more than 100 characters long', name: 'max_length_100', desc: '', args: []);
   }
 
-  /// `Range is required`
-  String get required_range {
-    return Intl.message('Range is required', name: 'required_range', desc: '', args: []);
-  }
-
   /// `List`
   String get list {
     return Intl.message('List', name: 'list', desc: '', args: []);
-  }
-
-  /// `List User`
-  String get list_user {
-    return Intl.message('List User', name: 'list_user', desc: '', args: []);
-  }
-
-  /// `New User`
-  String get new_user {
-    return Intl.message('New User', name: 'new_user', desc: '', args: []);
-  }
-
-  /// `Edit User`
-  String get edit_user {
-    return Intl.message('Edit User', name: 'edit_user', desc: '', args: []);
-  }
-
-  /// `View User`
-  String get view_user {
-    return Intl.message('View User', name: 'view_user', desc: '', args: []);
-  }
-
-  /// `Delete User`
-  String get delete_user {
-    return Intl.message('Delete User', name: 'delete_user', desc: '', args: []);
   }
 
   /// `Email must be a valid email address`
@@ -186,11 +151,6 @@ class S {
   /// `English`
   String get english {
     return Intl.message('English', name: 'english', desc: '', args: []);
-  }
-
-  /// `Create User`
-  String get create_user {
-    return Intl.message('Create User', name: 'create_user', desc: '', args: []);
   }
 
   /// `Save`
@@ -348,29 +308,6 @@ class S {
     return Intl.message('Send Email', name: 'email_send', desc: '', args: []);
   }
 
-  /// `{translate, select, connections{Connections} account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}`
-  String translate_menu_title(String translate) {
-    return Intl.select(
-      translate,
-      {
-        'connections': 'Connections',
-        'account': 'Account',
-        'userManagement': 'User Management',
-        'settings': 'Settings',
-        'logout': 'Logout',
-        'info': 'Info',
-        'language': 'Language',
-        'theme': 'Theme',
-        'new_user': 'New',
-        'list_user': 'List',
-        'other': 'Other',
-      },
-      name: 'translate_menu_title',
-      desc: '',
-      args: [translate],
-    );
-  }
-
   /// `Login with Email`
   String get login_with_email {
     return Intl.message('Login with Email', name: 'login_with_email', desc: '', args: []);
@@ -421,19 +358,9 @@ class S {
     return Intl.message('Language', name: 'language', desc: '', args: []);
   }
 
-  /// `Dashboard`
-  String get dashboard {
-    return Intl.message('Dashboard', name: 'dashboard', desc: '', args: []);
-  }
-
   /// `Refresh`
   String get refresh {
     return Intl.message('Refresh', name: 'refresh', desc: '', args: []);
-  }
-
-  /// `Quick Actions`
-  String get quick_actions {
-    return Intl.message('Quick Actions', name: 'quick_actions', desc: '', args: []);
   }
 
   /// `Join the Community`
@@ -571,26 +498,6 @@ class S {
     return Intl.message('Something went wrong', name: 'error_generic', desc: '', args: []);
   }
 
-  /// `Extended Information`
-  String get user_extended_info_title {
-    return Intl.message('Extended Information', name: 'user_extended_info_title', desc: '', args: []);
-  }
-
-  /// `Extended Info`
-  String get user_extended_info_button {
-    return Intl.message('Extended Info', name: 'user_extended_info_button', desc: '', args: []);
-  }
-
-  /// `Saved`
-  String get user_extended_info_saved {
-    return Intl.message('Saved', name: 'user_extended_info_saved', desc: '', args: []);
-  }
-
-  /// `Save failed: {error}`
-  String user_extended_info_save_failed(String error) {
-    return Intl.message('Save failed: $error', name: 'user_extended_info_save_failed', desc: '', args: [error]);
-  }
-
   /// `Access denied`
   String get forbidden_title {
     return Intl.message('Access denied', name: 'forbidden_title', desc: '', args: []);
@@ -701,26 +608,6 @@ class S {
     return Intl.message('Try Again', name: 'maintenance_retry', desc: '', args: []);
   }
 
-  /// `Could not load the users`
-  String get user_list_load_failed {
-    return Intl.message('Could not load the users', name: 'user_list_load_failed', desc: '', args: []);
-  }
-
-  /// `Could not delete the user`
-  String get user_delete_failed {
-    return Intl.message('Could not delete the user', name: 'user_delete_failed', desc: '', args: []);
-  }
-
-  /// `Could not load the user`
-  String get user_load_failed {
-    return Intl.message('Could not load the user', name: 'user_load_failed', desc: '', args: []);
-  }
-
-  /// `Roles unavailable`
-  String get authorities_load_failed {
-    return Intl.message('Roles unavailable', name: 'authorities_load_failed', desc: '', args: []);
-  }
-
   /// `You were signed out, but some stored data could not be removed from this device.`
   String get logout_stored_data_left {
     return Intl.message(
@@ -764,71 +651,6 @@ class S {
   /// `The page you requested could not be found.`
   String get not_found_message {
     return Intl.message('The page you requested could not be found.', name: 'not_found_message', desc: '', args: []);
-  }
-
-  /// `Dynamic Forms`
-  String get dynamic_forms {
-    return Intl.message('Dynamic Forms', name: 'dynamic_forms', desc: '', args: []);
-  }
-
-  /// `Dark`
-  String get theme_mode_dark {
-    return Intl.message('Dark', name: 'theme_mode_dark', desc: '', args: []);
-  }
-
-  /// `Light`
-  String get theme_mode_light {
-    return Intl.message('Light', name: 'theme_mode_light', desc: '', args: []);
-  }
-
-  /// `Expand`
-  String get sidebar_expand {
-    return Intl.message('Expand', name: 'sidebar_expand', desc: '', args: []);
-  }
-
-  /// `Collapse`
-  String get sidebar_collapse {
-    return Intl.message('Collapse', name: 'sidebar_collapse', desc: '', args: []);
-  }
-
-  /// `Type a command or search...`
-  String get command_palette_hint {
-    return Intl.message('Type a command or search...', name: 'command_palette_hint', desc: '', args: []);
-  }
-
-  /// `No results found`
-  String get command_palette_no_results {
-    return Intl.message('No results found', name: 'command_palette_no_results', desc: '', args: []);
-  }
-
-  /// `Go to home`
-  String get command_palette_home_description {
-    return Intl.message('Go to home', name: 'command_palette_home_description', desc: '', args: []);
-  }
-
-  /// `Manage users`
-  String get command_palette_users_description {
-    return Intl.message('Manage users', name: 'command_palette_users_description', desc: '', args: []);
-  }
-
-  /// `Create a new user`
-  String get command_palette_new_user_description {
-    return Intl.message('Create a new user', name: 'command_palette_new_user_description', desc: '', args: []);
-  }
-
-  /// `Your profile`
-  String get command_palette_account_description {
-    return Intl.message('Your profile', name: 'command_palette_account_description', desc: '', args: []);
-  }
-
-  /// `App preferences`
-  String get command_palette_settings_description {
-    return Intl.message('App preferences', name: 'command_palette_settings_description', desc: '', args: []);
-  }
-
-  /// `Update password`
-  String get command_palette_change_password_description {
-    return Intl.message('Update password', name: 'command_palette_change_password_description', desc: '', args: []);
   }
 
   /// `Your databases,\nin your pocket.`
@@ -966,11 +788,6 @@ class S {
     return Intl.message('Manage your account preferences', name: 'settings_subtitle', desc: '', args: []);
   }
 
-  /// `View or edit your profile information`
-  String get settings_account_subtitle {
-    return Intl.message('View or edit your profile information', name: 'settings_account_subtitle', desc: '', args: []);
-  }
-
   /// `Update your password securely`
   String get settings_change_password_subtitle {
     return Intl.message('Update your password securely', name: 'settings_change_password_subtitle', desc: '', args: []);
@@ -991,160 +808,6 @@ class S {
     return Intl.message('Retry', name: 'retry', desc: '', args: []);
   }
 
-  /// `Dashboard Error`
-  String get dashboard_error_title {
-    return Intl.message('Dashboard Error', name: 'dashboard_error_title', desc: '', args: []);
-  }
-
-  /// `System Dashboard`
-  String get dashboard_title {
-    return Intl.message('System Dashboard', name: 'dashboard_title', desc: '', args: []);
-  }
-
-  /// `Connectivity`
-  String get dashboard_connectivity {
-    return Intl.message('Connectivity', name: 'dashboard_connectivity', desc: '', args: []);
-  }
-
-  /// `Online`
-  String get dashboard_online {
-    return Intl.message('Online', name: 'dashboard_online', desc: '', args: []);
-  }
-
-  /// `Offline`
-  String get dashboard_offline {
-    return Intl.message('Offline', name: 'dashboard_offline', desc: '', args: []);
-  }
-
-  /// `Circuit Breaker`
-  String get dashboard_circuit_breaker {
-    return Intl.message('Circuit Breaker', name: 'dashboard_circuit_breaker', desc: '', args: []);
-  }
-
-  /// `{count, plural, =1{1 endpoint} other{{count} endpoints}}`
-  String dashboard_endpoint_count(int count) {
-    return Intl.plural(
-      count,
-      one: '1 endpoint',
-      other: '$count endpoints',
-      name: 'dashboard_endpoint_count',
-      desc: '',
-      args: [count],
-    );
-  }
-
-  /// `{count} open`
-  String dashboard_open_count(int count) {
-    return Intl.message('$count open', name: 'dashboard_open_count', desc: '', args: [count]);
-  }
-
-  /// `Cache`
-  String get dashboard_cache {
-    return Intl.message('Cache', name: 'dashboard_cache', desc: '', args: []);
-  }
-
-  /// `{count, plural, =1{1 item cached} other{{count} items cached}}`
-  String dashboard_cached_item_count(int count) {
-    return Intl.plural(
-      count,
-      one: '1 item cached',
-      other: '$count items cached',
-      name: 'dashboard_cached_item_count',
-      desc: '',
-      args: [count],
-    );
-  }
-
-  /// `Feature Flags`
-  String get dashboard_feature_flags {
-    return Intl.message('Feature Flags', name: 'dashboard_feature_flags', desc: '', args: []);
-  }
-
-  /// `{enabled}/{total} enabled`
-  String dashboard_feature_flags_enabled(int enabled, int total) {
-    return Intl.message(
-      '$enabled/$total enabled',
-      name: 'dashboard_feature_flags_enabled',
-      desc: '',
-      args: [enabled, total],
-    );
-  }
-
-  /// `Circuit Breaker Health`
-  String get dashboard_circuit_breaker_health {
-    return Intl.message('Circuit Breaker Health', name: 'dashboard_circuit_breaker_health', desc: '', args: []);
-  }
-
-  /// `No endpoints tracked yet`
-  String get dashboard_no_endpoints {
-    return Intl.message('No endpoints tracked yet', name: 'dashboard_no_endpoints', desc: '', args: []);
-  }
-
-  /// `Failures: {count}`
-  String dashboard_failure_count(int count) {
-    return Intl.message('Failures: $count', name: 'dashboard_failure_count', desc: '', args: [count]);
-  }
-
-  /// `No feature flags configured`
-  String get dashboard_no_feature_flags {
-    return Intl.message('No feature flags configured', name: 'dashboard_no_feature_flags', desc: '', args: []);
-  }
-
-  /// `App Configuration`
-  String get dashboard_app_configuration {
-    return Intl.message('App Configuration', name: 'dashboard_app_configuration', desc: '', args: []);
-  }
-
-  /// `Current Version`
-  String get dashboard_current_version {
-    return Intl.message('Current Version', name: 'dashboard_current_version', desc: '', args: []);
-  }
-
-  /// `Minimum Version`
-  String get dashboard_minimum_version {
-    return Intl.message('Minimum Version', name: 'dashboard_minimum_version', desc: '', args: []);
-  }
-
-  /// `Maintenance Mode`
-  String get dashboard_maintenance_mode {
-    return Intl.message('Maintenance Mode', name: 'dashboard_maintenance_mode', desc: '', args: []);
-  }
-
-  /// `ON`
-  String get dashboard_on {
-    return Intl.message('ON', name: 'dashboard_on', desc: '', args: []);
-  }
-
-  /// `OFF`
-  String get dashboard_off {
-    return Intl.message('OFF', name: 'dashboard_off', desc: '', args: []);
-  }
-
-  /// `Environment`
-  String get dashboard_environment {
-    return Intl.message('Environment', name: 'dashboard_environment', desc: '', args: []);
-  }
-
-  /// `Interceptor Chain`
-  String get dashboard_interceptor_chain {
-    return Intl.message('Interceptor Chain', name: 'dashboard_interceptor_chain', desc: '', args: []);
-  }
-
-  /// `Clear Cache`
-  String get dashboard_clear_cache {
-    return Intl.message('Clear Cache', name: 'dashboard_clear_cache', desc: '', args: []);
-  }
-
-  /// `Reset Circuit Breakers`
-  String get dashboard_reset_circuit_breakers {
-    return Intl.message('Reset Circuit Breakers', name: 'dashboard_reset_circuit_breakers', desc: '', args: []);
-  }
-
-  /// `Open Dynamic Forms`
-  String get dashboard_open_dynamic_forms {
-    return Intl.message('Open Dynamic Forms', name: 'dashboard_open_dynamic_forms', desc: '', args: []);
-  }
-
   /// `Cancel`
   String get cancel {
     return Intl.message('Cancel', name: 'cancel', desc: '', args: []);
@@ -1155,144 +818,9 @@ class S {
     return Intl.message('Inactive', name: 'inactive', desc: '', args: []);
   }
 
-  /// `Browse and manage users in a table view.`
-  String get user_list_subtitle {
-    return Intl.message('Browse and manage users in a table view.', name: 'user_list_subtitle', desc: '', args: []);
-  }
-
-  /// `Actions`
-  String get user_list_actions {
-    return Intl.message('Actions', name: 'user_list_actions', desc: '', args: []);
-  }
-
-  /// `Role filter`
-  String get user_list_role_filter {
-    return Intl.message('Role filter', name: 'user_list_role_filter', desc: '', args: []);
-  }
-
-  /// `Filter users...`
-  String get user_list_search_hint {
-    return Intl.message('Filter users...', name: 'user_list_search_hint', desc: '', args: []);
-  }
-
-  /// `User Information`
-  String get user_editor_info_title {
-    return Intl.message('User Information', name: 'user_editor_info_title', desc: '', args: []);
-  }
-
-  /// `Manage identity, contact, and access settings.`
-  String get user_editor_info_description {
-    return Intl.message(
-      'Manage identity, contact, and access settings.',
-      name: 'user_editor_info_description',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Identity`
-  String get user_editor_identity {
-    return Intl.message('Identity', name: 'user_editor_identity', desc: '', args: []);
-  }
-
-  /// `Basic account identity details.`
-  String get user_editor_identity_description {
-    return Intl.message(
-      'Basic account identity details.',
-      name: 'user_editor_identity_description',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Contact`
-  String get user_editor_contact {
-    return Intl.message('Contact', name: 'user_editor_contact', desc: '', args: []);
-  }
-
-  /// `Primary contact information.`
-  String get user_editor_contact_description {
-    return Intl.message('Primary contact information.', name: 'user_editor_contact_description', desc: '', args: []);
-  }
-
-  /// `Access`
-  String get user_editor_access {
-    return Intl.message('Access', name: 'user_editor_access', desc: '', args: []);
-  }
-
-  /// `Account status and role permissions.`
-  String get user_editor_access_description {
-    return Intl.message(
-      'Account status and role permissions.',
-      name: 'user_editor_access_description',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Fill in the details to create a new user.`
-  String get user_editor_create_subtitle {
-    return Intl.message(
-      'Fill in the details to create a new user.',
-      name: 'user_editor_create_subtitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Update user information below.`
-  String get user_editor_edit_subtitle {
-    return Intl.message('Update user information below.', name: 'user_editor_edit_subtitle', desc: '', args: []);
-  }
-
-  /// `View user details.`
-  String get user_editor_view_subtitle {
-    return Intl.message('View user details.', name: 'user_editor_view_subtitle', desc: '', args: []);
-  }
-
   /// `Submit`
   String get submit {
     return Intl.message('Submit', name: 'submit', desc: '', args: []);
-  }
-
-  /// `Error`
-  String get error_title {
-    return Intl.message('Error', name: 'error_title', desc: '', args: []);
-  }
-
-  /// `Form submitted successfully`
-  String get dynamic_form_submitted {
-    return Intl.message('Form submitted successfully', name: 'dynamic_form_submitted', desc: '', args: []);
-  }
-
-  /// `{field} is required`
-  String dynamic_form_field_required(String field) {
-    return Intl.message('$field is required', name: 'dynamic_form_field_required', desc: '', args: [field]);
-  }
-
-  /// `{field} must be at least {count, plural, =1{1 character} other{{count} characters}}`
-  String dynamic_form_field_min_length(String field, int count) {
-    return Intl.message(
-      '$field must be at least ${Intl.plural(count, one: '1 character', other: '$count characters')}',
-      name: 'dynamic_form_field_min_length',
-      desc: '',
-      args: [field, count],
-    );
-  }
-
-  /// `{field} must be at most {count, plural, =1{1 character} other{{count} characters}}`
-  String dynamic_form_field_max_length(String field, int count) {
-    return Intl.message(
-      '$field must be at most ${Intl.plural(count, one: '1 character', other: '$count characters')}',
-      name: 'dynamic_form_field_max_length',
-      desc: '',
-      args: [field, count],
-    );
-  }
-
-  /// `Must be a number`
-  String get dynamic_form_field_numeric {
-    return Intl.message('Must be a number', name: 'dynamic_form_field_numeric', desc: '', args: []);
   }
 
   /// `Apply`
@@ -1377,99 +905,9 @@ class S {
     return Intl.message('Hide password', name: 'password_hide', desc: '', args: []);
   }
 
-  /// `No users to show`
-  String get user_list_empty {
-    return Intl.message('No users to show', name: 'user_list_empty', desc: '', args: []);
-  }
-
   /// `LibreDB`
   String get app_title {
     return Intl.message('LibreDB', name: 'app_title', desc: '', args: []);
-  }
-
-  /// `Closed`
-  String get dashboard_circuit_state_closed {
-    return Intl.message('Closed', name: 'dashboard_circuit_state_closed', desc: '', args: []);
-  }
-
-  /// `Half-open`
-  String get dashboard_circuit_state_half_open {
-    return Intl.message('Half-open', name: 'dashboard_circuit_state_half_open', desc: '', args: []);
-  }
-
-  /// `Open`
-  String get dashboard_circuit_state_open {
-    return Intl.message('Open', name: 'dashboard_circuit_state_open', desc: '', args: []);
-  }
-
-  /// `Rejects requests when offline`
-  String get dashboard_interceptor_connectivity {
-    return Intl.message(
-      'Rejects requests when offline',
-      name: 'dashboard_interceptor_connectivity',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Attaches JWT token to requests`
-  String get dashboard_interceptor_auth {
-    return Intl.message('Attaches JWT token to requests', name: 'dashboard_interceptor_auth', desc: '', args: []);
-  }
-
-  /// `Refreshes expired access tokens`
-  String get dashboard_interceptor_token_refresh {
-    return Intl.message(
-      'Refreshes expired access tokens',
-      name: 'dashboard_interceptor_token_refresh',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Opt-in Idempotency-Key for POST/PUT/PATCH`
-  String get dashboard_interceptor_idempotency {
-    return Intl.message(
-      'Opt-in Idempotency-Key for POST/PUT/PATCH',
-      name: 'dashboard_interceptor_idempotency',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Retry + circuit breaker`
-  String get dashboard_interceptor_resilience {
-    return Intl.message('Retry + circuit breaker', name: 'dashboard_interceptor_resilience', desc: '', args: []);
-  }
-
-  /// `GET response caching with TTL`
-  String get dashboard_interceptor_cache {
-    return Intl.message('GET response caching with TTL', name: 'dashboard_interceptor_cache', desc: '', args: []);
-  }
-
-  /// `Records requests in dev console`
-  String get dashboard_interceptor_dev_console {
-    return Intl.message(
-      'Records requests in dev console',
-      name: 'dashboard_interceptor_dev_console',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Structured request/response logging`
-  String get dashboard_interceptor_logging {
-    return Intl.message(
-      'Structured request/response logging',
-      name: 'dashboard_interceptor_logging',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Serves mock data in dev/test`
-  String get dashboard_interceptor_mock {
-    return Intl.message('Serves mock data in dev/test', name: 'dashboard_interceptor_mock', desc: '', args: []);
   }
 
   /// `Single sign-on is not configured correctly in this app. Contact your administrator.`

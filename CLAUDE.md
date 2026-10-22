@@ -96,7 +96,7 @@ Every feature follows: **Event → BLoC → State → UI**
 ### `Bloc` vs `Cubit`
 
 - Use **`Cubit`** when every interaction is an atomic, fire-and-forget call and the event stream adds no value (no debouncing, no concurrency policy, no historical event payload needed). Example: `LocaleCubit` (`restore`, `changeLocale`).
-- Use **`Bloc`** when events carry meaningful payload, when an `EventTransformer` (debounce, restartable, droppable) is needed, or when the event log itself is valuable for replay/observability. Examples: `UserListBloc` (search debounce + delete drop-concurrent), `UserEditorBloc` (fetch/save lifecycle), `LoginBloc` (multistep auth flow).
+- Use **`Bloc`** when events carry meaningful payload, when an `EventTransformer` (debounce, restartable, droppable) is needed, or when the event log itself is valuable for replay/observability. Examples: `ConnectionListBloc` (restartable refresh), `ChangePasswordBloc` (drop-concurrent submit), `LoginBloc` (multistep auth flow).
 - Default to `Bloc` for any new feature touching network requests or user input streams; reach for `Cubit` only after confirming none of the above apply.
 
 ### State Modeling — MAIN RULE
@@ -104,37 +104,32 @@ Every feature follows: **Event → BLoC → State → UI**
 **Default to sealed state hierarchies** that leverage Dart 3's `sealed` modifier and exhaustive `switch` expressions. The compiler enforces handling of every state variant; UIs render via pattern matching.
 
 ```dart
-// State (real example: lib/features/users/application/user_list_state.dart)
-sealed class UserListState extends Equatable {
-  const UserListState();
+// State (real example: lib/features/connections/application/connection_list_state.dart)
+sealed class ConnectionListState extends Equatable {
+  const ConnectionListState();
+  @override List<Object?> get props => const [];
 }
-final class UserListInitial extends UserListState { /* ... */ }
-final class UserListLoading extends UserListState { /* ... */ }
-final class UserListLoaded extends UserListState {
-  const UserListLoaded({required this.users});
-  final List<UserEntity> users;
-  @override List<Object?> get props => [users];
+final class ConnectionListInitial extends ConnectionListState { /* ... */ }
+final class ConnectionListLoading extends ConnectionListState { /* ... */ }
+final class ConnectionListLoaded extends ConnectionListState {
+  const ConnectionListLoaded({required this.connections});
+  final List<StudioConnection> connections;
+  @override List<Object?> get props => [connections];
 }
-final class UserListDeleteSuccess extends UserListState { /* ... */ }
-sealed class UserListFailure extends UserListState {
-  const UserListFailure({required this.errorCode});
+final class ConnectionListFailure extends ConnectionListState {
+  const ConnectionListFailure({required this.errorCode});
   final AppErrorCode errorCode; // shown via errorCode.resolve(context); the raw message only goes to the log
   @override List<Object?> get props => [errorCode];
 }
-final class UserListLoadFailure extends UserListFailure { /* ... */ }
-final class UserListDeleteFailure extends UserListFailure {
-  const UserListDeleteFailure({required super.errorCode, required this.users});
-  final List<UserEntity> users; // the list stays on screen while the failure is shown
-  @override List<Object?> get props => [errorCode, users];
-}
 
-// UI
-BlocBuilder<UserListBloc, UserListState>(
+// UI (lib/features/connections/presentation/pages/connection_list_page.dart)
+BlocBuilder<ConnectionListBloc, ConnectionListState>(
   builder: (context, state) => switch (state) {
-    UserListInitial() || UserListDeleteSuccess() => const SizedBox.shrink(),
-    UserListLoading() => const Loading(),
-    UserListLoaded(:final users) || UserListDeleteFailure(:final users) => UserList(users),
-    UserListLoadFailure(:final errorCode) => ErrorBanner(errorCode.resolve(context)),
+    ConnectionListInitial() => _buildList(context),
+    ConnectionListLoading() => _buildList(context, isLoading: true),
+    ConnectionListLoaded(:final connections) => _buildList(context, items: connections),
+    ConnectionListFailure(:final errorCode) =>
+      _buildList(context, errorWidget: AppErrorState(description: errorCode.resolve(context))),
   },
 );
 ```

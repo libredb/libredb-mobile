@@ -45,8 +45,7 @@ enum StorageKeys {
   language('language'),
   username('username'),
   theme('theme'),
-  brightness('brightness'),
-  sidebarCollapsed('sidebarCollapsed');
+  brightness('brightness');
 
   const StorageKeys(this.key);
 
@@ -60,7 +59,6 @@ enum StorageKeys {
     StorageKeys.username => StorageScope.session,
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
-    StorageKeys.sidebarCollapsed => StorageScope.device,
   };
 }
 

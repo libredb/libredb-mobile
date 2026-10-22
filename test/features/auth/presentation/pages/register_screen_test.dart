@@ -11,7 +11,6 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/register_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/register_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -33,7 +32,6 @@ import '../../../../support/unsaved_changes_host.dart';
 
 void main() {
   late MockRegisterBloc mockRegisterBloc;
-  late MockAccountBloc mockAccountBloc;
   late GoRouter router;
 
   // Test user data
@@ -41,7 +39,6 @@ void main() {
 
   setUp(() {
     mockRegisterBloc = MockRegisterBloc();
-    mockAccountBloc = MockAccountBloc();
 
     // Setup router with necessary routes
     router = GoRouter(
@@ -51,10 +48,7 @@ void main() {
           path: ApplicationRoutesConstants.register,
           onExit: confirmLeavingUnsavedChanges,
           builder: (context, state) => MultiBlocProvider(
-            providers: [
-              BlocProvider<RegisterBloc>.value(value: mockRegisterBloc),
-              BlocProvider<AccountBloc>.value(value: mockAccountBloc),
-            ],
+            providers: [BlocProvider<RegisterBloc>.value(value: mockRegisterBloc)],
             child: RegisterScreen(),
           ),
         ),
@@ -65,8 +59,6 @@ void main() {
     // Setup default bloc behaviors
     when(() => mockRegisterBloc.stream).thenAnswer((_) => Stream.fromIterable([const RegisterInitialState()]));
     when(() => mockRegisterBloc.state).thenReturn(const RegisterInitialState());
-    when(() => mockAccountBloc.stream).thenAnswer((_) => Stream.fromIterable([const AccountState()]));
-    when(() => mockAccountBloc.state).thenReturn(const AccountState());
   });
 
   Widget createWidgetUnderTest({Locale locale = const Locale('en')}) {

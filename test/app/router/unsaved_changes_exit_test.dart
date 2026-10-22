@@ -9,29 +9,20 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_bloc.dart';
-import 'package:libredb_mobile/app/shell/sidebar/sidebar_nav_item.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
-import 'package:libredb_mobile/features/account/presentation/pages/account_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/change_password_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/register_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
-import 'package:libredb_mobile/features/users/presentation/pages/user_editor_page.dart';
-import 'package:libredb_mobile/features/users/presentation/pages/user_extended_info_page.dart';
-import 'package:libredb_mobile/features/users/presentation/pages/user_list_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
-import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
-import 'package:libredb_mobile/shared/dynamic_forms/presentation/pages/dynamic_form_page.dart';
-import 'package:libredb_mobile/shared/widgets/submit_button_widget.dart';
 import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../support/test_env.dart';
+import '../../support/user_menu.dart';
 
 /// The app on the mock-backed development config, with the idle timeout production has.
 const _app = App(
@@ -53,7 +44,6 @@ Future<void> _pumpApp(WidgetTester tester, {bool signedIn = true}) async {
   tester.view.devicePixelRatio = 1.0;
   if (signedIn) {
     TestEnv.authenticate();
-    await AppLocalStorage().save(StorageKeys.roles.key, <String>['ROLE_ADMIN']);
   }
   await tester.pumpWidget(_app);
   await tester.pumpAndSettle();
@@ -83,106 +73,55 @@ Future<void> _answer(WidgetTester tester, {required bool leave}) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openDirtyAccountForm(WidgetTester tester) async {
-  await tester.tap(find.widgetWithText(SidebarNavItem, 'Account'));
+/// Opens the change password page from the settings, as its tile does, and types in it.
+Future<void> _openDirtyChangePasswordForm(WidgetTester tester) async {
+  await tester.tap(find.widgetWithText(NavigationDestination, 'Settings'));
   await tester.pumpAndSettle();
-  expect(find.byType(AccountScreen), findsOneWidget);
-  await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Changed');
+  await tester.tap(find.byKey(settingsChangePasswordButtonKey));
   await tester.pumpAndSettle();
-}
-
-/// Opens the sample form that the dashboard links to.
-Future<void> _openDynamicForm(WidgetTester tester) async {
-  _router(tester).go('/dynamic-forms/sample');
+  await tester.enterText(find.byKey(changePasswordTextFieldCurrentPasswordKey), 'secret');
   await tester.pumpAndSettle();
-  expect(find.text('New Lead'), findsOneWidget);
-}
-
-/// Fills in the sample form and submits it, which the mock API accepts after a delay.
-Future<void> _submitDynamicForm(WidgetTester tester) async {
-  await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Full Name'), 'Jane Doe');
-  await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Email Address'), 'jane.doe@example.com');
-  await tester.ensureVisible(find.byType(FormBuilderDropdown<String>));
-  await tester.tap(find.byType(FormBuilderDropdown<String>));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Referral').last);
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text('Submit'));
-  await tester.tap(find.text('Submit'));
-  await tester.pump(const Duration(seconds: 1));
-  await tester.pumpAndSettle();
-  expect(find.text('Form submitted successfully'), findsOneWidget);
-}
-
-/// Opens a user's extended information from the user editor, as its button does.
-Future<void> _openExtendedInfo(WidgetTester tester) async {
-  _router(tester).go('/user/admin/edit');
-  await tester.pumpAndSettle();
-  await tester.ensureVisible(find.text(S.current.user_extended_info_button));
-  await tester.tap(find.text(S.current.user_extended_info_button));
-  await tester.pumpAndSettle();
-  expect(find.byType(UserExtendedInfoPage), findsOneWidget);
+  expect(find.byType(ChangePasswordScreen), findsOneWidget);
 }
 
 void main() {
-  group('A dirty account form', () {
-    testWidgets('asks before the sidebar leaves it, and keeps the sidebar on the page when the user stays', (
-      tester,
-    ) async {
+  group('A dirty change password form', () {
+    testWidgets('asks before the Android back button pops it off the settings page', (tester) async {
       await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
+      await _openDirtyChangePasswordForm(tester);
+      _expectBackHeld(tester, find.byType(ChangePasswordScreen));
 
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
+      await _androidBack(tester);
       expect(_unsavedChangesDialog, findsOneWidget);
 
-      await _answer(tester, leave: false);
-      expect(find.byType(AccountScreen), findsOneWidget);
-      expect(tester.element(find.byType(AccountScreen)).read<SidebarBloc>().state.activeRoute, '/account');
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
       await _answer(tester, leave: true);
+      expect(find.byType(ChangePasswordScreen), findsNothing);
       expect(find.byType(SettingsScreen), findsOneWidget);
     });
 
-    testWidgets('asks before the Android back button leaves it', (tester) async {
+    testWidgets('asks before the bottom navigation bar leaves it, and stays when the user stays', (tester) async {
       await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
-      _expectBackHeld(tester, find.byType(AccountScreen));
+      await _openDirtyChangePasswordForm(tester);
 
-      await _androidBack(tester);
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: false);
-      expect(find.byType(AccountScreen), findsOneWidget);
-
-      // Leaving goes where the page's own back button goes: the dashboard, as the page is the shell's only page.
-      await _androidBack(tester);
-      await _answer(tester, leave: true);
-      expect(find.byType(AccountScreen), findsNothing);
-      expect(_router(tester).state.uri.path, ApplicationRoutesConstants.home);
-    });
-
-    testWidgets('asks once when its own back button leaves it', (tester) async {
-      await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
-
-      await tester.tap(find.byKey(const Key('accountScreenAppBarBackButtonKey')));
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Connections'));
       await tester.pumpAndSettle();
       expect(_unsavedChangesDialog, findsOneWidget);
 
+      await _answer(tester, leave: false);
+      expect(find.byType(ChangePasswordScreen), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Connections'));
+      await tester.pumpAndSettle();
       await _answer(tester, leave: true);
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(AccountScreen), findsNothing);
+      expect(find.byType(ChangePasswordScreen), findsNothing);
+      expect(_router(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
     });
 
     testWidgets('does not hold up signing out', (tester) async {
       await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
+      await _openDirtyChangePasswordForm(tester);
 
-      await tester.tap(find.widgetWithText(SidebarNavItem, S.current.logout));
-      await tester.pumpAndSettle();
+      await selectFromUserMenu(tester, Icons.logout);
       await tester.tap(find.text(S.current.yes));
       await tester.pumpAndSettle();
 
@@ -192,10 +131,10 @@ void main() {
 
     testWidgets('does not hold up a session the server ends', (tester) async {
       await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
+      await _openDirtyChangePasswordForm(tester);
 
       await tester
-          .element(find.byType(AccountScreen))
+          .element(find.byType(ChangePasswordScreen))
           .read<SessionCubit>()
           .endSession(reason: SessionExpiredReason.expired);
       await tester.pumpAndSettle();
@@ -206,7 +145,7 @@ void main() {
 
     testWidgets('gives way to an idle timeout while the unsaved-changes dialog is open', (tester) async {
       await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
+      await _openDirtyChangePasswordForm(tester);
       await _androidBack(tester);
       expect(_unsavedChangesDialog, findsOneWidget);
 
@@ -216,26 +155,6 @@ void main() {
       expect(_unsavedChangesDialog, findsNothing);
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.byType(ResponsiveScaffold), findsNothing);
-    });
-  });
-
-  group('A dirty change password form', () {
-    testWidgets('asks before the Android back button pops it off the settings page', (tester) async {
-      await _pumpApp(tester);
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(settingsChangePasswordButtonKey));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(changePasswordTextFieldCurrentPasswordKey), 'secret');
-      await tester.pumpAndSettle();
-      _expectBackHeld(tester, find.byType(ChangePasswordScreen));
-
-      await _androidBack(tester);
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: true);
-      expect(find.byType(ChangePasswordScreen), findsNothing);
-      expect(find.byType(SettingsScreen), findsOneWidget);
     });
   });
 
@@ -290,158 +209,6 @@ void main() {
     });
   });
 
-  group('A dirty user editor', () {
-    testWidgets('asks before the Android back button leaves it', (tester) async {
-      await _pumpApp(tester);
-      _router(tester).go(ApplicationRoutesConstants.userList);
-      await tester.pumpAndSettle();
-      _router(tester).go(ApplicationRoutesConstants.userNew);
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'New');
-      await tester.pumpAndSettle();
-      _expectBackHeld(tester, find.byType(UserEditorScreen));
-
-      await _androidBack(tester);
-      expect(_unsavedChangesDialog, findsOneWidget);
-      await _answer(tester, leave: false);
-      expect(find.byType(UserEditorScreen), findsOneWidget);
-    });
-
-    testWidgets('leaves for the user list without asking once the save succeeds', (tester) async {
-      await _pumpApp(tester);
-      _router(tester).go('/user/admin/edit');
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('userEditorFirstNameFieldKey')), 'Renamed');
-      await tester.pumpAndSettle();
-
-      await tester.ensureVisible(find.byKey(const Key('userEditorSubmitButtonKey')));
-      await tester.tap(find.byKey(const Key('userEditorSubmitButtonKey')));
-      await tester.pumpAndSettle();
-
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(UserListPage), findsOneWidget);
-      // Lets the list's search request, delayed by the mock backend, finish before the test ends.
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-    });
-  });
-
-  group('A dirty dynamic form', () {
-    testWidgets('asks before the sidebar leaves it', (tester) async {
-      await _pumpApp(tester);
-      await _openDynamicForm(tester);
-      await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Full Name'), 'Jane Doe');
-      await tester.pumpAndSettle();
-      _expectBackHeld(tester, find.byType(DynamicFormPage));
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: false);
-      expect(find.byType(DynamicFormPage), findsOneWidget);
-      expect(find.text('Jane Doe'), findsOneWidget);
-    });
-
-    testWidgets('leaves without asking once the form is submitted', (tester) async {
-      await _pumpApp(tester);
-      await _openDynamicForm(tester);
-      await _submitDynamicForm(tester);
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
-
-    testWidgets('asks before the sidebar leaves changes made after a submit', (tester) async {
-      await _pumpApp(tester);
-      await _openDynamicForm(tester);
-      await _submitDynamicForm(tester);
-      // The form stays on the page after the submit, so the user can change it again.
-      await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Full Name'), 'Jane Smith');
-      await tester.pumpAndSettle();
-      _expectBackHeld(tester, find.byType(DynamicFormPage));
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: false);
-      expect(find.byType(DynamicFormPage), findsOneWidget);
-      expect(find.text('Jane Smith'), findsOneWidget);
-    });
-  });
-
-  group('A dirty user extended info form', () {
-    testWidgets('asks before the Android back button returns to the user editor', (tester) async {
-      await _pumpApp(tester);
-      await _openExtendedInfo(tester);
-      await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Phone'), '5550001111');
-      await tester.pumpAndSettle();
-      _expectBackHeld(tester, find.byType(UserExtendedInfoPage));
-
-      await _androidBack(tester);
-      expect(_unsavedChangesDialog, findsOneWidget);
-
-      await _answer(tester, leave: true);
-      expect(find.byType(UserExtendedInfoPage), findsNothing);
-      expect(find.byType(UserEditorScreen), findsOneWidget);
-    });
-
-    testWidgets('returns to the user editor without asking once the save succeeds', (tester) async {
-      await _pumpApp(tester);
-      await _openExtendedInfo(tester);
-      await tester.enterText(find.widgetWithText(FormBuilderTextField, 'Phone'), '5550001111');
-      await tester.pumpAndSettle();
-
-      await tester.ensureVisible(find.text('Submit'));
-      await tester.tap(find.text('Submit'));
-      // The mock API answers after a delay.
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(UserExtendedInfoPage), findsNothing);
-      expect(find.byType(UserEditorScreen), findsOneWidget);
-    });
-  });
-
-  group('A saved account form', () {
-    testWidgets('leaves through the sidebar without asking once the save succeeds', (tester) async {
-      await _pumpApp(tester);
-      await _openDirtyAccountForm(tester);
-
-      await tester.tap(find.byType(ResponsiveSubmitButton));
-      await tester.pumpAndSettle();
-      expect(
-        ModalRoute.of(tester.element(find.byType(AccountScreen)))!.popDisposition,
-        isNot(RoutePopDisposition.doNotPop),
-      );
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
-  });
-
-  group('A clean account form', () {
-    testWidgets('leaves through the sidebar without asking', (tester) async {
-      await _pumpApp(tester);
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Account'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(SidebarNavItem, 'Settings'));
-      await tester.pumpAndSettle();
-
-      expect(_unsavedChangesDialog, findsNothing);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
-  });
-
   testWidgets('every route of a page with an unsaved-changes scope asks before it is left', (tester) async {
     await _pumpApp(tester);
     final routes = <String, GoRoute>{};
@@ -454,15 +221,9 @@ void main() {
 
     collect(_router(tester).configuration.routes);
     for (final path in [
-      ApplicationRoutesConstants.account,
       ApplicationRoutesConstants.changePassword,
       ApplicationRoutesConstants.forgotPassword,
       ApplicationRoutesConstants.register,
-      ApplicationRoutesConstants.userNew,
-      ApplicationRoutesConstants.userEdit,
-      ApplicationRoutesConstants.userView,
-      '/user/:id/extended-info',
-      '/dynamic-forms/:formId',
     ]) {
       expect(routes[path]?.onExit, confirmLeavingUnsavedChanges, reason: path);
     }

@@ -21,20 +21,6 @@ void main() {
       });
     });
 
-    group('isCurrentUserAdmin', () {
-      test('returns false when roles is null', () {
-        expect(SecurityUtils.isCurrentUserAdmin(null), isFalse);
-      });
-
-      test('returns true when roles contains ROLE_ADMIN', () {
-        expect(SecurityUtils.isCurrentUserAdmin(['ROLE_ADMIN']), isTrue);
-      });
-
-      test('returns false when roles lacks ROLE_ADMIN', () {
-        expect(SecurityUtils.isCurrentUserAdmin(['ROLE_USER']), isFalse);
-      });
-    });
-
     group('isTokenExpired', () {
       test('returns true for null', () {
         expect(SecurityUtils.isTokenExpired(null), isTrue);

@@ -5,20 +5,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('requiredRolesFor', () {
-    test('returns empty set for unrestricted path (home)', () {
-      expect(requiredRolesFor(ApplicationRoutesConstants.home), isEmpty);
+    test('no route of the app is restricted', () {
+      expect(routeRoleRequirements, isEmpty);
+      for (final path in [
+        ApplicationRoutesConstants.root,
+        ApplicationRoutesConstants.connectionList,
+        ApplicationRoutesConstants.settings,
+        '/admin',
+      ]) {
+        expect(requiredRolesFor(path), isEmpty, reason: path);
+      }
     });
 
-    test('returns ROLE_ADMIN for /user (registered prefix)', () {
-      expect(requiredRolesFor(ApplicationRoutesConstants.userList), contains('ROLE_ADMIN'));
+    const requirements = <String, Set<String>>{
+      '/admin': {'admin'},
+      '/admin/audit': {'auditor'},
+    };
+
+    test('returns the roles of a registered prefix', () {
+      expect(requiredRolesFor('/admin', requirements: requirements), {'admin'});
     });
 
-    test('inherits restriction via longest-prefix: /user/123/edit also requires ROLE_ADMIN', () {
-      expect(requiredRolesFor('/user/123/edit'), contains('ROLE_ADMIN'));
+    test('inherits restriction via longest-prefix: /admin/users/1 also requires admin', () {
+      expect(requiredRolesFor('/admin/users/1', requirements: requirements), {'admin'});
+      expect(requiredRolesFor('/admin/audit/today', requirements: requirements), {'auditor'});
     });
 
     test('returns empty for an unrelated sibling path', () {
-      expect(requiredRolesFor('/userless'), isEmpty);
+      expect(requiredRolesFor('/administrator', requirements: requirements), isEmpty);
     });
   });
 

@@ -26,6 +26,7 @@ import 'package:logger/logger.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../support/loopback_tls_server.dart';
+import '../../support/mock_asset_stub.dart';
 import '../../support/test_env.dart';
 
 /// Interceptor that stubs responses before any real HTTP call.
@@ -627,7 +628,8 @@ void main() {
 
       test('given test environment when POST request is made then should return mock data', () async {
         TestEnv.authenticate();
-        final response = await mockClient.post('/account', {'data': 'test'});
+        stubAsset('assets/mock/POST_test.json', '{"id": 1}');
+        final response = await mockClient.post('/test', {'data': 'test'});
         expect(response.statusCode, lessThan(300));
       });
 
@@ -637,7 +639,8 @@ void main() {
 
       test('given test environment when PUT request is made then should return mock data', () async {
         TestEnv.authenticate();
-        final response = await mockClient.put('/admin/users', {'data': 'test'});
+        stubAsset('assets/mock/PUT_test.json', '{"id": 1}');
+        final response = await mockClient.put('/test', {'data': 'test'});
         expect(response.statusCode, lessThan(300));
       });
 

@@ -31,11 +31,6 @@ const _knownSharedExceptions = {
 
 /// features/ importing other features' internals (auth↔account coupling)
 const _knownCrossFeatureExceptions = {
-  'lib/features/dashboard/presentation/pages/dashboard_home_page.dart → account/application/account_bloc',
-  'lib/features/dashboard/presentation/pages/dashboard_home_page.dart → lifecycle/application/lifecycle_bloc',
-  'lib/features/dashboard/presentation/pages/dashboard_home_page.dart → lifecycle/domain/entities/app_config_entity',
-  'lib/features/dashboard/presentation/pages/dashboard_home_page.dart → lifecycle/application/lifecycle_state',
-  'lib/features/account/data/repositories/account_repository.dart → users/data/models/user',
   'lib/features/auth/navigation/auth_routes.dart → account/domain/repositories/account_repository',
   // Cross-feature use case imports moved here when the BLoC constructors
   // switched to required-use-case DI (#86). Proper fix is to relocate the
@@ -51,10 +46,6 @@ const _knownCrossFeatureExceptions = {
   'lib/features/auth/application/change_password_bloc.dart → account/application/usecases/change_password_usecase',
   'lib/features/auth/application/change_password_bloc.dart → account/data/models/change_password',
   'lib/features/auth/application/register_bloc.dart → account/application/usecases/register_account_usecase',
-  // (Note: dynamic_forms used to live under features/ and required 6 known
-  // exceptions for every consumer. It is now correctly placed under shared/
-  // as a feature-agnostic forms engine, so those exceptions are removed —
-  // features → shared/dynamic_forms is a normal allowed import direction.)
 };
 
 /// features/ importing app/ (route constants used for navigation)

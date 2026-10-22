@@ -2,7 +2,11 @@
 ///
 /// This class contains all the routes used in the application.
 class ApplicationRoutesConstants {
-  static const home = '/';
+  /// The root of the app, which opens [home].
+  static const root = '/';
+
+  /// Where the app opens after sign-in: the connection list.
+  static const home = connectionList;
 
   // Auth routes
   static const login = '/login';
@@ -11,15 +15,6 @@ class ApplicationRoutesConstants {
   static const changePassword = '/change-password';
   static const loginOtp = '/login-otp';
   static const loginOtpVerify = '/login-otp-verify';
-
-  // Account routes
-  static const account = '/account';
-
-  // User routes
-  static const userList = '/user';
-  static const userView = '/user/:id/view';
-  static const userEdit = '/user/:id/edit';
-  static const userNew = '/user/new';
 
   // Connection routes
   static const connectionList = '/connections';

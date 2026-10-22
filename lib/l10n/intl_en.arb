@@ -1,7 +1,6 @@
 {
   "@@locale": "en",
   "admin": "Admin",
-  "guest": "Guest",
   "role": "Role",
   "login": "Login",
   "first_name": "First Name",
@@ -17,17 +16,10 @@
   "min_length_4": "Field must be at least 4 characters long",
   "max_length_20": "Field cannot be more than 20 characters long",
   "max_length_100": "Field cannot be more than 100 characters long",
-  "required_range": "Range is required",
   "list": "List",
-  "list_user": "List User",
-  "new_user": "New User",
-  "edit_user": "Edit User",
-  "view_user": "View User",
-  "delete_user": "Delete User",
   "email_pattern": "Email must be a valid email address",
   "turkish": "Turkish",
   "english": "English",
-  "create_user": "Create User",
   "save": "Save",
   "back": "Back",
   "delete_confirmation": "Are you sure you want to delete?",
@@ -69,14 +61,6 @@
   "login_button": "Login",
   "loading": "Loading...",
   "email_send": "Send Email",
-  "translate_menu_title": "{translate, select, connections{Connections} account{Account} userManagement{User Management} settings{Settings}  logout{Logout}  info{Info} language{Language}  theme{Theme}  new_user{New}  list_user{List} other{Other}}",
-  "@translate_menu_title": {
-    "placeholders": {
-      "translate": {
-        "type": "String"
-      }
-    }
-  },
   "login_with_email": "Login with Email",
   "send_otp_code": "Send OTP Code",
   "invalid_email": "Invalid email address",
@@ -87,9 +71,7 @@
   "otp_code": "OTP Code",
   "theme": "Theme",
   "language": "Language",
-  "dashboard": "Dashboard",
   "refresh": "Refresh",
-  "quick_actions": "Quick Actions",
   "community_title": "Join the Community",
   "community_subtitle": "LibreDB's source code is public. Your contributions make it better!",
   "community_star": "Star & Fork",
@@ -112,17 +94,6 @@
   "error_account_passwords_same": "New password must be different from current password",
   "error_settings_change_language_failed": "Could not change the language",
   "error_generic": "Something went wrong",
-  "user_extended_info_title": "Extended Information",
-  "user_extended_info_button": "Extended Info",
-  "user_extended_info_saved": "Saved",
-  "user_extended_info_save_failed": "Save failed: {error}",
-  "@user_extended_info_save_failed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "forbidden_title": "Access denied",
   "@forbidden_title": {},
   "forbidden_message": "You do not have permission to view this page.",
@@ -176,14 +147,6 @@
   },
   "maintenance_retry": "Try Again",
   "@maintenance_retry": {},
-  "user_list_load_failed": "Could not load the users",
-  "@user_list_load_failed": {},
-  "user_delete_failed": "Could not delete the user",
-  "@user_delete_failed": {},
-  "user_load_failed": "Could not load the user",
-  "@user_load_failed": {},
-  "authorities_load_failed": "Roles unavailable",
-  "@authorities_load_failed": {},
   "logout_stored_data_left": "You were signed out, but some stored data could not be removed from this device.",
   "@logout_stored_data_left": {},
   "home": "Home",
@@ -200,32 +163,6 @@
   "@not_found_title": {},
   "not_found_message": "The page you requested could not be found.",
   "@not_found_message": {},
-  "dynamic_forms": "Dynamic Forms",
-  "@dynamic_forms": {},
-  "theme_mode_dark": "Dark",
-  "@theme_mode_dark": {},
-  "theme_mode_light": "Light",
-  "@theme_mode_light": {},
-  "sidebar_expand": "Expand",
-  "@sidebar_expand": {},
-  "sidebar_collapse": "Collapse",
-  "@sidebar_collapse": {},
-  "command_palette_hint": "Type a command or search...",
-  "@command_palette_hint": {},
-  "command_palette_no_results": "No results found",
-  "@command_palette_no_results": {},
-  "command_palette_home_description": "Go to home",
-  "@command_palette_home_description": {},
-  "command_palette_users_description": "Manage users",
-  "@command_palette_users_description": {},
-  "command_palette_new_user_description": "Create a new user",
-  "@command_palette_new_user_description": {},
-  "command_palette_account_description": "Your profile",
-  "@command_palette_account_description": {},
-  "command_palette_settings_description": "App preferences",
-  "@command_palette_settings_description": {},
-  "command_palette_change_password_description": "Update password",
-  "@command_palette_change_password_description": {},
   "login_brand_headline": "Your databases,\nin your pocket.",
   "@login_brand_headline": {},
   "login_brand_description": "Reach the databases LibreDB Studio grants you, from your phone.",
@@ -272,8 +209,6 @@
   "@forgot_password_description": {},
   "settings_subtitle": "Manage your account preferences",
   "@settings_subtitle": {},
-  "settings_account_subtitle": "View or edit your profile information",
-  "@settings_account_subtitle": {},
   "settings_change_password_subtitle": "Update your password securely",
   "@settings_change_password_subtitle": {},
   "settings_appearance": "Appearance",
@@ -282,165 +217,12 @@
   "@settings_theme_subtitle": {},
   "retry": "Retry",
   "@retry": {},
-  "dashboard_error_title": "Dashboard Error",
-  "@dashboard_error_title": {},
-  "dashboard_title": "System Dashboard",
-  "@dashboard_title": {},
-  "dashboard_connectivity": "Connectivity",
-  "@dashboard_connectivity": {},
-  "dashboard_online": "Online",
-  "@dashboard_online": {},
-  "dashboard_offline": "Offline",
-  "@dashboard_offline": {},
-  "dashboard_circuit_breaker": "Circuit Breaker",
-  "@dashboard_circuit_breaker": {},
-  "dashboard_endpoint_count": "{count, plural, =1{1 endpoint} other{{count} endpoints}}",
-  "@dashboard_endpoint_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_open_count": "{count} open",
-  "@dashboard_open_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_cache": "Cache",
-  "@dashboard_cache": {},
-  "dashboard_cached_item_count": "{count, plural, =1{1 item cached} other{{count} items cached}}",
-  "@dashboard_cached_item_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_feature_flags": "Feature Flags",
-  "@dashboard_feature_flags": {},
-  "dashboard_feature_flags_enabled": "{enabled}/{total} enabled",
-  "@dashboard_feature_flags_enabled": {
-    "placeholders": {
-      "enabled": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_circuit_breaker_health": "Circuit Breaker Health",
-  "@dashboard_circuit_breaker_health": {},
-  "dashboard_no_endpoints": "No endpoints tracked yet",
-  "@dashboard_no_endpoints": {},
-  "dashboard_failure_count": "Failures: {count}",
-  "@dashboard_failure_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_no_feature_flags": "No feature flags configured",
-  "@dashboard_no_feature_flags": {},
-  "dashboard_app_configuration": "App Configuration",
-  "@dashboard_app_configuration": {},
-  "dashboard_current_version": "Current Version",
-  "@dashboard_current_version": {},
-  "dashboard_minimum_version": "Minimum Version",
-  "@dashboard_minimum_version": {},
-  "dashboard_maintenance_mode": "Maintenance Mode",
-  "@dashboard_maintenance_mode": {},
-  "dashboard_on": "ON",
-  "@dashboard_on": {},
-  "dashboard_off": "OFF",
-  "@dashboard_off": {},
-  "dashboard_environment": "Environment",
-  "@dashboard_environment": {},
-  "dashboard_interceptor_chain": "Interceptor Chain",
-  "@dashboard_interceptor_chain": {},
-  "dashboard_clear_cache": "Clear Cache",
-  "@dashboard_clear_cache": {},
-  "dashboard_reset_circuit_breakers": "Reset Circuit Breakers",
-  "@dashboard_reset_circuit_breakers": {},
-  "dashboard_open_dynamic_forms": "Open Dynamic Forms",
-  "@dashboard_open_dynamic_forms": {},
   "cancel": "Cancel",
   "@cancel": {},
   "inactive": "Inactive",
   "@inactive": {},
-  "user_list_subtitle": "Browse and manage users in a table view.",
-  "@user_list_subtitle": {},
-  "user_list_actions": "Actions",
-  "@user_list_actions": {},
-  "user_list_role_filter": "Role filter",
-  "@user_list_role_filter": {},
-  "user_list_search_hint": "Filter users...",
-  "@user_list_search_hint": {},
-  "user_editor_info_title": "User Information",
-  "@user_editor_info_title": {},
-  "user_editor_info_description": "Manage identity, contact, and access settings.",
-  "@user_editor_info_description": {},
-  "user_editor_identity": "Identity",
-  "@user_editor_identity": {},
-  "user_editor_identity_description": "Basic account identity details.",
-  "@user_editor_identity_description": {},
-  "user_editor_contact": "Contact",
-  "@user_editor_contact": {},
-  "user_editor_contact_description": "Primary contact information.",
-  "@user_editor_contact_description": {},
-  "user_editor_access": "Access",
-  "@user_editor_access": {},
-  "user_editor_access_description": "Account status and role permissions.",
-  "@user_editor_access_description": {},
-  "user_editor_create_subtitle": "Fill in the details to create a new user.",
-  "@user_editor_create_subtitle": {},
-  "user_editor_edit_subtitle": "Update user information below.",
-  "@user_editor_edit_subtitle": {},
-  "user_editor_view_subtitle": "View user details.",
-  "@user_editor_view_subtitle": {},
   "submit": "Submit",
   "@submit": {},
-  "error_title": "Error",
-  "@error_title": {},
-  "dynamic_form_submitted": "Form submitted successfully",
-  "@dynamic_form_submitted": {},
-  "dynamic_form_field_required": "{field} is required",
-  "@dynamic_form_field_required": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      }
-    }
-  },
-  "dynamic_form_field_min_length": "{field} must be at least {count, plural, =1{1 character} other{{count} characters}}",
-  "@dynamic_form_field_min_length": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dynamic_form_field_max_length": "{field} must be at most {count, plural, =1{1 character} other{{count} characters}}",
-  "@dynamic_form_field_max_length": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dynamic_form_field_numeric": "Must be a number",
-  "@dynamic_form_field_numeric": {},
   "apply": "Apply",
   "@apply": {},
   "previous": "Previous",
@@ -475,34 +257,8 @@
   "@password_show": {},
   "password_hide": "Hide password",
   "@password_hide": {},
-  "user_list_empty": "No users to show",
-  "@user_list_empty": {},
   "app_title": "LibreDB",
   "@app_title": {},
-  "dashboard_circuit_state_closed": "Closed",
-  "@dashboard_circuit_state_closed": {},
-  "dashboard_circuit_state_half_open": "Half-open",
-  "@dashboard_circuit_state_half_open": {},
-  "dashboard_circuit_state_open": "Open",
-  "@dashboard_circuit_state_open": {},
-  "dashboard_interceptor_connectivity": "Rejects requests when offline",
-  "@dashboard_interceptor_connectivity": {},
-  "dashboard_interceptor_auth": "Attaches JWT token to requests",
-  "@dashboard_interceptor_auth": {},
-  "dashboard_interceptor_token_refresh": "Refreshes expired access tokens",
-  "@dashboard_interceptor_token_refresh": {},
-  "dashboard_interceptor_idempotency": "Opt-in Idempotency-Key for POST/PUT/PATCH",
-  "@dashboard_interceptor_idempotency": {},
-  "dashboard_interceptor_resilience": "Retry + circuit breaker",
-  "@dashboard_interceptor_resilience": {},
-  "dashboard_interceptor_cache": "GET response caching with TTL",
-  "@dashboard_interceptor_cache": {},
-  "dashboard_interceptor_dev_console": "Records requests in dev console",
-  "@dashboard_interceptor_dev_console": {},
-  "dashboard_interceptor_logging": "Structured request/response logging",
-  "@dashboard_interceptor_logging": {},
-  "dashboard_interceptor_mock": "Serves mock data in dev/test",
-  "@dashboard_interceptor_mock": {},
   "error_auth_oidc_config": "Single sign-on is not configured correctly in this app. Contact your administrator.",
   "@error_auth_oidc_config": {},
   "error_auth_oidc_discovery": "The identity provider could not be reached. Try again later, or contact your administrator if this continues.",

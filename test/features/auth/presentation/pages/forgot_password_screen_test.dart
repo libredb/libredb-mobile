@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
-import 'package:libredb_mobile/features/account/application/account_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/forgot_password_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -30,18 +29,13 @@ import '../../../../support/unsaved_changes_host.dart';
 ///class ForgotPasswordScreen extends
 void main() {
   late MockForgotPasswordBloc forgotPasswordBloc;
-  late MockAccountBloc accountBloc;
 
   //region setup
   setUp(() {
     forgotPasswordBloc = MockForgotPasswordBloc();
-    accountBloc = MockAccountBloc();
 
     when(() => forgotPasswordBloc.stream).thenAnswer((_) => Stream.fromIterable([const ForgotPasswordInitialState()]));
     when(() => forgotPasswordBloc.state).thenReturn(const ForgotPasswordInitialState());
-
-    when(() => accountBloc.stream).thenAnswer((_) => Stream.fromIterable([const AccountState()]));
-    when(() => accountBloc.state).thenReturn(const AccountState());
   });
 
   final Iterable<LocalizationsDelegate<dynamic>> locales = [
@@ -57,10 +51,7 @@ void main() {
         GoRoute(
           path: '/',
           builder: (_, _) => MultiBlocProvider(
-            providers: [
-              BlocProvider<AccountBloc>(create: (context) => accountBloc),
-              BlocProvider<ForgotPasswordBloc>(create: (context) => forgotPasswordBloc),
-            ],
+            providers: [BlocProvider<ForgotPasswordBloc>(create: (context) => forgotPasswordBloc)],
             child: ForgotPasswordScreen(),
           ),
         ),

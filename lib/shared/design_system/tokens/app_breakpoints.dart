@@ -7,10 +7,6 @@ class AppBreakpoints {
   static const double tablet = 1024.0;
   static const double desktop = 1200.0;
 
-  /// Sidebar dimensions.
-  static const double sidebarExpanded = 256.0;
-  static const double sidebarCollapsed = 72.0;
-
   /// Content area max width.
   static const double contentMaxWidth = 1200.0;
 

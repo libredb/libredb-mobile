@@ -1,7 +1,6 @@
 {
   "@@locale": "tr",
   "admin": "Admin",
-  "guest": "Kullanıcı",
   "role": "Rol",
   "login": "Kullanıcı Adı",
   "first_name": "İsim",
@@ -13,21 +12,14 @@
   "success": "Başarılı",
   "failed": "Başarısız",
   "required_field": "Zorunlu Alan",
-  "required_range": "Aralık gereklidir",
   "min_length_2": "Minimum 2 karakter uzunluğunda olmalıdır",
   "min_length_4": "Minimum 4 karakter uzunluğunda olmalıdır",
   "max_length_20": "Maksimum 20 karakter uzunluğunda olmalıdır",
   "max_length_100": "Maksimum 100 karakter uzunluğunda olmalıdır",
   "list": "Listele",
-  "list_user": "Kullanıcılar",
-  "new_user": "Yeni Kullanıcı Ekle",
-  "edit_user": "Kullanıcı Düzenle",
-  "view_user": "Kullanıcı Görüntüle",
-  "delete_user": "Kullanıcı Sil",
   "email_pattern": "E-posta adresi geçerli değil",
   "turkish": "Türkçe",
   "english": "İngilizce",
-  "create_user": "Kullanıcı Oluştur",
   "save": "Kaydet",
   "back": "Geri",
   "delete_confirmation": "Silmek istediğinize emin misiniz?",
@@ -69,14 +61,6 @@
   "login_button": "Giriş Yap",
   "loading": "Yükleniyor...",
   "email_send": "E-posta Gönder",
-  "translate_menu_title": "{translate, select, connections{Bağlantılar} account{Hesabım}  userManagement{Kullanıcı Yönetimi} settings{Ayarlar}  logout{Çıkış}  info{Bilgiler}  language{Diller}  theme{Tema}  new_user{Yeni Kullanıcı Ekle}  list_user{Kullanıcılar} other{Diğer}}",
-  "@translate_menu_title": {
-    "placeholders": {
-      "translate": {
-        "type": "String"
-      }
-    }
-  },
   "login_with_email": "E-posta ile Giriş",
   "send_otp_code": "OTP Kodu Gönder",
   "invalid_email": "Geçersiz e-posta adresi",
@@ -87,9 +71,7 @@
   "otp_code": "OTP Kodu",
   "theme": "Tema",
   "language": "Dil",
-  "dashboard": "Panel",
   "refresh": "Yenile",
-  "quick_actions": "Hızlı İşlemler",
   "community_title": "Topluluğa Katılın",
   "community_subtitle": "LibreDB'nin kaynak kodu herkese açıktır. Katkılarınız onu daha iyi yapar!",
   "community_star": "Yıldız & Fork",
@@ -112,17 +94,6 @@
   "error_account_passwords_same": "Yeni şifre mevcut şifreden farklı olmalıdır",
   "error_settings_change_language_failed": "Dil değiştirilemedi",
   "error_generic": "Bir şeyler ters gitti",
-  "user_extended_info_title": "Genişletilmiş Bilgi",
-  "user_extended_info_button": "Detaylar",
-  "user_extended_info_saved": "Kaydedildi",
-  "user_extended_info_save_failed": "Kaydedilemedi: {error}",
-  "@user_extended_info_save_failed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "forbidden_title": "Erişim engellendi",
   "@forbidden_title": {},
   "forbidden_message": "Bu sayfayı görüntüleme yetkiniz yok.",
@@ -176,14 +147,6 @@
   },
   "maintenance_retry": "Tekrar Dene",
   "@maintenance_retry": {},
-  "user_list_load_failed": "Kullanıcılar yüklenemedi",
-  "@user_list_load_failed": {},
-  "user_delete_failed": "Kullanıcı silinemedi",
-  "@user_delete_failed": {},
-  "user_load_failed": "Kullanıcı yüklenemedi",
-  "@user_load_failed": {},
-  "authorities_load_failed": "Roller alınamadı",
-  "@authorities_load_failed": {},
   "logout_stored_data_left": "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
   "@logout_stored_data_left": {},
   "home": "Ana Sayfa",
@@ -200,32 +163,6 @@
   "@not_found_title": {},
   "not_found_message": "İstediğiniz sayfa bulunamadı.",
   "@not_found_message": {},
-  "dynamic_forms": "Dinamik Formlar",
-  "@dynamic_forms": {},
-  "theme_mode_dark": "Koyu",
-  "@theme_mode_dark": {},
-  "theme_mode_light": "Açık",
-  "@theme_mode_light": {},
-  "sidebar_expand": "Genişlet",
-  "@sidebar_expand": {},
-  "sidebar_collapse": "Daralt",
-  "@sidebar_collapse": {},
-  "command_palette_hint": "Bir komut yazın veya arayın...",
-  "@command_palette_hint": {},
-  "command_palette_no_results": "Sonuç bulunamadı",
-  "@command_palette_no_results": {},
-  "command_palette_home_description": "Ana sayfaya git",
-  "@command_palette_home_description": {},
-  "command_palette_users_description": "Kullanıcıları yönetin",
-  "@command_palette_users_description": {},
-  "command_palette_new_user_description": "Yeni bir kullanıcı oluşturun",
-  "@command_palette_new_user_description": {},
-  "command_palette_account_description": "Profiliniz",
-  "@command_palette_account_description": {},
-  "command_palette_settings_description": "Uygulama tercihleri",
-  "@command_palette_settings_description": {},
-  "command_palette_change_password_description": "Şifrenizi güncelleyin",
-  "@command_palette_change_password_description": {},
   "login_brand_headline": "Veritabanlarınız\ncebinizde.",
   "@login_brand_headline": {},
   "login_brand_description": "LibreDB Studio'nun size açtığı veritabanlarına telefonunuzdan ulaşın.",
@@ -272,8 +209,6 @@
   "@forgot_password_description": {},
   "settings_subtitle": "Hesap tercihlerinizi yönetin",
   "@settings_subtitle": {},
-  "settings_account_subtitle": "Profil bilgilerinizi görüntüleyin veya düzenleyin",
-  "@settings_account_subtitle": {},
   "settings_change_password_subtitle": "Şifrenizi güvenle güncelleyin",
   "@settings_change_password_subtitle": {},
   "settings_appearance": "Görünüm",
@@ -282,165 +217,12 @@
   "@settings_theme_subtitle": {},
   "retry": "Tekrar Dene",
   "@retry": {},
-  "dashboard_error_title": "Panel Hatası",
-  "@dashboard_error_title": {},
-  "dashboard_title": "Sistem Paneli",
-  "@dashboard_title": {},
-  "dashboard_connectivity": "Bağlantı",
-  "@dashboard_connectivity": {},
-  "dashboard_online": "Çevrimiçi",
-  "@dashboard_online": {},
-  "dashboard_offline": "Çevrimdışı",
-  "@dashboard_offline": {},
-  "dashboard_circuit_breaker": "Devre Kesici",
-  "@dashboard_circuit_breaker": {},
-  "dashboard_endpoint_count": "{count, plural, other{{count} uç nokta}}",
-  "@dashboard_endpoint_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_open_count": "{count} açık",
-  "@dashboard_open_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_cache": "Önbellek",
-  "@dashboard_cache": {},
-  "dashboard_cached_item_count": "{count, plural, other{Önbellekte {count} öğe}}",
-  "@dashboard_cached_item_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_feature_flags": "Özellik Bayrakları",
-  "@dashboard_feature_flags": {},
-  "dashboard_feature_flags_enabled": "{enabled}/{total} etkin",
-  "@dashboard_feature_flags_enabled": {
-    "placeholders": {
-      "enabled": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_circuit_breaker_health": "Devre Kesici Durumu",
-  "@dashboard_circuit_breaker_health": {},
-  "dashboard_no_endpoints": "Henüz izlenen uç nokta yok",
-  "@dashboard_no_endpoints": {},
-  "dashboard_failure_count": "Hata: {count}",
-  "@dashboard_failure_count": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboard_no_feature_flags": "Yapılandırılmış özellik bayrağı yok",
-  "@dashboard_no_feature_flags": {},
-  "dashboard_app_configuration": "Uygulama Yapılandırması",
-  "@dashboard_app_configuration": {},
-  "dashboard_current_version": "Mevcut Sürüm",
-  "@dashboard_current_version": {},
-  "dashboard_minimum_version": "En Düşük Sürüm",
-  "@dashboard_minimum_version": {},
-  "dashboard_maintenance_mode": "Bakım Modu",
-  "@dashboard_maintenance_mode": {},
-  "dashboard_on": "AÇIK",
-  "@dashboard_on": {},
-  "dashboard_off": "KAPALI",
-  "@dashboard_off": {},
-  "dashboard_environment": "Ortam",
-  "@dashboard_environment": {},
-  "dashboard_interceptor_chain": "Interceptor Zinciri",
-  "@dashboard_interceptor_chain": {},
-  "dashboard_clear_cache": "Önbelleği Temizle",
-  "@dashboard_clear_cache": {},
-  "dashboard_reset_circuit_breakers": "Devre Kesicileri Sıfırla",
-  "@dashboard_reset_circuit_breakers": {},
-  "dashboard_open_dynamic_forms": "Dinamik Formları Aç",
-  "@dashboard_open_dynamic_forms": {},
   "cancel": "İptal",
   "@cancel": {},
   "inactive": "Pasif",
   "@inactive": {},
-  "user_list_subtitle": "Kullanıcılara tablo görünümünde göz atın ve onları yönetin.",
-  "@user_list_subtitle": {},
-  "user_list_actions": "İşlemler",
-  "@user_list_actions": {},
-  "user_list_role_filter": "Rol filtresi",
-  "@user_list_role_filter": {},
-  "user_list_search_hint": "Kullanıcıları filtrele...",
-  "@user_list_search_hint": {},
-  "user_editor_info_title": "Kullanıcı Bilgileri",
-  "@user_editor_info_title": {},
-  "user_editor_info_description": "Kimlik, iletişim ve erişim ayarlarını yönetin.",
-  "@user_editor_info_description": {},
-  "user_editor_identity": "Kimlik",
-  "@user_editor_identity": {},
-  "user_editor_identity_description": "Temel hesap kimlik bilgileri.",
-  "@user_editor_identity_description": {},
-  "user_editor_contact": "İletişim",
-  "@user_editor_contact": {},
-  "user_editor_contact_description": "Birincil iletişim bilgileri.",
-  "@user_editor_contact_description": {},
-  "user_editor_access": "Erişim",
-  "@user_editor_access": {},
-  "user_editor_access_description": "Hesap durumu ve rol yetkileri.",
-  "@user_editor_access_description": {},
-  "user_editor_create_subtitle": "Yeni bir kullanıcı oluşturmak için bilgileri doldurun.",
-  "@user_editor_create_subtitle": {},
-  "user_editor_edit_subtitle": "Kullanıcı bilgilerini aşağıda güncelleyin.",
-  "@user_editor_edit_subtitle": {},
-  "user_editor_view_subtitle": "Kullanıcı ayrıntılarını görüntüleyin.",
-  "@user_editor_view_subtitle": {},
   "submit": "Gönder",
   "@submit": {},
-  "error_title": "Hata",
-  "@error_title": {},
-  "dynamic_form_submitted": "Form başarıyla gönderildi",
-  "@dynamic_form_submitted": {},
-  "dynamic_form_field_required": "{field} zorunludur",
-  "@dynamic_form_field_required": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      }
-    }
-  },
-  "dynamic_form_field_min_length": "{field} en az {count} karakter olmalıdır",
-  "@dynamic_form_field_min_length": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dynamic_form_field_max_length": "{field} en fazla {count} karakter olmalıdır",
-  "@dynamic_form_field_max_length": {
-    "placeholders": {
-      "field": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dynamic_form_field_numeric": "Sayı olmalıdır",
-  "@dynamic_form_field_numeric": {},
   "apply": "Uygula",
   "@apply": {},
   "previous": "Önceki",
@@ -475,34 +257,8 @@
   "@password_show": {},
   "password_hide": "Şifreyi gizle",
   "@password_hide": {},
-  "user_list_empty": "Gösterilecek kullanıcı yok",
-  "@user_list_empty": {},
   "app_title": "LibreDB",
   "@app_title": {},
-  "dashboard_circuit_state_closed": "Kapalı",
-  "@dashboard_circuit_state_closed": {},
-  "dashboard_circuit_state_half_open": "Yarı açık",
-  "@dashboard_circuit_state_half_open": {},
-  "dashboard_circuit_state_open": "Açık",
-  "@dashboard_circuit_state_open": {},
-  "dashboard_interceptor_connectivity": "Çevrimdışıyken istekleri reddeder",
-  "@dashboard_interceptor_connectivity": {},
-  "dashboard_interceptor_auth": "İsteklere JWT belirtecini ekler",
-  "@dashboard_interceptor_auth": {},
-  "dashboard_interceptor_token_refresh": "Süresi dolan erişim belirteçlerini yeniler",
-  "@dashboard_interceptor_token_refresh": {},
-  "dashboard_interceptor_idempotency": "POST/PUT/PATCH için isteğe bağlı Idempotency-Key",
-  "@dashboard_interceptor_idempotency": {},
-  "dashboard_interceptor_resilience": "Yeniden deneme ve devre kesici",
-  "@dashboard_interceptor_resilience": {},
-  "dashboard_interceptor_cache": "GET yanıtlarını süreli önbelleğe alır",
-  "@dashboard_interceptor_cache": {},
-  "dashboard_interceptor_dev_console": "İstekleri geliştirici konsoluna kaydeder",
-  "@dashboard_interceptor_dev_console": {},
-  "dashboard_interceptor_logging": "Yapılandırılmış istek ve yanıt günlüğü",
-  "@dashboard_interceptor_logging": {},
-  "dashboard_interceptor_mock": "Geliştirme ve testte sahte veri sunar",
-  "@dashboard_interceptor_mock": {},
   "error_auth_oidc_config": "Bu uygulamada tek oturum açma doğru yapılandırılmamış. Yöneticinize başvurun.",
   "@error_auth_oidc_config": {},
   "error_auth_oidc_discovery": "Kimlik sağlayıcıya ulaşılamadı. Daha sonra yeniden deneyin; sorun sürerse yöneticinize başvurun.",

@@ -169,7 +169,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
         errors.add('${key.key}: $e');
       }
     }
-    // Cached GET responses, such as /account and /admin/users, are this user's data too.
+    // Cached GET responses, such as /account and /connections/managed, are this user's data too.
     try {
       await _cacheStorage.clear();
     } catch (e) {
@@ -239,7 +239,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
         //
         // [persist] only ever adds [StorageKeys.username] and
         // [StorageKeys.roles] to `mutatedLocal`, so the
-        // language/theme/brightness/sidebarCollapsed branches are unreachable in
+        // language/theme/brightness branches are unreachable in
         // practice — but they MUST stay in the switch to enforce
         // exhaustiveness. The `null` they return is safe because
         // [persist] never inserts those keys into `mutatedLocal`,
@@ -252,7 +252,6 @@ class AuthSessionRepository implements IAuthSessionRepository {
           StorageKeys.language => null,
           StorageKeys.theme => null,
           StorageKeys.brightness => null,
-          StorageKeys.sidebarCollapsed => null,
         };
         // AppLocalStorage.save/remove can refuse a mutation by returning
         // false without throwing. Honor that signal so a rollback that
