@@ -549,6 +549,51 @@ void main() {
         );
       });
 
+      test('a failure keeps the error text of its JSON body for the screen that must show it', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 400,
+          data: '{"error":"syntax error at or near \\"FORM\\"","code":"QUERY_ERROR","statusCode":400}',
+        );
+        await expectLater(
+          client.post('/db/query', {'sql': 'select * form t'}),
+          throwsA(
+            isA<BadRequestException>()
+                .having((e) => e.errorCode, 'errorCode', 'QUERY_ERROR')
+                .having((e) => e.serverMessage, 'serverMessage', 'syntax error at or near "FORM"'),
+          ),
+        );
+      });
+
+      test('the error text is scrubbed of the secrets the request sent', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 401,
+          data: '{"error":"password hunter2-secret was refused","code":"AUTH_ERROR"}',
+        );
+        await expectLater(
+          client.post('/db/test-connection', {'password': 'hunter2-secret'}),
+          throwsA(
+            isA<UnauthorizedException>().having(
+              (e) => e.serverMessage,
+              'serverMessage',
+              allOf(isNot(contains('hunter2-secret')), contains('[REDACTED]')),
+            ),
+          ),
+        );
+      });
+
+      test('a body without a string error gives no error text', () async {
+        for (final body in ['Bad Request', '{"code":"X"}', '{"error":7}']) {
+          stub.stubDioError(DioExceptionType.badResponse, statusCode: 400, data: body);
+          await expectLater(
+            client.get('/test'),
+            throwsA(isA<BadRequestException>().having((e) => e.serverMessage, 'serverMessage', isNull)),
+            reason: body,
+          );
+        }
+      });
+
       test('a transport failure has no status and no code', () async {
         stub.stubDioError(DioExceptionType.connectionError, message: 'Connection failed');
         await expectLater(

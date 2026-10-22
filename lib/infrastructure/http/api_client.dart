@@ -412,29 +412,46 @@ class ApiClient {
       sensitiveKeys: sensitiveKeysOf(e.requestOptions),
     );
     final code = errorCodeOf(e.response?.data);
+    final serverMessage = _errorMessageOf(body);
+    final retryAfter = _retryAfterOf(e.response?.headers);
     switch (statusCode) {
       case 400:
-        return BadRequestException(body, statusCode, code);
-      case 401:
-        return UnauthorizedException(body, statusCode, code);
-      case 403:
-        return UnauthorizedException(body, statusCode, code);
+        return BadRequestException(body, statusCode: statusCode, errorCode: code, serverMessage: serverMessage);
+      case 401 || 403:
+        return UnauthorizedException(body, statusCode: statusCode, errorCode: code, serverMessage: serverMessage);
       case 404:
-        return FetchDataException('Not found: $body', statusCode: statusCode, errorCode: code);
+        return FetchDataException(
+          'Not found: $body',
+          statusCode: statusCode,
+          errorCode: code,
+          serverMessage: serverMessage,
+        );
       case >= 500:
         return FetchDataException(
           'Server error ($statusCode): $body',
           statusCode: statusCode,
           errorCode: code,
-          retryAfter: _retryAfterOf(e.response?.headers),
+          retryAfter: retryAfter,
+          serverMessage: serverMessage,
         );
       default:
         return FetchDataException(
           'HTTP $statusCode: $body',
           statusCode: statusCode,
           errorCode: code,
-          retryAfter: _retryAfterOf(e.response?.headers),
+          retryAfter: retryAfter,
+          serverMessage: serverMessage,
         );
+    }
+  }
+
+  /// The string `error` of the scrubbed body text [scrubbedBody], when it is a JSON object.
+  static String? _errorMessageOf(String scrubbedBody) {
+    try {
+      final decoded = jsonDecode(scrubbedBody);
+      return decoded is Map && decoded['error'] is String ? decoded['error'] as String : null;
+    } on FormatException {
+      return null;
     }
   }
 

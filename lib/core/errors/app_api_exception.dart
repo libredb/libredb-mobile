@@ -2,8 +2,8 @@
 ///
 /// Building one logs nothing: the code that catches it logs it once, at the level that fits how it is handled.
 ///
-/// A failed HTTP response also carries its [statusCode], the machine-readable [errorCode] of its body, and how long
-/// `Retry-After` asks the client to wait ([retryAfter]); a transport failure has none of them.
+/// A failed HTTP response also carries its [statusCode], the machine-readable [errorCode] and the [serverMessage] of its
+/// body, and how long `Retry-After` asks the client to wait ([retryAfter]); a transport failure has none of them.
 abstract class AppException implements Exception {
   final String? _message;
   final String? _prefix;
@@ -17,7 +17,13 @@ abstract class AppException implements Exception {
   /// The whole seconds of a `Retry-After` header, or null when it is absent or is an HTTP date.
   final Duration? retryAfter;
 
-  AppException(String? message, String? prefix, {this.statusCode, this.errorCode, this.retryAfter})
+  /// The string `error` of a JSON error body, scrubbed of the request's secrets like the rest of the body, or null.
+  ///
+  /// It is the server's own words, such as a database's syntax error, for a screen whose purpose is to show them; any
+  /// other screen shows a translated message for [errorCode] instead.
+  final String? serverMessage;
+
+  AppException(String? message, String? prefix, {this.statusCode, this.errorCode, this.retryAfter, this.serverMessage})
     : _message = message,
       _prefix = prefix;
 
@@ -28,7 +34,7 @@ abstract class AppException implements Exception {
 }
 
 class FetchDataException extends AppException {
-  FetchDataException(String message, {super.statusCode, super.errorCode, super.retryAfter})
+  FetchDataException(String message, {super.statusCode, super.errorCode, super.retryAfter, super.serverMessage})
     : super(message, "Error During Communication: ");
 }
 
@@ -47,13 +53,13 @@ final class UntrustedCertificateException extends FetchDataException {
 }
 
 final class BadRequestException extends AppException {
-  BadRequestException([String? message, int? statusCode, String? errorCode])
-    : super(message, "Invalid Request: ", statusCode: statusCode, errorCode: errorCode);
+  BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage})
+    : super(message, "Invalid Request: ");
 }
 
 final class UnauthorizedException extends AppException {
-  UnauthorizedException([String? message, int? statusCode, String? errorCode])
-    : super(message, "Unauthorized: ", statusCode: statusCode, errorCode: errorCode);
+  UnauthorizedException(String? message, {super.statusCode, super.errorCode, super.serverMessage})
+    : super(message, "Unauthorized: ");
 }
 
 /// Thrown when a circuit breaker is in the OPEN state, rejecting requests
