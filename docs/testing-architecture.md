@@ -57,23 +57,26 @@ test/
 │   └── fake_data.dart         # Shared fixtures (mockUserFullPayload, ...)
 ├── architecture/              # Meta-tests enforcing rules (see below)
 │   ├── android_manifest_test.dart    # Android INTERNET, backup off
+│   ├── arb_translations_test.dart    # every English message has a Turkish one with the same placeholders
 │   ├── credential_to_string_test.dart # a class with a credential field keeps it out of toString
 │   ├── feature_generator_test.dart   # tool/generate_feature.dart output is clean and passes its tests
 │   ├── import_guard_test.dart        # layer dependency rules, url_launcher only in external_link.dart
+│   ├── log_lazy_arguments_test.dart  # AppLogger arguments are not turned into text before the level check
 │   ├── log_placeholders_test.dart    # every AppLogger call has one {} for each argument
 │   ├── log_secrets_test.dart         # no AppLogger call passes a value named for a credential
 │   ├── mock_asset_coverage_test.dart # every repository method succeeds on the mock
 │   ├── mock_asset_naming_test.dart   # mock asset names use '_', never '-'
 │   ├── oidc_platform_setup_test.dart # OIDC scheme placeholder, no client secret
 │   ├── sentry_native_scrub_patterns_test.dart # Kotlin scrub patterns equal the Dart ones, Gradle DSN gate
-│   └── test_file_naming_test.dart    # forbids *.test.dart (dot) files
+│   ├── test_file_naming_test.dart    # forbids *.test.dart (dot) files
+│   └── ui_text_localized_test.dart   # widgets show ARB text through S, not string literals
 ├── fixtures/                  # inputs and expected outputs shared with the Android JVM tests
-├── app/                       # app/ layer tests (router, shell, theme, di, ...)
+├── app/                       # app/ layer tests (app_test.dart, router, shell, theme, di, ...)
 ├── core/                      # core/ tests (errors, logging, security, result, ...)
 ├── features/<feature>/        # application/ data/ domain/ navigation/ presentation/
 ├── infrastructure/            # config, http (+ interceptors), storage, cache, ...
-├── shared/                    # design_system, dynamic_forms, models, utils, widgets
-└── main/                      # app_test.dart (root widget smoke test)
+├── integration/               # app_smoke_test.dart, the full-app smoke test
+└── shared/                    # design_system, dynamic_forms, models, utils, widgets
 ```
 
 ---

@@ -29,8 +29,8 @@ class _KeepingStore extends InMemorySharedPreferencesStore {
   }
 }
 
-/// A platform store that refuses to store a value whose key ends with [refused], as a browser does when the
-/// localStorage of the origin is full: [setValue] throws [error].
+/// A platform store that refuses to store a value whose key ends with [refused], as a full store does: [setValue]
+/// throws [error].
 class _FullStore extends InMemorySharedPreferencesStore {
   _FullStore({required this.refused, required this.error, Map<String, Object> data = const {}}) : super.withData(data);
 
@@ -44,7 +44,7 @@ class _FullStore extends InMemorySharedPreferencesStore {
   }
 }
 
-/// A platform store that cannot load its values, as a browser that blocks localStorage: loading throws [error].
+/// A platform store that cannot load its values: loading throws [error].
 class _UnloadableStore extends InMemorySharedPreferencesStore {
   _UnloadableStore(this.error) : super.empty();
 
@@ -548,7 +548,11 @@ void main() {
             matches(RegExp(r'Cache write error for key GET_/admin/users \(\d+ characters\): .*QuotaExceededError')),
           ),
         );
-        expect(await storage.read('GET_/admin/users'), isNull, reason: 'the tab must not answer from an unsaved entry');
+        expect(
+          await storage.read('GET_/admin/users'),
+          isNull,
+          reason: 'the storage must not answer from an unsaved entry',
+        );
         expect(await storage.count(), 0);
       });
 

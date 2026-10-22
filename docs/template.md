@@ -187,7 +187,8 @@ LibreDB Mobile signs in against a local Keycloak and Studio from `tool/studio-de
 - Configured via `AppConfig.idleTimeout` in `lib/infrastructure/config/environment.dart`: `AppConfig.prod()` sets 15 minutes, `AppConfig.dev()` and `AppConfig.test()` set `null`, which disables it.
 - Background-aware: on iOS the Dart `Timer` pauses while the app is suspended, so the observer also captures wall-clock `DateTime.now()` on lifecycle transitions; resumes past the threshold fire immediately.
 - Surfacing: when the timer fires, the user sees a localized snackbar ("You were signed out due to inactivity.") and the router redirects to login. The reason is tagged `SessionExpiredReason.idleTimeout` so logs and UI can distinguish it from a manual sign-out.
-- Activity scope: a touch or drag, mouse wheel and trackpad scrolling, and hardware key presses reset the timer, so a user who only scrolls a long page or only types in a form stays signed in.
+- Activity scope: a touch or drag, mouse wheel and trackpad scrolling, and hardware key presses reset the timer, so a user who only scrolls a long page stays signed in.
+  Typing on the on-screen keyboard usually does not reset it: the system keyboard sends the app text through the text input channel, not key events.
   Moving the mouse without a button pressed does not count, and neither do key events Flutter synthesizes to match the keyboard state.
 
 Compliance baselines that expect inactivity timeouts: SOC2 CC6.1, ISO 27001 A.9.4.2, GDPR Art. 32.
@@ -598,7 +599,6 @@ If you are unsure where to start, documentation improvements, screenshot refresh
 | Document | Description |
 | --- | --- |
 | [Feature-First Boundaries](feature-first-clean-boundaries.md) | Clean architecture design document |
-| [Upgrade Guide - Flutter 3.47.7](upgrade_flutter_3.47.7.md) | Flutter 3.44.3 → 3.47.7 upgrade notes |
 | [Single Sign-On (OIDC)](oidc.md) | `AUTH_PROVIDER=oidc` setup per provider, the backend contract and the internals |
 
 ## References

@@ -483,7 +483,7 @@ void main() {
   });
 }
 
-/// The identity provider of an oidc build: a sign-in succeeds as a user, no web sign-in is pending, and a provider
+/// The identity provider of an oidc build: a sign-in succeeds as a user, and a provider
 /// logout ends with [logoutOutcome], counted in [logouts].
 class _FakeOidcClient implements IOidcClient {
   OidcLogoutOutcome logoutOutcome = const ProviderSessionEnded();

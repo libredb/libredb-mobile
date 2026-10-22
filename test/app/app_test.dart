@@ -145,7 +145,7 @@ void main() {
       expect(find.byType(ResponsiveScaffold), findsOneWidget);
     });
 
-    // A deep link, a bookmark or a browser refresh starts the app on a page, which the restore time limit replaces with
+    // A deep link starts the app on a page, which the restore time limit replaces with
     // the login page that keeps the page as its returnUrl.
     testWidgets('opens the page the app started on when a stored session answers after the restore time limit', (
       tester,

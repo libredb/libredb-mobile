@@ -843,8 +843,8 @@ void main() {
     });
 
     // Regression: the refresh Dio decoded a response with a JSON content type itself, so a malformed one failed with
-    // the FormatException of the platform's parser instead of decodeCredentialJson's. On the web its message is the
-    // browser's text for the error, which repeats the characters around it, tokens included.
+    // the FormatException of the platform's parser instead of decodeCredentialJson's, whose source carries the body,
+    // tokens included.
     test('decodes a refresh response with a JSON content type through decodeCredentialJson', () async {
       AppLogger.configure(isProduction: true);
       addTearDown(() => AppLogger.configure(isProduction: false));

@@ -50,7 +50,7 @@ dev_dependencies:
   fake_async: 1.3.3
   shared_preferences_platform_interface: 2.4.2
   alchemist: 0.14.1
-  intl_utils: 2.8.17 # discontinued upstream; still works on Dart 3.13 (see docs/upgrade_flutter_3.47.7.md)
+  intl_utils: 2.8.17 # discontinued upstream; still works on Dart 3.13; Flutter's gen-l10n is the replacement
   logging: 1.3.0
   sentry: 10.1.0 # the version sentry_flutter pins; tests build options with an Android platform from its src
 
