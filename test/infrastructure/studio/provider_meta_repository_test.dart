@@ -27,6 +27,11 @@ void main() {
     expect(meta.objectKinds.map((k) => k.id), ['table', 'view', 'function', 'trigger']);
     expect(meta.objectKinds.last.attachedTo, 'table');
     expect(meta.keyScan, isNull);
+    expect(meta.schemaRefreshPattern, r'(CREATE|DROP|ALTER|TRUNCATE)\b');
+    expect(meta.refreshesSchema('drop view active_orders'), isTrue);
+    expect(meta.labels.entityNamePlural, 'Tables');
+    expect(meta.labels.rowNamePlural, 'rows');
+    expect(meta.labels.searchPlaceholder, 'Search tables or columns...');
   });
 
   test('a request without a session fails with an AuthError', () async {

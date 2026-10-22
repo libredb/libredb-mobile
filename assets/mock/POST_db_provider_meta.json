@@ -13,7 +13,27 @@
       { "id": "function", "role": "routine", "label": "Function", "labelPlural": "Functions", "hasSource": true, "sourceLanguage": "sql" },
       { "id": "trigger", "role": "attached", "label": "Trigger", "labelPlural": "Triggers", "hasSource": true, "attachedTo": "table" }
     ],
-    "defaultPort": 5432
+    "defaultPort": 5432,
+    "schemaRefreshPattern": "(CREATE|DROP|ALTER|TRUNCATE)\\b"
   },
-  "labels": { "entityName": "Table", "entityNamePlural": "Tables", "rowName": "row", "selectAction": "Select" }
+  "labels": {
+    "entityName": "Table",
+    "entityNamePlural": "Tables",
+    "rowName": "row",
+    "rowNamePlural": "rows",
+    "selectAction": "Select Top 50",
+    "generateAction": "Generate Query",
+    "analyzeAction": "Analyze Table",
+    "vacuumAction": "Vacuum Table",
+    "searchPlaceholder": "Search tables or columns...",
+    "analyzeGlobalLabel": "Run Analyze",
+    "analyzeGlobalTitle": "Update Statistics",
+    "analyzeGlobalDesc": "Updates the planner's statistics for all tables in the database to improve query optimization.",
+    "vacuumGlobalLabel": "Run Vacuum",
+    "vacuumGlobalTitle": "Reclaim Space",
+    "vacuumGlobalDesc": "Removes dead rows from tables and returns space to the operating system.",
+    "reindexGlobalLabel": "Run Reindex",
+    "reindexGlobalTitle": "Rebuild Indexes",
+    "reindexGlobalDesc": "Runs REINDEX DATABASE, reconstructing every index in the database."
+  }
 }

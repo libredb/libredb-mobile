@@ -49,7 +49,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/features/studio_status/` | Studio's liveness and readiness: the unreachable page and the wording of a governance outage ([below](#studio-reachability)) |
 | `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role, used across features |
 | `lib/shared/models/studio_connection.dart` | A connection Studio offers, read by the connection list, the active connection, the object browser and the SQL editor |
-| `lib/shared/models/provider_meta.dart` | What the engine of a connection can do (`ProviderMeta`, `ContainerLevel`, `ObjectKind`, `KeyScanSpec`), read by the connections, the object browser, the SQL editor and the result view |
+| `lib/shared/models/provider_meta.dart` | What the engine of a connection can do (`ProviderMeta`, `ContainerLevel`, `ObjectKind`, `KeyScanSpec`, `ProviderLabels`), read by the connections, the object browser, the SQL editor and the result view |
 | `lib/shared/models/provider_meta_repository.dart` | `IProviderMetaRepository`, the one way a feature asks for `ProviderMeta` |
 | `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser |
 | `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, and `ProviderMetaRepository` with its reader |
@@ -177,6 +177,8 @@ Studio counts requests per user in buckets, per Studio process (`src/lib/api/rat
 
 `provider-meta` describes the engine: how many container levels it has (none, a schema, or a database and its schemas), their names in the engine's words, and its object kinds.
 Kind ids such as `table` or `collection` are opaque: their labels come from Studio, never from the app, so a new engine needs no app change.
+Its `labels` give the engine's words for what a screen shows (Collection, document, Find Documents); each is optional in the app, and a screen that finds one missing uses its own translated wording.
+`ProviderMeta.refreshesSchema` tests a statement against Studio's `schemaRefreshPattern`, case-insensitively as Studio does, and answers false for a pattern Dart cannot compile.
 The tree is containers, then `counts` for a container, then `list` for one kind, then `describe` or `source` for one object, as each kind's `hasColumns` and `hasSource` allow.
 The object routes carry no `catalog` field: on a server-level connection the catalog is `container[0]` or `path[0]` (`src/app/api/db/objects/list/route.ts`).
 Only the routes that run statements or read a connection's state take a `catalog` body field: query, multi-query, transaction, profile, monitoring, maintenance and its preview, `POST /api/db/health` and pool statistics.
