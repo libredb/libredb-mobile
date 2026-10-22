@@ -38,7 +38,13 @@ class _StubInterceptor extends Interceptor {
     _dioError = null;
   }
 
-  void stubDioError(DioExceptionType type, {String? message, int? statusCode, String? data}) {
+  void stubDioError(
+    DioExceptionType type, {
+    String? message,
+    int? statusCode,
+    String? data,
+    Map<String, List<String>> headers = const {},
+  }) {
     _successResponse = null;
     final requestOptions = RequestOptions();
     _dioError = DioException(
@@ -46,7 +52,12 @@ class _StubInterceptor extends Interceptor {
       type: type,
       message: message,
       response: statusCode != null
-          ? Response(requestOptions: requestOptions, statusCode: statusCode, data: data ?? '')
+          ? Response(
+              requestOptions: requestOptions,
+              statusCode: statusCode,
+              data: data ?? '',
+              headers: Headers.fromMap(headers),
+            )
           : null,
     );
   }
@@ -65,6 +76,7 @@ class _StubInterceptor extends Interceptor {
                   requestOptions: options,
                   statusCode: _dioError!.response!.statusCode,
                   data: _dioError!.response!.data,
+                  headers: _dioError!.response!.headers,
                 )
               : null,
         ),
@@ -442,6 +454,110 @@ void main() {
         await expectLater(
           client.post('/test', {'data': 'test'}),
           throwsA(allOf([isA<BadRequestException>(), predicate((e) => e.toString().contains('Bad Request'))])),
+        );
+      });
+    });
+
+    // A server such as LibreDB Studio puts a machine-readable code in its error body and overloads statuses: a 401
+    // AUTH_ERROR is a wrong database password, not an ended session. The exception keeps the status, that code and
+    // Retry-After, so a repository can tell them apart without parsing the message.
+    group('error details', () {
+      test('a 401 keeps its status and the code of the JSON body', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 401,
+          data: '{"error":"password authentication failed","code":"AUTH_ERROR"}',
+        );
+        await expectLater(
+          client.post('/db/query', {'sql': 'select 1'}),
+          throwsA(
+            isA<UnauthorizedException>()
+                .having((e) => e.statusCode, 'statusCode', 401)
+                .having((e) => e.errorCode, 'errorCode', 'AUTH_ERROR')
+                .having((e) => e.retryAfter, 'retryAfter', isNull),
+          ),
+        );
+      });
+
+      test('a 429 keeps its code and the Retry-After seconds', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 429,
+          data: '{"error":"Too many requests","code":"RATE_LIMITED"}',
+          headers: {
+            'retry-after': ['30'],
+          },
+        );
+        await expectLater(
+          client.get('/connections/managed'),
+          throwsA(
+            isA<FetchDataException>()
+                .having((e) => e.statusCode, 'statusCode', 429)
+                .having((e) => e.errorCode, 'errorCode', 'RATE_LIMITED')
+                .having((e) => e.retryAfter, 'retryAfter', const Duration(seconds: 30)),
+          ),
+        );
+      });
+
+      test('a 503 keeps its code and Retry-After', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 503,
+          data: '{"error":"Governance snapshot unavailable","code":"GOVERNANCE_UNAVAILABLE"}',
+          headers: {
+            'retry-after': ['5'],
+          },
+        );
+        await expectLater(
+          client.get('/connections/managed'),
+          throwsA(
+            isA<FetchDataException>()
+                .having((e) => e.statusCode, 'statusCode', 503)
+                .having((e) => e.errorCode, 'errorCode', 'GOVERNANCE_UNAVAILABLE')
+                .having((e) => e.retryAfter, 'retryAfter', const Duration(seconds: 5)),
+          ),
+        );
+      });
+
+      test('a body that is not JSON, or has no string code, gives no code', () async {
+        for (final body in ['Bad Request', '{"error":"x"}', '{"code":42}', '[]']) {
+          stub.stubDioError(DioExceptionType.badResponse, statusCode: 400, data: body);
+          await expectLater(
+            client.get('/test'),
+            throwsA(
+              isA<BadRequestException>()
+                  .having((e) => e.statusCode, 'statusCode', 400)
+                  .having((e) => e.errorCode, 'errorCode', isNull),
+            ),
+            reason: body,
+          );
+        }
+      });
+
+      test('a Retry-After that is not a whole number of seconds gives no duration', () async {
+        stub.stubDioError(
+          DioExceptionType.badResponse,
+          statusCode: 429,
+          data: '{}',
+          headers: {
+            'retry-after': ['Wed, 21 Oct 2026 07:28:00 GMT'],
+          },
+        );
+        await expectLater(
+          client.get('/test'),
+          throwsA(isA<FetchDataException>().having((e) => e.retryAfter, 'retryAfter', isNull)),
+        );
+      });
+
+      test('a transport failure has no status and no code', () async {
+        stub.stubDioError(DioExceptionType.connectionError, message: 'Connection failed');
+        await expectLater(
+          client.get('/test'),
+          throwsA(
+            isA<FetchDataException>()
+                .having((e) => e.statusCode, 'statusCode', isNull)
+                .having((e) => e.errorCode, 'errorCode', isNull),
+          ),
         );
       });
     });

@@ -1,4 +1,4 @@
-import 'dart:convert' show utf8;
+import 'dart:convert' show jsonDecode, utf8;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc_advance/core/errors/app_api_exception.dart';
@@ -411,20 +411,51 @@ class ApiClient {
       requestBody: e.requestOptions.data,
       sensitiveKeys: sensitiveKeysOf(e.requestOptions),
     );
+    final code = _errorCodeOf(e.response?.data);
     switch (statusCode) {
       case 400:
-        return BadRequestException(body);
+        return BadRequestException(body, statusCode, code);
       case 401:
-        return UnauthorizedException(body);
+        return UnauthorizedException(body, statusCode, code);
       case 403:
-        return UnauthorizedException(body);
+        return UnauthorizedException(body, statusCode, code);
       case 404:
-        return FetchDataException('Not found: $body');
+        return FetchDataException('Not found: $body', statusCode: statusCode, errorCode: code);
       case >= 500:
-        return FetchDataException('Server error ($statusCode): $body');
+        return FetchDataException(
+          'Server error ($statusCode): $body',
+          statusCode: statusCode,
+          errorCode: code,
+          retryAfter: _retryAfterOf(e.response?.headers),
+        );
       default:
-        return FetchDataException('HTTP $statusCode: $body');
+        return FetchDataException(
+          'HTTP $statusCode: $body',
+          statusCode: statusCode,
+          errorCode: code,
+          retryAfter: _retryAfterOf(e.response?.headers),
+        );
     }
+  }
+
+  /// The string `code` of a JSON object body, given as a decoded map or as text. A code names a kind of failure and
+  /// holds no request data, so it is read before the body is scrubbed.
+  static String? _errorCodeOf(Object? data) {
+    Object? decoded = data;
+    if (data is String) {
+      try {
+        decoded = jsonDecode(data);
+      } on FormatException {
+        return null;
+      }
+    }
+    return decoded is Map && decoded['code'] is String ? decoded['code'] as String : null;
+  }
+
+  /// The delay of a `Retry-After` header given in seconds; the HTTP-date form is not read.
+  static Duration? _retryAfterOf(Headers? headers) {
+    final seconds = int.tryParse(headers?.value('retry-after')?.trim() ?? '');
+    return seconds == null || seconds < 0 ? null : Duration(seconds: seconds);
   }
 
   static AppException _mapUnknown(DioException e) {

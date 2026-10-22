@@ -1,11 +1,25 @@
 /// A failed request, as ApiClient reports it to a repository.
 ///
 /// Building one logs nothing: the code that catches it logs it once, at the level that fits how it is handled.
+///
+/// A failed HTTP response also carries its [statusCode], the machine-readable [errorCode] of its body, and how long
+/// `Retry-After` asks the client to wait ([retryAfter]); a transport failure has none of them.
 abstract class AppException implements Exception {
   final String? _message;
   final String? _prefix;
 
-  AppException(String? message, String? prefix) : _message = message, _prefix = prefix;
+  /// The HTTP status of the response, or null when no response arrived.
+  final int? statusCode;
+
+  /// The string `code` of a JSON error body, such as LibreDB Studio's `AUTH_ERROR` or `RATE_LIMITED`, or null.
+  final String? errorCode;
+
+  /// The whole seconds of a `Retry-After` header, or null when it is absent or is an HTTP date.
+  final Duration? retryAfter;
+
+  AppException(String? message, String? prefix, {this.statusCode, this.errorCode, this.retryAfter})
+    : _message = message,
+      _prefix = prefix;
 
   @override
   String toString() {
@@ -14,7 +28,8 @@ abstract class AppException implements Exception {
 }
 
 class FetchDataException extends AppException {
-  FetchDataException(String message) : super(message, "Error During Communication: ");
+  FetchDataException(String message, {super.statusCode, super.errorCode, super.retryAfter})
+    : super(message, "Error During Communication: ");
 }
 
 /// Thrown when the connection could not be verified as secure: the server
@@ -32,11 +47,13 @@ final class UntrustedCertificateException extends FetchDataException {
 }
 
 final class BadRequestException extends AppException {
-  BadRequestException([String? message]) : super(message, "Invalid Request: ");
+  BadRequestException([String? message, int? statusCode, String? errorCode])
+    : super(message, "Invalid Request: ", statusCode: statusCode, errorCode: errorCode);
 }
 
 final class UnauthorizedException extends AppException {
-  UnauthorizedException([String? message]) : super(message, "Unauthorized: ");
+  UnauthorizedException([String? message, int? statusCode, String? errorCode])
+    : super(message, "Unauthorized: ", statusCode: statusCode, errorCode: errorCode);
 }
 
 /// Thrown when a circuit breaker is in the OPEN state, rejecting requests
