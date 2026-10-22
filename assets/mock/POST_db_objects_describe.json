@@ -1,0 +1,10 @@
+{
+  "path": ["public", "orders"],
+  "columns": [
+    { "name": "id", "type": "integer", "nullable": false, "isPrimary": true, "defaultExpression": "nextval('orders_id_seq'::regclass)" },
+    { "name": "customer_id", "type": "integer", "nullable": false, "isPrimary": false },
+    { "name": "note", "type": "text", "nullable": true, "isPrimary": false }
+  ],
+  "indexes": [{ "name": "orders_pkey", "columns": ["id"], "unique": true }],
+  "foreignKeys": [{ "columnName": "customer_id", "referencedTable": "customers", "referencedColumn": "id" }]
+}

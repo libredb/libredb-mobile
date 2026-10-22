@@ -4,14 +4,18 @@ import 'package:flutter_bloc_advance/features/users/data/repositories/authority_
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:flutter_bloc_advance/features/auth/data/repositories/sso_auth_repository_impl.dart';
+import 'package:flutter_bloc_advance/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/app/shell/repositories/menu_repository.dart';
 import 'package:flutter_bloc_advance/features/account/data/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/connections/data/repositories/connection_repository.dart';
 import 'package:flutter_bloc_advance/features/connections/domain/repositories/connection_repository.dart';
+import 'package:flutter_bloc_advance/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:flutter_bloc_advance/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:flutter_bloc_advance/features/account/domain/repositories/account_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:flutter_bloc_advance/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:flutter_bloc_advance/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:flutter_bloc_advance/shared/dynamic_forms/data/repositories/dynamic_form_repository_impl.dart';
@@ -149,6 +153,12 @@ class AppDependencies {
 
   /// Studio's connection API.
   IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
+
+  /// Studio's session endpoint: who the signed-in user is.
+  IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);
+
+  /// Studio's read-only object routes.
+  IObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) => ObjectBrowserRepository(apiClient);
 
   IDynamicFormRepository createDynamicFormRepository(ApiClient apiClient) => DynamicFormRepository(apiClient);
 

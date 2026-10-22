@@ -1,0 +1,4 @@
+[
+  { "path": ["public", "orders"], "name": "orders", "kind": "table" },
+  { "path": ["sales", "order_totals"], "name": "order_totals", "kind": "view", "status": "INVALID" }
+]

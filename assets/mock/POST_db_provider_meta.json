@@ -1,0 +1,19 @@
+{
+  "capabilities": {
+    "queryLanguage": "sql",
+    "supportsExplain": true,
+    "supportsTransactions": true,
+    "supportsQueryCancel": true,
+    "supportsResultPagination": true,
+    "catalogSessions": false,
+    "containerLevels": [{ "id": "schema", "label": "Schema", "labelPlural": "Schemas" }],
+    "objectKinds": [
+      { "id": "table", "role": "relation", "label": "Table", "labelPlural": "Tables", "hasColumns": true },
+      { "id": "view", "role": "relation", "label": "View", "labelPlural": "Views", "hasColumns": true, "hasSource": true, "sourceLanguage": "sql" },
+      { "id": "function", "role": "routine", "label": "Function", "labelPlural": "Functions", "hasSource": true, "sourceLanguage": "sql" },
+      { "id": "trigger", "role": "attached", "label": "Trigger", "labelPlural": "Triggers", "hasSource": true, "attachedTo": "table" }
+    ],
+    "defaultPort": 5432
+  },
+  "labels": { "entityName": "Table", "entityNamePlural": "Tables", "rowName": "row", "selectAction": "Select" }
+}
