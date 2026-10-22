@@ -41,8 +41,8 @@ class InterceptorChainEntry {
 /// 2. [AuthInterceptor] — injects JWT token
 /// 3. [TokenRefreshInterceptor] — handles 401 responses with token refresh
 /// 4. [IdempotencyInterceptor] — opt-in Idempotency-Key header for mutating
-///    verbs (default off; retries reuse the same key)
-/// 5. [ResilienceInterceptor] — smart retry + circuit breaker
+///    verbs (default off; a resend after a token refresh reuses the same key)
+/// 5. [ResilienceInterceptor] — retry of a GET + circuit breaker
 /// 6. [CacheInterceptor] — GET response caching with TTL
 /// 7. [DevConsoleInterceptor] — records requests in debug console
 /// 8. [LoggingInterceptor] — structured request/response logging
@@ -168,9 +168,9 @@ class ApiClient {
       ),
       (
         // Idempotency runs before Resilience so the key is set on the very
-        // first outbound request and is then naturally reused on every
-        // retry pass (Resilience and TokenRefresh both re-fetch the same
-        // RequestOptions instance, which carries the cached key in extra).
+        // first outbound request and is then reused on the resend after a
+        // token refresh (TokenRefresh re-fetches the same RequestOptions
+        // instance, which carries the cached key in extra).
         interceptor: IdempotencyInterceptor(),
         meta: const InterceptorChainEntry(
           name: 'IdempotencyInterceptor',

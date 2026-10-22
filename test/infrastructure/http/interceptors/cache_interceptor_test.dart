@@ -778,6 +778,95 @@ void main() {
       });
     });
 
+    // A stale list of connections, a policy or an identity served as fresh would hide a revoked grant, and a /db/*
+    // answer is a database's live state: these are networkOnly unless the request names another policy.
+    group('Studio live endpoints', () {
+      const livePaths = [
+        '/connections/managed',
+        '/connections/policy',
+        '/auth/me',
+        '/health',
+        '/ready',
+        '/db/schema',
+        '/db/objects/containers',
+      ];
+
+      for (final path in livePaths) {
+        test('does not store the answer of GET $path', () async {
+          final options = RequestOptions(path: path, method: 'GET', baseUrl: 'https://studio.example.test/api');
+          final response = Response(requestOptions: options, statusCode: 200, data: '{"connections":[]}');
+
+          final handler = _TestResponseHandler();
+          await interceptor.onResponse(response, handler);
+
+          expect(handler.nextCalled, isTrue);
+          verifyNever(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl')));
+        });
+
+        test('does not answer GET $path from the cache when the server cannot be reached', () async {
+          final options = RequestOptions(path: path, method: 'GET', baseUrl: 'https://studio.example.test/api');
+          when(() => mockStorage.read(any())).thenAnswer(
+            (_) async => CacheEntry(key: 'GET_${options.uri}', data: '{"connections":[]}', createdAt: DateTime.now()),
+          );
+
+          final handler = _TestErrorHandler();
+          await interceptor.onError(
+            DioException(requestOptions: options, type: DioExceptionType.connectionError),
+            handler,
+          );
+
+          expect(handler.nextCalled, isTrue);
+          expect(handler.resolveCalled, isFalse);
+          verifyNever(() => mockStorage.read(any()));
+        });
+      }
+
+      test('a query string does not make a live endpoint cacheable', () async {
+        final options = RequestOptions(
+          path: '/connections/managed',
+          method: 'GET',
+          baseUrl: 'https://studio.example.test/api',
+          queryParameters: {'refresh': 1},
+        );
+        final response = Response(requestOptions: options, statusCode: 200, data: '{"connections":[]}');
+
+        await interceptor.onResponse(response, _TestResponseHandler());
+
+        verifyNever(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl')));
+      });
+
+      test('a policy the request names wins over the default of a live endpoint', () async {
+        when(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl'))).thenAnswer((_) async {});
+        final options = RequestOptions(
+          path: '/db/schema',
+          method: 'GET',
+          baseUrl: 'https://studio.example.test/api',
+          extra: {'cachePolicy': CachePolicy.networkFirst},
+        );
+
+        await interceptor.onResponse(
+          Response(requestOptions: options, statusCode: 200, data: '[]'),
+          _TestResponseHandler(),
+        );
+
+        verify(() => mockStorage.write('GET_${options.uri}', '[]', ttl: any(named: 'ttl'))).called(1);
+      });
+
+      for (final path in ['/connections', '/dbx/schema', '/auth/meter', '/healthz']) {
+        test('keeps networkFirst for $path, which only looks like a live endpoint', () async {
+          when(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl'))).thenAnswer((_) async {});
+          final options = RequestOptions(path: path, method: 'GET', baseUrl: 'https://studio.example.test/api');
+
+          await interceptor.onResponse(
+            Response(requestOptions: options, statusCode: 200, data: '[]'),
+            _TestResponseHandler(),
+          );
+
+          verify(() => mockStorage.write('GET_${options.uri}', '[]', ttl: any(named: 'ttl'))).called(1);
+        });
+      }
+    });
+
     group('default TTL', () {
       test('should use 5 minutes as default TTL', () async {
         when(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl'))).thenAnswer((_) async {});

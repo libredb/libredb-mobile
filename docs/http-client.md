@@ -6,12 +6,15 @@ The rules for Studio's endpoints are in [architecture.md](architecture.md#talkin
 
 ## Retries
 
-`ResilienceInterceptor` repeats a request that failed with a timeout, a connection error or a 502, 503 or 504, up to three times, and only when the request is safe to send twice.
-`GET`, `HEAD`, `OPTIONS`, `PUT` and `DELETE` are idempotent by HTTP semantics and are repeated.
-A `POST` or `PATCH` may already have been processed by the server, so it is repeated only when it carries an `Idempotency-Key` header; without one, the caller gets the error.
-Only `UserRepository.create` (`POST /admin/users`, inherited from the template, not a Studio endpoint) carries that header; no request to a Studio endpoint does, so nothing that runs a statement is ever repeated.
+`ResilienceInterceptor` repeats a `GET` that failed with a timeout, a connection error, or a 502, 503 or 504 without a Studio error code in its body, up to three times.
+No other method is repeated: a `POST` to Studio may run a statement, and the other methods change something on the server, so the caller gets the error, an `Idempotency-Key` header or not.
+
+An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`) is Studio's own answer, such as a 503 `GOVERNANCE_UNAVAILABLE` or `IDENTITY_PROVIDER_UNAVAILABLE`, or a 504 `TIMEOUT_ERROR`.
+It reaches the repository after one request, so the user sees what Studio said, and it is never repeated.
 
 After five failures in a row the interceptor opens the endpoint's circuit and refuses its requests for 30 seconds with `CircuitBreakerOpenException`.
+Only a timeout, a connection error and a 5xx without a Studio error code count as failures.
+A 4xx, an answer with a Studio error code at any status, an offline rejection and a TLS failure do not, so an endpoint that keeps answering `GOVERNANCE_UNAVAILABLE` never opens its circuit and the user keeps seeing that Studio is temporarily unavailable.
 
 ## Idempotency keys
 
@@ -24,16 +27,16 @@ await apiClient.patch<User>('/admin/users', user, pathParams: '42', idempotent: 
 ```
 
 The header is a contract, not a guarantee: the server must deduplicate by it (the IETF draft `idempotency-key-header`, with Stripe as the worked example).
-Against a server that ignores it, opting in is worse than leaving it off, because the key is what lets `ResilienceInterceptor` repeat a `POST` or `PATCH`, and every repeat the server processes creates another record.
+`ResilienceInterceptor` never repeats a request that carries it, since it repeats only a `GET`.
 `UserRepository.create` (`POST /admin/users`, inherited from the template, not a Studio endpoint) opts in.
-No request to a Studio endpoint opts in, so no statement is ever repeated.
+No request to a Studio endpoint opts in.
 
-Once generated, the key is kept in `RequestOptions.extra['_idempotency_key']` and reused on every later pass, which covers both a `ResilienceInterceptor` retry and the resend by `TokenRefreshInterceptor` after a 401 and a refresh.
+Once generated, the key is kept in `RequestOptions.extra['_idempotency_key']` and reused on every later pass, which covers the resend by `TokenRefreshInterceptor` after a 401 and a refresh.
 `GET`, `HEAD`, `OPTIONS` and `DELETE` never get the header.
 
 ## Response cache
 
-`CacheInterceptor` stores successful `GET` responses and answers from them by the request's `CachePolicy` (`options.extra['cachePolicy']`, `networkFirst` by default):
+`CacheInterceptor` stores successful `GET` responses and answers from them by the request's `CachePolicy` (`options.extra['cachePolicy']`, `networkFirst` by default, `networkOnly` for Studio's live endpoints):
 
 | Policy | Behavior |
 | --- | --- |
@@ -41,6 +44,10 @@ Once generated, the key is kept in `RequestOptions.extra['_idempotency_key']` an
 | `cacheFirst` | Answers from a fresh entry without sending the request; otherwise behaves as `networkFirst` |
 | `cacheOnly` | Answers from a fresh entry or fails with "No cached data available"; it never reaches the network, so neither being offline nor an open circuit stops it |
 | `networkOnly` | Never reads or writes the cache |
+
+Studio's live endpoints are `networkOnly` unless the request names another policy: `/connections/managed`, `/connections/policy`, `/auth/me`, `/health`, `/ready` and every `/db/*` path.
+Their answers carry grants, policy, identity and database state that may change at any moment, and a cached list would show a connection whose grant was revoked as available.
+Offline, such a `GET` fails with a network error; a list that should stay on screen is held in BLoC state and shown as stale, never served as fresh by the HTTP layer.
 
 An entry is fresh for its TTL, 5 minutes unless `options.extra['cacheTtl']` sets another.
 Past its TTL an entry still answers a `GET` that cannot reach the server, with an `x-cache: stale` header, until it is 24 hours old (`CacheEntry.maxStaleAge`).

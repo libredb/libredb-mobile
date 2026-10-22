@@ -801,15 +801,10 @@ void main() {
         ..reply(503)
         ..reply(200, '{"saved":true}');
 
-      final response = await client.post('/api/transport/retry', {'name': 'test'}, idempotent: true);
+      final response = await client.get('/api/transport/retry');
 
       expect(response.statusCode, 200);
-      const sent = (
-        method: 'POST',
-        path: '/api/transport/retry',
-        authorization: 'Bearer MOCK_TOKEN',
-        body: '{"name":"test"}',
-      );
+      const sent = (method: 'GET', path: '/api/transport/retry', authorization: 'Bearer MOCK_TOKEN', body: null);
       expect(adapter.requests, [sent, sent]);
       expect(adapter.closed, isFalse);
     });
@@ -1071,8 +1066,8 @@ void main() {
   });
 
   // Regression: a 503 or a timeout was retried for every HTTP method, so a POST the server had already processed
-  // ran again (a second registration, a double submission). A retry is sent only when repeating the request is
-  // safe: an idempotent method, or a POST or PATCH whose Idempotency-Key the retry sends again.
+  // ran again (a second registration, a double submission). Only a GET is retried: a POST to Studio may run a
+  // statement, so not even an Idempotency-Key makes repeating one safe.
   group('ApiClient retry by HTTP method', () {
     late ApiClient client;
     late _FakeHttpClientAdapter adapter;
@@ -1103,13 +1098,14 @@ void main() {
       expect(adapter.requests, hasLength(1), reason: 'the POST must reach the server once');
     });
 
-    test('retries a POST that carries an Idempotency-Key and sends the same key again', () async {
-      final response = await client.post('/api/retry/keyed-post', {'name': 'test'}, idempotent: true);
+    test('does not retry a POST that carries an Idempotency-Key either', () async {
+      await expectLater(
+        client.post('/api/retry/keyed-post', {'name': 'test'}, idempotent: true),
+        throwsA(isA<FetchDataException>().having((e) => e.toString(), 'message', contains('Server error (503)'))),
+      );
 
-      expect(response.statusCode, 200);
-      expect(adapter.idempotencyKeys, hasLength(2));
-      expect(adapter.idempotencyKeys.first, isNotNull);
-      expect(adapter.idempotencyKeys.last, adapter.idempotencyKeys.first, reason: 'the retry must reuse the key');
+      expect(adapter.idempotencyKeys, hasLength(1), reason: 'the POST must reach the server once');
+      expect(adapter.idempotencyKeys.single, isNotNull);
     });
 
     test('still retries a GET', () async {
