@@ -96,8 +96,6 @@ The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUD
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
-The app started from the [flutter-bloc-advanced](https://github.com/cevheri/flutter-bloc-advanced) template.
-
 ## License
 
 LibreDB Mobile is source-available under the [Elastic License 2.0](LICENSE), with SEKOYA GRUP BİLİŞİM VE TEKNOLOJİ LİMİTED ŞİRKETİ as the licensor.
