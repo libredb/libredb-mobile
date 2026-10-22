@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
@@ -20,6 +21,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// Recorded from Studio main at dbfea263 in tool/studio-dev, as user admin with a libredb-mobile access token, on the
 /// built-in SQLite sample connection. SQLite has no transactions, so test/fixtures/studio/txstatus.json is Studio's
 /// refusal of one. Record again after a Studio change to these routes.
+///
+/// The governed fixtures (`*_governed.json`, `governance_unavailable.json`, `admin_governance.json`) come from the
+/// governed profile of tool/studio-dev, Studio main at dbfea263 in governance mode, recorded with a libredb-mobile access
+/// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
+/// status. docs/studio.md describes the profile and how the unavailable source was produced.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -42,6 +48,42 @@ void main() {
     final policy = ConnectionPolicyModel.fromJsonString(fixture('policy'));
 
     expect(policy.governance, isFalse);
+  });
+
+  test('GET /api/connections/managed under governance lists the granted connections', () {
+    final connections = ManagedConnections.fromJsonString(fixture('managed_governed'));
+
+    expect(connections.map((c) => c.id), ['seed:sales-dev', 'seed:sales-prod']);
+    expect(connections.map((c) => c.environment), ['development', 'production']);
+    expect(connections.map((c) => c.group), ['Sales', 'Sales']);
+    expect(connections.first.type, 'postgres');
+  });
+
+  test('GET /api/connections/policy under governance', () {
+    final policy = ConnectionPolicyModel.fromJsonString(fixture('policy_governed'));
+
+    expect(policy.customConnections, isFalse);
+    expect(policy.governance, isTrue);
+    expect(policy.statementCapture, 'full');
+  });
+
+  test('GET /api/connections/managed while the governance source is unavailable', () {
+    final body = fixture('governance_unavailable');
+    final error = studioError(FetchDataException(body, statusCode: 503, errorCode: ApiClient.errorCodeOf(body)));
+
+    expect(error.code, AppErrorCode.studioGovernanceUnavailable.key);
+  });
+
+  test('GET /api/admin/governance of a loaded snapshot', () {
+    // The app has no reader of this route yet; the test pins the fields an admin screen would show.
+    final governance = (jsonDecode(fixture('admin_governance')) as Map<String, dynamic>)['governance'] as Map;
+
+    expect(governance['source'], 'postgres');
+    expect(governance['freshness'], 'ok');
+    expect(governance['admittedConnections'], 2);
+    expect(governance['skipped'], isEmpty);
+    expect((governance['canary'] as Map).values, everyElement('ok'));
+    expect(governance['settings'], contains(equals({'key': 'queryLog.statementCapture', 'source': 'runtime'})));
   });
 
   test('POST /api/db/test-connection', () {

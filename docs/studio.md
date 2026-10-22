@@ -111,3 +111,93 @@ How far this was verified:
 | --- | --- |
 | Android emulator, API 30 Google APIs image | Walked through as above with Studio built from libredb/libredb-studio#1914 at `d8d1b4970`: sign-in, the connection list, the refresh after expiry and the logout all worked |
 | iOS simulator | Not run |
+
+## Governed Studio
+
+The compose profile `governed` adds a second Studio in governance mode beside the first one, so the governed answers the app depends on can be recorded from a real Studio.
+Studio's `docs/GOVERNANCE.md` is the contract it follows.
+
+| Address or service | What it is |
+| --- | --- |
+| `https://localhost:9444` | The governed Studio; the app's API is `https://localhost:9444/api` |
+| `governance-source` | Postgres 17 holding the `bridge` schema a control plane would publish, seeded by `tool/studio-dev/governed/governance-source.sql` |
+| `governed-db` | Postgres 17 holding Studio's storage, which governance mode keeps in Postgres, and the `sales` database the governed connections open |
+
+No control plane runs: the seed holds the published bridge objects directly, built from Studio's own manifest.
+It grants the realm's users by their Keycloak `sub`, which the realm import fixes to `a0000000-0000-4000-8000-000000000001` for `admin` and `a0000000-0000-4000-8000-000000000002` for `user`:
+
+| Connection | Environment, group | `admin` | `user` |
+| --- | --- | --- | --- |
+| `sales-dev`, "Sales (development)" | `development`, `Sales` | write | write |
+| `sales-prod`, "Sales (production)" | `production`, `Sales` | write | read |
+
+The runtime setting `queryLog.statementCapture` is `full`, so the policy answers `statementCapture: "full"`.
+Sign in as `admin` / `admin` or `user` / `user`, as on the first Studio.
+
+Start the stack with the profile and build the app against the governed Studio:
+
+```shell
+STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
+fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev-governed.env
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed down -v
+```
+
+Pass `--profile governed` to `down` as well, or the profile's containers and volumes stay behind.
+On the Android emulator, `tool/studio-dev/trust-android-emulator.sh` also forwards port 9444.
+
+### Revoking a grant
+
+The seed writes the tables behind the bridge views, whose triggers notify Studio, so a change takes effect within a second:
+
+```shell
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed exec governance-source \
+  psql -U postgres -d governance -c "DELETE FROM bridge.grants_v1_source WHERE subject = 'a0000000-0000-4000-8000-000000000002' AND connection_id = 'sales-prod'"
+```
+
+After it, `user`'s managed list holds only `sales-dev`, and a request naming `seed:sales-prod` answers 404 `CONNECTION_NOT_FOUND`.
+Insert the row again to give the grant back:
+
+```shell
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed exec governance-source \
+  psql -U postgres -d governance -c "INSERT INTO bridge.grants_v1_source (subject, connection_id, level, expires_at, downgraded, granted_at) VALUES ('a0000000-0000-4000-8000-000000000002', 'sales-prod', 'read', NULL, false, now())"
+```
+
+An insert into `bridge.session_revocations_v1_source` ends a user's sessions the same way.
+
+### Making the snapshot unavailable
+
+Stop the governance source:
+
+```shell
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed stop governance-source
+```
+
+The governed Studio reloads every 5 seconds and serves its last snapshot for at most 15 seconds, so within about 15 seconds `GET /api/connections/managed` answers 503 `GOVERNANCE_UNAVAILABLE`.
+`docker compose ... --profile governed start governance-source` brings it back, and the next reload answers again.
+
+### Regenerating the seed
+
+`tool/studio-dev/governed/generate.ts` writes `governance-source.sql`, `governed-db.sql` and `keyring.json` from a checkout of Studio, with Studio's own fixture builder and test sealer; never edit those files by hand:
+
+```shell
+bun tool/studio-dev/governed/generate.ts ../libredb-studio
+```
+
+Every key and password in them is derived from a fixed label and protects nothing, so a second run writes the same bytes.
+Run it again when Studio publishes a new governance contract.
+
+### Docker Hub on this machine
+
+Where the stored Docker Hub credentials are rejected, pulls of `postgres` and `caddy` fail even though the images are public.
+Point `DOCKER_CONFIG` at an empty directory for the command, so Docker pulls anonymously:
+
+```shell
+mkdir -p /tmp/empty-docker-config
+DOCKER_CONFIG=/tmp/empty-docker-config docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
+```
+
+### Recorded answers
+
+`test/fixtures/studio/managed_governed.json`, `policy_governed.json` and `governance_unavailable.json` were recorded as `user` with a `libredb-mobile` access token, and `admin_governance.json` as `admin`, from Studio main at `dbfea263`.
+`test/infrastructure/studio/recorded_studio_answers_test.dart` reads them.
+The app was also walked through on the Android emulator (API 30 Google APIs image) against the governed Studio: the SSO sign-in as `user` and the connection list with both granted connections.
