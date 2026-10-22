@@ -21,7 +21,6 @@ class TemplateConfig {
   /// Whether [value] has not been filled in: it is empty, or still a placeholder such as `__KEYWORD__`.
   static bool isUnfilled(String value) => value.isEmpty || _placeholder.hasMatch(value);
 
-  /// `__`, a key of upper-case letters, digits and `_` that starts with a letter, and `__`: the placeholders
-  /// scripts/check_web_placeholders.sh finds in a web build.
+  /// `__`, a key of upper-case letters, digits and `_` that starts with a letter, and `__`.
   static final _placeholder = RegExp(r'^__[A-Z][A-Z0-9_]*__$');
 }
