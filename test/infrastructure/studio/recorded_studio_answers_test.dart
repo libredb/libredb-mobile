@@ -6,7 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/data/models/studio_identity_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
-import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
+import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -39,10 +39,14 @@ void main() {
   });
 
   test('GET /api/connections/managed', () {
-    final connections = ManagedConnections.fromJsonString(fixture('managed'));
+    final managed = ManagedConnectionsModel.read(fixture('managed'));
+    final connections = managed.connections;
 
     expect(connections.map((c) => c.id), ['seed:sqlite-embedded-sample', 'seed:libredb-embedded-sample']);
+    expect(connections.map((c) => c.seedId), ['sqlite-embedded-sample', 'libredb-embedded-sample']);
     expect(connections.first.database, 'data/sample-employees.db');
+    expect(connections.every((c) => !c.managed && !c.readOnly && c.color == null), isTrue);
+    expect(managed.cacheHint, const Duration(minutes: 1));
   });
 
   test('GET /api/connections/policy without governance', () {

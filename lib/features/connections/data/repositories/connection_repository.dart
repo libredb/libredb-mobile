@@ -2,10 +2,10 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_policy_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
-import 'package:libredb_mobile/features/connections/data/models/managed_connections.dart';
+import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
-import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
@@ -20,12 +20,12 @@ class ConnectionRepository implements IConnectionRepository {
   static final _log = AppLogger.getLogger('ConnectionRepository');
 
   @override
-  Future<Result<List<StudioConnection>>> listManaged() async {
+  Future<Result<ManagedConnections>> listManaged() async {
     try {
       final response = await _apiClient.get('/connections/managed');
-      final connections = ManagedConnections.fromJsonString(ApiClient.decodeUTF8(response.data!));
-      _log.debug('listManaged: {} connections', [connections.length]);
-      return Success(connections);
+      final managed = ManagedConnectionsModel.read(ApiClient.decodeUTF8(response.data!));
+      _log.debug('listManaged: {} connections', [managed.connections.length]);
+      return Success(managed);
     } catch (e) {
       return _failure('listManaged', e);
     }

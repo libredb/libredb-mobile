@@ -4,6 +4,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/usecases/list_managed_connections_usecase.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -14,6 +15,7 @@ void main() {
   late MockIConnectionRepository repository;
 
   const connections = [StudioConnection(id: 'seed:a', name: 'A', type: 'postgres')];
+  const managed = ManagedConnections(connections: connections, cacheHint: Duration(seconds: 10));
 
   setUp(() {
     repository = MockIConnectionRepository();
@@ -27,11 +29,14 @@ void main() {
   });
 
   blocTest<ConnectionListBloc, ConnectionListState>(
-    'loads the connections',
-    setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(connections)),
+    'loads the connections and the cache hint',
+    setUp: () => when(() => repository.listManaged()).thenAnswer((_) async => const Success(managed)),
     build: build,
     act: (bloc) => bloc.add(const ConnectionListRequested()),
-    expect: () => const [ConnectionListLoading(), ConnectionListLoaded(connections: connections)],
+    expect: () => const [
+      ConnectionListLoading(),
+      ConnectionListLoaded(connections: connections, cacheHint: Duration(seconds: 10)),
+    ],
   );
 
   blocTest<ConnectionListBloc, ConnectionListState>(

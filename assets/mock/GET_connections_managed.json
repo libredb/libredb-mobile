@@ -11,6 +11,7 @@
       "user": "studio_reader",
       "environment": "production",
       "group": "Sales",
+      "color": "#dc2626",
       "ssl": { "mode": "verify-full" },
       "managed": true,
       "roles": ["*"],
@@ -43,6 +44,7 @@
       "user": "studio_reader",
       "environment": "production",
       "group": "Finance",
+      "readOnly": true,
       "managed": true,
       "roles": ["admin"],
       "createdAt": "2026-10-01T08:00:00.000Z"
