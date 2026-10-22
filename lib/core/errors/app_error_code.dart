@@ -17,9 +17,6 @@
 enum AppErrorCode {
   // --- auth ---
   authInvalidAccessToken('auth.invalid_access_token'),
-  authLoginFailed('auth.login_failed'),
-  authSendOtpFailed('auth.send_otp_failed'),
-  authOtpValidationError('auth.otp_validation_error'),
   authSessionPersistFailed('auth.session_persist_failed'),
   authOidcConfig('auth.oidc_config'),
   authOidcDiscovery('auth.oidc_discovery'),
@@ -31,10 +28,6 @@ enum AppErrorCode {
   // --- users ---
   userCannotDeleteAdmin('user.cannot_delete_admin'),
   userNoAuthorities('user.no_authorities'),
-
-  // --- account ---
-  accountPasswordRequired('account.password_required'),
-  accountPasswordsSame('account.passwords_same'),
 
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),

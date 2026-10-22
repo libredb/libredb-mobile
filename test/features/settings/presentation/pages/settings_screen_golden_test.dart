@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -40,10 +39,7 @@ void main() {
     );
 
     return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
-        RepositoryProvider<AuthMode>.value(value: const JwtAuthMode()),
-      ],
+      providers: [RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks())],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         theme: dark ? AppTheme.dark() : AppTheme.light(),

@@ -25,7 +25,7 @@ void main() {
     when(() => loginBloc.state).thenReturn(const LoginInitialState());
   });
 
-  Widget buildScreen({bool dark = false, AuthMode authMode = const JwtAuthMode()}) {
+  Widget buildScreen({required AuthMode authMode, bool dark = false}) {
     final screen = MultiBlocProvider(
       providers: [
         RepositoryProvider<AuthMode>.value(value: authMode),
@@ -37,38 +37,8 @@ void main() {
     return goldenScreen(screen, dark: dark);
   }
 
-  goldenTest(
-    'LoginScreen — light',
-    fileName: 'login_screen_light',
-    pumpBeforeTest: pumpOnce,
-    builder: () => GoldenTestGroup(
-      columns: 1,
-      children: [
-        GoldenTestScenario(
-          name: 'initial',
-          child: SizedBox.fromSize(size: kGoldenScreenSize, child: buildScreen(dark: false)),
-        ),
-      ],
-    ),
-  );
-
-  goldenTest(
-    'LoginScreen — dark',
-    fileName: 'login_screen_dark',
-    pumpBeforeTest: pumpOnce,
-    builder: () => GoldenTestGroup(
-      columns: 1,
-      children: [
-        GoldenTestScenario(
-          name: 'initial',
-          child: SizedBox.fromSize(size: kGoldenScreenSize, child: buildScreen(dark: true)),
-        ),
-      ],
-    ),
-  );
-
-  // The single sign-on page of an oidc build, which sends the user to the provider only on a tap. Pumped past the
-  // page's 600 ms fade-in, which the first frame of the images above shows blank, so the image shows the form.
+  // The single sign-on page, which sends the user to the provider only on a tap. Pumped past the page's 600 ms
+  // fade-in, whose first frame is blank, so the image shows the page.
   goldenTest(
     'LoginScreen: single sign-on, light',
     fileName: 'login_screen_sso_light',

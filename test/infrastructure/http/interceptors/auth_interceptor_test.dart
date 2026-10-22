@@ -66,12 +66,6 @@ void main() {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('stale-jwt'));
 
       for (final (method, path) in [
-        ('POST', '/authenticate'),
-        ('POST', '/authenticate/send-otp'),
-        ('POST', '/authenticate/verify-otp'),
-        ('POST', '/register'),
-        ('POST', '/account/reset-password/init'),
-        ('POST', '/token/refresh'),
         // The lifecycle checks read the app config before sign-in.
         ('GET', '/app/config'),
         // Studio's liveness and readiness, which the app checks before sign-in.
@@ -87,19 +81,18 @@ void main() {
       }
     });
 
-    // The public list held paths without methods, the app's own routes and /logout, so these requests would have gone
-    // out without the token they need. No shipped request goes to them yet.
+    // The public list held paths without methods and the app's own routes, so these requests would have gone out
+    // without the token they need.
     test('attaches the stored token to any other request, also on the path of a public endpoint', () async {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value'));
 
       for (final (method, path) in [
-        // Answers whether the session is valid, so it needs the token, unlike the sign-in on the same path.
-        ('GET', '/authenticate'),
+        // Another method on the path of the public app config.
+        ('POST', '/app/config'),
         // A server-side logout has to know which session to end.
-        ('POST', '/logout'),
-        // Routes of the app, not endpoints of the API.
-        ('GET', '/forgot-password'),
-        ('GET', '/login-otp'),
+        ('POST', '/auth/logout'),
+        // A route of the app, not an endpoint of the API.
+        ('GET', '/login'),
       ]) {
         final handler = _CapturingRequestHandler();
 
@@ -136,8 +129,8 @@ void main() {
     });
   });
 
-  // Dio sends a request to an absolute URL there instead of to the base URL, so a path a server supplies, such as the
-  // submit endpoint of a dynamic form, could carry the token to any host.
+  // Dio sends a request to an absolute URL there instead of to the base URL, so a path a server supplies could carry
+  // the token to any host.
   group('AuthInterceptor.onRequest, origin of the request', () {
     const apiBase = 'https://api.example.test/api';
 

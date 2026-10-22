@@ -6,7 +6,6 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
-import 'package:libredb_mobile/features/auth/domain/entities/auth_entity.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
@@ -62,17 +61,6 @@ class _RecordingAuthRepository implements IAuthRepository {
     await storage.deleteAll();
     return logoutResult;
   }
-
-  @override
-  Future<Result<AuthTokenEntity>> authenticate(AuthCredentialsEntity userJWT) =>
-      throw UnimplementedError('a logout never authenticates');
-
-  @override
-  Future<Result<void>> sendOtp(SendOtpEntity request) => throw UnimplementedError('a logout never sends an OTP');
-
-  @override
-  Future<Result<AuthTokenEntity>> verifyOtp(VerifyOtpEntity request) =>
-      throw UnimplementedError('a logout never verifies an OTP');
 }
 
 /// Ends the provider session with [outcome], recording the hint of each call in [calls].
@@ -594,46 +582,6 @@ void main() {
       pending.logout.complete(const NoProviderLogout());
 
       expect(await signedOut.providerLogout, const Success<void>(null));
-    });
-  });
-
-  group('SsoSignOutAuthRepository delegates the password sign-in to the repository it wraps', () {
-    late MockIAuthRepository wrapped;
-    late SsoSignOutAuthRepository delegating;
-
-    setUp(() {
-      wrapped = MockIAuthRepository();
-      delegating = SsoSignOutAuthRepository(
-        inner: wrapped,
-        client: client,
-        secureStorage: storage,
-        settings: _settings(),
-        studioIdentity: studioIdentity,
-        sessionRefresh: sessionRefresh(),
-      );
-    });
-
-    test('authenticate', () async {
-      const credentials = AuthCredentialsEntity(username: 'admin', password: 'password');
-      const token = Success(AuthTokenEntity(idToken: 'token'));
-      when(() => wrapped.authenticate(credentials)).thenAnswer((_) async => token);
-
-      expect(await delegating.authenticate(credentials), token);
-    });
-
-    test('sendOtp', () async {
-      const request = SendOtpEntity(email: 'user@example.com');
-      when(() => wrapped.sendOtp(request)).thenAnswer((_) async => const Success(null));
-
-      expect(await delegating.sendOtp(request), const Success<void>(null));
-    });
-
-    test('verifyOtp', () async {
-      const request = VerifyOtpEntity(email: 'user@example.com', otp: '123456');
-      const token = Success(AuthTokenEntity(idToken: 'token'));
-      when(() => wrapped.verifyOtp(request)).thenAnswer((_) async => token);
-
-      expect(await delegating.verifyOtp(request), token);
     });
   });
 }

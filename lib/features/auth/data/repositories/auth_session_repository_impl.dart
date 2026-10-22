@@ -25,27 +25,20 @@ import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 /// [clear] removes what belongs to the session: both tokens, every [StorageKeys] value of [StorageScope.session]
 /// and the HTTP responses cached in [ICacheStorage]. Device preferences such as the language and theme stay.
 ///
-/// With `oidcKeys` on, as in an `oidc` build, the session also owns [SecureStorageKeys.oidcIdToken] and
-/// [SecureStorageKeys.accessTokenExpiresAt]: [persist] writes them after the refresh token, and the rollback and
-/// [clear] cover them. With it off, as in a `jwt` build, those keys are never read, written or deleted.
+/// The session also owns [SecureStorageKeys.oidcIdToken] and [SecureStorageKeys.accessTokenExpiresAt]: [persist] writes
+/// them after the refresh token, and the rollback and [clear] cover them.
 class AuthSessionRepository implements IAuthSessionRepository {
-  AuthSessionRepository({
-    required ISecureStorage secureStorage,
-    AppLocalStorage? storage,
-    ICacheStorage? cacheStorage,
-    this._oidcKeys = false,
-  })
+  AuthSessionRepository({required ISecureStorage secureStorage, AppLocalStorage? storage, ICacheStorage? cacheStorage})
     // ignore: prefer_initializing_formals
     : _secureStorage = secureStorage,
-       _storage = storage ?? AppLocalStorage(),
-       _cacheStorage = cacheStorage ?? SharedPrefsCacheStorage();
+      _storage = storage ?? AppLocalStorage(),
+      _cacheStorage = cacheStorage ?? SharedPrefsCacheStorage();
 
   static final _log = AppLogger.getLogger('AuthSessionRepository');
 
   final ISecureStorage _secureStorage;
   final AppLocalStorage _storage;
   final ICacheStorage _cacheStorage;
-  final bool _oidcKeys;
 
   @override
   Future<Result<void>> persist(AuthSession session) async {
@@ -67,10 +60,8 @@ class AuthSessionRepository implements IAuthSessionRepository {
     try {
       priorJwt = await _secureStorage.read(SecureStorageKeys.jwtToken.key);
       priorRefresh = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
-      if (_oidcKeys) {
-        priorOidcIdToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
-        priorExpiry = await _secureStorage.read(SecureStorageKeys.accessTokenExpiresAt.key);
-      }
+      priorOidcIdToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
+      priorExpiry = await _secureStorage.read(SecureStorageKeys.accessTokenExpiresAt.key);
       priorUsername = await _storage.read(StorageKeys.username.key);
       priorRoles = await _storage.read(StorageKeys.roles.key);
 
@@ -93,16 +84,14 @@ class AuthSessionRepository implements IAuthSessionRepository {
       } else {
         await _secureStorage.delete(SecureStorageKeys.refreshToken.key);
       }
-      if (_oidcKeys) {
-        // Same owner-of-keys contract: a session without an ID token or an expiry must not inherit the previous one.
-        final expiresAt = session.accessTokenExpiresAt;
-        await _writeOrDelete(SecureStorageKeys.oidcIdToken, session.oidcIdToken, mutatedSecure);
-        await _writeOrDelete(
-          SecureStorageKeys.accessTokenExpiresAt,
-          expiresAt == null ? null : encodeAccessTokenExpiry(expiresAt),
-          mutatedSecure,
-        );
-      }
+      // Same owner-of-keys contract: a session without an ID token or an expiry must not inherit the previous one.
+      final expiresAt = session.accessTokenExpiresAt;
+      await _writeOrDelete(SecureStorageKeys.oidcIdToken, session.oidcIdToken, mutatedSecure);
+      await _writeOrDelete(
+        SecureStorageKeys.accessTokenExpiresAt,
+        expiresAt == null ? null : encodeAccessTokenExpiry(expiresAt),
+        mutatedSecure,
+      );
       await _writeLocal(StorageKeys.username, session.username, mutatedLocal);
       await _writeLocal(StorageKeys.roles, session.roles, mutatedLocal);
       _log.info('persist: session written ({} secure + {} local)', [mutatedSecure.length, mutatedLocal.length]);
@@ -148,17 +137,15 @@ class AuthSessionRepository implements IAuthSessionRepository {
     } catch (e) {
       errors.add('refresh: $e');
     }
-    if (_oidcKeys) {
-      try {
-        await _secureStorage.delete(SecureStorageKeys.oidcIdToken.key);
-      } catch (e) {
-        errors.add('oidcIdToken: $e');
-      }
-      try {
-        await _secureStorage.delete(SecureStorageKeys.accessTokenExpiresAt.key);
-      } catch (e) {
-        errors.add('accessTokenExpiresAt: $e');
-      }
+    try {
+      await _secureStorage.delete(SecureStorageKeys.oidcIdToken.key);
+    } catch (e) {
+      errors.add('oidcIdToken: $e');
+    }
+    try {
+      await _secureStorage.delete(SecureStorageKeys.accessTokenExpiresAt.key);
+    } catch (e) {
+      errors.add('accessTokenExpiresAt: $e');
     }
     // Only the session keys: the device preferences, such as the language and theme, stay for whoever signs in next.
     final sessionKeys = StorageKeys.values.where((key) => key.scope == StorageScope.session).toList();
@@ -169,7 +156,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
         errors.add('${key.key}: $e');
       }
     }
-    // Cached GET responses, such as /account and /connections/managed, are this user's data too.
+    // Cached GET responses, such as /connections/managed, are this user's data too.
     try {
       await _cacheStorage.clear();
     } catch (e) {

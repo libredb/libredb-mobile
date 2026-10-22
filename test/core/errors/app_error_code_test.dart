@@ -16,7 +16,7 @@ void main() {
     });
 
     test('fromKey resolves known keys', () {
-      expect(AppErrorCode.fromKey('auth.login_failed'), AppErrorCode.authLoginFailed);
+      expect(AppErrorCode.fromKey('auth.oidc_failed'), AppErrorCode.authOidcFailed);
       expect(AppErrorCode.fromKey('user.cannot_delete_admin'), AppErrorCode.userCannotDeleteAdmin);
     });
 

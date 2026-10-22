@@ -47,9 +47,7 @@ class InterceptorChainEntry {
 /// 8. [LoggingInterceptor] — structured request/response logging
 /// 9. [MockInterceptor] — (dev/test only) simulates the network LAST, so its
 ///    response propagates back through the observability interceptors above
-///    just like a real round-trip (it resolves with callFollowing:true). It
-///    also answers the token refresh, which [TokenRefreshInterceptor] sends
-///    through its own Dio.
+///    just like a real round-trip (it resolves with callFollowing:true).
 ///
 /// Error mapping happens in the convenience methods ([get], [post], etc.)
 /// which catch [DioException] and rethrow as [AppException] types so that
@@ -63,17 +61,19 @@ class InterceptorChainEntry {
 /// [post] takes `receiveTimeout`, which replaces the 30 seconds the client waits for the answer of that one request,
 /// for a Studio route that runs a statement (`studioStatementReceiveTimeout`).
 ///
-/// `tokenRotation` replaces the backend's refresh endpoint ([BackendTokenRotation]) as the way
-/// [TokenRefreshInterceptor] refreshes the session, `isSessionExpired` decides which 401 starts
-/// that refresh, and `isSessionRefused` which 401 after it ends the session ([isUnauthorized],
-/// every 401, when either is null).
+/// [post] sends no header or content type of its own: every request carries the `Content-Type: application/json` of
+/// the client's base options, which LibreDB Studio requires of a POST that has no `Origin` header.
+///
+/// `tokenRotation` is how [TokenRefreshInterceptor] refreshes the session, at the identity provider; `isSessionExpired`
+/// decides which 401 starts that refresh, and `isSessionRefused` which 401 after it ends the session
+/// ([isUnauthorized], every 401, when either is null).
 class ApiClient {
   ApiClient({
     required this._appConfig,
     this._secureStorage,
+    required this._tokenRotation,
     this._onSessionExpired,
     this._dio,
-    this._tokenRotation,
     this._isSessionExpired,
     this._isSessionRefused,
   });
@@ -85,7 +85,7 @@ class ApiClient {
   final AppConfig _appConfig;
   final ISecureStorage? _secureStorage;
   final OnSessionExpired? _onSessionExpired;
-  final TokenRotation? _tokenRotation;
+  final TokenRotation _tokenRotation;
   final SessionExpiredPredicate? _isSessionExpired;
   final SessionRefusedPredicate? _isSessionRefused;
   Dio? _dio;
@@ -131,9 +131,9 @@ class ApiClient {
     // Certificate pinning. Empty pin list (default) keeps the system
     // adapter; populating appConfig.certificatePins swaps in a
     // pinning adapter that fails closed on any non-matching cert.
-    // Retries and the token refresh are sent through this same adapter
-    // (ResilienceInterceptor.forDio, TokenRefreshInterceptor), so the
-    // pins cover every request the client sends.
+    // Retries are sent through this same adapter
+    // (ResilienceInterceptor.forDio), so the pins cover every request the
+    // client sends.
     final pins = _appConfig.certificatePins;
     if (pins.isNotEmpty) {
       _log.info('Installing certificate pinning adapter ({} pin(s))', [pins.length]);
@@ -158,7 +158,6 @@ class ApiClient {
           dio: dio,
           onSessionExpired: _onSessionExpired,
           secureStorage: _secureStorage,
-          refreshDioFactory: _appConfig.isProduction ? null : _mockRefreshDio,
           rotation: _tokenRotation,
           isSessionExpired: _isSessionExpired ?? isUnauthorized,
           isSessionRefused: _isSessionRefused ?? isUnauthorized,
@@ -217,14 +216,6 @@ class ApiClient {
     return dio;
   }
 
-  /// The refresh Dio outside production. [TokenRefreshInterceptor] sends the
-  /// token refresh through its own Dio, which skips the chain above and so
-  /// the [MockInterceptor] at its end. That Dio gets a [MockInterceptor] of
-  /// its own, so the mock answers the refresh as the server would instead of
-  /// the request going to the network.
-  Dio _mockRefreshDio(Dio source) =>
-      TokenRefreshInterceptor.defaultRefreshDio(source)..interceptors.add(MockInterceptor(appConfig: _appConfig));
-
   // ---------------------------------------------------------------------------
   // Convenience methods matching the old HttpUtils API surface
   // ---------------------------------------------------------------------------
@@ -270,8 +261,6 @@ class ApiClient {
   Future<Response<String>> post<T>(
     String path,
     T data, {
-    Map<String, String>? headers,
-    String? contentType,
     String? pathParams,
     bool idempotent = false,
     Set<String> sensitiveKeys = const {},
@@ -287,8 +276,6 @@ class ApiClient {
         if (idempotent) IdempotencyInterceptor.optInExtraKey: true,
         if (sensitiveKeys.isNotEmpty) sensitiveKeysExtra: sensitiveKeys,
       },
-      headers: headers,
-      contentType: contentType,
     );
     try {
       return await instance.post<String>(fullPath, data: serialized, options: options);

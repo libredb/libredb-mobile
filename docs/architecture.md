@@ -41,7 +41,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 
 | Place | What it holds |
 | --- | --- |
-| `lib/features/auth/` | Sign-in through Keycloak (the `oidc` mode, [oidc.md](oidc.md)) and `StudioIdentityRepository` for `GET /api/auth/me` and the sign-out record at `POST /api/auth/logout` |
+| `lib/features/auth/` | Sign-in through Keycloak, the only sign-in ([oidc.md](oidc.md)), and `StudioIdentityRepository` for `GET /api/auth/me` and the sign-out record at `POST /api/auth/logout` |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
 | `lib/features/object_browser/` | Containers, counts, objects, details, source, search and key scan |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
@@ -62,7 +62,7 @@ A widget that more than one feature shows lives in `lib/shared/widgets/`.
 Each repository returns a `Result`: the entity, or an `AppError` with a translated `AppErrorCode`.
 The readers in each feature's `data/models/` (and in `lib/infrastructure/studio/` for a shared model) turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
 
-In mock mode (`main_local.dart`) `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
+In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oidc.md](oidc.md#mock-mode-without-keycloak)) and `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
 
 ### Maintenance and forced updates
 

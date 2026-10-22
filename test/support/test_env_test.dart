@@ -17,17 +17,17 @@ void main() {
   // regression fails here at once instead of hanging until the test times out.
   group('TestEnv.apiClient', () {
     for (final run in const ['first', 'second']) {
-      testWidgets('serves the mock account in the $run testWidgets of a file', (tester) async {
+      testWidgets('serves the mocked /auth/me in the $run testWidgets of a file', (tester) async {
         TestEnv.authenticate();
 
         Response<String>? response;
-        unawaited(TestEnv.apiClient().get('/account').then((value) => response = value));
+        unawaited(TestEnv.apiClient().get('/auth/me').then((value) => response = value));
         // Dio runs each interceptor in a Timer.run, so the request only moves while fake time does.
         await tester.pump(const Duration(seconds: 1));
 
         expect(response, isNotNull, reason: 'the mock request never completed');
         expect(response!.statusCode, 200);
-        expect(jsonDecode(response!.data!), containsPair('login', 'admin'));
+        expect(jsonDecode(response!.data!), containsPair('authenticated', true));
       });
     }
   });

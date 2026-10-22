@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_re
 import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,7 +39,11 @@ class _PinMismatchAdapter implements HttpClientAdapter {
 void main() {
   group('LifecycleRepository.fetchAppConfig', () {
     test('reports an untrusted certificate with AppErrorCode.networkCertInvalid', () async {
-      final apiClient = ApiClient(appConfig: _pinnedProdConfig, secureStorage: FlutterSecureStorageAdapter());
+      final apiClient = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
+        appConfig: _pinnedProdConfig,
+        secureStorage: FlutterSecureStorageAdapter(),
+      );
       apiClient.instance.httpClientAdapter = _PinMismatchAdapter();
 
       final result = await LifecycleRepository(apiClient).fetchAppConfig();

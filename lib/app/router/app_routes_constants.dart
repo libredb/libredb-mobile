@@ -10,11 +10,6 @@ class ApplicationRoutesConstants {
 
   // Auth routes
   static const login = '/login';
-  static const register = '/register';
-  static const forgotPassword = '/forgot-password';
-  static const changePassword = '/change-password';
-  static const loginOtp = '/login-otp';
-  static const loginOtpVerify = '/login-otp-verify';
 
   // Connection routes
   static const connectionList = '/connections';

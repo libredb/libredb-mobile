@@ -73,8 +73,8 @@ final class SessionUnauthenticated extends SessionState {
   @override
   List<Object?> get props => [reason, signInError];
 
-  /// Leaves out a null [signInError], so a `jwt` build, which never sets
-  /// one, prints this state as it did before the field existed.
+  /// Leaves out a null [signInError], so a state without one prints as
+  /// `SessionUnauthenticated(reason)`.
   @override
   String toString() {
     if (signInError != null || !(stringify ?? EquatableConfig.stringify)) return super.toString();
@@ -162,7 +162,7 @@ class SessionCubit extends Cubit<SessionState> {
   final AppConfig _appConfig;
   final Duration _restoreTimeLimit;
 
-  /// The startup step of an `oidc` build; null in a `jwt` build.
+  /// The startup step that refreshes an expired stored session; null only in a test that leaves it out.
   final ISsoSessionStartup? _ssoStartup;
   final Duration _ssoStartupTimeLimit;
 

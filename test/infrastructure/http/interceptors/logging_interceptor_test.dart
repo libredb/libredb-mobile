@@ -5,6 +5,7 @@ import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/logging_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -385,6 +386,7 @@ void main() {
         // Production chain, without MockInterceptor, so the failed response reaches the error interceptors as
         // it does against the real API. The adapter answers in place of the network.
         final client = ApiClient(
+          tokenRotation: const RefusingTokenRotation(),
           appConfig: const AppConfig(
             environment: Environment.prod,
             apiBaseUrl: 'https://api.example.test',

@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
@@ -24,7 +25,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(const App(language: 'en'));
+    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
     await tester.pumpAndSettle();
     routerOf(tester).go(location);
     await tester.pumpAndSettle();

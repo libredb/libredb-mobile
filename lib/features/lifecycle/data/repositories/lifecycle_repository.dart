@@ -34,7 +34,7 @@ class LifecycleRepository implements ILifecycleRepository {
     }
   }
 
-  /// An untrusted certificate carries [AppErrorCode.networkCertInvalid], as in DynamicFormRepository, so it can be told
+  /// An untrusted certificate carries [AppErrorCode.networkCertInvalid], as `studioError` gives it, so it can be told
   /// apart from a dropped connection.
   static AppError _mapFetchDataException(FetchDataException e) {
     if (e is UntrustedCertificateException) {

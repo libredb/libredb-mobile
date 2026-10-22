@@ -10,6 +10,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.da
 import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,7 +72,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
-      final client = ApiClient(appConfig: _prodConfig);
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = SqlEditorRepository(client);
     });

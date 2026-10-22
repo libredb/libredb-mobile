@@ -1,11 +1,10 @@
-/// The values given at build time that decide how the user signs in.
+/// The values given at build time that decide how the user signs in through the OpenID Connect provider.
 ///
-/// Each value defaults to its `--dart-define` (`AUTH_PROVIDER`, `OIDC_ISSUER` and so on), which are compile-time
+/// Each value defaults to its `--dart-define` (`OIDC_ISSUER`, `OIDC_CLIENT_ID` and so on), which are compile-time
 /// constants, so production code uses `const AuthDefines()` and a test passes its own values. An unset define reads as
 /// the empty string. [AuthMode.fromDefines] reads them.
 final class AuthDefines {
   const AuthDefines({
-    this._authProvider = const String.fromEnvironment('AUTH_PROVIDER'),
     this._oidcIssuer = const String.fromEnvironment('OIDC_ISSUER'),
     this._oidcClientId = const String.fromEnvironment('OIDC_CLIENT_ID'),
     this._oidcScope = const String.fromEnvironment('OIDC_SCOPE'),
@@ -19,7 +18,6 @@ final class AuthDefines {
     this._oidcRedirectScheme = const String.fromEnvironment('OIDC_REDIRECT_SCHEME'),
   });
 
-  final String _authProvider;
   final String _oidcIssuer;
   final String _oidcClientId;
   final String _oidcScope;
@@ -33,39 +31,20 @@ final class AuthDefines {
   final String _oidcRedirectScheme;
 }
 
-/// How the user signs in, chosen at build time by `AUTH_PROVIDER` and injected through `AppDependencies`.
+/// How the user signs in: always through the OpenID Connect provider (Keycloak), whose access token is the bearer
+/// LibreDB Studio accepts. Read at bootstrap and injected through `AppDependencies`.
 sealed class AuthMode {
   const AuthMode();
 
-  /// Reads `AUTH_PROVIDER` from [defines]: unset or `jwt` is [JwtAuthMode], and `oidc` is [OidcAuthMode], or
-  /// [OidcMisconfiguredAuthMode] when the OIDC settings break a rule. The value is trimmed and lower-cased first.
-  ///
-  /// Throws [AuthProviderConfigError] for any other value, which is never read as `jwt`.
+  /// Reads the `OIDC_*` values of [defines]: [OidcAuthMode], or [OidcMisconfiguredAuthMode] when the settings break a
+  /// rule, a build without them included. There is no other way to sign in, so a misconfigured build fails closed.
   static AuthMode fromDefines(AuthDefines defines) {
-    switch (defines._authProvider.trim().toLowerCase()) {
-      case '' || 'jwt':
-        return const JwtAuthMode();
-      case 'oidc':
-        try {
-          return OidcAuthMode(OidcSettings.parse(defines));
-        } on OidcConfigException catch (error) {
-          return OidcMisconfiguredAuthMode(error.reason);
-        }
-      default:
-        throw AuthProviderConfigError(defines._authProvider);
+    try {
+      return OidcAuthMode(OidcSettings.parse(defines));
+    } on OidcConfigException catch (error) {
+      return OidcMisconfiguredAuthMode(error.reason);
     }
   }
-
-  /// Whether the user signs in through an OpenID Connect provider, which a misconfigured `oidc` build also means.
-  bool get usesOidc;
-}
-
-/// The password sign-in against the backend, which issues its own JWT.
-final class JwtAuthMode extends AuthMode {
-  const JwtAuthMode();
-
-  @override
-  bool get usesOidc => false;
 }
 
 /// The sign-in through the OpenID Connect provider that [settings] describe.
@@ -73,32 +52,15 @@ final class OidcAuthMode extends AuthMode {
   const OidcAuthMode(this.settings);
 
   final OidcSettings settings;
-
-  @override
-  bool get usesOidc => true;
 }
 
-/// An `oidc` build whose settings break a rule. The app still starts, and the login page says that single sign-on is
-/// not configured correctly; [reason] goes to the log.
+/// A build whose OpenID Connect settings break a rule. The app still starts, and the login page says that single
+/// sign-on is not configured correctly; [reason] goes to the log.
 final class OidcMisconfiguredAuthMode extends AuthMode {
   const OidcMisconfiguredAuthMode(this.reason);
 
   /// The variable and the rule it breaks, written for an administrator.
   final String reason;
-
-  @override
-  bool get usesOidc => true;
-}
-
-/// Thrown at bootstrap for an `AUTH_PROVIDER` other than `jwt` or `oidc`, which stops the app before any screen.
-final class AuthProviderConfigError extends Error {
-  AuthProviderConfigError(this.value);
-
-  /// The value of `AUTH_PROVIDER` as it was given.
-  final String value;
-
-  @override
-  String toString() => 'AUTH_PROVIDER is "$value", but it must be jwt or oidc (unset means jwt)';
 }
 
 /// The `prompt` the authorization request sends, read from `OIDC_PROMPT`.
@@ -116,7 +78,7 @@ enum OidcPrompt {
   final String? parameter;
 }
 
-/// The OpenID Connect settings of an `oidc` build. The app is a public client, so there is no client secret.
+/// The OpenID Connect settings of the build. The app is a public client, so there is no client secret.
 final class OidcSettings {
   const OidcSettings({
     required this.issuer,
@@ -150,7 +112,7 @@ final class OidcSettings {
   static OidcSettings parse(AuthDefines defines) {
     final issuer = _issuer(defines._oidcIssuer.trim());
     final clientId = defines._oidcClientId.trim();
-    if (clientId.isEmpty) throw const OidcConfigException('OIDC_CLIENT_ID is required in oidc mode');
+    if (clientId.isEmpty) throw const OidcConfigException('OIDC_CLIENT_ID is required');
     final scopes = defines._oidcScope.trim().split(RegExp(r'\s+')).where((scope) => scope.isNotEmpty).toList();
     if (scopes.isNotEmpty && !scopes.contains('openid')) {
       throw OidcConfigException('OIDC_SCOPE must contain openid, but it is "${defines._oidcScope.trim()}"');
@@ -177,7 +139,7 @@ final class OidcSettings {
   }
 
   static Uri _issuer(String value) {
-    if (value.isEmpty) throw const OidcConfigException('OIDC_ISSUER is required in oidc mode');
+    if (value.isEmpty) throw const OidcConfigException('OIDC_ISSUER is required');
     // Uri.parse lower-cases the scheme and the host, and gives the host of `[::1]` without its brackets.
     final uri = Uri.tryParse(value);
     final valid =

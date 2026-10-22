@@ -1,11 +1,11 @@
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// The issuer and client id of a valid `oidc` build, which a row changes one field of.
+/// The issuer and client id of a valid build, which a row changes one field of.
 const _issuer = 'https://id.example.com/realms/demo';
 const _clientId = 'demo-app';
 
-/// The settings an `oidc` build with [defines] parses to; fails the test when the build is misconfigured.
+/// The settings a build with [defines] parses to; fails the test when the build is misconfigured.
 OidcSettings _settings(AuthDefines defines) {
   final mode = AuthMode.fromDefines(defines);
   if (mode is! OidcAuthMode) fail('expected OidcAuthMode, got $mode');
@@ -14,48 +14,27 @@ OidcSettings _settings(AuthDefines defines) {
 
 void main() {
   group('AuthMode.fromDefines', () {
-    test('uses jwt when nothing is set', () {
-      expect(AuthMode.fromDefines(const AuthDefines()), isA<JwtAuthMode>());
-    });
-
-    test('uses jwt for a padded upper-case JWT', () {
-      expect(AuthMode.fromDefines(const AuthDefines(authProvider: ' JWT ')), isA<JwtAuthMode>());
-    });
-
-    test('throws an error that names AUTH_PROVIDER and the value for an unknown provider', () {
-      expect(
-        () => AuthMode.fromDefines(const AuthDefines(authProvider: 'saml')),
-        throwsA(
-          isA<AuthProviderConfigError>()
-              .having((error) => error.value, 'value', 'saml')
-              .having(
-                (error) => error.toString(),
-                'toString',
-                allOf(contains('AUTH_PROVIDER'), contains('saml'), contains('jwt'), contains('oidc')),
-              ),
-        ),
-      );
-    });
-
-    test('is misconfigured in oidc mode without an issuer', () {
-      final mode = AuthMode.fromDefines(const AuthDefines(authProvider: 'oidc', oidcClientId: _clientId));
+    test('has no password sign-in: a build without OIDC settings fails closed as a misconfigured oidc build', () {
+      final mode = AuthMode.fromDefines(const AuthDefines());
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));
     });
 
-    test('is misconfigured in oidc mode without a client id', () {
-      final mode = AuthMode.fromDefines(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer));
+    test('is misconfigured without an issuer', () {
+      final mode = AuthMode.fromDefines(const AuthDefines(oidcClientId: _clientId));
+
+      expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));
+    });
+
+    test('is misconfigured without a client id', () {
+      final mode = AuthMode.fromDefines(const AuthDefines(oidcIssuer: _issuer));
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_CLIENT_ID')));
     });
 
     test('is misconfigured for an http issuer on a host that is not loopback', () {
       final mode = AuthMode.fromDefines(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: 'http://keycloak.example.com/realms/x',
-          oidcClientId: _clientId,
-        ),
+        const AuthDefines(oidcIssuer: 'http://keycloak.example.com/realms/x', oidcClientId: _clientId),
       );
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));
@@ -63,9 +42,7 @@ void main() {
 
     for (final issuer in ['http://localhost:8080/realms/x', 'http://127.0.0.1:8080/r', 'http://[::1]:8080/r']) {
       test('accepts the loopback http issuer $issuer', () {
-        final mode = AuthMode.fromDefines(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: issuer, oidcClientId: _clientId),
-        );
+        final mode = AuthMode.fromDefines(AuthDefines(oidcIssuer: issuer, oidcClientId: _clientId));
 
         expect(mode, isA<OidcAuthMode>().having((m) => m.settings.issuer, 'issuer', Uri.parse(issuer)));
       });
@@ -73,25 +50,21 @@ void main() {
 
     test('accepts an https issuer whose scheme is upper-case', () {
       final mode = AuthMode.fromDefines(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: 'HTTPS://id.example.com', oidcClientId: _clientId),
+        const AuthDefines(oidcIssuer: 'HTTPS://id.example.com', oidcClientId: _clientId),
       );
 
       expect(mode, isA<OidcAuthMode>());
     });
 
     test('is misconfigured for an issuer without a scheme', () {
-      final mode = AuthMode.fromDefines(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: 'id.example.com', oidcClientId: _clientId),
-      );
+      final mode = AuthMode.fromDefines(const AuthDefines(oidcIssuer: 'id.example.com', oidcClientId: _clientId));
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));
     });
 
     for (final issuer in ['https://id.example.com/realms/demo?x=1', 'https://id.example.com/realms/demo#y']) {
       test('is misconfigured for the issuer $issuer, which has a query or a fragment', () {
-        final mode = AuthMode.fromDefines(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: issuer, oidcClientId: _clientId),
-        );
+        final mode = AuthMode.fromDefines(AuthDefines(oidcIssuer: issuer, oidcClientId: _clientId));
 
         expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_ISSUER')));
       });
@@ -99,59 +72,42 @@ void main() {
 
     test('is misconfigured for a scope without openid', () {
       final mode = AuthMode.fromDefines(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcScope: 'profile email',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcScope: 'profile email'),
       );
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_SCOPE')));
     });
 
     test('asks for openid, profile and email when the scope is unset', () {
-      final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
+      final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.scopes, ['openid', 'profile', 'email']);
     });
 
     test('splits the scope on white space', () {
       final settings = _settings(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcScope: ' openid  offline_access ',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcScope: ' openid  offline_access '),
       );
 
       expect(settings.scopes, ['openid', 'offline_access']);
     });
 
     test('prompts for login when the prompt is unset', () {
-      final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
+      final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.prompt, OidcPrompt.login);
     });
 
     test('reads a padded mixed-case select_account prompt', () {
       final settings = _settings(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcPrompt: ' Select_Account ',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcPrompt: ' Select_Account '),
       );
 
       expect(settings.prompt, OidcPrompt.selectAccount);
     });
 
     test('reads the omit prompt', () {
-      final settings = _settings(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcPrompt: 'omit'),
-      );
+      final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcPrompt: 'omit'));
 
       expect(settings.prompt, OidcPrompt.omit);
     });
@@ -159,7 +115,7 @@ void main() {
     for (final prompt in ['none', 'always']) {
       test('is misconfigured for the prompt $prompt', () {
         final mode = AuthMode.fromDefines(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcPrompt: prompt),
+          AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcPrompt: prompt),
         );
 
         expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_PROMPT')));
@@ -168,9 +124,7 @@ void main() {
 
     for (final value in ['true', '1', 'on', 'YES']) {
       test('turns the automatic redirect on for $value', () {
-        final settings = _settings(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcAutoRedirect: value),
-        );
+        final settings = _settings(AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAutoRedirect: value));
 
         expect(settings.autoRedirect, isTrue);
       });
@@ -178,9 +132,7 @@ void main() {
 
     for (final value in ['false', '0', 'off', 'no', '']) {
       test('leaves the automatic redirect off for "$value"', () {
-        final settings = _settings(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcAutoRedirect: value),
-        );
+        final settings = _settings(AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAutoRedirect: value));
 
         expect(settings.autoRedirect, isFalse);
       });
@@ -188,26 +140,21 @@ void main() {
 
     test('is misconfigured for an automatic redirect of maybe', () {
       final mode = AuthMode.fromDefines(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcAutoRedirect: 'maybe',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAutoRedirect: 'maybe'),
       );
 
       expect(mode, isA<OidcMisconfiguredAuthMode>().having((m) => m.reason, 'reason', contains('OIDC_AUTO_REDIRECT')));
     });
 
     test('sends the logout hint when it is unset', () {
-      final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
+      final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.logoutHint, isTrue);
     });
 
     test('leaves the logout hint out when it is off', () {
       final settings = _settings(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcLogoutHint: 'off'),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcLogoutHint: 'off'),
       );
 
       expect(settings.logoutHint, isFalse);
@@ -215,7 +162,7 @@ void main() {
 
     test('is misconfigured for user roles without a role claim', () {
       final mode = AuthMode.fromDefines(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: 'user'),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: 'user'),
       );
 
       expect(
@@ -231,7 +178,6 @@ void main() {
     test('reads the role claim and the user roles together', () {
       final settings = _settings(
         const AuthDefines(
-          authProvider: 'oidc',
           oidcIssuer: _issuer,
           oidcClientId: _clientId,
           oidcRoleClaim: ' realm_access.roles ',
@@ -245,7 +191,7 @@ void main() {
 
     test('uses the admin role when the admin roles are only commas', () {
       final settings = _settings(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcAdminRoles: ' , ,'),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAdminRoles: ' , ,'),
       );
 
       expect(settings.adminRoles, ['admin']);
@@ -253,7 +199,7 @@ void main() {
 
     test('has no user roles when the user roles are only commas', () {
       final settings = _settings(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: ' , ,'),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcUserRoles: ' , ,'),
       );
 
       expect(settings.userRoles, isEmpty);
@@ -261,19 +207,14 @@ void main() {
 
     test('trims each admin role and keeps its case', () {
       final settings = _settings(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcAdminRoles: 'Admin, superadmin',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAdminRoles: 'Admin, superadmin'),
       );
 
       expect(settings.adminRoles, ['Admin', 'superadmin']);
     });
 
     test('uses the app redirect scheme when it is unset', () {
-      final settings = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
+      final settings = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(settings.redirectScheme, OidcSettings.defaultRedirectScheme);
       expect(settings.redirectScheme, 'org.libredb.mobile');
@@ -281,12 +222,7 @@ void main() {
 
     test('redirects sign-in and logout to <scheme>:/oauth2redirect', () {
       final settings = _settings(
-        const AuthDefines(
-          authProvider: 'oidc',
-          oidcIssuer: _issuer,
-          oidcClientId: _clientId,
-          oidcRedirectScheme: 'com.acme.db',
-        ),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcRedirectScheme: 'com.acme.db'),
       );
 
       expect(settings.redirectUri.toString(), 'com.acme.db:/oauth2redirect');
@@ -296,7 +232,7 @@ void main() {
     for (final scheme in ['org.libredb_mobile', '9app', 'Org.Libredb.Mobile']) {
       test('is misconfigured for the redirect scheme $scheme', () {
         final mode = AuthMode.fromDefines(
-          AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcRedirectScheme: scheme),
+          AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcRedirectScheme: scheme),
         );
 
         expect(
@@ -308,21 +244,13 @@ void main() {
 
     test('reads the audience, and leaves an unset audience and role claim out', () {
       final withAudience = _settings(
-        const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId, oidcAudience: ' api '),
+        const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId, oidcAudience: ' api '),
       );
-      final without = _settings(const AuthDefines(authProvider: 'oidc', oidcIssuer: _issuer, oidcClientId: _clientId));
+      final without = _settings(const AuthDefines(oidcIssuer: _issuer, oidcClientId: _clientId));
 
       expect(withAudience.audience, 'api');
       expect(without.audience, isNull);
       expect(without.roleClaim, isNull);
-    });
-  });
-
-  group('AuthMode.usesOidc', () {
-    test('is false for jwt and true for both oidc modes', () {
-      expect(const JwtAuthMode().usesOidc, isFalse);
-      expect(OidcAuthMode(OidcSettings(issuer: Uri.parse(_issuer), clientId: _clientId)).usesOidc, isTrue);
-      expect(const OidcMisconfiguredAuthMode('OIDC_ISSUER is required').usesOidc, isTrue);
     });
   });
 

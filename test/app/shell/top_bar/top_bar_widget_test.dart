@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
@@ -34,7 +35,7 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(language: language));
+    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
     await tester.pumpAndSettle();
   }
 

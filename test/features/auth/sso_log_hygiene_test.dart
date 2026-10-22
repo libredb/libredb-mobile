@@ -129,7 +129,7 @@ void main() {
     final sessions = dependencies.createAuthSessionRepository(secureStorage);
     final rotation = dependencies.createOidcTokenRotation(client, secureStorage);
     var sessionsExpired = 0;
-    final apiClient = dependencies.createOidcApiClient(
+    final apiClient = dependencies.createApiClient(
       secureStorage,
       onSessionExpired: () async {
         sessionsExpired++;
@@ -142,7 +142,7 @@ void main() {
     dio.interceptors.insert(dio.interceptors.length - 1, server);
     final ssoRepository = dependencies.createSsoAuthRepository(client, sessions, _settings);
     final signOutRepository = SsoSignOutAuthRepository(
-      inner: dependencies.createAuthRepository(sessions, apiClient),
+      inner: dependencies.createAuthRepository(sessions),
       client: client,
       secureStorage: secureStorage,
       settings: _settings,

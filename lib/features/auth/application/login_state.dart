@@ -1,35 +1,26 @@
 part of 'login_bloc.dart';
 
-/// Sealed hierarchy. The base class carries the two UI-config fields
-/// (`loginMethod`, `passwordVisible`) that survive across every variant
-/// transition — concurrent-state-access exception (CLAUDE.md → State
-/// Modeling). Auth-flow data (`username`, `email`, `otpCode`, error
-/// message) lives only on the variants that actually carry it.
 sealed class LoginState extends Equatable {
-  const LoginState({this.loginMethod = LoginMethod.password, this.passwordVisible = false});
-
-  final LoginMethod loginMethod;
-  final bool passwordVisible;
+  const LoginState();
 }
 
 final class LoginInitialState extends LoginState {
-  const LoginInitialState({super.loginMethod, super.passwordVisible});
+  const LoginInitialState();
 
   @override
-  List<Object?> get props => [loginMethod, passwordVisible];
+  List<Object?> get props => [];
 }
 
+/// A sign-in is running.
 final class LoginLoadingState extends LoginState {
-  const LoginLoadingState({this.username, super.loginMethod, super.passwordVisible});
-
-  final String? username;
+  const LoginLoadingState();
 
   @override
-  List<Object?> get props => [username, loginMethod, passwordVisible];
+  List<Object?> get props => [];
 }
 
 final class LoginLoadedState extends LoginState {
-  const LoginLoadedState({this.username, this.roles = const <String>[], super.loginMethod, super.passwordVisible});
+  const LoginLoadedState({this.username, this.roles = const <String>[]});
 
   final String? username;
 
@@ -41,44 +32,16 @@ final class LoginLoadedState extends LoginState {
   final List<String> roles;
 
   @override
-  List<Object?> get props => [username, roles, loginMethod, passwordVisible];
-}
-
-final class LoginOtpSentState extends LoginState {
-  const LoginOtpSentState({required this.email, super.passwordVisible}) : super(loginMethod: LoginMethod.otp);
-
-  final String email;
-
-  @override
-  List<Object?> get props => [email, passwordVisible];
-}
-
-final class LoginOtpVerifiedState extends LoginState {
-  const LoginOtpVerifiedState({required this.email, this.otpCode, super.passwordVisible})
-    : super(loginMethod: LoginMethod.otp);
-
-  final String email;
-  final String? otpCode;
-
-  @override
-  List<Object?> get props => [email, otpCode, passwordVisible];
-
-  /// The code is masked: the debug observer records the text of every state in the dev console.
-  @override
-  String toString() => 'LoginOtpVerifiedState(email: $email, otpCode: $secretMask, passwordVisible: $passwordVisible)';
+  List<Object?> get props => [username, roles];
 }
 
 final class LoginErrorState extends LoginState {
-  const LoginErrorState({required this.errorCode, this.message, super.loginMethod, super.passwordVisible});
+  const LoginErrorState({required this.errorCode});
 
   /// Translated by the UI via `errorCode.resolve(context)`. See
   /// `lib/shared/l10n/app_error_code_l10n.dart`.
   final AppErrorCode errorCode;
 
-  /// Optional developer-facing detail (e.g. raw exception text). Never
-  /// shown to end users — the UI always shows the translated [errorCode].
-  final String? message;
-
   @override
-  List<Object?> get props => [errorCode, message, loginMethod, passwordVisible];
+  List<Object?> get props => [errorCode];
 }

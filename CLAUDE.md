@@ -96,7 +96,7 @@ Every feature follows: **Event → BLoC → State → UI**
 ### `Bloc` vs `Cubit`
 
 - Use **`Cubit`** when every interaction is an atomic, fire-and-forget call and the event stream adds no value (no debouncing, no concurrency policy, no historical event payload needed). Example: `LocaleCubit` (`restore`, `changeLocale`).
-- Use **`Bloc`** when events carry meaningful payload, when an `EventTransformer` (debounce, restartable, droppable) is needed, or when the event log itself is valuable for replay/observability. Examples: `ConnectionListBloc` (restartable refresh), `ChangePasswordBloc` (drop-concurrent submit), `LoginBloc` (multistep auth flow).
+- Use **`Bloc`** when events carry meaningful payload, when an `EventTransformer` (debounce, restartable, droppable) is needed, or when the event log itself is valuable for replay/observability. Examples: `ConnectionListBloc` (restartable refresh), `LoginBloc` (drop-concurrent single sign-on), `SignOutBloc` (sign-out lifecycle).
 - Default to `Bloc` for any new feature touching network requests or user input streams; reach for `Cubit` only after confirming none of the above apply.
 
 ### State Modeling — MAIN RULE
@@ -159,8 +159,8 @@ When in doubt, prefer sealed and split the BLoC instead of growing the single st
 
 - **dev/test** → mock data from `assets/mock/*.json`
 - **prod** → real API (configured in `lib/infrastructure/config/environment.dart`)
-- **Sign-in mode** is a separate build-time switch, `AUTH_PROVIDER`: unset or `jwt` is the password and OTP sign-in against the backend, and `oidc` signs in through an OpenID Connect provider configured by the `OIDC_*` defines (`lib/infrastructure/config/auth_config.dart`, [`docs/oidc.md`](docs/oidc.md)).
-  Both entry points accept both modes, and `jwt` mode must never construct or call anything from the OIDC path.
+- **Sign-in** is only through Keycloak, the OpenID Connect provider the `OIDC_*` defines name (`lib/infrastructure/config/auth_config.dart`, [`docs/oidc.md`](docs/oidc.md)); there is no password, OTP or registration path and no backend token endpoint, and a build without the defines fails closed on the login page.
+  `main_prod.dart` signs in through the provider; `main_local.dart` passes `LocalSignInDependencies`, a debug-only provider double that `main_prod.dart` never imports (`test/architecture/local_sign_in_test.dart`).
 - **Backend:** the app's backend is LibreDB Studio, called with the Keycloak access token as bearer; `PROD_API_URL` is Studio's `/api` ([`docs/studio.md`](docs/studio.md)).
 
 ## Studio API Layer

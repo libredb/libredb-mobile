@@ -3,7 +3,7 @@
 The app talks to [LibreDB Studio](https://github.com/libredb/libredb-studio) as its backend.
 It signs in to Keycloak itself, as the public client `libredb-mobile` with the authorization code flow and PKCE, and sends Keycloak's access token to Studio as `Authorization: Bearer`.
 Studio accepts that token through its bearer channel for native clients, which `OIDC_BEARER_AUDIENCE` turns on (Studio's `docs/OIDC.md`, "Bearer access tokens for native clients").
-The sign-in itself is the app's `oidc` mode, described in [oidc.md](oidc.md).
+The sign-in itself, the app's only one, is described in [oidc.md](oidc.md).
 
 The bearer channel came with libredb/libredb-studio#1914, which is on Studio's main branch; Studio 1.0.0 does not have it.
 Until a Studio release contains it, build the Studio image from main, as shown below.
@@ -30,7 +30,6 @@ Under LibreDB Platform the installer creates all of this when `mobile.enabled` i
 The app is built with:
 
 ```env
-AUTH_PROVIDER=oidc
 OIDC_ISSUER=https://keycloak.example.com/realms/libredb
 OIDC_CLIENT_ID=libredb-mobile
 OIDC_ROLE_CLAIM=realm_access.roles

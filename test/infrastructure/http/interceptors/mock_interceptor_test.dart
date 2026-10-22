@@ -24,7 +24,7 @@ void main() {
   Dio mockDio() => Dio()..interceptors.add(MockInterceptor(appConfig: const AppConfig.test()));
 
   Future<Response<dynamic>> getAccount({String? authorization}) =>
-      mockDio().get('/account', options: Options(headers: {'Authorization': ?authorization}));
+      mockDio().get('/auth/me', options: Options(headers: {'Authorization': ?authorization}));
 
   group('MockInterceptor bearer check', () {
     test('an expired JWT bearer gets a 401', () async {
@@ -39,7 +39,7 @@ void main() {
       final response = await getAccount(authorization: 'Bearer $valid');
 
       expect(response.statusCode, 200);
-      expect(response.data, contains('"login": "admin"'));
+      expect(response.data, contains('"authenticated": true'));
     });
 
     test('a 3-part bearer without an exp claim still reaches the mock file', () async {
@@ -49,7 +49,7 @@ void main() {
       final lines = await printedLines(() async => response = await getAccount(authorization: 'Bearer $noExp'));
 
       expect(response.statusCode, 200);
-      expect(response.data, contains('"login": "admin"'));
+      expect(response.data, contains('"authenticated": true'));
       expect(lines.where((line) => line.contains('[E]')), isEmpty);
     });
 
@@ -57,7 +57,7 @@ void main() {
       final response = await getAccount(authorization: 'Bearer MOCK_TOKEN');
 
       expect(response.statusCode, 200);
-      expect(response.data, contains('"login": "admin"'));
+      expect(response.data, contains('"authenticated": true'));
     });
 
     test('a request with no Authorization header still gets a 401', () async {

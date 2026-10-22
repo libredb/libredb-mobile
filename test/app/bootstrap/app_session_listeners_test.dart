@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -32,10 +33,10 @@ import '../../support/test_env.dart';
 import '../../support/user_menu.dart';
 
 /// The app on the mock-backed development config, with the idle timeout turned on as production has it.
-const _app = App(
+final _app = App(
   language: 'en',
-  dependencies: AppDependencies(
-    appConfig: AppConfig(
+  dependencies: LocalSignInDependencies(
+    appConfig: const AppConfig(
       environment: Environment.dev,
       apiBaseUrl: null,
       certificatePins: <String>[],
@@ -101,11 +102,9 @@ const _inputsWithoutPointerMoves = <String, Future<void> Function(WidgetTester)>
   'typing': _pressKey,
 };
 
-/// Signs in through the login form. The mock API accepts any username and password.
-Future<void> _signIn(WidgetTester tester, String username) async {
-  await tester.enterText(find.byKey(loginTextFieldUsernameKey), username);
-  await tester.enterText(find.byKey(loginTextFieldPasswordKey), 'password');
-  await tester.tap(find.byKey(loginButtonSubmitKey));
+/// Signs in with the single sign-on button, through the local sign-in of the mock-backed app.
+Future<void> _signIn(WidgetTester tester) async {
+  await tester.tap(find.byKey(loginButtonSsoKey));
   await tester.pumpAndSettle();
 }
 
@@ -121,13 +120,13 @@ void main() {
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
 
       // A relaunch mounts a new App, which restores the session from storage.
       await tester.pumpWidget(const SizedBox());
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
       expect(find.byType(ResponsiveScaffold), findsNothing);
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
       expect(await AppLocalStorage().read(StorageKeys.roles.key), isNull);
@@ -142,7 +141,7 @@ void main() {
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
       expect(find.text('You were signed out due to inactivity.').hitTestable(), findsOneWidget);
     });
 
@@ -186,11 +185,11 @@ void main() {
         await tester.pump(const Duration(minutes: 4));
         await tester.pumpAndSettle();
         expect(find.byType(ResponsiveScaffold), findsOneWidget);
-        expect(find.byKey(loginButtonSubmitKey), findsNothing);
+        expect(find.byKey(loginButtonSsoKey), findsNothing);
 
         await tester.pump(const Duration(minutes: 1));
         await tester.pumpAndSettle();
-        expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
       });
     }
 
@@ -213,7 +212,7 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
     });
 
     testWidgets('an idle timeout keeps the preferences and removes the cached responses', (tester) async {
@@ -225,7 +224,7 @@ void main() {
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
 
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
@@ -241,7 +240,7 @@ void main() {
       expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
 
       await _logOut(tester);
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
 
       expect(await AppLocalStorage().read(StorageKeys.language.key), 'tr');
       expect(await AppLocalStorage().read(StorageKeys.theme.key), 'nature');
@@ -264,7 +263,7 @@ void main() {
 
       await _logOut(tester);
 
-      expect(find.byKey(loginButtonSubmitKey), findsOneWidget);
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
       expect(
         find.text('You were signed out, but some stored data could not be removed from this device.').hitTestable(),
         findsOneWidget,
@@ -348,45 +347,17 @@ void main() {
       });
     });
 
-    // A jwt build provides no gate, so reading it would throw ProviderNotFoundException. A misconfigured oidc build
-    // never restores a session an earlier build left, see app_session_listeners_sso_test.dart.
-    for (final (build, authMode) in <(String, AuthMode)>[('a jwt build', const JwtAuthMode())]) {
-      testWidgets('in $build, a session left by an earlier build and a logout read no gate', (tester) async {
-        TestEnv.authenticate();
-        await tester.pumpWidget(
-          App(
-            language: 'en',
-            dependencies: AppDependencies(appConfig: _app.dependencies.appConfig, authMode: authMode),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(ResponsiveScaffold), findsOneWidget);
-        expect(
-          () => tester.element(find.byType(MaterialApp)).read<SsoAutoRedirectGate>(),
-          throwsA(isA<ProviderNotFoundException>()),
-        );
-
-        await _logOut(tester);
-
-        expect(find.byKey(loginButtonSubmitKey), authMode is JwtAuthMode ? findsOneWidget : findsNothing);
-        expect(find.byType(LoginScreen), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      });
-    }
-
     for (final MapEntry(key: ending, value: endSession) in _sessionEndings.entries) {
-      testWidgets('after $ending, the next user types their password hidden', (tester) async {
+      testWidgets('after $ending, the next user finds a blank login page', (tester) async {
         await tester.pumpWidget(_app);
         await tester.pumpAndSettle();
-        // The first user shows the password while typing it.
-        await tester.tap(find.byKey(loginButtonPasswordVisibilityKey));
-        await tester.pump();
-        await _signIn(tester, 'admin');
+        await _signIn(tester);
+        expect(find.byType(ResponsiveScaffold), findsOneWidget);
 
         await endSession(tester);
 
-        final password = find.descendant(of: find.byKey(loginTextFieldPasswordKey), matching: find.byType(TextField));
-        expect(tester.widget<TextField>(password).obscureText, isTrue);
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(tester.element(find.byType(MaterialApp)).read<LoginBloc>().state, const LoginInitialState());
       });
     }
   });

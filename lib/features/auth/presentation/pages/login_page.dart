@@ -5,16 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
-import 'package:libredb_mobile/shared/widgets/password_validator.dart';
-import 'package:libredb_mobile/shared/widgets/responsive_form_widget.dart';
-import 'package:libredb_mobile/shared/widgets/submit_button_widget.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
@@ -38,10 +33,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final GlobalKey<FormBuilderState> _loginFormKey = GlobalKey<FormBuilderState>(debugLabel: '__loginFormKey__');
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>(debugLabel: '__loginScaffoldKey__');
   late AnimationController _animController;
-  final FocusNode _forgotPwFocus = FocusNode(skipTraversal: true);
 
   /// Whether the user has tapped the single sign-on button on this visit of the page, which hides
   /// [LoginScreen.startupSignInError].
@@ -57,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   @override
   void dispose() {
-    _forgotPwFocus.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -87,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           listener: (context, _) => context.read<SsoAutoRedirectGate>().close(),
           child: body,
         ),
-        OidcAuthMode() || JwtAuthMode() || OidcMisconfiguredAuthMode() => body,
+        OidcAuthMode() || OidcMisconfiguredAuthMode() => body,
       },
     );
   }
@@ -374,63 +366,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.8, color: cs.onSurface),
         ),
         const SizedBox(height: 8),
-        Text(
-          context.read<AuthMode>().usesOidc ? S.of(context).login_sso_subtitle : S.of(context).login_welcome_subtitle,
-          style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-        ),
+        Text(S.of(context).login_sso_subtitle, style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
       ],
     );
   }
 
   Widget _formBody(BuildContext context, bool isDark, {required bool showCommunity}) {
-    return switch (context.read<AuthMode>()) {
-      JwtAuthMode() => _passwordFormBody(context, isDark, showCommunity: showCommunity),
-      final OidcAuthMode mode => _ssoFormBody(context, mode, showCommunity: showCommunity),
-      final OidcMisconfiguredAuthMode mode => _ssoFormBody(context, mode, showCommunity: showCommunity),
-    };
+    return _ssoFormBody(context, context.read<AuthMode>(), showCommunity: showCommunity);
   }
 
-  Widget _passwordFormBody(BuildContext context, bool isDark, {required bool showCommunity}) {
-    return FormBuilder(
-      key: _loginFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _fieldLabel(context, S.of(context).login_user_name),
-          const SizedBox(height: 8),
-          _usernameField(context),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _fieldLabel(context, S.of(context).login_password)),
-              _forgotPasswordLink(context),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _passwordField(context),
-          const SizedBox(height: 8),
-          _validationZone(),
-          const SizedBox(height: 24),
-          SizedBox(width: double.infinity, child: _submitButton(context)),
-          const SizedBox(height: 16),
-          _dividerWithOr(context),
-          const SizedBox(height: 16),
-          SizedBox(width: double.infinity, child: _otpLoginButton(context)),
-          const SizedBox(height: 28),
-          _registerLink(context),
-          if (showCommunity) ...[
-            const SizedBox(height: 4),
-            CommunitySectionWidget(isDesktop: false, urls: _communityUrls(context)),
-          ],
-          const SizedBox(height: 16),
-          _versionText(context),
-        ],
-      ),
-    );
-  }
-
-  /// The sign-in of an `oidc` build: the error line and the single sign-on button, which a misconfigured build leaves
-  /// out.
+  /// The sign-in: the error line and the single sign-on button, which a misconfigured build leaves out.
   Widget _ssoFormBody(BuildContext context, AuthMode mode, {required bool showCommunity}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,7 +402,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   AppErrorCode? _ssoErrorCode(AuthMode mode, LoginState state) => switch (state) {
     LoginErrorState(:final errorCode) => errorCode,
     LoginLoadingState() || LoginLoadedState() => null,
-    LoginInitialState() || LoginOtpSentState() || LoginOtpVerifiedState() =>
+    LoginInitialState() =>
       (_ssoTapped ? null : widget.startupSignInError) ??
           (mode is OidcMisconfiguredAuthMode ? AppErrorCode.authOidcConfig : null),
   };
@@ -505,7 +450,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _requestSso(context);
   }
 
-  /// Starts the single sign-on. The page reads the route's `returnUrl` on the way out, as the password sign-in does.
+  /// Starts the single sign-on. The page reads the route's `returnUrl` on the way out.
   void _requestSso(BuildContext context) => context.read<LoginBloc>().add(const SsoSignInRequested());
 
   /// The links of the community section.
@@ -517,46 +462,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       child: Text(
         'v${AppConstants.appVersion}+${AppConstants.appBuildNumber}',
         style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
-      ),
-    );
-  }
-
-  Widget _dividerWithOr(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: cs.outlineVariant)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(S.of(context).login_or, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-        ),
-        Expanded(child: Divider(color: cs.outlineVariant)),
-      ],
-    );
-  }
-
-  Widget _registerLink(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(S.of(context).login_no_account, style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant)),
-          TextButton(
-            key: loginButtonRegisterKey,
-            onPressed: () => context.push(ApplicationRoutesConstants.register),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              S.of(context).register,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.onSurface),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -587,114 +492,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _fieldLabel(BuildContext context, String text) {
-    return Text(text, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500));
-  }
-
-  Widget _usernameField(BuildContext context) {
-    return FormBuilderTextField(
-      key: loginTextFieldUsernameKey,
-      name: 'username',
-      decoration: const InputDecoration(hintText: 'm@example.com'),
-      textInputAction: TextInputAction.next,
-      validator: FormBuilderValidators.compose([
-        FormBuilderValidators.required(errorText: S.of(context).required_field),
-        FormBuilderValidators.minLength(4, errorText: S.of(context).min_length_4),
-        FormBuilderValidators.maxLength(20, errorText: S.of(context).max_length_20),
-      ]),
-    );
-  }
-
-  Widget _passwordField(BuildContext context) {
-    return BlocBuilder<LoginBloc, LoginState>(
-      builder: (context, state) {
-        return FormBuilderTextField(
-          key: loginTextFieldPasswordKey,
-          name: 'password',
-          decoration: InputDecoration(
-            hintText: '********',
-            suffixIcon: IconButton(
-              key: loginButtonPasswordVisibilityKey,
-              tooltip: state.passwordVisible ? S.of(context).password_hide : S.of(context).password_show,
-              icon: Icon(state.passwordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
-              onPressed: () => context.read<LoginBloc>().add(const TogglePasswordVisibility()),
-            ),
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _trySubmit(context),
-          obscureText: !state.passwordVisible,
-          validator: passwordValidator(context),
-        );
-      },
-    );
-  }
-
-  Widget _submitButton(BuildContext context) {
-    return BlocBuilder<LoginBloc, LoginState>(
-      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
-      builder: (context, state) {
-        final isLoading = state is LoginLoadingState;
-        return FilledButton(
-          key: loginButtonSubmitKey,
-          onPressed: isLoading ? null : () => _trySubmit(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: isLoading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
-                  )
-                : Text(S.of(context).login_button),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _forgotPasswordLink(BuildContext context) {
-    return TextButton(
-      key: loginButtonForgotPasswordKey,
-      focusNode: _forgotPwFocus,
-      onPressed: () => context.push(ApplicationRoutesConstants.forgotPassword),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(S.of(context).password_forgot, style: const TextStyle(fontSize: 13)),
-    );
-  }
-
-  /// Keeps saying what went wrong, in the words of the error snack bar, after the snack bar has gone.
-  Widget _validationZone() {
-    return BlocBuilder<LoginBloc, LoginState>(
-      buildWhen: (previous, current) => current is LoginErrorState,
-      builder: (context, state) => switch (state) {
-        LoginErrorState(:final errorCode) => Center(
-          child: Text(
-            errorCode.resolve(context),
-            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        LoginInitialState() ||
-        LoginLoadingState() ||
-        LoginLoadedState() ||
-        LoginOtpSentState() ||
-        LoginOtpVerifiedState() => const SizedBox.shrink(),
-      },
-    );
-  }
-
-  void _trySubmit(BuildContext context) {
-    if (_loginFormKey.currentState?.saveAndValidate() ?? false) {
-      final username = _loginFormKey.currentState!.value['username'] as String;
-      final password = _loginFormKey.currentState!.value['password'] as String;
-      context.read<LoginBloc>().add(LoginFormSubmitted(username: username, password: password));
-    }
-  }
-
   void _onLoginStateChange(BuildContext context, LoginState state) {
     if (state is LoginLoadingState) {
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
@@ -708,14 +505,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } else if (state is LoginLoadedState) {
       // Honor `?returnUrl=` from the redirect-to-login flow so deep
       // links survive the auth bounce. Open-redirect guard rejects
-      // off-origin candidates; falls back to home.
-      // An `oidc` build also drops a returnUrl that is too long, holds a control character or is the login page.
+      // off-origin candidates, a returnUrl that is too long, holds a
+      // control character or is the login page; falls back to home.
       final returnUrl = GoRouterState.of(context).uri.queryParameters['returnUrl'];
-      final destination = switch (context.read<AuthMode>()) {
-        JwtAuthMode() => safeRedirectTarget(returnUrl, fallback: ApplicationRoutesConstants.home),
-        OidcAuthMode() || OidcMisconfiguredAuthMode() =>
-          safeReturnPath(returnUrl, loginPath: ApplicationRoutesConstants.login) ?? ApplicationRoutesConstants.home,
-      };
+      final destination =
+          safeReturnPath(returnUrl, loginPath: ApplicationRoutesConstants.login) ?? ApplicationRoutesConstants.home;
       context.go(destination);
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).hideCurrentSnackBar();
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
@@ -737,180 +531,5 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
       );
     }
-  }
-}
-
-Widget _otpLoginButton(BuildContext context) {
-  return OutlinedButton(
-    key: const Key('loginButtonOtpKey'),
-    onPressed: () => context.push(ApplicationRoutesConstants.loginOtp),
-    child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(S.of(context).login_with_email)),
-  );
-}
-
-class OtpEmailScreen extends StatelessWidget {
-  OtpEmailScreen({super.key});
-
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text(S.of(context).login_with_email),
-        leading: IconButton(
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _popOrFallback(context, ApplicationRoutesConstants.login),
-        ),
-      ),
-      body: BlocListener<LoginBloc, LoginState>(
-        listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
-        listener: (context, state) {
-          if (state is LoginOtpSentState) {
-            context.go('${ApplicationRoutesConstants.loginOtpVerify}/${state.email}');
-          } else if (state is LoginErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.errorCode.resolve(context))));
-          }
-        },
-        child: ResponsiveFormBuilder(
-          formKey: _formKey,
-          children: [
-            Text(
-              S.of(context).login_otp_email_instructions,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
-            Divider(color: Theme.of(context).colorScheme.outlineVariant),
-            const SizedBox(height: 8),
-            _emailField(context),
-            _submitOtpButton(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _emailField(BuildContext context) {
-    return FormBuilderTextField(
-      name: 'email',
-      decoration: InputDecoration(labelText: S.of(context).email, prefixIcon: const Icon(Icons.email)),
-      validator: FormBuilderValidators.compose([
-        FormBuilderValidators.required(errorText: S.of(context).required_field),
-        FormBuilderValidators.email(errorText: S.of(context).invalid_email),
-      ]),
-    );
-  }
-
-  Widget _submitOtpButton(BuildContext context) {
-    return BlocBuilder<LoginBloc, LoginState>(
-      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
-      builder: (context, state) {
-        return ResponsiveSubmitButton(
-          buttonText: S.of(context).send_otp_code,
-          isLoading: state is LoginLoadingState,
-          onPressed: () {
-            if (_formKey.currentState?.saveAndValidate() ?? false) {
-              final email = _formKey.currentState!.value['email'] as String;
-              context.read<LoginBloc>().add(SendOtpRequested(email: email));
-            }
-          },
-        );
-      },
-    );
-  }
-}
-
-class OtpVerifyScreen extends StatelessWidget {
-  OtpVerifyScreen({super.key, required this.email});
-
-  final String email;
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text(S.of(context).verify_otp_code),
-        leading: IconButton(
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _popOrFallback(context, ApplicationRoutesConstants.loginOtp),
-        ),
-      ),
-      body: BlocListener<LoginBloc, LoginState>(
-        listener: (context, state) {
-          switch (state) {
-            case LoginLoadedState():
-              context.go(ApplicationRoutesConstants.home);
-            // A failed verification or resend reports why, as the email screen does.
-            case LoginErrorState(:final errorCode):
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorCode.resolve(context))));
-            case LoginInitialState() || LoginLoadingState() || LoginOtpSentState() || LoginOtpVerifiedState():
-              break;
-          }
-        },
-        child: ResponsiveFormBuilder(
-          formKey: _formKey,
-          children: [
-            Text(S.of(context).otp_sent_to_email(email)),
-            _otpField(context),
-            _submitVerifyButton(context),
-            _resendButton(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _otpField(BuildContext context) {
-    return FormBuilderTextField(
-      name: 'otpCode',
-      decoration: InputDecoration(labelText: S.of(context).otp_code, prefixIcon: const Icon(Icons.lock_clock)),
-      validator: FormBuilderValidators.compose([
-        FormBuilderValidators.required(errorText: S.of(context).required_field),
-        FormBuilderValidators.numeric(errorText: S.of(context).only_numbers),
-        FormBuilderValidators.minLength(6, errorText: S.of(context).otp_length),
-        FormBuilderValidators.maxLength(6, errorText: S.of(context).otp_length),
-      ]),
-    );
-  }
-
-  Widget _submitVerifyButton(BuildContext context) {
-    return BlocBuilder<LoginBloc, LoginState>(
-      buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
-      builder: (context, state) {
-        return ResponsiveSubmitButton(
-          buttonText: S.of(context).verify_otp_code,
-          isLoading: state is LoginLoadingState,
-          onPressed: () {
-            if (_formKey.currentState?.saveAndValidate() ?? false) {
-              final otpCode = _formKey.currentState!.value['otpCode'] as String;
-              context.read<LoginBloc>().add(VerifyOtpSubmitted(email: email, otpCode: otpCode));
-            }
-          },
-        );
-      },
-    );
-  }
-
-  Widget _resendButton(BuildContext context) {
-    return TextButton(
-      onPressed: () => context.read<LoginBloc>().add(SendOtpRequested(email: email)),
-      child: Text(S.of(context).resend_otp_code),
-    );
-  }
-}
-
-void _popOrFallback(BuildContext context, String fallbackRoute) {
-  if (GoRouter.of(context).canPop()) {
-    context.pop();
-  } else {
-    context.go(fallbackRoute);
   }
 }

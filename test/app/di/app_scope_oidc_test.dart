@@ -35,7 +35,7 @@ class _IdleOidcClient implements IOidcClient {
       throw UnimplementedError('these tests never log out');
 }
 
-/// The test config in an oidc build over [client], recording the rotation its ApiClient is given.
+/// The test config over [client], recording the rotation its ApiClient is given.
 class _OidcDependencies extends AppDependencies {
   _OidcDependencies(this.client) : super(appConfig: const AppConfig.test(), authMode: OidcAuthMode(_oidcSettings));
 
@@ -46,21 +46,17 @@ class _OidcDependencies extends AppDependencies {
   IOidcClient createOidcClient(OidcSettings settings) => client;
 
   @override
-  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
-      throw StateError('an oidc build must create its ApiClient through createOidcApiClient');
-
-  @override
-  ApiClient createOidcApiClient(
+  ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
-    return super.createOidcApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
+    return super.createApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
   }
 }
 
-/// The test config in a misconfigured oidc build, recording the rotation its ApiClient is given.
+/// The test config in a misconfigured build, recording the rotation its ApiClient is given.
 class _MisconfiguredDependencies extends AppDependencies {
   _MisconfiguredDependencies()
     : super(
@@ -71,17 +67,13 @@ class _MisconfiguredDependencies extends AppDependencies {
   final apiClientRotations = <TokenRotation>[];
 
   @override
-  ApiClient createApiClient(ISecureStorage secureStorage, {required OnSessionExpired onSessionExpired}) =>
-      throw StateError('a misconfigured oidc build must never refresh through the backend refresh endpoint');
-
-  @override
-  ApiClient createOidcApiClient(
+  ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
-    return super.createOidcApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
+    return super.createApiClient(secureStorage, onSessionExpired: onSessionExpired, tokenRotation: tokenRotation);
   }
 }
 
@@ -113,7 +105,7 @@ Future<SessionState> _restoredSession(WidgetTester tester, BuildContext scope) a
 }
 
 void main() {
-  group('AppScope startup in an oidc build', () {
+  group('AppScope startup', () {
     testWidgets('refreshes an expired stored session through the provider before the router starts', (tester) async {
       for (final (key, value) in [
         (SecureStorageKeys.jwtToken, 'expired-access-token'),
@@ -141,8 +133,8 @@ void main() {
     });
   });
 
-  // A session that an earlier, correctly configured oidc build stored holds the provider's tokens.
-  group('AppScope in a misconfigured oidc build, with a session an earlier oidc build stored', () {
+  // A session that an earlier, correctly configured build stored holds the provider's tokens.
+  group('AppScope in a misconfigured build, with a session an earlier build stored', () {
     setUp(() async {
       final storage = FlutterSecureStorageAdapter();
       await storage.write(SecureStorageKeys.jwtToken.key, 'provider-access-token');
@@ -166,7 +158,7 @@ void main() {
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'provider-refresh-token');
     });
 
-    // The backend refresh endpoint must never receive the provider's refresh token.
+    // A misconfigured build cannot reach the identity provider, so it never refreshes the stored session.
     testWidgets('the ApiClient refreshes through a rotation that refuses every refresh', (tester) async {
       final dependencies = _MisconfiguredDependencies();
       final scope = await _pumpScope(tester, dependencies);
@@ -175,13 +167,12 @@ void main() {
 
       expect(dependencies.apiClientRotations, hasLength(1));
       final rotation = dependencies.apiClientRotations.single;
-      expect(rotation, isNot(isA<BackendTokenRotation>()));
       expect(await rotation.rotate('provider-refresh-token'), isA<RotationRefused>());
     });
   });
 
-  testWidgets('a jwt build provides no automatic redirect gate', (tester) async {
-    final scope = await _pumpScope(tester, const AppDependencies(appConfig: AppConfig.test()));
+  testWidgets('a misconfigured build provides no automatic redirect gate', (tester) async {
+    final scope = await _pumpScope(tester, _MisconfiguredDependencies());
 
     expect(() => scope.read<SsoAutoRedirectGate>(), throwsA(isA<ProviderNotFoundException>()));
   });

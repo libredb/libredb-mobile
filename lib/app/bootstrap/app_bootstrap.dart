@@ -17,10 +17,16 @@ import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
+/// Builds the [AppDependencies] of a run from its [AppConfig].
+typedef AppDependenciesFactory = AppDependencies Function(AppConfig appConfig);
+
 class AppBootstrap {
-  /// Starts the app as [config] says. [sentry] decides whether Sentry starts and starts it; a test passes its own.
+  /// Starts the app as [config] says. [dependencies] builds what the app runs on, [definedDependencies] unless
+  /// `main_local.dart` passes its local sign-in. [sentry] decides whether Sentry starts and starts it; a test passes
+  /// its own.
   static Future<void> run(
     AppBootstrapConfig config, {
+    AppDependenciesFactory dependencies = definedDependencies,
     @visibleForTesting SentryStart sentry = const SentryStart(),
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -31,24 +37,11 @@ class AppBootstrap {
     AppLogger.configure(isProduction: config.isProduction);
     final log = AppLogger.getLogger('AppBootstrap');
 
-    // An unknown AUTH_PROVIDER stops the app here, before any screen. An invalid OIDC configuration does not: the app
-    // starts, and the login page says that single sign-on is not configured correctly.
-    final AuthMode authMode;
-    try {
-      authMode = AuthMode.fromDefines(const AuthDefines());
-    } on AuthProviderConfigError catch (error) {
-      log.error('{}', [error]);
-      rethrow;
-    }
-    if (authMode case OidcMisconfiguredAuthMode(:final reason)) {
-      log.error('OIDC configuration is invalid: {}', [reason]);
-    }
-
     // Decided before anything reads the config: when Sentry may not start (a release build whose Android host did not
     // start the native SDK), the config loses its DSN, so the app runs exactly as without one.
     final appConfig = await sentry.gate(AppConfig.fromEnvironment(config.environment));
-    final dependencies = AppDependencies(appConfig: appConfig, authMode: authMode);
-    final secureStorage = dependencies.createSecureStorage();
+    final appDependencies = dependencies(appConfig);
+    final secureStorage = appDependencies.createSecureStorage();
 
     final existingPalette = await AppLocalStorage().read(StorageKeys.theme.key);
     if (existingPalette == null) {
@@ -71,7 +64,7 @@ class AppBootstrap {
     // errors to the Sentry-backed analytics here — doing so reports every crash
     // twice. With Sentry off, forwarding to the local logging analytics is the
     // only sink, so it stays enabled.
-    final analytics = dependencies.createAnalyticsService();
+    final analytics = appDependencies.createAnalyticsService();
     final sentryActive = appConfig.sentryDsn != null;
     CrashReporter.install(analytics, forwardToAnalytics: !sentryActive);
 
@@ -97,11 +90,22 @@ class AppBootstrap {
       appRunner: () => runApp(
         App(
           language: config.defaultLanguage,
-          dependencies: dependencies,
+          dependencies: appDependencies,
           secureStorage: secureStorage,
           analytics: analytics,
         ),
       ),
     );
+  }
+
+  /// The [AppDependencies] of a build that signs in through the identity provider its `OIDC_*` defines name. An
+  /// invalid OpenID Connect configuration does not stop the app: it starts, and the login page says that single
+  /// sign-on is not configured correctly.
+  static AppDependencies definedDependencies(AppConfig appConfig) {
+    final authMode = AuthMode.fromDefines(const AuthDefines());
+    if (authMode case OidcMisconfiguredAuthMode(:final reason)) {
+      AppLogger.getLogger('AppBootstrap').error('OIDC configuration is invalid: {}', [reason]);
+    }
+    return AppDependencies(appConfig: appConfig, authMode: authMode);
   }
 }
