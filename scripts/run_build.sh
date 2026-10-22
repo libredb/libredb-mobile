@@ -8,9 +8,7 @@ echo "Running pub get"
 fvm flutter pub get
 
 echo "Running intl_utils"
-fvm dart run intl_utils:generate
-# intl_utils formats its output at 80 columns; reformat to 120 so the committed files stay unchanged
-fvm dart format lib/generated --line-length=120
+scripts/generate_l10n.sh
 
 echo "Running flutter analyze"
 if ! fvm dart analyze; then

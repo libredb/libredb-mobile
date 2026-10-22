@@ -38,6 +38,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check generated localizations
+        # lib/generated must be exactly what scripts/generate_l10n.sh writes from the ARB files.
+        run: |
+          DART=dart scripts/generate_l10n.sh
+          if [ -n "$(git status --porcelain -- lib/generated)" ]; then
+            git status --porcelain -- lib/generated
+            echo "lib/generated differs from the ARB files. Run scripts/generate_l10n.sh and commit the result."
+            exit 1
+          fi
+
       - name: Check formatting
         run: dart format . --line-length=120 --set-exit-if-changed
 

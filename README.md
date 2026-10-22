@@ -68,11 +68,14 @@ fvm flutter run --target lib/main/main_local.dart
 ## Development
 
 ```shell
+scripts/generate_l10n.sh              # regenerate lib/generated after an ARB change
 fvm dart format . --line-length=120   # format
 fvm flutter analyze                   # lint
 fvm flutter test                      # all tests
 fvm flutter test --coverage           # with coverage; CI requires 65 percent or more
 ```
+
+Generated code is never edited by hand: `lib/generated` comes only from `scripts/generate_l10n.sh`, which runs `intl_utils` and formats its output at 120 columns, and CI fails when the committed files differ from what it writes.
 
 The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUDE.md) holds the conventions for people and coding agents alike, and [docs/testing-architecture.md](docs/testing-architecture.md) the test structure.
 
