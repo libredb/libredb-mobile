@@ -19,7 +19,7 @@ class NativeSentryTest {
         NativeSentry.configure(
             it,
             dsn = "https://public@example.invalid/1",
-            release = "0.22.2+1",
+            release = "1.0.0+1",
             dist = "1",
             environment = "production",
         )
@@ -56,7 +56,7 @@ class NativeSentryTest {
         val options = configured()
 
         assertEquals("https://public@example.invalid/1", options.dsn)
-        assertEquals("0.22.2+1", options.release)
+        assertEquals("1.0.0+1", options.release)
         assertEquals("1", options.dist)
         assertEquals("production", options.environment)
         assertEquals(5000, options.connectionTimeoutMillis)
