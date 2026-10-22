@@ -8,6 +8,8 @@ import 'package:libredb_mobile/features/connections/data/models/connection_polic
 import 'package:libredb_mobile/features/connections/data/models/connection_test_result_model.dart';
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/features/studio_status/data/models/studio_status_json.dart';
 import 'package:libredb_mobile/features/studio_status/domain/entities/governance_outage.dart';
@@ -15,6 +17,7 @@ import 'package:libredb_mobile/features/studio_status/domain/entities/studio_rea
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,6 +35,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
 /// `health.json`, `ready.json`, `ready_governed.json` and `ready_degraded.json` (the governed Studio with its source
 /// stopped) were recorded without a token, as the app sends them.
+/// The Postgres fixtures (`*_postgres*.json`, and `txbegin.json`, `txquery.json` and `txcommit.json` on one database
+/// of the server-level seed) come from the Postgres seeds of tool/studio-dev, Studio main at c9989a6b5, as user admin
+/// with a libredb-mobile access token; docs/studio.md lists the seeds and the command that recorded each one.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -202,6 +208,236 @@ void main() {
 
   test('a transaction on an engine without transactions is a 400 without a code', () {
     expect(ApiClient.errorCodeOf(fixture('txstatus')), isNull);
+  });
+
+  group('the Postgres seeds of tool/studio-dev', () {
+    test('GET /api/connections/managed lists the Postgres seeds without their password', () {
+      final managed = ManagedConnectionsModel.read(fixture('managed_postgres'));
+      final postgres = managed.connections.where((c) => c.type == 'postgres').toList();
+
+      expect(postgres.map((c) => c.id), [
+        'seed:dev-postgres',
+        'seed:dev-postgres-server',
+        'seed:dev-postgres-readonly',
+      ]);
+      expect(postgres.map((c) => c.environment), ['development', 'staging', 'development']);
+      expect(postgres.map((c) => c.group), everyElement('Dev databases'));
+      expect(postgres.map((c) => c.database), ['app', null, 'app']);
+      expect(postgres.every((c) => c.managed), isTrue);
+      expect(managed.connections.map((c) => c.id), contains('seed:sqlite-embedded-sample'));
+      final raw = (jsonDecode(fixture('managed_postgres')) as Map<String, dynamic>)['connections'] as List;
+      for (final connection in raw.cast<Map<String, dynamic>>().where((c) => c['type'] == 'postgres')) {
+        expect(connection, isNot(contains('password')), reason: 'Studio keeps a managed seed\'s secrets');
+      }
+      expect(fixture('managed_postgres'), isNot(contains('-dev-not-for-production')));
+    });
+
+    test('POST /api/db/provider-meta of a database-level seed', () {
+      final meta = ProviderMetaJson.read(fixture('meta_postgres'));
+
+      expect(meta.isSql, isTrue);
+      expect(meta.containerLevels.map((l) => l.id), ['schema']);
+      expect(meta.catalogSessions, isFalse);
+      expect(meta.supportsTransactions, isTrue);
+      expect(
+        meta.objectKinds.map((k) => k.id),
+        containsAll(['table', 'view', 'materialized_view', 'sequence', 'function', 'procedure', 'trigger']),
+      );
+      expect(meta.objectKinds.where((k) => k.hasSource).map((k) => k.id), containsAll(['view', 'function']));
+    });
+
+    test('POST /api/db/provider-meta of a server-level seed', () {
+      final meta = ProviderMetaJson.read(fixture('meta_postgres_server'));
+
+      expect(meta.containerLevels.map((l) => l.id), ['catalog', 'schema']);
+      expect(meta.catalogSessions, isTrue);
+    });
+
+    for (final name in ['meta_postgres', 'meta_postgres_server']) {
+      test('POST /api/db/provider-meta of $name reads the labels and the schema refresh rule', () {
+        final meta = ProviderMetaJson.read(fixture(name));
+
+        expect(meta.schemaRefreshPattern, r'(CREATE|DROP|ALTER|TRUNCATE)\b');
+        expect(meta.refreshesSchema('alter table public.orders add column x int'), isTrue);
+        expect(meta.refreshesSchema('SELECT * FROM public.orders'), isFalse);
+        expect(
+          meta.labels,
+          const ProviderLabels(
+            entityName: 'Table',
+            entityNamePlural: 'Tables',
+            rowName: 'row',
+            rowNamePlural: 'rows',
+            selectAction: 'Select Top 50',
+            generateAction: 'Generate Query',
+            searchPlaceholder: 'Search tables or columns...',
+          ),
+        );
+      });
+
+      test('POST /api/db/provider-meta of $name reads the capability and kind fields', () {
+        final meta = ProviderMetaJson.read(fixture(name));
+        ObjectKind kind(String id) => meta.objectKinds.singleWhere((k) => k.id == id);
+
+        expect(meta.explainFormat, 'postgres-json');
+        expect(meta.queryDialect, isNull);
+        expect(meta.maskingExemptColumns, isNull);
+        expect(meta.supportsColumnProfiling, isNull);
+        expect(meta.supportsSqlFormat, isNull);
+        expect(meta.tablesAreDerivedGroupings, isFalse);
+        expect(meta.identifierQuoting, isNull);
+        expect(meta.containerPathShapes, 'exact');
+        expect(meta.rowActions, isEmpty);
+        expect(meta.keyScan, isNull);
+        expect(kind('table').acceptsRowWrites, isTrue);
+        expect(kind('view').sourceLanguage, 'pgsql');
+        expect(kind('view').acceptsSourceEdits, isFalse);
+        expect(kind('function').acceptsSourceEdits, isTrue);
+        expect(kind('procedure').acceptsSourceEdits, isTrue);
+        expect(kind('sequence').hasSource, isFalse);
+        expect(kind('trigger').attachedTo, 'table');
+        expect(meta.objectKinds.map((k) => k.childKinds), everyElement(isEmpty));
+        expect(meta.objectKinds.map((k) => k.group), everyElement(isNull));
+        expect(meta.objectKinds.where((k) => k.countIsListing || k.machineNamesWithheld || k.keyBrowserOnly), isEmpty);
+      });
+    }
+
+    test('POST /api/db/objects/containers of a database-level seed lists its schemas', () {
+      final containers = ObjectBrowserJson.containers(fixture('containers_postgres'));
+
+      expect(
+        containers.map((c) => c.path),
+        containsAll([
+          ['public'],
+          ['sales'],
+        ]),
+      );
+      expect(containers.map((c) => c.level), everyElement(0));
+      expect(containers.singleWhere((c) => c.isSessionDefault).name, 'public');
+    });
+
+    test('POST /api/db/objects/containers of a server-level seed lists its databases', () {
+      final containers = ObjectBrowserJson.containers(fixture('containers_postgres_server'));
+
+      expect(containers.map((c) => c.name), containsAll(['app', 'archive']));
+      expect(containers.map((c) => c.level), everyElement(0));
+    });
+
+    test('POST /api/db/objects/containers under one database of a server-level seed lists its schemas', () {
+      final containers = ObjectBrowserJson.containers(fixture('containers_postgres_catalog'));
+
+      expect(
+        containers.map((c) => c.path),
+        containsAll([
+          ['app', 'public'],
+          ['app', 'sales'],
+        ]),
+      );
+      expect(containers.map((c) => c.level), everyElement(1));
+    });
+
+    test('POST /api/db/objects/counts of the public schema', () {
+      final counts = ObjectBrowserJson.counts(fixture('counts_postgres'));
+
+      expect(counts['table'], const KindCounted(4));
+      expect(counts['view'], const KindCounted(0));
+      expect(counts['function'], const KindCounted(1));
+      expect(counts['trigger'], const KindCounted(1));
+    });
+
+    test('POST /api/db/objects/list of the tables in the public schema', () {
+      final objects = ObjectBrowserJson.objects(fixture('list_postgres'));
+
+      expect(objects.map((o) => o.name), ['column_types', 'customers', 'order_items', 'orders']);
+      expect(objects.map((o) => o.kind), everyElement('table'));
+      expect(objects.firstWhere((o) => o.name == 'orders').path, ['public', 'orders']);
+    });
+
+    test('POST /api/db/objects/describe of public.orders', () {
+      final detail = ObjectBrowserJson.detail(fixture('describe_postgres_orders'));
+
+      expect(detail.path, ['public', 'orders']);
+      expect(detail.columns.map((c) => c.name), [
+        'id',
+        'customer_id',
+        'status',
+        'total',
+        'placed_at',
+        'updated_at',
+        'note',
+        'details',
+        'receipt',
+      ]);
+      expect(detail.columns.firstWhere((c) => c.name == 'id').isPrimary, isTrue);
+      expect(detail.columns.firstWhere((c) => c.name == 'note').nullable, isTrue);
+      expect(detail.foreignKeys.single.columnName, 'customer_id');
+      expect(detail.foreignKeys.single.referencedTable, contains('customers'));
+      expect(detail.indexes!.map((i) => i.name), contains('orders_customer_id_idx'));
+    });
+
+    // Studio reads the keys from information_schema views, which show foreign keys only to the owner, and primary keys
+    // only to the owner or a role with a non-SELECT privilege.
+    test('POST /api/db/objects/describe of public.orders as a role that may only read has no keys', () {
+      final detail = ObjectBrowserJson.detail(fixture('describe_postgres_orders_readonly'));
+
+      expect(detail.columns.map((c) => c.name), contains('customer_id'));
+      expect(detail.columns.where((c) => c.isPrimary), isEmpty);
+      expect(detail.foreignKeys, isEmpty);
+      expect(detail.indexes!.map((i) => i.name), containsAll(['orders_pkey', 'orders_customer_id_idx']));
+    });
+
+    test('POST /api/db/objects/source of a view', () {
+      final source = ObjectBrowserJson.source(fixture('source_postgres_view'));
+      final text = source.parts.whereType<SourceText>().first;
+
+      expect(source.path, ['sales', 'order_totals']);
+      expect(source.kind, 'view');
+      expect(text.text, contains('order_items'));
+      expect(text.language, 'pgsql');
+      expect(text.complete, isFalse, reason: 'Studio regenerates the SELECT of a view, not its CREATE VIEW');
+      expect(text.truncated, isFalse);
+    });
+
+    test('POST /api/db/objects/source of a function', () {
+      final source = ObjectBrowserJson.source(fixture('source_postgres_function'));
+      final text = source.parts.whereType<SourceText>().first;
+
+      expect(source.kind, 'function');
+      expect(source.path.first, 'sales');
+      expect(text.text, contains('CREATE OR REPLACE FUNCTION sales.order_total'));
+    });
+
+    test('POST /api/db/objects/search for ord', () {
+      final objects = ObjectBrowserJson.objects(fixture('search_postgres'));
+
+      expect(objects.map((o) => o.name), containsAll(['orders', 'order_items']));
+    });
+
+    test('POST /api/db/query of one row of every column type', () {
+      final result = SqlEditorJson.queryResult(fixture('query_types_postgres'));
+      final row = result.rows.single;
+
+      expect(result.fields.first, 'id');
+      expect(result.fields.last, 'null_value');
+      expect(row['null_value'], isNull);
+      expect(result.columnTypes['bytea_value'], 'bytea');
+      expect(result.columnTypes['jsonb_value'], 'jsonb');
+    });
+
+    test('POST /api/db/transaction begins on one database of a server-level seed', () {
+      expect(SqlEditorJson.transactionBegun(fixture('txbegin')), isNull);
+    });
+
+    test('POST /api/db/transaction runs an UPDATE in that transaction', () {
+      final run = SqlEditorJson.transactionRun(fixture('txquery'));
+
+      expect(run.inTransaction, isTrue);
+      expect(run.result!.rowCount, 1);
+    });
+
+    test('POST /api/db/transaction commits that transaction', () {
+      // The app has no reader of this answer yet; #51 adds one.
+      expect((jsonDecode(fixture('txcommit')) as Map<String, dynamic>)['status'], 'committed');
+    });
   });
 
   // Studio 02dc26057 has the same health and ready routes as dbfea263.

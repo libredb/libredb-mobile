@@ -1,0 +1,1 @@
+[{"path":["public","column_types"],"name":"column_types","kind":"table","sizeBytes":32768},{"path":["public","customers"],"name":"customers","kind":"table","sizeBytes":32768},{"path":["public","order_items"],"name":"order_items","kind":"table","sizeBytes":32768},{"path":["public","orders"],"name":"orders","kind":"table","sizeBytes":49152}]
