@@ -2704,12 +2704,12 @@ class S {
     );
   }
 
-  /// `The statement from the history takes the place of the text in the editor. It does not run.`
-  String get sql_history_replace_message {
+  /// `The new statement takes the place of the text in the editor. It does not run.`
+  String get editor_replace_message {
     return Intl.message(
-      'The statement from the history takes the place of the text in the editor. It does not run.',
-      name: 'sql_history_replace_message',
-      desc: 'Body of the prompt before a history entry replaces the text in the editor.',
+      'The new statement takes the place of the text in the editor. It does not run.',
+      name: 'editor_replace_message',
+      desc: 'Body of the prompt before a statement opened in the editor (from the history or another screen) replaces its text.',
       args: [],
     );
   }

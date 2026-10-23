@@ -296,6 +296,11 @@ void main() {
 
       await open(tester, const EditorOpenRequest(connectionId: 'seed:dev-postgres', text: 'SELECT 1'));
       expect(find.text("Replace the editor's text?"), findsOneWidget);
+      // One wording for every source of a request, History and Browse alike.
+      expect(
+        find.text('The new statement takes the place of the text in the editor. It does not run.'),
+        findsOneWidget,
+      );
       await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
       await tester.pumpAndSettle();
 

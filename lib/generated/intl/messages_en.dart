@@ -304,6 +304,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "editor_open_connection_unavailable": MessageLookupByLibrary.simpleMessage(
       "That connection is no longer available, so the statement was not opened.",
     ),
+    "editor_replace_message": MessageLookupByLibrary.simpleMessage(
+      "The new statement takes the place of the text in the editor. It does not run.",
+    ),
     "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Discard"),
     "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
       "The saved text that cannot be read is deleted from this phone. This cannot be undone.",
@@ -613,9 +616,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_history_filter_success": MessageLookupByLibrary.simpleMessage("Succeeded"),
     "sql_history_open": MessageLookupByLibrary.simpleMessage("History"),
     "sql_history_replace": MessageLookupByLibrary.simpleMessage("Replace"),
-    "sql_history_replace_message": MessageLookupByLibrary.simpleMessage(
-      "The statement from the history takes the place of the text in the editor. It does not run.",
-    ),
     "sql_history_replace_title": MessageLookupByLibrary.simpleMessage("Replace the editor\'s text?"),
     "sql_history_rows": m62,
     "sql_history_search_hint": MessageLookupByLibrary.simpleMessage("Search statements and connections"),

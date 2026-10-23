@@ -307,6 +307,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "editor_open_connection_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bu bağlantı artık kullanılamıyor, bu yüzden deyim açılmadı.",
     ),
+    "editor_replace_message": MessageLookupByLibrary.simpleMessage(
+      "Yeni deyim düzenleyicideki metnin yerini alır. Çalıştırılmaz.",
+    ),
     "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Sil"),
     "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
       "Okunamayan kayıtlı metin bu telefondan silinir. Bu işlem geri alınamaz.",
@@ -616,9 +619,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_history_filter_success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "sql_history_open": MessageLookupByLibrary.simpleMessage("Geçmiş"),
     "sql_history_replace": MessageLookupByLibrary.simpleMessage("Değiştir"),
-    "sql_history_replace_message": MessageLookupByLibrary.simpleMessage(
-      "Geçmişteki deyim düzenleyicideki metnin yerini alır. Çalıştırılmaz.",
-    ),
     "sql_history_replace_title": MessageLookupByLibrary.simpleMessage("Düzenleyicideki metin değiştirilsin mi?"),
     "sql_history_rows": m62,
     "sql_history_search_hint": MessageLookupByLibrary.simpleMessage("Deyimlerde ve bağlantılarda ara"),
