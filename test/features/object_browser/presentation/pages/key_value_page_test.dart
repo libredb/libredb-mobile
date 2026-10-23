@@ -10,6 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/key_value_page.dart';
@@ -112,6 +115,20 @@ void main() {
 
   Finder text() => find.byKey(const ValueKey('key-value-text'));
   Finder readValue() => find.widgetWithText(FilledButton, 'Read value');
+
+  testWidgets('a read refused with the account runs nothing again by itself once Retry clears the refusal', (
+    tester,
+  ) async {
+    answerRun('GET cache:greeting', () => Failure(AuthError('No role', code: AppErrorCode.studioAccountHasNoRole.key)));
+    await harness.pump(tester, location: _location('cache:greeting', type: 'string'));
+    await harness.refuseAccount(tester, AppErrorCode.studioAccountHasNoRole);
+
+    await harness.retryAccepted(tester);
+
+    expect(find.byKey(accountRefusalRetryKey), findsNothing, reason: 'the page is uncovered');
+    expect(find.byType(BrowseFailureView), findsOneWidget);
+    expect(runsOf('GET cache:greeting'), 1);
+  });
 
   group('each recorded type of database 1', () {
     testWidgets('a string shows its text, read with GET in database 1 as a number', (tester) async {
