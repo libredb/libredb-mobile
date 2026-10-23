@@ -78,6 +78,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_object_rows": m1,
     "browse_object_status_disabled": MessageLookupByLibrary.simpleMessage("Disabled"),
     "browse_object_status_invalid": MessageLookupByLibrary.simpleMessage("Invalid"),
+    "browse_object_view_source": MessageLookupByLibrary.simpleMessage("View source"),
     "browse_objects": MessageLookupByLibrary.simpleMessage("Objects"),
     "browse_objects_count": m2,
     "browse_objects_empty": MessageLookupByLibrary.simpleMessage("Studio lists no objects of this kind here."),

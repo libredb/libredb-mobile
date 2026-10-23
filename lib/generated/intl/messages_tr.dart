@@ -78,6 +78,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_object_rows": m1,
     "browse_object_status_disabled": MessageLookupByLibrary.simpleMessage("Devre dışı"),
     "browse_object_status_invalid": MessageLookupByLibrary.simpleMessage("Geçersiz"),
+    "browse_object_view_source": MessageLookupByLibrary.simpleMessage("Kaynağı görüntüle"),
     "browse_objects": MessageLookupByLibrary.simpleMessage("Nesneler"),
     "browse_objects_count": m2,
     "browse_objects_empty": MessageLookupByLibrary.simpleMessage("Studio burada bu türde nesne listelemiyor."),

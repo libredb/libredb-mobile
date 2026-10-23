@@ -1360,6 +1360,11 @@ class S {
     return Intl.message('Copy name', name: 'browse_object_copy_name', desc: '', args: []);
   }
 
+  /// `View source`
+  String get browse_object_view_source {
+    return Intl.message('View source', name: 'browse_object_view_source', desc: '', args: []);
+  }
+
   /// `Name copied`
   String get browse_object_name_copied {
     return Intl.message('Name copied', name: 'browse_object_name_copied', desc: '', args: []);

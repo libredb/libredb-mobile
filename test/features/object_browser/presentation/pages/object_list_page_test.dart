@@ -132,7 +132,11 @@ void main() {
       expect(find.descendant(of: rowOf('APP_ORDERS_PKG'), matching: find.text('Invalid')), findsNothing);
     });
 
-    testWidgets('are leaves: their child kinds show as text, and a tap pushes no list of them', (tester) async {
+    testWidgets('are leaves: their child kinds show as text, and a tap opens the source, never a list of them', (
+      tester,
+    ) async {
+      when(() => harness.repository.source(_oracle, path: ['APP', 'APP_ORDERS_PKG'], kind: 'package'))
+          .thenAnswer((_) async => Success(sourceAnswer('handwritten/oracle/source_package')));
       await harness.pump(tester, location: _packages);
 
       expect(
@@ -143,7 +147,8 @@ void main() {
       await tester.tap(find.text('APP_ORDERS_PKG'));
       await tester.pumpAndSettle();
 
-      expect(harness.location, _packages);
+      expect(harness.router.state.uri.path, '/browse/seed%3Aoracle/source/package');
+      expect(harness.router.state.uri.queryParametersAll['path'], ['APP', 'APP_ORDERS_PKG']);
       verifyNever(
         () => harness.repository.list(
           _oracle,
@@ -233,8 +238,93 @@ void main() {
     expect(find.descendant(of: rowOf('orders_touch'), matching: find.text('On orders')), findsOneWidget);
   });
 
+  group('tap rule', () {
+    const function = DatabaseObject(path: ['public', 'order_total(integer)'], name: 'order_total', kind: 'function');
+
+    setUp(() {
+      answerList(_postgres.id, ['public'], 'function', const Success([function]));
+      when(() => harness.repository.source(_postgres.id, path: function.path, kind: 'function'))
+          .thenAnswer((_) async => Success(sourceAnswer('source_postgres_function')));
+    });
+
+    testWidgets('a kind with source and no columns opens the object\'s source by its path, and back returns here', (
+      tester,
+    ) async {
+      await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/function?container=public');
+
+      await tester.tap(find.text('order_total'));
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
+      expect(harness.router.state.uri.queryParametersAll['path'], function.path);
+      verify(() => harness.repository.source(_postgres.id, path: function.path, kind: 'function')).called(1);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(harness.location, '/browse/seed%3Adev-postgres/objects/function?container=public');
+      expect(rowOf('order_total'), findsOneWidget);
+    });
+
+    testWidgets('a long press on a kind with source offers View source, which opens it', (tester) async {
+      await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/function?container=public');
+
+      await tester.longPress(find.text('order_total'));
+      await tester.pumpAndSettle();
+      expect(find.text('Copy name'), findsOneWidget);
+      await tester.tap(find.text('View source'));
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
+    });
+
+    testWidgets('a kind with columns waits for its Details screen: no tap, even when it also has source', (
+      tester,
+    ) async {
+      answerList(
+        _postgres.id,
+        ['public'],
+        'view',
+        const Success([
+          DatabaseObject(path: ['public', 'v_orders'], name: 'v_orders', kind: 'view'),
+        ]),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/view?container=public');
+
+      expect(tester.widget<ListTile>(rowOf('v_orders')).onTap, isNull);
+      await tester.longPress(find.text('v_orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('View source'), findsOneWidget);
+    });
+
+    testWidgets('a kind with neither columns nor source opens nothing', (tester) async {
+      harness.answerMeta(
+        'seed:mssql',
+        const ProviderMeta(
+          queryLanguage: 'sql',
+          schemaRefreshPattern: 'x',
+          containerLevels: [ContainerLevel(id: 'schema', label: 'Schema', labelPlural: 'Schemas')],
+          objectKinds: [ObjectKind(id: 'synonym', role: 'config', label: 'Synonym', labelPlural: 'Synonyms')],
+        ),
+      );
+      answerList(
+        'seed:mssql',
+        ['dbo'],
+        'synonym',
+        const Success([
+          DatabaseObject(path: ['dbo', 'syn'], name: 'syn', kind: 'synonym'),
+        ]),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Amssql/objects/synonym?container=dbo');
+
+      expect(tester.widget<ListTile>(rowOf('syn')).onTap, isNull);
+      await tester.longPress(find.text('syn'));
+      await tester.pumpAndSettle();
+      expect(find.text('View source'), findsNothing);
+    });
+  });
+
   group('long press', () {
-    testWidgets('offers Copy name only while no source or details screen exists, and copies the name', (tester) async {
+    testWidgets('offers Copy name only on a kind without source, and copies the name', (tester) async {
       final copied = <String>[];
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
         if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);

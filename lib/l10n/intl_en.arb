@@ -424,6 +424,8 @@
   "@browse_object_status_disabled": {"description": "Badge of an object the engine reports as DISABLED, such as a trigger."},
   "browse_object_copy_name": "Copy name",
   "@browse_object_copy_name": {},
+  "browse_object_view_source": "View source",
+  "@browse_object_view_source": {},
   "browse_object_name_copied": "Name copied",
   "@browse_object_name_copied": {},
   "local_filter_hint": "Filter",

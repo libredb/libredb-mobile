@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 
 /// What a tap on [object], of [kind] in [connectionId], opens, or null when it opens nothing.
@@ -7,11 +8,23 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 /// The one rule of every object row, the object list's and search's: Details when the kind `hasColumns`, else Source
 /// when it `hasSource`, else nothing. A group object such as an Oracle package is a leaf like any other, since Studio
 /// lists no object's children.
-/// Details and Source are screens of their own issues; each joins this rule, and the long-press menu, together with
-/// its screen, so until then the rule opens nothing and no row carries a tap that leads nowhere.
+/// Details is the screen of its own issue and joins this rule with it; until then a kind with columns opens nothing,
+/// rather than its source, so its tap does not change meaning once Details arrives.
 VoidCallback? objectTapAction(
   BuildContext context, {
   required String connectionId,
   required ObjectKind kind,
   required DatabaseObject object,
-}) => null;
+}) {
+  if (kind.hasColumns) return null;
+  if (kind.hasSource) return objectSourceAction(context, connectionId: connectionId, kind: kind, object: object);
+  return null;
+}
+
+/// Opens the source of [object] when [kind] `hasSource`, for the long-press menu's 'View source'; null otherwise.
+VoidCallback? objectSourceAction(
+  BuildContext context, {
+  required String connectionId,
+  required ObjectKind kind,
+  required DatabaseObject object,
+}) => kind.hasSource ? () => openBrowseSource(context, connectionId, object.path, kind.id) : null;

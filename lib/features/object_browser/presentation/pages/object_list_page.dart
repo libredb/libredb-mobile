@@ -209,30 +209,42 @@ class _ObjectTile extends StatelessWidget {
     );
   }
 
-  Future<void> _showMenu(BuildContext context) => showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.copy),
-            title: Text(S.of(sheetContext).browse_object_copy_name),
-            onTap: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final copied = S.of(sheetContext).browse_object_name_copied;
-              Navigator.of(sheetContext).pop();
-              await Clipboard.setData(ClipboardData(text: object.name));
-              messenger
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text(copied)));
-            },
-          ),
-        ],
+  Future<void> _showMenu(BuildContext context) {
+    final viewSource = objectSourceAction(context, connectionId: connectionId, kind: kind, object: object);
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (viewSource != null)
+              ListTile(
+                leading: const Icon(Icons.code),
+                title: Text(S.of(sheetContext).browse_object_view_source),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  viewSource();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: Text(S.of(sheetContext).browse_object_copy_name),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final copied = S.of(sheetContext).browse_object_name_copied;
+                Navigator.of(sheetContext).pop();
+                await Clipboard.setData(ClipboardData(text: object.name));
+                messenger
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(content: Text(copied)));
+              },
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// What the engine reports of an object, in words, so it never rests on color alone.
