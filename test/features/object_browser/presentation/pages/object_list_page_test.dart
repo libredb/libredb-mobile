@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
@@ -176,6 +177,48 @@ void main() {
     expect(find.descendant(of: rowOf('audit'), matching: find.text('Disabled')), findsOneWidget);
   });
 
+  testWidgets('any other status shows as Studio sends it, such as DB2\'s INOPERATIVE', (tester) async {
+    answerList(
+      _postgres.id,
+      ['public'],
+      'view',
+      const Success([
+        DatabaseObject(path: ['public', 'v_old'], name: 'v_old', kind: 'view', status: 'INOPERATIVE'),
+      ]),
+    );
+    await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/view?container=public');
+
+    expect(find.descendant(of: rowOf('v_old'), matching: find.text('INOPERATIVE')), findsOneWidget);
+  });
+
+  testWidgets('a kind that declares attachedTo names the parent whatever its role, as a Couchbase index does', (
+    tester,
+  ) async {
+    harness.answerMeta(
+      'seed:couchbase',
+      const ProviderMeta(
+        queryLanguage: 'sql',
+        schemaRefreshPattern: 'x',
+        containerLevels: [ContainerLevel(id: 'scope', label: 'Scope', labelPlural: 'Scopes')],
+        objectKinds: [
+          ObjectKind(id: 'collection', role: 'relation', label: 'Collection', labelPlural: 'Collections'),
+          ObjectKind(id: 'index', role: 'config', label: 'Index', labelPlural: 'Indexes', attachedTo: 'collection'),
+        ],
+      ),
+    );
+    answerList(
+      'seed:couchbase',
+      ['inventory'],
+      'index',
+      const Success([
+        DatabaseObject(path: ['inventory', 'airline', 'idx_name'], name: 'idx_name', kind: 'index'),
+      ]),
+    );
+    await harness.pump(tester, location: '/browse/seed%3Acouchbase/objects/index?container=inventory');
+
+    expect(find.descendant(of: rowOf('idx_name'), matching: find.text('On airline')), findsOneWidget);
+  });
+
   testWidgets('an attached object names its parent table as secondary text', (tester) async {
     answerList(
       _postgres.id,
@@ -250,6 +293,29 @@ void main() {
       expect(find.text('Nothing matches the filter.'), findsOneWidget);
     });
 
+    testWidgets('a refresh that empties the kind drops the filter, so the objects that come back all show', (
+      tester,
+    ) async {
+      answerList(_postgres.id, ['public'], 'table', const Success(cities));
+      await harness.pump(tester, location: _tables);
+      await filter(tester, 'ankara');
+      expect(find.text('1 of 3 match'), findsOneWidget);
+
+      answerList(_postgres.id, ['public'], 'table', const Success([]));
+      await tester.fling(find.byType(ListView).last, const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('Studio lists no objects of this kind here.'), findsOneWidget);
+
+      answerList(_postgres.id, ['public'], 'table', const Success(cities));
+      await tester.fling(find.byType(ListView).last, const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 objects'), findsOneWidget);
+      expect(rowOf('İstanbul'), findsOneWidget);
+      expect(rowOf('ankara'), findsOneWidget);
+      expect(rowOf('izmir_istanbul_route'), findsOneWidget);
+    });
+
     testWidgets('an empty kind says so in words, with no filter to type into', (tester) async {
       answerList(_postgres.id, ['public'], 'table', const Success([]));
       await harness.pump(tester, location: _tables);
@@ -314,6 +380,27 @@ void main() {
 
       await filter(tester, 'zzz');
       expect(find.text('Nothing matches the filter.'), findsOneWidget);
+    });
+
+    testWidgets('a refresh that empties the level drops the filter, so the containers that come back all show', (
+      tester,
+    ) async {
+      harness.active.select(_server);
+      await harness.pump(tester);
+      await filter(tester, 'arch');
+
+      harness.answerContainers(_server.id, null, const []);
+      await tester.fling(find.byType(ListView).last, const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('Studio lists nothing at this level.'), findsOneWidget);
+
+      harness.answerContainers(_server.id, null, containersAnswer('containers_postgres_server'));
+      await tester.fling(find.byType(ListView).last, const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+
+      expect(find.text('app'), findsOneWidget);
+      expect(find.text('archive'), findsOneWidget);
+      expect(find.text('postgres'), findsOneWidget);
     });
   });
 }

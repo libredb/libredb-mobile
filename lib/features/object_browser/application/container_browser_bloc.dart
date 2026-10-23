@@ -102,6 +102,8 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
       case Failure(:final error):
         _fail(error, onScreen, emit);
       case Success(:final data):
+        // An empty level shows no filter field, so a filter kept from before would hide what a later refresh brings.
+        if (data.isEmpty) _query = '';
         final first = !_answered;
         _answered = true;
         emit(

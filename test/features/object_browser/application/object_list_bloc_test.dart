@@ -102,6 +102,37 @@ void main() {
     );
 
     blocTest<ObjectListBloc, ObjectListState>(
+      'leaves out a child kind the engine does not declare rather than showing its raw id',
+      setUp: () {
+        answerMeta(
+          _oracle,
+          const ProviderMeta(
+            queryLanguage: 'sql',
+            schemaRefreshPattern: 'x',
+            containerLevels: [],
+            objectKinds: [
+              ObjectKind(
+                id: 'package',
+                role: 'group',
+                label: 'Package',
+                labelPlural: 'Packages',
+                childKinds: ['procedure', 'type_body'],
+              ),
+              ObjectKind(id: 'procedure', role: 'routine', label: 'Procedure', labelPlural: 'Procedures'),
+            ],
+          ),
+        );
+        answerList(_oracle, [], 'package', const Success([]));
+      },
+      build: () => build(_oracle, const [], 'package'),
+      act: (bloc) => bloc.add(const ObjectListRequested()),
+      skip: 1,
+      expect: () => [
+        isA<ObjectListLoaded>().having((s) => s.childKindLabels, 'childKindLabels', ['Procedures']),
+      ],
+    );
+
+    blocTest<ObjectListBloc, ObjectListState>(
       'refuses a kind the engine does not declare without asking Studio',
       setUp: () => answerMeta(_postgres, metaAnswer('meta_postgres')),
       build: () => build(_postgres, const ['public'], 'no_such_kind'),

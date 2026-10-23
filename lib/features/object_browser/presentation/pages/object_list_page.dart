@@ -155,8 +155,9 @@ class _ObjectListView extends StatelessWidget {
   }
 }
 
-/// One object: its name, a badge when the engine reports it `INVALID` or `DISABLED`, and what else Studio says of it
-/// as secondary text: the table an attached object hangs under, the kinds a group object holds, its row count and size.
+/// One object: its name, a badge when the engine reports a status (`INVALID` and `DISABLED` in the user's words, any
+/// other as Studio sends it), and what else Studio says of it as secondary text: the object it hangs under when its
+/// kind declares `attachedTo`, the kinds a group object holds, its row count and size.
 class _ObjectTile extends StatelessWidget {
   const _ObjectTile({
     required this.connectionId,
@@ -180,7 +181,7 @@ class _ObjectTile extends StatelessWidget {
     final rowCount = object.rowCount;
     final sizeBytes = object.sizeBytes;
     final secondary = [
-      if (kind.role == 'attached' && path.length >= 2) s.browse_object_attached_to(path[path.length - 2]),
+      if (kind.attachedTo != null && path.length >= 2) s.browse_object_attached_to(path[path.length - 2]),
       if (childKindLabels.isNotEmpty) childKindLabels.join(', '),
       if (rowCount != null) s.browse_object_rows(rowCount, number.format(rowCount)),
       if (sizeBytes != null && sizeBytes >= 0) formatByteSize(sizeBytes),
@@ -188,7 +189,9 @@ class _ObjectTile extends StatelessWidget {
     final badge = switch (object.status) {
       'INVALID' => _StatusBadge(label: s.browse_object_status_invalid, color: theme.colorScheme.error),
       'DISABLED' => _StatusBadge(label: s.browse_object_status_disabled, color: theme.colorScheme.onSurfaceVariant),
-      _ => null,
+      null => null,
+      // Another engine's word, such as DB2's INOPERATIVE, shows as Studio sends it.
+      final status => _StatusBadge(label: status, color: theme.colorScheme.onSurfaceVariant),
     };
     return ListTile(
       title: Text(object.name, maxLines: 1, overflow: TextOverflow.ellipsis),

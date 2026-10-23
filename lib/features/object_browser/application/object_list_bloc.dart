@@ -100,13 +100,13 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
       case Failure(:final error):
         _fail(error, onScreen, emit);
       case Success(:final data):
+        // An empty kind shows no filter field, so a filter kept from before would hide what a later refresh brings.
+        if (data.isEmpty) _query = '';
         _foldedNames = [for (final object in data) foldForSearch(object.name)];
         emit(
           ObjectListLoaded(
             kind: declared,
-            childKindLabels: [
-              for (final child in declared.childKinds) _kindOf(providerMeta, child)?.labelPlural ?? child,
-            ],
+            childKindLabels: _childKindLabels(providerMeta, declared),
             objects: data,
             visible: _visible(data),
             query: _query,
@@ -137,6 +137,21 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
       for (var i = 0; i < objects.length; i++)
         if (_foldedNames[i].contains(normalized)) objects[i],
     ];
+  }
+
+  /// The plural labels of [kind]'s child kinds. Studio draws no child kind at all, so a child the engine does not
+  /// declare is left out rather than shown as its raw id, and logged.
+  static List<String> _childKindLabels(ProviderMeta meta, ObjectKind kind) {
+    final labels = <String>[];
+    for (final child in kind.childKinds) {
+      final declared = _kindOf(meta, child);
+      if (declared == null) {
+        _log.info('child kind {} of kind {} is not declared by the engine', [child, kind.id]);
+      } else {
+        labels.add(declared.labelPlural);
+      }
+    }
+    return labels;
   }
 
   static ObjectKind? _kindOf(ProviderMeta meta, String id) {
