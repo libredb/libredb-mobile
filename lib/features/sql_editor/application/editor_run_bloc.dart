@@ -226,7 +226,6 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     final queryId = running.queryId;
     if (!running.supportsCancel || event.stopWaiting) {
       signal.cancel();
-      _scriptStartedAt = null;
       emit(const EditorCancelled(outcome: EditorCancelOutcome.stoppedWaiting));
       return;
     }
@@ -238,7 +237,6 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       case Success(:final data):
         _cancelAnswered = signal;
         signal.cancel();
-        _scriptStartedAt = null;
         emit(EditorCancelled(outcome: data ? EditorCancelOutcome.confirmed : EditorCancelOutcome.notConfirmed));
       case Failure(:final error):
         _log.warn('cancel failed: {}', [error.code ?? error.runtimeType]);

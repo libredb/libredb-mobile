@@ -631,6 +631,29 @@ void main() {
       runAnswer.complete(Success(customers));
     });
 
+    for (final stopWaiting in [true, false]) {
+      test(
+        '${stopWaiting ? 'Stop waiting' : 'an answered Cancel'} clears the start as the script is shown cancelled',
+        () async {
+          when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+          final bloc = build();
+          addTearDown(bloc.close);
+          DateTime? startWhenCancelled = DateTime(1);
+          final seen = bloc.stream.firstWhere((s) => s is EditorCancelled).then((_) {
+            startWhenCancelled = bloc.scriptStartedAt;
+          });
+
+          await runConfirmed(bloc, 'SELECT pg_sleep(40); SELECT pg_sleep(40)');
+          await pumpEventQueue();
+          expect(bloc.scriptStartedAt, isNotNull);
+          bloc.add(EditorCancelRequested(stopWaiting: stopWaiting));
+          await seen;
+
+          expect(startWhenCancelled, isNull);
+        },
+      );
+    }
+
     blocTest<EditorRunBloc, EditorRunState>(
       'Cancel posts the script run id while its request is open, then drops it',
       setUp: () => when(() => repository.cancel(any(), any())).thenAnswer((_) async {
