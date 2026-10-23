@@ -467,6 +467,26 @@ void main() {
       expect(runsOf(ledger), 2);
     });
 
+    testWidgets('refused with a vanished connection goes to the active connection\'s vanish flow', (tester) async {
+      answerRun(ledger, () => Success(_recorded('query_page_postgres_first')), page: QueryPage.first);
+      answerRun(
+        ledger,
+        () => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')),
+        page: second,
+      );
+      await pump(tester);
+      await type(tester, ledger);
+      await run(tester);
+      verifyNever(() => active.reportUnavailable(any()));
+
+      await scrollToLoadMore(tester);
+      await tester.tap(loadMore());
+      await tester.pumpAndSettle();
+
+      verify(() => active.reportUnavailable(_postgres.id)).called(1);
+      expect(runsOf(ledger), 2);
+    });
+
     testWidgets('of a confirmed text asks again before the page, and sends it only on confirm', (tester) async {
       answerRun(flagged, () => Success(_recorded('query_page_postgres_first')), page: QueryPage.first);
       answerRun(flagged, () => Success(_recorded('query_page_postgres_second')), page: second);

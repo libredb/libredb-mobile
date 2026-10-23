@@ -556,6 +556,29 @@ void main() {
       expect(find.textContaining('100 rows'), findsOneWidget);
     });
 
+    testWidgets('a page refused with a vanished connection goes to the active connection\'s vanish flow', (
+      tester,
+    ) async {
+      harness.active.select(_postgres);
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          ledgerPreview,
+          queryId: any(named: 'queryId'),
+          page: const QueryPage(limit: 50, offset: 50),
+          catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((_) async => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')));
+      await harness.pump(tester, location: ledgerLocation);
+      expect(harness.active.state, isA<ActiveConnectionSelected>());
+
+      await tester.tap(find.text('Load 50 more'));
+      await tester.pumpAndSettle();
+
+      expect(harness.active.state, isA<ActiveConnectionVanished>());
+    });
+
     testWidgets('an engine that cannot page offers no Load more', (tester) async {
       final meta = File('test/fixtures/studio/meta_postgres.json')
           .readAsStringSync()

@@ -17,9 +17,16 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 /// what was on screen before stays. While a script runs, its elapsed time shows under the progress, since a script
 /// waits without a timeout. A cancelled run says what the cancel did, as a notice; a failed cancel shows its failure
 /// above the run's progress. A run the app's switch to the background interrupted says so: a read with Run again,
-/// anything else that its outcome is unknown, with no Run again, so the user checks the data before running it.
+/// anything else that its outcome is unknown, with no Run again, so the user checks the data before running it. A page
+/// of Load more refused with `studio.connection_not_available` calls [onConnectionUnavailable], the editor's one way
+/// to the active connection's vanish flow.
 class EditorResultArea extends StatelessWidget {
-  const EditorResultArea({super.key, required this.confirm, required this.onRunAgain});
+  const EditorResultArea({
+    super.key,
+    required this.confirm,
+    required this.onRunAgain,
+    required this.onConnectionUnavailable,
+  });
 
   static const runAgainKey = ValueKey('sql_editor_run_again');
 
@@ -28,6 +35,9 @@ class EditorResultArea extends StatelessWidget {
 
   /// Run again of an interrupted read: the editor's Run, so the text goes through the write check again.
   final VoidCallback onRunAgain;
+
+  /// A page of Load more was refused with `studio.connection_not_available`.
+  final VoidCallback onConnectionUnavailable;
 
   @override
   Widget build(BuildContext context) => BlocBuilder<EditorRunBloc, EditorRunState>(
@@ -163,6 +173,9 @@ class EditorResultArea extends StatelessWidget {
         supportsResultPagination: state.supportsResultPagination,
       );
     },
-    child: ResultView(rolledBackNotice: S.of(context).sql_editor_rolled_back(state.commitKeyword)),
+    child: ResultView(
+      rolledBackNotice: S.of(context).sql_editor_rolled_back(state.commitKeyword),
+      onConnectionUnavailable: onConnectionUnavailable,
+    ),
   );
 }

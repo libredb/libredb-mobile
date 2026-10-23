@@ -334,6 +334,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "You are signed out of this app, but your session at the identity provider may still be active.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
+    "error_editor_page_interrupted": MessageLookupByLibrary.simpleMessage(
+      "Loading more was interrupted when the app went to the background; Studio cancelled it.",
+    ),
+    "error_editor_page_outcome_unknown": MessageLookupByLibrary.simpleMessage(
+      "Loading more was interrupted in the background, and its outcome is unknown: each page runs the whole statement again, so check the data before running it again.",
+    ),
     "error_editor_saved_text_not_stored": MessageLookupByLibrary.simpleMessage(
       "This phone could not save the statement text. Check its free storage and try again.",
     ),

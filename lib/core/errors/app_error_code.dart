@@ -67,6 +67,14 @@ enum AppErrorCode {
   /// The device refused to store or remove saved statement text.
   editorSavedTextNotStored('editor.saved_text_not_stored'),
 
+  /// A page of Load more of a read dropped without an answer while or after the app was in the background; Studio
+  /// cancelled its run.
+  editorPageInterrupted('editor.page_interrupted'),
+
+  /// A page of Load more of a text the write check flagged dropped without an answer while or after the app was in the
+  /// background; whether its run wrote is unknown.
+  editorPageOutcomeUnknown('editor.page_outcome_unknown'),
+
   // --- generic fallback ---
   generic('error.generic');
 

@@ -77,7 +77,8 @@ part 'editor_run_state.dart';
 /// the background ends in [EditorInterrupted], because Studio cancels a run whose request drops, and a write's outcome
 /// is unknown when the drop races the commit. It is a read only when [InterimWriteCheck] ran the text without asking,
 /// so a script never is. Nothing is sent again by itself; a run that answers in the background shows its answer as
-/// usual, and so does any answer Studio sent, since it says what happened.
+/// usual, and so does any answer Studio sent, since it says what happened. A page of Load more follows the same rule
+/// (#150), see [loadPage].
 class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   EditorRunBloc({
     required this._repository,
@@ -93,7 +94,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   }) : _lifecycle = lifecycle,
        super(const EditorIdle()) {
     _lifecycleChanges = lifecycle.changes.listen((change) {
-      if (_inFlight != null && isInBackground(change)) _backgroundedDuringRun = true;
+      if (!isInBackground(change)) return;
+      _backgroundChanges++;
+      if (_inFlight != null) _backgroundedDuringRun = true;
     });
     on<EditorRunRequested>(_onRunRequested, transformer: EventTransformers.dropConcurrent());
     on<EditorConfirmationAnswered>(_onConfirmationAnswered, transformer: EventTransformers.dropConcurrent());
@@ -126,6 +129,13 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
 
   /// The background time of the run in flight; null while none is.
   BackgroundRunLease? _lease;
+
+  /// How many times the app went to the background, so a page of Load more can tell whether it did while the page
+  /// was in flight.
+  int _backgroundChanges = 0;
+
+  /// The background time of each page of Load more in flight.
+  final _pageLeases = <BackgroundRunLease>{};
 
   /// The connection, the active one the page was built for.
   final String connectionId;
@@ -407,12 +417,21 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   /// the result view's Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks
   /// [confirm] first, and nothing is sent unless it answers true; the answer is then null. The state does not change,
   /// and a failure is answered, never sent again by itself.
+  ///
+  /// A page asks for background time as a run does and gives it back on its answer, or when the bloc closes. A page
+  /// that fails without an answer from Studio while or after the app was in the background answers an
+  /// [InterruptedError]: [AppErrorCode.editorPageInterrupted] for a text the check ran without asking, otherwise
+  /// [AppErrorCode.editorPageOutcomeUnknown], since Studio runs the whole statement again for each page.
   Future<Result<QueryResult>?> loadPage(
     EditorStatement statement,
     QueryPage page, {
     required Future<bool> Function() confirm,
   }) async {
     if (statement.asks != null && !await confirm()) return null;
+    final backgroundChanges = _backgroundChanges;
+    final startedInBackground = isInBackground(_lifecycle.current);
+    final lease = _backgroundRunTime.begin();
+    _pageLeases.add(lease);
     final answer = await _repository.run(
       connectionId,
       statement.text,
@@ -420,7 +439,20 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       page: page,
       catalog: statement.catalog,
     );
-    if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
+    if (_pageLeases.remove(lease)) unawaited(lease.end());
+    final backgrounded = startedInBackground || _backgroundChanges != backgroundChanges;
+    switch (answer) {
+      case Failure(:final error) when backgrounded && _droppedWithoutAnswer(error):
+        _log.info('a page was interrupted while the app was in the background');
+        final code = statement.asks == null
+            ? AppErrorCode.editorPageInterrupted
+            : AppErrorCode.editorPageOutcomeUnknown;
+        return Failure(InterruptedError('The page was interrupted in the background', code: code.key));
+      case Failure(:final error):
+        _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
+      case Success():
+        break;
+    }
     return answer;
   }
 
@@ -501,6 +533,10 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     // The page closed: the run's answer still adds its history entry, but the background time is given back now.
     unawaited(_lease?.end());
     _lease = null;
+    for (final lease in _pageLeases) {
+      unawaited(lease.end());
+    }
+    _pageLeases.clear();
     return super.close();
   }
 

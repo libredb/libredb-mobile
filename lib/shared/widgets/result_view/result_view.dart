@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -25,16 +27,29 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 ///
 /// [rolledBackNotice] words the notice that Studio rolled back a transaction the statement left open, when the caller
 /// has more to say than the plain sentence, as the SQL editor names the engine's commit keyword.
+///
+/// [onConnectionUnavailable] is called once for each page Studio refuses with `studio.connection_not_available`, so the
+/// caller hands its connection to the active connection's vanish flow.
 class ResultView extends StatelessWidget {
-  const ResultView({super.key, this.rolledBackNotice});
+  const ResultView({super.key, this.rolledBackNotice, this.onConnectionUnavailable});
 
   final String? rolledBackNotice;
+  final VoidCallback? onConnectionUnavailable;
 
   /// The share of the view's height the stats strip takes at most, and the footer too; a taller one scrolls.
   static const maxNoticeShare = 0.4;
 
   @override
-  Widget build(BuildContext context) => BlocBuilder<ResultViewBloc, ResultViewState>(
+  Widget build(BuildContext context) => BlocListener<ResultViewBloc, ResultViewState>(
+    listenWhen: (previous, current) =>
+        current is ResultViewLoadMoreFailed &&
+        current != previous &&
+        current.error.code == AppErrorCode.studioConnectionNotAvailable.key,
+    listener: (context, state) => onConnectionUnavailable?.call(),
+    child: _view(),
+  );
+
+  Widget _view() => BlocBuilder<ResultViewBloc, ResultViewState>(
     builder: (context, state) {
       final result = state.result;
       if (result.rows.isEmpty) return ResultEmptyView(result: result, rolledBackNotice: rolledBackNotice);
@@ -122,7 +137,9 @@ class ResultViewModeToggle extends StatelessWidget {
 
 /// Load more under the rows, naming the [pageSize] it fetches, as Studio's `load 500 more`: an action that needs
 /// Studio, so it is disabled offline with the reason; disabled while the page is in flight; and, for a failed page,
-/// `StudioErrorBanner` with a retry the user taps. Taller than [maxHeight], it scrolls.
+/// `StudioErrorBanner` with a retry the user taps, except for a page whose outcome is unknown, which the SQL editor
+/// answers for a page of a text that may write dropped in the background (#150): it offers no retry, so the user checks
+/// the data first. Taller than [maxHeight], it scrolls.
 class ResultLoadMoreFooter extends StatelessWidget {
   const ResultLoadMoreFooter({
     super.key,
@@ -141,6 +158,9 @@ class ResultLoadMoreFooter extends StatelessWidget {
     final size = resultNumberFormat(context).format(pageSize);
     void loadMore() => context.read<ResultViewBloc>().add(const ResultViewLoadMoreRequested());
     final action = switch (state) {
+      ResultViewLoadMoreFailed(:final error)
+          when error is InterruptedError && error.code == AppErrorCode.editorPageOutcomeUnknown.key =>
+        StudioErrorBanner(error: error),
       ResultViewLoadMoreFailed(:final error) => OnlineOnlyAction(
         builder: (context, enabled) => StudioErrorBanner(error: error, onRetry: enabled ? loadMore : null),
       ),

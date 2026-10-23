@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/row_count.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -22,7 +23,8 @@ import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 /// the engine offers a count, and Studio's preview, masked, in the result view.
 ///
 /// The preview runs on open, and again only on the user's pull or retry; a failure is never run again by itself. A
-/// `studio.query_error` shows the database's own words under the banner, on screen only.
+/// `studio.query_error` shows the database's own words under the banner, on screen only. A run or a page of Load more
+/// refused with `studio.connection_not_available` goes to the active connection's vanish flow.
 class ObjectRowsPage extends StatelessWidget {
   const ObjectRowsPage({super.key, required this.connectionId, required this.path, required this.kind});
 
@@ -148,7 +150,9 @@ class _ObjectRowsView extends StatelessWidget {
                 hasOuterOrderBy: false,
               );
             },
-            child: const ResultView(),
+            child: ResultView(
+              onConnectionUnavailable: () => context.read<ActiveConnectionCubit>().reportUnavailable(page.connectionId),
+            ),
           ),
         ),
       );

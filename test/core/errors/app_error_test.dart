@@ -192,6 +192,7 @@ void main() {
           TimeoutError() => 'timeout',
           RateLimitedError() => 'rate_limited',
           RequestCancelledError() => 'cancelled',
+          InterruptedError() => 'interrupted',
           UnknownError() => 'unknown',
         };
         expect(result, 'network');
@@ -208,6 +209,7 @@ void main() {
           TimeoutError() => 'timeout',
           RateLimitedError() => 'rate_limited',
           RequestCancelledError() => 'cancelled',
+          InterruptedError() => 'interrupted',
           UnknownError() => 'unknown',
         };
         expect(result, 'auth');
@@ -224,6 +226,7 @@ void main() {
           TimeoutError() => 'timeout',
           RateLimitedError() => 'rate_limited',
           RequestCancelledError() => 'cancelled',
+          InterruptedError() => 'interrupted',
           UnknownError() => 'unknown',
         };
         expect(result, 'server');
@@ -239,6 +242,7 @@ void main() {
           const TimeoutError('t'),
           const RateLimitedError('r'),
           const RequestCancelledError('c'),
+          const InterruptedError('i', code: 'editor.page_interrupted'),
           const UnknownError('u'),
         ];
 
@@ -253,6 +257,7 @@ void main() {
                 TimeoutError() => 'timeout',
                 RateLimitedError() => 'rate_limited',
                 RequestCancelledError() => 'cancelled',
+                InterruptedError() => 'interrupted',
                 UnknownError() => 'unknown',
               },
             )
@@ -267,6 +272,7 @@ void main() {
           'timeout',
           'rate_limited',
           'cancelled',
+          'interrupted',
           'unknown',
         ]);
       });

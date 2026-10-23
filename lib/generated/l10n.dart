@@ -2196,6 +2196,26 @@ class S {
     );
   }
 
+  /// `Loading more was interrupted when the app went to the background; Studio cancelled it.`
+  String get error_editor_page_interrupted {
+    return Intl.message(
+      'Loading more was interrupted when the app went to the background; Studio cancelled it.',
+      name: 'error_editor_page_interrupted',
+      desc: 'Load more of a read was interrupted because the app went to the background, and Studio cancelled the run of that page.',
+      args: [],
+    );
+  }
+
+  /// `Loading more was interrupted in the background, and its outcome is unknown: each page runs the whole statement again, so check the data before running it again.`
+  String get error_editor_page_outcome_unknown {
+    return Intl.message(
+      'Loading more was interrupted in the background, and its outcome is unknown: each page runs the whole statement again, so check the data before running it again.',
+      name: 'error_editor_page_outcome_unknown',
+      desc: 'Load more of a statement that may write was interrupted while the app was in the background, so whether the run of that page wrote is unknown.',
+      args: [],
+    );
+  }
+
   /// `Discard`
   String get editor_saved_text_discard {
     return Intl.message(
