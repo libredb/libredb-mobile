@@ -48,8 +48,20 @@ class _EditorViewState extends State<_EditorView> {
   final _text = TextEditingController();
   final _focus = FocusNode();
 
+  /// The confirmation sheet this page shows, while it is open.
+  Route<WriteConfirmation>? _sheet;
+
   @override
   void dispose() {
+    // The sheet sits on the root navigator, above the shell, so a deep link or a session end that disposes this page
+    // would leave it open; it answers cancelled instead and never outlives the page that asked. The root navigator is
+    // still updating its pages while this page is disposed, so the sheet is removed once that frame has finished.
+    if (_sheet case final sheet?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (sheet.isActive) sheet.navigator?.removeRoute(sheet, WriteConfirmation.cancelled);
+      });
+    }
+    _sheet = null;
     _text.dispose();
     _focus.dispose();
     super.dispose();
@@ -61,7 +73,7 @@ class _EditorViewState extends State<_EditorView> {
   }
 
   /// Shows the confirmation of [statement] on the open connection and answers whether the user confirmed it; a
-  /// connection that closed meanwhile answers no.
+  /// connection that closed meanwhile, or a page disposed while the sheet was open, answers no.
   Future<bool> _confirm(EditorStatement statement) async {
     final connection = context.read<ActiveConnectionCubit>().state.connection;
     final asks = statement.asks;
@@ -71,7 +83,11 @@ class _EditorViewState extends State<_EditorView> {
       connection: connection,
       text: statement.text,
       answer: asks,
+      onRoute: (route) => _sheet = route,
     );
+    _sheet = null;
+    // A page disposed while the sheet was open has no run left to send for, a page of Load more included.
+    if (!mounted) return false;
     return answer == WriteConfirmation.confirmed;
   }
 

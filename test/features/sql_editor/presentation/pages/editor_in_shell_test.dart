@@ -1,6 +1,8 @@
 @Tags(['widget'])
 library;
 
+import 'dart:io';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,9 +30,11 @@ import 'package:libredb_mobile/features/studio_status/application/studio_status_
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
@@ -57,7 +61,13 @@ void main() {
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(postgres.id)).thenAnswer(
       (_) async => const Success(
-        ProviderMeta(queryLanguage: 'sql', schemaRefreshPattern: 'DROP', containerLevels: [], objectKinds: []),
+        ProviderMeta(
+          queryLanguage: 'sql',
+          schemaRefreshPattern: 'DROP',
+          containerLevels: [],
+          objectKinds: [],
+          supportsResultPagination: true,
+        ),
       ),
     );
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
@@ -202,5 +212,73 @@ void main() {
     expect(find.text('login page'), findsOneWidget);
     expect(find.byType(WriteConfirmationSheet), findsNothing);
     verifyNothingSent();
+  });
+
+  testWidgets('a deep link that leaves the tab while the Run sheet is open closes the sheet and sends nothing', (
+    tester,
+  ) async {
+    final router = await pumpShell(tester);
+    await openConfirmation(tester);
+
+    router.go('/browse');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('browse root'), findsOneWidget);
+    expect(find.byType(WriteConfirmationSheet), findsNothing);
+    verifyNothingSent();
+  });
+
+  testWidgets('a deep link that leaves the tab while the Load more sheet is open sends no page', (tester) async {
+    const flagged = 'SELECT * FROM sales.ledger -- note: update';
+    final first = QueryResultJson.read(File('test/fixtures/studio/query_page_postgres_first.json').readAsStringSync());
+    when(
+      () => repository.run(
+        any(),
+        flagged,
+        queryId: any(named: 'queryId'),
+        page: QueryPage.first,
+      ),
+    ).thenAnswer((_) async => Success(first));
+    when(
+      () => repository.run(
+        any(),
+        flagged,
+        queryId: any(named: 'queryId'),
+        page: QueryPage.after(first.pagination!),
+      ),
+    ).thenAnswer((_) async => Success(first));
+    final router = await pumpShell(tester);
+    await tester.enterText(find.byKey(EditorInput.fieldKey), flagged);
+    await tester.pump();
+    await tester.tap(find.byKey(EditorActions.runKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Run').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('result-load-more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Load 50 more'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(WriteConfirmationSheet), findsOneWidget);
+
+    router.go('/browse');
+    await tester.pumpAndSettle();
+    // A sheet that outlived the editor would still take an answer here.
+    if (find.byType(WriteConfirmationSheet).evaluate().isNotEmpty) {
+      await tester.tap(find.widgetWithText(FilledButton, 'Run').last);
+      await tester.pumpAndSettle();
+    }
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(WriteConfirmationSheet), findsNothing);
+    verifyNever(
+      () => repository.run(
+        any(),
+        flagged,
+        queryId: any(named: 'queryId'),
+        page: QueryPage.after(first.pagination!),
+      ),
+    );
   });
 }
