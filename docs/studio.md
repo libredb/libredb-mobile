@@ -68,6 +68,7 @@ docker compose -f tool/studio-dev/docker-compose.yml down -v
 ```
 
 The last command removes the stack with all its state, its CA included.
+A first start on an empty volume runs the database seeds, which on a loaded host can take over two minutes; the database healthchecks allow 120 seconds for that before a failed check counts, so `up --wait` waits instead of failing.
 
 ### Android emulator
 
@@ -223,6 +224,7 @@ The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/p
 - `public.column_types`, one row of every column type a query result renders.
 - The view `sales.order_totals`, the function `sales.order_total(bigint)`, the procedure `sales.mark_shipped(bigint)` and the trigger `orders_touch_updated_at` on `public.orders`.
 - `sales.ledger`, exactly 100 rows, so pages of 50 rows end with a full page that has no more and an empty page past it.
+- `sales.room_bookings`, with the exclusion constraint `room_bookings_during_excl` (`EXCLUDE USING gist (during WITH &&)`), which the Indexes tab lists under "Exclusion constraints".
 
 `archive` holds one table, so the server-level seed lists more than one database.
 The first two seeds sign in as `app_owner`, which owns every object, and the third as `studio_reader`, which may only read and owns nothing.
@@ -381,6 +383,7 @@ record query_page_postgres_first /db/query '{"connectionId":"seed:dev-postgres",
 record query_page_postgres_second /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM sales.ledger;","options":{"limit":50,"offset":50}}'
 record query_page_postgres_third /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM sales.ledger;","options":{"limit":50,"offset":100}}'
 record describe_postgres_orders_readonly /db/objects/describe '{"connectionId":"seed:dev-postgres-readonly","path":["public","orders"],"kind":"table"}'
+record describe_postgres_room_bookings /db/objects/describe '{"connectionId":"seed:dev-postgres","path":["sales","room_bookings"],"kind":"table"}'
 ```
 
 The row previews and counts of #98 were recorded the same way, from a fresh volume, with the statements the app's generator writes:

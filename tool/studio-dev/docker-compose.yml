@@ -161,6 +161,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+      # A cold initdb on a loaded host can take over 2 minutes; failed checks before then do not count.
+      start_period: 120s
 
   # The Redis behind seed:dev-redis, with no persistence, so every start begins empty and redis-seed loads it.
   redis:
@@ -173,6 +175,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+      # The same grace as the databases, for a slow start on a loaded host; failed checks before then do not count.
+      start_period: 120s
 
   # Loads redis/seed.redis into the Redis above, once it answers. redis-cli goes on after a failed command and exits 0,
   # so the service fails on any reply but OK, a number or a stream id (an error, NOAUTH or a refused write), and on a key
@@ -221,6 +225,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+      # A cold initdb on a loaded host can take over 2 minutes; failed checks before then do not count.
+      start_period: 120s
 
   # Studio's storage, which governance mode keeps in Postgres, and the sales database the governed connections open.
   governed-db:
@@ -235,6 +241,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+      # A cold initdb on a loaded host can take over 2 minutes; failed checks before then do not count.
+      start_period: 120s
 
   libredb-studio-governed:
     image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:latest}
