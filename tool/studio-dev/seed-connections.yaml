@@ -48,6 +48,21 @@ connections:
     roles: ["*"]
     managed: true
 
+  # The database of dev-postgres marked as production, so the editor's write confirmation asks for the typed
+  # connection name.
+  - id: dev-postgres-prod
+    name: "Prod Postgres"
+    type: postgres
+    host: postgres
+    port: 5432
+    database: app
+    user: app_owner
+    password: "${APP_OWNER_PASSWORD}"
+    environment: production
+    group: "Dev databases"
+    roles: ["*"]
+    managed: true
+
   # The Redis of the compose file, loaded by redis/seed.redis. Names no database, so a walk or a query without one
   # reads database 0, Redis's own default, and a request names another in database.
   - id: dev-redis
