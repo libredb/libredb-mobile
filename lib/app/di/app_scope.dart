@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
+import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/localization/locale_cubit.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -272,6 +273,11 @@ class AppScope extends StatelessWidget {
           // AppSessionListeners tells it who signed in and closes it at the session's end.
           BlocProvider<ActiveConnectionCubit>(
             create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
+          ),
+          // Follows the active connection, so the Browse tab opens a session-default container on its first entry only.
+          RepositoryProvider<SessionDefaultEntry>(
+            create: (context) => SessionDefaultEntry(context.read<ActiveConnectionCubit>().connectionIds),
+            dispose: (entry) => entry.dispose(),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

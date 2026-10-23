@@ -8,7 +8,8 @@ import 'package:libredb_mobile/generated/l10n.dart';
 
 /// The frame around every signed-in page, at every screen width: the one top bar with the page title above it, and
 /// below it the bottom navigation bar on a tab, or a back arrow in the top bar on any other page, such as the settings.
-/// On the Browse tab the title is the active connection, which opens the connection switcher.
+/// A page under the Browse root keeps the bottom navigation bar and has the back arrow too. On every Browse location the
+/// title is the active connection, which opens the connection switcher.
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({super.key, required this.child, required this.activeRoute});
 
@@ -26,7 +27,11 @@ class ResponsiveScaffold extends StatelessWidget {
           children: [
             TopBarWidget(
               title: title,
-              onBack: tab == null ? () => _back(context) : null,
+              onBack: tab == null
+                  ? () => _back(context)
+                  : _inBrowseStack(activeRoute)
+                  ? () => _backInBrowse(context)
+                  : null,
               // Only the Browse tab works on the active connection for now; the SQL tab follows in M5.
               titleWidget: tab == ApplicationRoutesConstants.browse ? ActiveConnectionTitle(fallback: title) : null,
             ),
@@ -44,6 +49,20 @@ class ResponsiveScaffold extends StatelessWidget {
       if (route == tab || route.startsWith('$tab/')) return tab;
     }
     return null;
+  }
+
+  /// Whether [route] is a page under the Browse root, which keeps the tab's bottom navigation bar and has a back arrow,
+  /// since iOS has no system back.
+  static bool _inBrowseStack(String route) => route.startsWith('${ApplicationRoutesConstants.browse}/');
+
+  /// Returns to the Browse page under this one, or to the Browse root for a page opened by a link with nothing under it.
+  static void _backInBrowse(BuildContext context) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+    } else {
+      router.go(ApplicationRoutesConstants.browse);
+    }
   }
 
   /// Returns to the page under this one, or to the connection list for a page opened by a link with nothing under it.
