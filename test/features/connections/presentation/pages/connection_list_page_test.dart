@@ -906,6 +906,33 @@ void main() {
       expect(recoveriesReported, 2);
     });
 
+    testWidgets('an outage greys the stars and the recent strip too, and neither acts', (tester) async {
+      Finder star(String id) => find.byKey(ValueKey('connection-star-$id'));
+      Finder recent(String id) => find.byKey(ValueKey('connection-recent-$id'));
+      answer(const ManagedConnections(connections: [sales, ledger], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester);
+      await tester.tap(star('seed:sales'));
+      await tester.pump();
+      await tester.tap(row('seed:ledger'));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.byKey(const ValueKey('connection-check')))).pop();
+      await tester.pumpAndSettle();
+      expect(recent('seed:ledger'), findsOneWidget);
+      when(() => repository.listManaged()).thenAnswer((_) async => governanceUnavailable);
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(find.text(_outageNotice), findsOneWidget);
+      expect(tester.widget<ActionChip>(recent('seed:ledger')).onPressed, isNull);
+      await tester.tap(star('seed:sales'), warnIfMissed: false);
+      await tester.pump();
+      expect(header('favorites'), findsOneWidget);
+      await tester.tap(row('seed:ledger'), warnIfMissed: false);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('connection-check')), findsNothing);
+    });
+
     testWidgets('the first list of a page clears an outage that a page closed during it left behind', (tester) async {
       answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
 
