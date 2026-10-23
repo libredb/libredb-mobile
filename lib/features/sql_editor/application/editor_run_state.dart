@@ -1,14 +1,16 @@
 part of 'editor_run_bloc.dart';
 
-/// A text the editor sends, and why it asked before running, null when the check cleared it.
+/// A text the editor sends, and why it asked before running, null when the check cleared it; [catalog] is the
+/// database it runs in on a server-level connection, which each later page of its result names again.
 class EditorStatement extends Equatable {
-  const EditorStatement({required this.text, this.asks});
+  const EditorStatement({required this.text, this.asks, this.catalog});
 
   final String text;
   final AsksBeforeRunning? asks;
+  final String? catalog;
 
   @override
-  List<Object?> get props => [text, asks];
+  List<Object?> get props => [text, asks, catalog];
 
   /// Prints the length, never the text, which can hold customer data in its literals.
   @override

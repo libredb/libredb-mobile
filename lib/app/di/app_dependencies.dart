@@ -38,11 +38,13 @@ import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.da
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:libredb_mobile/infrastructure/storage/active_catalog_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/encrypted_text_file_store.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferences.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
@@ -139,6 +141,9 @@ class AppDependencies {
 
   /// The connection each signed-in user had open last on this device.
   IActiveConnectionStore createActiveConnectionStore() => ActiveConnectionPreferences();
+
+  /// The database each signed-in user ran statements in last on each server-level connection on this device.
+  IActiveCatalogStore createActiveCatalogStore() => ActiveCatalogPreferences();
 
   /// Whether results show cards or a table on this device.
   IResultViewModeStore createResultViewModeStore() => ResultViewModePreferences();

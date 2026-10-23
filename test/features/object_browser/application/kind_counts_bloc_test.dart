@@ -8,7 +8,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/kind_counts_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:mocktail/mocktail.dart';
 

@@ -7,7 +7,8 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 /// Run, under the text: an action that needs Studio, so it is disabled offline with the reason; disabled while the
-/// text is empty, while a run waits for its confirmation, and while a rate limit's delay runs.
+/// text is empty, while a run waits for its confirmation, while a rate limit's delay runs, and while [withheld], as on
+/// a server-level connection with no database to run in.
 ///
 /// While a statement runs, Run becomes Cancel, or Stop waiting on an engine that cannot cancel; it reads Cancelling
 /// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down. After a
@@ -19,12 +20,14 @@ class EditorActions extends StatelessWidget {
     required this.onRun,
     required this.onCancel,
     required this.onStopWaiting,
+    this.withheld = false,
   });
 
   final TextEditingController text;
   final VoidCallback onRun;
   final VoidCallback onCancel;
   final VoidCallback onStopWaiting;
+  final bool withheld;
 
   static const runKey = ValueKey('sql-editor-run');
   static const stopWaitingKey = ValueKey('sql-editor-stop-waiting');
@@ -81,7 +84,7 @@ class EditorActions extends StatelessWidget {
         valueListenable: text,
         builder: (context, value, _) => FilledButton.icon(
           key: runKey,
-          onPressed: online && !busy && value.text.trim().isNotEmpty ? onRun : null,
+          onPressed: online && !busy && !withheld && value.text.trim().isNotEmpty ? onRun : null,
           icon: const Icon(Icons.play_arrow),
           label: Text(S.of(context).sql_editor_run),
         ),

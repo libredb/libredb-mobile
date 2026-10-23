@@ -36,7 +36,10 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
@@ -65,7 +68,11 @@ class MockIStatementRepository extends Mock implements IStatementRepository {}
 
 class MockIObjectBrowserRepository extends Mock implements IObjectBrowserRepository {}
 
+class MockIContainersRepository extends Mock implements IContainersRepository {}
+
 class MockIActiveConnectionStore extends Mock implements IActiveConnectionStore {}
+
+class MockIActiveCatalogStore extends Mock implements IActiveCatalogStore {}
 
 class MockIResultViewModeStore extends Mock implements IResultViewModeStore {}
 
@@ -84,6 +91,8 @@ class MockStudioIdentityCubit extends MockCubit<StudioIdentityState> implements 
 class MockConnectionPolicyCubit extends MockCubit<ConnectionPolicyState> implements ConnectionPolicyCubit {}
 
 class MockActiveConnectionCubit extends MockCubit<ActiveConnectionState> implements ActiveConnectionCubit {}
+
+class MockActiveCatalogCubit extends MockCubit<ActiveCatalogState> implements ActiveCatalogCubit {}
 
 class MockConnectivityCubit extends MockCubit<ConnectivityState> implements ConnectivityCubit {}
 

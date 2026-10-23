@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:mocktail/mocktail.dart';
 

@@ -7,9 +7,10 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
@@ -175,9 +176,12 @@ void main() {
       expect(find.text('Databases'), findsOneWidget);
       expect(find.text('archive'), findsOneWidget);
       expect(harness.location, '/browse', reason: 'no database is the session default');
+      expect(harness.catalog.catalogOf(_server.id), isNull);
 
       await tester.tap(find.text('app'));
       await tester.pumpAndSettle();
+
+      expect(harness.catalog.catalogOf(_server.id), 'app', reason: 'opening a database makes it the active one');
 
       expect(find.text('Schemas'), findsOneWidget);
       expect(harness.location, '/browse/seed%3Adev-postgres-server/containers?container=app');
@@ -203,6 +207,7 @@ void main() {
 
       expect(harness.location, '/browse/seed%3Amssql/kinds?container=app&container=dbo');
       expect(find.text('dbo'), findsOneWidget);
+      expect(harness.catalog.state, const ActiveCatalogNone(), reason: 'MSSQL declares no catalogSessions');
 
       harness.router.pop();
       await tester.pumpAndSettle();

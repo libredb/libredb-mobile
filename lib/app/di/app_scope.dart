@@ -50,7 +50,9 @@ import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.d
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
 
 class AppScope extends StatelessWidget {
   const AppScope({
@@ -183,6 +185,8 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<IObjectBrowserRepository>(
           create: (context) => context.read<CachedObjectBrowserRepository>(),
         ),
+        // The same instance, so the SQL editor's list of a server's databases shares Browse's kept answer.
+        RepositoryProvider<IContainersRepository>(create: (context) => context.read<CachedObjectBrowserRepository>()),
         RepositoryProvider<SchemaChangeNotifier>(
           create: (context) => SchemaChangeNotifier(
             providerMeta: context.read<IProviderMetaRepository>(),
@@ -281,6 +285,14 @@ class AppScope extends StatelessWidget {
           // AppSessionListeners tells it who signed in and closes it at the session's end.
           BlocProvider<ActiveConnectionCubit>(
             create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
+          ),
+          // Beside the active connection, which it follows: Browse and the SQL editor share the database a server-level
+          // connection runs statements in; AppSessionListeners tells it who signed in and clears it at the session's end.
+          BlocProvider<ActiveCatalogCubit>(
+            create: (context) => ActiveCatalogCubit(
+              store: dependencies.createActiveCatalogStore(),
+              connectionIds: context.read<ActiveConnectionCubit>().connectionIds,
+            ),
           ),
           // Above the router, so every result view shows the same mode; a device setting, which no session end clears.
           BlocProvider<ResultViewModeCubit>(

@@ -602,6 +602,15 @@ void main() {
       expect(result.pagination?.limit, 50);
     });
 
+    test('POST /api/db/query with catalog archive on the server-level seed runs in archive', () {
+      final result = QueryResultJson.read(fixture('query_catalog_postgres_server'));
+
+      expect(result.rows, [
+        {'current_database': 'archive'},
+      ]);
+      expect(result.pagination?.hasMore, isFalse);
+    });
+
     test('the preview and the count run the same on the read-only seed, whose describe carries no keys', () {
       expect(
         QueryResultJson.read(fixture('query_preview_postgres_readonly_customers')).rows,

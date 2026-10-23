@@ -50,6 +50,10 @@ import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 import '../../support/test_env.dart';
 
@@ -991,6 +995,17 @@ void main() {
       expect(scope.read<IStatementTextStore>(), isA<IStatementTextStore>());
     });
 
+    testWidgets('provides one active database, which a switch of the active connection clears', (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final catalog = scope.read<ActiveCatalogCubit>();
+
+      catalog.choose('seed:server', 'archive');
+      scope.read<ActiveConnectionCubit>().select(const StudioConnection(id: 'seed:other', name: 'Other', type: 'pg'));
+      await tester.pump();
+
+      expect(catalog.state, const ActiveCatalogNone());
+    });
+
     testWidgets('provides the result view mode, restored from the device', (tester) async {
       await AppLocalStorage().save(StorageKeys.resultViewMode.key, 'table');
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
@@ -1004,6 +1019,7 @@ void main() {
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IObjectBrowserRepository>(), same(scope.read<CachedObjectBrowserRepository>()));
+      expect(scope.read<IContainersRepository>(), same(scope.read<CachedObjectBrowserRepository>()));
       expect(scope.read<IProviderMetaRepository>(), same(scope.read<CachedProviderMetaRepository>()));
     });
 

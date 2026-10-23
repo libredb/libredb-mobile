@@ -7,9 +7,9 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
@@ -115,6 +115,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
             openOnEntry: first && event is ContainerBrowserRequested ? _entry?.take(connectionId, parent, data) : null,
             query: _query,
             searchesObjects: providerMeta.searchesObjects,
+            catalogSessions: providerMeta.catalogSessions,
           ),
         );
     }
@@ -151,6 +152,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     isRefreshing: isRefreshing,
     query: _query,
     searchesObjects: loaded.searchesObjects,
+    catalogSessions: loaded.catalogSessions,
   );
 
   @override

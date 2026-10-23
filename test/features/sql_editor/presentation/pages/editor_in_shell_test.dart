@@ -31,7 +31,9 @@ import 'package:libredb_mobile/features/studio_status/application/studio_status_
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -115,10 +117,15 @@ void main() {
           RepositoryProvider<ISqlEditorRepository>.value(value: repository),
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
+          // The engine above declares no catalogSessions, so the editor never lists a server's databases here.
+          RepositoryProvider<IContainersRepository>.value(value: MockIContainersRepository()),
         ],
         child: MultiBlocProvider(
           providers: [
             BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider<ActiveCatalogCubit>(
+              create: (_) => ActiveCatalogCubit(store: MockIActiveCatalogStore(), connectionIds: active.connectionIds),
+            ),
             BlocProvider<StudioIdentityCubit>.value(value: identity),
             BlocProvider<ConnectionPolicyCubit>.value(value: policy),
             BlocProvider<ConnectivityCubit>.value(value: connectivity),

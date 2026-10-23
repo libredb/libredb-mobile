@@ -880,5 +880,15 @@
   "sql_editor_cancel_not_confirmed": "Studio could not confirm the cancel. The statement may still run on the server.",
   "@sql_editor_cancel_not_confirmed": {"description": "The SQL editor's notice that Studio did not confirm the cancel, so the statement may still run."},
   "sql_editor_stopped_waiting": "Stopped waiting. This database cannot cancel a statement, so it may still run on the server.",
-  "@sql_editor_stopped_waiting": {"description": "The SQL editor's notice after Stop waiting, on an engine that cannot cancel."}
+  "@sql_editor_stopped_waiting": {"description": "The SQL editor's notice after Stop waiting, on an engine that cannot cancel."},
+  "sql_editor_catalog_label": "Database",
+  "@sql_editor_catalog_label": {"description": "The SQL editor's name for the database a server-level connection runs statements in, when Studio sends no label for its level."},
+  "sql_editor_catalog_chip": "{label}: {catalog}",
+  "@sql_editor_catalog_chip": {"description": "The SQL editor's chip of the database a server-level connection runs statements in, which opens the picker.", "placeholders": {"label": {"type": "String", "example": "Database"}, "catalog": {"type": "String", "example": "archive"}}},
+  "sql_editor_catalog_picker_title": "Run statements in",
+  "@sql_editor_catalog_picker_title": {"description": "The title of the SQL editor's picker of the database a server-level connection runs statements in."},
+  "sql_editor_catalog_failed": "The databases to run statements in could not be listed.",
+  "@sql_editor_catalog_failed": {"description": "The SQL editor could not read the databases of a server-level connection, shown above Studio's error with its retry; Run waits for a database."},
+  "sql_editor_catalog_none": "The server lists no database to run statements in.",
+  "@sql_editor_catalog_none": {"description": "A server-level connection lists no database, so the SQL editor offers no Run."}
 }

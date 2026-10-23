@@ -1,11 +1,11 @@
 import 'package:libredb_mobile/core/result/result.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 
 /// Read-only browsing of a managed connection, named by its id (`seed:<id>`).
 ///

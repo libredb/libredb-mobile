@@ -18,14 +18,15 @@ import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
@@ -44,6 +45,10 @@ class BrowseHarness {
     when(() => store.read(any())).thenAnswer((_) async => null);
     when(() => store.write(any(), any())).thenAnswer((_) async {});
     active = ActiveConnectionCubit(store: store);
+    final catalogStore = MockIActiveCatalogStore();
+    when(() => catalogStore.read(any(), any())).thenAnswer((_) async => null);
+    when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
+    catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: active.connectionIds);
     entry = SessionDefaultEntry(active.connectionIds);
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   }
@@ -52,6 +57,7 @@ class BrowseHarness {
   final providerMeta = MockIProviderMetaRepository();
   final statements = MockIStatementRepository();
   late final ActiveConnectionCubit active;
+  late final ActiveCatalogCubit catalog;
   late final SessionDefaultEntry entry;
   late final SchemaChangeNotifier schemaChanges;
   final _connectivity = StreamController<ConnectivityState>.broadcast();
@@ -114,6 +120,7 @@ class BrowseHarness {
       router.dispose();
       await entry.dispose();
       await schemaChanges.dispose();
+      await catalog.close();
       await active.close();
       await _connectivity.close();
     });
@@ -129,6 +136,7 @@ class BrowseHarness {
         child: MultiBlocProvider(
           providers: [
             BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider<ActiveCatalogCubit>.value(value: catalog),
             BlocProvider<StudioIdentityCubit>.value(value: identity),
             BlocProvider<ConnectionPolicyCubit>.value(value: policy),
             BlocProvider<ConnectivityCubit>.value(value: connectivity),

@@ -8,7 +8,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/container_browser_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -111,16 +111,39 @@ void main() {
     );
 
     blocTest<ContainerBrowserBloc, ContainerBrowserState>(
-      'seed:dev-postgres-server shows its databases, which name no session default',
+      'seed:dev-postgres-server shows its databases, which name no session default, and declares catalogSessions',
       setUp: () {
         answerMeta('seed:dev-postgres-server', metaAnswer('meta_postgres_server'));
         answerContainers('seed:dev-postgres-server', null, containersAnswer('containers_postgres_server'));
       },
       build: () => build('seed:dev-postgres-server'),
+      act: (bloc) => bloc
+        ..add(const ContainerBrowserRequested())
+        ..add(const ContainerBrowserFilterChanged('arch')),
+      wait: ContainerBrowserBloc.filterDebounce,
+      expect: () => [
+        const ContainerBrowserLoading(),
+        isA<ContainerBrowserLoaded>()
+            .having((s) => s.containers.map((c) => c.name), 'names', ['app', 'archive', 'postgres'])
+            .having((s) => s.openOnEntry, 'openOnEntry', isNull)
+            .having((s) => s.catalogSessions, 'catalogSessions', isTrue),
+        isA<ContainerBrowserLoaded>()
+            .having((s) => s.visibleContainers.map((c) => c.name), 'filtered', ['archive'])
+            .having((s) => s.catalogSessions, 'catalogSessions kept by a filter', isTrue),
+      ],
+    );
+
+    blocTest<ContainerBrowserBloc, ContainerBrowserState>(
+      'seed:dev-postgres declares no catalogSessions',
+      setUp: () {
+        answerMeta('seed:dev-postgres', metaAnswer('meta_postgres'));
+        answerContainers('seed:dev-postgres', null, containersAnswer('containers_postgres'));
+      },
+      build: () => build('seed:dev-postgres'),
       act: (bloc) => bloc.add(const ContainerBrowserRequested()),
       expect: () => [
         const ContainerBrowserLoading(),
-        loaded(label: 'Databases', names: ['app', 'archive', 'postgres'], depth: 2),
+        isA<ContainerBrowserLoaded>().having((s) => s.catalogSessions, 'catalogSessions', isFalse),
       ],
     );
 

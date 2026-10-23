@@ -1,15 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:libredb_mobile/core/result/result.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/cache/session_memory_cache.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 
 /// Keeps the containers, counts, lists and describe answers of [IObjectBrowserRepository] in memory for [ttl], so
 /// browsing back and forth spends none of the user's Studio request budget, which every object route charges.
@@ -19,7 +20,10 @@ import 'package:libredb_mobile/infrastructure/cache/session_memory_cache.dart';
 /// connection id, its method, its container or object path and its kind; on a server-level connection the database is
 /// the path's first segment, so it needs no key of its own. The session end, [invalidate] and [invalidateContainer]
 /// also keep an answer still on its way from being stored (see [SessionMemoryCache]).
-class CachedObjectBrowserRepository implements IObjectBrowserRepository {
+///
+/// It is also the app's [IContainersRepository], so the SQL editor's list of a server's databases shares Browse's
+/// kept answer.
+class CachedObjectBrowserRepository implements IObjectBrowserRepository, IContainersRepository {
   CachedObjectBrowserRepository(this._inner, {DateTime Function()? now})
     : _cache = SessionMemoryCache(ttl: ttl, now: now);
 

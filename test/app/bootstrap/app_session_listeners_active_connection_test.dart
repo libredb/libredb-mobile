@@ -14,6 +14,7 @@ import 'package:libredb_mobile/features/object_browser/data/repositories/cached_
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
@@ -62,6 +63,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(active.state.connection?.id, billing);
+  });
+
+  testWidgets('a logout clears the active database and the same user gets the remembered one back', (tester) async {
+    await launch(tester);
+    final catalog = tester.element(find.byType(ResponsiveScaffold)).read<ActiveCatalogCubit>();
+    await tester.tap(row(billing));
+    await tester.pumpAndSettle();
+    catalog.choose(billing, 'archive');
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+
+    await logOut(tester);
+    expect(catalog.state, const ActiveCatalogNone());
+    expect(await tester.runAsync(() => catalog.remembered(billing)), isNull);
+
+    await tester.tap(find.byKey(loginButtonSsoKey));
+    await tester.pumpAndSettle();
+
+    expect(await tester.runAsync(() => catalog.remembered(billing)), 'archive');
   });
 
   testWidgets('opening a connection, and each switch, drops the expired object answers', (tester) async {

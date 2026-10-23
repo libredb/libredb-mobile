@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/object_browser/application/container_browser_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
@@ -11,7 +10,9 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
@@ -21,7 +22,8 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 ///
 /// A container opens the level under it, or its kind screen at the last level; an engine with no container level shows
 /// its kind screen here instead. On the first entry of a connection the level opens its session-default container by
-/// itself, unless a page above it is on screen, as under a link to a deeper page.
+/// itself, unless a page above it is on screen, as under a link to a deeper page. Opening a database of a server-level
+/// connection (`catalogSessions`) makes it the active database, the one the SQL editor runs statements in.
 class ContainerLevelPage extends StatelessWidget {
   const ContainerLevelPage({super.key, required this.connectionId, this.parent = const [], this.headingAction});
 
@@ -56,6 +58,10 @@ class _ContainerLevelView extends StatelessWidget {
   final Widget? headingAction;
 
   void _open(BuildContext context, ContainerBrowserLoaded level, ObjectContainer container) {
+    // A database of a server-level connection becomes the one statements run in, as opening it in Studio's tree does.
+    if (parent.isEmpty && level.catalogSessions) {
+      context.read<ActiveCatalogCubit>().choose(connectionId, container.name);
+    }
     if (level.opensKinds(container)) {
       openBrowseKinds(context, connectionId, container.path);
     } else {
