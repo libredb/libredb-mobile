@@ -128,7 +128,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m50(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
-  static String m51(name) => "Onaylamak için ${name} yazın";
+  static String m51(name) => "Onaylamak için \"${name}\" yazın";
 
   static String m52(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
 

@@ -38,7 +38,7 @@ Future<WriteConfirmation> showWriteConfirmationSheet(
 /// On a production connection the header is in the error colour and Run stays disabled until the user types the
 /// connection's name, compared exactly as Studio's typed confirmation compares it (`src/components/typed-confirm.tsx`
 /// at libredb-studio c9989a6b5): no trimming, no case folding, an empty field never matches, and a connection without
-/// a name shows a sentence in place of the field and keeps Run disabled. That step is the phone's own, for every
+/// a name (or one of only white space) shows a sentence in place of the field and keeps Run disabled. That step is the phone's own, for every
 /// confirmation on a production connection.
 class WriteConfirmationSheet extends StatefulWidget {
   const WriteConfirmationSheet({super.key, required this.connection, required this.text, required this.answer});
@@ -60,11 +60,10 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
 
   bool get _isProduction => widget.connection.environment == StudioEnvironment.production;
 
-  bool get _canRun {
-    if (!_isProduction) return true;
-    final name = widget.connection.name;
-    return name.isNotEmpty && _typedName.text == name;
-  }
+  /// Whether the connection has a name to type; a name of only white space is none, as an empty one is.
+  bool get _hasName => widget.connection.name.trim().isNotEmpty;
+
+  bool get _canRun => !_isProduction || (_hasName && _typedName.text == widget.connection.name);
 
   @override
   void dispose() {
@@ -103,7 +102,7 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
               runSpacing: AppSpacing.xs,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (connection.name.isNotEmpty) Text(connection.name, style: theme.textTheme.titleSmall),
+                if (_hasName) Text(connection.name, style: theme.textTheme.titleSmall),
                 if (EnvironmentBadge.showsFor(environment))
                   EnvironmentBadge(environment: environment!, color: connection.color),
               ],
@@ -140,7 +139,7 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
             ),
             if (_isProduction) ...[
               Text(s.write_confirm_production_prompt, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.error)),
-              if (connection.name.isEmpty)
+              if (!_hasName)
                 Text(s.write_confirm_no_name, style: theme.textTheme.bodyMedium)
               else
                 TextField(

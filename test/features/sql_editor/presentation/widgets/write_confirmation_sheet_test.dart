@@ -258,6 +258,39 @@ void main() {
       expect(_runEnabled(tester), isFalse);
     });
 
+    testWidgets('a production connection whose name is only spaces counts as one without a name', (tester) async {
+      await _open(
+        tester,
+        connection: const StudioConnection(id: 'seed:x', name: '   ', type: 'postgres', environment: 'production'),
+      );
+
+      expect(find.text(_s.write_confirm_no_name), findsOneWidget);
+      expect(_nameField, findsNothing);
+      expect(_runEnabled(tester), isFalse);
+    });
+
+    testWidgets('the label shows the name with its spaces kept, between quotes, and the exact name enables Run', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        connection: const StudioConnection(
+          id: 'seed:x',
+          name: 'Sales Prod ',
+          type: 'postgres',
+          environment: 'production',
+        ),
+      );
+
+      expect(find.text('Type "Sales Prod " to confirm'), findsOneWidget);
+      await tester.enterText(_nameField, 'Sales Prod');
+      await tester.pump();
+      expect(_runEnabled(tester), isFalse);
+      await tester.enterText(_nameField, 'Sales Prod ');
+      await tester.pump();
+      expect(_runEnabled(tester), isTrue);
+    });
+
     testWidgets('applies to a statement that asks only because the engine is not SQL', (tester) async {
       await _open(
         tester,

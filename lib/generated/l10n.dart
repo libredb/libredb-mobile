@@ -2257,12 +2257,12 @@ class S {
     );
   }
 
-  /// `Type {name} to confirm`
+  /// `Type "{name}" to confirm`
   String write_confirm_name_label(String name) {
     return Intl.message(
-      'Type $name to confirm',
+      'Type "$name" to confirm',
       name: 'write_confirm_name_label',
-      desc: 'The label of the field the user types the production connection\'s name in.',
+      desc: 'The label of the field the user types the production connection\'s name in; the quotes show a leading or trailing space of the name.',
       args: [name],
     );
   }

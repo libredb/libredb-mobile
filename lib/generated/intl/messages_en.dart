@@ -127,7 +127,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m50(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
-  static String m51(name) => "Type ${name} to confirm";
+  static String m51(name) => "Type \"${name}\" to confirm";
 
   static String m52(word, line) => "May change data: ${word} on line ${line}";
 
