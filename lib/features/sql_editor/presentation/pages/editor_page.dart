@@ -63,6 +63,9 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 /// field holds another text, and never runs; its database becomes the active one once the text is in, on a server-level
 /// connection only. A cancelled replace keeps both the text and the database.
 ///
+/// A run refused with `studio.connection_not_available` hands [connectionId] to the active connection's vanish flow, as
+/// the Browse pages do, so the SQL tab never keeps a connection Studio no longer offers; nothing is sent again.
+///
 /// A run keeps background time while it is in flight, and a run that the app's switch to the background interrupted
 /// says so on return: Run again for a read, and that the outcome is unknown for anything else.
 class EditorPage extends StatelessWidget {
@@ -459,6 +462,11 @@ class _EditorViewState extends State<_EditorView> {
               current is EditorAwaitingConfirmation ||
               (current is EditorStatementFailed && previous is! EditorAwaitingConfirmation),
           listener: _onStateChanged,
+        ),
+        BlocListener<EditorRunBloc, EditorRunState>(
+          listenWhen: (previous, current) =>
+              current is EditorFailed && current.error.code == AppErrorCode.studioConnectionNotAvailable.key,
+          listener: (context, state) => context.read<ActiveConnectionCubit>().reportUnavailable(widget.connectionId),
         ),
         BlocListener<EditorLanguageCubit, EditorLanguageState>(
           listener: (context, state) => _text.highlighting = switch (state) {

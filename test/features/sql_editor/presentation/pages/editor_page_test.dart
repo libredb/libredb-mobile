@@ -54,6 +54,7 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/printed_lines.dart';
 
 String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -184,6 +185,7 @@ void main() {
     String? subject = _account,
     Size? size,
     Locale? locale,
+    Stream<ActiveConnectionState> states = const Stream<ActiveConnectionState>.empty(),
   }) async {
     if (size != null) {
       tester.view.physicalSize = size;
@@ -192,7 +194,7 @@ void main() {
     }
     whenListen(
       active,
-      const Stream<ActiveConnectionState>.empty(),
+      states,
       initialState: connection == null ? const ActiveConnectionNone() : ActiveConnectionSelected(connection),
     );
     when(() => active.listed(any())).thenReturn(connection);
@@ -410,6 +412,27 @@ void main() {
     expect(find.text('The database did not allow this. You may lack a privilege on this object.'), findsOneWidget);
     expect(find.textContaining('permission denied for table orders'), findsNothing);
     expect(runsOf(delete), 1);
+  });
+
+  testWidgets('a run refused with studio.connection_not_available reports the connection, runs once, logs no text', (
+    tester,
+  ) async {
+    const statement = "SELECT * FROM customers WHERE email = 'ada@example.com'";
+    answerRun(statement, () => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')));
+    final states = StreamController<ActiveConnectionState>();
+    addTearDown(states.close);
+    when(() => active.reportUnavailable(any()))
+        .thenAnswer((_) => states.add(const ActiveConnectionVanished(_postgres)));
+    await pump(tester, states: states.stream);
+    await type(tester, statement);
+
+    final lines = await printedLines(() => run(tester));
+
+    verify(() => active.reportUnavailable(_postgres.id)).called(1);
+    expect(find.byType(PickConnectionFirst), findsOneWidget);
+    expect(find.byKey(EditorInput.fieldKey), findsNothing);
+    expect(runsOf(statement), 1);
+    expect(lines.where((line) => line.contains('customers') || line.contains('ada@example.com')), isEmpty);
   });
 
   group('Load more', () {
