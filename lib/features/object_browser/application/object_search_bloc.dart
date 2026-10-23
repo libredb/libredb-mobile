@@ -43,15 +43,38 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   /// The connection, from the page's route.
   final String connectionId;
 
+  /// The trimmed term of the last event that went on to the search, its wait or its request, null after a term too
+  /// short to search.
+  String? _lastTerm;
+
   /// Restartable over every term event: a typed term long enough to search waits [debounce] first, while a submit and
   /// a term too short to search act at once, and each event cancels the wait or the search of the one before it.
-  static Stream<ObjectSearchTermEvent> _debounceTyping(
+  ///
+  /// A term already searched is not sent again, since each search spends a Studio request slot: a repeat of the term
+  /// that is waiting, in flight or on screen is dropped before it can cancel anything, and a return to the term on
+  /// screen while another waits only drops that wait. After a failure the same term is sent again, so Retry works.
+  Stream<ObjectSearchTermEvent> _debounceTyping(
     Stream<ObjectSearchTermEvent> events,
     Stream<ObjectSearchTermEvent> Function(ObjectSearchTermEvent) mapper,
-  ) => events.switchMap((event) {
-    final waits = event is ObjectSearchTermChanged && _searchable(event.term);
+  ) => events.where((event) => !_repeatsLast(event)).switchMap((event) {
+    final searchable = _searchable(event.term);
+    final term = searchable ? _trimmed(event.term) : null;
+    _lastTerm = term;
+    if (state case ObjectSearchResults(term: final shown) when term != null && shown == term) {
+      return const Stream.empty();
+    }
+    final waits = event is ObjectSearchTermChanged && searchable;
     return waits ? _after(debounce, event).switchMap(mapper) : mapper(event);
   });
+
+  /// Whether [event] asks again for the term that last went on, while it is still waiting, in flight or on screen.
+  bool _repeatsLast(ObjectSearchTermEvent event) {
+    if (!_searchable(event.term) || _trimmed(event.term) != _lastTerm) return false;
+    return switch (state) {
+      ObjectSearchFailure() || ObjectSearchIdle() => false,
+      _ => true,
+    };
+  }
 
   /// [event] once [delay] has passed, with the timer cancelled when the listener goes, so a dropped wait leaves no
   /// timer behind.
@@ -93,8 +116,9 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
 
   Future<void> _onTerm(ObjectSearchTermEvent event, Emitter<ObjectSearchState> emit) async {
     final meta = state.meta;
-    // No term is taken before provider-meta says the connection can be searched.
-    if (meta == null || meta.catalogSessions) return;
+    // No term is taken before provider-meta is read; a server-level connection is ObjectSearchNotAvailable, which
+    // holds none, so it never searches.
+    if (meta == null) return;
     if (!_searchable(event.term)) {
       emit(ObjectSearchIdle(meta: meta));
       return;

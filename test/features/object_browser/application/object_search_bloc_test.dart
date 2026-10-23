@@ -193,6 +193,136 @@ void main() {
     });
   });
 
+  group('repeats', () {
+    test('a submit after the pause sends nothing new for the term already searched', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.elapse(ObjectSearchBloc.debounce * 2);
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('a trailing space after the pause sends nothing new, typed or submitted', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchTermChanged('ord '));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchSubmitted('ord '));
+        async.elapse(ObjectSearchBloc.debounce * 2);
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>());
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('a submit while the same term is in flight sends nothing new', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        final answer = Completer<Result<List<DatabaseObject>>>();
+        when(
+          () => repository.search(
+            _postgres,
+            term: 'ord',
+            kinds: any(named: 'kinds'),
+          ),
+        ).thenAnswer((_) => answer.future);
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        answer.complete(Success(objectsAnswer('search_postgres')));
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>());
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('typing back to the term on screen drops the wait of the other term and sends nothing', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchTermChanged('orde'));
+        async.elapse(const Duration(milliseconds: 200));
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce * 2);
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('the same term is sent again from a failure, so Retry works', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, const Failure(ValidationError('refused')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        expect(bloc.state, isA<ObjectSearchFailure>());
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord', 'ord']);
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('the same term is sent again after a shorter one cleared the results', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchTermChanged('o'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord', 'ord']);
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+  });
+
   group('minimum length', () {
     test('a one-character term sends no request, typed or submitted, and spaces around it do not count', () {
       fakeAsync((async) {
