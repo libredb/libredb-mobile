@@ -78,7 +78,7 @@ class KeyWalkSummary extends StatelessWidget {
               readOutcome.isIncomplete
                   ? s.keys_read_incomplete(readOutcome.endReason)
                   : s.keys_read_unknown(readOutcome.endReason),
-              style: warning,
+              style: note,
             ),
             for (final loss in readOutcome.provenLoss) Text(loss, style: warning),
           ],

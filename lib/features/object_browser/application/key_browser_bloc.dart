@@ -165,8 +165,23 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
   }
 
   KeyBrowserLoaded _merge(KeyBrowserLoaded walk, KeyScanPage page, KeyPageLoad load) {
-    final keys = <String>{...walk.keys, ...page.keys};
-    final folders = <String>{...walk.folders, ...?page.prefixes};
+    // As Studio's panel absorbs a page: a name already held is skipped, the page's folders come before its keys, and
+    // nothing is taken past heldKeyLimit, so the page that crosses it is trimmed to exactly the limit.
+    final folders = <String>{...walk.folders};
+    final keys = <String>{...walk.keys};
+    bool absorb(Set<String> into, String name) {
+      if (into.contains(name)) return true;
+      if (folders.length + keys.length >= heldKeyLimit) return false;
+      into.add(name);
+      return true;
+    }
+
+    for (final folder in page.prefixes ?? const <String>[]) {
+      if (!absorb(folders, folder)) break;
+    }
+    for (final key in page.keys) {
+      if (!absorb(keys, key)) break;
+    }
     final skipped = switch ((walk.skipped, page.skipped)) {
       (final before?, final now?) => KeyScanSkipped(count: before.count + now.count, reason: now.reason),
       (final before, final now) => now ?? before,
@@ -175,12 +190,16 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
       spec: walk.spec,
       pattern: walk.pattern,
       keys: List.unmodifiable(keys),
-      types: Map.unmodifiable({...walk.types, ...page.types}),
+      types: Map.unmodifiable({
+        ...walk.types,
+        for (final MapEntry(:key, :value) in page.types.entries)
+          if (keys.contains(key)) key: value,
+      }),
       folders: List.unmodifiable(folders),
       scanned: walk.scanned + page.keys.length + (page.prefixes?.length ?? 0),
       cursor: page.cursor,
       total: walk.spec.totalScope == 'none' ? null : page.total,
-      clustered: page.clustered ?? walk.clustered,
+      clustered: page.clustered,
       skipped: skipped,
       readOutcome: page.readOutcome ?? walk.readOutcome,
       load: load,

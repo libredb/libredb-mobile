@@ -83,37 +83,52 @@ final class ObjectBrowserJson {
   static const _sourcePartLimit = 8;
 
   /// `POST /api/db/keys/scan`: `KeyScanPage`.
+  ///
+  /// `skipped` and `readOutcome` report keys left out and reads that may be short, so either one, present but
+  /// malformed or with a blank reason, fails the page rather than being dropped (decisions.md, #59).
   static KeyScanPage keyScanPage(String body) {
     final json = _object(body);
-    final types = json['types'];
+    final cursor = _string(json['cursor'], 'cursor');
+    // Studio refuses an empty cursor on the next page, so an answer naming one is not a page the app can go on from.
+    if (cursor.isEmpty) throw const FormatException('A key page has an empty cursor');
+    final types = _map(json['types'], 'types');
     return KeyScanPage(
       keys: _strings(json['keys'], 'keys'),
-      cursor: _string(json['cursor'], 'cursor'),
+      cursor: cursor,
       types: {
-        if (types is Map)
-          for (final MapEntry(:key, :value) in types.entries)
-            if (key is String && value is String) key: value,
+        for (final MapEntry(:key, :value) in types.entries)
+          if (value is String) key: value,
       },
       total: _int(json['total'], 'total'),
       clustered: json['clustered'] is bool ? json['clustered'] as bool : null,
-      skipped: _skipped(json['skipped']),
-      readOutcome: _readOutcome(json['readOutcome']),
+      skipped: json['skipped'] == null ? null : _skipped(json['skipped']),
+      readOutcome: json['readOutcome'] == null ? null : _readOutcome(json['readOutcome']),
       prefixes: _optionalStrings(json['prefixes']),
     );
   }
 
-  static KeyScanSkipped? _skipped(Object? value) {
-    if (value is! Map || value['count'] is! int || value['reason'] is! String) return null;
-    return KeyScanSkipped(count: value['count'] as int, reason: value['reason'] as String);
+  static KeyScanSkipped _skipped(Object? value) {
+    final skipped = _map(value, 'skipped');
+    return KeyScanSkipped(
+      count: _int(skipped['count'], 'skipped count'),
+      reason: _sentence(skipped['reason'], 'skipped reason'),
+    );
   }
 
-  static KeyReadOutcome? _readOutcome(Object? value) {
-    if (value is! Map || value['scope'] is! String || value['endReason'] is! String) return null;
+  static KeyReadOutcome _readOutcome(Object? value) {
+    final outcome = _map(value, 'readOutcome');
+    final provenLoss = outcome['provenLoss'];
     return KeyReadOutcome(
-      scope: value['scope'] as String,
-      endReason: value['endReason'] as String,
-      provenLoss: _optionalStrings(value['provenLoss']) ?? const [],
+      scope: _sentence(outcome['scope'], 'readOutcome scope'),
+      endReason: _sentence(outcome['endReason'], 'readOutcome endReason'),
+      provenLoss: provenLoss == null ? const [] : List.unmodifiable(_strings(provenLoss, 'provenLoss')),
     );
+  }
+
+  /// A string that holds more than white space.
+  static String _sentence(Object? value, String what) {
+    final text = _string(value, what);
+    return text.trim().isEmpty ? throw FormatException('The $what is blank') : text;
   }
 
   /// A list of strings, or null when [value] is anything else.

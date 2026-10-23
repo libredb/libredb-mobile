@@ -227,6 +227,28 @@ void main() {
     });
   });
 
+  testWidgets('draws each proven loss in the warning style, under the plain read outcome', (tester) async {
+    harness.answerMeta(_firestore, metaAnswer('handwritten/firestore/meta'));
+    answerPages(
+      (_) => const Success(
+        KeyScanPage(
+          keys: [],
+          cursor: '0',
+          types: {},
+          total: 0,
+          prefixes: ['a/'],
+          readOutcome: KeyReadOutcome(scope: 'incomplete', endReason: 'the server closed', provenLoss: ['one lost']),
+        ),
+      ),
+    );
+    await harness.pump(tester, location: '/browse/seed%3Afirestore/keys');
+
+    final theme = Theme.of(tester.element(find.byType(ListView).last));
+    final outcome = tester.widget<Text>(find.text(S.current.keys_read_incomplete('the server closed')));
+    expect(outcome.style?.color, theme.colorScheme.onSurfaceVariant);
+    expect(tester.widget<Text>(find.text('one lost')).style?.color, theme.colorScheme.error);
+  });
+
   testWidgets('shows no total under totalScope none', (tester) async {
     harness.answerMeta(
       _mqtt,
@@ -275,6 +297,9 @@ void main() {
         ),
         findsOneWidget,
       );
+      final outcome = tester.widget<Text>(find.textContaining(S.current.keys_read_incomplete('')));
+      final theme = Theme.of(tester.element(find.byType(ListView).last));
+      expect(outcome.style?.color, theme.colorScheme.onSurfaceVariant, reason: 'a plain line, as Studio draws it');
     });
 
     testWidgets('a folder opens its own level as a page, asked with level true, its prefix and no database', (
@@ -314,7 +339,10 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/browse');
+      // go_router 18.1.1 keeps the popped page's query on the remaining location after a deep link opened with go
+      // (decisions.md, rules from #54); /browse reads no query, so it shows the root as ever.
+      expect(harness.location, '/browse?prefix=carts%2F');
+      expect(find.byType(BackButton), findsNothing);
     });
   });
 }

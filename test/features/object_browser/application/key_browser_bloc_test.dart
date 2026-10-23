@@ -181,6 +181,25 @@ void main() {
     });
   });
 
+  test('takes clustered from each page, so a page that says nothing clears it', () async {
+    answerMeta(metaAnswer('meta_redis'));
+    var calls = 0;
+    answerPages(
+      (_) => Success(
+        calls++ == 0
+            ? const KeyScanPage(keys: ['a'], cursor: '5', types: {}, total: 9, clustered: true)
+            : const KeyScanPage(keys: ['b'], cursor: '0', types: {}, total: 9),
+      ),
+    );
+    final bloc = build(container: const ['0']);
+
+    final first = await settle(bloc, const KeyBrowserStarted()) as KeyBrowserLoaded;
+    final second = await settle(bloc, const KeyBrowserMoreRequested()) as KeyBrowserLoaded;
+
+    expect(first.clustered, isTrue);
+    expect(second.clustered, isNull);
+  });
+
   group('etcd, a counted prefix walk', () {
     setUp(() => answerMeta(metaAnswer('handwritten/etcd/meta')));
 
@@ -326,6 +345,40 @@ void main() {
       bloc.add(const KeyBrowserAllRequested());
       await pumpEventQueue();
       expect(requests, hasLength(10));
+    });
+
+    test('trims the page that crosses the limit to exactly 10,000 held keys, keeping the first it names', () async {
+      answerPages((_) => Success(keysPage(requests.length * 1500, 1500)));
+      final bloc = build(container: const ['0']);
+
+      await settle(bloc, const KeyBrowserStarted());
+      final state = await settle(bloc, const KeyBrowserAllRequested()) as KeyBrowserLoaded;
+
+      expect(requests, hasLength(7));
+      expect(state.keys, hasLength(KeyBrowserBloc.heldKeyLimit));
+      expect(state.keys.last, 'k:${1500 + KeyBrowserBloc.heldKeyLimit - 1}');
+      expect(state.atCap, isTrue);
+    });
+
+    test('a level page that crosses the limit keeps its folders first, then its keys, up to 10,000 entries', () async {
+      answerMeta(metaAnswer('handwritten/firestore/meta'));
+      answerPages(
+        (_) => Success(
+          KeyScanPage(
+            keys: [for (var i = 0; i < 600; i++) 'k$i'],
+            prefixes: [for (var i = 0; i < 9600; i++) 'f$i/'],
+            cursor: 'next',
+            types: const {},
+            total: 0,
+          ),
+        ),
+      );
+
+      final state = await settle(build(), const KeyBrowserStarted()) as KeyBrowserLoaded;
+
+      expect(state.folders, hasLength(9600));
+      expect(state.keys, hasLength(400));
+      expect(state.held, KeyBrowserBloc.heldKeyLimit);
     });
 
     test('ends when the cursor returns to 0, reporting its progress after each page', () async {
