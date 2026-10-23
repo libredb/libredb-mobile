@@ -139,6 +139,15 @@ CREATE TABLE sales.ledger (
 );
 INSERT INTO sales.ledger SELECT n, 'entry ' || n FROM generate_series(1, 100) AS n;
 
+-- One exclusion constraint, which the Indexes tab lists under its own heading, recorded as
+-- describe_postgres_room_bookings.json. In sales, so no answer recorded from public changes.
+CREATE TABLE sales.room_bookings (
+  id integer PRIMARY KEY,
+  room text NOT NULL,
+  during tstzrange NOT NULL,
+  EXCLUDE USING gist (during WITH &&)
+);
+
 GRANT USAGE ON SCHEMA public, sales TO studio_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA public, sales TO studio_reader;
 
