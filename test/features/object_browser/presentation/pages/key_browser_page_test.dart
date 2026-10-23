@@ -15,6 +15,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/key_browser_list.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/widgets/pick_connection_first.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -160,6 +161,21 @@ void main() {
 
       expect(progress(tester), 'Scanned 4 of the 2093 keys this database holds; more remain');
       expect(find.text(S.current.keys_clustered), findsOneWidget);
+    });
+
+    testWidgets('keeps the limit notice when the trim cuts the last page, and caps the scanned count shown', (
+      tester,
+    ) async {
+      answerPages(
+        (_) => Success(
+          KeyScanPage(keys: [for (var i = 0; i < 10500; i++) 'k:$i'], cursor: '0', types: const {}, total: 12000),
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0');
+
+      expect(find.text(S.current.keys_cap), findsOneWidget);
+      expect(progress(tester), 'Scanned 10000 of the 12000 keys this database holds');
+      expect(find.text(S.current.keys_load_more), findsNothing);
     });
 
     testWidgets('Load all shows its progress and a Stop that waits for the page in flight', (tester) async {
@@ -339,9 +355,8 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
-      // go_router 18.1.1 keeps the popped page's query on the remaining location after a deep link opened with go
-      // (decisions.md, rules from #54); /browse reads no query, so it shows the root as ever.
-      expect(harness.location, '/browse?prefix=carts%2F');
+      expect(harness.router.state.uri.path, '/browse');
+      expect(find.byType(PickConnectionFirst), findsOneWidget, reason: 'the Browse root, with no connection open');
       expect(find.byType(BackButton), findsNothing);
     });
   });

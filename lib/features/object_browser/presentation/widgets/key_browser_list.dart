@@ -82,7 +82,8 @@ class KeyWalkSummary extends StatelessWidget {
             ),
             for (final loss in readOutcome.provenLoss) Text(loss, style: warning),
           ],
-          if (walk.atCap && walk.hasMore) Text(s.keys_cap, style: note),
+          // Drawn from the held count alone, so a trimmed last page keeps it too, as Studio's panel does.
+          if (walk.atCap) Text(s.keys_cap, style: warning),
           if (walk.load == KeyPageLoad.all) ...[
             LinearProgressIndicator(value: (walk.held / KeyBrowserBloc.heldKeyLimit).clamp(0, 1).toDouble()),
             OutlinedButton.icon(
@@ -114,7 +115,8 @@ class KeyWalkSummary extends StatelessWidget {
   /// 'Scanned n keys; more remain' until the cursor returns to `0`, with the total in the scope `totalScope` names:
   /// the database's key count, the walk's exact count, or none.
   String _progress(S s) {
-    final count = walk.scanned;
+    // Capped for display only, as Studio's panel does: the screen never holds more than the limit.
+    final count = walk.scanned < KeyBrowserBloc.heldKeyLimit ? walk.scanned : KeyBrowserBloc.heldKeyLimit;
     final more = walk.hasMore;
     final total = walk.total;
     if (walk.usesLevels) return more ? s.keys_listed_more(count) : s.keys_listed(count);

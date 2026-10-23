@@ -190,11 +190,7 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
       spec: walk.spec,
       pattern: walk.pattern,
       keys: List.unmodifiable(keys),
-      types: Map.unmodifiable({
-        ...walk.types,
-        for (final MapEntry(:key, :value) in page.types.entries)
-          if (keys.contains(key)) key: value,
-      }),
+      types: Map.unmodifiable({...walk.types, ...page.types}),
       folders: List.unmodifiable(folders),
       scanned: walk.scanned + page.keys.length + (page.prefixes?.length ?? 0),
       cursor: page.cursor,
