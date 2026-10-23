@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -212,6 +213,98 @@ void main() {
 
       expect(tester.getSize(find.byKey(const ValueKey('result-header-id'))).width, 80);
       expect(tester.getSize(find.byKey(const ValueKey('result-header-note'))).width, 500);
+    });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'at text scale $scale every header and sampled value shows whole, measured in the font it is drawn in',
+        (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          // As sales.ledger and public.column_types on the emulator (#126): every column is sized from its content.
+          await _Harness(tester).pump(
+            QueryResult(
+              fields: const ['entry', 'null_value', 'ts', 'email'],
+              rows: [
+                for (final n in [1, 10, 100])
+                  {'entry': 'entry $n', 'null_value': null, 'ts': n, 'email': 'p$n@example.com'},
+              ],
+              rowCount: 3,
+              executionTime: Duration.zero,
+              columnTypes: const {'ts': 'timestamp with time zone'},
+            ),
+            screen: const Size(4000, 2000),
+          );
+
+          final texts = [
+            for (final field in ['entry', 'null_value', 'ts', 'email'])
+              find.descendant(of: find.byKey(ValueKey('result-header-$field')), matching: find.text(field)),
+            find.byKey(const ValueKey('result-column-type-ts')),
+            for (final index in [0, 1, 2])
+              find.descendant(of: _row(index), matching: find.text('entry ${[1, 10, 100][index]}')),
+          ];
+          for (final text in texts) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(of: text, matching: find.byType(RichText), matchRoot: true),
+            );
+            final painter = TextPainter(
+              text: paragraph.text,
+              textDirection: paragraph.textDirection,
+              textScaler: paragraph.textScaler,
+              maxLines: 1,
+            )..layout();
+            addTearDown(painter.dispose);
+            final reason = paragraph.text.toPlainText();
+            expect(paragraph.didExceedMaxLines, isFalse, reason: reason);
+            expect(painter.width, lessThanOrEqualTo(paragraph.size.width), reason: reason);
+          }
+          // The masked column's lock is counted beside its name.
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('result-header-email')),
+              matching: find.bySemanticsLabel('Masked value'),
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+    }
+
+    testWidgets('a value after the first 200 rows does not widen its column', (tester) async {
+      QueryResult result(String last) => QueryResult(
+        fields: const ['entry'],
+        rows: [
+          for (var n = 1; n <= 200; n++) {'entry': 'e$n'},
+          {'entry': last},
+        ],
+        rowCount: 201,
+        executionTime: Duration.zero,
+      );
+      await _Harness(tester).pump(result('e'));
+      final width = tester.getSize(find.byKey(const ValueKey('result-header-entry'))).width;
+
+      await _Harness(tester).pump(result('x' * 30));
+
+      expect(tester.getSize(find.byKey(const ValueKey('result-header-entry'))).width, width);
+    });
+
+    testWidgets('a value wider than 500 px still ends in an ellipsis', (tester) async {
+      await _Harness(tester).pump(
+        QueryResult(
+          fields: const ['note'],
+          rows: [
+            {'note': 'x' * 100},
+          ],
+          rowCount: 1,
+          executionTime: Duration.zero,
+        ),
+      );
+
+      expect(tester.getSize(find.byKey(const ValueKey('result-header-note'))).width, 500);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: _row(0), matching: find.byType(RichText)),
+      );
+      expect(paragraph.didExceedMaxLines, isTrue);
     });
 
     testWidgets('500 rows build only the rows on screen, and the header stays pinned as they scroll', (tester) async {

@@ -162,9 +162,10 @@ class _KeyValueView extends StatelessWidget {
     if (shown is KeyValueLoaded && text == null) {
       return RefreshIndicator(
         onRefresh: () => _refresh(context),
+        notificationPredicate: browseResultRefreshPredicate,
         // A short result still pulls to refresh.
         child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(physics: const AlwaysScrollableScrollPhysics()),
+          behavior: alwaysScrollableBrowseBehavior(context),
           child: BlocProvider(
             // Each read is a result of its own, masked with the policy of its own read.
             key: ValueKey(shown.run),
