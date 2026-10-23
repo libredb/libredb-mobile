@@ -6,14 +6,17 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../../mocks/mock_classes.dart';
 import '../../../../support/test_env.dart';
 
 void main() {
@@ -26,7 +29,8 @@ void main() {
 
     setUp(() {
       TestEnv.authenticate();
-      repository = SqlEditorRepository(TestEnv.apiClient());
+      final client = TestEnv.apiClient();
+      repository = SqlEditorRepository(client, StatementRepository(client));
     });
 
     test('run reads rows, types and paging', () async {
@@ -66,6 +70,43 @@ void main() {
     });
   });
 
+  test('run is the shared statement runner, so the app has one /db/query call', () async {
+    final statements = MockIStatementRepository();
+    const answer = QueryResult(fields: ['n'], rows: [], rowCount: 0, executionTime: Duration.zero);
+    when(
+      () => statements.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        params: any(named: 'params'),
+        catalog: any(named: 'catalog'),
+      ),
+    ).thenAnswer((_) async => const Success(answer));
+    final repository = SqlEditorRepository(TestEnv.apiClient(), statements);
+
+    final result = await repository.run(
+      connection,
+      'select n from t',
+      queryId: 'q-3',
+      page: const QueryPage(limit: 10),
+      params: [1],
+      catalog: 'app',
+    );
+
+    expect(data(result), answer);
+    verify(
+      () => statements.run(
+        connection,
+        'select n from t',
+        queryId: 'q-3',
+        page: const QueryPage(limit: 10),
+        params: [1],
+        catalog: 'app',
+      ),
+    ).called(1);
+  });
+
   group('what it sends', () {
     late _RecordingAdapter adapter;
     late SqlEditorRepository repository;
@@ -74,7 +115,7 @@ void main() {
       adapter = _RecordingAdapter();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
-      repository = SqlEditorRepository(client);
+      repository = SqlEditorRepository(client, StatementRepository(client));
     });
 
     test('run sends the connection id, the statement, the page, the run id and the bind values as JSON', () async {
@@ -96,6 +137,33 @@ void main() {
         'options': {'limit': 100, 'offset': 200},
         'queryId': 'q-7',
         'params': [7],
+      });
+    });
+
+    test('runScript sends the page for the last SELECT as options', () async {
+      adapter.answer = (200, _scriptAnswer);
+
+      await repository.runScript(connection, 'select 1; select * from orders', page: const QueryPage(limit: 50));
+
+      expect(adapter.lastPath, '/db/multi-query');
+      expect(adapter.lastContentType, startsWith('application/json'));
+      expect(adapter.lastBody, {
+        'connectionId': connection,
+        'sql': 'select 1; select * from orders',
+        'options': {'limit': 50, 'offset': 0},
+      });
+    });
+
+    test('runScript without a page sends no options', () async {
+      adapter.answer = (200, _scriptAnswer);
+
+      await repository.runScript(connection, 'select 1; select 2', queryId: 'q-2', catalog: 'app');
+
+      expect(adapter.lastBody, {
+        'connectionId': connection,
+        'sql': 'select 1; select 2',
+        'queryId': 'q-2',
+        'catalog': 'app',
       });
     });
 
@@ -221,6 +289,8 @@ void main() {
     });
   });
 }
+
+const _scriptAnswer = '{"statements":[],"statementCount":0,"executedCount":0,"executionTime":0}';
 
 const _queryAnswer =
     '{"rows":[],"fields":["id"],"rowCount":0,"executionTime":1,'

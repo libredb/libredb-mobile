@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 
 /// Whether a connection has an open transaction, and whose it is.

@@ -37,6 +37,8 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 
 // Interface repository mocks (for use case tests)
 class MockIAuthRepository extends Mock implements IAuthRepository {}
@@ -58,6 +60,8 @@ class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
 
 class MockIProviderMetaRepository extends Mock implements IProviderMetaRepository {}
+
+class MockIStatementRepository extends Mock implements IStatementRepository {}
 
 class MockIObjectBrowserRepository extends Mock implements IObjectBrowserRepository {}
 
@@ -101,4 +105,5 @@ void registerAllFallbackValues() {
   registerFallbackValue(FakeUri());
   registerFallbackValue(<String>{});
   registerFallbackValue(ConnectionFavorites.empty);
+  registerFallbackValue(QueryPage.first);
 }

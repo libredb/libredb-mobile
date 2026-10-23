@@ -7,9 +7,10 @@ import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 /// Tells the object browser that a statement may have changed a connection's schema, as Studio's web tree learns it:
 /// the statement matches the engine's `schemaRefreshPattern` (`ProviderMeta.refreshesSchema`).
 ///
-/// The statement runner calls [statementSucceeded] after each successful run. A match drops the connection's browser
-/// answers through [invalidateConnection] first, and then sends the connection id on [changes], so an open browser
-/// screen that reloads reads afresh.
+/// The SQL editor's run (M5), which runs what the user typed, calls [statementSucceeded] after each successful run;
+/// the shared statement repository does not, since a preview, a count and a key read change no schema. A match drops
+/// the connection's browser answers through [invalidateConnection] first, and then sends the connection id on
+/// [changes], so an open browser screen that reloads reads afresh.
 class SchemaChangeNotifier {
   SchemaChangeNotifier({required this._providerMeta, required this.invalidateConnection});
 

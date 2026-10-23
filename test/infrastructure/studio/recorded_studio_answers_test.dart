@@ -19,6 +19,7 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
+import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -238,7 +239,7 @@ void main() {
   });
 
   test('POST /api/db/query with a page that has more rows', () {
-    final result = SqlEditorJson.queryResult(fixture('query'));
+    final result = QueryResultJson.read(fixture('query'));
 
     expect(result.rows, hasLength(2));
     expect(result.fields.first, 'emp_no');
@@ -247,7 +248,7 @@ void main() {
   });
 
   test('POST /api/db/query with a bind value', () {
-    expect(SqlEditorJson.queryResult(fixture('queryparams')).rows.single['answer'], 42);
+    expect(QueryResultJson.read(fixture('queryparams')).rows.single['answer'], 42);
   });
 
   test('POST /api/db/multi-query that stops at a failed statement', () {
@@ -492,7 +493,7 @@ void main() {
     });
 
     test('POST /api/db/query of one row of every column type', () {
-      final result = SqlEditorJson.queryResult(fixture('query_types_postgres'));
+      final result = QueryResultJson.read(fixture('query_types_postgres'));
       final row = result.rows.single;
 
       expect(result.fields.first, 'id');
@@ -647,13 +648,13 @@ void main() {
 
     // One read per key type, each the statement Studio's key browser generates for it, run in database 1.
     test('POST /api/db/query reads a string', () {
-      expect(SqlEditorJson.queryResult(fixture('query_redis_string')).rows, [
+      expect(QueryResultJson.read(fixture('query_redis_string')).rows, [
         {'result': 'hello from db1'},
       ]);
     });
 
     test('POST /api/db/query reads a string holding JSON as text', () {
-      final result = SqlEditorJson.queryResult(fixture('query_redis_json'));
+      final result = QueryResultJson.read(fixture('query_redis_json'));
 
       expect(result.fields, ['result']);
       expect(jsonDecode(result.rows.single['result']! as String), {
@@ -664,7 +665,7 @@ void main() {
     });
 
     test('POST /api/db/query reads a hash as field and value rows', () {
-      final result = SqlEditorJson.queryResult(fixture('query_redis_hash'));
+      final result = QueryResultJson.read(fixture('query_redis_hash'));
 
       expect(result.fields, ['field', 'value']);
       expect(result.rows.map((r) => r['field']), ['name', 'email', 'plan']);
@@ -672,8 +673,8 @@ void main() {
     });
 
     test('POST /api/db/query reads a list and a set as numbered rows', () {
-      final list = SqlEditorJson.queryResult(fixture('query_redis_list'));
-      final set = SqlEditorJson.queryResult(fixture('query_redis_set'));
+      final list = QueryResultJson.read(fixture('query_redis_list'));
+      final set = QueryResultJson.read(fixture('query_redis_set'));
 
       expect(list.fields, ['index', 'value']);
       expect(list.rows.map((r) => r['index']), [1, 2, 3]);
@@ -683,7 +684,7 @@ void main() {
     });
 
     test('POST /api/db/query reads a sorted set with each score as text', () {
-      final result = SqlEditorJson.queryResult(fixture('query_redis_zset'));
+      final result = QueryResultJson.read(fixture('query_redis_zset'));
 
       expect(result.fields, ['member', 'score']);
       expect(result.rows, [
@@ -694,7 +695,7 @@ void main() {
     });
 
     test('POST /api/db/query reads a stream as one row per entry', () {
-      final result = SqlEditorJson.queryResult(fixture('query_redis_stream'));
+      final result = QueryResultJson.read(fixture('query_redis_stream'));
 
       expect(result.fields, ['id', 'action', 'device']);
       expect(result.rows.map((r) => r['id']), ['1700000000000-0', '1700000000001-0']);

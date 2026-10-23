@@ -2,29 +2,60 @@ import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.d
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('queryResult', () {
-    test('a result inside a script has no paging; warnings and a rolled-back transaction are kept', () {
-      final result = SqlEditorJson.queryResult(
-        '{"rows":[],"fields":["n"],"rowCount":0,"executionTime":0.5,"openTransaction":"rolled-back",'
-        '"warnings":[{"message":"table does not exist, skipping","code":"00000","severity":"NOTICE"},{"code":1}]}',
+  group('scriptResult reads the loss notices of each statement strictly', () {
+    const page = '"limit":1,"offset":0,"hasMore":false,"totalReturned":1';
+    String script(String statementMore, {String scriptMore = ''}) =>
+        '{"statements":[{"index":0,"sql":"x","startLine":1,"status":"success","rows":[{"n":1}],"fields":["n"],'
+        '"rowCount":1,"executionTime":1$statementMore}],"statementCount":1,"executedCount":1,"executionTime":1'
+        '$scriptMore}';
+
+    final malformed = {
+      'a wasLimited string': ',"pagination":{$page,"wasLimited":"true"}',
+      'a pagination string': ',"pagination":"none"',
+      'a warnings object': ',"warnings":{"message":"x"}',
+      'a warning without message': ',"warnings":[{"code":1}]',
+      'an openTransaction of committed': ',"openTransaction":"committed"',
+    };
+    for (final MapEntry(key: name, value: more) in malformed.entries) {
+      test('$name in a statement fails the read', () {
+        expect(() => SqlEditorJson.scriptResult(script(more)), throwsFormatException);
+      });
+    }
+
+    test('an openTransaction of committed on the script fails the read', () {
+      expect(
+        () => SqlEditorJson.scriptResult(script('', scriptMore: ',"openTransaction":"committed"')),
+        throwsFormatException,
       );
+    });
 
+    test('a statement without them reads as before, with its warnings and column types', () {
+      final result = SqlEditorJson.scriptResult(
+        script(',"warnings":[{"message":"m","severity":"NOTICE"}],"columnTypes":{"n":"int4"}'),
+      ).statements.single.result!;
+
+      expect(result.rows, [
+        {'n': 1},
+      ]);
+      expect(result.warnings.single.message, 'm');
+      expect(result.columnTypes, {'n': 'int4'});
       expect(result.pagination, isNull);
-      expect(result.openTransactionRolledBack, isTrue);
-      expect(result.executionTime, const Duration(microseconds: 500));
-      expect(result.warnings.single.message, 'table does not exist, skipping');
+      expect(SqlEditorJson.scriptResult(script('')).openTransactionRolledBack, isFalse);
+      expect(
+        SqlEditorJson.scriptResult(script('', scriptMore: ',"openTransaction":"rolled-back"'))
+            .openTransactionRolledBack,
+        isTrue,
+      );
     });
+  });
 
-    test('refuses an answer without fields, rows or a row count', () {
-      for (final body in [
-        '{"rows":[],"rowCount":0,"executionTime":1}',
-        '{"fields":[],"rowCount":0,"executionTime":1}',
-        '{"rows":[],"fields":[],"executionTime":1}',
-        '{"rows":[1],"fields":[],"rowCount":0,"executionTime":1}',
-      ]) {
-        expect(() => SqlEditorJson.queryResult(body), throwsFormatException, reason: body);
-      }
-    });
+  test('transactionRun of one statement reads its loss notices strictly', () {
+    expect(
+      () => SqlEditorJson.transactionRun(
+        '{"inTransaction":true,"rows":[],"fields":[],"rowCount":0,"executionTime":1,"warnings":"none"}',
+      ),
+      throwsFormatException,
+    );
   });
 
   test('scriptResult gives a failed statement without a message a generic one', () {

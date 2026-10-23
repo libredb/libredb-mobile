@@ -1,22 +1,26 @@
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 
 /// Studio's statement routes, all `POST` with the connection named in the body. The paths are relative to
 /// `PROD_API_URL`, which ends in Studio's `/api`. The statement text is never logged. A request that runs a statement
 /// waits [studioStatementReceiveTimeout] for its answer; `cancel` runs none and keeps the client's default.
+///
+/// [run] goes through the shared [IStatementRepository], so the app sends `/db/query` from one place.
 class SqlEditorRepository implements ISqlEditorRepository {
-  SqlEditorRepository(this._apiClient);
+  SqlEditorRepository(this._apiClient, this._statements);
 
   final ApiClient _apiClient;
+  final IStatementRepository _statements;
 
   static final _log = AppLogger.getLogger('SqlEditorRepository');
 
@@ -28,22 +32,22 @@ class SqlEditorRepository implements ISqlEditorRepository {
     QueryPage page = QueryPage.first,
     List<Object?>? params,
     String? catalog,
-  }) => _post('run', '/db/query', {
-    'connectionId': connectionId,
-    'sql': sql,
-    'options': page.toJson(),
-    'queryId': ?queryId,
-    'params': ?params,
-    'catalog': ?catalog,
-  }, SqlEditorJson.queryResult);
+  }) => _statements.run(connectionId, sql, queryId: queryId, page: page, params: params, catalog: catalog);
 
   @override
-  Future<Result<ScriptResult>> runScript(String connectionId, String sql, {String? queryId, String? catalog}) => _post(
-    'runScript',
-    '/db/multi-query',
-    {'connectionId': connectionId, 'sql': sql, 'queryId': ?queryId, 'catalog': ?catalog},
-    SqlEditorJson.scriptResult,
-  );
+  Future<Result<ScriptResult>> runScript(
+    String connectionId,
+    String sql, {
+    String? queryId,
+    String? catalog,
+    QueryPage? page,
+  }) => _post('runScript', '/db/multi-query', {
+    'connectionId': connectionId,
+    'sql': sql,
+    'options': ?page?.toJson(),
+    'queryId': ?queryId,
+    'catalog': ?catalog,
+  }, SqlEditorJson.scriptResult);
 
   @override
   Future<Result<bool>> cancel(String connectionId, String queryId) => _post(
