@@ -7,17 +7,35 @@ sealed class EditorRunEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
+/// Where a run's history entry goes: the account Studio named when Run was tapped, as its subject hash, and the name of
+/// the connection the run is on.
+final class EditorHistoryTarget extends Equatable {
+  const EditorHistoryTarget({required this.subjectHash, required this.connectionName});
+
+  final String subjectHash;
+  final String connectionName;
+
+  @override
+  List<Object?> get props => [subjectHash, connectionName];
+
+  /// Prints neither the account nor the connection.
+  @override
+  String toString() => 'EditorHistoryTarget';
+}
+
 /// Run [text] for [role], the role Studio names now, whose policy masks the answer, in [catalog], the database picked
-/// on a server-level connection, or null on any other.
+/// on a server-level connection, or null on any other, and add it to the history of [history]; null while Studio has
+/// named no account, when nothing is kept.
 final class EditorRunRequested extends EditorRunEvent {
-  const EditorRunRequested({required this.text, required this.role, this.catalog});
+  const EditorRunRequested({required this.text, required this.role, this.catalog, this.history});
 
   final String text;
   final StudioRole? role;
   final String? catalog;
+  final EditorHistoryTarget? history;
 
   @override
-  List<Object?> get props => [text, role, catalog];
+  List<Object?> get props => [text, role, catalog, history];
 
   /// Prints the length, never the text, which can hold customer data in its literals.
   @override

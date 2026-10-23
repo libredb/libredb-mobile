@@ -6,6 +6,9 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
+/// History and Run, under the text. History reads only the phone, so it works offline, and is disabled while
+/// [onHistory] is null.
+///
 /// Run, under the text: an action that needs Studio, so it is disabled offline with the reason; disabled while the
 /// text is empty, while a run waits for its confirmation, while a rate limit's delay runs, and while [withheld], as on
 /// a server-level connection with no database to run in.
@@ -21,6 +24,7 @@ class EditorActions extends StatelessWidget {
     required this.onCancel,
     required this.onStopWaiting,
     this.withheld = false,
+    required this.onHistory,
   });
 
   final TextEditingController text;
@@ -28,9 +32,11 @@ class EditorActions extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onStopWaiting;
   final bool withheld;
+  final VoidCallback? onHistory;
 
   static const runKey = ValueKey('sql-editor-run');
   static const stopWaitingKey = ValueKey('sql-editor-stop-waiting');
+  static const historyKey = ValueKey('sql-editor-history');
 
   @override
   Widget build(BuildContext context) {
@@ -38,42 +44,58 @@ class EditorActions extends StatelessWidget {
     final state = context.watch<EditorRunBloc>().state;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      child: Align(
-        alignment: AlignmentDirectional.centerEnd,
-        child: switch (state) {
-          EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.end,
-            children: [
-              // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
-              // stop, so the request can also be dropped without posting another cancel.
-              if (cancelFailure != null && cancelFailure is! RateLimitedError)
-                OutlinedButton(key: stopWaitingKey, onPressed: onStopWaiting, child: Text(s.sql_editor_stop_waiting)),
-              FilledButton.tonalIcon(
-                key: runKey,
-                onPressed: waitingForRetry ? null : onCancel,
-                icon: const Icon(Icons.stop),
-                label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
-              ),
-            ],
+      child: Row(
+        children: [
+          TextButton.icon(
+            key: historyKey,
+            onPressed: onHistory,
+            icon: const Icon(Icons.history),
+            label: Text(s.sql_history_open),
           ),
-          EditorCancelling() => FilledButton.tonalIcon(
-            key: runKey,
-            onPressed: null,
-            icon: SizedBox.square(
-              dimension: MediaQuery.textScalerOf(context).scale(16),
-              child: const CircularProgressIndicator(strokeWidth: 2),
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: switch (state) {
+                EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
+                    // stop, so the request can also be dropped without posting another cancel.
+                    if (cancelFailure != null && cancelFailure is! RateLimitedError)
+                      OutlinedButton(
+                        key: stopWaitingKey,
+                        onPressed: onStopWaiting,
+                        child: Text(s.sql_editor_stop_waiting),
+                      ),
+                    FilledButton.tonalIcon(
+                      key: runKey,
+                      onPressed: waitingForRetry ? null : onCancel,
+                      icon: const Icon(Icons.stop),
+                      label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
+                    ),
+                  ],
+                ),
+                EditorCancelling() => FilledButton.tonalIcon(
+                  key: runKey,
+                  onPressed: null,
+                  icon: SizedBox.square(
+                    dimension: MediaQuery.textScalerOf(context).scale(16),
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  label: Text(s.sql_editor_cancelling),
+                ),
+                EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
+                EditorIdle() ||
+                EditorSucceeded() ||
+                EditorStatementFailed() ||
+                EditorFailed() ||
+                EditorCancelled() => _run(busy: false),
+              },
             ),
-            label: Text(s.sql_editor_cancelling),
           ),
-          EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
-          EditorIdle() ||
-          EditorSucceeded() ||
-          EditorStatementFailed() ||
-          EditorFailed() ||
-          EditorCancelled() => _run(busy: false),
-        },
+        ],
       ),
     );
   }

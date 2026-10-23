@@ -2,6 +2,7 @@
 library;
 
 import 'dart:io';
+import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
@@ -17,14 +18,18 @@ import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
@@ -36,9 +41,11 @@ import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -52,6 +59,7 @@ void main() {
   late ActiveConnectionCubit active;
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
+  late MockIStatementHistoryRepository history;
   late SchemaChangeNotifier schemaChanges;
 
   setUp(() {
@@ -60,6 +68,7 @@ void main() {
     when(() => store.write(any(), any())).thenAnswer((_) async {});
     active = ActiveConnectionCubit(store: store)..select(postgres);
     repository = MockISqlEditorRepository();
+    history = MockIStatementHistoryRepository();
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(postgres.id)).thenAnswer(
       (_) async => const Success(
@@ -80,12 +89,15 @@ void main() {
     await active.close();
   });
 
-  Future<GoRouter> pumpShell(WidgetTester tester) async {
+  Future<GoRouter> pumpShell(
+    WidgetTester tester, {
+    StudioIdentityState identityState = const StudioIdentityLoading(),
+  }) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final identity = MockStudioIdentityCubit();
-    whenListen(identity, const Stream<StudioIdentityState>.empty(), initialState: const StudioIdentityLoading());
+    whenListen(identity, const Stream<StudioIdentityState>.empty(), initialState: identityState);
     final policy = MockConnectionPolicyCubit();
     whenListen(policy, const Stream<ConnectionPolicyState>.empty(), initialState: const ConnectionPolicyLoading());
     final connectivity = MockConnectivityCubit();
@@ -119,6 +131,7 @@ void main() {
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           // The engine above declares no catalogSessions, so the editor never lists a server's databases here.
           RepositoryProvider<IContainersRepository>.value(value: MockIContainersRepository()),
+          RepositoryProvider<IStatementHistoryRepository>.value(value: history),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -290,6 +303,83 @@ void main() {
         page: QueryPage.after(first.pagination!),
         cancelSignal: any(named: 'cancelSignal'),
       ),
+    );
+  });
+
+  Future<GoRouter> openHistory(WidgetTester tester) async {
+    when(() => history.read(subjectHash('kc-ada'))).thenAnswer((_) async => const Success([]));
+    final router = await pumpShell(
+      tester,
+      identityState: const StudioIdentityLoaded(
+        StudioIdentity(username: 'ada', role: StudioUserRole(), subject: 'kc-ada'),
+      ),
+    );
+    await tester.tap(find.byKey(EditorActions.historyKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(StatementHistorySheet), findsOneWidget);
+    return router;
+  }
+
+  testWidgets('a session that ends while the History sheet is open closes it with the editor', (tester) async {
+    final router = await openHistory(tester);
+
+    router.go('/login');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('login page'), findsOneWidget);
+    expect(find.byType(StatementHistorySheet), findsNothing);
+  });
+
+  testWidgets('a deep link that leaves the tab while the History sheet is open closes it', (tester) async {
+    final router = await openHistory(tester);
+
+    router.go('/browse');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('browse root'), findsOneWidget);
+    expect(find.byType(StatementHistorySheet), findsNothing);
+  });
+
+  testWidgets('a history write refused after the editor closed is still said, on the page the user went to', (
+    tester,
+  ) async {
+    final answer = Completer<Result<QueryResult>>();
+    when(
+      () => repository.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).thenAnswer((_) => answer.future);
+    when(() => history.record(any(), any()))
+        .thenAnswer((_) async => const Failure(UnknownError('Could not add', code: 'editor.saved_text_not_stored')));
+    final router = await pumpShell(
+      tester,
+      identityState: const StudioIdentityLoaded(
+        StudioIdentity(username: 'ada', role: StudioUserRole(), subject: 'kc-ada'),
+      ),
+    );
+    await tester.enterText(find.byKey(EditorInput.fieldKey), 'SELECT 1');
+    await tester.pump();
+    await tester.tap(find.byKey(EditorActions.runKey));
+    await tester.pump();
+
+    router.go('/browse');
+    await tester.pumpAndSettle();
+    expect(find.byKey(EditorInput.fieldKey), findsNothing);
+    answer.complete(
+      const Success(QueryResult(fields: [], rows: [], rowCount: 0, executionTime: Duration(milliseconds: 1))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('browse root'), findsOneWidget);
+    expect(
+      find.text('This phone could not save the statement text. Check its free storage and try again.'),
+      findsOneWidget,
     );
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -6,6 +7,8 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
@@ -32,6 +35,7 @@ const _server = 'seed:dev-postgres-server';
 void main() {
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
+  late MockIStatementHistoryRepository history;
   late SchemaChangeNotifier schemaChanges;
   late List<String> invalidated;
   late List<String> changed;
@@ -41,9 +45,11 @@ void main() {
   const user = StudioUserRole();
 
   var ids = 0;
+  late List<AppErrorCode> notKept;
 
   setUp(() {
     ids = 0;
+    notKept = [];
     repository = MockISqlEditorRepository();
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(_postgres)).thenAnswer((_) async => Success(_meta('meta_postgres')));
@@ -53,6 +59,22 @@ void main() {
     changed = [];
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: invalidated.add);
     schemaChanges.changes.listen(changed.add);
+    history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer((invocation) async {
+      final run = invocation.positionalArguments[1] as FinishedRun;
+      return Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: run.connectionId,
+          connectionName: run.connectionName,
+          text: run.text,
+          status: run.status,
+          duration: run.duration,
+          rowCount: run.rowCount,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      );
+    });
   });
 
   tearDown(() => schemaChanges.dispose());
@@ -61,6 +83,8 @@ void main() {
     repository: repository,
     providerMeta: providerMeta,
     schemaChanges: schemaChanges,
+    history: history,
+    onHistoryNotKept: notKept.add,
     connectionId: connectionId,
     newRunId: () => 'run-${++ids}',
   );
@@ -645,6 +669,207 @@ void main() {
         expect(changed, isEmpty);
       },
     );
+  });
+
+  group('the history', () {
+    const account = 'account-hash';
+    const target = EditorHistoryTarget(subjectHash: account, connectionName: 'Dev Postgres');
+
+    List<FinishedRun> recorded() => verify(() => history.record(account, captureAny())).captured.cast<FinishedRun>();
+
+    void verifyNothingRecorded() => verifyNever(() => history.record(any(), any()));
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a run that succeeds writes one entry with its text, Studio\'s time and the rows it counted',
+      setUp: () => answerRun(() => Success(customers)),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT * FROM customers', role: user, history: target)),
+      skip: 2,
+      verify: (_) => expect(recorded(), [
+        FinishedRun(
+          connectionId: _postgres,
+          connectionName: 'Dev Postgres',
+          text: 'SELECT * FROM customers',
+          status: StatementRunStatus.success,
+          duration: customers.executionTime,
+          rowCount: customers.rowCount,
+        ),
+      ]),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a statement the database refused writes one Failed entry, which carries no error text',
+      setUp: () => answerRun(
+        () => const Failure(ValidationError('relation "missing" does not exist', code: 'studio.query_error')),
+      ),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT * FROM missing', role: user, history: target)),
+      skip: 2,
+      verify: (_) {
+        final run = recorded().single;
+        expect(run.status, StatementRunStatus.failure);
+        expect(run.text, 'SELECT * FROM missing');
+        expect(run.rowCount, isNull);
+        expect(run.props, isNot(contains(contains('does not exist'))));
+      },
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a request Studio refused, or that timed out after it was sent, writes a Failed entry',
+      build: build,
+      act: (bloc) async {
+        answerRun(() => const Failure(AuthError('denied', code: 'studio.permission_denied')));
+        bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target));
+        await bloc.stream.firstWhere((s) => s is EditorFailed);
+        answerRun(() => const Failure(TimeoutError('TimeoutException')));
+        bloc.add(const EditorRunRequested(text: 'SELECT 2', role: user, history: target));
+        await bloc.stream.firstWhere((s) => s is EditorFailed);
+      },
+      verify: (_) => expect(recorded().map((run) => (run.text, run.status)), [
+        ('SELECT 1', StatementRunStatus.failure),
+        ('SELECT 2', StatementRunStatus.failure),
+      ]),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a request that never reached Studio writes nothing',
+      setUp: () => answerRun(() => const Failure(NetworkError('offline', code: 'network.offline'))),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target)),
+      skip: 2,
+      verify: (_) => verifyNothingRecorded(),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a cancelled confirmation writes nothing; a confirmed one writes the confirmed text once',
+      setUp: () => answerRun(() => Success(_recorded('query'))),
+      build: build,
+      act: (bloc) async {
+        bloc.add(const EditorRunRequested(text: 'DELETE FROM orders', role: user, history: target));
+        await bloc.stream.firstWhere((s) => s is EditorAwaitingConfirmation);
+        bloc.add(const EditorConfirmationAnswered(confirmed: false));
+        await bloc.stream.firstWhere((s) => s is EditorIdle);
+        await pumpEventQueue();
+        verifyNothingRecorded();
+        bloc.add(const EditorRunRequested(text: 'DELETE FROM orders', role: user, history: target));
+        await bloc.stream.firstWhere((s) => s is EditorAwaitingConfirmation);
+        bloc.add(const EditorConfirmationAnswered(confirmed: true));
+        await bloc.stream.firstWhere((s) => s is EditorSucceeded);
+      },
+      verify: (_) => expect(recorded().map((run) => run.text), ['DELETE FROM orders']),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a text refused before it was sent writes nothing',
+      build: build,
+      act: (bloc) async {
+        bloc.add(const EditorRunRequested(text: 'SELECT 1; SELECT 2', role: user, history: target));
+        await bloc.stream.firstWhere((s) => s is EditorFailed);
+        bloc.add(EditorRunRequested(text: 'x' * (EditorRunBloc.maxTextLength + 1), role: user, history: target));
+        await pumpEventQueue();
+      },
+      verify: (_) => verifyNothingRecorded(),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'nothing is written while Studio has named no account',
+      setUp: () => answerRun(() => Success(customers)),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user)),
+      skip: 2,
+      verify: (_) => verifyNothingRecorded(),
+    );
+
+    test('Load more writes no entry', () async {
+      answerRun(() => Success(firstPage));
+      final bloc = build();
+      addTearDown(bloc.close);
+      bloc.add(const EditorRunRequested(text: 'SELECT * FROM sales.ledger', role: user, history: target));
+      final succeeded = await bloc.stream.firstWhere((s) => s is EditorSucceeded) as EditorSucceeded;
+      answerRun(() => Success(secondPage));
+
+      await bloc.loadPage(succeeded.statement, QueryPage.after(firstPage.pagination!), confirm: () async => true);
+
+      expect(recorded(), hasLength(1));
+    });
+
+    test('a run answered after the editor closed still writes its entry, and still tells a refused write', () async {
+      when(() => history.record(any(), any()))
+          .thenAnswer((_) async => const Failure(UnknownError('Could not add', code: 'editor.saved_text_not_stored')));
+      final answer = Completer<Result<QueryResult>>();
+      when(
+        () => repository.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((_) => answer.future);
+      final bloc = build();
+      bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target));
+      await bloc.stream.firstWhere((s) => s is EditorRunning);
+      final closing = bloc.close();
+
+      answer.complete(Success(customers));
+      await closing;
+      await pumpEventQueue();
+
+      expect(recorded().map((run) => run.text), ['SELECT 1']);
+      expect(notKept, [AppErrorCode.editorSavedTextNotStored]);
+    });
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a timeout before the request was sent writes nothing',
+      setUp: () => answerRun(() => const Failure(TimeoutError('TimeoutException', sent: false))),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target)),
+      skip: 2,
+      verify: (_) => verifyNothingRecorded(),
+    );
+
+    test('a success Studio timed as zero keeps the time the phone measured, as Studio\'s web does', () async {
+      when(
+        () => repository.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer(
+        (_) => Future.delayed(
+          const Duration(milliseconds: 20),
+          () => const Success(QueryResult(fields: [], rows: [], rowCount: 0, executionTime: Duration.zero)),
+        ),
+      );
+      final bloc = build();
+      addTearDown(bloc.close);
+
+      bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target));
+      await bloc.stream.firstWhere((s) => s is EditorSucceeded);
+      await pumpEventQueue();
+
+      expect(recorded().single.duration, greaterThanOrEqualTo(const Duration(milliseconds: 20)));
+    });
+
+    test('a write the store refused is told, with its code only', () async {
+      answerRun(() => Success(customers));
+      when(() => history.record(any(), any()))
+          .thenAnswer((_) async => const Failure(UnknownError('Could not add', code: 'editor.saved_text_not_stored')));
+      final bloc = build();
+      addTearDown(bloc.close);
+
+      bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user, history: target));
+      await bloc.stream.firstWhere((s) => s is EditorSucceeded);
+      await pumpEventQueue();
+
+      expect(notKept, [AppErrorCode.editorSavedTextNotStored]);
+    });
+
+    test('the target prints no account', () {
+      expect(target.toString(), isNot(contains(account)));
+    });
   });
 
   test('no state or event prints the statement text', () {

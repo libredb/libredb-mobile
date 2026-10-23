@@ -7,6 +7,8 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
@@ -30,6 +32,7 @@ void main() {
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late SchemaChangeNotifier schemaChanges;
+  late MockIStatementHistoryRepository history;
   late Completer<Result<QueryResult>> runAnswer;
   late Completer<Result<bool>> cancelAnswer;
   late List<CancelSignal?> sentSignals;
@@ -46,6 +49,20 @@ void main() {
     when(() => providerMeta.providerMeta(_redis))
         .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_redis'))));
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
+    history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer(
+      (_) async => Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: _postgres,
+          connectionName: 'Dev Postgres',
+          text: 'x',
+          status: StatementRunStatus.failure,
+          duration: Duration.zero,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      ),
+    );
     runAnswer = Completer();
     cancelAnswer = Completer();
     sentSignals = [];
@@ -80,6 +97,8 @@ void main() {
     repository: repository,
     providerMeta: providerMeta,
     schemaChanges: schemaChanges,
+    history: history,
+    onHistoryNotKept: (_) {},
     connectionId: connectionId,
     newRunId: () => 'run-${++ids}',
   );
@@ -334,4 +353,84 @@ void main() {
     expect: () => const <EditorRunState>[],
     verify: (_) => verifyNever(() => repository.cancel(any(), any())),
   );
+
+  group('the history', () {
+    const target = EditorHistoryTarget(subjectHash: 'account-hash', connectionName: 'Dev Postgres');
+
+    Future<void> startTracked(EditorRunBloc bloc) async {
+      bloc.add(const EditorRunRequested(text: 'SELECT pg_sleep(30)', role: _user, history: target));
+      await pumpEventQueue();
+    }
+
+    List<FinishedRun> recorded() =>
+        verify(() => history.record('account-hash', captureAny())).captured.cast<FinishedRun>();
+
+    for (final confirmed in [true, false]) {
+      blocTest<EditorRunBloc, EditorRunState>(
+        'a cancel Studio answered ${confirmed ? 'as cancelled' : 'without confirming'} writes one Failed entry',
+        build: build,
+        act: (bloc) async {
+          await startTracked(bloc);
+          bloc.add(const EditorCancelRequested());
+          await pumpEventQueue();
+          cancelAnswer.complete(Success(confirmed));
+          await pumpEventQueue();
+        },
+        skip: 3,
+        verify: (_) {
+          final run = recorded().single;
+          expect(run.text, 'SELECT pg_sleep(30)');
+          expect(run.status, StatementRunStatus.failure);
+          expect(run.rowCount, isNull);
+        },
+      );
+    }
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a 499 QUERY_CANCELLED writes one Failed entry with no error text',
+      build: build,
+      act: (bloc) async {
+        await startTracked(bloc);
+        runAnswer.complete(Failure(ServerError('Query was cancelled', code: AppErrorCode.studioQueryCancelled.key)));
+        await pumpEventQueue();
+      },
+      skip: 2,
+      verify: (_) {
+        final run = recorded().single;
+        expect(run.status, StatementRunStatus.failure);
+        expect(run.props, isNot(contains(contains('cancelled'))));
+      },
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'Stop waiting on an engine without a cancel writes nothing, since the outcome is unknown',
+      build: () => build(connectionId: _redis),
+      act: (bloc) async {
+        bloc.add(const EditorRunRequested(text: 'GET "user:1"', role: _user, history: target));
+        await pumpEventQueue();
+        bloc.add(const EditorConfirmationAnswered(confirmed: true));
+        await pumpEventQueue();
+        bloc.add(const EditorCancelRequested());
+        await pumpEventQueue();
+      },
+      skip: 3,
+      verify: (_) => verifyNever(() => history.record(any(), any())),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'Stop waiting after a failed cancel writes nothing',
+      build: build,
+      act: (bloc) async {
+        await startTracked(bloc);
+        bloc.add(const EditorCancelRequested());
+        await pumpEventQueue();
+        cancelAnswer.complete(const Failure(ServerError('down')));
+        await pumpEventQueue();
+        bloc.add(const EditorCancelRequested(stopWaiting: true));
+        await pumpEventQueue();
+      },
+      skip: 4,
+      verify: (_) => verifyNever(() => history.record(any(), any())),
+    );
+  });
 }

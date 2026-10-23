@@ -62,9 +62,18 @@ final class NotFoundError extends AppError {
   const NotFoundError(super.message, {super.code});
 }
 
-/// Request timeout.
+/// Request timeout. [sent] is false for a timeout while connecting or sending, when the server never received the
+/// request.
 final class TimeoutError extends AppError {
-  const TimeoutError(super.message, {super.code});
+  const TimeoutError(super.message, {super.code, this.sent = true});
+
+  final bool sent;
+
+  @override
+  bool operator ==(Object other) => other is TimeoutError && super == other && other.sent == sent;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, sent);
 }
 
 /// The server refused the request because the client sent too many (429). [retryAfter] is how long it asked the client
