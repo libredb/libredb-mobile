@@ -31,6 +31,47 @@ void main() {
     expect(() => ObjectBrowserJson.objects('[{"name":"t","kind":"table"}]'), throwsFormatException);
   });
 
+  group('searchResults', () {
+    test('reads the matches as Studio lists them, container by container', () {
+      final matches = ObjectBrowserJson.searchResults(
+        '[{"path":["public","orders"],"name":"orders","kind":"table","sizeBytes":49152},'
+        '{"path":["sales","order_total(bigint)"],"name":"order_total","kind":"function"}]',
+      );
+
+      expect(
+        [for (final m in matches) m.path],
+        [
+          ['public', 'orders'],
+          ['sales', 'order_total(bigint)'],
+        ],
+      );
+      expect([for (final m in matches) m.name], ['orders', 'order_total']);
+      expect(matches.first.sizeBytes, 49152);
+    });
+
+    test('refuses a match whose name, kind or path is missing', () {
+      expect(() => ObjectBrowserJson.searchResults('[{"path":["p","t"],"kind":"table"}]'), throwsFormatException);
+      expect(() => ObjectBrowserJson.searchResults('[{"path":["p","t"],"name":"t"}]'), throwsFormatException);
+      expect(() => ObjectBrowserJson.searchResults('[{"name":"t","kind":"table"}]'), throwsFormatException);
+    });
+
+    test('refuses a match whose name or kind is empty or blank, or whose path is empty', () {
+      for (final body in [
+        '[{"path":["p","t"],"name":"","kind":"table"}]',
+        '[{"path":["p","t"],"name":"  ","kind":"table"}]',
+        '[{"path":["p","t"],"name":"t","kind":""}]',
+        '[{"path":["p","t"],"name":"t","kind":" "}]',
+        '[{"path":[],"name":"t","kind":"table"}]',
+      ]) {
+        expect(() => ObjectBrowserJson.searchResults(body), throwsFormatException, reason: body);
+      }
+    });
+
+    test('refuses an answer that is not a list', () {
+      expect(() => ObjectBrowserJson.searchResults('{"error":"x"}'), throwsFormatException);
+    });
+  });
+
   test('objects leave out optional fields of an unexpected type', () {
     final object = ObjectBrowserJson.objects('[{"path":["t"],"name":"t","kind":"table","rowCount":"12"}]').single;
 

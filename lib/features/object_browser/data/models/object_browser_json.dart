@@ -31,9 +31,16 @@ final class ObjectBrowserJson {
     for (final MapEntry(:key, :value) in _object(body).entries) key: _kindCount(value),
   };
 
-  /// `POST /api/db/objects/list` and `POST /api/db/objects/search`: `DatabaseObject[]`.
+  /// `POST /api/db/objects/list`: `DatabaseObject[]`.
   static List<DatabaseObject> objects(String body) => [
     for (final item in _list(jsonDecode(body), 'objects')) _databaseObject(item),
+  ];
+
+  /// `POST /api/db/objects/search`: `DatabaseObject[]`, read more strictly than a listing: a match whose name or kind
+  /// is empty or blank, or whose path is empty, is refused. Studio matches a trimmed, non-blank term inside the name,
+  /// so a blank name cannot be a match, and a match without a kind or a path could neither be labelled nor opened.
+  static List<DatabaseObject> searchResults(String body) => [
+    for (final item in _list(jsonDecode(body), 'matches')) _searchMatch(item),
   ];
 
   /// `POST /api/db/objects/describe`: `ObjectDetail`.
@@ -173,6 +180,14 @@ final class ObjectBrowserJson {
       rowCount: object['rowCount'] is int ? object['rowCount'] as int : null,
       sizeBytes: object['sizeBytes'] is int ? object['sizeBytes'] as int : null,
     );
+  }
+
+  static DatabaseObject _searchMatch(Object? item) {
+    final object = _databaseObject(item);
+    _filled(object.name, 'name');
+    _filled(object.kind, 'kind');
+    if (object.path.isEmpty) throw const FormatException('The path of a match is empty');
+    return object;
   }
 
   static ColumnSchema _column(Object? item) {
