@@ -339,10 +339,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
     "error_editor_page_interrupted": MessageLookupByLibrary.simpleMessage(
-      "Uygulama arka plana geçtiğinde daha fazla yükleme kesildi; Studio onu iptal etti.",
+      "Uygulama arka plana geçtiğinde daha fazla satır yükleme kesildi; Studio onu iptal etti.",
     ),
     "error_editor_page_outcome_unknown": MessageLookupByLibrary.simpleMessage(
-      "Daha fazla yükleme arka planda kesildi ve sonucu bilinmiyor: her sayfa ifadenin tamamını yeniden çalıştırır, bu yüzden yeniden çalıştırmadan önce verileri kontrol edin.",
+      "Daha fazla satır yükleme arka planda kesildi ve sonucu bilinmiyor: her sayfa ifadenin tamamını yeniden çalıştırır, bu yüzden yeniden çalıştırmadan önce verileri kontrol edin.",
     ),
     "error_editor_saved_text_not_stored": MessageLookupByLibrary.simpleMessage(
       "Bu telefon sorgu metnini kaydedemedi. Boş depolama alanını kontrol edip tekrar deneyin.",

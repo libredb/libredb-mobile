@@ -549,6 +549,42 @@ void main() {
       });
     });
 
+    test('a page writes no history entry, answered or interrupted', () async {
+      const target = EditorHistoryTarget(subjectHash: 'account', connectionName: 'Dev Postgres');
+      final bloc = build();
+      addTearDown(bloc.close);
+      bloc.add(const EditorRunRequested(text: read, role: _user, history: target));
+      await pumpEventQueue();
+      runAnswer.complete(Success(firstPage));
+      await pumpEventQueue();
+      final shown = bloc.state as EditorSucceeded;
+      verify(() => history.record('account', any())).called(1);
+      pageAnswer = Completer();
+      when(
+        () => repository.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer((_) => pageAnswer.future);
+
+      pageAnswer.complete(Success(secondPage));
+      await loadPage(bloc, shown);
+      pageAnswer = Completer();
+      final interruptedPage = loadPage(bloc, shown);
+      await pumpEventQueue();
+      lifecycle.leave();
+      pageAnswer.complete(const Failure(reset));
+      expect(await interruptedPage, interrupted(AppErrorCode.editorPageInterrupted));
+      await bloc.close();
+      await pumpEventQueue();
+
+      verifyNever(() => history.record(any(), any()));
+    });
+
     test('logs neither the statement nor an error text', () async {
       const secret = "SELECT * FROM sales.ledger WHERE note = 'ada@example.com' -- note: update";
       final bloc = build();
