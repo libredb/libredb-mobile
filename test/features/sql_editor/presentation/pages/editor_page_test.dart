@@ -290,18 +290,6 @@ void main() {
     expect(runsOf('SELECT * FROM customers'), 1);
   });
 
-  testWidgets('a text of several statements is refused with the one-statement message, and nothing is sent', (
-    tester,
-  ) async {
-    await pump(tester);
-    await type(tester, 'SELECT 1; SELECT 2');
-
-    await run(tester);
-
-    expect(find.text('This text holds more than one statement. Run one statement at a time.'), findsOneWidget);
-    verifyNothingSent();
-  });
-
   group('a text that may write', () {
     const delete = 'DELETE FROM orders WHERE false';
 

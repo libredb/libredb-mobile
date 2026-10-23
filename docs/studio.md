@@ -421,6 +421,16 @@ wait
 `cancel_postgres.json` answers `{"cancelled":true}` and `query_cancelled_postgres.json` the 499 `QUERY_CANCELLED`.
 A cancel posted after the run's request was dropped answers `{"cancelled":false}`, because Studio's abort bridge had already stopped the run.
 
+The script answers of #117 were recorded the same way, from a fresh volume, with the first page the editor sends for a script:
+
+```shell
+record multi_postgres /db/multi-query '{"connectionId":"seed:dev-postgres","sql":"SELECT 1 AS a; SELECT * FROM nope; SELECT 3 AS c","options":{"offset":0},"queryId":"7d1c2a52-0000-4000-8000-000000000117"}'
+record multi_postgres_rows /db/multi-query '{"connectionId":"seed:dev-postgres","sql":"SELECT 1 AS a; SELECT 2 AS b","options":{"offset":0},"queryId":"7d1c2a52-0000-4000-8000-000000000118"}'
+```
+
+`multi_postgres.json` stops at the failed second statement, so `executedCount` is 2 of 3, and neither answer carries `pagination`.
+In the same run `SELECT pg_sleep(40); SELECT pg_sleep(40)` answered both statements after 80 seconds, a dollar-quoted `CREATE FUNCTION` with a `;` in its body ran as one statement, and `/db/cancel` posted two seconds into `SELECT pg_sleep(30); SELECT pg_sleep(30)` answered `{"cancelled":true}` while the script answered 200 with its first statement failed as `Query was cancelled` and the second not run.
+
 The three `query_page_postgres_*.json` pages were recorded from a fresh volume.
 The first answers `hasMore: true`; the second answers `hasMore: false`, since Studio asks for one row past the page and that row is missing; the third, past the last row, has no rows and pins the append of an empty page.
 

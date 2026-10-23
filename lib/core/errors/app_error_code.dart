@@ -67,9 +67,6 @@ enum AppErrorCode {
   /// The device refused to store or remove saved statement text.
   editorSavedTextNotStored('editor.saved_text_not_stored'),
 
-  /// The text holds several statements, which the editor runs one at a time.
-  editorSeveralStatements('editor.several_statements'),
-
   // --- generic fallback ---
   generic('error.generic');
 

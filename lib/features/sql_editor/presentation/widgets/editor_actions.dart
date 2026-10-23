@@ -11,7 +11,8 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 ///
 /// Run, under the text: an action that needs Studio, so it is disabled offline with the reason; disabled while the
 /// text is empty, while a run waits for its confirmation, while a rate limit's delay runs, and while [withheld], as on
-/// a server-level connection with no database to run in.
+/// a server-level connection with no database to run in. While the text has a non-blank selection it reads Run
+/// selection, since only the selection is sent.
 ///
 /// While a statement runs, Run becomes Cancel, or Stop waiting on an engine that cannot cancel; it reads Cancelling
 /// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down. After a
@@ -89,6 +90,7 @@ class EditorActions extends StatelessWidget {
                 EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
                 EditorIdle() ||
                 EditorSucceeded() ||
+                EditorScriptAnswered() ||
                 EditorStatementFailed() ||
                 EditorFailed() ||
                 EditorCancelled() => _run(busy: false),
@@ -100,6 +102,13 @@ class EditorActions extends StatelessWidget {
     );
   }
 
+  /// The text [value] has selected, empty without a selection.
+  static String selectedText(TextEditingValue value) {
+    final selection = value.selection;
+    if (!selection.isValid || selection.isCollapsed || selection.end > value.text.length) return '';
+    return selection.textInside(value.text);
+  }
+
   Widget _run({required bool busy}) {
     return OnlineOnlyAction(
       builder: (context, online) => ValueListenableBuilder<TextEditingValue>(
@@ -108,7 +117,9 @@ class EditorActions extends StatelessWidget {
           key: runKey,
           onPressed: online && !busy && !withheld && value.text.trim().isNotEmpty ? onRun : null,
           icon: const Icon(Icons.play_arrow),
-          label: Text(S.of(context).sql_editor_run),
+          label: Text(
+            selectedText(value).trim().isEmpty ? S.of(context).sql_editor_run : S.of(context).sql_editor_run_selection,
+          ),
         ),
       ),
     );

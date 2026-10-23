@@ -22,13 +22,15 @@ abstract class ISqlEditorRepository {
   });
 
   /// Runs a text of several statements in order. It takes no bind values. [page] bounds the last statement when it is
-  /// a SELECT; Studio answers no paging for a script, so there is no next page to ask for.
+  /// a SELECT; Studio answers no paging for a script, so there is no next page to ask for. [queryId] lets [cancel]
+  /// stop the statement in flight, and [cancelSignal] drops the request, which then answers `RequestCancelledError`.
   Future<Result<ScriptResult>> runScript(
     String connectionId,
     String sql, {
     String? queryId,
     String? catalog,
     QueryPage? page,
+    CancelSignal? cancelSignal,
   });
 
   /// Asks Studio to stop the run [queryId], through the shared `IStatementRepository.cancel`. True when the engine
