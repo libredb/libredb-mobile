@@ -690,6 +690,63 @@ void main() {
       expect(runEnabled(tester), isTrue);
     });
 
+    group('studio.connection_not_available', () {
+      const gone = Failure<ProviderMeta>(NotFoundError('gone', code: 'studio.connection_not_available'));
+
+      /// Answers the engine read of [connection] with [answers] in turn, the last one for every later read.
+      void answerMetaInTurn(StudioConnection connection, List<Result<ProviderMeta>> answers) {
+        var call = 0;
+        when(() => providerMeta.providerMeta(connection.id)).thenAnswer((_) async {
+          final answer = answers[call < answers.length ? call : answers.length - 1];
+          call++;
+          return answer;
+        });
+      }
+
+      testWidgets('on the database list hands the connection to the vanish flow, which leaves the pick page', (
+        tester,
+      ) async {
+        when(() => containers.containers(_server.id, refresh: any(named: 'refresh')))
+            .thenAnswer((_) async => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')));
+        final states = StreamController<ActiveConnectionState>();
+        addTearDown(states.close);
+        when(() => active.reportUnavailable(any()))
+            .thenAnswer((_) => states.add(const ActiveConnectionVanished(_server)));
+        await pump(tester, connection: _server, states: states.stream);
+        await tester.pumpAndSettle();
+
+        verify(() => active.reportUnavailable(_server.id)).called(1);
+        expect(find.byType(PickConnectionFirst), findsOneWidget);
+        expect(find.byKey(EditorInput.fieldKey), findsNothing);
+        verifyNothingSent();
+      });
+
+      testWidgets("on the database chip's engine read hands the connection to the vanish flow", (tester) async {
+        // The language label reads the engine first and is answered; the chip's read is refused.
+        answerMetaInTurn(_server, [Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))), gone]);
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Language: sql'), findsOneWidget);
+        expect(find.byType(StudioErrorBanner), findsOneWidget);
+        verify(() => active.reportUnavailable(_server.id)).called(1);
+        verifyNothingSent();
+      });
+
+      testWidgets("on the language label's engine read hands the connection to the vanish flow", (tester) async {
+        // The language label reads the engine first and is refused; the chip's read is answered.
+        answerMetaInTurn(_server, [gone, Success(ProviderMetaJson.read(_fixture('meta_postgres_server')))]);
+        answerDatabases();
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('The language of this connection could not be read'), findsOneWidget);
+        expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+        verify(() => active.reportUnavailable(_server.id)).called(1);
+        verifyNothingSent();
+      });
+    });
+
     testWidgets('a server that lists no database offers no Run', (tester) async {
       when(() => containers.containers(_server.id, refresh: any(named: 'refresh')))
           .thenAnswer((_) async => Success(Answered(const [], at: DateTime(2026))));

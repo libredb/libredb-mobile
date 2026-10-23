@@ -63,8 +63,9 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 /// field holds another text, and never runs; its database becomes the active one once the text is in, on a server-level
 /// connection only. A cancelled replace keeps both the text and the database.
 ///
-/// A run refused with `studio.connection_not_available` hands [connectionId] to the active connection's vanish flow, as
-/// the Browse pages do, so the SQL tab never keeps a connection Studio no longer offers; nothing is sent again.
+/// A run, the database list or the engine read refused with `studio.connection_not_available` hands [connectionId] to
+/// the active connection's vanish flow, as the Browse pages do, so the SQL tab never keeps a connection Studio no
+/// longer offers; nothing is sent again.
 ///
 /// A run keeps background time while it is in flight, and a run that the app's switch to the background interrupted
 /// says so on return: Run again for a read, and that the outcome is unknown for anything else.
@@ -452,6 +453,13 @@ class _EditorViewState extends State<_EditorView> {
     }
   }
 
+  /// Whether Studio answered [code] because it no longer offers this editor's connection.
+  static bool _vanished(String? code) => code == AppErrorCode.studioConnectionNotAvailable.key;
+
+  /// Hands this editor's connection to the active connection's vanish flow, which closes the editor when it is the
+  /// active one; nothing is sent again.
+  void _reportVanished() => context.read<ActiveConnectionCubit>().reportUnavailable(widget.connectionId);
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -464,9 +472,23 @@ class _EditorViewState extends State<_EditorView> {
           listener: _onStateChanged,
         ),
         BlocListener<EditorRunBloc, EditorRunState>(
+          listenWhen: (previous, current) => current is EditorFailed && _vanished(current.error.code),
+          listener: (context, state) => _reportVanished(),
+        ),
+        BlocListener<EditorCatalogBloc, EditorCatalogState>(
+          listenWhen: (previous, current) => switch (current) {
+            EditorCatalogMetaFailure(:final error) || EditorCatalogFailure(:final error) => _vanished(error.code),
+            EditorCatalogChecking() ||
+            EditorCatalogNotUsed() ||
+            EditorCatalogLoading() ||
+            EditorCatalogListed() => false,
+          },
+          listener: (context, state) => _reportVanished(),
+        ),
+        BlocListener<EditorLanguageCubit, EditorLanguageState>(
           listenWhen: (previous, current) =>
-              current is EditorFailed && current.error.code == AppErrorCode.studioConnectionNotAvailable.key,
-          listener: (context, state) => context.read<ActiveConnectionCubit>().reportUnavailable(widget.connectionId),
+              current is EditorLanguageUnknown && current.errorCode == AppErrorCode.studioConnectionNotAvailable,
+          listener: (context, state) => _reportVanished(),
         ),
         BlocListener<EditorLanguageCubit, EditorLanguageState>(
           listener: (context, state) => _text.highlighting = switch (state) {
