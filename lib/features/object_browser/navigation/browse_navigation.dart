@@ -12,6 +12,7 @@ class BrowseRouteNames {
   static const detail = 'browseDetail';
   static const search = 'browseSearch';
   static const rows = 'browseRows';
+  static const keyValue = 'browseKeyValue';
 }
 
 /// The query key that carries a container path, once per segment and in order.
@@ -103,3 +104,27 @@ void openBrowseKeys(BuildContext context, String connectionId, List<String> cont
 /// comes back as it was; an empty path leaves the key out.
 Map<String, dynamic> _containerQuery(List<String> path) =>
     path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browseContainerKey: path};
+
+/// The query key that carries the value type a key browser page read for a key.
+const browseTypeKey = 'type';
+
+/// The value type carried by the route of [state], null when the route names none.
+String? browseTypeOf(GoRouterState state) => state.uri.queryParameters[browseTypeKey];
+
+/// Opens the value of [key] of [connectionId], walked in [container], with the value [type] its key browser page read,
+/// if any; the key is one `path` value, whatever it holds.
+void openBrowseKeyValue(
+  BuildContext context,
+  String connectionId,
+  List<String> container,
+  String key, {
+  String? type,
+}) => context.pushNamed(
+  BrowseRouteNames.keyValue,
+  pathParameters: {browseConnectionIdKey: connectionId},
+  queryParameters: {
+    ..._containerQuery(container),
+    browsePathKey: [key],
+    browseTypeKey: ?type,
+  },
+);

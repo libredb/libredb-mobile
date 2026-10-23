@@ -62,9 +62,9 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
       case KeyBrowserStarted():
         await _start(emit);
       case KeyBrowserPatternSubmitted(:final text):
-        final spec = _specOnScreen;
-        if (spec == null) return _start(emit);
-        await _readPage(KeyBrowserLoaded(spec: spec, pattern: text), KeyPageLoad.more, emit);
+        final walk = _walkOnScreen;
+        if (walk == null) return _start(emit);
+        await _readPage(KeyBrowserLoaded(meta: walk.meta, spec: walk.spec, pattern: text), KeyPageLoad.more, emit);
       case KeyBrowserMoreRequested():
         final walk = _walkOnScreen;
         if (walk == null) return _start(emit);
@@ -89,8 +89,6 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
     KeyBrowserLoading() || KeyBrowserUnavailable() => null,
   };
 
-  KeyScanSpec? get _specOnScreen => _walkOnScreen?.spec;
-
   Future<void> _start(Emitter<KeyBrowserState> emit) async {
     emit(const KeyBrowserLoading());
     final meta = await _providerMeta.providerMeta(connectionId);
@@ -102,9 +100,9 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
       case Success(data: ProviderMeta(keyScan: null)):
         _log.warn('the engine declares no key walk');
         emit(const KeyBrowserUnavailable());
-      case Success(data: ProviderMeta(keyScan: final spec?)):
+      case Success(data: final meta && ProviderMeta(keyScan: final spec?)):
         await _readPage(
-          KeyBrowserLoaded(spec: spec, pattern: spec.pattern == 'glob' ? '*' : ''),
+          KeyBrowserLoaded(meta: meta, spec: spec, pattern: spec.pattern == 'glob' ? '*' : ''),
           KeyPageLoad.more,
           emit,
         );
@@ -187,6 +185,7 @@ class KeyBrowserBloc extends Bloc<KeyBrowserEvent, KeyBrowserState> {
       (final before, final now) => now ?? before,
     };
     return KeyBrowserLoaded(
+      meta: walk.meta,
       spec: walk.spec,
       pattern: walk.pattern,
       keys: List.unmodifiable(keys),

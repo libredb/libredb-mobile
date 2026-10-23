@@ -223,6 +223,9 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   Neither is ever retried by itself, after a failure or a schema change; only the user's pull, retry or tap runs one again.
   An engine whose preview the app does not write yet (a declared query dialect, `previewProjection`, `previewTimeWindow`, `containerNameSpelling: "engine"`, Couchbase, or a query language other than `sql` and `json`) shows View rows disabled and offers no count.
   The rows page shows the database's own words for `studio.query_error`, as the editor does, on screen only.
+- A tap on a key in the key browser follows Studio's `onOpenKey`: an engine with a key-browser kind (etcd's `key`, Firestore's `document`) opens that kind's source for the path `[key]` and runs nothing; Redis runs the read Studio's key browser writes for the type the key's page read, ported to `RedisKeyReadGenerator`, or `TYPE <key>` when the page named none of the seven types it reads.
+  The read carries `database` when the walked container is all digits, and a key ending in `:*` is read like any other, where Studio scans it as a prefix group.
+  After a `TYPE` answer only the user's 'Read value' runs the typed read; a `(nil)` or `(empty list)` answer with `rowCount: 0`, or `TYPE` answering `none`, says the key no longer exists.
 - The fields of a result that report lost or incomplete data (`pagination` with its `wasLimited`, `warnings`, and `openTransaction`, which Studio sends only as `rolled-back`) are read strictly in every reader that builds a `QueryResult`: present but malformed fails the read, so the screen shows a failure instead of hiding that rows or notices are missing.
 - `runScript` sends several statements, which Studio splits and runs in order, stopping at the first failure.
   It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values.
@@ -262,7 +265,7 @@ Studio's error body is `{error, code?, ...}`.
 
 A sign-in that `GET /api/auth/me` refuses with any other `AuthError`, a 401 that reached the caller, shows `studio.account_refused`.
 A screen shows the translated message of the code.
-The SQL editor and the object browser's rows page also show the database's own words, the `message` of the error, because a syntax error or a refused read is what the user needs to read there.
+The SQL editor and the object browser's rows and key value pages also show the database's own words, the `message` of the error, because a syntax error or a refused read is what the user needs to read there.
 
 ## Governance
 

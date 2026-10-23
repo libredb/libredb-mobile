@@ -4,6 +4,7 @@ import 'package:libredb_mobile/features/object_browser/navigation/browse_navigat
 import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/key_browser_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/key_value_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_detail_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_list_page.dart';
@@ -112,6 +113,22 @@ class ObjectBrowserFeatureRoutes {
             state: state,
             type: AppPageTransitionType.slideRight,
             child: ObjectSearchPage(connectionId: browseConnectionIdOf(state)),
+          ),
+        ),
+        GoRoute(
+          name: BrowseRouteNames.keyValue,
+          path: ApplicationRoutesConstants.browseKeyValue,
+          // A key is one path value; a link that names none or several names no key.
+          redirect: (context, state) => browsePathOf(state).length == 1 ? null : ApplicationRoutesConstants.notFound,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: KeyValuePage(
+              connectionId: browseConnectionIdOf(state),
+              container: browseContainerOf(state),
+              keyName: browsePathOf(state).single,
+              type: browseTypeOf(state),
+            ),
           ),
         ),
       ],

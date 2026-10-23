@@ -731,5 +731,17 @@
   "result_loading_more": "{count, plural, =1{Loading 1 more…} other{Loading {rows} more…}}",
   "@result_loading_more": {"description": "The next page of a result is in flight.", "placeholders": {"count": {"type": "int"}, "rows": {"type": "String", "example": "500"}}},
   "result_order_notice": "Without an ORDER BY the engine may return rows that repeat or are skipped between pages.",
-  "@result_order_notice": {"description": "Studio's notice for a paged result whose statement has no outer ORDER BY."}
+  "@result_order_notice": {"description": "Studio's notice for a paged result whose statement has no outer ORDER BY."},
+  "keys_value_overline": "Key",
+  "@keys_value_overline": {"description": "Over a key's name, at the head of its value page."},
+  "keys_value_vanished": "This key no longer exists. Pull to read it again.",
+  "@keys_value_vanished": {"description": "On a key's value page, when Redis answered that the key was deleted or expired after the key list was read."},
+  "keys_value_type": "Studio says this key's type is {type}.",
+  "@keys_value_type": {"description": "On a key's value page when the key list named no type, with the type Redis answered.", "placeholders": {"type": {"type": "String"}}},
+  "keys_value_read": "Read value",
+  "@keys_value_read": {"description": "Runs the read of a key's value for the type Redis answered."},
+  "keys_value_no_read": "The app has no read for this type.",
+  "@keys_value_no_read": {"description": "On a key's value page, under a type that none of the app's key reads covers."},
+  "keys_value_unavailable": "Reading a key's value is not available for this engine.",
+  "@keys_value_unavailable": {"description": "On a key's value page opened for an engine that is not read with Redis commands."}
 }

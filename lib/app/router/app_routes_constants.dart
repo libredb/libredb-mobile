@@ -44,6 +44,10 @@ class ApplicationRoutesConstants {
   /// The first rows of an object of a kind, its path as repeated `path` query parameters.
   static const browseRows = ':connectionId/rows/:kind';
 
+  /// The value of a Redis key walked in a container (`container`), the key as one `path` query parameter and the type
+  /// its key browser page read as `type`.
+  static const browseKeyValue = ':connectionId/value';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

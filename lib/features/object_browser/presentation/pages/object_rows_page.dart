@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/core/errors/app_error.dart';
-import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_rows_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/row_count_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_database_words.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/row_count.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -104,7 +102,7 @@ class _ObjectRowsView extends StatelessWidget {
           if (loaded != null) OfflineStaleMarker(loadedAt: loaded.loadedAt),
           if (error != null) ...[
             BrowseFailureView(connectionId: page.connectionId, error: error, onRetry: () => _run(context)),
-            if (_databaseWordsOf(error) case final words?) _DatabaseWords(words),
+            if (browseDatabaseWordsOf(error) case final words?) BrowseDatabaseWords(words),
           ],
           BrowseHeading(
             title: page.path.isEmpty ? page.kind : page.path.last,
@@ -168,50 +166,5 @@ class _ObjectRowsView extends StatelessWidget {
       final PreviewStatement count => count,
       PreviewUnavailable() => null,
     };
-  }
-
-  /// The database's own words of a failed read, such as a permission refused to a read-only role.
-  static String? _databaseWordsOf(AppError error) =>
-      error.code == AppErrorCode.studioQueryError.key && error.message.trim().isNotEmpty ? error.message : null;
-}
-
-/// The database's words for a failed preview, in monospace and selectable, as the SQL editor shows them; never logged.
-class _DatabaseWords extends StatelessWidget {
-  const _DatabaseWords(this.words);
-
-  final String words;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: AppSpacing.xs,
-            children: [
-              Text(S.of(context).browse_rows_database_says, style: theme.textTheme.labelMedium),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 160),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    words,
-                    key: const ValueKey('rows-database-words'),
-                    style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

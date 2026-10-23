@@ -23,6 +23,7 @@ final class KeyBrowserUnavailable extends KeyBrowserState {
 /// The walk so far: every key and folder the pages named, held once each, and what the pages said about it.
 final class KeyBrowserLoaded extends KeyBrowserState {
   const KeyBrowserLoaded({
+    required this.meta,
     required this.spec,
     required this.pattern,
     this.keys = const [],
@@ -37,6 +38,9 @@ final class KeyBrowserLoaded extends KeyBrowserState {
     this.load = KeyPageLoad.idle,
     this.stopping = false,
   });
+
+  /// The engine's provider-meta, which says what a tap on a key opens.
+  final ProviderMeta meta;
 
   /// The shape of the engine's walk.
   final KeyScanSpec spec;
@@ -88,6 +92,7 @@ final class KeyBrowserLoaded extends KeyBrowserState {
   bool get usesLevels => spec.levels != null;
 
   KeyBrowserLoaded copyWith({KeyPageLoad? load, bool? stopping}) => KeyBrowserLoaded(
+    meta: meta,
     spec: spec,
     pattern: pattern,
     keys: keys,
@@ -105,6 +110,7 @@ final class KeyBrowserLoaded extends KeyBrowserState {
 
   @override
   List<Object?> get props => [
+    meta,
     spec,
     pattern,
     keys,
