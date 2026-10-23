@@ -370,6 +370,44 @@
   "@browse_level_empty": {},
   "browse_kinds_empty": "Studio burada hiç nesne saymıyor.",
   "@browse_kinds_empty": {},
+  "browse_source": "Kaynak",
+  "@browse_source": {},
+  "browse_source_regenerated": "Studio tarafından yeniden oluşturuldu, saklanan metin değil",
+  "@browse_source_regenerated": {},
+  "browse_source_partial": "Kısmi",
+  "@browse_source_partial": {},
+  "browse_source_truncated": "Kesildi: {reason}",
+  "@browse_source_truncated": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_source_unavailable": "Bu tanım okunamadı",
+  "@browse_source_unavailable": {},
+  "browse_source_copy": "Tümünü kopyala",
+  "@browse_source_copy": {},
+  "browse_source_copied": "Kopyalandı",
+  "@browse_source_copied": {},
+  "browse_source_copy_failed": "Kopyalanamadı ({code})",
+  "@browse_source_copy_failed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_source_share": "Paylaş",
+  "@browse_source_share": {},
+  "browse_source_share_failed": "Paylaşılamadı ({code})",
+  "@browse_source_share_failed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "account_refusal_title": "Hesabınızın Studio'ya erişimi yok",
   "@account_refusal_title": {},
   "connection_vanished": "{name} artık kullanılamıyor",

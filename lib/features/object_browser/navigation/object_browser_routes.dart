@@ -4,6 +4,7 @@ import 'package:libredb_mobile/features/object_browser/navigation/browse_navigat
 import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/object_source_page.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 
 /// The Browse tab: its root, which follows the active connection, and the pages under it, which take their connection
@@ -32,6 +33,19 @@ class ObjectBrowserFeatureRoutes {
             state: state,
             type: AppPageTransitionType.slideRight,
             child: KindCountsPage(connectionId: browseConnectionIdOf(state), container: browseContainerOf(state)),
+          ),
+        ),
+        GoRoute(
+          name: BrowseRouteNames.source,
+          path: ApplicationRoutesConstants.browseSource,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: ObjectSourcePage(
+              connectionId: browseConnectionIdOf(state),
+              path: browsePathOf(state),
+              kind: browseKindOf(state),
+            ),
           ),
         ),
       ],

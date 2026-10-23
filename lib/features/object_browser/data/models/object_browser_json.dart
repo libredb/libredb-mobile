@@ -65,17 +65,22 @@ final class ObjectBrowserJson {
     );
   }
 
-  /// `POST /api/db/objects/source`: `{path, kind, parts}`.
+  /// `POST /api/db/objects/source`: `{path, kind, parts}`, one to eight parts with distinct ids, as Studio's client
+  /// accepts it (`isSourceDocumentShape` in `src/components/object-source/source-reader.ts`).
   static ObjectSource source(String body) {
     final json = _object(body);
     final parts = _list(json['parts'], 'parts');
     if (parts.isEmpty) throw const FormatException('An object source has no parts');
-    return ObjectSource(
-      path: _strings(json['path'], 'path'),
-      kind: _string(json['kind'], 'kind'),
-      parts: [for (final part in parts) _sourcePart(part)],
-    );
+    if (parts.length > _sourcePartLimit) throw const FormatException('An object source has more than eight parts');
+    final read = [for (final part in parts) _sourcePart(part)];
+    if (read.map((part) => part.id).toSet().length != read.length) {
+      throw const FormatException('Two parts of an object source share an id');
+    }
+    return ObjectSource(path: _strings(json['path'], 'path'), kind: _string(json['kind'], 'kind'), parts: read);
   }
+
+  /// Studio's `SOURCE_PART_LIMIT` (`src/lib/db/object-kinds.ts`).
+  static const _sourcePartLimit = 8;
 
   /// `POST /api/db/keys/scan`: `KeyScanPage`.
   static KeyScanPage keyScanPage(String body) {
@@ -125,21 +130,59 @@ final class ObjectBrowserJson {
     );
   }
 
+  /// A text, a refusal (`unavailable`) or a neutral statement (`unavailable` with `statement: true`), refused as
+  /// Studio's client refuses it (`isPartShape` in `src/components/object-source/source-reader.ts`): a part with both a
+  /// text and a refusal, a `statement` that is not `true` or sits on a part without `unavailable`, an empty or blank
+  /// string where Studio needs a filled one, a `form` or `origin` it does not send, and a `truncated` that is not a
+  /// limit with a filled reason. `edit` is left out: the app does not edit source.
   static SourcePart _sourcePart(Object? item) {
     final part = _map(item, 'source part');
-    final id = _string(part['id'], 'id');
-    final label = _string(part['label'], 'label');
-    if (part['unavailable'] is String) {
-      return SourceUnavailable(id: id, label: label, reason: part['unavailable'] as String);
+    final id = _filled(part['id'], 'id');
+    final label = _filled(part['label'], 'label');
+    final refused = part.containsKey('unavailable');
+    if (refused && part.containsKey('text')) throw const FormatException('A source part has a text and a refusal');
+    if (part.containsKey('statement') && (part['statement'] != true || !refused)) {
+      throw const FormatException('A source part has a statement that is not a refusal marked true');
+    }
+    if (refused) {
+      final reason = _filled(part['unavailable'], 'unavailable');
+      return part['statement'] == true
+          ? SourceStatement(id: id, label: label, statement: reason)
+          : SourceUnavailable(id: id, label: label, reason: reason);
     }
     return SourceText(
       id: id,
       label: label,
-      text: _string(part['text'], 'text'),
-      language: _string(part['language'], 'language'),
-      complete: part['form'] != 'partial',
-      truncated: part['truncated'] != null,
+      text: _filled(part['text'], 'text'),
+      language: _filled(part['language'], 'language'),
+      origin: _origin(part['origin']),
+      complete: _complete(part['form']),
+      truncated: part.containsKey('truncated') ? _truncation(part['truncated']) : null,
     );
+  }
+
+  static SourceTruncation _truncation(Object? value) {
+    final truncated = _map(value, 'truncation');
+    return SourceTruncation(limit: _int(truncated['limit'], 'limit'), reason: _filled(truncated['reason'], 'reason'));
+  }
+
+  static bool _complete(Object? form) => switch (form) {
+    'complete' => true,
+    'partial' => false,
+    _ => throw const FormatException('The form of a source part is not one Studio sends'),
+  };
+
+  static SourceOrigin _origin(Object? value) {
+    for (final origin in SourceOrigin.values) {
+      if (origin.name == value) return origin;
+    }
+    throw const FormatException('The origin of a source part is not one Studio sends');
+  }
+
+  /// A string that holds more than white space, as Studio's `isFilledString` requires.
+  static String _filled(Object? value, String what) {
+    final string = _string(value, what);
+    return string.trim().isEmpty ? throw FormatException('The $what is empty') : string;
   }
 
   static Map<String, dynamic> _object(String body) => _map(jsonDecode(body), 'answer');
