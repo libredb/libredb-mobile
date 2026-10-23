@@ -57,6 +57,13 @@ enum AppErrorCode {
   studioTransactionCredentialChanged('studio.transaction_credential_changed'),
   studioUnreadableAnswer('studio.unreadable_answer'),
 
+  // --- SQL editor: the statement text kept on the device ---
+  /// A saved draft or history cannot be read: its key is gone, the file was changed, or it is of an unknown version.
+  editorSavedTextUnreadable('editor.saved_text_unreadable'),
+
+  /// The device refused to store or remove saved statement text.
+  editorSavedTextNotStored('editor.saved_text_not_stored'),
+
   // --- generic fallback ---
   generic('error.generic');
 

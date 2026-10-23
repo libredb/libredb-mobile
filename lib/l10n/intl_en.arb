@@ -743,5 +743,15 @@
   "keys_value_no_read": "The app has no read for this type.",
   "@keys_value_no_read": {"description": "On a key's value page, under a type that none of the app's key reads covers."},
   "keys_value_unavailable": "Reading a key's value is not available for this engine.",
-  "@keys_value_unavailable": {"description": "On a key's value page opened for an engine that is not read with Redis commands."}
+  "@keys_value_unavailable": {"description": "On a key's value page opened for an engine that is not read with Redis commands."},
+  "error_editor_saved_text_unreadable": "The statement text saved on this phone cannot be read. It may have come from a backup of another device, or the file was changed. Discard it to keep new text again.",
+  "@error_editor_saved_text_unreadable": {"description": "A saved draft or statement history cannot be read; the screen offers Discard next to it."},
+  "error_editor_saved_text_not_stored": "This phone could not save the statement text. Check its free storage and try again.",
+  "@error_editor_saved_text_not_stored": {"description": "The device refused to store or remove saved statement text."},
+  "editor_saved_text_discard": "Discard",
+  "@editor_saved_text_discard": {"description": "Deletes saved statement text that cannot be read, after a confirmation."},
+  "editor_saved_text_discard_title": "Discard the saved text?",
+  "@editor_saved_text_discard_title": {"description": "Title of the confirmation before saved statement text that cannot be read is deleted."},
+  "editor_saved_text_discard_message": "The saved text that cannot be read is deleted from this phone. This cannot be undone.",
+  "@editor_saved_text_discard_message": {"description": "Body of the confirmation before saved statement text that cannot be read is deleted."}
 }

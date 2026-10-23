@@ -210,6 +210,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => values.remove(key);
   @override
   Future<void> deleteAll() async => values.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Answers 401 to a request with the old bearer, which runs the error interceptors as a server response does, and 200

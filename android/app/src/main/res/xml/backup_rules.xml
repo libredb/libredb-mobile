@@ -3,4 +3,5 @@
      They only take effect if android:allowBackup is turned back on. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="."/>
+    <exclude domain="file" path="statement_text/"/>
 </full-backup-content>

@@ -212,6 +212,9 @@ class _WipeWhileReadingSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _FixedSecureStorage implements ISecureStorage {
@@ -225,6 +228,9 @@ class _FixedSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _ThrowingSecureStorage implements ISecureStorage {
@@ -236,6 +242,9 @@ class _ThrowingSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _CapturingRequestHandler extends RequestInterceptorHandler {

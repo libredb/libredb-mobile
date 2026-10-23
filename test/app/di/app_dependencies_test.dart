@@ -18,6 +18,7 @@ import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -31,6 +32,9 @@ class _StubSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _MemorySecureStorage implements ISecureStorage {
@@ -43,6 +47,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => store.remove(key);
   @override
   Future<void> deleteAll() async => store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Dependencies whose 401 predicate accepts no 401, as an app on a backend that narrows it does.
@@ -284,6 +291,10 @@ void main() {
       dependencies.createSqlEditorRepository(TestEnv.apiClient(), statements, queryTimeouts),
       isA<ISqlEditorRepository>(),
     );
+  });
+
+  test('app dependencies expose the encrypted statement text store, keyed through the secure storage', () {
+    expect(dependencies.createStatementTextStore(dependencies.createSecureStorage()), isA<IStatementTextStore>());
   });
 
   test('every feature reads provider-meta and the object routes through the in-memory caches', () {

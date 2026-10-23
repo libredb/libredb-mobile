@@ -22,6 +22,9 @@ class _FlakyDeleteSecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 LoginRepository _repository(ISecureStorage secure) =>

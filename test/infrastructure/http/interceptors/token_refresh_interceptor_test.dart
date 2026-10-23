@@ -27,6 +27,9 @@ class _ReadThrowsOnJwtSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => _store.remove(key);
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// In-memory ISecureStorage for tests. Counts reads of the refresh-token
@@ -46,6 +49,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => _store.remove(key);
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// A request to [path] as AuthInterceptor sends it, which records the session generation the request goes out under.
@@ -1879,6 +1885,9 @@ class _RefreshWriteFailsSecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Captures the Authorization header and the loop-prevention marker on

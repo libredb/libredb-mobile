@@ -11,7 +11,9 @@ import 'package:libredb_mobile/features/connections/domain/repositories/favorite
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/data/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
@@ -39,6 +41,7 @@ import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
+import 'package:libredb_mobile/infrastructure/storage/encrypted_text_file_store.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferences.dart';
@@ -165,6 +168,11 @@ class AppDependencies {
     IStatementRepository statements,
     ConnectionQueryTimeouts queryTimeouts,
   ) => SqlEditorRepository(apiClient, statements, queryTimeouts);
+
+  /// The statement text each account keeps on the device, the editor drafts and the history, encrypted with a key per
+  /// account in [secureStorage].
+  IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) =>
+      StatementTextStore(EncryptedTextFileStore(secureStorage: secureStorage));
 
   /// Reads the remote app config that decides whether the app opens, shows the maintenance screen or asks for an
   /// update.

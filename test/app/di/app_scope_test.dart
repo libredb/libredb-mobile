@@ -46,6 +46,7 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -960,6 +961,14 @@ void main() {
       for (final MapEntry(key: name, value: given) in dependencies.given.entries) {
         expect(given, same(provided), reason: name);
       }
+    });
+
+    testWidgets('provides the statement text store that the editor drafts and the history keep text in', (
+      tester,
+    ) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<IStatementTextStore>(), isA<IStatementTextStore>());
     });
 
     testWidgets('provides the result view mode, restored from the device', (tester) async {

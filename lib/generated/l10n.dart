@@ -2126,6 +2126,56 @@ class S {
       args: [],
     );
   }
+
+  /// `The statement text saved on this phone cannot be read. It may have come from a backup of another device, or the file was changed. Discard it to keep new text again.`
+  String get error_editor_saved_text_unreadable {
+    return Intl.message(
+      'The statement text saved on this phone cannot be read. It may have come from a backup of another device, or the file was changed. Discard it to keep new text again.',
+      name: 'error_editor_saved_text_unreadable',
+      desc: 'A saved draft or statement history cannot be read; the screen offers Discard next to it.',
+      args: [],
+    );
+  }
+
+  /// `This phone could not save the statement text. Check its free storage and try again.`
+  String get error_editor_saved_text_not_stored {
+    return Intl.message(
+      'This phone could not save the statement text. Check its free storage and try again.',
+      name: 'error_editor_saved_text_not_stored',
+      desc: 'The device refused to store or remove saved statement text.',
+      args: [],
+    );
+  }
+
+  /// `Discard`
+  String get editor_saved_text_discard {
+    return Intl.message(
+      'Discard',
+      name: 'editor_saved_text_discard',
+      desc: 'Deletes saved statement text that cannot be read, after a confirmation.',
+      args: [],
+    );
+  }
+
+  /// `Discard the saved text?`
+  String get editor_saved_text_discard_title {
+    return Intl.message(
+      'Discard the saved text?',
+      name: 'editor_saved_text_discard_title',
+      desc: 'Title of the confirmation before saved statement text that cannot be read is deleted.',
+      args: [],
+    );
+  }
+
+  /// `The saved text that cannot be read is deleted from this phone. This cannot be undone.`
+  String get editor_saved_text_discard_message {
+    return Intl.message(
+      'The saved text that cannot be read is deleted from this phone. This cannot be undone.',
+      name: 'editor_saved_text_discard_message',
+      desc: 'Body of the confirmation before saved statement text that cannot be read is deleted.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

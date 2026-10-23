@@ -37,6 +37,10 @@ abstract interface class ISecureStorage {
 
   /// Delete all stored values. Throws on platform failure.
   Future<void> deleteAll();
+
+  /// The names of every stored value, so an owner can find its own by a prefix. Throws on platform failure, and on
+  /// Android when any value cannot be decrypted; it never deletes a value.
+  Future<Set<String>> keys();
 }
 
 /// Production implementation backed by [FlutterSecureStorage].
@@ -95,6 +99,18 @@ class FlutterSecureStorageAdapter implements ISecureStorage {
     _log.info('Deleting all secure storage data');
     await _storage.deleteAll();
   }
+
+  /// The plugin has no call that lists names only, so this reads every value: the values cross into memory and are
+  /// dropped here, never returned or logged. On Android it passes `resetOnError: false` for this call alone, because
+  /// readAll decrypts every value and the plugin's default answers one that fails by deleting the whole store; a
+  /// corrupt entry then throws instead, and nothing is deleted.
+  @override
+  Future<Set<String>> keys() async {
+    _log.trace('Listing secure storage keys');
+    return (await _storage.readAll(aOptions: _listingAndroidOptions)).keys.toSet();
+  }
+
+  static const _listingAndroidOptions = AndroidOptions(resetOnError: false);
 }
 
 /// Keys for values that must be stored in the platform-backed secure

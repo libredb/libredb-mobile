@@ -18,6 +18,10 @@ void main() {
   const dataExtractionRulesPath = 'android/app/src/main/res/xml/data_extraction_rules.xml';
   const backupRulesPath = 'android/app/src/main/res/xml/backup_rules.xml';
   final sharedPrefsExclude = RegExp(r'<exclude\s+domain="sharedpref"\s+path="\."\s*/>');
+  // The statement text store (lib/infrastructure/storage/encrypted_text_file_store.dart) keeps its files under the
+  // application support directory, which path_provider_android puts in getFilesDir(), the `file` domain. Its key never
+  // leaves the device, so a restored copy could not be read; the files stay out of a backup and a transfer anyway.
+  final statementTextExclude = RegExp(r'<exclude\s+domain="file"\s+path="statement_text/"\s*/>');
 
   test('the main manifest declares the INTERNET permission', () {
     final manifest = _readWithoutXmlComments(manifestPath);
@@ -61,6 +65,31 @@ void main() {
       reason:
           'These sections of $dataExtractionRulesPath lack <exclude domain="sharedpref" path="."/>, '
           'so they can restore session tokens that no longer decrypt:\n${unprotected.join('\n')}',
+    );
+  });
+
+  test('the data extraction rules keep the statement text files out of cloud backups and device transfers', () {
+    final rules = _readWithoutXmlComments(dataExtractionRulesPath);
+
+    final unprotected = const [
+      'cloud-backup',
+      'device-transfer',
+    ].where((section) => !_contentsOf(section, rules).any(statementTextExclude.hasMatch)).toList();
+
+    expect(
+      unprotected,
+      isEmpty,
+      reason:
+          'These sections of $dataExtractionRulesPath lack <exclude domain="file" path="statement_text/"/>, '
+          'so they can carry encrypted statement text to another device:\n${unprotected.join('\n')}',
+    );
+  });
+
+  test('the backup rules keep the statement text files out of backups', () {
+    expect(
+      statementTextExclude.hasMatch(_readWithoutXmlComments(backupRulesPath)),
+      isTrue,
+      reason: '$backupRulesPath lacks <exclude domain="file" path="statement_text/"/>',
     );
   });
 

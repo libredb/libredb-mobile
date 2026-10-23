@@ -256,6 +256,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "edit": MessageLookupByLibrary.simpleMessage("Düzenle"),
+    "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Sil"),
+    "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
+      "Okunamayan kayıtlı metin bu telefondan silinir. Bu işlem geri alınamaz.",
+    ),
+    "editor_saved_text_discard_title": MessageLookupByLibrary.simpleMessage("Kayıtlı metin silinsin mi?"),
     "english": MessageLookupByLibrary.simpleMessage("İngilizce"),
     "error_auth_invalid_access_token": MessageLookupByLibrary.simpleMessage("Geçersiz erişim belirteci"),
     "error_auth_oidc_config": MessageLookupByLibrary.simpleMessage(
@@ -269,6 +274,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bu uygulamadan çıkış yaptınız, ancak kimlik sağlayıcıdaki oturumunuz hâlâ açık olabilir.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
+    "error_editor_saved_text_not_stored": MessageLookupByLibrary.simpleMessage(
+      "Bu telefon sorgu metnini kaydedemedi. Boş depolama alanını kontrol edip tekrar deneyin.",
+    ),
+    "error_editor_saved_text_unreadable": MessageLookupByLibrary.simpleMessage(
+      "Bu telefonda kayıtlı sorgu metni okunamıyor. Başka bir cihazın yedeğinden gelmiş ya da dosya değiştirilmiş olabilir. Yeni metnin yeniden kaydedilmesi için onu silin.",
+    ),
     "error_generic": MessageLookupByLibrary.simpleMessage("Bir şeyler ters gitti"),
     "error_link_open_failed": m18,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(
