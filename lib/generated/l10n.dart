@@ -1759,6 +1759,11 @@ class S {
       args: [],
     );
   }
+
+  /// `Null value`
+  String get cell_null_semantics {
+    return Intl.message('Null value', name: 'cell_null_semantics', desc: '', args: []);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

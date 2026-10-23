@@ -667,5 +667,7 @@
   "keys_empty": "Studio found no keys here.",
   "@keys_empty": {},
   "keys_unavailable": "Studio declares no key browser for this connection.",
-  "@keys_unavailable": {}
+  "@keys_unavailable": {},
+  "cell_null_semantics": "Null value",
+  "@cell_null_semantics": {}
 }

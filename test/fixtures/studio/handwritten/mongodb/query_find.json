@@ -1,0 +1,51 @@
+{
+  "rows": [
+    {
+      "_id": "6717a1f0c2a4e93b5f0d1e01",
+      "name": "Ada",
+      "address": {
+        "city": "London",
+        "geo": {
+          "lat": 51.5072,
+          "lng": -0.1276
+        }
+      },
+      "tags": [
+        "math",
+        "engines"
+      ],
+      "created": "2026-10-22T13:45:00.000Z"
+    },
+    {
+      "_id": "6717a1f0c2a4e93b5f0d1e02",
+      "name": "Grace",
+      "tags": [],
+      "payload": {
+        "type": "Buffer",
+        "data": [
+          1,
+          "two"
+        ]
+      },
+      "visits": 0
+    }
+  ],
+  "fields": [
+    "_id",
+    "name",
+    "address",
+    "tags",
+    "created",
+    "payload",
+    "visits"
+  ],
+  "rowCount": 2,
+  "executionTime": 3,
+  "pagination": {
+    "limit": 50,
+    "offset": 0,
+    "hasMore": false,
+    "totalReturned": 2,
+    "wasLimited": false
+  }
+}

@@ -157,6 +157,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_source_truncated": m12,
     "browse_source_unavailable": MessageLookupByLibrary.simpleMessage("This definition could not be read"),
     "cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
+    "cell_null_semantics": MessageLookupByLibrary.simpleMessage("Null value"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Contribute"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Documentation"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Open an Issue"),
