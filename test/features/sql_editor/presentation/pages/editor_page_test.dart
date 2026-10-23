@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
@@ -17,7 +18,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_dra
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
-import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
+import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
@@ -194,6 +195,32 @@ void main() {
       const Stream<ActiveConnectionState>.empty(),
       initialState: connection == null ? const ActiveConnectionNone() : ActiveConnectionSelected(connection),
     );
+    when(() => active.listed(any())).thenReturn(connection);
+    // The SQL tab's own route, as the History tap opens its entry through the router (openEditor).
+    final router = GoRouter(
+      initialLocation: '/sql',
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => Scaffold(
+            body: StudioRoleScope(
+              role: const StudioUserRole(),
+              child: StudioSubjectScope(
+                subjectHash: subject,
+                child: StatementCaptureScope(
+                  recordsInFull: recordsInFull,
+                  child: OfflineStatus(isOffline: offline, child: child),
+                ),
+              ),
+            ),
+          ),
+          routes: [
+            ...SqlEditorFeatureRoutes.routes,
+            GoRoute(path: '/connections', builder: (_, _) => const Text('connections page')),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
@@ -215,7 +242,8 @@ void main() {
             BlocProvider<ActiveCatalogCubit>.value(value: catalog),
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
           ],
-          child: MaterialApp(
+          child: MaterialApp.router(
+            routerConfig: router,
             locale: locale,
             localizationsDelegates: const [
               S.delegate,
@@ -224,18 +252,6 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: S.delegate.supportedLocales,
-            home: Scaffold(
-              body: StudioRoleScope(
-                role: const StudioUserRole(),
-                child: StudioSubjectScope(
-                  subjectHash: subject,
-                  child: StatementCaptureScope(
-                    recordsInFull: recordsInFull,
-                    child: OfflineStatus(isOffline: offline, child: const SqlPage()),
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
       ),

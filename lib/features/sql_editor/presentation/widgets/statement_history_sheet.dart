@@ -16,8 +16,9 @@ import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
 
 /// Shows the History sheet of [subjectHash] over the editor of [activeConnectionId], and answers the entry the user
-/// tapped to put in the editor, or null when the sheet closed without one. Only an entry of [activeConnectionId] whose
-/// text was kept can be tapped; the sheet never runs anything.
+/// tapped to put in the editor, or null when the sheet closed without one. Only an entry whose text was kept can be
+/// tapped, of [activeConnectionId] or of another connection, which the editor then opens; the sheet never runs
+/// anything.
 ///
 /// [onRoute] is told the sheet's route, so the editor can close it when it is disposed.
 Future<StatementHistoryEntry?> showStatementHistorySheet(
