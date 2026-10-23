@@ -587,22 +587,30 @@ void main() {
 
     test('logs neither the statement nor an error text', () async {
       const secret = "SELECT * FROM sales.ledger WHERE note = 'ada@example.com' -- note: update";
-      final bloc = build();
-      addTearDown(bloc.close);
-      final shown = await firstPageOf(bloc, secret);
       final printed = <String>[];
 
+      // The whole bloc lifetime runs in the zone, so every line it prints is captured.
       await runZoned(() async {
-        final answer = loadPage(bloc, shown);
+        final bloc = build();
+        final shown = await firstPageOf(bloc, secret);
+        final failed = loadPage(bloc, shown);
+        await pumpEventQueue();
+        pageAnswer.complete(Failure(ServerError('relation ada@example.com', code: AppErrorCode.studioQueryError.key)));
+        await failed;
+        pageAnswer = Completer();
+        final dropped = loadPage(bloc, shown);
         await pumpEventQueue();
         lifecycle.leave();
         pageAnswer.complete(const Failure(NetworkError('reset while reading ada@example.com')));
-        await answer;
+        await dropped;
+        await bloc.close();
       }, zoneSpecification: ZoneSpecification(print: (_, _, _, line) => printed.add(line)));
 
-      expect(printed, isNotEmpty, reason: 'the interrupted page is logged');
-      expect(printed.join('\n'), isNot(contains('ada@')));
-      expect(printed.join('\n'), isNot(contains('sales.ledger')));
+      final log = printed.join('\n');
+      expect(log, contains('a page was interrupted while the app was in the background'), reason: 'positive control');
+      expect(log, contains('page not read: studio.query_error'), reason: 'positive control');
+      expect(log, isNot(contains('ada@')));
+      expect(log, isNot(contains('sales.ledger')));
     });
 
     group('background time', () {
