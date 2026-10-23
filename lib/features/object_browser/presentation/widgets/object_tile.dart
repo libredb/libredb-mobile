@@ -13,7 +13,8 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// other as Studio sends it), and what else Studio says of it as secondary text: [kindLabel] when set, the object it
 /// hangs under when its kind declares `attachedTo`, the kinds a group object holds, its row count and size. A tap opens
 /// by the object tap rule, and a long press offers View rows (by `objectRowsAction`, online only), Open in editor
-/// (wherever View rows opens, offline too), Details, View source and Copy name. The object list and the search share it, each passing its connection's [meta].
+/// (wherever View rows opens, offline too), Details, View source and Copy name. The object list and the search share
+/// it, each passing its connection's [meta].
 class ObjectTile extends StatelessWidget {
   const ObjectTile({
     super.key,

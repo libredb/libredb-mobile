@@ -64,7 +64,8 @@ class BrowseHarness {
   final _connectivity = StreamController<ConnectivityState>.broadcast();
   late GoRouter router;
 
-  /// The open requests the SQL tab received, in order; the tab itself is a stand-in, since the editor is not under test.
+  /// The open requests the SQL tab received, in order; the tab itself is a stand-in, since the editor is not under
+  /// test.
   final editorRequests = <EditorOpenRequest>[];
 
   static const _online = ConnectivityState(status: ConnectivityStatus.online);
