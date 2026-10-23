@@ -37,7 +37,13 @@ final class EditorRateLimitElapsed extends EditorRunEvent {
   const EditorRateLimitElapsed();
 }
 
-/// Cancel (or Stop waiting) of the statement in flight.
+/// Cancel (or Stop waiting) of the statement in flight. With [stopWaiting] the request is only dropped and nothing is
+/// posted, which the editor offers after a cancel that failed.
 final class EditorCancelRequested extends EditorRunEvent {
-  const EditorCancelRequested();
+  const EditorCancelRequested({this.stopWaiting = false});
+
+  final bool stopWaiting;
+
+  @override
+  List<Object?> get props => [stopWaiting];
 }

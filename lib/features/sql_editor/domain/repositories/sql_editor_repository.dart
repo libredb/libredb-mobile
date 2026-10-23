@@ -31,8 +31,9 @@ abstract class ISqlEditorRepository {
     QueryPage? page,
   });
 
-  /// Asks Studio to stop the run [queryId], through the shared `IStatementRepository.cancel`. True when the engine stopped it; false when it had already finished or the
-  /// engine did not stop it. The stopped run itself fails with `studio.query_cancelled`.
+  /// Asks Studio to stop the run [queryId], through the shared `IStatementRepository.cancel`. True when the engine
+  /// stopped it; false when it had already finished or the engine did not stop it. The stopped run itself fails with
+  /// `studio.query_cancelled`.
   Future<Result<bool>> cancel(String connectionId, String queryId);
 
   /// Opens a transaction. The answer says whether the engine reports its transaction state, or null when unknown.

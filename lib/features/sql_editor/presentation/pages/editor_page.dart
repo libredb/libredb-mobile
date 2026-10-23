@@ -134,6 +134,7 @@ class _EditorViewState extends State<_EditorView> {
             text: _text,
             onRun: _run,
             onCancel: () => context.read<EditorRunBloc>().add(const EditorCancelRequested()),
+            onStopWaiting: () => context.read<EditorRunBloc>().add(const EditorCancelRequested(stopWaiting: true)),
           ),
           const Divider(height: 1),
           Expanded(flex: 3, child: EditorResultArea(confirm: _confirm)),

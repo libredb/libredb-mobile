@@ -229,6 +229,32 @@ void main() {
     );
 
     blocTest<EditorRunBloc, EditorRunState>(
+      'after a cancel that failed otherwise, Stop waiting drops the request without posting a second cancel',
+      build: build,
+      act: (bloc) async {
+        await startRun(bloc);
+        bloc.add(const EditorCancelRequested());
+        await pumpEventQueue();
+        cancelAnswer.complete(const Failure(NetworkError('No Internet connection')));
+        await pumpEventQueue();
+        bloc.add(const EditorCancelRequested(stopWaiting: true));
+      },
+      skip: 2,
+      expect: () => [
+        const EditorRunning(
+          queryId: 'run-1',
+          supportsCancel: true,
+          cancelFailure: NetworkError('No Internet connection'),
+        ),
+        const EditorCancelled(outcome: EditorCancelOutcome.stoppedWaiting),
+      ],
+      verify: (_) {
+        verify(() => repository.cancel(_postgres, 'run-1')).called(1);
+        expect(sentSignals.single!.isCancelled, isTrue);
+      },
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
       'a second Cancel while the first is posted sends nothing',
       build: build,
       act: (bloc) async {

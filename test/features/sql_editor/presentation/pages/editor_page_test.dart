@@ -606,6 +606,45 @@ void main() {
       verify(() => repository.cancel(any(), any())).called(1);
     });
 
+    testWidgets('after a cancel that failed otherwise, offers Stop waiting beside Cancel, which posts nothing more', (
+      tester,
+    ) async {
+      when(() => repository.cancel(any(), any()))
+          .thenAnswer((_) async => const Failure(NetworkError('No Internet connection')));
+      await startRun(tester);
+
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(buttonLabel(tester), 'Cancel');
+      expect(runEnabled(tester), isTrue);
+      final stopWaiting = find.byKey(EditorActions.stopWaitingKey);
+      expect(find.descendant(of: stopWaiting, matching: find.text('Stop waiting')), findsOneWidget);
+      await tester.tap(stopWaiting);
+      await tester.pump();
+
+      expect(find.textContaining('Stopped waiting.'), findsOneWidget);
+      expect(find.byKey(EditorActions.stopWaitingKey), findsNothing);
+      verify(() => repository.cancel(any(), any())).called(1);
+    });
+
+    testWidgets('after a rate limit on the cancel offers no Stop waiting', (tester) async {
+      when(() => repository.cancel(any(), any())).thenAnswer(
+        (_) async =>
+            const Failure(RateLimitedError('slow', code: 'studio.rate_limited', retryAfter: Duration(seconds: 2))),
+      );
+      await startRun(tester);
+
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(EditorActions.stopWaitingKey), findsNothing);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+    });
+
     testWidgets('the labels are in Turkish', (tester) async {
       when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
       await startRun(tester, locale: const Locale('tr'));

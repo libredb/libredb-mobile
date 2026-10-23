@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
@@ -9,15 +10,24 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// text is empty, while a run waits for its confirmation, and while a rate limit's delay runs.
 ///
 /// While a statement runs, Run becomes Cancel, or Stop waiting on an engine that cannot cancel; it reads Cancelling
-/// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down.
+/// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down. After a
+/// cancel that failed otherwise, Stop waiting stands beside Cancel and drops the request without posting again.
 class EditorActions extends StatelessWidget {
-  const EditorActions({super.key, required this.text, required this.onRun, required this.onCancel});
+  const EditorActions({
+    super.key,
+    required this.text,
+    required this.onRun,
+    required this.onCancel,
+    required this.onStopWaiting,
+  });
 
   final TextEditingController text;
   final VoidCallback onRun;
   final VoidCallback onCancel;
+  final VoidCallback onStopWaiting;
 
   static const runKey = ValueKey('sql-editor-run');
+  static const stopWaitingKey = ValueKey('sql-editor-stop-waiting');
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +38,22 @@ class EditorActions extends StatelessWidget {
       child: Align(
         alignment: AlignmentDirectional.centerEnd,
         child: switch (state) {
-          EditorRunning(:final supportsCancel, :final waitingForRetry) => FilledButton.tonalIcon(
-            key: runKey,
-            onPressed: waitingForRetry ? null : onCancel,
-            icon: const Icon(Icons.stop),
-            label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
+          EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            alignment: WrapAlignment.end,
+            children: [
+              // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
+              // stop, so the request can also be dropped without posting another cancel.
+              if (cancelFailure != null && cancelFailure is! RateLimitedError)
+                OutlinedButton(key: stopWaitingKey, onPressed: onStopWaiting, child: Text(s.sql_editor_stop_waiting)),
+              FilledButton.tonalIcon(
+                key: runKey,
+                onPressed: waitingForRetry ? null : onCancel,
+                icon: const Icon(Icons.stop),
+                label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
+              ),
+            ],
           ),
           EditorCancelling() => FilledButton.tonalIcon(
             key: runKey,
