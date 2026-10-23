@@ -11,17 +11,17 @@ How the app talks to Studio is in [architecture.md](architecture.md).
 ## Status
 
 Each milestone from M2 on is a GitHub milestone with an epic issue that lists its children.
-The children of M3 to M9 are filed as issues when their milestone starts.
+The children of a milestone are filed as issues when it starts: M2 to M5 in full, M6 in part, M7 to M9 not yet.
 
 | Milestone | Status | Epic |
 | --- | --- | --- |
 | M0 Foundation | Done | |
 | M1 Studio API layer | Done | |
-| M2 Connection list | In progress | [#8][e8] |
-| M3 Object browser | Planned | [#31][e31] |
-| M4 Result grid and data preview | Planned | [#32][e32] |
-| M5 SQL editor | Planned | [#33][e33] |
-| M6 Release | Planned | [#34][e34] |
+| M2 Connection list | Done | [#8][e8] |
+| M3 Object browser | Done | [#31][e31] |
+| M4 Result grid and data preview | Done | [#32][e32] |
+| M5 SQL editor | In progress | [#33][e33] |
+| M6 Release | In progress | [#34][e34] |
 | M7 Editor power tools | Planned | [#35][e35] |
 | M8 Admin on the go | Planned | [#36][e36] |
 | M9 Grant a connection | Planned, needs Platform v1 | [#37][e37] |
@@ -52,12 +52,14 @@ A typed Dart client for the Studio endpoints the next milestones need, with no n
 - Repositories for the session (`/api/auth/me`), connections, the object browser and the SQL editor, each with mock answers and tests.
 
 Done when every repository has tests against recorded Studio answers and one smoke run against the local Studio passes.
-The answers in `test/fixtures/studio/` were recorded from Studio main in `tool/studio-dev` on the SQLite sample, which has no transactions: the transaction methods are tested against hand-written answers only, until the local stack has an engine with transactions.
+The answers in `test/fixtures/studio/` were recorded from Studio main in `tool/studio-dev`, first on the SQLite sample, which has no transactions.
+The transaction answers `txbegin.json`, `txquery.json` and `txcommit.json` were recorded later from the Postgres seeds of `tool/studio-dev` ([#49][i49], [PR #65][p65]).
 
 ## M2 Connection list
 
 The first real screen after sign-in: which databases can I use?
 Epic [#8][e8], end-to-end walkthrough [#30][i30].
+Done: every child is merged, and the walkthrough was recorded on the Android emulator in [PR #78][p78].
 
 - Align the HTTP layer with Studio first: the session rule on `/api/auth/me`, the retry and cache defaults, and a receive timeout longer than Studio's query timeout.
 - Remove the template features and the jwt sign-in mode, and move the cross-feature Studio models to `lib/shared`.
@@ -68,7 +70,8 @@ Epic [#8][e8], end-to-end walkthrough [#30][i30].
 ## M3 Object browser
 
 Look inside a connection, read-only, on the Browse tab.
-Epic [#31][e31], end-to-end walkthrough M3-99 (listed in the epic).
+Epic [#31][e31], end-to-end walkthrough [#60][i60].
+Done: every child is merged, and the walkthrough was recorded on the Android emulator in [PR #101][p101].
 
 - Containers, then the kinds and their counts, then the objects of one kind, then an object's columns, indexes, foreign keys and source.
 - Search across the objects of a connection, and a key browser for Redis.
@@ -78,7 +81,8 @@ Epic [#31][e31], end-to-end walkthrough M3-99 (listed in the epic).
 ## M4 Result grid and data preview
 
 Show rows on a phone, before the editor exists, by previewing objects from the browser.
-Epic [#32][e32], end-to-end walkthrough M4-99 (listed in the epic).
+Epic [#32][e32], end-to-end walkthrough [#100][i100].
+Done: every child is merged, and the walkthrough was recorded on Android 13 in [PR #128][p128].
 
 - A card per row with a stats strip, a compact table, load more, and a row detail with copy.
 - Cell rendering rules for NULL, documents, binary values and big numbers.
@@ -88,19 +92,22 @@ Epic [#32][e32], end-to-end walkthrough M4-99 (listed in the epic).
 ## M5 SQL editor
 
 Type and run statements on a phone, on the SQL tab.
-Epic [#33][e33], end-to-end walkthrough M5-99 (listed in the epic).
+Epic [#33][e33], end-to-end walkthrough [#124][i124].
+In progress: the editor, the write confirmation, cancel, the catalog picker, script and selection runs, the background rule, drafts, history and opening a statement were merged between [PR #131][p131] and [PR #153][p153].
+The walkthrough and two defects ([#140][i140], [#150][i150]) are open.
 
 - Run a statement with a fail-closed write confirmation, and cancel it.
 - An editor input sized for a phone, a catalog picker for server-level connections, and an honest answer when the app goes to the background during a run.
 - Statement history on the device, and open a statement from history or from the object browser.
-- Script runs and a confirmation driven by Studio's statement analysis follow when Studio ships that endpoint.
+- Script runs and a selection run on the phone ([#117][i117], [PR #146][p146]).
+- Routing and a write confirmation driven by Studio's statement analysis ([#122][i122], [#123][i123]) follow when Studio ships that endpoint.
 
 ## M6 Release
 
 Ship the first store release of M2 to M5.
 Epic [#34][e34]; its end-to-end check is the full walkthrough on a physical Android phone and on iOS (M6-04).
 
-- Remove the start-up check that read an app config from Studio, a route Studio does not have (done in [#102](https://github.com/libredb/libredb-mobile/issues/102)).
+- Remove the start-up check that read an app config from Studio, a route Studio does not have (done in [#102](https://github.com/libredb/libredb-mobile/issues/102), [PR #137][p137]).
 - Certificate pinning and Sentry for the release build, with the native scrubber on iOS, since sentry-cocoa records events and breadcrumbs unmasked ([crash-reporting.md](crash-reporting.md)).
 - Screen capture protection on data screens, an app lock, and a way to remove the app's data.
 - Store listings, signing and a release pipeline.
@@ -157,6 +164,23 @@ These stay out of the app; Studio's web UI serves them.
 
 [e8]: https://github.com/libredb/libredb-mobile/issues/8
 [i30]: https://github.com/libredb/libredb-mobile/issues/30
+[i49]: https://github.com/libredb/libredb-mobile/issues/49
+[i60]: https://github.com/libredb/libredb-mobile/issues/60
+[i100]: https://github.com/libredb/libredb-mobile/issues/100
+[i117]: https://github.com/libredb/libredb-mobile/issues/117
+[i122]: https://github.com/libredb/libredb-mobile/issues/122
+[i123]: https://github.com/libredb/libredb-mobile/issues/123
+[i124]: https://github.com/libredb/libredb-mobile/issues/124
+[i140]: https://github.com/libredb/libredb-mobile/issues/140
+[i150]: https://github.com/libredb/libredb-mobile/issues/150
+[p65]: https://github.com/libredb/libredb-mobile/pull/65
+[p78]: https://github.com/libredb/libredb-mobile/pull/78
+[p101]: https://github.com/libredb/libredb-mobile/pull/101
+[p128]: https://github.com/libredb/libredb-mobile/pull/128
+[p131]: https://github.com/libredb/libredb-mobile/pull/131
+[p137]: https://github.com/libredb/libredb-mobile/pull/137
+[p146]: https://github.com/libredb/libredb-mobile/pull/146
+[p153]: https://github.com/libredb/libredb-mobile/pull/153
 [e31]: https://github.com/libredb/libredb-mobile/issues/31
 [e32]: https://github.com/libredb/libredb-mobile/issues/32
 [e33]: https://github.com/libredb/libredb-mobile/issues/33

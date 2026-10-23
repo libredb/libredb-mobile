@@ -153,7 +153,7 @@ A mock on a channel the reset never touches needs no opt-out.
 
 ### The asset cache
 
-`rootBundle` caches the `Future` of every string asset it loads, including the `assets/mock/*.json` files behind `MockInterceptor` and `MenuRepository`.
+`rootBundle` caches the `Future` of every string asset it loads, including the `assets/mock/*.json` files behind `MockInterceptor`.
 Code that awaits a cached `Future` is resumed by a microtask of the zone that created it.
 Each `testWidgets` body runs in its own `FakeAsync` zone, and nothing runs that zone's microtasks once the test ends.
 So once a `testWidgets` had loaded an asset, every later `testWidgets` in the same file that needed it waited forever: only the first test of a file got its mock responses, and the others hung until they timed out.
