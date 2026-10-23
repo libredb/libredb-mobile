@@ -128,6 +128,10 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m50(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
+  static String m51(name) => "Onaylamak için ${name} yazın";
+
+  static String m52(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
+
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
     "account": MessageLookupByLibrary.simpleMessage("Hesabım"),
@@ -537,6 +541,31 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "users": MessageLookupByLibrary.simpleMessage("Kullanıcılar"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
+    "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("İptal"),
+    "write_confirm_name_label": m51,
+    "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
+      "Bu üretim bağlantısının yazılacak bir adı yok, bu yüzden deyim burada onaylanamaz.",
+    ),
+    "write_confirm_production_prompt": MessageLookupByLibrary.simpleMessage(
+      "Bu bir üretim bağlantısı. Deyimi çalıştırmak için adını yazın.",
+    ),
+    "write_confirm_read_grant": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantıdaki erişiminiz salt okunur, bu yüzden Studio burada bir yazmayı reddedecek. Bir yönetici erişiminizi yükseltebilir.",
+    ),
+    "write_confirm_read_only_connection": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantı operatörü tarafından salt okunur yapıldı, bu yüzden Studio veya veritabanı burada bir yazmayı reddedecek.",
+    ),
+    "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
+      "Veriyi değiştirebilir: uygulama deyimin nasıl başladığını okuyamıyor",
+    ),
+    "write_confirm_reason_may_write_at": m52,
+    "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
+      "Uygulama bu motorun bir komutunun ne yaptığını okuyamaz",
+    ),
+    "write_confirm_reason_several": MessageLookupByLibrary.simpleMessage("Birden fazla deyim çalıştırır"),
+    "write_confirm_run": MessageLookupByLibrary.simpleMessage("Çalıştır"),
+    "write_confirm_text_heading": MessageLookupByLibrary.simpleMessage("Çalışacak olan"),
+    "write_confirm_title": MessageLookupByLibrary.simpleMessage("Çalıştırmadan önce onaylayın"),
     "yes": MessageLookupByLibrary.simpleMessage("Evet"),
   };
 }

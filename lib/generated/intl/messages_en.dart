@@ -127,6 +127,10 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m50(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
+  static String m51(name) => "Type ${name} to confirm";
+
+  static String m52(word, line) => "May change data: ${word} on line ${line}";
+
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
     "account": MessageLookupByLibrary.simpleMessage("Account"),
@@ -534,6 +538,31 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "users": MessageLookupByLibrary.simpleMessage("Users"),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
+    "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
+    "write_confirm_name_label": m51,
+    "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
+      "This production connection has no name to type, so the statement cannot be confirmed here.",
+    ),
+    "write_confirm_production_prompt": MessageLookupByLibrary.simpleMessage(
+      "This is a production connection. Type its name to run the statement.",
+    ),
+    "write_confirm_read_grant": MessageLookupByLibrary.simpleMessage(
+      "Your access to this connection is read only, so Studio will refuse a write here. An administrator can raise it.",
+    ),
+    "write_confirm_read_only_connection": MessageLookupByLibrary.simpleMessage(
+      "This connection is set read only by its operator, so Studio or the database will refuse a write here.",
+    ),
+    "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
+      "May change data: the app cannot tell how the statement starts",
+    ),
+    "write_confirm_reason_may_write_at": m52,
+    "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
+      "The app cannot read what a command of this engine does",
+    ),
+    "write_confirm_reason_several": MessageLookupByLibrary.simpleMessage("Runs more than one statement"),
+    "write_confirm_run": MessageLookupByLibrary.simpleMessage("Run"),
+    "write_confirm_text_heading": MessageLookupByLibrary.simpleMessage("What will run"),
+    "write_confirm_title": MessageLookupByLibrary.simpleMessage("Confirm before running"),
     "yes": MessageLookupByLibrary.simpleMessage("Yes"),
   };
 }
