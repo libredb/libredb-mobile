@@ -504,6 +504,7 @@ void main() {
         any(),
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
         catalog: any(named: 'catalog'),
       ),
     ).thenAnswer((_) async => answer());
@@ -514,6 +515,7 @@ void main() {
         any(),
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
         catalog: captureAny(named: 'catalog'),
       ),
     ).captured;
@@ -531,8 +533,15 @@ void main() {
             .having((s) => s.statement.catalog, 'catalog', 'archive'),
       ],
       verify: (_) {
-        verify(() => repository.run(_server, 'SELECT current_database()', queryId: 'run-1', catalog: 'archive'))
-            .called(1);
+        verify(
+          () => repository.run(
+            _server,
+            'SELECT current_database()',
+            queryId: 'run-1',
+            catalog: 'archive',
+            cancelSignal: any(named: 'cancelSignal'),
+          ),
+        ).called(1);
       },
     );
 

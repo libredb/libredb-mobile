@@ -463,6 +463,7 @@ void main() {
             sql,
             queryId: any(named: 'queryId'),
             page: any(named: 'page'),
+            cancelSignal: any(named: 'cancelSignal'),
             catalog: any(named: 'catalog'),
           ),
         ).thenAnswer((invocation) async {
@@ -479,6 +480,7 @@ void main() {
         any(),
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
         catalog: captureAny(named: 'catalog'),
       ),
     ).captured;
@@ -635,6 +637,7 @@ void main() {
           orders,
           queryId: any(named: 'queryId'),
           page: QueryPage.first,
+          cancelSignal: any(named: 'cancelSignal'),
           catalog: any(named: 'catalog'),
         ),
       ).thenAnswer((_) async => Success(_recorded('query_page_postgres_first')));
@@ -644,6 +647,7 @@ void main() {
           orders,
           queryId: any(named: 'queryId'),
           page: QueryPage.after(_recorded('query_page_postgres_first').pagination!),
+          cancelSignal: any(named: 'cancelSignal'),
           catalog: any(named: 'catalog'),
         ),
       ).thenAnswer((_) async => Success(_recorded('query_page_postgres_second')));
