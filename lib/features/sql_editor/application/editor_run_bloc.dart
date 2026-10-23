@@ -59,9 +59,9 @@ part 'editor_run_state.dart';
 /// before the cancel shows its answer.
 ///
 /// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
-/// bloc never holds a clear row; a script's every statement is. After a success [SchemaChangeNotifier.statementSucceeded]
-/// tells the object browser the text that ran, and after a script each successful statement's text. Neither the
-/// statement nor a database error text is logged; only an error's code is.
+/// bloc never holds a clear row; a script's every statement is. After a success
+/// [SchemaChangeNotifier.statementSucceeded] tells the object browser the text that ran, and after a script each
+/// successful statement's text. Neither the statement nor a database error text is logged; only an error's code is.
 ///
 /// Each run that reached Studio adds one entry to the account's history through [IStatementHistoryRepository], when
 /// the run names an [EditorHistoryTarget]: Succeeded, or Failed for any failure but one before the request reached
@@ -426,9 +426,10 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
 
   /// Adds the run of [text] that answered [result] after [elapsed] to the history of [history], unless it never
   /// reached Studio, or was dropped without a cancel Studio answered ([cancelAnswered]): Stop waiting, which leaves the
-  /// outcome unknown, and so does a run the background [interrupted]. A cancelled run, by the user's answered cancel or Studio's 499, is Failed, as Studio's web keeps
-  /// its 499. A success keeps Studio's own time and row count, and the time measured here when Studio timed it
-  /// as zero, as Studio's web does (`resultData.executionTime || executionTime`).
+  /// outcome unknown, and so does a run the background [interrupted]. A cancelled run, by the user's answered cancel
+  /// or Studio's 499, is Failed, as Studio's web keeps its 499. A success keeps Studio's own time and row count, and
+  /// the time measured here when Studio timed it as zero, as Studio's web does
+  /// (`resultData.executionTime || executionTime`).
   Future<void> _record(
     EditorHistoryTarget history,
     String text,
