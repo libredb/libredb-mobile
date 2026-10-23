@@ -47,6 +47,8 @@ final class ProviderMetaJson {
       supportsSqlFormat: capabilities['supportsSqlFormat'] == false ? false : null,
       catalogSessions: capabilities['catalogSessions'] == true,
       tablesAreDerivedGroupings: capabilities['tablesAreDerivedGroupings'] == true,
+      // Studio declares only the literal `true`; absent means a request costs nothing to send.
+      resumesBilledCompute: capabilities['resumesBilledCompute'] == true,
       identifierQuoting: _optionalString(capabilities['identifierQuoting']),
       containerPathShapes: _optionalString(capabilities['containerPathShapes']) ?? 'exact',
       rowActions: [

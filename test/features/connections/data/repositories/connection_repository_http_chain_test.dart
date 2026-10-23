@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -46,6 +47,49 @@ void main() {
     expect(ResilienceInterceptor.instance.circuitBreakers['/connections/managed']?.failureCount ?? 0, 0);
   });
 
+  test('a check whose database refuses its credential reaches the sheet after one request, with its fix', () async {
+    adapter.replies.add((
+      401,
+      '{"error":"password authentication failed","code":"AUTH_ERROR","fixStatement":"ALTER USER app PASSWORD"}',
+    ));
+
+    final result = await repository.test('seed:sales-postgres');
+
+    expect(
+      result,
+      isA<Failure<ConnectionTestResult>>().having(
+        (f) => f.error,
+        'error',
+        isA<AuthError>()
+            .having((e) => e.code, 'code', AppErrorCode.studioDatabaseAuth.key)
+            .having((e) => e.fixStatement, 'fixStatement', 'ALTER USER app PASSWORD'),
+      ),
+    );
+    expect(adapter.requestCount, 1);
+  });
+
+  test('a rate-limited check is not sent again and carries the delay Studio asked for', () async {
+    adapter.replies.add((
+      429,
+      '{"error":"Too many requests","code":"RATE_LIMITED"}',
+      {
+        'retry-after': ['12'],
+      },
+    ));
+
+    final result = await repository.test('seed:sales-postgres');
+
+    expect(
+      result,
+      isA<Failure<ConnectionTestResult>>().having(
+        (f) => f.error,
+        'error',
+        isA<RateLimitedError>().having((e) => e.retryAfter, 'retryAfter', const Duration(seconds: 12)),
+      ),
+    );
+    expect(adapter.requestCount, 1);
+  });
+
   test('offline, listManaged returns a network failure, not the list it read before', () async {
     adapter.replies.add((200, '{"connections":[{"id":"seed:sales-postgres","name":"Sales","type":"postgres"}]}'));
     expect(await repository.listManaged(), isA<Success<ManagedConnections>>());
@@ -75,7 +119,7 @@ const _prodConfig = AppConfig(
   idleTimeout: null,
 );
 
-/// Answers each request with the next queued status code and JSON body, or throws the next queued error.
+/// Answers each request with the next queued status code, JSON body and headers, or throws the next queued error.
 class _QueuedAdapter implements HttpClientAdapter {
   final List<Object> replies = [];
   int requestCount = 0;
@@ -93,6 +137,14 @@ class _QueuedAdapter implements HttpClientAdapter {
         status,
         headers: {
           Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      ),
+      (final int status, final String body, final Map<String, List<String>> headers) => ResponseBody.fromString(
+        body,
+        status,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+          ...headers,
         },
       ),
       final Object error => throw error,
