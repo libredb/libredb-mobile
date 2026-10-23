@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
-import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -53,14 +52,13 @@ class TestEnv {
     );
   }
 
-  /// Resets the per-test environment: re-installs the secure-storage mock,
-  /// clears all storage and the process-wide [FeatureFlagService.instance].
+  /// Resets the per-test environment: re-installs the secure-storage mock
+  /// and clears all storage.
   /// No language is stored, so an `App` starts in the language passed to it,
   /// as on a first launch. Idempotent and cheap (in-memory).
   static Future<void> reset() async {
     _installSecureStorageMock();
     await _clearStorage();
-    FeatureFlagService.instance.clear();
   }
 
   /// Seeds a mock JWT in the secure-store backing. Call inside a test body or

@@ -45,7 +45,6 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
 | `lib/features/object_browser/` | Containers, counts, objects, details, source, search, key scan, and the rows and row count of an object |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
-| `lib/features/lifecycle/` | The maintenance and forced update check at start ([below](#maintenance-and-forced-updates)) |
 | `lib/features/studio_status/` | Studio's liveness and readiness: the unreachable page and the wording of a governance outage ([below](#studio-reachability)) |
 | `lib/shared/models/studio_identity.dart` | Who Studio says the user is, with Studio's role as the sealed `StudioRole`: `StudioAdminRole`, `StudioUserRole`, or `StudioUnknownRole` for a role this app does not know, which gets the least the app grants |
 | `lib/shared/models/studio_connection.dart` | A connection Studio offers, read by the connection list, the active connection, the object browser and the SQL editor |
@@ -69,23 +68,9 @@ The readers in each feature's `data/models/` (and in `lib/infrastructure/studio/
 
 In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oidc.md](oidc.md#mock-mode-without-keycloak)) and `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
 
-### Maintenance and forced updates
-
-At start the app reads `GET /app/config` under `PROD_API_URL`, an endpoint that needs no session (mock: `assets/mock/GET_app_config.json`).
-Studio has no `/api/app/config` today, so against a real Studio the check fails open on every start and logs an error; only the mock answers it.
-`LifecycleGate` (`lib/features/lifecycle/`) sits in the `MaterialApp` builder, around the session restore and the router, and shows a full-screen page in their place when the answer asks for one.
-
-- `maintenanceMode: true` shows the maintenance page with the answer's `maintenanceMessage` (or a translated default), the `maintenanceEstimatedEnd` time in the user's language and time zone, and a retry button.
-- A `minimumVersion` above the installed version shows the update page, which opens the `storeUrl` when it is an https link.
-- The app checks again when it comes back to the foreground, at most once every 5 minutes (`LifecycleBloc.defaultRecheckInterval`).
-- The check fails open: when the endpoint is missing or the request fails, the app opens normally and logs the failure as an error.
-  An untrusted certificate is reported with `AppErrorCode.networkCertInvalid`.
-  A failed re-check keeps a maintenance or update page the server already asked for, so a server error or a lost connection does not let the user skip a required update.
-- A non-empty `featureFlags` map in the answer replaces the flags in `FeatureFlagService`.
-
 ### Studio reachability
 
-`StudioStatusGate` (`lib/features/studio_status/`) sits beside `LifecycleGate` in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
+`StudioStatusGate` (`lib/features/studio_status/`) sits in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
 
 - `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`), and when the device comes back online.
 - A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, over the session restore and the router.
@@ -333,7 +318,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
   Whether a dropped mobile connection behind a proxy aborts the request is not verified until M5-03 (in [#33](https://github.com/libredb/libredb-mobile/issues/33)) does; the editor cancels explicitly.
 - Granting a connection needs an API in Platform that does not exist yet (milestone M9).
 - Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
-- Studio has no `/api/app/config`, so maintenance mode, forced updates and remote feature flags work only against the mock (milestone M6).
+- Studio offers no maintenance mode and no minimum app version, so the app has no maintenance or forced update gate; milestone M7 brings the gate back when Studio offers one.
 
 ## Open questions
 

@@ -274,7 +274,8 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
+      await _cacheResponse();
+      expect(await SharedPrefsCacheStorage().count(), isPositive);
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpAndSettle();
@@ -291,7 +292,8 @@ void main() {
       await _choosePreferences();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
+      await _cacheResponse();
+      expect(await SharedPrefsCacheStorage().count(), isPositive);
 
       await _logOut(tester);
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);
@@ -313,7 +315,8 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(_app);
       await tester.pumpAndSettle();
-      expect(await SharedPrefsCacheStorage().count(), isPositive, reason: 'the connection list caches its requests');
+      await _cacheResponse();
+      expect(await SharedPrefsCacheStorage().count(), isPositive);
 
       await _logOut(tester);
 
@@ -483,6 +486,11 @@ class _OidcDependencies extends AppDependencies {
 
 /// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or
 /// read-only disk does.
+/// Leaves a cached response as a GET outside Studio's live endpoints does. Since the app config check is gone, the app
+/// caches nothing on its way to the connection list, whose requests are all live.
+Future<void> _cacheResponse() =>
+    SharedPrefsCacheStorage().write('GET_https://api.example.test/storage/config', '{"storageProvider":"local"}');
+
 class _CacheKeepingStore extends InMemorySharedPreferencesStore {
   _CacheKeepingStore() : super.empty();
 

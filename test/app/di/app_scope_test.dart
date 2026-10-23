@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
@@ -24,11 +25,10 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -212,6 +212,30 @@ class _CountingDependencies extends AppDependencies {
     onAccountRefused: onAccountRefused,
     tokenRotation: tokenRotation,
   );
+}
+
+/// The production dependencies with every request answered and recorded by [server], from the first request on.
+class _RecordingServerDependencies extends _CountingDependencies {
+  _RecordingServerDependencies(this.server);
+
+  final _ServerAdapter server;
+
+  @override
+  ApiClient createApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
+    required TokenRotation tokenRotation,
+  }) {
+    final apiClient = super.createApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      onAccountRefused: onAccountRefused,
+      tokenRotation: tokenRotation,
+    );
+    apiClient.instance.httpClientAdapter = server;
+    return apiClient;
+  }
 }
 
 /// Answers like the server while a token refresh races the end of the session: a request with [staleJwt] gets 401,
@@ -547,29 +571,25 @@ void main() {
       expect(sessionRepository.clears, 1);
     });
 
-    // The lifecycle checks read GET /app/config before sign-in. Were it not public, it would carry the stored token,
-    // which the server may reject, and spend the stored refresh token on a refresh.
-    testWidgets('reading the app config sends no stored token and refreshes none', (tester) async {
-      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _expiredJwt());
-      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
-      final rotation = _FakeRotation();
-      final dependencies = _CountingDependencies(rotation: rotation);
-      final scope = await _pumpScope(tester, dependencies);
+    // The app asked Studio for an app config, a route Studio does not have, so the check failed on every start.
+    testWidgets('the app asks Studio for no app config at start, nor on a return to the foreground', (tester) async {
       final server = _ServerAdapter({
-        'GET /app/config': (200, {'minimumVersion': '1.0.0', 'maintenanceMode': false}),
+        'GET /health': (200, {'status': 'healthy', 'service': 'libredb-studio'}),
       });
-      final apiClient = scope.read<ApiClient>();
-      apiClient.instance.httpClientAdapter = server;
+      await tester.pumpWidget(App(language: 'en', dependencies: _RecordingServerDependencies(server)));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginScreen), findsOneWidget);
 
-      Result<AppConfigEntity>? result;
-      LifecycleRepository(apiClient).fetchAppConfig().then((value) => result = value);
-      await _pumpUntil(tester, () => result != null);
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pump(const Duration(minutes: 6));
+      for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pumpAndSettle();
 
-      expect(result, isA<Success<AppConfigEntity>>());
-      expect(server.requests, ['GET /app/config null'], reason: 'no stored token is sent, and none is refreshed');
-      expect(rotation.rotations, 0);
-      expect(dependencies.sessionExpiredCalls, 0);
-      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), 'stored-refresh-token');
+      expect(server.requests, ['GET /health null', 'GET /health null'], reason: 'only the Studio status check');
     });
 
     // Regression: a token refresh still on its way when the session ended stored the rotated tokens after the wipe.

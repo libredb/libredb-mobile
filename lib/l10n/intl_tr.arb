@@ -60,41 +60,6 @@
       }
     }
   },
-  "force_update_title": "Güncelleme Gerekli",
-  "@force_update_title": {},
-  "force_update_message": "Yeni bir sürüm mevcut. Uygulamayı kullanmaya devam etmek için lütfen güncelleyin.",
-  "@force_update_message": {},
-  "force_update_versions": "Mevcut: {currentVersion}  •  Gerekli: {minimumVersion}",
-  "@force_update_versions": {
-    "placeholders": {
-      "currentVersion": {
-        "type": "String"
-      },
-      "minimumVersion": {
-        "type": "String"
-      }
-    }
-  },
-  "force_update_button": "Şimdi Güncelle",
-  "@force_update_button": {},
-  "force_update_no_store_link": "En son sürümü yüklemek için uygulama mağazanızı açın.",
-  "@force_update_no_store_link": {},
-  "force_update_store_link_invalid": "Güncelleme bağlantısı geçersiz. En son sürümü yüklemek için uygulama mağazanızı açın.",
-  "@force_update_store_link_invalid": {},
-  "maintenance_title": "Bakım Yapılıyor",
-  "@maintenance_title": {},
-  "maintenance_message": "Planlı bir bakım çalışması yapıyoruz. Lütfen kısa bir süre sonra tekrar deneyin.",
-  "@maintenance_message": {},
-  "maintenance_estimated_end": "Tahmini bitiş: {time}",
-  "@maintenance_estimated_end": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "maintenance_retry": "Tekrar Dene",
-  "@maintenance_retry": {},
   "logout_stored_data_left": "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
   "@logout_stored_data_left": {},
   "home": "Ana Sayfa",

@@ -7,7 +7,6 @@ import 'package:libredb_mobile/features/connections/data/repositories/connection
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
@@ -64,7 +63,6 @@ void main() {
     'ISqlEditorRepository.commit': (client) => _sqlEditor(client).commit('seed:sales-db'),
     'ISqlEditorRepository.rollback': (client) => _sqlEditor(client).rollback('seed:sales-db'),
     'ISqlEditorRepository.transactionStatus': (client) => _sqlEditor(client).transactionStatus('seed:sales-db'),
-    'ILifecycleRepository.fetchAppConfig': (client) => LifecycleRepository(client).fetchAppConfig(),
     'IStudioStatusRepository.liveness': (client) => StudioStatusRepository(client).liveness(),
     'IStudioStatusRepository.readiness': (client) => StudioStatusRepository(client).readiness(),
   };
@@ -79,13 +77,8 @@ void main() {
     });
   }
 
-  // Sent before sign-in: the app config the lifecycle checks read, and Studio's liveness and readiness. The sign-in
-  // itself goes to the identity provider.
-  const sentBeforeSignIn = [
-    'ILifecycleRepository.fetchAppConfig',
-    'IStudioStatusRepository.liveness',
-    'IStudioStatusRepository.readiness',
-  ];
+  // Sent before sign-in: Studio's liveness and readiness. The sign-in itself goes to the identity provider.
+  const sentBeforeSignIn = ['IStudioStatusRepository.liveness', 'IStudioStatusRepository.readiness'];
   for (final name in sentBeforeSignIn) {
     test('$name succeeds through the mock-backed client without a stored token', () async {
       final result = await requests[name]!(TestEnv.apiClient());

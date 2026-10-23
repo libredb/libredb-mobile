@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -111,6 +112,11 @@ class _SlowAccessTokenStorage implements ISecureStorage {
 
 /// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or
 /// read-only disk does.
+/// Leaves a cached response as a GET outside Studio's live endpoints does. Since the app config check is gone, the app
+/// caches nothing on its way to the connection list, whose requests are all live.
+Future<void> _cacheResponse() =>
+    SharedPrefsCacheStorage().write('GET_https://api.example.test/storage/config', '{"storageProvider":"local"}');
+
 class _CacheKeepingStore extends InMemorySharedPreferencesStore {
   _CacheKeepingStore() : super.empty();
 
@@ -195,6 +201,7 @@ void main() {
       SharedPreferencesStorePlatform.instance = _CacheKeepingStore();
       final client = _FakeOidcClient();
       await _startSignedIn(tester, client);
+      await _cacheResponse();
 
       await _logOut(tester);
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);

@@ -33,7 +33,7 @@ flowchart TB
         direction LR
         CR["ConnectionRepository"]
         SIR["StudioIdentityRepository"]
-        LR["LifecycleRepository"]
+        SSR["StudioStatusRepository"]
     end
 
     REPO --> API
@@ -293,7 +293,8 @@ There is no token file: the sign-in and the token refresh go to the identity pro
 
 | Method | Path | Sent by |
 | --- | --- | --- |
-| `GET` | `/app/config` | Lifecycle checks before sign-in, `LifecycleRepository.fetchAppConfig` |
+| `GET` | `/health` | Studio's liveness check, at start and on a return to the foreground, `StudioStatusRepository.liveness` |
+| `GET` | `/ready` | Studio's readiness, `StudioStatusRepository.readiness` |
 
 The path is the one the `ApiClient` method is called with, before any path parameters.
 Another method on the same path is private, and the app's own routes, such as `/login`, are not API endpoints, so the list leaves them out.

@@ -66,8 +66,6 @@ void main() {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('stale-jwt'));
 
       for (final (method, path) in [
-        // The lifecycle checks read the app config before sign-in.
-        ('GET', '/app/config'),
         // Studio's liveness and readiness, which the app checks before sign-in.
         ('GET', '/health'),
         ('GET', '/ready'),
@@ -87,8 +85,8 @@ void main() {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value'));
 
       for (final (method, path) in [
-        // Another method on the path of the public app config.
-        ('POST', '/app/config'),
+        // Another method on the path of Studio's public liveness.
+        ('POST', '/health'),
         // A server-side logout has to know which session to end.
         ('POST', '/auth/logout'),
         // A route of the app, not an endpoint of the API.

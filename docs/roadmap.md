@@ -100,7 +100,7 @@ Epic [#33][e33], end-to-end walkthrough M5-99 (listed in the epic).
 Ship the first store release of M2 to M5.
 Epic [#34][e34]; its end-to-end check is the full walkthrough on a physical Android phone and on iOS (M6-04).
 
-- Remove the start-up check that reads `/api/app/config`, a route Studio does not have.
+- Remove the start-up check that read an app config from Studio, a route Studio does not have (done in [#102](https://github.com/libredb/libredb-mobile/issues/102)).
 - Certificate pinning and Sentry for the release build, with the native scrubber on iOS, since sentry-cocoa records events and breadcrumbs unmasked ([crash-reporting.md](crash-reporting.md)).
 - Screen capture protection on data screens, an app lock, and a way to remove the app's data.
 - Store listings, signing and a release pipeline.

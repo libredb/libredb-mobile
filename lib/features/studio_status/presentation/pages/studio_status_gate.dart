@@ -11,9 +11,9 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 ///
 /// [child] stays mounted under the page, offstage and without tickers, focus or semantics, so the open pages keep
 /// their state, unsaved input included, and show again as they were once Studio answers.
-/// `App` places it beside `LifecycleGate` in the `MaterialApp` builder, around the session restore and the router, so
-/// the page has no Navigator above it. It tells
-/// [StudioStatusBloc] when the app goes to the background and comes back; the bloc decides whether to check again.
+/// `App` places it in the `MaterialApp` builder, around the session restore and the router, so the page has no
+/// Navigator above it. It tells [StudioStatusBloc] when the app goes to the background and comes back; the bloc
+/// decides whether to check again.
 class StudioStatusGate extends StatefulWidget {
   const StudioStatusGate({super.key, required this.child});
 

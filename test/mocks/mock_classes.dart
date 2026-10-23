@@ -26,7 +26,6 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -56,8 +55,6 @@ class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 class MockICollapsedSectionsRepository extends Mock implements ICollapsedSectionsRepository {}
 
 class MockIFavoriteConnectionsRepository extends Mock implements IFavoriteConnectionsRepository {}
-
-class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 
 class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
 

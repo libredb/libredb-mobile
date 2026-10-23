@@ -36,10 +36,6 @@ import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
-import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
-import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/usecases/check_studio_liveness_usecase.dart';
@@ -48,7 +44,6 @@ import 'package:libredb_mobile/features/studio_status/domain/repositories/studio
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
-import 'package:libredb_mobile/core/feature_flags/feature_flag_service.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -236,9 +231,6 @@ class AppScope extends StatelessWidget {
           RepositoryProvider<IAuthRepository>(create: (context) => context.read<SsoSignOutAuthRepository>()),
           RepositoryProvider<ISsoSignOutRepository>(create: (context) => context.read<SsoSignOutAuthRepository>()),
         ],
-        RepositoryProvider<ILifecycleRepository>(
-          create: (context) => dependencies.createLifecycleRepository(context.read<ApiClient>()),
-        ),
         RepositoryProvider<IStudioStatusRepository>(
           create: (context) => dependencies.createStudioStatusRepository(context.read<ApiClient>()),
         ),
@@ -260,13 +252,6 @@ class AppScope extends StatelessWidget {
             ),
           ),
           BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()..add(const LoadTheme())),
-          // Created, and the first check sent, when App's LifecycleGate first builds.
-          BlocProvider<LifecycleBloc>(
-            create: (context) => LifecycleBloc(
-              fetchAppConfigUseCase: FetchAppConfigUseCase(context.read<ILifecycleRepository>()),
-              featureFlagService: FeatureFlagService.instance,
-            )..add(const LifecycleCheckEvent()),
-          ),
           // Created, and the first liveness check sent, when App's StudioStatusGate first builds, which is before the
           // stored session is restored.
           BlocProvider<StudioStatusBloc>(
