@@ -13,7 +13,9 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
@@ -87,6 +89,7 @@ void main() {
   late MockIProviderMetaRepository providerMeta;
   late MockActiveConnectionCubit active;
   late MockIStatementHistoryRepository history;
+  late MockIStatementTextStore textStore;
   late SchemaChangeNotifier schemaChanges;
   late MockIContainersRepository containers;
   late MockIActiveCatalogStore catalogStore;
@@ -104,6 +107,9 @@ void main() {
     when(() => providerMeta.providerMeta(_server.id))
         .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
     containers = MockIContainersRepository();
+    textStore = MockIStatementTextStore();
+    when(() => textStore.readDraft(any(), any())).thenAnswer((_) async => const Success(null));
+    when(() => textStore.saveDraft(any(), any(), any())).thenAnswer((_) async => const Success(DraftSaveOutcome.kept));
     catalogStore = MockIActiveCatalogStore();
     when(() => catalogStore.read(any(), any())).thenAnswer((_) async => null);
     when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
@@ -192,6 +198,7 @@ void main() {
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IContainersRepository>.value(value: containers),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IStatementTextStore>.value(value: textStore),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -612,9 +619,10 @@ void main() {
     testWidgets('a provider-meta failure on an ordinary connection shows Studio\'s error with a retry, no databases', (
       tester,
     ) async {
-      var calls = 0;
+      // Studio is down until the retry, for every reader of the meta (the database chip and the language label).
+      var down = true;
       when(() => providerMeta.providerMeta(_postgres.id)).thenAnswer((_) async {
-        if (++calls == 1) return const Failure(ServerError('down', code: 'studio.internal_error'));
+        if (down) return const Failure(ServerError('down', code: 'studio.internal_error'));
         return Success(ProviderMetaJson.read(_fixture('meta_postgres')));
       });
       await pump(tester);
@@ -625,6 +633,7 @@ void main() {
       expect(find.text('The databases to run statements in could not be listed.'), findsNothing);
       expect(runEnabled(tester), isFalse);
 
+      down = false;
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 

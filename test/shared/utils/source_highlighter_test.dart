@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_highlighter.dart';
+import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
 
 void main() {
   List<(String, SourceTokenKind)> tokens(String language, String line) => [

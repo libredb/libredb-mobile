@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
-import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_highlighter.dart';
+import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:share_plus/share_plus.dart';
 

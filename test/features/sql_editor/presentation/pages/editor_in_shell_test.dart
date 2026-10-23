@@ -24,7 +24,10 @@ import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
@@ -60,6 +63,7 @@ void main() {
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late MockIStatementHistoryRepository history;
+  late MockIStatementTextStore textStore;
   late SchemaChangeNotifier schemaChanges;
 
   setUp(() {
@@ -69,6 +73,23 @@ void main() {
     active = ActiveConnectionCubit(store: store)..select(postgres);
     repository = MockISqlEditorRepository();
     history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer((invocation) async {
+      final run = invocation.positionalArguments[1] as FinishedRun;
+      return Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: run.connectionId,
+          connectionName: run.connectionName,
+          text: run.text,
+          status: run.status,
+          duration: run.duration,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      );
+    });
+    textStore = MockIStatementTextStore();
+    when(() => textStore.readDraft(any(), any())).thenAnswer((_) async => const Success(null));
+    when(() => textStore.saveDraft(any(), any(), any())).thenAnswer((_) async => const Success(DraftSaveOutcome.kept));
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(postgres.id)).thenAnswer(
       (_) async => const Success(
@@ -91,7 +112,10 @@ void main() {
 
   Future<GoRouter> pumpShell(
     WidgetTester tester, {
-    StudioIdentityState identityState = const StudioIdentityLoading(),
+    // Studio named the account, so the editor's field is open; until it does the field is read only (#114).
+    StudioIdentityState identityState = const StudioIdentityLoaded(
+      StudioIdentity(username: 'ada', role: StudioUserRole(), subject: 'kc-ada'),
+    ),
   }) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
@@ -132,6 +156,7 @@ void main() {
           // The engine above declares no catalogSessions, so the editor never lists a server's databases here.
           RepositoryProvider<IContainersRepository>.value(value: MockIContainersRepository()),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IStatementTextStore>.value(value: textStore),
         ],
         child: MultiBlocProvider(
           providers: [
