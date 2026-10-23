@@ -38,8 +38,8 @@ part 'editor_run_state.dart';
 /// cancel posted after that answers that it stopped nothing; the request is dropped once the cancel answered. A
 /// confirmed cancel, or the run answering `QUERY_CANCELLED`, ends in [EditorCancelled] as confirmed, an unconfirmed one
 /// as not confirmed. A failed cancel, a rate limit included, leaves the run going and is never sent again by the bloc.
-/// Without the engine's cancel, or after a cancel that failed, Stop waiting only drops the request. A run that answers before the cancel shows its
-/// answer.
+/// Without the engine's cancel, or after a cancel that failed, Stop waiting only drops the request. A run that answers
+/// before the cancel shows its answer.
 ///
 /// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
 /// bloc never holds a clear row. After a success [SchemaChangeNotifier.statementSucceeded] tells the object browser.
