@@ -9,8 +9,8 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 
 /// `POST /db/query` with the connection named in the body, relative to `PROD_API_URL`, which ends in Studio's `/api`.
-/// It waits the connection's query timeout plus a margin for the answer ([ConnectionQueryTimeouts]). Only the error code is logged, never the statement or the
-/// database's words, and `ApiClient` never sends a POST twice.
+/// It waits the connection's query timeout plus a margin for the answer ([ConnectionQueryTimeouts]). Only the error
+/// code is logged, never the statement or the database's words, and `ApiClient` never sends a POST twice.
 ///
 /// It tells no `SchemaChangeNotifier`: a preview, a count and a key read change no schema, and the SQL editor's run,
 /// which runs what the user typed, does that itself.

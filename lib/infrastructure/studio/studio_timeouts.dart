@@ -18,9 +18,9 @@ const Duration studioStatementMargin = Duration(seconds: 15);
 
 /// The query timeout Studio sent for each managed connection, which `/db/query` and `/db/transaction` wait for.
 ///
-/// `IConnectionRepository.listManaged` replaces it with every list it reads, and the statement repositories read it, so
-/// no caller passes a timeout. A connection allowed 120 seconds waits 135; one Studio sent none for, or one the last list
-/// did not name, waits [studioStatementReceiveTimeout]. It holds no secret and is never written to disk.
+/// `IConnectionRepository.listManaged` replaces it with every list it reads, and the statement repositories read it,
+/// so no caller passes a timeout. A connection allowed 120 seconds waits 135; one Studio sent none for, or one the last
+/// list did not name, waits [studioStatementReceiveTimeout]. It holds no secret and is never written to disk.
 class ConnectionQueryTimeouts {
   Map<String, Duration> _byId = const {};
 

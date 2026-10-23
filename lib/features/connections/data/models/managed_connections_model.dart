@@ -15,6 +15,10 @@ final class ManagedConnectionsModel {
   /// The color format Studio accepts for a seed and a governed connection.
   static final _hexColor = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
+  /// The largest millisecond count read, Studio's cap on a query timeout (`use-connection-form.ts`); a larger number
+  /// would overflow the `Duration` it becomes, so it is left out like any unexpected value.
+  static const _maxMilliseconds = 2147483647;
+
   /// Throws a [FormatException] when the body has no `connections` list, or a connection lacks its id, name or type.
   static ManagedConnections read(String body) {
     final decoded = jsonDecode(body);
@@ -23,7 +27,7 @@ final class ManagedConnectionsModel {
     final cacheHint = (decoded as Map<String, dynamic>)['cacheHint'];
     return ManagedConnections(
       connections: [for (final item in connections) _connection(item)],
-      cacheHint: cacheHint is num && cacheHint.isFinite && cacheHint >= 0
+      cacheHint: cacheHint is num && cacheHint.isFinite && cacheHint >= 0 && cacheHint <= _maxMilliseconds
           ? Duration(milliseconds: cacheHint.round())
           : null,
     );
@@ -57,9 +61,11 @@ final class ManagedConnectionsModel {
   }
 
   /// Milliseconds, from the connection's own setting or governance's `query.timeoutMs`; anything but a positive finite
-  /// number is left out, so the statement routes keep Studio's default.
+  /// number up to [_maxMilliseconds] is left out, so the statement routes keep Studio's default.
   static Duration? _queryTimeout(Object? value) =>
-      value is num && value.isFinite && value > 0 ? Duration(milliseconds: value.round()) : null;
+      value is num && value.isFinite && value > 0 && value <= _maxMilliseconds
+      ? Duration(milliseconds: value.round())
+      : null;
 
   /// A governed Studio from libredb-studio#1922 on sends `read` or `write`; anything else is left out, unlogged, since
   /// the list is read again every 10 seconds under governance.
