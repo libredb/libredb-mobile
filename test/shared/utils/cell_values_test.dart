@@ -541,6 +541,93 @@ void main() {
     });
   });
 
+  group('rowJsonText, the grid\'s Copy Row as JSON', () {
+    test('two-space indent, in the row\'s own key order, numbers and NULL as they came', () {
+      expect(
+        rowJsonText({'id': 7, 'name': 'Alice', 'score': 1.5, 'whole': 2.0, 'note': null, 'ok': true}),
+        '{\n'
+        '  "id": 7,\n'
+        '  "name": "Alice",\n'
+        '  "score": 1.5,\n'
+        '  "whole": 2,\n'
+        '  "note": null,\n'
+        '  "ok": true\n'
+        '}',
+      );
+    });
+
+    test('a number string stays a string, every digit kept', () {
+      expect(rowJsonText({'big_value': '9007199254740993'}), '{\n  "big_value": "9007199254740993"\n}');
+    });
+
+    test('an integer past 2^53 keeps every digit', () {
+      expect(rowJsonText({'n': 9007199254740993}), '{\n  "n": 9007199254740993\n}');
+    });
+
+    test('a binary cell is its \\x hex string; a Buffer inside a document stays as the document spells it', () {
+      expect(
+        rowJsonText({
+          'bytes': buffer([222, 173, 190, 239]),
+          'doc': {
+            'inner': buffer([1]),
+          },
+        }),
+        '{\n'
+        '  "bytes": "\\\\xdeadbeef",\n'
+        '  "doc": {\n'
+        '    "inner": {\n'
+        '      "type": "Buffer",\n'
+        '      "data": [\n'
+        '        1\n'
+        '      ]\n'
+        '    }\n'
+        '  }\n'
+        '}',
+      );
+    });
+
+    test('a number JSON cannot carry is written as its word, as Studio\'s jsonSafe writes it', () {
+      expect(
+        rowJsonText({
+          'a': double.infinity,
+          'b': [double.negativeInfinity],
+          'c': {'d': double.nan},
+        }),
+        '{\n  "a": "Infinity",\n  "b": [\n    "-Infinity"\n  ],\n  "c": {\n    "d": "NaN"\n  }\n}',
+      );
+    });
+
+    test('nested objects and arrays, and empty ones, are indented as JSON.stringify indents them', () {
+      expect(
+        rowJsonText({
+          'json': {
+            'a': [1, 2],
+          },
+          'empty': <Object?>[],
+          'none': <String, Object?>{},
+        }),
+        '{\n  "json": {\n    "a": [\n      1,\n      2\n    ]\n  },\n  "empty": [],\n  "none": {}\n}',
+      );
+    });
+
+    test('an empty row is {}', () {
+      expect(rowJsonText(const {}), '{}');
+    });
+
+    test('query_types_postgres.json: bytea as \\xdeadbeef, big_value a string, null_value null', () {
+      final result = QueryResultJson.read(File('test/fixtures/studio/query_types_postgres.json').readAsStringSync());
+      final decoded = jsonDecode(rowJsonText(result.rows.single)) as Map<String, Object?>;
+
+      expect(decoded['bytea_value'], r'\xdeadbeef');
+      expect(decoded['big_value'], '9007199254740993');
+      expect(decoded['id'], 1);
+      expect(decoded['real_value'], 1.5);
+      expect(decoded['null_value'], isNull);
+      expect(decoded.containsKey('null_value'), isTrue);
+      expect(decoded.keys.toList(), result.fields);
+    });
+  });
+
   group('recorded and hand-written answers', () {
     test('every column of query_types_postgres.json classifies as expected', () {
       final result = QueryResultJson.read(File('test/fixtures/studio/query_types_postgres.json').readAsStringSync());

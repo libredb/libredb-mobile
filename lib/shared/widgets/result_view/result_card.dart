@@ -25,6 +25,7 @@ class ResultCard extends StatelessWidget {
     required this.maskedColumns,
     required this.vectorColumns,
     this.onTap,
+    this.onFieldLongPress,
   });
 
   final Map<String, Object?> row;
@@ -43,6 +44,23 @@ class ResultCard extends StatelessWidget {
 
   /// Opens the row detail; without it the card is not tappable.
   final VoidCallback? onTap;
+
+  /// Opens the copy menu of the field a long press landed on: the title, the id line or a preview field.
+  final ValueChanged<String>? onFieldLongPress;
+
+  /// [child], showing [field], with the long press that opens its copy menu.
+  Widget _field(String field, Widget child) {
+    final onFieldLongPress = this.onFieldLongPress;
+    return GestureDetector(
+      key: ValueKey('card-field-$field'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: onFieldLongPress == null ? null : () => onFieldLongPress(field),
+      child: child,
+    );
+  }
+
+  /// The title row, which takes a long press only when it shows a field rather than `Row n`.
+  Widget _titleRow(String? field, Widget child) => field == null ? child : _field(field, child);
 
   CellValue _cell(String field) =>
       classifyCell(row[field], vector: vectorColumns[field], isAbsent: !row.containsKey(field));
@@ -84,39 +102,45 @@ class ResultCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: hasTitle
-                                  ? CompactCell(
-                                      cell: _cell(primary),
-                                      style: _isMasked(primary) ? titleStyle?.merge(maskedStyle) : titleStyle,
-                                    )
-                                  : Text(
-                                      s.result_row_title(index + 1),
-                                      style: titleStyle,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                            ),
-                            if (hasTitle && _isMasked(primary)) _Lock(label: s.result_masked_semantics),
-                          ],
-                        ),
-                        if (id != null && id != primary && row[id] != null)
+                        _titleRow(
+                          hasTitle ? primary : null,
                           Row(
                             children: [
                               Flexible(
-                                child: Text(
-                                  s.result_card_id(_cell(id).compactText),
-                                  style: _isMasked(id)
-                                      ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                                      : theme.textTheme.bodySmall?.copyWith(color: muted, fontFamily: 'monospace'),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                child: hasTitle
+                                    ? CompactCell(
+                                        cell: _cell(primary),
+                                        style: _isMasked(primary) ? titleStyle?.merge(maskedStyle) : titleStyle,
+                                      )
+                                    : Text(
+                                        s.result_row_title(index + 1),
+                                        style: titleStyle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                               ),
-                              if (_isMasked(id)) _Lock(label: s.result_masked_semantics),
+                              if (hasTitle && _isMasked(primary)) _Lock(label: s.result_masked_semantics),
                             ],
+                          ),
+                        ),
+                        if (id != null && id != primary && row[id] != null)
+                          _field(
+                            id,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    s.result_card_id(_cell(id).compactText),
+                                    style: _isMasked(id)
+                                        ? theme.textTheme.bodySmall?.merge(maskedStyle)
+                                        : theme.textTheme.bodySmall?.copyWith(color: muted, fontFamily: 'monospace'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (_isMasked(id)) _Lock(label: s.result_masked_semantics),
+                              ],
+                            ),
                           ),
                       ],
                     ),
@@ -125,38 +149,41 @@ class ResultCard extends StatelessWidget {
                 ],
               ),
               for (final field in preview)
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              field,
-                              style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                _field(
+                  field,
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                field,
+                                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          if (_isMasked(field)) _Lock(label: s.result_masked_semantics),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      flex: 3,
-                      child: Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: CompactCell(
-                          cell: _cell(field),
-                          style: _isMasked(field)
-                              ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                              : theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                            if (_isMasked(field)) _Lock(label: s.result_masked_semantics),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        flex: 3,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: CompactCell(
+                            cell: _cell(field),
+                            style: _isMasked(field)
+                                ? theme.textTheme.bodySmall?.merge(maskedStyle)
+                                : theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               if (hidden > 0)
                 Text(
@@ -199,6 +226,7 @@ class ResultCardList extends StatelessWidget {
     required this.maskedColumns,
     required this.vectorColumns,
     this.onRowTap,
+    this.onFieldLongPress,
   });
 
   final List<String> fields;
@@ -207,12 +235,16 @@ class ResultCardList extends StatelessWidget {
   final Map<String, VectorColumn> vectorColumns;
   final ValueChanged<int>? onRowTap;
 
+  /// Opens the copy menu of a card's field, with the row's index and the field.
+  final void Function(int index, String field)? onFieldLongPress;
+
   @override
   Widget build(BuildContext context) {
     final primary = primaryField(fields, rows);
     final id = idField(fields);
     final preview = previewFields(fields, primary: primary, id: id);
     final onRowTap = this.onRowTap;
+    final onFieldLongPress = this.onFieldLongPress;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       itemCount: rows.length,
@@ -227,6 +259,7 @@ class ResultCardList extends StatelessWidget {
         maskedColumns: maskedColumns,
         vectorColumns: vectorColumns,
         onTap: onRowTap == null ? null : () => onRowTap(index),
+        onFieldLongPress: onFieldLongPress == null ? null : (field) => onFieldLongPress(index, field),
       ),
     );
   }

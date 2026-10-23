@@ -17,5 +17,6 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        SensitiveClipboard.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
     }
 }

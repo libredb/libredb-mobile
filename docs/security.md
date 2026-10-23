@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -104,6 +104,20 @@ Three of Studio's mask functions have open bugs, which the port corrects until S
 - `partial` (Token/Key) shows 8 of 9 or 10 characters in Studio (libredb/libredb-studio#1915); the phone masks up to 8 characters fully and from 9 on shows `min(4, floor(n / 8))` characters at each end, keeping the length.
 - `email` prints `undefined` for an empty local part or domain in Studio (#1915); the phone gives `***@***.***`.
 - `date` (Birthdate) keeps the last two characters of any value in Studio (#1917), so a timestamp shows `****-**-0Z`; the phone keeps the day only of a bare `YYYY-MM-DD` date and masks anything else as `****-**-**`.
+
+## Clipboard
+
+A result value or a whole row reaches the clipboard only through `SensitiveClipboard` (`lib/shared/utils/sensitive_clipboard.dart`), a method channel that `MainActivity` and `AppDelegate` answer.
+It copies what the screen shows, so a masked field is copied as its mask.
+A selected part of a value in the row sheet is copied the same way, from the toolbar's Copy or with Ctrl+C (`SensitiveSelectableText`), and that toolbar has no Share, Look Up or Search Web, which would hand the value to another app or the system.
+A screen reader's Copy on a value copies the whole value through `SensitiveClipboard` too: the editable text's own Copy action writes the plain clipboard directly, so its semantics are replaced by a node that reads the value and copies it, and a screen reader user cannot copy a part of a value.
+
+- On Android 13 (API 33) and later the clip carries `ClipDescription.EXTRA_IS_SENSITIVE`, so the system's clipboard preview hides the value.
+  Android below 13 shows no preview, and the clip is plain there.
+- On iOS the item expires after 2 minutes and is local only (`UIPasteboard` `setItems(_:options:)` with `.expirationDate` and `.localOnly`), so Universal Clipboard does not carry it to the user's other devices.
+- A failed copy is shown to the user with its error code and logged with its error type, never with the value.
+
+The source viewer, the copy of an object's name and the copy of a failed statement keep the plain clipboard: they hold no row value.
 
 ## Inactivity sign-out
 
