@@ -165,7 +165,7 @@ Every request follows these rules:
 | `POST /api/db/keys/scan` | `IObjectBrowserRepository.scanKeys` | `KeyScanPage` |
 | `POST /api/db/query` | `IStatementRepository.run`, which `ISqlEditorRepository.run` calls | `QueryResult` |
 | `POST /api/db/multi-query` | `ISqlEditorRepository.runScript` | `ScriptResult` |
-| `POST /api/db/cancel` | `ISqlEditorRepository.cancel` | whether the engine stopped the run |
+| `POST /api/db/cancel` | `IStatementRepository.cancel`, which `ISqlEditorRepository.cancel` calls | whether the engine stopped the run |
 | `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction; `TransactionEnd` for `commit` and `rollback` |
 
 ### Rate limit
@@ -226,6 +226,12 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   Decided in #113 for [#88](https://github.com/libredb/libredb-mobile/issues/88) item 3: when provider-meta cannot be read after a successful statement, the connection's browser answers are dropped and `changes` is told all the same, and the failure is logged by its code, because a needless reload costs one request while a stale tree shows a table that no longer exists.
 - `cancel` stops a run by the id the app gave it, from `newQueryId`, a UUID: Studio checks no owner on a cancel, so the id must be unguessable.
   The cancelled run fails with `studio.query_cancelled`.
+- `ApiClient.post` takes a `CancelSignal`, which drops the request through Dio's cancel token; the dropped request fails with `RequestCancelledException`, which `studioError` reports as `RequestCancelledError`, no error any screen shows, and which is neither retried nor counted against the circuit breaker.
+- The editor's Cancel ([#116](https://github.com/libredb/libredb-mobile/issues/116)): with the engine's `supportsQueryCancel` it posts `cancel` with the run's id while the run's request is still open, and drops the request once Studio answered.
+  The order is measured: Studio's abort bridge stops the run as soon as its request is dropped, so a cancel posted after the drop, the order of Studio's web Stop, answers `{"cancelled": false}` for a run that did stop.
+  `{"cancelled": true}` or a 499 `QUERY_CANCELLED` says Cancelled, `{"cancelled": false}` says Studio could not confirm the cancel; a failed cancel, a 429 with its countdown included, leaves the run going, and no cancel is sent again by itself.
+  Without the engine's cancel, Stop waiting drops the request only and says the statement may still run.
+- The object browser's rows page and Redis key value page drop their requests in flight when they close, and post no `cancel`, so leaving spends no request slot; Studio's abort bridge then stops the run where the engine supports it.
 - A transaction's statements cannot be cancelled.
   Without governance Studio keeps one transaction per connection for every user of it, owned by the account that began it, and refuses others with `studio.transaction_not_owned` for up to five idle minutes.
   On a server-level connection it keeps one per database, so `commit`, `rollback` and `transactionStatus` name the `catalog` the transaction began in; without it Studio finds no open transaction.
@@ -323,7 +329,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
 - Studio cancels a run when its request is aborted (`src/lib/api/abort-cancel.ts`, used by `src/lib/api/editor-query.ts:135` and `src/app/api/db/multi-query/route.ts:297`).
   So a client receive timeout shorter than Studio's query timeout kills the statement on the server ([#15](https://github.com/libredb/libredb-mobile/issues/15); [Statement timeouts](#statement-timeouts) says how the app avoids it), and so may the app going to the background during a run (M5-09, in [#33](https://github.com/libredb/libredb-mobile/issues/33)).
-  Whether a dropped mobile connection behind a proxy aborts the request is not verified until M5-03 (in [#33](https://github.com/libredb/libredb-mobile/issues/33)) does; the editor cancels explicitly.
+  Measured in [#116](https://github.com/libredb/libredb-mobile/issues/116) on `tool/studio-dev` (Studio `c9989a6b5`, through its Caddy TLS proxy): a `SELECT pg_sleep(30)` on `seed:dev-postgres` whose request the client dropped after one second was gone from `pg_stat_activity` within 0.1 seconds, so a dropped request is passed through the proxy and stops the run.
 - Granting a connection needs an API in Platform that does not exist yet (milestone M9).
 - Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
 - Studio offers no maintenance mode and no minimum app version, so the app has no maintenance or forced update gate; milestone M7 brings the gate back when Studio offers one.

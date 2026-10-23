@@ -6,6 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_id.dart';
@@ -28,6 +29,9 @@ part 'object_rows_state.dart';
 /// bloc never holds a clear row. A run is a statement: it runs only when the page asks, on open, a pull or a retry,
 /// never again by itself after a failure or a schema change, and a request while one runs is dropped. Neither the
 /// statement nor a database error text is logged.
+///
+/// Closing the bloc, which leaving the page does, drops the requests still in flight, the preview and a Load more;
+/// Studio then cancels the run where the engine supports it, and no `/db/cancel` spends a request slot.
 class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
   ObjectRowsBloc({
     required this._statements,
@@ -59,6 +63,9 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
 
   /// The runs answered so far, which tells one result on screen from the next.
   int _runs = 0;
+
+  /// Drop the requests in flight.
+  final _inFlight = <CancelSignal>{};
 
   Future<void> _onRequested(ObjectRowsRequested event, Emitter<ObjectRowsState> emit) async {
     final onScreen = switch (state) {
@@ -99,12 +106,15 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
         preview = statement;
     }
 
-    final result = await _statements.run(
-      connectionId,
-      preview.statement,
-      queryId: _newRunId(),
-      page: const QueryPage(limit: PreviewStatementGenerator.pageSize),
-      catalog: preview.catalog,
+    final result = await _dropOnClose(
+      (signal) => _statements.run(
+        connectionId,
+        preview.statement,
+        queryId: _newRunId(),
+        page: const QueryPage(limit: PreviewStatementGenerator.pageSize),
+        catalog: preview.catalog,
+        cancelSignal: signal,
+      ),
     );
     if (emit.isDone) return;
     switch (result) {
@@ -129,15 +139,37 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
   /// Runs [preview], the statement of the rows on screen, again for [page], with a fresh run id and in its catalog, for
   /// the result view's Load more; the state does not change, and a failure is answered, never run again by itself.
   Future<Result<QueryResult>> loadPage(PreviewStatement preview, QueryPage page) async {
-    final answer = await _statements.run(
-      connectionId,
-      preview.statement,
-      queryId: _newRunId(),
-      page: page,
-      catalog: preview.catalog,
+    final answer = await _dropOnClose(
+      (signal) => _statements.run(
+        connectionId,
+        preview.statement,
+        queryId: _newRunId(),
+        page: page,
+        catalog: preview.catalog,
+        cancelSignal: signal,
+      ),
     );
     if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
     return answer;
+  }
+
+  /// Sends [run] with a signal that [close] cancels while the answer is awaited.
+  Future<Result<QueryResult>> _dropOnClose(Future<Result<QueryResult>> Function(CancelSignal signal) run) async {
+    final signal = CancelSignal();
+    _inFlight.add(signal);
+    try {
+      return await run(signal);
+    } finally {
+      _inFlight.remove(signal);
+    }
+  }
+
+  @override
+  Future<void> close() {
+    for (final signal in _inFlight) {
+      signal.cancel();
+    }
+    return super.close();
   }
 
   void _fail(

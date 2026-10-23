@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -8,6 +9,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_value_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/redis_key_read_generator.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -63,6 +65,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       database: any(named: 'database'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) async => answer());
 
@@ -73,8 +76,35 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       database: any(named: 'database'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).callCount;
+
+  // Leaving the page closes its bloc, which drops the read it waits for without posting /db/cancel (#116).
+  test('closing drops the read in flight', () async {
+    final signals = <CancelSignal?>[];
+    when(
+      () => statements.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        database: any(named: 'database'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).thenAnswer((invocation) {
+      signals.add(invocation.namedArguments[#cancelSignal] as CancelSignal?);
+      return Completer<Result<QueryResult>>().future;
+    });
+    final bloc = build()..add(const KeyValueRequested(role: StudioUserRole()));
+    await pumpEventQueue();
+    expect(signals.single!.isCancelled, isFalse);
+
+    await bloc.close();
+
+    expect(signals.single!.isCancelled, isTrue);
+    verifyNever(() => statements.cancel(any(), any()));
+  });
 
   group('the typed read of each recorded type in database 1', () {
     for (final (fixture, key, type, command, rows) in [
@@ -106,6 +136,7 @@ void main() {
               queryId: captureAny(named: 'queryId'),
               page: QueryPage.first,
               database: 1,
+              cancelSignal: any(named: 'cancelSignal'),
             ),
           )..called(1);
           expect(call.captured.single, startsWith('run-'));
@@ -126,6 +157,7 @@ void main() {
         'GET cache:greeting',
         queryId: any(named: 'queryId'),
         page: QueryPage.first,
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).called(1),
   );
@@ -135,7 +167,14 @@ void main() {
     build: () => build(container: const ['99999999999999999999999']),
     act: (bloc) => bloc.add(const KeyValueRequested(role: null)),
     expect: () => [isA<KeyValueFailure>().having((s) => s.error, 'error', isA<ValidationError>())],
-    verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+    verify: (_) => verifyNever(
+      () => statements.run(
+        any(),
+        any(),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ),
   );
 
   blocTest<KeyValueBloc, KeyValueState>(
@@ -191,6 +230,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           database: any(named: 'database'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ),
     );
@@ -372,7 +412,14 @@ void main() {
       build: build,
       act: (bloc) => bloc.add(const KeyValueRequested(role: null)),
       expect: () => [const KeyValueFailure(error: ServerError('down'))],
-      verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+      verify: (_) => verifyNever(
+        () => statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ),
     );
   });
 
@@ -387,7 +434,14 @@ void main() {
       build: () => build(connectionId: connectionId),
       act: (bloc) => bloc.add(const KeyValueRequested(role: null)),
       expect: () => [const KeyValueUnavailable()],
-      verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+      verify: (_) => verifyNever(
+        () => statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ),
     );
   }
 }

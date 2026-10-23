@@ -319,6 +319,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer(
         (_) async => const Success(QueryResult(fields: ['id'], rows: [], rowCount: 0, executionTime: Duration.zero)),
@@ -348,6 +349,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           catalog: 'app',
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer(
         (_) async => const Success(
@@ -362,7 +364,14 @@ void main() {
         ),
       );
       await harness.pump(tester, location: ordersLocation);
-      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+      verifyNever(
+        () => harness.statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      );
 
       await tester.tap(countRows());
       await tester.pumpAndSettle();
@@ -379,6 +388,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer((_) async => const Failure(ServerError('down', code: 'studio.database_unreachable')));
       await harness.pump(tester, location: ordersLocation);

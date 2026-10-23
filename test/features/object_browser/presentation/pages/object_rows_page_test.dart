@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -15,6 +16,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
@@ -72,6 +74,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) => answer());
 
@@ -84,6 +87,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).callCount;
 
@@ -133,6 +137,7 @@ void main() {
           queryId: any(named: 'queryId', that: isNotEmpty),
           page: const QueryPage(limit: 50),
           catalog: null,
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1);
     });
@@ -329,6 +334,34 @@ void main() {
     }, variant: platforms);
   });
 
+  // The preview's request is dropped when the page goes, and Studio cancels the run itself; no /db/cancel is posted,
+  // so leaving spends no request slot (#116).
+  testWidgets('leaving the page during a preview drops its request and posts no cancel', (tester) async {
+    final signals = <CancelSignal?>[];
+    when(
+      () => harness.statements.run(
+        _postgres.id,
+        _preview,
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).thenAnswer((invocation) {
+      signals.add(invocation.namedArguments[#cancelSignal] as CancelSignal?);
+      return Completer<Result<QueryResult>>().future;
+    });
+    await harness.pump(tester, location: customersLocation, settle: false);
+    expect(signals.single!.isCancelled, isFalse);
+
+    harness.router.go(ApplicationRoutesConstants.connectionList);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ObjectRowsPage), findsNothing);
+    expect(signals.single!.isCancelled, isTrue);
+    verifyNever(() => harness.statements.cancel(any(), any()));
+  });
+
   testWidgets('a connection switch returns Browse to the new connection\'s first entry', (tester) async {
     harness.active.select(_server);
     answerRun(
@@ -363,6 +396,7 @@ void main() {
         queryId: any(named: 'queryId'),
         page: const QueryPage(limit: 50),
         catalog: 'app',
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).called(1);
     expect(find.byType(ResultView), findsOneWidget);
@@ -422,7 +456,14 @@ void main() {
 
     expect(find.text('Preview is not available for this engine yet'), findsOneWidget);
     expect(countButton(), findsNothing);
-    verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+    verifyNever(
+      () => harness.statements.run(
+        any(),
+        any(),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    );
   });
 
   testWidgets('an object path whose names hold /, a space and İ survives the round trip through browseRows', (
@@ -462,6 +503,7 @@ void main() {
         queryId: any(named: 'queryId'),
         page: page,
         catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) async => Success(_recorded(fixture)));
 
@@ -487,6 +529,7 @@ void main() {
           queryId: captureAny(named: 'queryId'),
           page: captureAny(named: 'page'),
           catalog: null,
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).captured;
       expect(captured, hasLength(4));

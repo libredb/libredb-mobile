@@ -88,6 +88,7 @@ class BrowseHarness {
     String location = ApplicationRoutesConstants.browse,
     bool offline = false,
     Locale? locale,
+    bool settle = true,
   }) async {
     final identity = MockStudioIdentityCubit();
     whenListen(identity, const Stream<StudioIdentityState>.empty(), initialState: const StudioIdentityLoading());
@@ -152,7 +153,13 @@ class BrowseHarness {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // A page still loading shows a spinner that never settles.
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+      await tester.pump();
+    }
   }
 
   /// Takes the device offline, or back online.
