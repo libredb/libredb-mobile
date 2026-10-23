@@ -32,6 +32,7 @@ import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_g
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
@@ -278,6 +279,10 @@ class AppScope extends StatelessWidget {
           // AppSessionListeners tells it who signed in and closes it at the session's end.
           BlocProvider<ActiveConnectionCubit>(
             create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
+          ),
+          // Above the router, so every result view shows the same mode; a device setting, which no session end clears.
+          BlocProvider<ResultViewModeCubit>(
+            create: (_) => ResultViewModeCubit(store: dependencies.createResultViewModeStore())..restore(),
           ),
           // Follows the active connection, so the Browse tab opens a session-default container on its first entry only.
           RepositoryProvider<SessionDefaultEntry>(

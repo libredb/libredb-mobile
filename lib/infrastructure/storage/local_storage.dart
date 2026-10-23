@@ -44,7 +44,10 @@ enum StorageKeys {
   connectionFavorites('connection_favorites'),
 
   /// The connection each signed-in user had open last, by a hash of the identity provider's subject.
-  activeConnection('active_connection');
+  activeConnection('active_connection'),
+
+  /// Whether results show cards or a table; see `ResultViewModePreferences`.
+  resultViewMode('result_view_mode');
 
   const StorageKeys(this.key);
 
@@ -61,6 +64,8 @@ enum StorageKeys {
     // reads them; the user's 'Remove my data' clears them.
     StorageKeys.connectionFavorites => StorageScope.device,
     StorageKeys.activeConnection => StorageScope.device,
+    // A view mode holds no user data, so every account on the device shares it.
+    StorageKeys.resultViewMode => StorageScope.device,
   };
 }
 

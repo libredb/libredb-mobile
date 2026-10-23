@@ -40,8 +40,10 @@ import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart'
 import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferences.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 
 /// What the app is built from. The app signs in only through the OpenID Connect provider; `main_local.dart` swaps the
 /// provider for a debug-only double (`LocalSignInDependencies`), which `main_prod.dart` never imports.
@@ -134,6 +136,9 @@ class AppDependencies {
 
   /// The connection each signed-in user had open last on this device.
   IActiveConnectionStore createActiveConnectionStore() => ActiveConnectionPreferences();
+
+  /// Whether results show cards or a table on this device.
+  IResultViewModeStore createResultViewModeStore() => ResultViewModePreferences();
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);

@@ -38,6 +38,9 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_in
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
@@ -919,6 +922,15 @@ void main() {
 
       expect(scope.read<IStatementRepository>(), isA<IStatementRepository>());
       expect(scope.read<ISqlEditorRepository>(), isA<ISqlEditorRepository>());
+    });
+
+    testWidgets('provides the result view mode, restored from the device', (tester) async {
+      await AppLocalStorage().save(StorageKeys.resultViewMode.key, 'table');
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      final cubit = scope.read<ResultViewModeCubit>();
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+      expect(cubit.state, ResultViewMode.table);
     });
 
     testWidgets('features get the one cached object browser and provider-meta that the app clears', (tester) async {

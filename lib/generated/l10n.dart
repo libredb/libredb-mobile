@@ -2012,6 +2012,60 @@ class S {
       args: [],
     );
   }
+
+  /// `Cards`
+  String get result_view_cards {
+    return Intl.message(
+      'Cards',
+      name: 'result_view_cards',
+      desc: 'The result view mode that shows a card per row.',
+      args: [],
+    );
+  }
+
+  /// `Table`
+  String get result_view_table {
+    return Intl.message(
+      'Table',
+      name: 'result_view_table',
+      desc: 'The result view mode that shows the rows as a table.',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{Load 1 more} other{Load {rows} more}}`
+  String result_load_more(int count, String rows) {
+    return Intl.plural(
+      count,
+      one: 'Load 1 more',
+      other: 'Load $rows more',
+      name: 'result_load_more',
+      desc: 'Fetches the next page of a result, of the page size already on screen.',
+      args: [count, rows],
+    );
+  }
+
+  /// `{count, plural, =1{Loading 1 more…} other{Loading {rows} more…}}`
+  String result_loading_more(int count, String rows) {
+    return Intl.plural(
+      count,
+      one: 'Loading 1 more…',
+      other: 'Loading $rows more…',
+      name: 'result_loading_more',
+      desc: 'The next page of a result is in flight.',
+      args: [count, rows],
+    );
+  }
+
+  /// `Without an ORDER BY the engine may return rows that repeat or are skipped between pages.`
+  String get result_order_notice {
+    return Intl.message(
+      'Without an ORDER BY the engine may return rows that repeat or are skipped between pages.',
+      name: 'result_order_notice',
+      desc: 'Studio\'s notice for a paged result whose statement has no outer ORDER BY.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

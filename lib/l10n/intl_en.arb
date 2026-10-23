@@ -721,5 +721,15 @@
   "browse_count_failed": "Could not count the rows ({code})",
   "@browse_count_failed": {"description": "In a heading, when the row count was refused or could not be read, with its error code.", "placeholders": {"code": {"type": "String"}}},
   "browse_rows_database_says": "The database says",
-  "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."}
+  "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."},
+  "result_view_cards": "Cards",
+  "@result_view_cards": {"description": "The result view mode that shows a card per row."},
+  "result_view_table": "Table",
+  "@result_view_table": {"description": "The result view mode that shows the rows as a table."},
+  "result_load_more": "{count, plural, =1{Load 1 more} other{Load {rows} more}}",
+  "@result_load_more": {"description": "Fetches the next page of a result, of the page size already on screen.", "placeholders": {"count": {"type": "int"}, "rows": {"type": "String", "example": "500"}}},
+  "result_loading_more": "{count, plural, =1{Loading 1 more…} other{Loading {rows} more…}}",
+  "@result_loading_more": {"description": "The next page of a result is in flight.", "placeholders": {"count": {"type": "int"}, "rows": {"type": "String", "example": "500"}}},
+  "result_order_notice": "Without an ORDER BY the engine may return rows that repeat or are skipped between pages.",
+  "@result_order_notice": {"description": "Studio's notice for a paged result whose statement has no outer ORDER BY."}
 }

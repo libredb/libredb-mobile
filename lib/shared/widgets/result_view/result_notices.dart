@@ -78,17 +78,32 @@ class ResultRolledBackBanner extends StatelessWidget {
   }
 }
 
-/// The strip above the cards (Studio's `StatsBar`): the rows and execution time, the `limited` chip with Studio's
-/// notice when Studio bounded the result, a chip that opens and shuts the warnings, open at first as Studio's is, and
-/// the rollback banner. Each loss notice stays reachable: a shut warning list keeps its chip, and a strip taller than
-/// [maxHeight], as at a large text size, scrolls inside that height, so the cards keep their room.
+/// The strip above the rows (Studio's `StatsBar`): the rows and execution time, the `limited` chip with Studio's
+/// notice when Studio bounded the result, a chip that opens and shuts the warnings, open at first as Studio's is, a
+/// [trailing] widget after the chips, Studio's notice that rows may repeat or be skipped between pages when
+/// [orderNotice] asks for it, and the rollback banner. Each loss notice stays reachable: a shut warning list keeps its
+/// chip, and a strip taller than [maxHeight], as at a large text size, scrolls inside that height, so the rows keep
+/// their room.
 class ResultStatsStrip extends StatefulWidget {
-  const ResultStatsStrip({super.key, required this.result, this.maxHeight = double.infinity});
+  const ResultStatsStrip({
+    super.key,
+    required this.result,
+    this.maxHeight = double.infinity,
+    this.orderNotice = false,
+    this.trailing,
+  });
 
   final QueryResult result;
 
   /// The most height the strip takes.
   final double maxHeight;
+
+  /// Whether to say, once, that without an ORDER BY the engine may return rows that repeat or are skipped between
+  /// pages (`StatsBar.tsx:60`).
+  final bool orderNotice;
+
+  /// Shown after the chips, such as the card and table toggle.
+  final Widget? trailing;
 
   @override
   State<ResultStatsStrip> createState() => _ResultStatsStripState();
@@ -178,8 +193,24 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
                     ),
                   ),
                 ),
+              ?widget.trailing,
             ],
           ),
+          if (widget.orderNotice)
+            Row(
+              key: const ValueKey('result-order-notice'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: AppSpacing.xs,
+              children: [
+                Icon(Icons.info_outline, size: MediaQuery.textScalerOf(context).scale(14), color: scheme.tertiary),
+                Expanded(
+                  child: Text(
+                    s.result_order_notice,
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
+            ),
           if (warnings.isNotEmpty && _warningsOpen) ResultWarningList(warnings: warnings),
           if (result.openTransactionRolledBack) const ResultRolledBackBanner(),
         ],
