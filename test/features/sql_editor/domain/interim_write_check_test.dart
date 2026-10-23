@@ -39,7 +39,10 @@ void main() {
       'SELECT 1;  \n\t ',
       '-- a note\nSELECT 1',
       '/* a note */ SELECT 1',
-      '/* one */ /* two */\n-- three\r  SELECT 1',
+      '/* one */ /* two */\n-- three\r\n  SELECT 1',
+      '/***/SELECT 1',
+      '/*+ hint */ SELECT 1',
+      '-- c\tx\nSELECT 1',
       '/* SELECT * not closed here * / still */SELECT 1',
       'SELECT updated_at, created_by, inserted, sets, intot FROM t',
       'SELECT go FROM t',
@@ -50,6 +53,8 @@ void main() {
       'SELECT pg_terminate_backend(42)',
       "SELECT nextval('s')",
       'SELECT setval(1)',
+      "SELECT dblink_exec('c', 'DR' || 'OP TABLE t')",
+      "SELECT lo_export(42, '/tmp/f')",
     ]) {
       test(text.replaceAll('\n', r'\n').replaceAll('\r', r'\r'), () => expect(_sql(text), const RunsWithoutAsking()));
     }
@@ -92,6 +97,13 @@ void main() {
       'SELECT pg_sleep(1) EXEC sp_who': ('EXEC', 1),
       'SELECT 1 SHUTDOWN': ('SHUTDOWN', 1),
       'SELECT 1 DBCC CHECKDB': ('DBCC', 1),
+      // A digit does not hide a deny word: T-SQL reads `1DELETE` as the number 1 and a DELETE.
+      'SELECT 1DELETE FROM orders': ('DELETE', 1),
+      'SELECT 1.0DELETE FROM orders': ('DELETE', 1),
+      'SELECT 0x1DELETE FROM orders': ('DELETE', 1),
+      'SELECT 1KILL 52': ('KILL', 1),
+      'SELECT 1e1drop TABLE t': ('DROP', 1),
+      'SELECT x1DELETE FROM t': ('DELETE', 1),
     };
     for (final MapEntry(key: text, value: (word, line)) in cases.entries) {
       test(text.replaceAll('\n', r'\n').replaceAll('\r', r'\r'), () {
@@ -107,6 +119,8 @@ void main() {
         expect(_sql('SELECT 1 ${word.toLowerCase()}'), _asks(_mayWrite, word: word, line: 1));
         expect(_sql('SELECT 1 (${word[0]}${word.substring(1).toLowerCase()})'), _asks(_mayWrite, word: word, line: 1));
         expect(_sql('SELECT 1 x${word}x, ${word}_1, _$word, ${word}9'), const RunsWithoutAsking());
+        expect(_sql('SELECT 1 1$word'), _asks(_mayWrite, word: word, line: 1));
+        expect(_sql('SELECT 1 0x9$word'), _asks(_mayWrite, word: word, line: 1));
       });
     }
 
@@ -163,17 +177,49 @@ void main() {
       expect(_sql('"SELECT" 1'), _asks(_mayWrite));
     });
 
-    test('a `--` comment ends at a line feed or a carriage return', () {
-      expect(_sql('-- c\rSELECT 1'), const RunsWithoutAsking());
+    test('a leading `--` comment ends at a line feed, a CRLF pair included', () {
       expect(_sql('-- c\nSELECT 1'), const RunsWithoutAsking());
       expect(_sql('-- c\r\nSELECT 1'), const RunsWithoutAsking());
-      expect(_sql('--c\nSELECT 1'), const RunsWithoutAsking());
+      expect(_sql('--\nSELECT 1'), const RunsWithoutAsking());
     });
 
-    test('a `/* */` comment is read flat and ends at the first `*/`', () {
-      expect(_sql('/* a /* b */ SELECT 1'), const RunsWithoutAsking());
-      expect(_sql('/* a /* b */ c */ SELECT 1'), _asks(_mayWrite, word: 'C', line: 1));
+    // A leading comment counts only when every engine reads it the same way; otherwise the text has no first keyword.
+    group('a leading comment the engines read differently leaves no first keyword', () {
+      final cases = [
+        // PostgreSQL and SQL Server end `--` at a bare carriage return, SQLite, MySQL, MariaDB and DuckDB do not, so
+        // either reading may hide the statement's real first keyword (measured on sqlite3 by review#111).
+        '-- c\rSELECT 1',
+        '-- x\rSELECT 1\nPRAGMA user_version = 5',
+        "-- x\rSELECT 1\nATTACH DATABASE 'f' AS f",
+        '-- a\r\n-- b\rSELECT 1\nPRAGMA x',
+        '/* one */ /* two */\n-- three\r  SELECT 1',
+        // PostgreSQL and SQL Server nest block comments, the others end at the first `*/` (both texts ran on
+        // PostgreSQL 17.6 without asking before this rule).
+        "/* /* */ SELECT 1 */ COMMENT ON TABLE orders IS 'x'",
+        '/* /* */ SELECT 1 */ REASSIGN OWNED BY alice TO bob',
+        "/* /* */ SELECT 1 */ xp_cmdshell 'whoami'",
+        '/* a /* b */ SELECT 1',
+        '/* a /* b */ c */ SELECT 1',
+        '/*/ x /*/ SELECT 1',
+        '-- c\n/* /* */ SELECT 1 */ PRAGMA x',
+        // MySQL and MariaDB run the body of `/*!` and `/*M!`.
+        '/*!RENAME*/ TABLE a TO b',
+        '/*!50000 RENAME*/ TABLE a TO b',
+        '/*M!RENAME*/ TABLE a TO b',
+        '/*m!100000 RENAME*/ TABLE a TO b',
+        '/* c */ /*!RENAME*/ TABLE a TO b',
+        // MySQL reads `--` as a comment only when white space follows it.
+        '--c\nSELECT 1',
+        '--1\nSELECT 1',
+      ];
+      for (final text in cases) {
+        test(text.replaceAll('\n', r'\n').replaceAll('\r', r'\r'), () => expect(_sql(text), _asks(_mayWrite)));
+      }
+    });
+
+    test('a block comment is read flat to the first `*/` when it holds no other `/*`', () {
       expect(_sql('/**/SELECT 1'), const RunsWithoutAsking());
+      expect(_sql('/* a * / b */ SELECT 1'), const RunsWithoutAsking());
     });
 
     test('a keyword in a leading comment is no first keyword', () {

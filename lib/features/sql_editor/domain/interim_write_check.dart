@@ -134,6 +134,18 @@ class InterimWriteCheck {
   /// A word: a run of ASCII letters, digits and `_`; any other character, a non-ASCII letter included, ends it.
   static final _word = RegExp('[A-Za-z0-9_]+');
 
+  /// A deny word in any ASCII case whose left neighbour is not an ASCII letter or `_` and whose right neighbour is not
+  /// an ASCII letter, digit or `_`. A digit on the left does not hide it, since T-SQL reads `1DELETE` as the number 1
+  /// and a DELETE. Each letter is spelled as its two ASCII cases, so no other script's case folding can match.
+  static final _denyWord = RegExp(
+    '(?<![A-Za-z_])(?:${[
+      for (final word in denyWords) [for (final c in word.split('')) '[$c${c.toLowerCase()}]'].join(),
+    ].join('|')})(?![A-Za-z0-9_])',
+  );
+
+  /// The white space MySQL needs after `--` to read a comment.
+  static const _dashCommentSpace = {' ', '\t', '\n', '\r'};
+
   /// Whether [text] runs without asking on an engine that speaks SQL ([isSql], `ProviderMeta.isSql`) or not.
   WriteCheckAnswer check(String text, {required bool isSql}) {
     if (!isSql) return const AsksBeforeRunning(reasons: {WriteCheckReason.notSql});
@@ -155,15 +167,18 @@ class InterimWriteCheck {
   }
 
   static FlaggedWord? _firstDenyWord(String text) {
-    for (final match in _word.allMatches(text)) {
-      final word = match[0]!.toUpperCase();
-      if (denyWords.contains(word)) return FlaggedWord(word: word, line: _lineOf(text, match.start));
-    }
-    return null;
+    final match = _denyWord.firstMatch(text);
+    if (match == null) return null;
+    return FlaggedWord(word: match[0]!.toUpperCase(), line: _lineOf(text, match.start));
   }
 
-  /// The first word after leading white space and comments: a `--` comment ends at a line feed or a carriage return,
-  /// a `/* */` comment at the first `*/`. Null when a leading comment never closes or no word follows.
+  /// The first word after leading white space and comments, or null when no word follows them.
+  ///
+  /// A leading comment counts only when every engine reads it the same way, so the text has no first keyword when a
+  /// leading comment never closes, when a `--` comment holds a bare carriage return (PostgreSQL and SQL Server end it
+  /// there, SQLite, MySQL, MariaDB and DuckDB at the line feed) or is not followed by white space (MySQL reads no
+  /// comment then), when a `/* */` comment holds another `/*` (PostgreSQL and SQL Server nest them, the others end it
+  /// at the first `*/`), and when it starts with `/*!` or `/*M!` (MySQL and MariaDB run its body).
   static FlaggedWord? _firstKeyword(String text) {
     var i = 0;
     while (i < text.length) {
@@ -171,12 +186,17 @@ class InterimWriteCheck {
       if (char.trim().isEmpty) {
         i++;
       } else if (text.startsWith('--', i)) {
-        final end = text.indexOf(RegExp('[\r\n]'), i + 2);
+        if (i + 2 >= text.length || !_dashCommentSpace.contains(text[i + 2])) return null;
+        final end = text.indexOf('\n', i + 2);
         if (end < 0) return null;
+        final body = text.substring(i + 2, end);
+        if ((body.endsWith('\r') ? body.substring(0, body.length - 1) : body).contains('\r')) return null;
         i = end + 1;
       } else if (text.startsWith('/*', i)) {
+        if (text.startsWith('/*!', i) || text.startsWith('/*M!', i) || text.startsWith('/*m!', i)) return null;
         final end = text.indexOf('*/', i + 2);
         if (end < 0) return null;
+        if (text.substring(i + 2, end + 2).contains('/*')) return null;
         i = end + 2;
       } else {
         final match = _word.matchAsPrefix(text, i);

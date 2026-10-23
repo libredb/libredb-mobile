@@ -158,16 +158,18 @@ It replaces Studio's own reading, about 4,500 lines of grammar code in `src/lib/
 
 A SQL text runs without asking only when all three of these hold:
 
-- The raw text holds no deny word, comments and quotes included, matched as a whole word in any ASCII case, where a word is a run of ASCII letters, digits and `_`; so `deleted` is not `DELETE`, while `x$delete` and `çdelete` hold it.
+- The raw text holds no deny word, comments and quotes included, in any ASCII case, where a deny word counts when its left neighbour is not an ASCII letter or `_` and its right neighbour is not an ASCII letter, digit or `_`; so `deleted` is not `DELETE`, while `x$delete`, `çdelete` and `1DELETE` hold it, since T-SQL reads `SELECT 1DELETE FROM orders` as a SELECT and a DELETE.
 - No `;` is followed by anything but white space, and no line holds only `GO` or only `/` (trimmed, in any case).
 - Its first keyword, read after leading comments only, is `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, `VALUES`, `TABLE` or `WITH`.
-  A `--` comment ends at a line feed or a carriage return, a `/* */` comment at the first `*/`, and a text whose leading comment never closes has no first keyword and asks.
+  A leading comment counts only when every engine reads it the same way; otherwise the text has no first keyword and asks.
+  So a text asks when a leading comment never closes, when a leading `--` comment holds a bare carriage return or is not followed by white space, when a leading `/* */` comment holds another `/*`, and when a leading comment starts with `/*!` or `/*M!`.
 
 The deny words are `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, `GRANT`, `REVOKE`, `DENY`, `CALL`, `EXEC`, `EXECUTE`, `DO`, `COPY`, `LOCK`, `SET`, `RESET`, `COMMIT`, `ROLLBACK`, `BEGIN`, `VACUUM`, `REINDEX`, `CLUSTER`, `REFRESH`, `INTO`, `ANALYZE` and `ANALYSE`, and the T-SQL statements that need no separator and change data, rights, sessions or the server: `KILL`, `SHUTDOWN`, `BACKUP`, `RESTORE`, `DBCC`, `RECONFIGURE`, `DISABLE`, `ENABLE`, `SEND`, `RECEIVE`, `WRITETEXT`, `UPDATETEXT` and `SETUSER`.
 `ANALYZE` and `ANALYSE` cover `EXPLAIN ANALYZE` in every spelling, `EXPLAIN (FORMAT JSON, ANALYZE)` included, so a data-modifying CTE and `EXPLAIN ANALYZE` of a write, which Studio's own check still misses (libredb/libredb-studio#1862 and #1863), ask.
 `REPLACE` is not a deny word: it is a string function in every dialect, and its statement forms are caught by `INTO`, `CREATE`, the separator rule and the first-keyword rule.
 
-Comments are not removed before the scan, because the engines disagree about them, as Studio's own readers record from measurements (`src/lib/sql/update-target.ts:187-226`, `src/lib/sql/optimizer-hints.ts:1-44`): PostgreSQL and SQL Server end a `--` comment at a bare carriage return, MySQL and MariaDB run the body of `/*!` and `/*M!`, and MySQL needs a space after `--`.
+Comments are not removed before the scan, because the engines disagree about them, as Studio's own readers record from measurements (`src/lib/sql/update-target.ts:187-226`, `src/lib/sql/optimizer-hints.ts:1-44`): PostgreSQL and SQL Server end a `--` comment at a bare carriage return while SQLite, MySQL, MariaDB and DuckDB end it at the line feed, PostgreSQL and SQL Server nest `/* */` comments while the others end one at the first `*/`, MySQL and MariaDB run the body of `/*!` and `/*M!`, and MySQL needs white space after `--`.
+Each of these could hide the real first keyword behind a leading comment: on PostgreSQL 17.6 `/* /* */ SELECT 1 */ COMMENT ON TABLE orders IS 'x'` ran, and on SQLite `-- x`, a bare carriage return, `SELECT 1`, a line feed and `PRAGMA user_version = 5` ran, which is why such a comment leaves no first keyword.
 So `SELECT 1 -- x`, a bare carriage return and `; DELETE FROM t`, two statements to PostgreSQL, asks, and so do `SELECT * FROM t /*!50000 INTO OUTFILE '/tmp/x' */` and `SELECT 1 --1 INTO OUTFILE '/tmp/f'`.
 T-SQL needs no separator between statements, so `SELECT 1 KILL 52` asks on its deny word.
 With the deny scan and the separator rule on the raw text no quote or comment can hide a word or a separator, so a backslash, a `$`, a `#` or an unclosed quote does not ask by itself.
@@ -183,7 +185,8 @@ A false prompt costs one tap, or the typed name on production; a missed write co
 
 The known limits, which Studio's check shares and #123 fixes:
 
-- The check reads keywords, not what a function or procedure called inside an allowed statement does, so `SELECT pg_terminate_backend(42)` and `SELECT nextval('s')` run without asking.
+- The check reads keywords, not what a function or procedure called inside an allowed statement does, and a function can run any statement.
+  `dblink_exec` runs whatever statement it is given, and one built from pieces, such as `SELECT dblink_exec('c', 'DR' || 'OP TABLE t')`, holds no deny word; `SELECT lo_export(42, '/tmp/f')` writes a server file, and `SELECT pg_terminate_backend(42)` and `SELECT nextval('s')` change state; all of them run without asking.
 - A T-SQL statement whose keyword is not on the deny list is not seen.
 
 `WriteConfirmationSheet` (`lib/features/sql_editor/presentation/widgets/`) shows the connection's name and environment, every reason in words, and every line of the text in a lazily built list, never an excerpt, so a write far down a script can be found.
