@@ -20,12 +20,14 @@ import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/utils/sensitive_clipboard.dart';
 import 'package:libredb_mobile/shared/widgets/cells/sensitive_selectable_text.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_table.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../browse_answers.dart';
 import '../../browse_harness.dart';
+import '../../result_scroll.dart';
 
 const _redis = StudioConnection(id: 'seed:dev-redis', name: 'Dev Redis', type: 'redis');
 const _postgres = StudioConnection(id: 'seed:dev-postgres', name: 'Dev (PostgreSQL)', type: 'postgres');
@@ -464,5 +466,82 @@ void main() {
 
     expect(find.byType(KeyValuePage), findsNothing);
     verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+  });
+
+  group('scrolling a loaded result', () {
+    final platforms = TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS});
+    const read = 'XRANGE events - + COUNT 100';
+    final location = _location('events', type: 'stream');
+
+    Future<void> showTable(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Table'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the cards settle at the first and the last row', (tester) async {
+      answerRun(read, () => Success(wideResult()));
+      await harness.pump(tester, location: location);
+      // Offline a pull past the first row reads nothing, so the same list is measured at both ends.
+      await harness.setOffline(tester, true);
+
+      await expectSettlesAtEachEnd(tester, cardListScrollable());
+    }, variant: platforms);
+
+    testWidgets('the table settles at the first and the last row', (tester) async {
+      answerRun(read, () => Success(wideResult()));
+      await harness.pump(tester, location: location);
+      await showTable(tester);
+      await harness.setOffline(tester, true);
+
+      await expectSettlesAtEachEnd(tester, tableRowsScrollable());
+    }, variant: platforms);
+
+    testWidgets('the table settles at the first and the last column', (tester) async {
+      answerRun(read, () => Success(wideResult()));
+      await harness.pump(tester, location: location);
+      await showTable(tester);
+
+      await expectSettlesAtEachEnd(tester, tableColumnsScrollable());
+    }, variant: platforms);
+
+    testWidgets('a pull on the cards springs back, offline', (tester) async {
+      answerRun(read, () => Success(wideResult()));
+      await harness.pump(tester, location: location);
+      await harness.setOffline(tester, true);
+
+      await pullAndExpectSpringBack(tester, cardListScrollable());
+      expect(find.widgetWithText(SnackBar, 'No internet connection'), findsOneWidget);
+      expect(runsOf(read), 1);
+    }, variant: platforms);
+
+    testWidgets('a one-row result on the cards still pulls to refresh, and springs back', (tester) async {
+      answerRun(read, () => Success(wideResult(rows: 1, columns: 2)));
+      await harness.pump(tester, location: location);
+
+      await pullAndExpectSpringBack(tester, cardListScrollable());
+      expect(runsOf(read), 2);
+    }, variant: platforms);
+
+    for (final (rows, name) in [(100, '100 rows'), (1, 'one row')]) {
+      testWidgets('a pull on a table of $name refreshes once, and springs back', (tester) async {
+        answerRun(read, () => Success(wideResult(rows: rows)));
+        await harness.pump(tester, location: location);
+        await showTable(tester);
+
+        await pullAndExpectSpringBack(tester, tableRowsScrollable());
+        expect(runsOf(read), 2);
+      }, variant: platforms);
+    }
+
+    testWidgets('a sideways scroll of the table past either end refreshes nothing', (tester) async {
+      answerRun(read, () => Success(wideResult()));
+      await harness.pump(tester, location: location);
+      await showTable(tester);
+
+      await expectSettlesAtEachEnd(tester, tableColumnsScrollable());
+      await tester.flingFrom(tester.getCenter(find.byType(ResultTable)), const Offset(400, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(runsOf(read), 1);
+    }, variant: platforms);
   });
 }
