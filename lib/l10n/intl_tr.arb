@@ -966,5 +966,7 @@
   "sql_editor_draft_read_failed": "Bu bağlantı için kaydedilen metin okunamadı, bu yüzden yeni metin saklanmıyor. {reason}",
   "@sql_editor_draft_read_failed": {"description": "Shown when reading the editor's saved draft failed for a reason other than an unreadable file, with Retry.", "placeholders": {"reason": {"type": "String", "example": "Something went wrong."}}},
   "sql_editor_draft_no_account": "Studio hesabınızı bildirene kadar metin saklanmaz.",
-  "@sql_editor_draft_no_account": {"description": "Shown under the editor's field while Studio has not named the signed-in account: the field stays editable, but no draft is read or kept."}
+  "@sql_editor_draft_no_account": {"description": "Shown under the editor's field while Studio has not named the signed-in account: the field stays editable, but no draft is read or kept."},
+  "editor_open_connection_unavailable": "Bu bağlantı artık kullanılamıyor, bu yüzden deyim açılmadı.",
+  "@editor_open_connection_unavailable": {"description": "Shown when a statement was to open in the editor on a connection Studio no longer lists; nothing opens."}
 }

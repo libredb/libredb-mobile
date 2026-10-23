@@ -2926,6 +2926,16 @@ class S {
       args: [],
     );
   }
+
+  /// `That connection is no longer available, so the statement was not opened.`
+  String get editor_open_connection_unavailable {
+    return Intl.message(
+      'That connection is no longer available, so the statement was not opened.',
+      name: 'editor_open_connection_unavailable',
+      desc: 'Shown when a statement was to open in the editor on a connection Studio no longer lists; nothing opens.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

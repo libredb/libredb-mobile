@@ -88,6 +88,13 @@ class ActiveConnectionCubit extends Cubit<ActiveConnectionState> {
     _persist(connection.id);
   }
 
+  /// The connection [connectionId] names in the last managed list Studio answered in this session, or null when that
+  /// list does not hold it or none was answered yet.
+  StudioConnection? listed(String connectionId) => switch (_listed) {
+    final connections? => _byId(connections, connectionId),
+    null => null,
+  };
+
   /// Takes the managed list Studio just answered: the active connection vanishes when the list no longer holds it, and
   /// otherwise takes what Studio now says about it; the first list of a session decides whether the stored one opens.
   void connectionsListed(List<StudioConnection> connections) {

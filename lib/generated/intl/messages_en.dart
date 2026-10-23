@@ -301,6 +301,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Are you sure you want to delete?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Documentation"),
     "edit": MessageLookupByLibrary.simpleMessage("Edit"),
+    "editor_open_connection_unavailable": MessageLookupByLibrary.simpleMessage(
+      "That connection is no longer available, so the statement was not opened.",
+    ),
     "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Discard"),
     "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
       "The saved text that cannot be read is deleted from this phone. This cannot be undone.",

@@ -1,3 +1,7 @@
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/shared/models/editor_open_request.dart';
+
 /// Routes for the application
 ///
 /// This class contains all the routes used in the application.
@@ -60,3 +64,11 @@ class ApplicationRoutesConstants {
   // Error routes
   static const notFound = '/not-found';
 }
+
+/// Opens the SQL tab on [request]: its connection, its database and its text, which the editor puts in the field
+/// without running it, asking first when the field holds another text. Any feature may call it.
+///
+/// The request travels as go_router `extra`, never in the location, since go_router logs every location it goes to;
+/// the tab stays inside the shell, so no route is pushed above it.
+void openEditor(BuildContext context, EditorOpenRequest request) =>
+    context.go(ApplicationRoutesConstants.sql, extra: EditorOpenDelivery(request));

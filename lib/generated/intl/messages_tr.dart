@@ -304,6 +304,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Silmek istediğinize emin misiniz?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "edit": MessageLookupByLibrary.simpleMessage("Düzenle"),
+    "editor_open_connection_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantı artık kullanılamıyor, bu yüzden deyim açılmadı.",
+    ),
     "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Sil"),
     "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
       "Okunamayan kayıtlı metin bu telefondan silinir. Bu işlem geri alınamaz.",

@@ -28,6 +28,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
     required this.connectionId,
   }) : super(const EditorCatalogChecking()) {
     on<EditorCatalogRequested>(_onRequested, transformer: EventTransformers.dropConcurrent());
+    on<EditorCatalogOpenRequested>(_onOpenRequested);
   }
 
   static final _log = AppLogger.getLogger('EditorCatalogBloc');
@@ -38,6 +39,9 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
 
   /// The connection, the active one the editor was built for.
   final String connectionId;
+
+  /// The database an open request named, which the default gives way to while the server lists it.
+  String? _requested;
 
   Future<void> _onRequested(EditorCatalogRequested event, Emitter<EditorCatalogState> emit) async {
     final ProviderMeta meta;
@@ -63,9 +67,29 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
         final listed = [for (final container in data.value) container.name];
         final wanted = _activeCatalog.catalogOf(connectionId) ?? await _activeCatalog.remembered(connectionId);
         if (isClosed) return;
-        final chosen = defaultCatalog(listed: listed, wanted: wanted);
+        // An open request that arrived while the databases were read wins over the default.
+        final requested = _requested;
+        _requested = null;
+        final chosen = requested != null && listed.contains(requested)
+            ? requested
+            : defaultCatalog(listed: listed, wanted: wanted);
         if (chosen != null) _activeCatalog.choose(connectionId, chosen);
         emit(EditorCatalogListed(label: label, catalogs: listed));
+    }
+  }
+
+  void _onOpenRequested(EditorCatalogOpenRequested event, Emitter<EditorCatalogState> emit) {
+    switch (state) {
+      case EditorCatalogListed(:final catalogs):
+        if (catalogs.contains(event.catalog)) {
+          _activeCatalog.choose(connectionId, event.catalog);
+        } else {
+          _log.info('the requested database is not listed, the active one stays');
+        }
+      case EditorCatalogNotUsed():
+        break;
+      case EditorCatalogChecking() || EditorCatalogMetaFailure() || EditorCatalogLoading() || EditorCatalogFailure():
+        _requested = event.catalog;
     }
   }
 }

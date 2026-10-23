@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_catalog_bloc.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_draft_bloc.dart';
@@ -25,6 +26,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/editor_open_request.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
@@ -55,14 +57,20 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 /// database keeps the text.
 ///
 /// Each run that reached Studio is added to the account's history on the phone, which History opens; an entry tapped
-/// there replaces the text, after asking when the text differs, and never runs.
+/// there is opened as an open request ([openEditor]), so an entry of another connection opens that connection's editor.
+///
+/// An open request for [connectionId] arrives as [openRequest]: its text replaces the field's, after asking when the
+/// field holds another text, and never runs; its database becomes the active one once the text is in, on a server-level
+/// connection only. A cancelled replace keeps both the text and the database.
 ///
 /// A run keeps background time while it is in flight, and a run that the app's switch to the background interrupted
 /// says so on return: Run again for a read, and that the outcome is unknown for anything else.
 class EditorPage extends StatelessWidget {
-  const EditorPage({super.key, required this.connectionId});
+  const EditorPage({super.key, required this.connectionId, this.openRequest});
 
   final String connectionId;
+
+  final EditorOpenDelivery? openRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +112,7 @@ class EditorPage extends StatelessWidget {
           ),
         ),
       ],
-      child: _EditorView(connectionId: connectionId),
+      child: _EditorView(connectionId: connectionId, openRequest: openRequest),
     );
   }
 
@@ -143,9 +151,10 @@ class EditorPage extends StatelessWidget {
 }
 
 class _EditorView extends StatefulWidget {
-  const _EditorView({required this.connectionId});
+  const _EditorView({required this.connectionId, this.openRequest});
 
   final String connectionId;
+  final EditorOpenDelivery? openRequest;
 
   @override
   State<_EditorView> createState() => _EditorViewState();
@@ -258,6 +267,40 @@ class _EditorViewState extends State<_EditorView> {
   int _runStart = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _receive(widget.openRequest);
+  }
+
+  @override
+  void didUpdateWidget(_EditorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.openRequest, oldWidget.openRequest)) _receive(widget.openRequest);
+  }
+
+  /// Takes the open request out of [delivery] once the frame is built, since the replace prompt needs this page in the
+  /// tree; a delivery taken before has nothing left to hand over, so a rebuild never puts the text in again.
+  void _receive(EditorOpenDelivery? delivery) {
+    if (delivery == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (delivery.take() case final request?) await _putInField(request.text, catalog: request.catalog);
+    });
+  }
+
+  /// Puts [text] in the field, after asking when it would replace another text, then makes [catalog] the active
+  /// database; nothing runs, and a cancel changes neither.
+  Future<void> _putInField(String text, {String? catalog}) async {
+    if (!await confirmReplaceEditorText(context, current: _text.text, incoming: text)) return;
+    if (!mounted) return;
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    if (catalog != null) context.read<EditorCatalogBloc>().add(EditorCatalogOpenRequested(catalog));
+  }
+
+  @override
   void dispose() {
     // The sheet sits on the root navigator, above the shell, so a deep link or a session end that disposes this page
     // would leave it open; it answers cancelled instead and never outlives the page that asked. The root navigator is
@@ -307,8 +350,8 @@ class _EditorViewState extends State<_EditorView> {
     );
   }
 
-  /// Opens the account's History over this editor and puts the tapped entry's text in the field, after asking when it
-  /// would replace another text; nothing runs.
+  /// Opens the account's History over this editor and opens the tapped entry as an open request, on the entry's own
+  /// connection; nothing runs.
   Future<void> _openHistory(String subjectHash) async {
     final connectionId = context.read<EditorRunBloc>().connectionId;
     final entry = await showStatementHistorySheet(
@@ -319,13 +362,8 @@ class _EditorViewState extends State<_EditorView> {
     );
     _historySheet = null;
     final text = entry?.text;
-    if (!mounted || text == null) return;
-    if (!await confirmReplaceEditorText(context, current: _text.text, incoming: text)) return;
-    if (!mounted) return;
-    _text.value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
+    if (!mounted || entry == null || text == null) return;
+    openEditor(context, EditorOpenRequest(connectionId: entry.connectionId, text: text));
   }
 
   /// Shows the confirmation of [statement] on the open connection and answers whether the user confirmed it; a
