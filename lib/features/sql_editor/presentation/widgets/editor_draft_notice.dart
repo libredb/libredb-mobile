@@ -7,8 +7,8 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 
 /// What the editor says about its saved draft, under the field: that no text is kept until Studio names the account,
-/// while the field is read only, that a text over the bound is not kept, that the device refused a save, that the saved draft cannot be read (with Discard behind a confirmation), or that reading it
-/// failed (with Retry). Nothing while the draft is kept.
+/// that a text over the bound is not kept, that the device refused a save, that the saved draft cannot be read (with
+/// Discard behind a confirmation), or that reading it failed (with Retry). Nothing while the draft is kept.
 class EditorDraftNotice extends StatelessWidget {
   const EditorDraftNotice({super.key});
 
@@ -21,7 +21,10 @@ class EditorDraftNotice extends StatelessWidget {
     return BlocBuilder<EditorDraftBloc, EditorDraftState>(
       builder: (context, state) => switch (state) {
         EditorDraftOff() => _line(context, Icons.info_outline, s.sql_editor_draft_no_account),
-        EditorDraftLoading() || EditorDraftRestored() || EditorDraftKept() => const SizedBox.shrink(),
+        EditorDraftLoading() ||
+        EditorDraftConflict() ||
+        EditorDraftRestored() ||
+        EditorDraftKept() => const SizedBox.shrink(),
         EditorDraftNotKept() => _line(context, Icons.info_outline, s.sql_editor_draft_not_kept),
         EditorDraftSaveFailed(:final errorCode) => _line(
           context,

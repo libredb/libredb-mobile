@@ -7,7 +7,7 @@ sealed class EditorDraftState extends Equatable {
   List<Object?> get props => const [];
 }
 
-/// Studio has named no account, so no draft is read or saved.
+/// Studio has named no account, so no draft is read or saved; the field stays editable.
 final class EditorDraftOff extends EditorDraftState {
   const EditorDraftOff();
 }
@@ -20,6 +20,17 @@ final class EditorDraftLoading extends EditorDraftState {
 /// The saved [draft] was read, for the field to show.
 final class EditorDraftRestored extends EditorDraftState {
   const EditorDraftRestored(this.draft);
+
+  final StatementDraft draft;
+
+  @override
+  List<Object?> get props => [draft];
+}
+
+/// The field holds a text typed before Studio named the account and the account has another saved [draft]: the user
+/// chooses which to keep, and nothing is saved until then.
+final class EditorDraftConflict extends EditorDraftState {
+  const EditorDraftConflict(this.draft);
 
   final StatementDraft draft;
 

@@ -123,6 +123,7 @@ class EditorPage extends StatelessWidget {
       EditorDraftUnreadable() => AppErrorCode.editorSavedTextUnreadable.resolve(context),
       EditorDraftOff() ||
       EditorDraftLoading() ||
+      EditorDraftConflict() ||
       EditorDraftRestored() ||
       EditorDraftKept() ||
       EditorDraftReadFailed() => throw ArgumentError.value(outcome, 'outcome', 'not an outcome of a save'),
@@ -213,6 +214,17 @@ class _EditorViewState extends State<_EditorView> {
         text: draft.text,
         selection: TextSelection.collapsed(offset: draft.text.length),
       );
+    }
+  }
+
+  /// Asks whether the account's saved draft takes the place of the text typed before Studio named the account; either
+  /// answer goes to the draft, which restores the saved one or saves the typed one.
+  Future<void> _askConflict(EditorDraftState state) async {
+    if (state case EditorDraftConflict(:final draft)) {
+      final bloc = context.read<EditorDraftBloc>();
+      final restore = await confirmReplaceEditorText(context, current: _text.text, incoming: draft.text);
+      if (!mounted) return;
+      bloc.add(EditorDraftConflictAnswered(restore: restore));
     }
   }
 
@@ -372,6 +384,10 @@ class _EditorViewState extends State<_EditorView> {
           listenWhen: (previous, current) => current is EditorDraftRestored,
           listener: (context, state) => _restore(state),
         ),
+        BlocListener<EditorDraftBloc, EditorDraftState>(
+          listenWhen: (previous, current) => current is EditorDraftConflict,
+          listener: (context, state) => _askConflict(state),
+        ),
         BlocListener<EditorCatalogBloc, EditorCatalogState>(
           listener: (context, state) {
             _applyRestoredCatalog();
@@ -389,8 +405,8 @@ class _EditorViewState extends State<_EditorView> {
           Flexible(
             flex: 2,
             child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
-              // Read only until the account's draft is read, so the saved draft is never replaced by a text typed before.
-              selector: (state) => state is EditorDraftLoading || state is EditorDraftOff,
+              // Read only while the account's draft is read; a text typed before Studio named the account is asked about.
+              selector: (state) => state is EditorDraftLoading,
               builder: (context, loading) => EditorInput(
                 controller: _text,
                 focusNode: _focus,

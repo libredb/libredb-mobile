@@ -53,3 +53,14 @@ final class EditorDraftDiscardRequested extends EditorDraftEvent {
 final class EditorDraftRetryRequested extends EditorDraftEvent {
   const EditorDraftRetryRequested();
 }
+
+/// The user answered which text to keep after [EditorDraftConflict]: the saved draft when [restore], else the text
+/// typed before Studio named the account, which is then saved as the draft.
+final class EditorDraftConflictAnswered extends EditorDraftEvent {
+  const EditorDraftConflictAnswered({required this.restore});
+
+  final bool restore;
+
+  @override
+  List<Object?> get props => [restore];
+}

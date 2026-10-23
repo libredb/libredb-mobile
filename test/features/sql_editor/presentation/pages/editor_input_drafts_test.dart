@@ -356,15 +356,51 @@ void main() {
       verifyNever(() => store.readDraft(_alice, any()));
     });
 
-    testWidgets('until Studio names the account the field is read only, says why, and nothing is read or saved', (
+    testWidgets('until Studio names the account the field stays editable, says no text is kept, and keeps none', (
       tester,
     ) async {
       await pump(tester, subject: null);
 
-      expect(tester.widget<TextField>(field()).readOnly, isTrue);
+      expect(tester.widget<TextField>(field()).readOnly, isFalse);
       expect(find.text('Text is not kept until Studio names your account.'), findsOneWidget);
+      await type(tester, 'select 1');
       await tester.pump(const Duration(seconds: 2));
       verifyZeroInteractions(store);
+    });
+
+    group('a text typed before Studio names the account, with a saved draft', () {
+      Future<void> nameTheAccount(WidgetTester tester) async {
+        when(() => store.readDraft(_alice, _postgres.id))
+            .thenAnswer((_) async => const Success(StatementDraft(text: 'saved draft')));
+        final showEditor = await pump(tester, subject: null);
+        await type(tester, 'typed early');
+        await tester.pumpWidget(app(showEditor: showEditor, subject: _alice));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('asks, and Replace restores the saved draft and saves nothing', (tester) async {
+        await nameTheAccount(tester);
+        expect(find.text("Replace the editor's text?"), findsOneWidget);
+        expect(controller(tester).text, 'typed early');
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(controller(tester).text, 'saved draft');
+        verifyNever(() => store.saveDraft(any(), any(), any()));
+      });
+
+      testWidgets('asks, and Cancel keeps the typed text, which is then saved as the draft', (tester) async {
+        await nameTheAccount(tester);
+
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(controller(tester).text, 'typed early');
+        expect(saved(_postgres.id), [const StatementDraft(text: 'typed early')]);
+      });
     });
 
     testWidgets('once Studio names the account the saved draft is restored and the field opens', (tester) async {

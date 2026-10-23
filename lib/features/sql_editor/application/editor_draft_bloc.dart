@@ -39,6 +39,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     on<EditorDraftFlushRequested>((event, emit) => _saveLatest(emit), transformer: EventTransformers.queue());
     on<EditorDraftDiscardRequested>(_onDiscard, transformer: EventTransformers.dropConcurrent());
     on<EditorDraftRetryRequested>(_onRetry, transformer: EventTransformers.dropConcurrent());
+    on<EditorDraftConflictAnswered>(_onConflictAnswered, transformer: EventTransformers.dropConcurrent());
   }
 
   static const defaultSaveDelay = Duration(seconds: 1);
@@ -90,7 +91,11 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
 
   bool get _canSave => switch (state) {
     EditorDraftRestored() || EditorDraftKept() || EditorDraftNotKept() || EditorDraftSaveFailed() => true,
-    EditorDraftOff() || EditorDraftLoading() || EditorDraftUnreadable() || EditorDraftReadFailed() => false,
+    EditorDraftOff() ||
+    EditorDraftLoading() ||
+    EditorDraftConflict() ||
+    EditorDraftUnreadable() ||
+    EditorDraftReadFailed() => false,
   };
 
   /// The latest text when it has to be saved: a subject is named, nothing unread stands in the way, and the store does
@@ -134,9 +139,14 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     switch (result) {
       case Success(:final data):
         _stored = data;
+        final typed = _latest;
+        if (data != null && typed != null && typed.text.isNotEmpty && typed.text != data.text) {
+          // A text typed before Studio named the account replaces nothing without the user's word.
+          emit(EditorDraftConflict(data));
+          return;
+        }
         if (data != null) {
-          // The saved draft wins over what the field held, which the page keeps read only until the draft is read;
-          // the field shows the restored draft from now on.
+          // The field shows the restored draft from now on.
           _latest = data;
           emit(EditorDraftRestored(data));
           return;
@@ -190,6 +200,18 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
         if (outcome != null) onLateOutcome?.call(outcome);
       }),
     );
+  }
+
+  Future<void> _onConflictAnswered(EditorDraftConflictAnswered event, Emitter<EditorDraftState> emit) async {
+    if (state case EditorDraftConflict(:final draft)) {
+      if (event.restore) {
+        _latest = draft;
+        emit(EditorDraftRestored(draft));
+        return;
+      }
+      emit(const EditorDraftKept());
+      await _saveLatest(emit);
+    }
   }
 
   Future<void> _onDiscard(EditorDraftDiscardRequested event, Emitter<EditorDraftState> emit) async {

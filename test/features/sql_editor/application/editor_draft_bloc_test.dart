@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -69,24 +67,83 @@ void main() {
     verify: (_) => verifyNever(() => store.saveDraft(any(), any(), any())),
   );
 
-  blocTest<EditorDraftBloc, EditorDraftState>(
-    'the saved draft wins over a text the field held before the account was known, which is not saved',
-    setUp: () {
-      final read = Completer<Result<StatementDraft?>>();
-      when(() => store.readDraft(_alice, _connection)).thenAnswer((_) => read.future);
-      Future<void>.delayed(_delay, () => read.complete(const Success(StatementDraft(text: 'older'))));
-    },
-    build: build,
-    act: (bloc) => bloc
-      ..add(const EditorDraftTextChanged('typed'))
-      ..add(const EditorDraftSubjectChanged(_alice)),
-    wait: _delay * 4,
-    expect: () => const [EditorDraftLoading(), EditorDraftRestored(StatementDraft(text: 'older'))],
-    verify: (bloc) async {
-      await bloc.close();
-      verifyNever(() => store.saveDraft(any(), any(), any()));
-    },
-  );
+  group('a text typed before Studio named the account', () {
+    setUp(
+      () =>
+          when(() => store.readDraft(_alice, _connection))
+              .thenAnswer((_) async => const Success(StatementDraft(text: 'older'))),
+    );
+
+    blocTest<EditorDraftBloc, EditorDraftState>(
+      'and a saved draft ask which to keep, and nothing is saved meanwhile',
+      build: build,
+      act: (bloc) => bloc
+        ..add(const EditorDraftTextChanged('typed'))
+        ..add(const EditorDraftSubjectChanged(_alice))
+        ..add(const EditorDraftFlushRequested()),
+      wait: _delay * 3,
+      expect: () => const [EditorDraftLoading(), EditorDraftConflict(StatementDraft(text: 'older'))],
+      verify: (_) => verifyNever(() => store.saveDraft(any(), any(), any())),
+    );
+
+    blocTest<EditorDraftBloc, EditorDraftState>(
+      'restores the saved draft when the user takes it, and saves nothing',
+      build: build,
+      act: (bloc) async {
+        bloc
+          ..add(const EditorDraftTextChanged('typed'))
+          ..add(const EditorDraftSubjectChanged(_alice));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const EditorDraftConflictAnswered(restore: true));
+      },
+      wait: _delay * 3,
+      expect: () => const [
+        EditorDraftLoading(),
+        EditorDraftConflict(StatementDraft(text: 'older')),
+        EditorDraftRestored(StatementDraft(text: 'older')),
+      ],
+      verify: (bloc) async {
+        await bloc.close();
+        verifyNever(() => store.saveDraft(any(), any(), any()));
+      },
+    );
+
+    blocTest<EditorDraftBloc, EditorDraftState>(
+      'keeps the typed text when the user keeps it, and saves it as the draft',
+      build: build,
+      act: (bloc) async {
+        bloc
+          ..add(const EditorDraftTextChanged('typed'))
+          ..add(const EditorDraftSubjectChanged(_alice));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const EditorDraftConflictAnswered(restore: false));
+      },
+      wait: _delay * 3,
+      expect: () => const [EditorDraftLoading(), EditorDraftConflict(StatementDraft(text: 'older')), EditorDraftKept()],
+      verify: (_) => expect(saved(), [const StatementDraft(text: 'typed')]),
+    );
+
+    blocTest<EditorDraftBloc, EditorDraftState>(
+      'that is the saved draft itself restores it without asking',
+      build: build,
+      act: (bloc) => bloc
+        ..add(const EditorDraftTextChanged('older'))
+        ..add(const EditorDraftSubjectChanged(_alice)),
+      expect: () => const [EditorDraftLoading(), EditorDraftRestored(StatementDraft(text: 'older'))],
+    );
+
+    blocTest<EditorDraftBloc, EditorDraftState>(
+      'with no saved draft is saved as the draft',
+      setUp: () => when(() => store.readDraft(_alice, _connection)).thenAnswer((_) async => const Success(null)),
+      build: build,
+      act: (bloc) => bloc
+        ..add(const EditorDraftTextChanged('typed'))
+        ..add(const EditorDraftSubjectChanged(_alice)),
+      wait: _delay,
+      expect: () => const [EditorDraftLoading(), EditorDraftKept()],
+      verify: (_) => expect(saved(), [const StatementDraft(text: 'typed')]),
+    );
+  });
 
   blocTest<EditorDraftBloc, EditorDraftState>(
     'saves once after typing pauses, with the latest text',
