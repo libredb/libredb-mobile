@@ -18,11 +18,12 @@ import 'package:flutter_test/flutter_test.dart';
 /// one `MockInterceptor` looks up for the request.
 void main() {
   late Directory project;
+  late String steps;
 
   setUpAll(() async {
     project = await Directory.systemTemp.createTemp('feature_generator_test_');
     _copyProject(project);
-    await _run(project, _dart, ['run', 'tool/generate_feature.dart', _feature]);
+    steps = await _run(project, _dart, ['run', 'tool/generate_feature.dart', _feature]);
   });
 
   tearDownAll(() => project.delete(recursive: true));
@@ -39,6 +40,13 @@ void main() {
 
   test('the generated code analyzes cleanly', () async {
     await _run(project, _dart, ['analyze', '--fatal-infos', ..._generated]);
+  });
+
+  // The sidebar menu from assets/mock/menus.json and its translate_menu_title key left with the template shell (#17).
+  test('the printed steps name no file or key the app no longer has', () {
+    expect(steps, contains('lib/app/router/app_router.dart'));
+    expect(steps, isNot(contains('menus.json')));
+    expect(steps, isNot(contains('translate_menu_title')));
   });
 
   test('the generated tests pass', () async {
@@ -107,7 +115,8 @@ void _copyProject(Directory target) {
   }
 }
 
-Future<void> _run(Directory project, String executable, List<String> arguments) async {
+/// Runs [executable] in [project], expects it to succeed and answers what it printed.
+Future<String> _run(Directory project, String executable, List<String> arguments) async {
   final result = await Process.run(
     executable,
     arguments,
@@ -119,4 +128,5 @@ Future<void> _run(Directory project, String executable, List<String> arguments) 
     0,
     reason: '`${arguments.join(' ')}` failed in ${project.path}:\n${result.stdout}\n${result.stderr}',
   );
+  return result.stdout as String;
 }

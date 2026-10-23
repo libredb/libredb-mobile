@@ -41,7 +41,7 @@ The smoke test `test/integration/app_smoke_test.dart` boots the whole app in moc
 ## A new feature
 
 `fvm dart run tool/generate_feature.dart <feature>` writes a CRUD feature under `lib/features/<feature>/` with its tests and mock data.
-It then prints the steps left to do by hand: registering the repository, the routes, the menu entry and the translations, and adding the repository methods to `test/architecture/mock_asset_coverage_test.dart`.
+It then prints the steps left to do by hand: registering the repository, the routes and the translations, and adding the repository methods to `test/architecture/mock_asset_coverage_test.dart`.
 The full list of steps for a feature is under "Adding a New Feature" in [CLAUDE.md](../CLAUDE.md).
 `test/architecture/feature_generator_test.dart` runs it on every test run, so its output stays formatted, analyzed and green.
 
