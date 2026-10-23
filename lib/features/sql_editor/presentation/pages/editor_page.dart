@@ -549,7 +549,7 @@ class _EditorViewState extends State<_EditorView> {
           const Divider(height: 1),
           Expanded(
             flex: 3,
-            child: EditorResultArea(confirm: _confirm, onRunAgain: _run),
+            child: EditorResultArea(confirm: _confirm, onRunAgain: _run, onConnectionUnavailable: _reportVanished),
           ),
           ListenableBuilder(
             listenable: _focus,
