@@ -36,7 +36,7 @@ class ObjectSourcePage extends StatelessWidget {
               title: path.isEmpty ? kind : path.last,
               overline: S.of(context).browse_source,
               actions: [
-                if (state case ObjectSourceLoaded(hasDetails: true))
+                if (state case ObjectSourceLoaded(hasDetails: true) || ObjectSourceFailure(hasDetails: true))
                   TextButton(
                     onPressed: () => openBrowseDetail(context, connectionId, path, kind),
                     child: Text(S.of(context).browse_details),

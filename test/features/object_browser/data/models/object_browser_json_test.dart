@@ -92,6 +92,14 @@ void main() {
       expect(column.declaredType, isNull);
     });
 
+    test('an empty column name is kept, as MongoDB sends for a field named by an empty key', () {
+      final column = ObjectBrowserJson.detail(
+        detail(columns: '[{"name":"","type":"string","nullable":true,"isPrimary":false}]'),
+      ).columns.single;
+
+      expect(column.name, '');
+    });
+
     test('a blank declared type is left out, as no declaration', () {
       final column = ObjectBrowserJson.detail(
         detail(columns: '[{"name":"id","type":"integer","declaredType":" ","nullable":false,"isPrimary":true}]'),
@@ -104,9 +112,6 @@ void main() {
       'a path that is not a list of strings': detail(path: '["public",1]'),
       'a missing path': '{"columns":[$column],"indexes":[],"foreignKeys":[]}',
       'a column without a name': detail(columns: '[{"type":"integer","nullable":false,"isPrimary":true}]'),
-      'a column with a blank name': detail(
-        columns: '[{"name":" ","type":"integer","nullable":false,"isPrimary":true}]',
-      ),
       'a column without a type': detail(columns: '[{"name":"id","nullable":false,"isPrimary":true}]'),
       'a column with a blank type': detail(columns: '[{"name":"id","type":"","nullable":false,"isPrimary":true}]'),
       'a column without nullable': detail(columns: '[{"name":"id","type":"integer","isPrimary":true}]'),

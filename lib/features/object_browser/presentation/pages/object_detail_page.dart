@@ -185,6 +185,8 @@ class _DetailTabs extends StatelessWidget {
     final s = S.of(context);
     return [
       if (detail.foreignKeys.isEmpty) _Note(s.browse_detail_no_foreign_keys),
+      if (loaded.foreignKeyLookupError case final error? when detail.foreignKeys.isNotEmpty)
+        _Caption(s.browse_detail_links_unchecked(error.code ?? error.runtimeType.toString())),
       for (final key in detail.foreignKeys)
         if (loaded.foreignKeyTargets[key.referencedTable] case final target?)
           ListTile(

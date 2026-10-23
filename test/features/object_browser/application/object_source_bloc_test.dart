@@ -83,7 +83,7 @@ void main() {
       bloc.add(const ObjectSourceRequested());
     },
     expect: () => [
-      const ObjectSourceFailure(ServerError('refused', code: 'studio.connection_not_available')),
+      const ObjectSourceFailure(ServerError('refused', code: 'studio.connection_not_available'), hasDetails: true),
       const ObjectSourceLoading(),
       ObjectSourceLoaded(view, hasDetails: true),
     ],

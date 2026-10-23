@@ -194,13 +194,53 @@ void main() {
     expect(find.descendant(of: row, matching: find.byIcon(Icons.chevron_right)), findsNothing);
   });
 
+  testWidgets('a lookup list Studio refuses leaves the foreign key as text and says the links were not checked', (
+    tester,
+  ) async {
+    answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders')));
+    when(
+      () => harness.repository.list(
+        _postgres.id,
+        container: ['app', 'public'],
+        kind: 'table',
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async => const Failure(ServerError('busy', code: 'studio.rate_limited')));
+    for (final kind in ['view', 'materialized_view', 'sequence']) {
+      answerList(kind, const []);
+    }
+    await harness.pump(tester, location: ordersLocation);
+    await openTab(tester, 'Foreign keys');
+
+    expect(find.text('Could not check which tables these keys open (studio.rate_limited)'), findsOneWidget);
+    final row = find.ancestor(of: find.text('References customers.id'), matching: find.byType(ListTile));
+    expect(tester.widget<ListTile>(row).onTap, isNull);
+  });
+
+  testWidgets('foreign keys whose lookup Studio answered show no unchecked line', (tester) async {
+    answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders')));
+    answerList('table', _tables());
+    await harness.pump(tester, location: ordersLocation);
+    await openTab(tester, 'Foreign keys');
+
+    expect(find.textContaining('Could not check'), findsNothing);
+  });
+
+  testWidgets('an answer without indexes says Studio lists none', (tester) async {
+    answerDescribe(_postgres.id, orders, 'table', () => Success(_handwritten('firestore/describe_collection')));
+    await harness.pump(tester, location: ordersLocation);
+    await openTab(tester, 'Indexes');
+
+    expect(find.text('Studio lists no indexes.'), findsOneWidget);
+  });
+
   testWidgets('the read-only answer, without keys, shows no key and says there is no foreign key', (tester) async {
     answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders_readonly')));
     await harness.pump(tester, location: ordersLocation);
 
     expect(find.byIcon(Icons.key), findsNothing);
     await openTab(tester, 'Foreign keys');
-    expect(find.text('No foreign keys'), findsOneWidget);
+    expect(find.text('Studio lists no foreign keys.'), findsOneWidget);
   });
 
   group('the sampled caption', () {
@@ -237,7 +277,7 @@ void main() {
     await openTab(tester, 'Indexes');
 
     expect(find.text(detail.indexesUnavailable!), findsOneWidget);
-    expect(find.text('No indexes'), findsNothing);
+    expect(find.text('Studio lists no indexes.'), findsNothing);
   });
 
   testWidgets('the exclusion constraint shows on the Indexes tab, after the indexes, in monospace', (tester) async {
@@ -312,6 +352,21 @@ void main() {
       expect(harness.router.state.name, BrowseRouteNames.source);
       expect(harness.router.state.uri.queryParametersAll['path'], view);
     });
+  });
+
+  testWidgets('the Source page of a kind with columns offers its detail even when Studio refuses the source', (
+    tester,
+  ) async {
+    const view = ['app', 'public', 'order_totals'];
+    when(() => harness.repository.source(_postgres.id, path: view, kind: 'view'))
+        .thenAnswer((_) async => const Failure(ServerError('refused')));
+    await harness.pump(
+      tester,
+      location: '/browse/seed%3Adev-postgres-server/source/view?path=app&path=public&path=order_totals',
+    );
+
+    expect(find.byType(BrowseFailureView), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Details'), findsOneWidget);
   });
 
   testWidgets('the Source page of a kind without columns offers no detail', (tester) async {

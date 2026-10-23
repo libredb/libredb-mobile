@@ -22,8 +22,11 @@ part 'object_detail_state.dart';
 ///
 /// A foreign key names only a table, so its target is looked up in the lists of the object's container, kind by kind
 /// among the kinds with columns, until each name is found; a name that no list holds, or that two objects carry,
-/// stays unresolved and is never turned into a guessed path. A list Studio refuses leaves its names unresolved and
-/// does not fail the detail, which is already read. A pull to refresh takes the cache's refresh path for the
+/// stays unresolved and is never turned into a guessed path. PostgreSQL qualifies `referencedTable` as `schema.table`
+/// whenever the referenced schema is not `public`, even within the same schema (Studio's `postgres.ts`), so such a
+/// key stays unresolved. A list Studio refuses leaves its names unresolved and is kept as
+/// [ObjectDetailLoaded.foreignKeyLookupError], so the page says the links were not checked; it does not fail the
+/// detail, which is already read. A pull to refresh takes the cache's refresh path for the
 /// describe, and a schema change of the connection loads the detail again.
 class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
   ObjectDetailBloc({
@@ -90,13 +93,14 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
       case Failure(:final error):
         _fail(error, onScreen, emit);
       case Success(data: final detail):
-        final targets = await _foreignKeyTargets(providerMeta, detail);
+        final (targets, lookupError) = await _foreignKeyTargets(providerMeta, detail);
         if (emit.isDone) return;
         emit(
           ObjectDetailLoaded(
             detail: detail,
             kind: _kindOf(providerMeta),
             foreignKeyTargets: targets,
+            foreignKeyLookupError: lookupError,
             loadedAt: clock.now(),
           ),
         );
@@ -111,9 +115,10 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
     return null;
   }
 
-  Future<Map<String, DatabaseObject>> _foreignKeyTargets(ProviderMeta meta, ObjectDetail detail) async {
+  Future<(Map<String, DatabaseObject>, AppError?)> _foreignKeyTargets(ProviderMeta meta, ObjectDetail detail) async {
     final wanted = {for (final key in detail.foreignKeys) key.referencedTable};
     final found = <String, DatabaseObject>{};
+    AppError? refused;
     final container = path.isEmpty ? const <String>[] : path.sublist(0, path.length - 1);
     for (final declared in meta.objectKinds) {
       if (wanted.isEmpty) break;
@@ -122,6 +127,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
       switch (listed) {
         case Failure(:final error):
           _log.warn('a foreign key\'s table was not looked up in a list: {}', [error.code ?? error.runtimeType]);
+          refused ??= error;
         case Success(:final data):
           for (final name in wanted.toList()) {
             final named = data.where((object) => object.name == name).toList();
@@ -131,7 +137,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
           }
       }
     }
-    return found;
+    return (found, refused);
   }
 
   void _fail(AppError error, ObjectDetailLoaded? onScreen, Emitter<ObjectDetailState> emit) {
@@ -148,6 +154,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
     detail: loaded.detail,
     kind: loaded.kind,
     foreignKeyTargets: loaded.foreignKeyTargets,
+    foreignKeyLookupError: loaded.foreignKeyLookupError,
     loadedAt: loaded.loadedAt,
     isRefreshing: isRefreshing,
   );

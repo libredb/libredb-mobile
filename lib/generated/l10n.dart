@@ -1450,14 +1450,24 @@ class S {
     return Intl.message('Studio lists no columns.', name: 'browse_detail_no_columns', desc: '', args: []);
   }
 
-  /// `No indexes`
+  /// `Studio lists no indexes.`
   String get browse_detail_no_indexes {
-    return Intl.message('No indexes', name: 'browse_detail_no_indexes', desc: '', args: []);
+    return Intl.message('Studio lists no indexes.', name: 'browse_detail_no_indexes', desc: '', args: []);
   }
 
-  /// `No foreign keys`
+  /// `Studio lists no foreign keys.`
   String get browse_detail_no_foreign_keys {
-    return Intl.message('No foreign keys', name: 'browse_detail_no_foreign_keys', desc: '', args: []);
+    return Intl.message('Studio lists no foreign keys.', name: 'browse_detail_no_foreign_keys', desc: '', args: []);
+  }
+
+  /// `Could not check which tables these keys open ({code})`
+  String browse_detail_links_unchecked(String code) {
+    return Intl.message(
+      'Could not check which tables these keys open ($code)',
+      name: 'browse_detail_links_unchecked',
+      desc: 'Over foreign keys whose tables could not be looked up, with the error code of the refused list.',
+      args: [code],
+    );
   }
 
   /// `Exclusion constraints`

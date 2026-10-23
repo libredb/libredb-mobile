@@ -124,7 +124,7 @@ void main() {
   );
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
-    'a list Studio refuses leaves the foreign key as text, and the detail still shows',
+    'a list Studio refuses leaves the foreign key as text and keeps the refusal for the page to say so',
     setUp: () {
       answerDescribe(orders, () => Success(ordersDetail));
       answerList('table', const Failure(ServerError('refused')));
@@ -134,7 +134,15 @@ void main() {
     },
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
-    expect: () => [ObjectDetailLoaded(detail: ordersDetail, kind: table, foreignKeyTargets: const {}, loadedAt: at)],
+    expect: () => [
+      ObjectDetailLoaded(
+        detail: ordersDetail,
+        kind: table,
+        foreignKeyTargets: const {},
+        foreignKeyLookupError: const ServerError('refused'),
+        loadedAt: at,
+      ),
+    ],
   );
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(

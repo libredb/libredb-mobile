@@ -17,6 +17,7 @@ final class ObjectDetailLoaded extends ObjectDetailState {
     required this.detail,
     this.kind,
     required this.foreignKeyTargets,
+    this.foreignKeyLookupError,
     required this.loadedAt,
     this.isRefreshing = false,
   });
@@ -30,13 +31,17 @@ final class ObjectDetailLoaded extends ObjectDetailState {
   /// name, in the same container. A name that is missing here has no such object and shows as text.
   final Map<String, DatabaseObject> foreignKeyTargets;
 
+  /// The first refusal of a list the foreign keys were looked up in, so the page says their links were not checked;
+  /// null when every list was read.
+  final AppError? foreignKeyLookupError;
+
   /// When the detail was read; offline, the page shows it as what was loaded at this time.
   final DateTime loadedAt;
 
   final bool isRefreshing;
 
   @override
-  List<Object?> get props => [detail, kind, foreignKeyTargets, loadedAt, isRefreshing];
+  List<Object?> get props => [detail, kind, foreignKeyTargets, foreignKeyLookupError, loadedAt, isRefreshing];
 }
 
 /// The detail could not be read.

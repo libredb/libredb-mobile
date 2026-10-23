@@ -58,12 +58,12 @@ class ObjectSourceBloc extends Bloc<ObjectSourceEvent, ObjectSourceState> {
       case Success(:final data):
         emit(ObjectSourceLoaded(data, hasDetails: hasDetails));
       case Failure(:final error):
-        _fail(error, emit);
+        _fail(error, emit, hasDetails: hasDetails);
     }
   }
 
-  void _fail(AppError error, Emitter<ObjectSourceState> emit) {
+  void _fail(AppError error, Emitter<ObjectSourceState> emit, {bool hasDetails = false}) {
     _log.warn('source not read: {}', [error.code ?? error.runtimeType]);
-    emit(ObjectSourceFailure(error));
+    emit(ObjectSourceFailure(error, hasDetails: hasDetails));
   }
 }

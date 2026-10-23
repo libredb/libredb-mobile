@@ -38,10 +38,11 @@ final class ObjectBrowserJson {
 
   /// `POST /api/db/objects/describe`: `ObjectDetail`.
   ///
-  /// Every field Studio's type requires is read strictly, a name or type that is blank included, since a row
-  /// without one says nothing; `indexes` is a list or Studio's filled `{unavailable}` sentence, and a column's
-  /// `provenance` is a loss notice. `exclusionConstraints` is optional and left out when it is not a list, but each
-  /// constraint in it needs its name and definition; a `declaredType` that is not a filled string is left out.
+  /// Every field Studio's type requires is read strictly, and a type, key or index name that is blank is refused,
+  /// since a row without one says nothing; a column's name may be empty, as MongoDB names a field of an empty key.
+  /// `indexes` is a list or Studio's filled `{unavailable}` sentence, and a column's `provenance` is a loss notice.
+  /// `exclusionConstraints` is optional and left out when it is not a list, but each constraint in it needs its name
+  /// and definition; a `declaredType` that is not a filled string is left out.
   static ObjectDetail detail(String body) {
     final json = _object(body);
     final indexes = json['indexes'];
@@ -179,7 +180,7 @@ final class ObjectBrowserJson {
     final defaultValue = column['defaultValue'] ?? column['defaultExpression'];
     final declaredType = column['declaredType'];
     return ColumnSchema(
-      name: _filled(column['name'], 'name'),
+      name: _string(column['name'], 'name'),
       type: _filled(column['type'], 'type'),
       declaredType: declaredType is String && declaredType.trim().isNotEmpty ? declaredType : null,
       nullable: _bool(column['nullable'], 'nullable'),

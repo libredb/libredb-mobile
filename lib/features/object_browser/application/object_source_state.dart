@@ -25,10 +25,14 @@ final class ObjectSourceLoaded extends ObjectSourceState {
 
 /// The source could not be read; [error] is shown by the Browse failure view, from its code.
 final class ObjectSourceFailure extends ObjectSourceState {
-  const ObjectSourceFailure(this.error);
+  const ObjectSourceFailure(this.error, {this.hasDetails = false});
 
   final AppError error;
 
+  /// Whether the object's kind has columns, so its detail can be opened even though its source was refused; false
+  /// when provider-meta itself failed.
+  final bool hasDetails;
+
   @override
-  List<Object?> get props => [error];
+  List<Object?> get props => [error, hasDetails];
 }
