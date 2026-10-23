@@ -33,10 +33,17 @@ import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 /// and logging record it. The error names the missing file. The mock cannot
 /// answer that request, so the caller gets a failure, not a made-up success.
 /// A DELETE needs no file and always gets 204.
+///
+/// A path in [_actionPaths] answers each `action` of the request body with its own file,
+/// `{METHOD}{path}_{action}.json`, as Studio's route answers each action with its own shape. A request to such a path
+/// without a string `action` made of word characters finds no file and gets the 501.
 class MockInterceptor extends Interceptor {
   MockInterceptor({this.appConfig = const AppConfig.dev()});
 
   final AppConfig appConfig;
+
+  /// `POST /db/transaction` answers `begin`, `query`, `commit`, `rollback` and `status` each in its own shape.
+  static const _actionPaths = {'/db/transaction'};
 
   static final _log = AppLogger.getLogger('MockInterceptor');
 
@@ -87,7 +94,7 @@ class MockInterceptor extends Interceptor {
     } else if (hasQueryParams) {
       mockFileName = '${options.method}${filePath}_queryParams.json';
     } else {
-      mockFileName = '${options.method}$filePath.json';
+      mockFileName = '${options.method}$filePath${_actionSuffix(options, basePath)}.json';
     }
 
     final mockDataPath = 'assets/mock/$mockFileName';
@@ -112,6 +119,14 @@ class MockInterceptor extends Interceptor {
     }
     _log.debug('Mock data loaded: {} {} (body length: {})', [options.method, basePath, responseBody.length]);
     handler.resolve(Response(requestOptions: options, data: responseBody, statusCode: statusCode), true);
+  }
+
+  /// `_{action}` for a request to one of [_actionPaths] whose body names its action, else empty.
+  static String _actionSuffix(RequestOptions options, String basePath) {
+    if (!_actionPaths.contains(basePath)) return '';
+    final data = options.data;
+    final action = data is Map ? data['action'] : null;
+    return action is String && RegExp(r'^\w+$').hasMatch(action) ? '_$action' : '';
   }
 
   /// Whether [authorization] carries a JWT whose `exp` has passed. Only a JWT-shaped bearer (three non-empty dot

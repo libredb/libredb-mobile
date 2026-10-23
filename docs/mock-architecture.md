@@ -252,6 +252,9 @@ if (hasPathParams) {
 
 The `_basePath`, `_pathParams`, and `_queryParams` metadata are injected by `ApiClient` into `options.extra` so the interceptor can distinguish between `/items` (list) and `/items/123` (single item).
 
+`POST /db/transaction` is read by the body's `action`, because Studio answers each action in its own shape: `begin` reads `POST_db_transaction_begin.json`, and `query`, `commit`, `rollback` and `status` read theirs the same way.
+A request to it without a string `action` finds no file and gets the 501.
+
 ## Mock JSON File Structure
 
 Each file contains the exact JSON the real API would return.

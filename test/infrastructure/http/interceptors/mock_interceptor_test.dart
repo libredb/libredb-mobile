@@ -64,4 +64,46 @@ void main() {
       await expectLater(getAccount(), throwsA(_unauthorized));
     });
   });
+
+  group('MockInterceptor transaction actions', () {
+    Future<Response<dynamic>> transaction(Object? data) => mockDio().post(
+      '/db/transaction',
+      data: data,
+      options: Options(headers: {'Authorization': 'Bearer MOCK_TOKEN'}, extra: {'_basePath': '/db/transaction'}),
+    );
+
+    test('each action reads the recorded answer named after it', () async {
+      for (final (action, status) in [('begin', 'active'), ('commit', 'committed'), ('rollback', 'rolled_back')]) {
+        final response = await transaction({'connectionId': 'seed:sales-db', 'action': action});
+
+        expect(response.statusCode, 201, reason: action);
+        expect((jsonDecode(response.data as String) as Map<String, dynamic>)['status'], status, reason: action);
+      }
+    });
+
+    test('an action without a recorded answer gets a 501 naming its file', () async {
+      await expectLater(
+        transaction({'connectionId': 'seed:sales-db', 'action': 'unknown'}),
+        throwsA(
+          isA<DioException>()
+              .having((e) => e.response?.statusCode, 'statusCode', 501)
+              .having((e) => e.message, 'message', contains('assets/mock/POST_db_transaction_unknown.json')),
+        ),
+      );
+    });
+
+    test('a request without an action gets a 501, not the answer of some action', () async {
+      for (final data in <Object?>[
+        {'connectionId': 'seed:sales-db'},
+        {'connectionId': 'seed:sales-db', 'action': 1},
+        null,
+      ]) {
+        await expectLater(
+          transaction(data),
+          throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'statusCode', 501)),
+          reason: '$data',
+        );
+      }
+    });
+  });
 }

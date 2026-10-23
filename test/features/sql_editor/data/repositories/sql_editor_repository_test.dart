@@ -65,12 +65,25 @@ void main() {
     test('the transaction actions read their answers', () async {
       expect(data(await repository.beginTransaction(connection)), isTrue);
       expect(data(await repository.runInTransaction(connection, 'update orders set status = 1')).inTransaction, isTrue);
-      // The mock answers one body for every transaction action, so it confirms neither end; both still ended.
-      expect(await repository.commit(connection), isA<Success<TransactionEnd>>());
-      expect(await repository.rollback(connection), isA<Success<TransactionEnd>>());
+      expect(await repository.commit(connection), const Success(TransactionEnd.confirmed));
+      expect(await repository.rollback(connection), const Success(TransactionEnd.confirmed));
       final status = data(await repository.transactionStatus(connection));
       expect(status.ownedByYou, isTrue);
       expect(status.startedAt, DateTime.utc(2026, 10, 22, 9));
+    });
+
+    test('each transaction action gets the status Studio answers for it', () async {
+      Future<Object?> status(String action) async {
+        final response = await TestEnv.apiClient().post('/db/transaction', {
+          'connectionId': connection,
+          'action': action,
+        });
+        return (jsonDecode(response.data!) as Map<String, dynamic>)['status'];
+      }
+
+      expect(await status('begin'), 'active');
+      expect(await status('commit'), 'committed');
+      expect(await status('rollback'), 'rolled_back');
     });
   });
 
