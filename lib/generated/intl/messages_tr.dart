@@ -88,15 +88,32 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m31(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
 
-  static String m32(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m32(count, rows) => "${Intl.plural(count, one: '1 satır etkilendi', other: '${rows} satır etkilendi')}";
 
-  static String m33(message) => "Hata: ${message}";
+  static String m33(id) => "#${id}";
 
-  static String m34(detail) => "Ayrıntı: ${detail}";
+  static String m34(count) => "${Intl.plural(count, one: '+1 alan daha', other: '+${count} alan daha')}";
 
-  static String m35(host) => "Studio adresi: ${host}";
+  static String m35(index) => "Satır ${index}";
 
-  static String m36(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m36(count, rows, time) =>
+      "${Intl.plural(count, one: '1 satır, ${time} ms', other: '${rows} satır, ${time} ms')}";
+
+  static String m37(code) => "Kod ${code}";
+
+  static String m38(severity, message) => "${severity}: ${message}";
+
+  static String m39(count) => "${Intl.plural(count, one: '1 uyarı', other: '${count} uyarı')}";
+
+  static String m40(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+
+  static String m41(message) => "Hata: ${message}";
+
+  static String m42(detail) => "Ayrıntı: ${detail}";
+
+  static String m43(host) => "Studio adresi: ${host}";
+
+  static String m44(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -399,6 +416,28 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Bilinmeyen kullanıcı"),
     "refresh": MessageLookupByLibrary.simpleMessage("Yenile"),
     "required_field": MessageLookupByLibrary.simpleMessage("Zorunlu Alan"),
+    "result_affected_rows": m32,
+    "result_card_id": m33,
+    "result_empty": MessageLookupByLibrary.simpleMessage("Sorgu veri döndürmedi"),
+    "result_empty_bounded": MessageLookupByLibrary.simpleMessage(
+      "Hiçbir satır gösterilmiyor: sonuç ilk satırından önce kesildi",
+    ),
+    "result_engine_reported": MessageLookupByLibrary.simpleMessage("Motorun bildirdiği:"),
+    "result_limited": MessageLookupByLibrary.simpleMessage("sınırlı"),
+    "result_limited_notice": MessageLookupByLibrary.simpleMessage(
+      "Studio bu sonucu sınırladı. Sınırın ötesindeki hiçbir şey bu sonuçta yok.",
+    ),
+    "result_masked_semantics": MessageLookupByLibrary.simpleMessage("Maskelenmiş değer"),
+    "result_more_fields": m34,
+    "result_rolled_back": MessageLookupByLibrary.simpleMessage(
+      "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı.",
+    ),
+    "result_row_title": m35,
+    "result_stats": m36,
+    "result_warning_code": m37,
+    "result_warning_fallback": MessageLookupByLibrary.simpleMessage("Uyarı"),
+    "result_warning_line": m38,
+    "result_warnings": m39,
     "retry": MessageLookupByLibrary.simpleMessage("Tekrar Dene"),
     "role": MessageLookupByLibrary.simpleMessage("Rol"),
     "save": MessageLookupByLibrary.simpleMessage("Kaydet"),
@@ -414,17 +453,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m32,
-    "studio_error_semantics": m33,
+    "studio_error_retry_in": m40,
+    "studio_error_semantics": m41,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m34,
+    "studio_governance_detail": m42,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
     ),
-    "studio_unreachable_host": m35,
+    "studio_unreachable_host": m43,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
@@ -433,7 +472,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m36,
+    "table_rows_listed": m44,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),

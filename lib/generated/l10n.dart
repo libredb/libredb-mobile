@@ -1764,6 +1764,164 @@ class S {
   String get cell_null_semantics {
     return Intl.message('Null value', name: 'cell_null_semantics', desc: '', args: []);
   }
+
+  /// `{count, plural, =1{1 row, {time} ms} other{{rows} rows, {time} ms}}`
+  String result_stats(int count, String rows, String time) {
+    return Intl.plural(
+      count,
+      one: '1 row, $time ms',
+      other: '$rows rows, $time ms',
+      name: 'result_stats',
+      desc: 'The stats strip of a result: the rows shown and how long the statement ran.',
+      args: [count, rows, time],
+    );
+  }
+
+  /// `{count, plural, =1{1 warning} other{{count} warnings}}`
+  String result_warnings(int count) {
+    return Intl.plural(
+      count,
+      one: '1 warning',
+      other: '$count warnings',
+      name: 'result_warnings',
+      desc: 'The chip that opens and shuts the warnings the engine reported.',
+      args: [count],
+    );
+  }
+
+  /// `{severity}: {message}`
+  String result_warning_line(String severity, String message) {
+    return Intl.message(
+      '$severity: $message',
+      name: 'result_warning_line',
+      desc: 'One warning with its severity, both as Studio wrote them.',
+      args: [severity, message],
+    );
+  }
+
+  /// `Warning`
+  String get result_warning_fallback {
+    return Intl.message(
+      'Warning',
+      name: 'result_warning_fallback',
+      desc: 'A warning the engine sent without a message.',
+      args: [],
+    );
+  }
+
+  /// `Code {code}`
+  String result_warning_code(String code) {
+    return Intl.message(
+      'Code $code',
+      name: 'result_warning_code',
+      desc: 'The engine\'s code of a warning.',
+      args: [code],
+    );
+  }
+
+  /// `The engine reported:`
+  String get result_engine_reported {
+    return Intl.message(
+      'The engine reported:',
+      name: 'result_engine_reported',
+      desc: 'Above the warnings of a result with no rows.',
+      args: [],
+    );
+  }
+
+  /// `limited`
+  String get result_limited {
+    return Intl.message(
+      'limited',
+      name: 'result_limited',
+      desc: 'Studio\'s badge on a result it bounded, in lower case as Studio writes it.',
+      args: [],
+    );
+  }
+
+  /// `Studio bounded this result. Anything beyond the bound is not in it.`
+  String get result_limited_notice {
+    return Intl.message(
+      'Studio bounded this result. Anything beyond the bound is not in it.',
+      name: 'result_limited_notice',
+      desc: 'What the limited badge means.',
+      args: [],
+    );
+  }
+
+  /// `This statement left a transaction open, and Studio rolled it back, so its changes were discarded.`
+  String get result_rolled_back {
+    return Intl.message(
+      'This statement left a transaction open, and Studio rolled it back, so its changes were discarded.',
+      name: 'result_rolled_back',
+      desc: 'Studio rolled back a transaction the statement left open.',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 row affected} other{{rows} rows affected}}`
+  String result_affected_rows(int count, String rows) {
+    return Intl.plural(
+      count,
+      one: '1 row affected',
+      other: '$rows rows affected',
+      name: 'result_affected_rows',
+      desc: 'A write statement\'s answer: the rows it changed.',
+      args: [count, rows],
+    );
+  }
+
+  /// `No row is shown: the result was cut before its first row`
+  String get result_empty_bounded {
+    return Intl.message(
+      'No row is shown: the result was cut before its first row',
+      name: 'result_empty_bounded',
+      desc: 'An empty result Studio bounded.',
+      args: [],
+    );
+  }
+
+  /// `Query returned no data`
+  String get result_empty {
+    return Intl.message('Query returned no data', name: 'result_empty', desc: 'A result with no rows.', args: []);
+  }
+
+  /// `Row {index}`
+  String result_row_title(int index) {
+    return Intl.message(
+      'Row $index',
+      name: 'result_row_title',
+      desc: 'The title of a result card whose title field is NULL.',
+      args: [index],
+    );
+  }
+
+  /// `#{id}`
+  String result_card_id(String id) {
+    return Intl.message('#$id', name: 'result_card_id', desc: 'The id field under a result card\'s title.', args: [id]);
+  }
+
+  /// `{count, plural, =1{+1 more field} other{+{count} more fields}}`
+  String result_more_fields(int count) {
+    return Intl.plural(
+      count,
+      one: '+1 more field',
+      other: '+$count more fields',
+      name: 'result_more_fields',
+      desc: 'Under a result card: the fields it does not show.',
+      args: [count],
+    );
+  }
+
+  /// `Masked value`
+  String get result_masked_semantics {
+    return Intl.message(
+      'Masked value',
+      name: 'result_masked_semantics',
+      desc: 'What a screen reader says for the lock on a masked field.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
