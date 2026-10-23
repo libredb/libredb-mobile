@@ -169,6 +169,43 @@ Found during the walkthrough and logged for the backlog, none of which fails a s
 
 The iOS simulator was not run, since this Linux host has none and CI builds Android only, so no step is verified on iOS, #57's share sheet included; #91 tracks the iOS walkthrough.
 
+## M4 walkthrough
+
+The end-to-end walkthrough of milestone M4 (#100) was run on 2026-10-23 from `main` at `3efd6d6`, built with Flutter 3.47.7 as a debug APK of `main_prod.dart` with `studio-dev.env`.
+The stack ran `libredb-studio:main-c9989a6` (Studio main `c9989a6b5`), Keycloak 26.8.1, Postgres 17 and Redis 8.10, started from a fresh volume, so `sales.ledger` held its 100 rows.
+The device was the Android emulator 37.2.12 with the AVD `libredb-dev-api33`: API 33 Google APIs image, Android 13, `sdk_gphone64_x86_64`, KVM, after `tool/studio-dev/trust-android-emulator.sh`.
+Step 1 was walked through as `user` / `user` and as `admin` / `admin`, every other step as `user` / `user`.
+For steps 6, 9 and 10 the `postgres` container logged every statement with its database (`ALTER SYSTEM SET log_statement = 'all'` and a `log_line_prefix` with `%d`, then `pg_reload_conf()`), which `down -v` removes with the volume.
+
+| Step | Result |
+| --- | --- |
+| 1. Masked columns | Passed: View rows on `public.customers` shows `email` as `a**@e**********` and `g****@e**********` and `card_number` as `****-****-****-1111`, with the lock, for `user` and for `admin`, in the cards, the row detail and the table header; a NULL stays `NULL` |
+| 2. Cell types | Passed: `public.column_types` shows `bigint` `9007199254740993` and `numeric` `12345678901234.123456` with every digit, `jsonb` as `{"b":{"c":true}}` in a cell and pretty-printed in the row detail, `bytea` as `\xdeadbeef`, and `null_value` as the muted italic `NULL`; the table cuts some headers, #126 |
+| 3. Paging, modes, rotation | Passed but for the rotation: `sales.ledger` opens on 50 rows with the `limited` chip and the order notice; Load 50 more gives 100 rows, after which Studio offers no more and the chip, the notice and the button go; cards and table switch, and the table mode was still chosen after the app was relaunched; the rotation could not run, since the app is locked to portrait, #127; the table scrolls past its last row and column, #125, and cuts `entry 10` to `entry …`, #126 |
+| 4. Row detail and copy | Passed: the sheet swipes from "Row 1 of 100" to row 3 and back; Copy value of a clear field and of a masked field and Copy row as JSON in the sheet, and Copy value of a masked cell in the table's long-press menu, say "Copied", and Android 13's clipboard preview shows only dots each time; pasted into a text field, the masked `email` gives `a**@e**********` and the row gives its JSON with both masked values |
+| 5. Count | Passed: Count rows on `public.orders` reads "4 rows" |
+| 6. Server-level seed | Passed: View rows on `app.public.orders` of Dev Postgres server shows its 4 rows, and the Postgres log shows `SELECT * FROM app.public.orders LIMIT 51;` in the database `app` |
+| 7. Read-only role | Passed: the describe of `public.orders` through Dev Postgres (read-only role) marks no key, and Count rows ("4 rows") and View rows (4 rows) run as `studio_reader` |
+| 8. Redis values | Passed: in database 1 the string `cache:greeting`, the JSON text of `user:2:profile` (pretty-printed), the hash `user:2`, the list `session:2:events`, the set `user:2:roles`, the sorted set `cache:leaderboard` and the stream `session:2:log` open from the key browser; the hash's `email` field shows `grace@example.com` in clear; after `redis-cli -n 1 DEL cache:greeting` in the `redis` container, the still listed key opens on "This key no longer exists. Pull to read it again." |
+| 9. Offline | Passed: airplane mode on the loaded `sales.ledger` rows keeps them under the offline banner with "Offline: showing what was loaded at 2:24 PM"; a pull says "No internet connection", and neither the Postgres log nor Studio's log has a line from it; View rows (long-press menu and detail heading), Count rows (rows page and detail heading) and Load 50 more are disabled with "Needs an internet connection"; a loaded Redis value page behaves the same way |
+| 10. No 429, one run per tap | Passed: 2 minutes 25 seconds of four rounds over the tables of `public`, View rows on `customers`, the detail of `orders`, its Count rows and View rows sent 12 statements for 12 taps, each once in the Postgres log; Studio logged no `rate_limit_exceeded` and no 429 during the whole walkthrough |
+
+Notes:
+
+- Read value, offered only for a key the key browser lists without a type, was not reached: Studio's scan gave every key of the seed its type, so its offline state is covered only by #99's widget test.
+- When the 60 second access token had expired, Studio answered a `POST /api/db/query` with 401 and an audit line `permission_denied`, `bearer_token_invalid`; the app refreshed and repeated the request, and the Postgres log still shows that statement once, since Studio refuses the token before it runs anything.
+- With the emulator's default host GPU, Chrome's Custom Tab drew the Keycloak page on this API 33 image as broken shapes; the walkthrough ran with `emulator -avd libredb-dev-api33 -gpu swiftshader_indirect`, which draws it correctly and still uses KVM.
+
+Defects found, each filed and linked from #100:
+
+- #125: the rows page and the key value page scroll past their content in both directions and do not spring back after a pull.
+- #126: a table column sized to its content cuts its header or its longest value by a few pixels.
+- #127: the app is locked to portrait, so the rotation checks of #96 and #100 cannot run.
+
+No Studio defect was found.
+
+The iOS simulator was not run, since this Linux host has none and CI builds Android only (`.github/workflows/build_and_test.yml:83-84`), so no step is verified on iOS, the clipboard expiry and local-only flag of #97 included; #91 tracks the iOS walkthrough on macOS.
+
 ## Postgres seeds
 
 The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:
