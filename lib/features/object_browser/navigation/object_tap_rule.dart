@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
+import 'package:libredb_mobile/shared/models/editor_open_request.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 
 /// What a tap on [object], of [kind] in [connectionId], opens, or null when it opens nothing.
@@ -41,22 +43,29 @@ sealed class ObjectRowsAction {
 }
 
 /// 'View rows' opens the object's rows; [count] is Studio's count statement when the engine offers a count, else null.
+///
+/// [openInEditor] is 'Open in editor', offered wherever View rows is: it hands the same preview statement to the SQL
+/// editor of the connection, with the preview's catalog, without running it. It sends nothing to Studio, so it stays
+/// enabled offline; the editor's own Run, check and confirmation decide what runs.
 final class ObjectRowsOpen extends ObjectRowsAction {
-  const ObjectRowsOpen({required this.open, this.count});
+  const ObjectRowsOpen({required this.open, required this.openInEditor, this.count});
 
   final VoidCallback open;
+  final VoidCallback openInEditor;
   final PreviewStatement? count;
 }
 
-/// 'View rows' shows disabled, saying preview is not available for this engine yet, and no count is offered.
+/// 'View rows' shows disabled, saying preview is not available for this engine yet, and no count is offered, nor
+/// 'Open in editor'.
 final class ObjectRowsRefused extends ObjectRowsAction {
   const ObjectRowsRefused();
 }
 
-/// What 'View rows' and 'Count rows' offer for the object at [path] of [connectionId], of [kind], in the long-press
-/// menu of the object list and the search and in the detail page's heading: null, nothing, for a kind that is not a
-/// relation kind or that only the key browser lists, so a routine never gets a SELECT; [ObjectRowsRefused] for a
-/// relation kind whose preview the generator refuses; else [ObjectRowsOpen], which opens `browseRows`.
+/// What 'View rows', 'Count rows' and 'Open in editor' offer for the object at [path] of [connectionId], of [kind], in
+/// the long-press menu of the object list and the search and in the detail page's heading: null, nothing, for a kind
+/// that is not a relation kind or that only the key browser lists, so a routine never gets a SELECT;
+/// [ObjectRowsRefused] for a relation kind whose preview the generator refuses; else [ObjectRowsOpen], which opens
+/// `browseRows` or the editor.
 ///
 /// A tap on the object never runs a statement: View rows is offered only from these two places.
 ObjectRowsAction? objectRowsAction(
@@ -70,8 +79,12 @@ ObjectRowsAction? objectRowsAction(
   const generator = PreviewStatementGenerator();
   return switch (generator.preview(meta, kind, path)) {
     PreviewUnavailable() => const ObjectRowsRefused(),
-    PreviewStatement() => ObjectRowsOpen(
+    final PreviewStatement preview => ObjectRowsOpen(
       open: () => openBrowseRows(context, connectionId, path, kind.id),
+      openInEditor: () => openEditor(
+        context,
+        EditorOpenRequest(connectionId: connectionId, text: preview.statement, catalog: preview.catalog),
+      ),
       count: switch (generator.count(meta, kind, path)) {
         final PreviewStatement count => count,
         PreviewUnavailable() => null,

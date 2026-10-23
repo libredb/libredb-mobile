@@ -781,6 +781,8 @@
   "@result_copy_failed": {"description": "A copy of a result value failed; code is the error's code.", "placeholders": {"code": {"type": "String"}}},
   "browse_view_rows": "Satırları göster",
   "@browse_view_rows": {"description": "Opens the first rows of a table, a view or a collection."},
+  "browse_open_in_editor": "Düzenleyicide aç",
+  "@browse_open_in_editor": {"description": "Opens the generated SELECT of a table, a view or a collection in the SQL editor, without running it."},
   "browse_count_rows": "Satırları say",
   "@browse_count_rows": {"description": "Runs a count of the rows of a table, a view or a collection."},
   "browse_preview_unavailable": "Bu motor için önizleme henüz kullanılamıyor",

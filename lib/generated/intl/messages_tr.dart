@@ -222,6 +222,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_objects_count": m7,
     "browse_objects_empty": MessageLookupByLibrary.simpleMessage("Studio burada bu türde nesne listelemiyor."),
     "browse_objects_match": m8,
+    "browse_open_in_editor": MessageLookupByLibrary.simpleMessage("Düzenleyicide aç"),
     "browse_preview_unavailable": MessageLookupByLibrary.simpleMessage("Bu motor için önizleme henüz kullanılamıyor"),
     "browse_rows_database_says": MessageLookupByLibrary.simpleMessage("Veritabanının yanıtı"),
     "browse_search_action": MessageLookupByLibrary.simpleMessage("Nesnelerde ara"),

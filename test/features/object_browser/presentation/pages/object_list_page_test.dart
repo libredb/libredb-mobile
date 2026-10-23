@@ -314,6 +314,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Copy name'), findsOneWidget);
       expect(find.text('View rows'), findsNothing, reason: 'a routine never gets a SELECT');
+      expect(find.text('Open in editor'), findsNothing, reason: 'a routine never gets a SELECT');
       await tester.tap(find.text('View source'));
       await tester.pumpAndSettle();
 
@@ -405,6 +406,7 @@ void main() {
         expect(find.text('View source'), findsNothing);
         expect(find.text('Details'), findsOneWidget);
         expect(find.text('View rows'), findsOneWidget);
+        expect(find.text('Open in editor'), findsOneWidget);
 
         await tester.tap(find.text('Copy name'));
         await tester.pumpAndSettle();
@@ -488,6 +490,36 @@ void main() {
 
       expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'View rows')).enabled, isFalse);
       expect(find.text('Preview is not available for this engine yet'), findsOneWidget);
+      expect(find.text('Open in editor'), findsNothing, reason: 'the generator writes no preview to open');
+    });
+  });
+
+  group('Open in editor', () {
+    testWidgets('offline, the long press still offers it enabled while View rows is disabled', (tester) async {
+      answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+      await harness.pump(tester, location: _tables, offline: true);
+
+      await tester.longPress(find.text('customers'));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'View rows')).enabled, isFalse);
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Open in editor')).enabled, isTrue);
+    });
+
+    testWidgets('sits right under View rows in the long-press menu', (tester) async {
+      answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+      await harness.pump(tester, location: _tables);
+
+      await tester.longPress(find.text('customers'));
+      await tester.pumpAndSettle();
+
+      final titles = [
+        for (final tile in tester.widgetList<ListTile>(find.byType(ListTile)))
+          if (tile.title case Text(:final data?)) data,
+      ];
+      final viewRows = titles.indexOf('View rows');
+      expect(viewRows, isNonNegative);
+      expect(titles[viewRows + 1], 'Open in editor');
     });
   });
 
