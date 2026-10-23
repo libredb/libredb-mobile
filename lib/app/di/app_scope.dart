@@ -33,6 +33,8 @@ import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_i
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
@@ -195,6 +197,12 @@ class AppScope extends StatelessWidget {
           ),
           dispose: (notifier) => notifier.dispose(),
         ),
+        RepositoryProvider<BindingAppLifecycleSource>(
+          create: (_) => dependencies.createAppLifecycleSource(),
+          dispose: (source) => source.dispose(),
+        ),
+        RepositoryProvider<IAppLifecycleSource>(create: (context) => context.read<BindingAppLifecycleSource>()),
+        RepositoryProvider<IBackgroundRunTime>(create: (_) => dependencies.createBackgroundRunTime()),
         RepositoryProvider<IStatementRepository>(
           create: (context) => dependencies.createStatementRepository(
             context.read<ApiClient>(),

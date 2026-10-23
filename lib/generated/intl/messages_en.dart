@@ -562,11 +562,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Statement"),
     "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Type one or more statements"),
+    "sql_editor_interrupted_read": MessageLookupByLibrary.simpleMessage(
+      "The run was interrupted when the app went to the background; Studio cancelled it.",
+    ),
+    "sql_editor_interrupted_unknown": MessageLookupByLibrary.simpleMessage(
+      "Outcome unknown: check the data before running it again.",
+    ),
     "sql_editor_language": m53,
     "sql_editor_language_unknown": m54,
     "sql_editor_redo": MessageLookupByLibrary.simpleMessage("Redo"),
     "sql_editor_rolled_back": m55,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Run"),
+    "sql_editor_run_again": MessageLookupByLibrary.simpleMessage("Run again"),
     "sql_editor_run_selection": MessageLookupByLibrary.simpleMessage("Run selection"),
     "sql_editor_script_elapsed": m56,
     "sql_editor_script_failed": MessageLookupByLibrary.simpleMessage("Failed"),

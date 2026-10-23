@@ -6,6 +6,7 @@ import 'package:libredb_mobile/features/sql_editor/presentation/widgets/script_r
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/browse_database_words.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
@@ -15,12 +16,18 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 /// `StudioErrorBanner`, which offers no retry, since Run is the only way to send again. While a confirmation is open,
 /// what was on screen before stays. While a script runs, its elapsed time shows under the progress, since a script
 /// waits without a timeout. A cancelled run says what the cancel did, as a notice; a failed cancel shows its failure
-/// above the run's progress.
+/// above the run's progress. A run the app's switch to the background interrupted says so: a read with Run again,
+/// anything else that its outcome is unknown, with no Run again, so the user checks the data before running it.
 class EditorResultArea extends StatelessWidget {
-  const EditorResultArea({super.key, required this.confirm});
+  const EditorResultArea({super.key, required this.confirm, required this.onRunAgain});
+
+  static const runAgainKey = ValueKey('sql_editor_run_again');
 
   /// Asks the user to confirm a page of a flagged statement, as the page asks before the first run.
   final Future<bool> Function(EditorStatement statement) confirm;
+
+  /// Run again of an interrupted read: the editor's Run, so the text goes through the write check again.
+  final VoidCallback onRunAgain;
 
   @override
   Widget build(BuildContext context) => BlocBuilder<EditorRunBloc, EditorRunState>(
@@ -35,6 +42,7 @@ class EditorResultArea extends StatelessWidget {
     EditorRunning(:final cancelFailure?) => _running(context, cancelFailure: cancelFailure),
     EditorRunning() || EditorCancelling() => _progress(context),
     EditorCancelled(:final outcome) => _cancelled(context, outcome),
+    EditorInterrupted(:final wasRead) => _interrupted(context, wasRead: wasRead),
     EditorSucceeded() => _result(context, state),
     EditorScriptAnswered() => ScriptResultView(key: ValueKey(state.run), answer: state),
     EditorStatementFailed(:final error) => SingleChildScrollView(
@@ -105,6 +113,39 @@ class EditorResultArea extends StatelessWidget {
               EditorCancelOutcome.stoppedWaiting => s.sql_editor_stopped_waiting,
             }),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// What a switch to the background did to the run, as a notice; Run again only for a read.
+  Widget _interrupted(BuildContext context, {required bool wasRead}) {
+    final s = S.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(wasRead ? Icons.info_outline : Icons.warning_amber_outlined),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(wasRead ? s.sql_editor_interrupted_read : s.sql_editor_interrupted_unknown)),
+            ],
+          ),
+          if (wasRead)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: OnlineOnlyAction(
+                builder: (context, online) => OutlinedButton.icon(
+                  key: runAgainKey,
+                  onPressed: online ? onRunAgain : null,
+                  icon: const Icon(Icons.replay),
+                  label: Text(s.sql_editor_run_again),
+                ),
+              ),
+            ),
         ],
       ),
     );

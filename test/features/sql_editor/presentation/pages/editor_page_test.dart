@@ -21,6 +21,7 @@ import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.d
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_result_area.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -37,9 +38,12 @@ import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/pick_connection_first.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
@@ -199,6 +203,11 @@ void main() {
           RepositoryProvider<IContainersRepository>.value(value: containers),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
           RepositoryProvider<IStatementTextStore>.value(value: textStore),
+          RepositoryProvider<IAppLifecycleSource>(
+            create: (_) => BindingAppLifecycleSource(),
+            dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
+          ),
+          RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -928,6 +937,135 @@ void main() {
       await tester.pump();
 
       expect(find.text('İptal edildi'), findsOneWidget);
+    });
+  });
+  group('Backgrounding during a run', () {
+    /// Holds the run of [sql] until the returned completer answers.
+    Completer<Result<QueryResult>> holdRun(String sql) {
+      final answer = Completer<Result<QueryResult>>();
+      when(
+        () => repository.run(
+          any(),
+          sql,
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((_) => answer.future);
+      return answer;
+    }
+
+    void leaveApp(WidgetTester tester) {
+      addTearDown(() => tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed));
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+    }
+
+    void comeBack(WidgetTester tester) {
+      for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+    }
+
+    const dropped = NetworkError('Connection reset by peer');
+    const readMessage = 'The run was interrupted when the app went to the background; Studio cancelled it.';
+    const unknownMessage = 'Outcome unknown: check the data before running it again.';
+
+    testWidgets("a read interrupted in the background says Studio cancelled it, and Run again is the user's tap", (
+      tester,
+    ) async {
+      final answer = holdRun('SELECT pg_sleep(20)');
+      await pump(tester);
+      await type(tester, 'SELECT pg_sleep(20)');
+      await tester.tap(runButton());
+      await tester.pump();
+      leaveApp(tester);
+      answer.complete(const Failure(dropped));
+      await tester.pump();
+      comeBack(tester);
+      await tester.pump();
+
+      expect(find.text(readMessage), findsOneWidget);
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(runsOf('SELECT pg_sleep(20)'), 1, reason: 'nothing is sent again by itself');
+
+      answerRun('SELECT pg_sleep(20)', () => Success(_recorded('query_preview_postgres_customers')));
+      await tester.tap(find.byKey(EditorResultArea.runAgainKey));
+      await tester.pumpAndSettle();
+
+      expect(runsOf('SELECT pg_sleep(20)'), 1, reason: 'one more run, counted since the last verify');
+      expect(find.text(readMessage), findsNothing);
+    });
+
+    testWidgets('a write interrupted in the background says the outcome is unknown and offers no Run again', (
+      tester,
+    ) async {
+      final answer = holdRun('UPDATE orders SET status = status');
+      await pump(tester);
+      await type(tester, 'UPDATE orders SET status = status');
+      await run(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Run').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      leaveApp(tester);
+      answer.complete(const Failure(dropped));
+      await tester.pump();
+      comeBack(tester);
+      await tester.pump();
+
+      expect(find.text(unknownMessage), findsOneWidget);
+      expect(find.byKey(EditorResultArea.runAgainKey), findsNothing);
+      expect(find.text('Run again'), findsNothing);
+      expect(runsOf('UPDATE orders SET status = status'), 1);
+    });
+
+    testWidgets('a run that answers in the background shows its result on return', (tester) async {
+      final answer = holdRun('SELECT 1');
+      await pump(tester);
+      await type(tester, 'SELECT 1');
+      await tester.tap(runButton());
+      await tester.pump();
+      leaveApp(tester);
+      answer.complete(Success(_recorded('query_preview_postgres_customers')));
+      await tester.pump();
+      comeBack(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ResultView), findsOneWidget);
+      expect(find.text(readMessage), findsNothing);
+    });
+
+    testWidgets('both messages and Run again read in Turkish', (tester) async {
+      final read = holdRun('SELECT pg_sleep(20)');
+      await pump(tester, locale: const Locale('tr'));
+      await type(tester, 'SELECT pg_sleep(20)');
+      await tester.tap(runButton());
+      await tester.pump();
+      leaveApp(tester);
+      read.complete(const Failure(dropped));
+      await tester.pump();
+      comeBack(tester);
+      await tester.pump();
+
+      expect(find.text('Uygulama arka plana geçtiğinde çalıştırma kesildi; Studio onu iptal etti.'), findsOneWidget);
+      expect(find.text('Yeniden çalıştır'), findsOneWidget);
+
+      final write = holdRun('GET a');
+      await pump(tester, connection: _redis, locale: const Locale('tr'));
+      await type(tester, 'GET a');
+      await run(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Çalıştır').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      leaveApp(tester);
+      write.complete(const Failure(dropped));
+      await tester.pump();
+      comeBack(tester);
+      await tester.pump();
+
+      expect(find.text('Sonuç bilinmiyor: yeniden çalıştırmadan önce verileri kontrol edin.'), findsOneWidget);
+      expect(find.text('Yeniden çalıştır'), findsNothing);
     });
   });
 

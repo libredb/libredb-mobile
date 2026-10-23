@@ -27,6 +27,8 @@ import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
@@ -54,6 +56,9 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 ///
 /// Each run that reached Studio is added to the account's history on the phone, which History opens; an entry tapped
 /// there replaces the text, after asking when the text differs, and never runs.
+///
+/// A run keeps background time while it is in flight, and a run that the app's switch to the background interrupted
+/// says so on return: Run again for a read, and that the outcome is unknown for anything else.
 class EditorPage extends StatelessWidget {
   const EditorPage({super.key, required this.connectionId});
 
@@ -73,6 +78,8 @@ class EditorPage extends StatelessWidget {
             schemaChanges: context.read<SchemaChangeNotifier>(),
             history: context.read<IStatementHistoryRepository>(),
             onHistoryNotKept: (code) => _sayHistoryNotKept(messenger, code),
+            lifecycle: context.read<IAppLifecycleSource>(),
+            backgroundRunTime: context.read<IBackgroundRunTime>(),
             connectionId: connectionId,
           ),
         ),
@@ -359,7 +366,8 @@ class _EditorViewState extends State<_EditorView> {
           EditorSucceeded() ||
           EditorScriptAnswered() ||
           EditorStatementFailed() ||
-          EditorFailed():
+          EditorFailed() ||
+          EditorInterrupted():
         break;
     }
   }
@@ -432,7 +440,10 @@ class _EditorViewState extends State<_EditorView> {
             },
           ),
           const Divider(height: 1),
-          Expanded(flex: 3, child: EditorResultArea(confirm: _confirm)),
+          Expanded(
+            flex: 3,
+            child: EditorResultArea(confirm: _confirm, onRunAgain: _run),
+          ),
           ListenableBuilder(
             listenable: _focus,
             builder: (context, _) => _focus.hasFocus

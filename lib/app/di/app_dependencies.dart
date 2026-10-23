@@ -50,6 +50,8 @@ import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dar
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 
 /// What the app is built from. The app signs in only through the OpenID Connect provider; `main_local.dart` swaps the
 /// provider for a debug-only double (`LocalSignInDependencies`), which `main_prod.dart` never imports.
@@ -182,6 +184,12 @@ class AppDependencies {
   /// The statement history each account keeps on the device, in the history of [store].
   IStatementHistoryRepository createStatementHistoryRepository(IStatementTextStore store) =>
       StatementHistoryRepository(store);
+
+  /// The app's lifecycle, which the SQL editor's run follows.
+  BindingAppLifecycleSource createAppLifecycleSource() => BindingAppLifecycleSource();
+
+  /// The background time a statement run asks for: `beginBackgroundTask` on iOS, nothing on Android.
+  IBackgroundRunTime createBackgroundRunTime() => BackgroundRunTime.forPlatform();
 
   /// Studio's liveness and readiness, which tell an unreachable Studio apart from a session failure.
   IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => StudioStatusRepository(apiClient);

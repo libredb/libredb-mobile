@@ -122,6 +122,20 @@ final class EditorCancelled extends EditorRunState {
   List<Object?> get props => [outcome];
 }
 
+/// The run [queryId] failed without an answer from Studio while or after the app was in the background, so Studio
+/// cancelled it when its request dropped. [wasRead] is true only when the write check ran the text without asking:
+/// the editor then offers Run again, and otherwise says that the outcome is unknown, since a write may have committed
+/// before the drop. Nothing runs again by itself.
+final class EditorInterrupted extends EditorRunState {
+  const EditorInterrupted({required this.queryId, required this.wasRead});
+
+  final String queryId;
+  final bool wasRead;
+
+  @override
+  List<Object?> get props => [queryId, wasRead];
+}
+
 /// The answer of [statement], masked with [policy]; [run] tells it from the next one.
 final class EditorSucceeded extends EditorRunState {
   const EditorSucceeded({

@@ -91,7 +91,8 @@ class EditorActions extends StatelessWidget {
             EditorScriptAnswered() ||
             EditorStatementFailed() ||
             EditorFailed() ||
-            EditorCancelled() => _run(busy: false),
+            EditorCancelled() ||
+            EditorInterrupted() => _run(busy: false),
           },
         ],
       ),

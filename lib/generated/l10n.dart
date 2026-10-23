@@ -2437,6 +2437,36 @@ class S {
     );
   }
 
+  /// `The run was interrupted when the app went to the background; Studio cancelled it.`
+  String get sql_editor_interrupted_read {
+    return Intl.message(
+      'The run was interrupted when the app went to the background; Studio cancelled it.',
+      name: 'sql_editor_interrupted_read',
+      desc: 'The SQL editor\'s notice that a read was interrupted because the app went to the background, and Studio cancelled it.',
+      args: [],
+    );
+  }
+
+  /// `Outcome unknown: check the data before running it again.`
+  String get sql_editor_interrupted_unknown {
+    return Intl.message(
+      'Outcome unknown: check the data before running it again.',
+      name: 'sql_editor_interrupted_unknown',
+      desc: 'The SQL editor\'s notice that a statement that may write was interrupted while the app was in the background, so whether it ran is unknown.',
+      args: [],
+    );
+  }
+
+  /// `Run again`
+  String get sql_editor_run_again {
+    return Intl.message(
+      'Run again',
+      name: 'sql_editor_run_again',
+      desc: 'Runs the interrupted read again, shown under its notice; never offered for a statement that may write.',
+      args: [],
+    );
+  }
+
   /// `Database`
   String get sql_editor_catalog_label {
     return Intl.message(
