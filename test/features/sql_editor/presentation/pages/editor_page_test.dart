@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -19,6 +20,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -89,6 +91,7 @@ void main() {
       sql,
       queryId: any(named: 'queryId'),
       page: page ?? any(named: 'page'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) async => answer());
 
@@ -98,6 +101,7 @@ void main() {
       sql,
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).callCount;
 
@@ -109,6 +113,7 @@ void main() {
       page: any(named: 'page'),
       params: any(named: 'params'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   );
 
@@ -118,6 +123,7 @@ void main() {
     bool offline = false,
     bool recordsInFull = false,
     Size? size,
+    Locale? locale,
   }) async {
     if (size != null) {
       tester.view.physicalSize = size;
@@ -142,6 +148,7 @@ void main() {
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
           ],
           child: MaterialApp(
+            locale: locale,
             localizationsDelegates: const [
               S.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -387,6 +394,7 @@ void main() {
           flagged,
           queryId: any(named: 'queryId'),
           page: second,
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       );
 
@@ -404,6 +412,7 @@ void main() {
           flagged,
           queryId: any(named: 'queryId'),
           page: second,
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1);
     });
@@ -470,6 +479,144 @@ void main() {
 
     expect(runEnabled(tester), isTrue);
     expect(runsOf('SELECT 1'), 1);
+  });
+
+  group('Cancel', () {
+    /// Holds the run of [sql] until the returned completer answers, or fails it as cancelled once its request is
+    /// dropped, as ApiClient does.
+    Completer<Result<QueryResult>> holdRun(String sql) {
+      final answer = Completer<Result<QueryResult>>();
+      when(
+        () => repository.run(
+          any(),
+          sql,
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((invocation) {
+        final signal = invocation.namedArguments[#cancelSignal] as CancelSignal?;
+        return Future.any([
+          answer.future,
+          if (signal != null)
+            signal.whenCancelled.then((_) => const Failure<QueryResult>(RequestCancelledError('Request cancelled'))),
+        ]);
+      });
+      return answer;
+    }
+
+    String buttonLabel(WidgetTester tester) =>
+        tester.widget<Text>(find.descendant(of: runButton(), matching: find.byType(Text))).data!;
+
+    Future<void> startRun(WidgetTester tester, {StudioConnection connection = _postgres, Locale? locale}) async {
+      holdRun('SELECT pg_sleep(30)');
+      await pump(tester, connection: connection, locale: locale);
+      await type(tester, 'SELECT pg_sleep(30)');
+      await tester.tap(runButton());
+      await tester.pump();
+      if (connection == _redis) {
+        // Redis is not SQL, so the text asks first; the run's spinner never settles, so the sheet's exit is pumped.
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Run').last);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pump();
+    }
+
+    testWidgets('Run reads Cancel while the statement runs, and a confirmed cancel says Cancelled, not an error', (
+      tester,
+    ) async {
+      when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+      await startRun(tester);
+
+      expect(buttonLabel(tester), 'Cancel');
+      expect(runEnabled(tester), isTrue);
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Cancelled'), findsOneWidget);
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(buttonLabel(tester), 'Run');
+      verify(() => repository.cancel(_postgres.id, any())).called(1);
+    });
+
+    testWidgets('says Studio could not confirm the cancel when it answers cancelled: false', (tester) async {
+      when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(false));
+      await startRun(tester);
+
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.textContaining('Studio could not confirm the cancel.'), findsOneWidget);
+      expect(find.textContaining('may still run on the server'), findsOneWidget);
+    });
+
+    testWidgets('reads Cancelling and is disabled while the cancel is posted', (tester) async {
+      final cancelled = Completer<Result<bool>>();
+      when(() => repository.cancel(any(), any())).thenAnswer((_) => cancelled.future);
+      await startRun(tester);
+
+      await tester.tap(runButton());
+      await tester.pump();
+
+      expect(buttonLabel(tester), 'Cancelling');
+      expect(runEnabled(tester), isFalse);
+      cancelled.complete(const Success(true));
+      await tester.pump();
+    });
+
+    testWidgets('an engine without cancel reads Stop waiting, posts nothing, and says the statement may still run', (
+      tester,
+    ) async {
+      await startRun(tester, connection: _redis);
+
+      expect(buttonLabel(tester), 'Stop waiting');
+      await tester.tap(runButton());
+      await tester.pump();
+
+      expect(find.textContaining('Stopped waiting.'), findsOneWidget);
+      expect(find.textContaining('may still run on the server'), findsOneWidget);
+      verifyNever(() => repository.cancel(any(), any()));
+    });
+
+    testWidgets('a rate limit on the cancel shows the countdown, keeps the run, and Cancel waits for it', (
+      tester,
+    ) async {
+      when(() => repository.cancel(any(), any())).thenAnswer(
+        (_) async =>
+            const Failure(RateLimitedError('slow', code: 'studio.rate_limited', retryAfter: Duration(seconds: 2))),
+      );
+      await startRun(tester);
+
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('You can try again in 2 s.'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(buttonLabel(tester), 'Cancel');
+      expect(runEnabled(tester), isFalse);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+
+      expect(runEnabled(tester), isTrue);
+      verify(() => repository.cancel(any(), any())).called(1);
+    });
+
+    testWidgets('the labels are in Turkish', (tester) async {
+      when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+      await startRun(tester, locale: const Locale('tr'));
+
+      expect(buttonLabel(tester), 'İptal et');
+      await tester.tap(runButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('İptal edildi'), findsOneWidget);
+    });
   });
 
   group('the rolled-back notice', () {

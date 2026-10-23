@@ -513,11 +513,20 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
+    "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("İptal et"),
+    "sql_editor_cancel_not_confirmed": MessageLookupByLibrary.simpleMessage(
+      "Studio iptali doğrulayamadı. Deyim sunucuda çalışmaya devam ediyor olabilir.",
+    ),
+    "sql_editor_cancelled": MessageLookupByLibrary.simpleMessage("İptal edildi"),
+    "sql_editor_cancelling": MessageLookupByLibrary.simpleMessage("İptal ediliyor"),
     "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Deyim"),
     "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Bir deyim yazın"),
     "sql_editor_rolled_back": m50,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Çalıştır"),
-    "sql_editor_running": MessageLookupByLibrary.simpleMessage("Çalışıyor"),
+    "sql_editor_stop_waiting": MessageLookupByLibrary.simpleMessage("Beklemeyi bırak"),
+    "sql_editor_stopped_waiting": MessageLookupByLibrary.simpleMessage(
+      "Beklemeyi bıraktınız. Bu veritabanı bir deyimi iptal edemez; deyim sunucuda çalışmaya devam ediyor olabilir.",
+    ),
     "studio_error_copy_statement": MessageLookupByLibrary.simpleMessage("İfadeyi kopyala"),
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",

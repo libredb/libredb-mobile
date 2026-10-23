@@ -857,8 +857,18 @@
   "@sql_editor_field_label": {"description": "The accessible name of the SQL editor's text field."},
   "sql_editor_run": "Çalıştır",
   "@sql_editor_run": {"description": "Runs the statement in the SQL editor."},
-  "sql_editor_running": "Çalışıyor",
-  "@sql_editor_running": {"description": "Shown on Run while the statement runs."},
   "sql_editor_rolled_back": "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı. Korumak için {keyword} ekleyin.",
-  "@sql_editor_rolled_back": {"description": "The SQL editor's notice that Studio rolled back a transaction the statement left open, with the engine's commit keyword.", "placeholders": {"keyword": {"type": "String", "example": "COMMIT"}}}
+  "@sql_editor_rolled_back": {"description": "The SQL editor's notice that Studio rolled back a transaction the statement left open, with the engine's commit keyword.", "placeholders": {"keyword": {"type": "String", "example": "COMMIT"}}},
+  "sql_editor_cancel": "İptal et",
+  "@sql_editor_cancel": {"description": "Asks Studio to stop the statement that runs, shown on Run while it runs."},
+  "sql_editor_stop_waiting": "Beklemeyi bırak",
+  "@sql_editor_stop_waiting": {"description": "Shown on Run while a statement runs on an engine that cannot cancel: the app stops waiting for the answer."},
+  "sql_editor_cancelling": "İptal ediliyor",
+  "@sql_editor_cancelling": {"description": "Shown on Run while Studio is asked to stop the statement."},
+  "sql_editor_cancelled": "İptal edildi",
+  "@sql_editor_cancelled": {"description": "The SQL editor's notice that Studio stopped the statement; not an error."},
+  "sql_editor_cancel_not_confirmed": "Studio iptali doğrulayamadı. Deyim sunucuda çalışmaya devam ediyor olabilir.",
+  "@sql_editor_cancel_not_confirmed": {"description": "The SQL editor's notice that Studio did not confirm the cancel, so the statement may still run."},
+  "sql_editor_stopped_waiting": "Beklemeyi bıraktınız. Bu veritabanı bir deyimi iptal edemez; deyim sunucuda çalışmaya devam ediyor olabilir.",
+  "@sql_editor_stopped_waiting": {"description": "The SQL editor's notice after Stop waiting, on an engine that cannot cancel."}
 }

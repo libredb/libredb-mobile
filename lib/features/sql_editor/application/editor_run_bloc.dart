@@ -9,6 +9,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/statement_position.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_id.dart';
@@ -32,6 +33,14 @@ part 'editor_run_state.dart';
 /// [ISqlEditorRepository.run] with a fresh run id, never to `runScript`, and never sent again by the bloc: a failure,
 /// a rate limit included, waits for the user's next Run, and a Run while one is in flight is dropped.
 ///
+/// Cancel of the run in flight: when the engine supports it, the bloc posts [ISqlEditorRepository.cancel] with the
+/// run's id while the run's request is still open, because Studio stops a run as soon as its request is dropped and a
+/// cancel posted after that answers that it stopped nothing; the request is dropped once the cancel answered. A
+/// confirmed cancel, or the run answering `QUERY_CANCELLED`, ends in [EditorCancelled] as confirmed, an unconfirmed one
+/// as not confirmed. A failed cancel, a rate limit included, leaves the run going and is never sent again by the bloc.
+/// Without the engine's cancel, Stop waiting only drops the request. A run that answers before the cancel shows its
+/// answer.
+///
 /// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
 /// bloc never holds a clear row. After a success [SchemaChangeNotifier.statementSucceeded] tells the object browser.
 /// Neither the statement nor a database error text is logged; only an error's code is.
@@ -47,6 +56,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     on<EditorRunRequested>(_onRunRequested, transformer: EventTransformers.dropConcurrent());
     on<EditorConfirmationAnswered>(_onConfirmationAnswered, transformer: EventTransformers.dropConcurrent());
     on<EditorRateLimitElapsed>(_onRateLimitElapsed);
+    on<EditorCancelRequested>(_onCancelRequested, transformer: EventTransformers.dropConcurrent());
   }
 
   /// The longest text the phone sends, counted as `String.length`: Studio bounds the text of a console engine only
@@ -67,11 +77,14 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   /// The runs answered so far, which tells one result on screen from the next.
   int _runs = 0;
 
+  /// Drops the request of the run in flight; null while none is.
+  CancelSignal? _inFlight;
+
   Future<void> _onRunRequested(EditorRunRequested event, Emitter<EditorRunState> emit) async {
     switch (state) {
-      case EditorRunning() || EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true):
+      case EditorRunning() || EditorCancelling() || EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true):
         return;
-      case EditorIdle() || EditorSucceeded() || EditorStatementFailed() || EditorFailed():
+      case EditorIdle() || EditorSucceeded() || EditorStatementFailed() || EditorFailed() || EditorCancelled():
         break;
     }
     final text = event.text;
@@ -128,7 +141,47 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   }
 
   void _onRateLimitElapsed(EditorRateLimitElapsed event, Emitter<EditorRunState> emit) {
-    if (state case EditorFailed(:final error, waitingForRetry: true)) emit(EditorFailed(error: error));
+    switch (state) {
+      case EditorFailed(:final error, waitingForRetry: true):
+        emit(EditorFailed(error: error));
+      case final EditorRunning running when running.waitingForRetry:
+        emit(
+          EditorRunning(
+            queryId: running.queryId,
+            supportsCancel: running.supportsCancel,
+            cancelFailure: running.cancelFailure,
+          ),
+        );
+      case _:
+        break;
+    }
+  }
+
+  /// Cancel, or Stop waiting, of the run in flight; see the class documentation for the order of the cancel and the
+  /// drop.
+  Future<void> _onCancelRequested(EditorCancelRequested event, Emitter<EditorRunState> emit) async {
+    final running = state;
+    final signal = _inFlight;
+    if (running is! EditorRunning || running.waitingForRetry || signal == null) return;
+    final queryId = running.queryId;
+    if (!running.supportsCancel) {
+      signal.cancel();
+      emit(const EditorCancelled(outcome: EditorCancelOutcome.stoppedWaiting));
+      return;
+    }
+    emit(EditorCancelling(queryId: queryId));
+    final answer = await _repository.cancel(connectionId, queryId);
+    // The run answered first, and its answer is on screen.
+    if (emit.isDone || state != EditorCancelling(queryId: queryId)) return;
+    switch (answer) {
+      case Success(:final data):
+        signal.cancel();
+        emit(EditorCancelled(outcome: data ? EditorCancelOutcome.confirmed : EditorCancelOutcome.notConfirmed));
+      case Failure(:final error):
+        _log.warn('cancel failed: {}', [error.code ?? error.runtimeType]);
+        final waiting = error is RateLimitedError && (error.retryAfter?.inSeconds ?? 0) > 0;
+        emit(EditorRunning(queryId: queryId, supportsCancel: true, cancelFailure: error, waitingForRetry: waiting));
+    }
   }
 
   /// Sends [statement] once and shows its answer.
@@ -139,10 +192,25 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     StudioRole? role,
   ) async {
     final queryId = _newRunId();
-    emit(EditorRunning(queryId: queryId));
-    final result = await _repository.run(connectionId, statement.text, queryId: queryId);
+    final signal = _inFlight = CancelSignal();
+    emit(EditorRunning(queryId: queryId, supportsCancel: meta.supportsQueryCancel));
+    final result = await _repository.run(connectionId, statement.text, queryId: queryId, cancelSignal: signal);
+    if (identical(_inFlight, signal)) _inFlight = null;
     if (emit.isDone) return;
+    switch (state) {
+      case EditorRunning(queryId: final id) || EditorCancelling(queryId: final id) when id == queryId:
+        break;
+      // A cancel already ended the run on screen.
+      case _:
+        return;
+    }
     switch (result) {
+      // Only a cancel drops the request, and it says what happened itself.
+      case Failure(:final error) when error is RequestCancelledError:
+        return;
+      case Failure(:final error) when error.code == AppErrorCode.studioQueryCancelled.key:
+        _log.info('the run was cancelled');
+        emit(const EditorCancelled(outcome: EditorCancelOutcome.confirmed));
       case Failure(:final error):
         _fail(emit, error, statement: statement);
       case Success(:final data):

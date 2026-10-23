@@ -242,7 +242,17 @@ void main() {
             )
             .toList();
 
-        expect(results, ['network', 'auth', 'validation', 'server', 'not_found', 'timeout', 'rate_limited', 'cancelled', 'unknown']);
+        expect(results, [
+          'network',
+          'auth',
+          'validation',
+          'server',
+          'not_found',
+          'timeout',
+          'rate_limited',
+          'cancelled',
+          'unknown',
+        ]);
       });
     });
   });

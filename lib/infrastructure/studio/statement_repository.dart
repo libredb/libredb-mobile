@@ -39,15 +39,20 @@ class StatementRepository implements IStatementRepository {
       throw ArgumentError.value(database, 'database', 'must not be negative');
     }
     try {
-      final response = await _apiClient.post('/db/query', {
-        'connectionId': connectionId,
-        'sql': sql,
-        'options': page.toJson(),
-        'queryId': ?queryId,
-        'params': ?params,
-        'catalog': ?catalog,
-        'database': ?database,
-      }, receiveTimeout: _queryTimeouts.statementReceiveTimeout(connectionId), cancelSignal: cancelSignal);
+      final response = await _apiClient.post(
+        '/db/query',
+        {
+          'connectionId': connectionId,
+          'sql': sql,
+          'options': page.toJson(),
+          'queryId': ?queryId,
+          'params': ?params,
+          'catalog': ?catalog,
+          'database': ?database,
+        },
+        receiveTimeout: _queryTimeouts.statementReceiveTimeout(connectionId),
+        cancelSignal: cancelSignal,
+      );
       return Success(QueryResultJson.read(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       final error = studioError(e);

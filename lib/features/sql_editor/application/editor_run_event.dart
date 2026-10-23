@@ -32,7 +32,12 @@ final class EditorConfirmationAnswered extends EditorRunEvent {
   List<Object?> get props => [confirmed];
 }
 
-/// The delay a rate limit asked for has passed, so Run may send again.
+/// The delay a rate limit asked for has passed, so Run, or Cancel of a run, may send again.
 final class EditorRateLimitElapsed extends EditorRunEvent {
   const EditorRateLimitElapsed();
+}
+
+/// Cancel (or Stop waiting) of the statement in flight.
+final class EditorCancelRequested extends EditorRunEvent {
+  const EditorCancelRequested();
 }

@@ -13,7 +13,7 @@ import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 
 /// The SQL editor of [connectionId]: the statement capture note while governance records statements in full, the text
-/// field, Run, and the result under them.
+/// field, Run (Cancel while a statement runs), and the result under them.
 ///
 /// One column at every size, so a rotation rebuilds the same widgets: the text and its selection live in this page's
 /// controller and the result in the blocs above the result area, and none of them reloads. The shell's scaffold resizes
@@ -103,7 +103,13 @@ class _EditorViewState extends State<_EditorView> {
       case EditorStatementFailed(:final position?):
         _text.selection = TextSelection.collapsed(offset: position.clamp(0, _text.text.length));
         _focus.requestFocus();
-      case EditorIdle() || EditorRunning() || EditorSucceeded() || EditorStatementFailed() || EditorFailed():
+      case EditorIdle() ||
+          EditorRunning() ||
+          EditorCancelling() ||
+          EditorCancelled() ||
+          EditorSucceeded() ||
+          EditorStatementFailed() ||
+          EditorFailed():
         break;
     }
   }
@@ -124,7 +130,11 @@ class _EditorViewState extends State<_EditorView> {
             flex: 2,
             child: EditorInput(controller: _text, focusNode: _focus),
           ),
-          EditorActions(text: _text, onRun: _run),
+          EditorActions(
+            text: _text,
+            onRun: _run,
+            onCancel: () => context.read<EditorRunBloc>().add(const EditorCancelRequested()),
+          ),
           const Divider(height: 1),
           Expanded(flex: 3, child: EditorResultArea(confirm: _confirm)),
         ],

@@ -162,6 +162,7 @@ void main() {
       page: any(named: 'page'),
       params: any(named: 'params'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   );
 
@@ -238,6 +239,7 @@ void main() {
         flagged,
         queryId: any(named: 'queryId'),
         page: QueryPage.first,
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) async => Success(first));
     when(
@@ -246,6 +248,7 @@ void main() {
         flagged,
         queryId: any(named: 'queryId'),
         page: QueryPage.after(first.pagination!),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) async => Success(first));
     final router = await pumpShell(tester);
@@ -278,6 +281,7 @@ void main() {
         flagged,
         queryId: any(named: 'queryId'),
         page: QueryPage.after(first.pagination!),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     );
   });
