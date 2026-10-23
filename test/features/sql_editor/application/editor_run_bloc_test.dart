@@ -751,8 +751,6 @@ void main() {
       'a text refused before it was sent writes nothing',
       build: build,
       act: (bloc) async {
-        bloc.add(const EditorRunRequested(text: 'SELECT 1; SELECT 2', role: user, history: target));
-        await bloc.stream.firstWhere((s) => s is EditorFailed);
         bloc.add(EditorRunRequested(text: 'x' * (EditorRunBloc.maxTextLength + 1), role: user, history: target));
         await pumpEventQueue();
       },

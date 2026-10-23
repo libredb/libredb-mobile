@@ -13,7 +13,9 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
@@ -38,6 +40,7 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
+import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -100,6 +103,7 @@ void main() {
   late SchemaChangeNotifier schemaChanges;
   late MockIContainersRepository containers;
   late ActiveCatalogCubit catalog;
+  late MockIStatementHistoryRepository history;
 
   setUp(() {
     repository = MockISqlEditorRepository();
@@ -116,6 +120,22 @@ void main() {
     when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
     catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
     active = MockActiveConnectionCubit();
+    history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer((invocation) async {
+      final run = invocation.positionalArguments[1] as FinishedRun;
+      return Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: run.connectionId,
+          connectionName: run.connectionName,
+          text: run.text,
+          status: run.status,
+          duration: run.duration,
+          rowCount: run.rowCount,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      );
+    });
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   });
 
@@ -166,6 +186,7 @@ void main() {
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IContainersRepository>.value(value: containers),
+          RepositoryProvider<IStatementHistoryRepository>.value(value: history),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -185,9 +206,12 @@ void main() {
             home: Scaffold(
               body: StudioRoleScope(
                 role: const StudioUserRole(),
-                child: StatementCaptureScope(
-                  recordsInFull: false,
-                  child: OfflineStatus(isOffline: false, child: const SqlPage()),
+                child: StudioSubjectScope(
+                  subjectHash: 'account-hash',
+                  child: StatementCaptureScope(
+                    recordsInFull: false,
+                    child: OfflineStatus(isOffline: false, child: const SqlPage()),
+                  ),
                 ),
               ),
             ),
@@ -243,6 +267,9 @@ void main() {
         findsOneWidget,
       );
       expect(scriptsOf(text), 1);
+      final entry = verify(() => history.record('account-hash', captureAny())).captured.single as FinishedRun;
+      expect(entry.text, text);
+      expect(entry.status, StatementRunStatus.failure);
     },
   );
 

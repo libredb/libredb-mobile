@@ -224,6 +224,7 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   The answer shows a card per statement Studio ran, the statements it did not run as one line, and the last statement with rows open in the result view, masked with the run's policy and without Load more; a successful statement's `rowCount` must be a whole number, else the read fails.
   The rolled-back notice keeps the commit advice only when every statement succeeded, and each successful statement's text is told to `SchemaChangeNotifier`.
   A script shows its elapsed time while it runs, and Cancel stops it by its run id as it stops a run.
+  A script runs in the active database on a server-level connection, and writes one history entry for its whole text, Failed when a statement failed.
   Any other text the check flags runs only after the write confirmation, and so does each Load more of it, because every page runs the whole statement again on Studio; the text sent is the one confirmed.
   A `studio.query_error` shows the database's own words under the editor and places the cursor at `details.position`, which counts characters from 1 and is converted to a UTF-16 offset.
   The rolled-back notice advises the engine's commit keyword, `EXEC` on Redis and `COMMIT` elsewhere, as Studio's web does.
