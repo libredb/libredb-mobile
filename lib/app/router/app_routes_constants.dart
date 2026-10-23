@@ -26,6 +26,9 @@ class ApplicationRoutesConstants {
   /// The kind screen of a container (`container`).
   static const browseKinds = ':connectionId/kinds';
 
+  /// The source of an object of a kind, its path as repeated `path` query parameters.
+  static const browseSource = ':connectionId/source/:kind';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

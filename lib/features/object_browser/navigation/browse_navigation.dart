@@ -6,10 +6,17 @@ class BrowseRouteNames {
   static const browse = 'browse';
   static const containers = 'browseContainers';
   static const kinds = 'browseKinds';
+  static const source = 'browseSource';
 }
 
 /// The query key that carries a container path, once per segment and in order.
 const browseContainerKey = 'container';
+
+/// The query key that carries an object path, once per segment and in order.
+const browsePathKey = 'path';
+
+/// The path parameter that names an object's kind.
+const browseKindKey = 'kind';
 
 /// The path parameter that names the connection.
 const browseConnectionIdKey = 'connectionId';
@@ -20,6 +27,13 @@ String browseConnectionIdOf(GoRouterState state) => state.pathParameters[browseC
 /// The container path carried by the route of [state], empty when the route names none.
 List<String> browseContainerOf(GoRouterState state) =>
     List.unmodifiable(state.uri.queryParametersAll[browseContainerKey] ?? const <String>[]);
+
+/// The object path carried by the route of [state], empty when the route names none.
+List<String> browsePathOf(GoRouterState state) =>
+    List.unmodifiable(state.uri.queryParametersAll[browsePathKey] ?? const <String>[]);
+
+/// The kind named by the route of [state].
+String browseKindOf(GoRouterState state) => state.pathParameters[browseKindKey]!;
 
 /// Opens the level of [connectionId]'s containers under [parent].
 void openBrowseContainers(BuildContext context, String connectionId, List<String> parent) => context.pushNamed(
@@ -33,6 +47,13 @@ void openBrowseKinds(BuildContext context, String connectionId, List<String> con
   BrowseRouteNames.kinds,
   pathParameters: {browseConnectionIdKey: connectionId},
   queryParameters: _containerQuery(container),
+);
+
+/// Opens the source of the object at [path] of [connectionId], of [kind].
+void openBrowseSource(BuildContext context, String connectionId, List<String> path, String kind) => context.pushNamed(
+  BrowseRouteNames.source,
+  pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
+  queryParameters: path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browsePathKey: path},
 );
 
 /// A container path as repeated query values, which `Uri` encodes one by one, so a name holding `/`, `&` or a space
