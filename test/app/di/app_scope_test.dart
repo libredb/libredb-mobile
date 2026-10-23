@@ -39,6 +39,8 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -910,6 +912,13 @@ void main() {
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
+    });
+
+    testWidgets('provides the shared statement runner that the browser and the SQL editor run through', (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<IStatementRepository>(), isA<IStatementRepository>());
+      expect(scope.read<ISqlEditorRepository>(), isA<ISqlEditorRepository>());
     });
 
     testWidgets('features get the one cached object browser and provider-meta that the app clears', (tester) async {

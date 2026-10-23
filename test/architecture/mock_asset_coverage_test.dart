@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_re
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
+import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_env.dart';
@@ -48,17 +49,16 @@ void main() {
     'IObjectBrowserRepository.search': (client) =>
         ObjectBrowserRepository(client).search('seed:sales-db', term: 'order'),
     'IObjectBrowserRepository.scanKeys': (client) => ObjectBrowserRepository(client).scanKeys('seed:cache'),
-    'ISqlEditorRepository.run': (client) => SqlEditorRepository(client).run('seed:sales-db', 'select 1'),
-    'ISqlEditorRepository.runScript': (client) =>
-        SqlEditorRepository(client).runScript('seed:sales-db', 'select 1; select 2'),
-    'ISqlEditorRepository.cancel': (client) => SqlEditorRepository(client).cancel('seed:sales-db', 'q-1'),
-    'ISqlEditorRepository.beginTransaction': (client) => SqlEditorRepository(client).beginTransaction('seed:sales-db'),
+    'IStatementRepository.run': (client) => StatementRepository(client).run('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.run': (client) => _sqlEditor(client).run('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.runScript': (client) => _sqlEditor(client).runScript('seed:sales-db', 'select 1; select 2'),
+    'ISqlEditorRepository.cancel': (client) => _sqlEditor(client).cancel('seed:sales-db', 'q-1'),
+    'ISqlEditorRepository.beginTransaction': (client) => _sqlEditor(client).beginTransaction('seed:sales-db'),
     'ISqlEditorRepository.runInTransaction': (client) =>
-        SqlEditorRepository(client).runInTransaction('seed:sales-db', 'select 1'),
-    'ISqlEditorRepository.commit': (client) => SqlEditorRepository(client).commit('seed:sales-db'),
-    'ISqlEditorRepository.rollback': (client) => SqlEditorRepository(client).rollback('seed:sales-db'),
-    'ISqlEditorRepository.transactionStatus': (client) =>
-        SqlEditorRepository(client).transactionStatus('seed:sales-db'),
+        _sqlEditor(client).runInTransaction('seed:sales-db', 'select 1'),
+    'ISqlEditorRepository.commit': (client) => _sqlEditor(client).commit('seed:sales-db'),
+    'ISqlEditorRepository.rollback': (client) => _sqlEditor(client).rollback('seed:sales-db'),
+    'ISqlEditorRepository.transactionStatus': (client) => _sqlEditor(client).transactionStatus('seed:sales-db'),
     'ILifecycleRepository.fetchAppConfig': (client) => LifecycleRepository(client).fetchAppConfig(),
     'IStudioStatusRepository.liveness': (client) => StudioStatusRepository(client).liveness(),
     'IStudioStatusRepository.readiness': (client) => StudioStatusRepository(client).readiness(),
@@ -113,6 +113,8 @@ void main() {
     expect(driven.difference(methods), isEmpty, reason: 'These entries match no repository method');
   });
 }
+
+SqlEditorRepository _sqlEditor(ApiClient client) => SqlEditorRepository(client, StatementRepository(client));
 
 /// `Interface.method` for every method of a repository interface that a class importing [ApiClient] implements.
 Set<String> _apiClientRepositoryMethods() {

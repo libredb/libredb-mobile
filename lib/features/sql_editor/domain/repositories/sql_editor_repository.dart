@@ -1,14 +1,15 @@
 import 'package:libredb_mobile/core/result/result.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
 
 /// Runs statements on a managed connection, named by its id (`seed:<id>`). Each call spends a slot of the user's
 /// Studio request budget, and none is ever retried on its own: a statement may have changed data.
 abstract class ISqlEditorRepository {
-  /// Runs one statement. [queryId], from `newQueryId()`, lets [cancel] stop it; [params] are positional bind values
-  /// (strings, numbers, booleans or null); [catalog] is the database to run in on a server-level connection.
+  /// Runs one statement through the shared `IStatementRepository`. [queryId], from `newQueryId()`, lets [cancel] stop
+  /// it; [params] are positional bind values (strings, numbers, booleans or null); [catalog] is the database to run in
+  /// on a server-level connection.
   Future<Result<QueryResult>> run(
     String connectionId,
     String sql, {
@@ -18,8 +19,15 @@ abstract class ISqlEditorRepository {
     String? catalog,
   });
 
-  /// Runs a text of several statements in order. It takes no bind values and has no paging.
-  Future<Result<ScriptResult>> runScript(String connectionId, String sql, {String? queryId, String? catalog});
+  /// Runs a text of several statements in order. It takes no bind values. [page] bounds the last statement when it is
+  /// a SELECT; Studio answers no paging for a script, so there is no next page to ask for.
+  Future<Result<ScriptResult>> runScript(
+    String connectionId,
+    String sql, {
+    String? queryId,
+    String? catalog,
+    QueryPage? page,
+  });
 
   /// Asks Studio to stop the run [queryId]. True when the engine stopped it; false when it had already finished or the
   /// engine did not stop it. The stopped run itself fails with `studio.query_cancelled`.

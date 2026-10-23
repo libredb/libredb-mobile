@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_result.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 
 /// The answer to a text of several statements, which Studio splits and runs in order, stopping at the first that
 /// fails. A failed statement is part of the result, not an error.

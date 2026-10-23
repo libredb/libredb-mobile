@@ -35,11 +35,13 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_in
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
+import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 
 /// What the app is built from. The app signs in only through the OpenID Connect provider; `main_local.dart` swaps the
 /// provider for a debug-only double (`LocalSignInDependencies`), which `main_prod.dart` never imports.
@@ -144,8 +146,12 @@ class AppDependencies {
   CachedObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) =>
       CachedObjectBrowserRepository(ObjectBrowserRepository(apiClient));
 
-  /// Studio's statement routes.
-  ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient) => SqlEditorRepository(apiClient);
+  /// The one way a feature runs a statement and reads its result: `POST /api/db/query`.
+  IStatementRepository createStatementRepository(ApiClient apiClient) => StatementRepository(apiClient);
+
+  /// Studio's statement routes, with a single statement run through [statements].
+  ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient, IStatementRepository statements) =>
+      SqlEditorRepository(apiClient, statements);
 
   /// Reads the remote app config that decides whether the app opens, shows the maintenance screen or asks for an
   /// update.

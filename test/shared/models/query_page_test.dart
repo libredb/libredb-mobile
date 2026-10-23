@@ -1,5 +1,5 @@
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_id.dart';
-import 'package:libredb_mobile/features/sql_editor/domain/entities/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_id.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -52,8 +52,10 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/shared/active_connection/` | `ActiveConnectionCubit`, the one connection Browse and SQL work on, which the top bar's switcher changes and every feature follows; it is remembered on the device per signed-in subject (a SHA-256 of the identity provider's `sub`), opens again only when the first managed list of the session still holds it, and vanishes with the message '<name> is no longer available' when a list no longer holds it or a feature gets `studio.connection_not_available` for it |
 | `lib/shared/models/provider_meta.dart` | What the engine of a connection can do (`ProviderMeta`, `ContainerLevel`, `ObjectKind`, `KeyScanSpec`, `ProviderLabels`), read by the connections, the object browser, the SQL editor and the result view |
 | `lib/shared/models/provider_meta_repository.dart` | `IProviderMetaRepository`, the one way a feature asks for `ProviderMeta` |
+| `lib/shared/models/query_result.dart`, `query_page.dart`, `query_id.dart`, `vector_column.dart` | The shared statement models: `QueryResult` with its `QueryWarning`s and `VectorColumn`s, `appendResultPage` (Load more), `QueryPage` and `QueryPagination`, and `newQueryId`, read by the object browser, the SQL editor and the result view |
+| `lib/shared/models/statement_repository.dart` | `IStatementRepository`, the one way a feature runs a statement and reads its `QueryResult` |
 | `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser |
-| `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, and `ProviderMetaRepository` with its reader |
+| `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, `ProviderMetaRepository` with its reader, and `StatementRepository` with its reader `query_result_json.dart` |
 | `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
 
 A model that more than one feature reads lives in `lib/shared/models/`, never in one feature's `domain/`, because a feature must not import another feature's internals (`test/architecture/import_guard_test.dart`).
@@ -173,7 +175,7 @@ Every request follows these rules:
 | `POST /api/db/objects/source` | `IObjectBrowserRepository.source` | `ObjectSource` |
 | `POST /api/db/objects/search` | `IObjectBrowserRepository.search` | `List<DatabaseObject>` |
 | `POST /api/db/keys/scan` | `IObjectBrowserRepository.scanKeys` | `KeyScanPage` |
-| `POST /api/db/query` | `ISqlEditorRepository.run` | `QueryResult` |
+| `POST /api/db/query` | `IStatementRepository.run`, which `ISqlEditorRepository.run` calls | `QueryResult` |
 | `POST /api/db/multi-query` | `ISqlEditorRepository.runScript` | `ScriptResult` |
 | `POST /api/db/cancel` | `ISqlEditorRepository.cancel` | whether the engine stopped the run |
 | `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction |
@@ -211,9 +213,14 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
 ### Statements
 
 - `run` sends one statement, with an optional page, bind values and a run id.
+  Every feature sends it through `IStatementRepository`, so the app has one `/db/query` call; the SQL editor's `run` delegates to it.
   Studio pages a SELECT only when it adds the row bound itself; `QueryPage.after` asks for the next page, and `pagination.hasMore` says whether there is one.
+  `appendResultPage` appends that page to the rows on screen by Studio's own rule (`src/lib/results/append-page.ts`).
+  `database`, sent only when set and always as a JSON number, names the numbered database a key was walked in; Studio refuses it with a 400 on an engine that scans no keys, so only a Redis key read sends it.
+- The fields of a result that report lost or incomplete data (`pagination` with its `wasLimited`, `warnings`, and `openTransaction`, which Studio sends only as `rolled-back`) are read strictly in every reader that builds a `QueryResult`: present but malformed fails the read, so the screen shows a failure instead of hiding that rows or notices are missing.
 - `runScript` sends several statements, which Studio splits and runs in order, stopping at the first failure.
-  It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values and has no paging.
+  It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values.
+  A page given to it is sent as `options` and bounds the last statement when that is a SELECT, but Studio answers no paging for a script, so there is no next page.
   Deciding whether a text holds one statement or several is the editor's job (milestone M5).
 - `cancel` stops a run by the id the app gave it, from `newQueryId`, a UUID: Studio checks no owner on a cancel, so the id must be unguessable.
   The cancelled run fails with `studio.query_cancelled`.

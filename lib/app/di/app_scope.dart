@@ -30,6 +30,7 @@ import 'package:libredb_mobile/features/auth/data/services/misconfigured_sso_ses
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
@@ -186,8 +187,12 @@ class AppScope extends StatelessWidget {
           ),
           dispose: (notifier) => notifier.dispose(),
         ),
+        RepositoryProvider<IStatementRepository>(
+          create: (context) => dependencies.createStatementRepository(context.read<ApiClient>()),
+        ),
         RepositoryProvider<ISqlEditorRepository>(
-          create: (context) => dependencies.createSqlEditorRepository(context.read<ApiClient>()),
+          create: (context) =>
+              dependencies.createSqlEditorRepository(context.read<ApiClient>(), context.read<IStatementRepository>()),
         ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(
