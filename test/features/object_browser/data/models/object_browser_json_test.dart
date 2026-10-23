@@ -147,6 +147,57 @@ void main() {
       );
     });
 
+    test('refuses a text part without a form, or with one Studio does not send', () {
+      const noForm = '"id":"b","label":"B","text":"BEGIN","language":"sql","origin":"stored"';
+      expect(() => ObjectBrowserJson.source(answer('{$noForm}')), throwsFormatException);
+      expect(() => ObjectBrowserJson.source(answer('{$noForm,"form":"whole"}')), throwsFormatException);
+    });
+
+    test('refuses a truncation whose reason is empty or blank, or that is null', () {
+      for (final reason in ['""', '"  "']) {
+        expect(
+          () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"limit":10,"reason":$reason}}')),
+          throwsFormatException,
+          reason: reason,
+        );
+      }
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":null}')),
+        throwsFormatException,
+      );
+    });
+
+    test('refuses an empty or blank id, label, text, language or refusal sentence', () {
+      for (final blank in ['""', '" "']) {
+        for (final field in ['id', 'label', 'text', 'language']) {
+          final fields = {
+            'id': '"b"',
+            'label': '"B"',
+            'text': '"BEGIN"',
+            'language': '"sql"',
+            'form': '"complete"',
+            'origin': '"stored"',
+          }..[field] = blank;
+          final part = fields.entries.map((e) => '"${e.key}":${e.value}').join(',');
+          expect(() => ObjectBrowserJson.source(answer('{$part}')), throwsFormatException, reason: '$field $blank');
+        }
+        expect(
+          () => ObjectBrowserJson.source(answer('{"id":"c","label":"C","unavailable":$blank}')),
+          throwsFormatException,
+          reason: 'unavailable $blank',
+        );
+      }
+    });
+
+    test('refuses two parts with one id, and more than eight parts', () {
+      const part = '{"id":"c","label":"C","unavailable":"x"}';
+      expect(() => ObjectBrowserJson.source(answer('$part,$part')), throwsFormatException);
+      final nine = [for (var i = 0; i < 9; i++) '{"id":"p$i","label":"P","unavailable":"x"}'].join(',');
+      expect(() => ObjectBrowserJson.source(answer(nine)), throwsFormatException);
+      final eight = [for (var i = 0; i < 8; i++) '{"id":"p$i","label":"P","unavailable":"x"}'].join(',');
+      expect(ObjectBrowserJson.source(answer(eight)).parts, hasLength(8));
+    });
+
     test('refuses a source without parts', () {
       expect(() => ObjectBrowserJson.source('{"path":["v"],"kind":"view","parts":[]}'), throwsFormatException);
     });

@@ -1265,6 +1265,11 @@ class S {
     return Intl.message('Copied', name: 'browse_source_copied', desc: '', args: []);
   }
 
+  /// `Could not copy ({code})`
+  String browse_source_copy_failed(String code) {
+    return Intl.message('Could not copy ($code)', name: 'browse_source_copy_failed', desc: '', args: [code]);
+  }
+
   /// `Share`
   String get browse_source_share {
     return Intl.message('Share', name: 'browse_source_share', desc: '', args: []);

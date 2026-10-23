@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_highlighter.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_share.dart';
@@ -96,18 +97,28 @@ class _Sentence extends StatelessWidget {
 }
 
 class _TextPart extends StatelessWidget {
+  static final _log = AppLogger.getLogger('ObjectSourceView');
+
   const _TextPart({super.key, required this.source, required this.part});
 
   final ObjectSource source;
   final SourceText part;
 
+  /// Puts the whole part on the clipboard; a copy that fails is shown with its code.
   Future<void> _copy(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final copied = S.of(context).browse_source_copied;
-    await Clipboard.setData(ClipboardData(text: part.text));
+    final s = S.of(context);
+    String message;
+    try {
+      await Clipboard.setData(ClipboardData(text: part.text));
+      message = s.browse_source_copied;
+    } on PlatformException catch (error) {
+      _log.warn('source not copied: {}', [error.code]);
+      message = s.browse_source_copy_failed(error.code);
+    }
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(copied)));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -174,6 +185,8 @@ class _SourceLines extends StatefulWidget {
 }
 
 class _SourceLinesState extends State<_SourceLines> {
+  static final _lineBreak = RegExp(r'\r?\n');
+
   late List<_Row> _rows;
   late int _widest;
   late int _lineCount;
@@ -196,7 +209,7 @@ class _SourceLinesState extends State<_SourceLines> {
     const most = ObjectSourceView.maxRowLength;
     final rows = <_Row>[];
     var widest = 0;
-    final lines = widget.text.split('\n');
+    final lines = widget.text.split(_lineBreak);
     for (var index = 0; index < lines.length; index++) {
       final line = lines[index].replaceAll('\t', '    ');
       if (line.length <= most) {

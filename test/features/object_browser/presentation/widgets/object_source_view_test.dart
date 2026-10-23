@@ -198,6 +198,30 @@ void main() {
     expect(find.text('Copied'), findsOneWidget);
   });
 
+  testWidgets('shows a copy that fails, with its error code', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async => call.method == 'Clipboard.setData' ? throw PlatformException(code: 'clipboard_denied') : null,
+    );
+    await tester.pumpWidget(_app(_one(_text('SELECT 1'))));
+
+    await tester.tap(find.byTooltip('Copy all'));
+    await tester.pump();
+
+    expect(find.text('Could not copy (clipboard_denied)'), findsOneWidget);
+    expect(find.text('Copied'), findsNothing);
+  });
+
+  testWidgets('splits lines on CRLF as well as LF, and shows no carriage return', (tester) async {
+    await tester.pumpWidget(_app(_one(_text('SELECT 1\r\nFROM t\nWHERE x'))));
+
+    expect(find.text('3'), findsOneWidget);
+    for (final rich in tester.widgetList<RichText>(find.byType(RichText))) {
+      expect(rich.text.toPlainText(), isNot(contains('\r')));
+    }
+    expect(_span(tester, 'FROM'), isNotNull);
+  });
+
   group('Share', () {
     testWidgets('sends a part of up to 100,000 characters as text', (tester) async {
       final text = 'x' * 100000;

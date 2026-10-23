@@ -390,6 +390,14 @@
   "@browse_source_copy": {},
   "browse_source_copied": "Copied",
   "@browse_source_copied": {},
+  "browse_source_copy_failed": "Could not copy ({code})",
+  "@browse_source_copy_failed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "browse_source_share": "Share",
   "@browse_source_share": {},
   "browse_source_share_failed": "Could not share ({code})",
