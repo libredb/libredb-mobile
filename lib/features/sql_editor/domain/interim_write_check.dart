@@ -244,14 +244,26 @@ class InterimWriteCheck {
   /// A word: a run of ASCII letters, digits and `_`; any other character, a non-ASCII letter included, ends it.
   static final _word = RegExp('[A-Za-z0-9_]+');
 
-  /// A deny word in any ASCII case (a `$` in one matches only itself) whose left neighbour is not an ASCII letter or `_` and whose right neighbour is not
-  /// an ASCII letter, digit or `_`. A digit on the left does not hide it, since T-SQL reads `1DELETE` as the number 1
-  /// and a DELETE. Each letter is spelled as its two ASCII cases, so no other script's case folding can match.
+  /// A deny word in any ASCII case, a `$` in one matching only itself, whose left neighbour is not an ASCII letter or
+  /// `_` and whose right neighbour is not an ASCII letter, digit or `_`. A digit on the left does not hide it, since
+  /// T-SQL reads `1DELETE` as the number 1 and a DELETE. Each letter is spelled as its two ASCII cases, so no other
+  /// script's case folding can match.
   static final _denyWord = RegExp(
     '(?<![A-Za-z_])(?:${[
       for (final word in denyWords) [for (final c in word.split('')) '[$c${c.toLowerCase()}]'].join(),
     ].join('|')})(?![A-Za-z0-9_])',
   );
+
+  /// A PostgreSQL Unicode-escaped identifier, which spells a name the scan cannot read: `U&"dblink_exe\0063"` is
+  /// `dblink_exec`.
+  static final _unicodeEscapedIdentifier = RegExp('[Uu]&"');
+
+  /// What the sheet names for a Unicode-escaped identifier.
+  static const unicodeEscapedIdentifierWord = 'U&"';
+
+  /// The words after a first keyword `EXPLAIN` that ask: Oracle and DB2 write the plan of `EXPLAIN PLAN` into a
+  /// table, and DB2's `EXPLAIN ALL` writes its explain tables.
+  static const _explainWritingWords = {'PLAN', 'ALL'};
 
   /// A maximal run of ASCII letters, digits and `_` that starts with a digit; T-SQL ends a number at the first
   /// character that cannot continue it, so every deny word inside such a run counts (`0xKILL` is `0x` and KILL).
@@ -262,7 +274,7 @@ class InterimWriteCheck {
 
   /// The characters that end a `--` comment on some engines but not on others: a carriage return (when no line feed
   /// follows it), a vertical tab, a form feed, NEL, the line separator and the paragraph separator.
-  static final _otherLineTerminator = RegExp('\r(?!\n)|[\x0B\x0C\u0085\u2028\u2029]');
+  static final _otherLineTerminator = RegExp('\r(?!\n)|[\x0B\x0C\u0085  ]');
 
   /// The white space MySQL needs after `--` to read a comment.
   static const _dashCommentSpace = {' ', '\t', '\n', '\r'};
@@ -275,10 +287,25 @@ class InterimWriteCheck {
     var flagged = _firstDenyWord(text);
     if (flagged != null) reasons.add(WriteCheckReason.mayWrite);
 
-    final first = _firstKeyword(text);
-    if (first == null || !allowedFirstKeywords.contains(first.word)) {
-      reasons.add(WriteCheckReason.mayWrite);
-      flagged ??= first;
+    final first = _wordAfterComments(text, 0);
+    switch (first) {
+      case _Unreadable() || _NoWord():
+        reasons.add(WriteCheckReason.mayWrite);
+      case _Word(:final word) when !allowedFirstKeywords.contains(word.word):
+        reasons.add(WriteCheckReason.mayWrite);
+        flagged ??= word;
+      case _Word(:final word, :final end) when word.word == 'EXPLAIN':
+        switch (_wordAfterComments(text, end)) {
+          case _Unreadable():
+            reasons.add(WriteCheckReason.mayWrite);
+          case _Word(word: final next) when _explainWritingWords.contains(next.word):
+            reasons.add(WriteCheckReason.mayWrite);
+            flagged ??= next;
+          case _Word() || _NoWord():
+            break;
+        }
+      case _Word():
+        break;
     }
 
     if (_hasSeveralStatements(text)) reasons.add(WriteCheckReason.severalStatements);
@@ -287,6 +314,7 @@ class InterimWriteCheck {
     return AsksBeforeRunning(reasons: reasons, flaggedWord: flagged);
   }
 
+  /// The first deny word or Unicode-escaped identifier by position, the longest deny word when several start there.
   static FlaggedWord? _firstDenyWord(String text) {
     final bounded = _denyWord.firstMatch(text);
     var start = bounded?.start;
@@ -304,43 +332,50 @@ class InterimWriteCheck {
         }
       }
     }
+    final escaped = _unicodeEscapedIdentifier.firstMatch(text);
+    if (escaped != null && (start == null || escaped.start < start)) {
+      start = escaped.start;
+      word = unicodeEscapedIdentifierWord;
+    }
     if (start == null) return null;
     return FlaggedWord(word: word!, line: _lineOf(text, start));
   }
 
-  /// The first word after leading white space and comments, or null when no word follows them.
+  /// The word after the white space and comments that start at [offset].
   ///
-  /// A leading comment counts only when every engine reads it the same way, so the text has no first keyword when a
-  /// leading comment never closes, when a `--` comment holds a bare carriage return or another line terminator but
-  /// the line feed (PostgreSQL and SQL Server end it at a bare carriage return, SQLite, MySQL, MariaDB and DuckDB at the
-  /// line feed) or is not followed by white space (MySQL reads no
-  /// comment then), when a `/* */` comment holds another `/*` (PostgreSQL and SQL Server nest them, the others end it
-  /// at the first `*/`), and when it starts with `/*!` or `/*M!` (MySQL and MariaDB run its body).
-  static FlaggedWord? _firstKeyword(String text) {
-    var i = 0;
+  /// A comment counts only when every engine reads it the same way, so the answer is [_Unreadable] when a comment
+  /// there never closes, when a `--` comment holds a bare carriage return or a line terminator other than the line
+  /// feed (PostgreSQL and SQL Server end it at a bare carriage return, SQLite, MySQL, MariaDB and DuckDB at the line
+  /// feed) or is not followed by white space (MySQL reads no comment then), when a `/* */` comment holds another `/*`
+  /// (PostgreSQL and SQL Server nest them, the others end it at the first `*/`), and when it starts with `/*!` or
+  /// `/*M!` (MySQL and MariaDB run its body).
+  static _Next _wordAfterComments(String text, int offset) {
+    var i = offset;
     while (i < text.length) {
       final char = text[i];
       if (char.trim().isEmpty) {
         i++;
       } else if (text.startsWith('--', i)) {
-        if (i + 2 >= text.length || !_dashCommentSpace.contains(text[i + 2])) return null;
+        if (i + 2 >= text.length || !_dashCommentSpace.contains(text[i + 2])) return const _Unreadable();
         final end = text.indexOf('\n', i + 2);
-        if (end < 0) return null;
-        if (_otherLineTerminator.hasMatch(text.substring(i + 2, end + 1))) return null;
+        if (end < 0) return const _Unreadable();
+        if (_otherLineTerminator.hasMatch(text.substring(i + 2, end + 1))) return const _Unreadable();
         i = end + 1;
       } else if (text.startsWith('/*', i)) {
-        if (text.startsWith('/*!', i) || text.startsWith('/*M!', i) || text.startsWith('/*m!', i)) return null;
+        if (text.startsWith('/*!', i) || text.startsWith('/*M!', i) || text.startsWith('/*m!', i)) {
+          return const _Unreadable();
+        }
         final end = text.indexOf('*/', i + 2);
-        if (end < 0) return null;
-        if (text.substring(i + 2, end + 2).contains('/*')) return null;
+        if (end < 0) return const _Unreadable();
+        if (text.substring(i + 2, end + 2).contains('/*')) return const _Unreadable();
         i = end + 2;
       } else {
         final match = _word.matchAsPrefix(text, i);
-        if (match == null) return null;
-        return FlaggedWord(word: match[0]!.toUpperCase(), line: _lineOf(text, i));
+        if (match == null) return const _NoWord();
+        return _Word(FlaggedWord(word: match[0]!.toUpperCase(), line: _lineOf(text, i)), match.end);
       }
     }
-    return null;
+    return const _NoWord();
   }
 
   static bool _hasSeveralStatements(String text) {
@@ -354,4 +389,25 @@ class InterimWriteCheck {
 
   /// The 1-based line of [offset], counted as [statementLines] splits lines.
   static int _lineOf(String text, int offset) => statementLines(text.substring(0, offset)).length;
+}
+
+/// What follows white space and comments: a word and where it ends, something else or the end of the text, or a
+/// comment the engines read differently.
+sealed class _Next {
+  const _Next();
+}
+
+final class _Word extends _Next {
+  const _Word(this.word, this.end);
+
+  final FlaggedWord word;
+  final int end;
+}
+
+final class _NoWord extends _Next {
+  const _NoWord();
+}
+
+final class _Unreadable extends _Next {
+  const _Unreadable();
 }

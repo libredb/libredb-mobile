@@ -38,8 +38,8 @@ Future<WriteConfirmation> showWriteConfirmationSheet(
 /// On a production connection the header is in the error colour and Run stays disabled until the user types the
 /// connection's name, compared exactly as Studio's typed confirmation compares it (`src/components/typed-confirm.tsx`
 /// at libredb-studio c9989a6b5): no trimming, no case folding, an empty field never matches, and a connection without
-/// a name (or one of only white space) shows a sentence in place of the field and keeps Run disabled. That step is the phone's own, for every
-/// confirmation on a production connection.
+/// a name (or one of only white space) shows a sentence in place of the field and keeps Run disabled. That step is the
+/// phone's own, for every confirmation on a production connection.
 class WriteConfirmationSheet extends StatefulWidget {
   const WriteConfirmationSheet({super.key, required this.connection, required this.text, required this.answer});
 

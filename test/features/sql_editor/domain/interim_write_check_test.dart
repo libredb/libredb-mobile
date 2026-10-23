@@ -516,6 +516,60 @@ void main() {
     });
   });
 
+  group('a Unicode-escaped identifier', () {
+    // review#111 deleted 3 rows on PostgreSQL 17.6 through `U&"dblink_exe\0063"`, which spells dblink_exec.
+    for (final text in [
+      r'''SELECT U&"dblink_exe\0063"('dbname=app', 'x')''',
+      'select u&"x" from t',
+      r'''SELECT U&"nextva!006c" UESCAPE '!' ('s')''',
+      'SELECT 1, U&"a"',
+    ]) {
+      test(text, () => expect(_sql(text), _asks(_mayWrite, word: 'U&"', line: 1)));
+    }
+
+    test('is named by position among the deny words, on its own line', () {
+      expect(_sql('SELECT 1\nFROM U&"t" WHERE DELETE'), _asks(_mayWrite, word: 'U&"', line: 2));
+      expect(_sql('SELECT 1 DELETE\nFROM U&"t"'), _asks(_mayWrite, word: 'DELETE', line: 1));
+    });
+
+    test('U& without a double quote right after it, or a quote after other text, does not ask', () {
+      expect(_sql("SELECT U&'d\\0061t\\+000061'"), const RunsWithoutAsking());
+      expect(_sql('SELECT U& "x"'), const RunsWithoutAsking());
+      expect(_sql('SELECT "U&x"'), const RunsWithoutAsking());
+    });
+  });
+
+  group('EXPLAIN', () {
+    test('asks when its next word is PLAN or ALL, naming that word', () {
+      expect(_sql('EXPLAIN PLAN FOR SELECT * FROM t'), _asks(_mayWrite, word: 'PLAN', line: 1));
+      expect(_sql('EXPLAIN /* c */ PLAN FOR SELECT 1'), _asks(_mayWrite, word: 'PLAN', line: 1));
+      expect(_sql('explain\n-- c\nplan for select 1'), _asks(_mayWrite, word: 'PLAN', line: 3));
+      expect(_sql('EXPLAIN ALL FOR SELECT * FROM t'), _asks(_mayWrite, word: 'ALL', line: 1));
+      expect(_sql('Explain All for select 1'), _asks(_mayWrite, word: 'ALL', line: 1));
+    });
+
+    test('asks when a comment the engines read differently stands before its next word', () {
+      for (final text in [
+        'EXPLAIN /* /* */ SELECT 1 */ PLAN FOR SELECT 1',
+        'EXPLAIN -- x\rSELECT 1\nPLAN FOR SELECT 1',
+        'EXPLAIN /*!PLAN*/ SELECT 1',
+        'EXPLAIN /* open',
+      ]) {
+        expect(_sql(text), _asks(_mayWrite), reason: text);
+      }
+    });
+
+    test('runs when its next word is another word, a parenthesis or nothing', () {
+      expect(_sql('EXPLAIN SELECT 1'), const RunsWithoutAsking());
+      expect(_sql('EXPLAIN (FORMAT JSON) SELECT 1'), const RunsWithoutAsking());
+      expect(_sql('EXPLAIN QUERY PLAN SELECT 1'), const RunsWithoutAsking());
+      expect(_sql('EXPLAIN /* PLAN */ SELECT 1'), const RunsWithoutAsking());
+      expect(_sql('EXPLAIN PLANS'), const RunsWithoutAsking());
+      expect(_sql('EXPLAIN'), const RunsWithoutAsking());
+      expect(_sql('SELECT plan, all_rows FROM t'), const RunsWithoutAsking());
+    });
+  });
+
   group('several statements', () {
     test('a `;` followed by more text asks', () {
       expect(_sql('SELECT 1; DELETE FROM t'), _asks(_mayWriteAndSeveral, word: 'DELETE', line: 1));
