@@ -33,6 +33,8 @@ import 'package:libredb_mobile/features/connections/domain/repositories/connecti
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 
 // Interface repository mocks (for use case tests)
@@ -56,6 +58,8 @@ class MockIStudioStatusRepository extends Mock implements IStudioStatusRepositor
 
 class MockIProviderMetaRepository extends Mock implements IProviderMetaRepository {}
 
+class MockIActiveConnectionStore extends Mock implements IActiveConnectionStore {}
+
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}
 
@@ -65,6 +69,8 @@ class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBlo
 class MockStudioIdentityCubit extends MockCubit<StudioIdentityState> implements StudioIdentityCubit {}
 
 class MockConnectionPolicyCubit extends MockCubit<ConnectionPolicyState> implements ConnectionPolicyCubit {}
+
+class MockActiveConnectionCubit extends MockCubit<ActiveConnectionState> implements ActiveConnectionCubit {}
 
 class MockConnectivityCubit extends MockCubit<ConnectivityState> implements ConnectivityCubit {}
 

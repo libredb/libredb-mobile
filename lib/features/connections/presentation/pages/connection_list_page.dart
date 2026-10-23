@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/features/connections/application/collapsed_sections_cubit.dart';
+import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
-import 'package:libredb_mobile/features/connections/application/connection_sections.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/active_connection_feed.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_details_sheet.dart';
-import 'package:libredb_mobile/features/connections/presentation/widgets/connection_star_button.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/connection_list_view.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_empty_state.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
-import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
-import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
-import 'package:libredb_mobile/shared/models/studio_environment.dart';
-import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
@@ -160,30 +158,32 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return OnReconnect(
-      onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRefreshed()),
-      child: MultiBlocListener(
-        listeners: [
-          BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
-          BlocListener<ConnectionListBloc, ConnectionListState>(
-            listenWhen: (previous, current) =>
-                current is ConnectionListLoaded &&
-                (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
-            listener: (context, state) {
-              final policy = context.read<ConnectionPolicyCubit>();
-              final first = !_listShown;
-              _listShown = true;
-              if (first && policy.state is ConnectionPolicyLoaded) return;
-              if (first && policy.state is ConnectionPolicyLoading) return;
-              policy.refresh();
-            },
-          ),
-        ],
-        child: Column(
-          children: [
-            const _StatementCaptureNote(),
-            Expanded(child: _buildState(context)),
+    return ActiveConnectionFeed(
+      child: OnReconnect(
+        onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRefreshed()),
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
+            BlocListener<ConnectionListBloc, ConnectionListState>(
+              listenWhen: (previous, current) =>
+                  current is ConnectionListLoaded &&
+                  (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
+              listener: (context, state) {
+                final policy = context.read<ConnectionPolicyCubit>();
+                final first = !_listShown;
+                _listShown = true;
+                if (first && policy.state is ConnectionPolicyLoaded) return;
+                if (first && policy.state is ConnectionPolicyLoading) return;
+                policy.refresh();
+              },
+            ),
           ],
+          child: Column(
+            children: [
+              const _StatementCaptureNote(),
+              Expanded(child: _buildState(context)),
+            ],
+          ),
         ),
       ),
     );
@@ -248,7 +248,6 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
 
   /// The list in [state]; [unavailable] greys it under the governance outage notice and disables its rows.
   Widget _buildLoaded(BuildContext context, ConnectionListLoaded state, {bool unavailable = false}) {
-    final l10n = S.of(context);
     final refreshError = state.refreshError;
     final header = [
       OfflineStaleMarker(loadedAt: state.loadedAt),
@@ -285,88 +284,35 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
         ],
       );
     }
-    // A search shows every match, so it opens the collapsed sections without changing what the device remembers.
-    final searching = state.isSearching;
     return Column(
       children: [
         ...header,
-        Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-          child: _SearchField(controller: _search),
-        ),
-        _EnvironmentChips(environments: state.environments, selected: state.environment),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _refresh,
-            child: BlocBuilder<FavoriteConnectionsBloc, FavoriteConnectionsState>(
-              builder: (context, favoritesState) {
-                final favorites = switch (favoritesState) {
-                  FavoriteConnectionsReady(:final favorites) => favorites,
-                  FavoriteConnectionsNone() || FavoriteConnectionsLoading() || FavoriteConnectionsUnavailable() => null,
-                };
-                final split = withFavorites(state.sections, favorites?.starred ?? const {});
-                // The strip is a shortcut to the whole list, so a search or a filter hides it.
-                final recent = favorites == null || searching || state.environment != null
-                    ? const <StudioConnection>[]
-                    : recentConnections(state.connections, favorites.recent);
-                return BlocBuilder<CollapsedSectionsCubit, CollapsedSectionsState>(
-                  builder: (context, collapsed) {
-                    bool isOpen(String key) => searching || !collapsed.isCollapsed(key);
-                    Widget sectionHeader(String key, String title, int count) => _SectionHeader(
-                      key: ValueKey('connection-section-$key'),
-                      title: title,
-                      count: count,
-                      collapsed: !isOpen(key),
-                      onTap: searching ? null : () => context.read<CollapsedSectionsCubit>().toggle(key),
-                    );
-                    Widget connectionRow(StudioConnection connection) => _ConnectionRow(
-                      key: ValueKey('connection-row-${connection.id}'),
-                      connection: connection,
-                      starred: favorites?.starred.contains(connection.id),
-                      enabled: !unavailable,
-                    );
-                    return ListView(
-                      key: const ValueKey('connection-sections'),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                      children: [
-                        if (recent.isNotEmpty) _RecentStrip(connections: recent, enabled: !unavailable),
-                        if (split.favorites.isEmpty && split.sections.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xl),
-                            child: Text(
-                              l10n.connection_search_no_match,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        if (split.favorites.isNotEmpty) ...[
-                          sectionHeader(_favoritesKey, l10n.connection_favorites, split.favorites.length),
-                          if (isOpen(_favoritesKey)) ...split.favorites.map(connectionRow),
-                        ],
-                        for (final section in split.sections) ...[
-                          sectionHeader(
-                            section.key,
-                            section.group ?? l10n.connection_group_other,
-                            section.connections.length,
-                          ),
-                          if (isOpen(section.key)) ...section.connections.map(connectionRow),
-                        ],
-                      ],
-                    );
-                  },
-                );
-              },
+          child: BlocSelector<ActiveConnectionCubit, ActiveConnectionState, String?>(
+            selector: (active) => active.connection?.id,
+            builder: (context, activeId) => ConnectionListView(
+              state: state,
+              search: _search,
+              activeId: activeId,
+              onRefresh: _refresh,
+              showRecent: true,
+              enabled: !unavailable,
+              onOpen: (connection) => _open(context, connection),
+              onLongPress: (connection) => showConnectionDetailsSheet(context, connection),
             ),
           ),
         ),
       ],
     );
   }
-}
 
-/// Names the Favorites section in the stored collapsed state; a group key always starts with `group:`.
-const _favoritesKey = 'favorites';
+  /// Makes [connection] the active one and the first of the recent ones, and opens it in the Browse tab.
+  void _open(BuildContext context, StudioConnection connection) {
+    context.read<FavoriteConnectionsBloc>().add(FavoriteConnectionOpened(connection.id));
+    context.read<ActiveConnectionCubit>().select(connection);
+    context.go(ApplicationRoutesConstants.browse);
+  }
+}
 
 /// "Statements you run are recorded in full in this server's query log." under the app bar while governance records
 /// statements in full, as Studio's web client says it; nothing otherwise.
@@ -445,240 +391,4 @@ class _OutageBanner extends StatelessWidget {
       child: child,
     ),
   );
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = S.of(context);
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (context, value, _) => TextField(
-        controller: controller,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: l10n.connection_search_hint,
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: value.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: l10n.connection_search_clear,
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    controller.clear();
-                    context.read<ConnectionListBloc>().add(const ConnectionListSearchChanged(''));
-                  },
-                ),
-        ),
-        onChanged: (text) => context.read<ConnectionListBloc>().add(ConnectionListSearchChanged(text)),
-      ),
-    );
-  }
-}
-
-class _EnvironmentChips extends StatelessWidget {
-  const _EnvironmentChips({required this.environments, required this.selected});
-
-  final List<String> environments;
-  final String? selected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (environments.isEmpty) return const SizedBox(height: AppSpacing.sm);
-    final l10n = S.of(context);
-    return Semantics(
-      container: true,
-      label: l10n.connection_environment_filter,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-        child: Row(
-          spacing: AppSpacing.sm,
-          children: [
-            for (final environment in environments)
-              FilterChip(
-                label: Text(StudioEnvironment.label(environment) ?? l10n.connection_environment_other),
-                selected: environment == selected,
-                onSelected: (isSelected) => context.read<ConnectionListBloc>().add(
-                  ConnectionListEnvironmentFilterChanged(isSelected ? environment : null),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    super.key,
-    required this.title,
-    required this.count,
-    required this.collapsed,
-    required this.onTap,
-  });
-
-  final String title;
-  final int count;
-  final bool collapsed;
-
-  /// Null while a search is active: the section then stays open and the header does not toggle it.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      button: onTap != null,
-      expanded: !collapsed,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-            child: Row(
-              spacing: AppSpacing.sm,
-              children: [
-                Icon(collapsed ? Icons.chevron_right : Icons.expand_more, color: theme.colorScheme.onSurfaceVariant),
-                Expanded(
-                  child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                ),
-                Text('$count', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConnectionRow extends StatelessWidget {
-  const _ConnectionRow({super.key, required this.connection, required this.starred, this.enabled = true});
-
-  final StudioConnection connection;
-
-  /// Whether the user starred the connection, or null when the list shows no favorites and so no star.
-  final bool? starred;
-
-  /// False while governance is unavailable: the row shows greyed and neither opens nor stars.
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final environment = connection.environment;
-    final strip = EnvironmentAccent.resolve(
-      environment: environment,
-      color: connection.color,
-      scheme: theme.colorScheme,
-    ).strip;
-    final secondary = connection.database ?? connection.host;
-    final showsBadge = EnvironmentBadge.showsFor(environment);
-    // Until the active connection (#26) lands, a tap shows the details too.
-    final row = InkWell(
-      onTap: enabled ? () => _open(context, connection) : null,
-      onLongPress: enabled ? () => showConnectionDetailsSheet(context, connection) : null,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: strip ?? Colors.transparent, width: 4)),
-        ),
-        padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, starred == null ? AppSpacing.lg : 0, AppSpacing.sm),
-        child: Row(
-          spacing: AppSpacing.md,
-          children: [
-            Icon(engineIcon(connection.type), semanticLabel: connection.type, color: theme.colorScheme.primary),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 2,
-                children: [
-                  Text(connection.name, style: theme.textTheme.bodyLarge),
-                  if (secondary != null)
-                    Text(
-                      secondary,
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  if (showsBadge || connection.readOnlyForUser)
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      children: [
-                        if (showsBadge) EnvironmentBadge(environment: environment!, color: connection.color),
-                        if (connection.readOnlyForUser) const ReadOnlyChip(),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            if (starred != null)
-              ConnectionStarButton(
-                key: ValueKey('connection-star-${connection.id}'),
-                connection: connection,
-                starred: starred!,
-              ),
-          ],
-        ),
-      ),
-    );
-    return enabled ? row : IgnorePointer(child: Opacity(opacity: 0.38, child: row));
-  }
-}
-
-/// The last connections the user opened, the one opened last first, each a shortcut that opens it like its row.
-class _RecentStrip extends StatelessWidget {
-  const _RecentStrip({required this.connections, required this.enabled});
-
-  final List<StudioConnection> connections;
-
-  /// False while governance is unavailable: the shortcuts show greyed and do not open.
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      key: const ValueKey('connection-recent'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-          child: Text(
-            S.of(context).connection_recent,
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-          child: Row(
-            spacing: AppSpacing.sm,
-            children: [
-              for (final connection in connections)
-                ActionChip(
-                  key: ValueKey('connection-recent-${connection.id}'),
-                  avatar: Icon(engineIcon(connection.type), semanticLabel: connection.type),
-                  label: Text(connection.name),
-                  onPressed: enabled ? () => _open(context, connection) : null,
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Opens the connection: it becomes the first of the recent ones, and, until the active connection (#26) lands, the
-/// sheet shows what the app knows about it.
-void _open(BuildContext context, StudioConnection connection) {
-  context.read<FavoriteConnectionsBloc>().add(FavoriteConnectionOpened(connection.id));
-  showConnectionDetailsSheet(context, connection);
 }

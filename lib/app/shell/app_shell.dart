@@ -12,6 +12,10 @@ import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.state, required this.child});
@@ -72,30 +76,67 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return DevConsoleShortcut(
-      child: SignOutProgressBarrier(
-        child: Column(
-          children: [
-            const ConnectivityBanner(),
-            Expanded(
-              // The offline banner already pads itself below the status bar, so the shell must not add that inset again.
-              child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
-                selector: (state) => state.isOffline,
-                builder: (context, isOffline) => MediaQuery.removePadding(
-                  context: context,
-                  removeTop: isOffline,
-                  child: _accountRefusalOr(
-                    ResponsiveScaffold(
-                      activeRoute: widget.state.uri.path,
-                      child: GovernanceStatusScope(child: widget.child),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
+          listenWhen: (previous, current) => current is ActiveConnectionVanished,
+          listener: (context, state) => _onVanished(context, (state as ActiveConnectionVanished).vanished),
+        ),
+        BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
+          listenWhen: (previous, current) =>
+              current.connection != null && previous.connection?.id != current.connection!.id,
+          listener: (context, state) => _onSwitched(context),
+        ),
+      ],
+      child: DevConsoleShortcut(
+        child: SignOutProgressBarrier(
+          child: Column(
+            children: [
+              const ConnectivityBanner(),
+              Expanded(
+                // The offline banner already pads itself below the status bar, so the shell must not add that inset
+                // again.
+                child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
+                  selector: (state) => state.isOffline,
+                  builder: (context, isOffline) => MediaQuery.removePadding(
+                    context: context,
+                    removeTop: isOffline,
+                    child: _accountRefusalOr(
+                      ResponsiveScaffold(
+                        activeRoute: widget.state.uri.path,
+                        child: GovernanceStatusScope(child: widget.child),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+  /// Names the vanished connection, never with the reason, and closes the pages that showed it for the connection
+  /// list.
+  void _onVanished(BuildContext context, StudioConnection vanished) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(S.of(context).connection_vanished(vanished.name))));
+    if (_worksOnActiveConnection(widget.state.uri.path)) context.go(ApplicationRoutesConstants.connectionList);
+  }
+
+  /// Returns the Browse stack to its root when another connection opens, so no page of the previous one stays, without
+  /// changing the visible tab.
+  void _onSwitched(BuildContext context) {
+    if (widget.state.uri.path.startsWith('${ApplicationRoutesConstants.browse}/')) {
+      context.go(ApplicationRoutesConstants.browse);
+    }
+  }
+
+  /// Whether the page at [location] shows the active connection: the Browse and SQL tabs and every page under them.
+  static bool _worksOnActiveConnection(String location) => [
+    ApplicationRoutesConstants.browse,
+    ApplicationRoutesConstants.sql,
+  ].any((tab) => location == tab || location.startsWith('$tab/'));
 }
