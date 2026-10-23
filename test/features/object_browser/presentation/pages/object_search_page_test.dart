@@ -277,6 +277,45 @@ void main() {
     expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
   });
 
+  for (final viaMenu in [false, true]) {
+    testWidgets('a table match opens its Details ${viaMenu ? 'from the long-press menu' : 'by the tap rule'}', (
+      tester,
+    ) async {
+      answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
+      when(
+        () => harness.repository.describe(
+          _postgres.id,
+          path: ['public', 'orders'],
+          kind: 'table',
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async => Success(detailAnswer('describe_postgres_orders')));
+      // The detail page lists the schema's tables to link the foreign keys.
+      when(
+        () => harness.repository.list(
+          _postgres.id,
+          container: ['public'],
+          kind: 'table',
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async => Success(objectsAnswer('list_postgres')));
+      await harness.pump(tester, location: _search);
+      await type(tester, 'ord');
+
+      if (viaMenu) {
+        await tester.longPress(find.text('orders'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Details'));
+      } else {
+        await tester.tap(find.text('orders'));
+      }
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/detail/table');
+      expect(harness.router.state.uri.queryParametersAll['path'], ['public', 'orders']);
+    });
+  }
+
   testWidgets('a match of a kind the engine does not declare shows without a kind and opens nothing', (tester) async {
     answerSearch(
       _postgres.id,
