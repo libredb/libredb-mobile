@@ -213,6 +213,22 @@ void main() {
       expect(find.widgetWithText(SnackBar, 'Copied'), findsOneWidget);
     });
 
+    testWidgets('Ctrl+A then Ctrl+C goes through the sensitive clipboard only', (tester) async {
+      answerRun('GET cache:greeting', () => Success(_recorded('query_redis_string')));
+      await harness.pump(tester, location: _location('cache:greeting', type: 'string'));
+
+      await tester.tap(find.text('hello from db1'));
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      expect(copied, ['hello from db1']);
+      expect(plain, isEmpty);
+    });
+
     testWidgets('a selection and the screen reader\'s Copy go through the sensitive clipboard only', (tester) async {
       final handle = tester.ensureSemantics();
       answerRun('GET cache:greeting', () => Success(_recorded('query_redis_string')));

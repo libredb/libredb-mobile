@@ -131,6 +131,14 @@ void main() {
   );
 
   blocTest<KeyValueBloc, KeyValueState>(
+    'an all-digit container too long for a database number is refused, and nothing runs on the default database',
+    build: () => build(container: const ['99999999999999999999999']),
+    act: (bloc) => bloc.add(const KeyValueRequested(role: null)),
+    expect: () => [isA<KeyValueFailure>().having((s) => s.error, 'error', isA<ValidationError>())],
+    verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+  );
+
+  blocTest<KeyValueBloc, KeyValueState>(
     'a stream field named email is masked by its name, and the entry id stays clear',
     setUp: () => answerRun(
       'XRANGE events - + COUNT 100',

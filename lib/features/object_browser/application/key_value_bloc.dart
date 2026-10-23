@@ -68,10 +68,11 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
   /// The value answers so far, which tells one result on screen from the next.
   int _runs = 0;
 
-  /// The numbered database the key was walked in: the container's first segment when it is all digits.
+  /// The numbered database the key was walked in: the container's first segment when it is all digits, else null.
+  /// Throws a [FormatException] for digits too many for an int, which name no database the app can send.
   int? get _database {
     if (container.isEmpty || !_digits.hasMatch(container.first)) return null;
-    return int.tryParse(container.first);
+    return int.parse(container.first);
   }
 
   Future<void> _onRead(KeyValueEvent event, Emitter<KeyValueState> emit) async {
@@ -111,8 +112,17 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
       return;
     }
 
+    final int? database;
+    try {
+      database = _database;
+    } on FormatException {
+      // Sending none would read the session's default database instead of the one the key was walked in.
+      _log.warn('the walked database number is out of range');
+      _fail(emit, const ValidationError('The walked database number is out of range'), onScreen: onScreen);
+      return;
+    }
     final read = _generator.read(keyName, _type);
-    final result = await _statements.run(connectionId, read.statement, queryId: _newRunId(), database: _database);
+    final result = await _statements.run(connectionId, read.statement, queryId: _newRunId(), database: database);
     if (emit.isDone) return;
     switch (result) {
       case Failure(:final error):
