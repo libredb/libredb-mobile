@@ -24,7 +24,9 @@ import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
@@ -60,6 +62,7 @@ void main() {
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late MockIStatementHistoryRepository history;
+  late MockIStatementTextStore textStore;
   late SchemaChangeNotifier schemaChanges;
 
   setUp(() {
@@ -69,6 +72,9 @@ void main() {
     active = ActiveConnectionCubit(store: store)..select(postgres);
     repository = MockISqlEditorRepository();
     history = MockIStatementHistoryRepository();
+    textStore = MockIStatementTextStore();
+    when(() => textStore.readDraft(any(), any())).thenAnswer((_) async => const Success(null));
+    when(() => textStore.saveDraft(any(), any(), any())).thenAnswer((_) async => const Success(DraftSaveOutcome.kept));
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(postgres.id)).thenAnswer(
       (_) async => const Success(
@@ -132,6 +138,7 @@ void main() {
           // The engine above declares no catalogSessions, so the editor never lists a server's databases here.
           RepositoryProvider<IContainersRepository>.value(value: MockIContainersRepository()),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IStatementTextStore>.value(value: textStore),
         ],
         child: MultiBlocProvider(
           providers: [

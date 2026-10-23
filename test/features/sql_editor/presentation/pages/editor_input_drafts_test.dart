@@ -12,9 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/editor_language.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_accessory_row.dart';
@@ -27,7 +30,10 @@ import 'package:libredb_mobile/features/sql_editor/presentation/widgets/highligh
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -46,6 +52,7 @@ String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsSt
 
 const _postgres = StudioConnection(id: 'seed:dev-postgres', name: 'Dev Postgres', type: 'postgres');
 const _redis = StudioConnection(id: 'seed:dev-redis', name: 'Dev Redis', type: 'redis');
+const _server = StudioConnection(id: 'seed:dev-postgres-server', name: 'Dev Postgres server', type: 'postgres');
 const _alice = 'alice-hash';
 const _bob = 'bob-hash';
 
@@ -60,8 +67,9 @@ void main() {
   late MockActiveConnectionCubit active;
   late StreamController<ActiveConnectionState> connections;
   late SchemaChangeNotifier schemaChanges;
-
-  setUpAll(() => registerFallbackValue(const StatementDraft(text: '')));
+  late MockIStatementHistoryRepository history;
+  late MockIContainersRepository containers;
+  late ActiveCatalogCubit catalog;
 
   setUp(() {
     repository = MockISqlEditorRepository();
@@ -76,12 +84,38 @@ void main() {
     when(() => store.discardDraft(any(), any())).thenAnswer((_) async => const Success(null));
     active = MockActiveConnectionCubit();
     connections = StreamController<ActiveConnectionState>();
+    when(() => providerMeta.providerMeta(_server.id))
+        .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
+    history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer(
+      (invocation) async => Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: _postgres.id,
+          connectionName: _postgres.name,
+          text: (invocation.positionalArguments[1] as FinishedRun).text,
+          status: StatementRunStatus.success,
+          duration: Duration.zero,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      ),
+    );
+    containers = MockIContainersRepository();
+    when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer(
+      (_) async =>
+          Success(Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026))),
+    );
+    final catalogStore = MockIActiveCatalogStore();
+    when(() => catalogStore.read(any(), any())).thenAnswer((_) async => null);
+    when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
+    catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
   });
 
   tearDown(() async {
     await schemaChanges.dispose();
     await connections.close();
+    await catalog.close();
   });
 
   /// Shows the SQL tab, or [other] in its place when [showEditor] is false, as leaving the tab does.
@@ -92,10 +126,13 @@ void main() {
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<IStatementTextStore>.value(value: store),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
+          RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IContainersRepository>.value(value: containers),
         ],
         child: MultiBlocProvider(
           providers: [
             BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider<ActiveCatalogCubit>.value(value: catalog),
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
           ],
           child: MaterialApp(
@@ -456,6 +493,59 @@ void main() {
       verify(() => store.discardDraft(_alice, _postgres.id)).called(1);
       expect(find.textContaining('cannot be read'), findsNothing);
       expect(saved(_postgres.id), [const StatementDraft(text: 'select 8')]);
+    });
+
+    group('on a server-level connection', () {
+      testWidgets('the draft is saved with the active database', (tester) async {
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+        expect(catalog.catalogOf(_server.id), 'app');
+
+        await type(tester, 'select 10');
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(saved(_server.id), [const StatementDraft(text: 'select 10', catalog: 'app')]);
+      });
+
+      testWidgets('restoring the draft makes its database active again while the server lists it', (tester) async {
+        when(() => store.readDraft(_alice, _server.id))
+            .thenAnswer((_) async => const Success(StatementDraft(text: 'select 11', catalog: 'archive')));
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+
+        expect(controller(tester).text, 'select 11');
+        expect(catalog.catalogOf(_server.id), 'archive');
+        await tester.pump(const Duration(seconds: 2));
+        verifyNever(() => store.saveDraft(any(), any(), any()));
+      });
+
+      testWidgets('a database the server no longer lists keeps the default, and the draft takes it', (tester) async {
+        when(() => store.readDraft(_alice, _server.id))
+            .thenAnswer((_) async => const Success(StatementDraft(text: 'select 12', catalog: 'gone')));
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(controller(tester).text, 'select 12');
+        expect(catalog.catalogOf(_server.id), 'app');
+        expect(saved(_server.id), [const StatementDraft(text: 'select 12', catalog: 'app')]);
+      });
+
+      testWidgets('choosing another database saves the draft with it', (tester) async {
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+        await type(tester, 'select 13');
+        await tester.pump(const Duration(seconds: 1));
+
+        catalog.choose(_server.id, 'postgres');
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(saved(_server.id), [
+          const StatementDraft(text: 'select 13', catalog: 'app'),
+          const StatementDraft(text: 'select 13', catalog: 'postgres'),
+        ]);
+      });
     });
 
     testWidgets('a draft read that fails otherwise is shown with Retry', (tester) async {

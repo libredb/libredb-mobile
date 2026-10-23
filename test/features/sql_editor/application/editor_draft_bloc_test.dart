@@ -21,8 +21,6 @@ Failure<T> _failure<T>(AppErrorCode code) => Failure<T>(UnknownError('store', co
 void main() {
   late MockIStatementTextStore store;
 
-  setUpAll(() => registerFallbackValue(const StatementDraft(text: '')));
-
   setUp(() {
     store = MockIStatementTextStore();
     when(() => store.readDraft(any(), any())).thenAnswer((_) async => const Success(null));
