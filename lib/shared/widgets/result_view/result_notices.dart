@@ -161,9 +161,12 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            s.result_warnings(warnings.length),
-                            style: chipStyle?.copyWith(color: scheme.onErrorContainer),
+                          // Wraps at a large text size rather than run past the screen's edge.
+                          Flexible(
+                            child: Text(
+                              s.result_warnings(warnings.length),
+                              style: chipStyle?.copyWith(color: scheme.onErrorContainer),
+                            ),
                           ),
                           Icon(
                             _warningsOpen ? Icons.expand_less : Icons.expand_more,

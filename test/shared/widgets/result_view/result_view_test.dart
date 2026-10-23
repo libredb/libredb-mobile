@@ -434,9 +434,9 @@ void main() {
       expect(find.byType(ResultCard), findsWidgets);
     });
 
-    for (final screen in const [Size(360, 640), Size(800, 360)]) {
-      testWidgets('at ${screen.width.toInt()}x${screen.height.toInt()} and text scale 2 every notice is reachable and '
-          'the cards keep room', (tester) async {
+    for (final (screen, scale) in const [(Size(360, 640), 2.0), (Size(800, 360), 2.0), (Size(360, 640), 3.0)]) {
+      testWidgets('at ${screen.width.toInt()}x${screen.height.toInt()} and text scale $scale every notice is reachable '
+          'and the cards keep room', (tester) async {
         final rows = [
           for (var i = 0; i < 50; i++) {'id': i, 'name': 'person $i', 'city': 'city $i'},
         ];
@@ -451,7 +451,7 @@ void main() {
             wasLimited: true,
             rolledBack: true,
           ),
-          textScale: 2,
+          textScale: scale,
           screen: screen,
         );
 
