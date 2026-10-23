@@ -80,6 +80,9 @@ class _EditorViewState extends State<_EditorView> {
       case EditorAwaitingConfirmation(:final statement):
         final bloc = context.read<EditorRunBloc>();
         final confirmed = await _confirm(statement);
+        // A session that ends while the sheet is open (an inactivity sign-out, or a Studio session that ended) takes
+        // the router to the login page and disposes this page with its run, so there is nothing left to answer.
+        if (!mounted) return;
         bloc.add(EditorConfirmationAnswered(confirmed: confirmed));
       case EditorStatementFailed(:final position?):
         _text.selection = TextSelection.collapsed(offset: position.clamp(0, _text.text.length));

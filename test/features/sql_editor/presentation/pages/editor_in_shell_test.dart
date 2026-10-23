@@ -95,6 +95,7 @@ void main() {
             ...SqlEditorFeatureRoutes.routes,
           ],
         ),
+        GoRoute(path: '/login', builder: (_, _) => const Text('login page')),
       ],
     );
     addTearDown(router.dispose);
@@ -183,6 +184,23 @@ void main() {
     expect(find.byType(ProfileSheet), findsNothing);
     expect(find.byKey(EditorInput.fieldKey), findsOneWidget);
     expect(active.state.connection, postgres);
+    verifyNothingSent();
+  });
+
+  // The session ends while the sheet is open, as an inactivity sign-out or an ended Studio session does: the router
+  // leaves the shell for the login page, which removes the editor and the sheet above it.
+  testWidgets('a session that ends while the sheet is open sends nothing and adds nothing to the closed run', (
+    tester,
+  ) async {
+    final router = await pumpShell(tester);
+    await openConfirmation(tester);
+
+    router.go('/login');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('login page'), findsOneWidget);
+    expect(find.byType(WriteConfirmationSheet), findsNothing);
     verifyNothingSent();
   });
 }
