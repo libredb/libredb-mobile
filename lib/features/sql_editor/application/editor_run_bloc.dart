@@ -50,7 +50,8 @@ part 'editor_run_state.dart';
 ///
 /// Each run that reached Studio adds one entry to the account's history through [IStatementHistoryRepository], when
 /// the run names an [EditorHistoryTarget]: Succeeded, or Failed for any failure but one before the request reached
-/// Studio (a [NetworkError], or a [TimeoutError] before it was sent), without the error's text. A text refused here, a
+/// Studio (a [NetworkError], or a [TimeoutError] before it was sent), without the error's text; a cancelled run is
+/// Failed, and a request dropped by Stop waiting adds none. A text refused here, a
 /// cancelled confirmation and a page of Load more add none. The entry is written even when the editor closed before
 /// the answer came, and a write the store refused is told to [onHistoryNotKept] then too.
 class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
@@ -95,6 +96,10 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
 
   /// Drops the request of the run in flight; null while none is.
   CancelSignal? _inFlight;
+
+  /// The signal of the run whose cancel Studio answered, so its dropped request still counts as a run that reached
+  /// Studio and was cancelled; a request dropped by Stop waiting has no known outcome.
+  CancelSignal? _cancelAnswered;
 
   Future<void> _onRunRequested(EditorRunRequested event, Emitter<EditorRunState> emit) async {
     switch (state) {
@@ -192,6 +197,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     if (emit.isDone || state != EditorCancelling(queryId: queryId)) return;
     switch (answer) {
       case Success(:final data):
+        _cancelAnswered = signal;
         signal.cancel();
         emit(EditorCancelled(outcome: data ? EditorCancelOutcome.confirmed : EditorCancelOutcome.notConfirmed));
       case Failure(:final error):
@@ -221,7 +227,11 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       catalog: statement.catalog,
     );
     if (identical(_inFlight, signal)) _inFlight = null;
-    if (history != null) unawaited(_record(history, statement.text, result, watch.elapsed));
+    final cancelAnswered = identical(_cancelAnswered, signal);
+    if (cancelAnswered) _cancelAnswered = null;
+    if (history != null) {
+      unawaited(_record(history, statement.text, result, watch.elapsed, cancelAnswered: cancelAnswered));
+    }
     if (emit.isDone) return;
     switch (state) {
       case EditorRunning(queryId: final id) || EditorCancelling(queryId: final id) when id == queryId:
@@ -276,9 +286,17 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   }
 
   /// Adds the run of [text] that answered [result] after [elapsed] to the history of [history], unless it never
-  /// reached Studio. A success keeps Studio's own time and row count, and the time measured here when Studio timed it
+  /// reached Studio, or was dropped without a cancel Studio answered ([cancelAnswered]): Stop waiting, which leaves the
+  /// outcome unknown. A cancelled run, by the user's answered cancel or Studio's 499, is Failed, as Studio's web keeps
+  /// its 499. A success keeps Studio's own time and row count, and the time measured here when Studio timed it
   /// as zero, as Studio's web does (`resultData.executionTime || executionTime`).
-  Future<void> _record(EditorHistoryTarget history, String text, Result<QueryResult> result, Duration elapsed) async {
+  Future<void> _record(
+    EditorHistoryTarget history,
+    String text,
+    Result<QueryResult> result,
+    Duration elapsed, {
+    required bool cancelAnswered,
+  }) async {
     final FinishedRun run;
     switch (result) {
       case Success(:final data):
@@ -290,7 +308,10 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
           duration: data.executionTime == Duration.zero ? elapsed : data.executionTime,
           rowCount: data.rowCount,
         );
-      case Failure(:final error) when error is NetworkError || (error is TimeoutError && !error.sent):
+      case Failure(:final error)
+          when error is NetworkError ||
+              (error is TimeoutError && !error.sent) ||
+              (error is RequestCancelledError && !cancelAnswered):
         return;
       case Failure():
         run = FinishedRun(

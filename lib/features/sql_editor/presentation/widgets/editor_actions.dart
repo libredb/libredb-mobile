@@ -56,38 +56,42 @@ class EditorActions extends StatelessWidget {
             child: Align(
               alignment: AlignmentDirectional.centerEnd,
               child: switch (state) {
-          EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.end,
-            children: [
-              // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
-              // stop, so the request can also be dropped without posting another cancel.
-              if (cancelFailure != null && cancelFailure is! RateLimitedError)
-                OutlinedButton(key: stopWaitingKey, onPressed: onStopWaiting, child: Text(s.sql_editor_stop_waiting)),
-              FilledButton.tonalIcon(
-                key: runKey,
-                onPressed: waitingForRetry ? null : onCancel,
-                icon: const Icon(Icons.stop),
-                label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
-              ),
-            ],
-          ),
-          EditorCancelling() => FilledButton.tonalIcon(
-            key: runKey,
-            onPressed: null,
-            icon: SizedBox.square(
-              dimension: MediaQuery.textScalerOf(context).scale(16),
-              child: const CircularProgressIndicator(strokeWidth: 2),
-            ),
-            label: Text(s.sql_editor_cancelling),
-          ),
-          EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
-          EditorIdle() ||
-          EditorSucceeded() ||
-          EditorStatementFailed() ||
-          EditorFailed() ||
-          EditorCancelled() => _run(busy: false),
+                EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
+                    // stop, so the request can also be dropped without posting another cancel.
+                    if (cancelFailure != null && cancelFailure is! RateLimitedError)
+                      OutlinedButton(
+                        key: stopWaitingKey,
+                        onPressed: onStopWaiting,
+                        child: Text(s.sql_editor_stop_waiting),
+                      ),
+                    FilledButton.tonalIcon(
+                      key: runKey,
+                      onPressed: waitingForRetry ? null : onCancel,
+                      icon: const Icon(Icons.stop),
+                      label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
+                    ),
+                  ],
+                ),
+                EditorCancelling() => FilledButton.tonalIcon(
+                  key: runKey,
+                  onPressed: null,
+                  icon: SizedBox.square(
+                    dimension: MediaQuery.textScalerOf(context).scale(16),
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  label: Text(s.sql_editor_cancelling),
+                ),
+                EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
+                EditorIdle() ||
+                EditorSucceeded() ||
+                EditorStatementFailed() ||
+                EditorFailed() ||
+                EditorCancelled() => _run(busy: false),
               },
             ),
           ),

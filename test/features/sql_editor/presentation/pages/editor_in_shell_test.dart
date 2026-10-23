@@ -352,6 +352,7 @@ void main() {
         any(),
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) => answer.future);
     when(() => history.record(any(), any()))

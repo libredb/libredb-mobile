@@ -803,6 +803,7 @@ void main() {
           any(),
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer((_) => answer.future);
       final bloc = build();
@@ -834,6 +835,7 @@ void main() {
           any(),
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer(
         (_) => Future.delayed(
