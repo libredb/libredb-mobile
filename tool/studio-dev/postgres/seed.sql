@@ -131,6 +131,14 @@ CREATE FUNCTION public.touch_updated_at() RETURNS trigger
 CREATE TRIGGER orders_touch_updated_at BEFORE UPDATE ON public.orders
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
+-- Exactly 100 rows, so pages of 50 give a page with more to come, a last full page and an empty one past it, read by
+-- query_page_postgres_first.json, _second.json and _third.json. In sales, so no answer recorded from public changes.
+CREATE TABLE sales.ledger (
+  id integer PRIMARY KEY,
+  entry text NOT NULL
+);
+INSERT INTO sales.ledger SELECT n, 'entry ' || n FROM generate_series(1, 100) AS n;
+
 GRANT USAGE ON SCHEMA public, sales TO studio_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA public, sales TO studio_reader;
 

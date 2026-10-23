@@ -5,49 +5,163 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_card.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_notices.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_table.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
+import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
-/// The result of the [ResultViewBloc] above it: the stats strip over a card per row, or an empty state.
+/// The result of the [ResultViewBloc] above it: the stats strip over a card per row or a table, as the
+/// [ResultViewModeCubit] above it says, or an empty state; under the rows, Load more when the bloc offers a page.
 ///
-/// It shows no error: a failed run is its caller's, shown with `StudioErrorBanner`. A tap on a card opens the row's
-/// detail sheet, and a long press on a card's field its copy menu.
+/// It shows no error of the run itself: a failed run is its caller's, shown with `StudioErrorBanner`. A failed page
+/// keeps the rows, with the banner and a retry the user taps. A tap on a card opens the row's detail sheet, and a long
+/// press on a card's field its copy menu.
+///
+/// Nothing in it reloads on a size change: the rows and the view mode live in blocs above it, so rotating the phone
+/// keeps them and the scroll position.
 class ResultView extends StatelessWidget {
   const ResultView({super.key});
 
-  /// The share of the view's height the stats strip takes at most; a taller strip scrolls.
+  /// The share of the view's height the stats strip takes at most, and the footer too; a taller one scrolls.
   static const maxNoticeShare = 0.4;
 
   @override
   Widget build(BuildContext context) => BlocBuilder<ResultViewBloc, ResultViewState>(
-    builder: (context, state) => switch (state) {
-      ResultViewLoaded(:final result) when result.rows.isEmpty => ResultEmptyView(result: result),
-      ResultViewLoaded(:final result, :final maskedColumns) => LayoutBuilder(
-        builder: (context, constraints) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ResultStatsStrip(
-              result: result,
-              maxHeight: constraints.hasBoundedHeight ? constraints.maxHeight * maxNoticeShare : double.infinity,
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ResultCardList(
-                fields: result.fields,
-                rows: result.rows,
-                maskedColumns: maskedColumns,
-                vectorColumns: result.vectorColumns,
-                onRowTap: (index) =>
-                    showRowDetailSheet(context, result: result, maskedColumns: maskedColumns, index: index),
-                onFieldLongPress: (index, field) =>
-                    showRowCopyMenu(context, result: result, maskedColumns: maskedColumns, index: index, field: field),
+    builder: (context, state) {
+      final result = state.result;
+      if (result.rows.isEmpty) return ResultEmptyView(result: result);
+      final bloc = context.read<ResultViewBloc>();
+      final pageSize = bloc.pageOffer(result);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxHeight = constraints.hasBoundedHeight ? constraints.maxHeight * maxNoticeShare : double.infinity;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ResultStatsStrip(
+                result: result,
+                maxHeight: maxHeight,
+                orderNotice: bloc.showsOrderNotice(result),
+                trailing: const ResultViewModeToggle(),
               ),
-            ),
-          ],
-        ),
-      ),
+              const Divider(height: 1),
+              Expanded(
+                child: BlocBuilder<ResultViewModeCubit, ResultViewMode>(
+                  builder: (context, mode) => switch (mode) {
+                    ResultViewMode.cards => ResultCardList(
+                      fields: result.fields,
+                      rows: result.rows,
+                      maskedColumns: state.maskedColumns,
+                      vectorColumns: result.vectorColumns,
+                      onRowTap: (index) =>
+                          showRowDetailSheet(context, result: result, maskedColumns: state.maskedColumns, index: index),
+                      onFieldLongPress: (index, field) => showRowCopyMenu(
+                        context,
+                        result: result,
+                        maskedColumns: state.maskedColumns,
+                        index: index,
+                        field: field,
+                      ),
+                    ),
+                    ResultViewMode.table => ResultTable(result: result, maskedColumns: state.maskedColumns),
+                  },
+                ),
+              ),
+              if (pageSize != null) ...[
+                const Divider(height: 1),
+                ResultLoadMoreFooter(state: state, pageSize: pageSize, maxHeight: maxHeight),
+              ],
+            ],
+          );
+        },
+      );
     },
   );
+}
+
+/// The card and table toggle, which the [ResultViewModeCubit] above it stores for the device.
+class ResultViewModeToggle extends StatelessWidget {
+  const ResultViewModeToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final size = MediaQuery.textScalerOf(context).scale(18);
+    return BlocBuilder<ResultViewModeCubit, ResultViewMode>(
+      builder: (context, mode) => SegmentedButton<ResultViewMode>(
+        key: const ValueKey('result-view-mode'),
+        showSelectedIcon: false,
+        style: const ButtonStyle(visualDensity: VisualDensity.compact),
+        segments: [
+          ButtonSegment(
+            value: ResultViewMode.cards,
+            icon: Icon(Icons.view_agenda_outlined, size: size),
+            tooltip: s.result_view_cards,
+          ),
+          ButtonSegment(
+            value: ResultViewMode.table,
+            icon: Icon(Icons.table_chart_outlined, size: size),
+            tooltip: s.result_view_table,
+          ),
+        ],
+        selected: {mode},
+        onSelectionChanged: (selected) => context.read<ResultViewModeCubit>().select(selected.single),
+      ),
+    );
+  }
+}
+
+/// Load more under the rows, naming the [pageSize] it fetches, as Studio's `load 500 more`: an action that needs
+/// Studio, so it is disabled offline with the reason; disabled while the page is in flight; and, for a failed page,
+/// `StudioErrorBanner` with a retry the user taps. Taller than [maxHeight], it scrolls.
+class ResultLoadMoreFooter extends StatelessWidget {
+  const ResultLoadMoreFooter({
+    super.key,
+    required this.state,
+    required this.pageSize,
+    this.maxHeight = double.infinity,
+  });
+
+  final ResultViewState state;
+  final int pageSize;
+  final double maxHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final size = resultNumberFormat(context).format(pageSize);
+    void loadMore() => context.read<ResultViewBloc>().add(const ResultViewLoadMoreRequested());
+    final action = switch (state) {
+      ResultViewLoadMoreFailed(:final error) => OnlineOnlyAction(
+        builder: (context, enabled) => StudioErrorBanner(error: error, onRetry: enabled ? loadMore : null),
+      ),
+      ResultViewLoaded(loadingMore: true) => FilledButton.tonalIcon(
+        onPressed: null,
+        icon: SizedBox.square(
+          dimension: MediaQuery.textScalerOf(context).scale(16),
+          child: const CircularProgressIndicator(strokeWidth: 2),
+        ),
+        label: Text(s.result_loading_more(pageSize, size)),
+      ),
+      ResultViewLoaded() => OnlineOnlyAction(
+        builder: (context, enabled) =>
+            FilledButton.tonal(onPressed: enabled ? loadMore : null, child: Text(s.result_load_more(pageSize, size))),
+      ),
+    };
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        child: Padding(
+          key: const ValueKey('result-load-more'),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          child: Center(child: action),
+        ),
+      ),
+    );
+  }
 }
 
 /// A result without rows (Studio's empty grid, `ResultsGrid.tsx:1323-1335`): the rows a write affected, the line for a

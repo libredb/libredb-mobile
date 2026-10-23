@@ -30,6 +30,7 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -130,6 +131,7 @@ class BrowseHarness {
             BlocProvider<ConnectivityCubit>.value(value: connectivity),
             BlocProvider<StudioStatusBloc>.value(value: studioStatus),
             BlocProvider<StudioAccountRefusalCubit>(create: (_) => StudioAccountRefusalCubit()),
+            BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
             BlocProvider<SignOutBloc>(create: (_) => SignOutBloc(logoutUseCase: LogoutUseCase(MockIAuthRepository()))),
           ],
           child: AppConnectivityScope(

@@ -133,7 +133,17 @@ class _ObjectRowsView extends StatelessWidget {
           child: BlocProvider(
             // Each run is a result of its own, masked with the policy of its own run.
             key: ValueKey(loaded.run),
-            create: (_) => ResultViewBloc(masked: loaded.masked, policy: loaded.policy),
+            create: (_) {
+              final rows = context.read<ObjectRowsBloc>();
+              return ResultViewBloc(
+                masked: loaded.masked,
+                policy: loaded.policy,
+                loadPage: (page) => rows.loadPage(loaded.preview, page),
+                supportsResultPagination: loaded.meta.supportsResultPagination,
+                // The generator never writes an ORDER BY, so a later page may not follow the first's order.
+                hasOuterOrderBy: false,
+              );
+            },
             child: const ResultView(),
           ),
         ),

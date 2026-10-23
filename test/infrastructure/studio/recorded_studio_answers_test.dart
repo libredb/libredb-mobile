@@ -24,6 +24,8 @@ import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -534,6 +536,31 @@ void main() {
         QueryResultJson.read(fixture('query_preview_postgres_customers')).rows,
       );
       expect(readRowCount(QueryResultJson.read(fixture('query_count_postgres_readonly_customers'))), 3);
+    });
+
+    test('POST /api/db/query pages of sales.ledger append to its 100 rows, and only the first has more', () {
+      final first = QueryResultJson.read(fixture('query_page_postgres_first'));
+      final second = QueryResultJson.read(fixture('query_page_postgres_second'));
+      final third = QueryResultJson.read(fixture('query_page_postgres_third'));
+
+      expect(
+        first.pagination,
+        const QueryPagination(limit: 50, offset: 0, hasMore: true, totalReturned: 50, wasLimited: true),
+      );
+      expect(QueryPage.after(first.pagination!), const QueryPage(limit: 50, offset: 50));
+      // The run asks for one row past the page; the second page's probe row is missing, so it has no more.
+      expect(second.pagination!.hasMore, isFalse);
+      expect(QueryPage.after(second.pagination!), const QueryPage(limit: 50, offset: 100));
+      expect(third.rows, isEmpty);
+      expect(third.pagination!.hasMore, isFalse);
+
+      final all = appendResultPage(appendResultPage(first, second), third);
+
+      expect(all.fields, ['id', 'entry']);
+      expect(all.rows.map((row) => row['id']), [for (var id = 1; id <= 100; id++) id]);
+      expect(all.rows.last, {'id': 100, 'entry': 'entry 100'});
+      expect(all.rowCount, 100);
+      expect(all.pagination!.hasMore, isFalse);
     });
 
     test('POST /api/db/transaction begins on one database of a server-level seed', () {

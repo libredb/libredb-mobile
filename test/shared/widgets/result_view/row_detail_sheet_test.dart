@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -18,8 +19,11 @@ import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
 import 'package:libredb_mobile/shared/utils/sensitive_clipboard.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
 
 final _policy = MaskingPolicy.forRole(const StudioUserRole());
@@ -67,9 +71,19 @@ void _fakeClipboard({PlatformException? failure}) {
   );
 }
 
-Future<ResultViewBloc> _pump(WidgetTester tester, QueryResult result, {Locale locale = const Locale('en')}) async {
+Future<ResultViewBloc> _pump(
+  WidgetTester tester,
+  QueryResult result, {
+  Locale locale = const Locale('en'),
+  ResultViewMode mode = ResultViewMode.cards,
+}) async {
   final bloc = ResultViewBloc(masked: maskResult(result, _policy), policy: _policy);
-  addTearDown(bloc.close);
+  // Closed without waiting: Load more is droppable, and that close finishes only on a microtask the finished test's
+  // fake clock never runs.
+  addTearDown(() => unawaited(bloc.close()));
+  final modes = ResultViewModeCubit(store: _ModeStore(mode));
+  await modes.restore();
+  addTearDown(modes.close);
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
@@ -81,7 +95,16 @@ Future<ResultViewBloc> _pump(WidgetTester tester, QueryResult result, {Locale lo
       ],
       supportedLocales: S.delegate.supportedLocales,
       home: Scaffold(
-        body: BlocProvider.value(value: bloc, child: const ResultView()),
+        body: OfflineStatus(
+          isOffline: false,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: modes),
+              BlocProvider.value(value: bloc),
+            ],
+            child: const ResultView(),
+          ),
+        ),
       ),
     ),
   );
@@ -662,4 +685,74 @@ void main() {
     await _openRow(tester, 0);
     expect(_inSheet(find.text('Satır 1 / 3')), findsOneWidget);
   });
+
+  group('the table', () {
+    Finder cell(int index, String field) => find.descendant(
+      of: find.byKey(ValueKey('result-row-$index')),
+      matching: find.byKey(ValueKey('result-cell-$field')),
+    );
+
+    testWidgets('a tap on a row opens the sheet on that row', (tester) async {
+      await _pump(tester, _result(), mode: ResultViewMode.table);
+
+      await tester.tap(find.byKey(const ValueKey('result-row-2')));
+      await tester.pumpAndSettle();
+
+      expect(_inSheet(find.text('Row 3 of 3')), findsOneWidget);
+      expect(find.descendant(of: _field('name'), matching: find.text('Carol')), findsOneWidget);
+    });
+
+    testWidgets('a long press on a cell offers Copy value and Copy row as JSON for its row, and opens no sheet', (
+      tester,
+    ) async {
+      await _pump(tester, _result(), mode: ResultViewMode.table);
+
+      await tester.longPress(cell(1, 'note'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Copy value'), findsOneWidget);
+      expect(find.byType(RowDetailSheet), findsNothing);
+      await tester.tap(find.text('Copy value'));
+      await tester.pumpAndSettle();
+
+      expect(_copied, ['second']);
+    });
+
+    testWidgets('Copy value of a masked cell writes only its mask, through the sensitive clipboard', (tester) async {
+      final mask = maskResult(_result(), _policy).result.rows.first['email']! as String;
+      await _pump(tester, _result(), mode: ResultViewMode.table);
+
+      await tester.longPress(cell(0, 'email'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy value'));
+      await tester.pumpAndSettle();
+
+      expect(_copied, [mask]);
+      expect(_copied.single, isNot(_clearEmail));
+      expect(_calls, hasLength(1));
+    });
+
+    testWidgets('Copy row as JSON from a cell writes that row', (tester) async {
+      await _pump(tester, _result(), mode: ResultViewMode.table);
+
+      await tester.longPress(cell(2, 'id'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy row as JSON'));
+      await tester.pumpAndSettle();
+
+      expect((jsonDecode(_copied.single) as Map)['id'], 3);
+    });
+  });
+}
+
+class _ModeStore implements IResultViewModeStore {
+  _ModeStore(this.mode);
+
+  ResultViewMode mode;
+
+  @override
+  Future<ResultViewMode?> read() async => mode;
+
+  @override
+  Future<void> write(ResultViewMode mode) async => this.mode = mode;
 }

@@ -10,6 +10,7 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_id.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
@@ -123,6 +124,20 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
           ),
         );
     }
+  }
+
+  /// Runs [preview], the statement of the rows on screen, again for [page], with a fresh run id and in its catalog, for
+  /// the result view's Load more; the state does not change, and a failure is answered, never run again by itself.
+  Future<Result<QueryResult>> loadPage(PreviewStatement preview, QueryPage page) async {
+    final answer = await _statements.run(
+      connectionId,
+      preview.statement,
+      queryId: _newRunId(),
+      page: page,
+      catalog: preview.catalog,
+    );
+    if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
+    return answer;
   }
 
   void _fail(

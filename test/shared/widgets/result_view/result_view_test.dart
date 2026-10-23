@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -14,9 +15,12 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_card.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 
 final _policy = MaskingPolicy.forRole(const StudioUserRole());
 
@@ -65,7 +69,9 @@ Future<ResultViewBloc> _pump(
     addTearDown(tester.view.reset);
   }
   final bloc = ResultViewBloc(masked: maskResult(result, _policy), policy: _policy);
-  addTearDown(bloc.close);
+  // Closed without waiting: Load more is droppable, and that close finishes only on a microtask the finished test's
+  // fake clock never runs.
+  addTearDown(() => unawaited(bloc.close()));
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
@@ -81,7 +87,16 @@ Future<ResultViewBloc> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: Scaffold(
             appBar: screen == null ? null : AppBar(title: const Text('rows')),
-            body: BlocProvider.value(value: bloc, child: const ResultView()),
+            body: OfflineStatus(
+              isOffline: false,
+              child: MultiBlocProvider(
+                providers: [
+                  BlocProvider(create: (_) => ResultViewModeCubit(store: _CardsStore())),
+                  BlocProvider.value(value: bloc),
+                ],
+                child: const ResultView(),
+              ),
+            ),
           ),
         ),
       ),
@@ -556,4 +571,13 @@ void main() {
       expect(find.text('Hiçbir satır gösterilmiyor: sonuç ilk satırından önce kesildi'), findsOneWidget);
     });
   });
+}
+
+/// A device that stored no view mode, so every result shows cards.
+class _CardsStore implements IResultViewModeStore {
+  @override
+  Future<ResultViewMode?> read() async => null;
+
+  @override
+  Future<void> write(ResultViewMode mode) async {}
 }

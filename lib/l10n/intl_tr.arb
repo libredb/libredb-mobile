@@ -713,5 +713,15 @@
   "browse_count_failed": "Satırlar sayılamadı ({code})",
   "@browse_count_failed": {"description": "In a heading, when the row count was refused or could not be read, with its error code.", "placeholders": {"code": {"type": "String"}}},
   "browse_rows_database_says": "Veritabanının yanıtı",
-  "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."}
+  "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."},
+  "result_view_cards": "Kartlar",
+  "@result_view_cards": {"description": "The result view mode that shows a card per row."},
+  "result_view_table": "Tablo",
+  "@result_view_table": {"description": "The result view mode that shows the rows as a table."},
+  "result_load_more": "{count, plural, =1{1 tane daha yükle} other{{rows} tane daha yükle}}",
+  "@result_load_more": {"description": "Fetches the next page of a result, of the page size already on screen.", "placeholders": {"count": {"type": "int"}, "rows": {"type": "String", "example": "500"}}},
+  "result_loading_more": "{count, plural, =1{1 tane daha yükleniyor…} other{{rows} tane daha yükleniyor…}}",
+  "@result_loading_more": {"description": "The next page of a result is in flight.", "placeholders": {"count": {"type": "int"}, "rows": {"type": "String", "example": "500"}}},
+  "result_order_notice": "ORDER BY olmadan motor, sayfalar arasında satırları tekrarlayabilir ya da atlayabilir.",
+  "@result_order_notice": {"description": "Studio's notice for a paged result whose statement has no outer ORDER BY."}
 }
