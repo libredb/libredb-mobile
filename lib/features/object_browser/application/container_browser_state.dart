@@ -25,6 +25,7 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
     required this.loadedAt,
     this.isRefreshing = false,
     this.openOnEntry,
+    this.query = '',
   });
 
   /// The level, in the engine's own words.
@@ -43,11 +44,20 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
   /// The session-default container the page opens by itself, on the first entry of the connection only.
   final ObjectContainer? openOnEntry;
 
+  /// The filter as typed.
+  final String query;
+
+  /// The containers whose name holds [query], compared by the shared search fold; all of them while not filtering.
+  List<ObjectContainer> get visibleContainers => [
+    for (final container in containers)
+      if (matchesSearch(query, [container.name])) container,
+  ];
+
   /// Whether [container] is at the last level, so it opens on its kinds rather than on the level under it.
   bool opensKinds(ObjectContainer container) => container.path.length >= depth;
 
   @override
-  List<Object?> get props => [level, depth, containers, loadedAt, isRefreshing, openOnEntry];
+  List<Object?> get props => [level, depth, containers, loadedAt, isRefreshing, openOnEntry, query];
 }
 
 /// The level could not be read.

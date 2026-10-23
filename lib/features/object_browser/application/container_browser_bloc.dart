@@ -13,6 +13,7 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/shared/utils/search_fold.dart';
 
 part 'container_browser_event.dart';
 part 'container_browser_state.dart';
@@ -31,11 +32,18 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     Stream<String> schemaChanges = const Stream.empty(),
     this._entry,
   }) : super(const ContainerBrowserLoading()) {
-    on<ContainerBrowserEvent>(_onLoad, transformer: EventTransformers.restart());
+    on<ContainerBrowserLoadEvent>(_onLoad, transformer: EventTransformers.restart());
+    on<ContainerBrowserFilterChanged>(
+      _onFilterChanged,
+      transformer: EventTransformers.debounceRestartable(filterDebounce),
+    );
     _schemaChanges = schemaChanges
         .where((id) => id == connectionId)
         .listen((_) => add(const _ContainerBrowserSchemaChanged()));
   }
+
+  /// How long the filter waits after the last keystroke.
+  static const filterDebounce = Duration(milliseconds: 200);
 
   static final _log = AppLogger.getLogger('ContainerBrowserBloc');
 
@@ -54,7 +62,10 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
   /// Whether a first answer arrived, after which the level never opens a container by itself.
   bool _answered = false;
 
-  Future<void> _onLoad(ContainerBrowserEvent event, Emitter<ContainerBrowserState> emit) async {
+  /// The filter as typed, kept across loads so a refresh shows the same narrowing.
+  String _query = '';
+
+  Future<void> _onLoad(ContainerBrowserLoadEvent event, Emitter<ContainerBrowserState> emit) async {
     final refresh = event is ContainerBrowserRefreshed;
     final onScreen = switch (state) {
       final ContainerBrowserLoaded loaded => loaded,
@@ -100,8 +111,21 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
             containers: data,
             loadedAt: clock.now(),
             openOnEntry: first && event is ContainerBrowserRequested ? _entry?.take(connectionId, parent, data) : null,
+            query: _query,
           ),
         );
+    }
+  }
+
+  void _onFilterChanged(ContainerBrowserFilterChanged event, Emitter<ContainerBrowserState> emit) {
+    _query = event.query;
+    switch (state) {
+      case final ContainerBrowserLoaded loaded:
+        emit(_copy(loaded, isRefreshing: loaded.isRefreshing));
+      case ContainerBrowserFailure(:final error, :final previous?):
+        emit(ContainerBrowserFailure(error: error, previous: _copy(previous)));
+      case ContainerBrowserFailure() || ContainerBrowserLoading() || ContainerBrowserNoLevels():
+        break;
     }
   }
 
@@ -115,14 +139,15 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     emit(ContainerBrowserFailure(error: error, previous: onScreen == null ? null : _copy(onScreen)));
   }
 
-  static ContainerBrowserLoaded _copy(ContainerBrowserLoaded loaded, {bool isRefreshing = false}) =>
-      ContainerBrowserLoaded(
-        level: loaded.level,
-        depth: loaded.depth,
-        containers: loaded.containers,
-        loadedAt: loaded.loadedAt,
-        isRefreshing: isRefreshing,
-      );
+  /// [loaded] with the filter as it is now.
+  ContainerBrowserLoaded _copy(ContainerBrowserLoaded loaded, {bool isRefreshing = false}) => ContainerBrowserLoaded(
+    level: loaded.level,
+    depth: loaded.depth,
+    containers: loaded.containers,
+    loadedAt: loaded.loadedAt,
+    isRefreshing: isRefreshing,
+    query: _query,
+  );
 
   @override
   Future<void> close() async {

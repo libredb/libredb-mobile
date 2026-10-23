@@ -336,4 +336,44 @@ void main() {
       verify: (_) => verify(() => repository.containers('seed:dev-postgres', parent: null, refresh: false)).called(1),
     );
   });
+
+  group('filter', () {
+    blocTest<ContainerBrowserBloc, ContainerBrowserState>(
+      'narrows the level by name after 200 ms, folded as Studio\'s tree filter folds, without a request, across a refresh',
+      setUp: () {
+        answerMeta('seed:dev-postgres-server', metaAnswer('meta_postgres_server'));
+        answerContainers('seed:dev-postgres-server', null, const [
+          ObjectContainer(path: ['İstanbul'], name: 'İstanbul', level: 0),
+          ObjectContainer(path: ['ankara'], name: 'ankara', level: 0),
+        ]);
+      },
+      build: () => build('seed:dev-postgres-server'),
+      act: (bloc) async {
+        bloc.add(const ContainerBrowserRequested());
+        await bloc.stream.firstWhere((s) => s is ContainerBrowserLoaded);
+        bloc.add(const ContainerBrowserFilterChanged('ist'));
+        bloc.add(const ContainerBrowserFilterChanged('istanbul'));
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        bloc.add(const ContainerBrowserRefreshed());
+      },
+      wait: const Duration(milliseconds: 50),
+      skip: 2,
+      expect: () => [
+        isA<ContainerBrowserLoaded>()
+            .having((s) => s.query, 'query', 'istanbul')
+            .having((s) => s.visibleContainers.map((c) => c.name), 'visible', ['İstanbul'])
+            .having((s) => s.containers, 'containers', hasLength(2)),
+        isA<ContainerBrowserLoaded>().having((s) => s.isRefreshing, 'isRefreshing', isTrue),
+        isA<ContainerBrowserLoaded>().having((s) => s.isRefreshing, 'isRefreshing', isFalse).having(
+          (s) => s.visibleContainers.map((c) => c.name),
+          'visible',
+          ['İstanbul'],
+        ),
+      ],
+      verify: (_) {
+        verify(() => repository.containers('seed:dev-postgres-server', parent: null, refresh: false)).called(1);
+        verify(() => repository.containers('seed:dev-postgres-server', parent: null, refresh: true)).called(1);
+      },
+    );
+  });
 }

@@ -6,6 +6,7 @@ class BrowseRouteNames {
   static const browse = 'browse';
   static const containers = 'browseContainers';
   static const kinds = 'browseKinds';
+  static const objects = 'browseObjects';
   static const source = 'browseSource';
 }
 
@@ -55,6 +56,14 @@ void openBrowseSource(BuildContext context, String connectionId, List<String> pa
   pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
   queryParameters: path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browsePathKey: path},
 );
+
+/// Opens the objects of [kind] in [container] of [connectionId].
+void openBrowseObjects(BuildContext context, String connectionId, List<String> container, String kind) =>
+    context.pushNamed(
+      BrowseRouteNames.objects,
+      pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
+      queryParameters: _containerQuery(container),
+    );
 
 /// A container path as repeated query values, which `Uri` encodes one by one, so a name holding `/`, `&` or a space
 /// comes back as it was; an empty path leaves the key out.

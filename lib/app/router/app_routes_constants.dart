@@ -26,6 +26,9 @@ class ApplicationRoutesConstants {
   /// The kind screen of a container (`container`).
   static const browseKinds = ':connectionId/kinds';
 
+  /// The objects of one kind in a container (`container`).
+  static const browseObjects = ':connectionId/objects/:kind';
+
   /// The source of an object of a kind, its path as repeated `path` query parameters.
   static const browseSource = ':connectionId/source/:kind';
 
