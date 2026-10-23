@@ -86,7 +86,7 @@ void main() {
       setUp: () => answerMeta('seed:sample', metaAnswer('meta')),
       build: () => build('seed:sample'),
       act: (bloc) => bloc.add(const ContainerBrowserRequested()),
-      expect: () => const [ContainerBrowserLoading(), ContainerBrowserNoLevels()],
+      expect: () => const [ContainerBrowserLoading(), ContainerBrowserNoLevels(searchesObjects: true)],
       verify: (_) => verifyNever(
         () => repository.containers(
           any(),

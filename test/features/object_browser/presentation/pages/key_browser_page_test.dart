@@ -387,6 +387,56 @@ void main() {
     expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'b')).onTap, isNull, reason: 'no key kind, not Redis');
   });
 
+  group('Turkish grouping', () {
+    const tr = Locale('tr');
+    final many = [for (var i = 0; i < 1500; i++) 'k$i'];
+
+    testWidgets('the scanned line and the database total', (tester) async {
+      harness.answerMeta(_redis.id, metaAnswer('meta_redis'));
+      answerPages((_) => Success(KeyScanPage(keys: many, cursor: '0', types: const {}, total: 12000)));
+      await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0', locale: tr);
+
+      expect(progress(tester), 'Bu veritabanının tuttuğu 12.000 anahtardan 1.500 tanesi tarandı');
+    });
+
+    testWidgets('the scanned line without a total, the keys left out and a folder count', (tester) async {
+      harness.answerMeta(
+        _mqtt,
+        const ProviderMeta(
+          queryLanguage: 'mqtt',
+          schemaRefreshPattern: 'x',
+          containerLevels: [],
+          objectKinds: [],
+          keyScan: KeyScanSpec(defaultCount: 100, maxCount: 500, separator: '/', pattern: 'prefix', totalScope: 'none'),
+        ),
+      );
+      answerPages(
+        (_) => Success(
+          KeyScanPage(
+            keys: [for (final key in many) 'a/$key'],
+            cursor: '0',
+            types: const {},
+            total: 0,
+            skipped: const KeyScanSkipped(count: 2500, reason: 'r'),
+          ),
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Amqtt/keys', locale: tr);
+
+      expect(progress(tester), '1.500 anahtar tarandı');
+      expect(find.text('Bu taramada 2.500 anahtar dışarıda kaldı: r'), findsOneWidget);
+      expect(find.descendant(of: find.widgetWithText(ListTile, 'a/'), matching: find.text('1.500')), findsOneWidget);
+    });
+
+    testWidgets('the listed line of a level page', (tester) async {
+      harness.answerMeta(_firestore, metaAnswer('handwritten/firestore/meta'));
+      answerPages((_) => Success(KeyScanPage(keys: many, prefixes: const [], cursor: '0', types: const {}, total: 0)));
+      await harness.pump(tester, location: '/browse/seed%3Afirestore/keys', locale: tr);
+
+      expect(progress(tester), '1.500 öğe listelendi');
+    });
+  });
+
   group('Firestore level pages', () {
     setUp(() => harness.answerMeta(_firestore, metaAnswer('handwritten/firestore/meta')));
 

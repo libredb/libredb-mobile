@@ -121,8 +121,8 @@ class ProviderMeta extends Equatable {
 
   /// Whether Studio's object search can list a kind of this engine: it never lists a kind only the key browser
   /// enumerates (`resolveKinds` in libredb-studio `src/lib/api/object-route.ts`), so an engine whose every kind is one
-  /// has nothing to search.
-  bool get searchesObjects => objectKinds.isEmpty || objectKinds.any((kind) => !kind.keyBrowserOnly);
+  /// has nothing to search, and neither has an engine that declares no kind.
+  bool get searchesObjects => objectKinds.any((kind) => !kind.keyBrowserOnly);
 
   /// Whether running [statement] may change the schema, so the object tree has to be read again.
   ///

@@ -153,8 +153,8 @@ class _KindCountsView extends StatelessWidget {
   }
 }
 
-/// One kind and its count, grouped in the locale's way: `1,207`, `12,000+` for a floor Studio measured from a read that stopped short, or Studio's
-/// sentence for why the engine could not count it. [onTap] opens the kind's objects.
+/// One kind and its count, grouped in the locale's way: `1,207`, `12,000+` for a floor Studio measured from a read
+/// that stopped short, or Studio's sentence for why the engine could not count it. [onTap] opens the kind's objects.
 class _KindTile extends StatelessWidget {
   const _KindTile({required this.row, this.onTap});
 

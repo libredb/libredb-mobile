@@ -15,10 +15,10 @@ import 'package:libredb_mobile/infrastructure/cache/session_memory_cache.dart';
 /// browsing back and forth spends none of the user's Studio request budget, which every object route charges.
 ///
 /// A kept answer keeps the time Studio gave it ([Answered.at]), so a screen showing it names that time, not the time
-/// it was read from memory. Source, search and key pages are always read afresh. Each answer is stored under its connection id, its method,
-/// its container or object path and its kind; on a server-level connection the database is the path's first segment,
-/// so it needs no key of its own. The session end, [invalidate] and [invalidateContainer] also keep an answer still on
-/// its way from being stored (see [SessionMemoryCache]).
+/// it was read from memory. Source, search and key pages are always read afresh. Each answer is stored under its
+/// connection id, its method, its container or object path and its kind; on a server-level connection the database is
+/// the path's first segment, so it needs no key of its own. The session end, [invalidate] and [invalidateContainer]
+/// also keep an answer still on its way from being stored (see [SessionMemoryCache]).
 class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   CachedObjectBrowserRepository(this._inner, {DateTime Function()? now})
     : _cache = SessionMemoryCache(ttl: ttl, now: now);

@@ -13,7 +13,7 @@ final class ContainerBrowserLoading extends ContainerBrowserState {
 
 /// The engine nests its objects in no container, as SQLite does, so the connection opens on its kinds.
 final class ContainerBrowserNoLevels extends ContainerBrowserState {
-  const ContainerBrowserNoLevels({this.searchesObjects = true});
+  const ContainerBrowserNoLevels({required this.searchesObjects});
 
   /// [ProviderMeta.searchesObjects] of the engine.
   final bool searchesObjects;
@@ -32,7 +32,7 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
     this.isRefreshing = false,
     this.openOnEntry,
     this.query = '',
-    this.searchesObjects = true,
+    required this.searchesObjects,
   });
 
   /// The level, in the engine's own words.
