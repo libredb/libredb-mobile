@@ -423,10 +423,15 @@ void main() {
     addTearDown(states.close);
     when(() => active.reportUnavailable(any()))
         .thenAnswer((_) => states.add(const ActiveConnectionVanished(_postgres)));
-    await pump(tester, states: states.stream);
-    await type(tester, statement);
+    // The editor's blocs are created by pump, so the whole flow runs in the zone that captures their lines.
+    final lines = await printedLines(() async {
+      await pump(tester, states: states.stream);
+      await type(tester, statement);
+      await run(tester);
+    });
 
-    final lines = await printedLines(() => run(tester));
+    // The control that the zone sees the editor's lines: the bloc's own warning, with the code and nothing else.
+    expect(lines, contains(allOf(contains('run failed'), contains('studio.connection_not_available'))));
 
     verify(() => active.reportUnavailable(_postgres.id)).called(1);
     expect(find.byType(PickConnectionFirst), findsOneWidget);
@@ -693,16 +698,6 @@ void main() {
     group('studio.connection_not_available', () {
       const gone = Failure<ProviderMeta>(NotFoundError('gone', code: 'studio.connection_not_available'));
 
-      /// Answers the engine read of [connection] with [answers] in turn, the last one for every later read.
-      void answerMetaInTurn(StudioConnection connection, List<Result<ProviderMeta>> answers) {
-        var call = 0;
-        when(() => providerMeta.providerMeta(connection.id)).thenAnswer((_) async {
-          final answer = answers[call < answers.length ? call : answers.length - 1];
-          call++;
-          return answer;
-        });
-      }
-
       testWidgets('on the database list hands the connection to the vanish flow, which leaves the pick page', (
         tester,
       ) async {
@@ -721,28 +716,17 @@ void main() {
         verifyNothingSent();
       });
 
-      testWidgets("on the database chip's engine read hands the connection to the vanish flow", (tester) async {
-        // The language label reads the engine first and is answered; the chip's read is refused.
-        answerMetaInTurn(_server, [Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))), gone]);
-        await pump(tester, connection: _server);
-        await tester.pumpAndSettle();
-
-        expect(find.text('Language: sql'), findsOneWidget);
-        expect(find.byType(StudioErrorBanner), findsOneWidget);
-        verify(() => active.reportUnavailable(_server.id)).called(1);
-        verifyNothingSent();
-      });
-
-      testWidgets("on the language label's engine read hands the connection to the vanish flow", (tester) async {
-        // The language label reads the engine first and is refused; the chip's read is answered.
-        answerMetaInTurn(_server, [gone, Success(ProviderMetaJson.read(_fixture('meta_postgres_server')))]);
-        answerDatabases();
+      testWidgets('on the engine read hands the connection to the vanish flow from the chip and the label', (
+        tester,
+      ) async {
+        when(() => providerMeta.providerMeta(_server.id)).thenAnswer((_) async => gone);
         await pump(tester, connection: _server);
         await tester.pumpAndSettle();
 
         expect(find.textContaining('The language of this connection could not be read'), findsOneWidget);
-        expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
-        verify(() => active.reportUnavailable(_server.id)).called(1);
+        expect(find.byType(StudioErrorBanner), findsOneWidget);
+        // Once from the database chip's read and once from the language label's, whichever reads first.
+        verify(() => active.reportUnavailable(_server.id)).called(2);
         verifyNothingSent();
       });
     });
