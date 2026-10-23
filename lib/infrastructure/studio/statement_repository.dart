@@ -31,6 +31,9 @@ class StatementRepository implements IStatementRepository {
     String? catalog,
     int? database,
   }) async {
+    if (database != null && database < 0) {
+      throw ArgumentError.value(database, 'database', 'must not be negative');
+    }
     try {
       final response = await _apiClient.post('/db/query', {
         'connectionId': connectionId,

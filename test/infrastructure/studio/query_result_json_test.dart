@@ -81,6 +81,7 @@ void main() {
       'a wasLimited null': {
         'pagination': {...page, 'wasLimited': null},
       },
+      'a pagination without wasLimited': {'pagination': page},
       'a pagination string': {'pagination': 'none'},
       'a pagination null': {'pagination': null},
       'a warnings object': {
@@ -110,7 +111,11 @@ void main() {
     }
 
     test('absent ones read as none', () {
-      final result = read(answer({'pagination': page}));
+      final result = read(
+        answer({
+          'pagination': {...page, 'wasLimited': false},
+        }),
+      );
 
       expect(result.pagination?.wasLimited, isFalse);
       expect(result.warnings, isEmpty);

@@ -9,7 +9,8 @@ import 'package:libredb_mobile/shared/models/vector_column.dart';
 ///
 /// A missing or mistyped required field throws a [FormatException]. The fields that report lost or incomplete data,
 /// `pagination` (with its `wasLimited`), `warnings` and `openTransaction`, are read strictly: present but malformed
-/// throws too, so the result is shown as a failure instead of hiding that rows or notices are missing. Absent, they
+/// throws too, and so does a `pagination` without `wasLimited`, which Studio always sends, so the result is shown as a
+/// failure instead of hiding that rows or notices are missing. Absent, `pagination`, `warnings` and `openTransaction`
 /// read as none. Any other optional field of an unexpected type is left out.
 final class QueryResultJson {
   const QueryResultJson._();
@@ -44,13 +45,12 @@ final class QueryResultJson {
 
   static QueryPagination _pagination(Object? value) {
     final pagination = _map(value, 'pagination');
-    final wasLimited = pagination['wasLimited'];
     return QueryPagination(
       limit: _int(pagination['limit'], 'limit'),
       offset: _int(pagination['offset'], 'offset'),
       hasMore: _bool(pagination['hasMore'], 'hasMore'),
       totalReturned: _int(pagination['totalReturned'], 'totalReturned'),
-      wasLimited: pagination.containsKey('wasLimited') && _bool(wasLimited, 'wasLimited'),
+      wasLimited: _bool(pagination['wasLimited'], 'wasLimited'),
     );
   }
 

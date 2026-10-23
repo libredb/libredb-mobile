@@ -82,6 +82,8 @@ QueryResult appendResultPage(QueryResult shown, QueryResult page) {
     warnings: page.warnings,
     pagination: page.pagination,
     openTransactionRolledBack: page.openTransactionRolledBack,
+    // Studio writes `page.vectorColumns ?? shown.vectorColumns`; an absent declaration reads here as an empty map, and
+    // Studio never sends an empty one, so isNotEmpty is the same test.
     vectorColumns: page.vectorColumns.isNotEmpty ? page.vectorColumns : shown.vectorColumns,
   );
 }

@@ -11,7 +11,8 @@ abstract class IStatementRepository {
   /// Runs [sql]. [queryId], from `newQueryId()`, lets the run be cancelled; [page] is the rows of a SELECT to fetch;
   /// [params] are positional bind values (strings, numbers, booleans or null); [catalog] is the database to run in on
   /// a server-level connection; [database] is the numbered database a key was walked in, which Studio takes only for
-  /// a key read on an engine that scans keys (Redis).
+  /// a key read on an engine that scans keys (Redis). A negative [database], which Studio refuses with a 400, throws an
+  /// [ArgumentError] before anything is sent.
   Future<Result<QueryResult>> run(
     String connectionId,
     String sql, {

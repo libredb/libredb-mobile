@@ -89,6 +89,11 @@ void main() {
       expect((adapter.lastBody! as Map)['database'], 0);
     });
 
+    test('a negative database is refused before anything is sent, as Studio refuses it with a 400', () async {
+      expect(() => repository.run('seed:cache', 'GET "user:1"', database: -1), throwsArgumentError);
+      expect(adapter.requests, 0);
+    });
+
     test('no database key without a database', () async {
       await repository.run(connection, 'select 1');
 
