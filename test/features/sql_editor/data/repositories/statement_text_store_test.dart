@@ -33,6 +33,9 @@ class _MemorySecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() => throw UnimplementedError('the store never deletes every secure value');
+
+  @override
+  Future<Set<String>> keys() async => values.keys.toSet();
 }
 
 void main() {

@@ -45,6 +45,9 @@ class _RecordingSecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => values.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// The local logout, which records itself in [calls], wipes [storage] and answers [logoutResult].

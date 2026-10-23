@@ -26,6 +26,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => _store.remove(key);
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// ISecureStorage whose read() always throws. Exercises the
@@ -39,6 +42,9 @@ class _ReadThrowsSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// ISecureStorage that throws on the configured delete key. Exercises
@@ -59,6 +65,9 @@ class _SelectiveFailSecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// ISecureStorage whose write of [failOnWrite] stores the value and then throws, as an adapter that fails after it
@@ -599,6 +608,9 @@ class _InOrderSecureStorage implements ISecureStorage {
     store.clear();
     return _answer<void>(null);
   }
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Sends [options] through [interceptor], as the client sends every request, and returns them as they leave it.

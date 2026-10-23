@@ -26,6 +26,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => _store.remove(key);
   @override
   Future<void> deleteAll() async => _store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _ReadThrowsSecureStorage implements ISecureStorage {
@@ -37,6 +40,9 @@ class _ReadThrowsSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Holds a token for every key but cannot delete one.
@@ -49,6 +55,9 @@ class _DeleteThrowsSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => throw StateError('boom on delete $key');
   @override
   Future<void> deleteAll() async => throw StateError('boom on deleteAll');
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// A startup step that answers [answer], and counts the times the cubit gave up on it.

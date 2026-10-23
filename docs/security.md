@@ -23,8 +23,9 @@ The editor's drafts (one per connection, with its catalog) and the statement his
 - Key: 32 bytes from `Random.secure()` per account, in base64 in `flutter_secure_storage`, written before the account's first file, under a name derived from the subject hash that does not contain it.
   A sign-out keeps the key and the files, so the same account reads its text after the next sign-in, and another account never reads it.
   Neither the text nor the key is kept in memory between calls.
+  A key that is malformed while the account has no files left is deleted, so a discard recovers; with files left it reads as unreadable.
 - Writes go to `<name>.tmp`, flushed, and are then renamed over the file, so an interrupted write leaves the old file; a stale `.tmp` is never read.
-  One queue runs every call, so a draft save and a history append never interleave.
+  One queue per directory, shared by every store instance, runs every call, so a draft save and a history append never interleave and two instances never make two keys.
 - Bounds, counted as `String.length`: a draft keeps at most 100,000 characters, and a longer one removes the connection's saved draft, so an older and shorter one is never restored, and the editor says it was not kept.
   The history keeps at most 500 entries (Studio's `MAX_HISTORY_ITEMS`) and 1,000,000 characters of statement text, dropping the oldest entries first; an entry over 100,000 characters is kept without its text and marked.
   It never keeps the database's error text.
@@ -34,7 +35,8 @@ The editor's drafts (one per connection, with its catalog) and the statement his
 - A write the device refuses answers `editor.saved_text_not_stored`, which the screen shows.
 - Backups: Android excludes `statement_text/` in the `file` domain from cloud backup and device transfer (`data_extraction_rules.xml`, `backup_rules.xml`).
   iOS keeps the default, so a backup may hold the files but never the key; excluding the directory needs Swift that no build here checks, and moves to M6 with the iOS build.
-- Clears: `clearSubject` deletes the account's key first and its files after it, so an interrupted clear leaves only ciphertext no key opens, and it reports a failure; `clearAll` does that for every account directory.
+- Clears: `clearSubject` deletes the account's key first and its files after it, so an interrupted clear leaves only ciphertext no key opens, and it reports a failure.
+  `clearAll` does that for every account directory, then deletes every key of the store left in `flutter_secure_storage` (found by its name prefix, such as a key whose directory is gone after an iOS reinstall), and only then the whole `statement_text/` directory.
   Both are for 'Remove my data' in M6; a plain sign-out keeps the text.
 - Logs and errors carry no text, key, subject, subject hash or path; a decode failure is reported without the decrypted bytes.
 

@@ -54,6 +54,9 @@ class _MemorySecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 final _now = DateTime.utc(2026, 10, 21, 12);

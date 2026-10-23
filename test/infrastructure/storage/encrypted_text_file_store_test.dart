@@ -53,6 +53,12 @@ class _MemorySecureStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() => throw UnimplementedError('the store never deletes every secure value');
+
+  @override
+  Future<Set<String>> keys() async {
+    calls.add('keys');
+    return values.keys.toSet();
+  }
 }
 
 String _hash(String subject) => sha256.convert(utf8.encode(subject)).toString();
@@ -187,6 +193,13 @@ void main() {
       await expectLater(store.read(alice, 'history'), throwsA(unreadable(UnreadableReason.authentication)));
     });
 
+    test('an empty file reads as unreadable, not as an unknown version', () async {
+      await write(alice, 'history', statement);
+      fileOf(alice, 'history').writeAsBytesSync([]);
+
+      await expectLater(store.read(alice, 'history'), throwsA(unreadable(UnreadableReason.authentication)));
+    });
+
     test('text that decrypts but is not JSON reads as unreadable, and the error does not carry the text', () async {
       await write(alice, 'history', 'a');
       final key = SecretKey(base64.decode(secure.values.values.single));
@@ -233,6 +246,34 @@ void main() {
       expect(fileOf(alice, 'other').existsSync(), isFalse);
       expect(secure.values, isEmpty);
     });
+
+    for (final (label, malformed) in [
+      ('not base64', 'not base64!'),
+      ('not 32 bytes', base64.encode(List.filled(16, 1))),
+    ]) {
+      test('a key that is $label, while the subject has no files, is deleted and replaced on the next write', () async {
+        await write(alice, 'history', statement);
+        await store.delete(alice, 'history');
+        final name = secure.values.keys.single;
+        secure.values[name] = malformed;
+
+        expect(await store.read(alice, 'history'), isNull);
+        await write(alice, 'history', 'new');
+
+        expect(await store.read(alice, 'history'), 'new');
+        expect(base64.decode(secure.values[name]!), hasLength(32));
+      });
+
+      test('a key that is $label, while files are left, is unreadable and stays', () async {
+        await write(alice, 'history', statement);
+        final name = secure.values.keys.single;
+        secure.values[name] = malformed;
+
+        await expectLater(store.read(alice, 'history'), throwsA(unreadable(UnreadableReason.keyMissing)));
+        await expectLater(write(alice, 'other', 'new'), throwsA(unreadable(UnreadableReason.keyMissing)));
+        expect(secure.values[name], malformed);
+      });
+    }
 
     test('a write never replaces a file that cannot be read', () async {
       await write(alice, 'history', statement);
@@ -314,6 +355,16 @@ void main() {
       expect(await store.read(alice, 'history'), List.generate(20, (i) => i));
     });
 
+    test('two stores over the same directory share one queue, so they never make two keys', () async {
+      final other = EncryptedTextFileStore(secureStorage: secure, supportDirectory: () async => root);
+
+      await Future.wait([write(alice, 'a', 'first'), other.update(alice, 'b', (_) => const WriteFile('second', null))]);
+
+      expect(secure.written, hasLength(1));
+      expect(await store.read(alice, 'a'), 'first');
+      expect(await other.read(alice, 'b'), 'second');
+    });
+
     test('a write the device refuses throws a storage error that names no path', () async {
       await write(alice, 'history', 'a');
       Directory(fileOf(alice, 'history.tmp').path).createSync();
@@ -381,8 +432,36 @@ void main() {
       await store.clearAll();
 
       expect(secure.values, isEmpty);
-      expect(Directory('${root.path}/statement_text').listSync(), isEmpty);
+      expect(Directory('${root.path}/statement_text').existsSync(), isFalse);
       expect(secure.filesAtDelete.first, isTrue);
+    });
+
+    test(
+      'clearAll removes a key whose folder is gone and a stray folder, keys first, and no other secure value',
+      () async {
+        await write(alice, 'history', 'a');
+        Directory('${root.path}/statement_text/$alice').deleteSync(recursive: true);
+        final stray = File('${root.path}/statement_text/stray/leftover');
+        stray.createSync(recursive: true);
+        secure.values['jwtToken'] = 'session';
+
+        await store.clearAll();
+
+        expect(secure.values.keys, ['jwtToken']);
+        expect(secure.filesAtDelete, isNotEmpty);
+        expect(secure.filesAtDelete, everyElement(isTrue), reason: 'every key goes before the files');
+        expect(Directory('${root.path}/statement_text').existsSync(), isFalse);
+      },
+    );
+
+    test('clearAll reports a key it cannot delete and leaves the files for the next try', () async {
+      await write(alice, 'history', 'a');
+      Directory('${root.path}/statement_text/$alice').deleteSync(recursive: true);
+      File('${root.path}/statement_text/stray/leftover').createSync(recursive: true);
+      secure.refuseDelete = true;
+
+      await expectLater(store.clearAll(), throwsA(isA<StoredTextStorageException>()));
+      expect(File('${root.path}/statement_text/stray/leftover').existsSync(), isTrue);
     });
 
     test('clearAll on a fresh install succeeds', () async {

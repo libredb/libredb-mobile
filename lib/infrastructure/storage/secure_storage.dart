@@ -37,6 +37,9 @@ abstract interface class ISecureStorage {
 
   /// Delete all stored values. Throws on platform failure.
   Future<void> deleteAll();
+
+  /// The names of every stored value, so an owner can find its own by a prefix. Throws on platform failure.
+  Future<Set<String>> keys();
 }
 
 /// Production implementation backed by [FlutterSecureStorage].
@@ -94,6 +97,12 @@ class FlutterSecureStorageAdapter implements ISecureStorage {
   Future<void> deleteAll() async {
     _log.info('Deleting all secure storage data');
     await _storage.deleteAll();
+  }
+
+  @override
+  Future<Set<String>> keys() async {
+    _log.trace('Listing secure storage keys');
+    return (await _storage.readAll()).keys.toSet();
   }
 }
 

@@ -81,6 +81,26 @@ void main() {
       await expectLater(adapter.deleteAll(), throwsA(isA<PlatformException>()));
     });
 
+    test('keys propagates PlatformException from the platform side', () async {
+      mockChannel((call) async {
+        if (call.method == 'readAll') {
+          throw PlatformException(code: 'platform_error', message: 'keystore unavailable');
+        }
+        return null;
+      });
+
+      await expectLater(FlutterSecureStorageAdapter().keys(), throwsA(isA<PlatformException>()));
+    });
+
+    test('keys answers the names of the stored values', () async {
+      mockChannel((call) async {
+        expect(call.method, 'readAll');
+        return {'jwtToken': 'a', 'statementTextKey.x': 'b'};
+      });
+
+      expect(await FlutterSecureStorageAdapter().keys(), {'jwtToken', 'statementTextKey.x'});
+    });
+
     test('read returns null only when the key is absent (not on error)', () async {
       mockChannel((call) async {
         expect(call.method, 'read');
@@ -113,6 +133,7 @@ void main() {
       await adapter.read('jwtToken');
       await adapter.delete('jwtToken');
       await adapter.deleteAll();
+      await adapter.keys();
 
       return sent;
     }
@@ -120,7 +141,7 @@ void main() {
     test('on iOS every call keeps accessibility first_unlock_this_device', () async {
       final sent = await optionsSentOn(TargetPlatform.iOS);
 
-      expect(sent, hasLength(4));
+      expect(sent, hasLength(5));
       expect(sent, everyElement(containsPair('accessibility', 'first_unlock_this_device')));
     });
   });

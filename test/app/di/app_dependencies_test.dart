@@ -32,6 +32,9 @@ class _StubSecureStorage implements ISecureStorage {
   Future<void> delete(String key) async {}
   @override
   Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 class _MemorySecureStorage implements ISecureStorage {
@@ -44,6 +47,9 @@ class _MemorySecureStorage implements ISecureStorage {
   Future<void> delete(String key) async => store.remove(key);
   @override
   Future<void> deleteAll() async => store.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// Dependencies whose 401 predicate accepts no 401, as an app on a backend that narrows it does.

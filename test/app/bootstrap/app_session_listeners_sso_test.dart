@@ -104,6 +104,9 @@ class _SlowAccessTokenStorage implements ISecureStorage {
 
   @override
   Future<void> deleteAll() async => values.clear();
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
 /// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or

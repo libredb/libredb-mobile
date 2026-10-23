@@ -90,8 +90,8 @@ final class KeepFile<T> extends FileChange<T> {
 /// throws it, and no new key is made over those files.
 ///
 /// Writes go to `<name>.tmp`, flushed, and are then renamed over the file, so an interrupted write leaves the old file
-/// and a `.tmp` that is never read. Every call runs in one queue, so a read-modify-write is never interleaved with
-/// another. Encryption, decryption and JSON run in [Isolate.run]; neither the content nor the key is kept between
+/// and a `.tmp` that is never read. Every call runs in one queue per application support directory, shared by every
+/// instance, so a read-modify-write is never interleaved with another. Encryption, decryption and JSON run in [Isolate.run]; neither the content nor the key is kept between
 /// calls. No log line and no exception names the content, the key, the subject hash or a path.
 class EncryptedTextFileStore {
   EncryptedTextFileStore({required this._secureStorage, Future<Directory> Function()? supportDirectory})
@@ -106,18 +106,25 @@ class EncryptedTextFileStore {
   static const _keyLength = 32;
   static const _tmpSuffix = '.tmp';
 
+  /// Every key name of this store starts with this, so [clearAll] finds keys whose directory is gone.
+  static const _keyPrefix = 'statementTextKey.';
+
   static final _subjectHashPattern = RegExp(r'^[0-9a-f]{64}$');
   static final _namePattern = RegExp(r'^[a-z0-9_]{1,64}$');
 
   final ISecureStorage _secureStorage;
   final Future<Directory> Function() _supportDirectory;
 
-  Future<void> _queue = Future.value();
+  /// One queue per application support directory, shared by every store in the isolate, so two stores over the same
+  /// files never race: two first writes would each make a key, and the second would orphan the first one's file.
+  static final _queues = <String, Future<void>>{};
+
+  Future<Directory>? _rootDirectory;
 
   /// The JSON value of the file [name] of [subjectHash], or null when there is none.
-  Future<Object?> read(String subjectHash, String name) => _enqueue(() async {
+  Future<Object?> read(String subjectHash, String name) => _enqueue((root) async {
     _check(subjectHash, name);
-    final directory = await _subjectDirectory(subjectHash);
+    final directory = _subjectDirectory(root, subjectHash);
     final key = await _keyFor(directory, subjectHash);
     if (key == null) return null;
     return _readFile(directory, subjectHash, name, key);
@@ -128,9 +135,9 @@ class EncryptedTextFileStore {
   ///
   /// An unreadable file throws before [change] runs, so it is never replaced.
   Future<T> update<T>(String subjectHash, String name, FileChange<T> Function(Object? current) change) =>
-      _enqueue(() async {
+      _enqueue((root) async {
         _check(subjectHash, name);
-        final directory = await _subjectDirectory(subjectHash);
+        final directory = _subjectDirectory(root, subjectHash);
         var key = await _keyFor(directory, subjectHash);
         final current = key == null ? null : await _readFile(directory, subjectHash, name, key);
         final next = change(current);
@@ -147,46 +154,90 @@ class EncryptedTextFileStore {
       });
 
   /// Deletes the file [name] of [subjectHash], readable or not, and a stale `.tmp` of it. Needs no key.
-  Future<void> delete(String subjectHash, String name) => _enqueue(() async {
+  Future<void> delete(String subjectHash, String name) => _enqueue((root) async {
     _check(subjectHash, name);
-    await _deleteFile(await _subjectDirectory(subjectHash), name);
+    await _deleteFile(_subjectDirectory(root, subjectHash), name);
   });
 
   /// Deletes the key of [subjectHash] first and its files after it, so an interrupted clear leaves only ciphertext no
   /// key opens. A key the secure store cannot delete throws, and the files are left for the next try.
-  Future<void> clearSubject(String subjectHash) => _enqueue(() async {
+  Future<void> clearSubject(String subjectHash) => _enqueue((root) async {
     _check(subjectHash, null);
-    await _clear(await _subjectDirectory(subjectHash), subjectHash);
+    await _clear(_subjectDirectory(root, subjectHash), subjectHash);
   });
 
-  /// [clearSubject] for each subject directory. Tries every subject and throws the first failure after that.
-  Future<void> clearAll() => _enqueue(() async {
-    final folder = Directory('${(await _root()).path}/$_folder');
+  /// [clearSubject] for each subject directory, then every key of this store left in the secure store (a key whose
+  /// directory is gone, as an iOS Keychain item outlives a reinstall), then the whole `statement_text/` directory,
+  /// stray entries included. Keys go before files throughout; a failure is thrown after every key was tried, and then
+  /// the remaining files are left for the next try.
+  Future<void> clearAll() => _enqueue((root) async {
+    final folder = Directory('${root.path}/$_folder');
     final List<Directory> subjects;
     try {
-      if (!await folder.exists()) return;
-      subjects = await folder.list().where((entry) => entry is Directory).cast<Directory>().toList();
+      subjects = await folder.exists()
+          ? await folder.list().where((entry) => entry is Directory).cast<Directory>().toList()
+          : const <Directory>[];
     } on FileSystemException catch (e) {
       throw StoredTextStorageException('list the stored subjects', _cause(e));
     }
     Object? first;
     StackTrace? firstStack;
-    for (final directory in subjects) {
-      final subjectHash = directory.uri.pathSegments.where((segment) => segment.isNotEmpty).last;
-      if (!_subjectHashPattern.hasMatch(subjectHash)) continue;
+    Future<void> attempt(Future<void> Function() step) async {
       try {
-        await _clear(directory, subjectHash);
+        await step();
       } catch (e, stack) {
         first ??= e;
         firstStack ??= stack;
       }
     }
-    if (first != null) Error.throwWithStackTrace(first, firstStack!);
+
+    for (final directory in subjects) {
+      final subjectHash = directory.uri.pathSegments.where((segment) => segment.isNotEmpty).last;
+      if (_subjectHashPattern.hasMatch(subjectHash)) await attempt(() => _clear(directory, subjectHash));
+    }
+    await attempt(() async {
+      final Set<String> names;
+      try {
+        names = await _secureStorage.keys();
+      } catch (e) {
+        throw StoredTextStorageException('list the keys', _cause(e));
+      }
+      for (final name in names.where((name) => name.startsWith(_keyPrefix))) {
+        await attempt(() async {
+          try {
+            await _secureStorage.delete(name);
+          } catch (e) {
+            throw StoredTextStorageException('delete the key', _cause(e));
+          }
+        });
+      }
+    });
+    if (first case final error?) Error.throwWithStackTrace(error, firstStack!);
+    try {
+      if (await folder.exists()) await folder.delete(recursive: true);
+    } on FileSystemException catch (e) {
+      throw StoredTextStorageException('delete the stored files', _cause(e));
+    }
+    _log.info('Cleared the stored text of every subject');
   });
 
-  Future<T> _enqueue<T>(Future<T> Function() operation) {
-    final result = _queue.then((_) => operation());
-    _queue = result.then<void>((_) {}, onError: (Object _) {});
+  Future<T> _enqueue<T>(Future<T> Function(Directory root) operation) async {
+    final Directory root;
+    try {
+      root = await (_rootDirectory ??= _root());
+    } catch (_) {
+      _rootDirectory = null;
+      rethrow;
+    }
+    final path = root.absolute.path;
+    final result = (_queues[path] ?? Future<void>.value()).then((_) => operation(root));
+    final tail = result.then<void>((_) {}, onError: (Object _) {});
+    _queues[path] = tail;
+    unawaited(
+      tail.then((_) {
+        if (identical(_queues[path], tail)) _queues.remove(path);
+      }),
+    );
     return result;
   }
 
@@ -205,11 +256,12 @@ class EncryptedTextFileStore {
     }
   }
 
-  Future<Directory> _subjectDirectory(String subjectHash) async =>
-      Directory('${(await _root()).path}/$_folder/$subjectHash');
+  static Directory _subjectDirectory(Directory root, String subjectHash) =>
+      Directory('${root.path}/$_folder/$subjectHash');
 
-  /// The key of [subjectHash], or null when it has none and no file needs one. A missing key while files are left
-  /// throws [StoredTextUnreadableException].
+  /// The key of [subjectHash], or null when it has none and no file needs one. A missing or malformed key while files
+  /// are left throws [StoredTextUnreadableException]; a malformed key with no file left is deleted, so a discard
+  /// recovers and the next write makes a new key.
   Future<Uint8List?> _keyFor(Directory directory, String subjectHash) async {
     final String? stored;
     try {
@@ -224,11 +276,18 @@ class EncryptedTextFileStore {
       } on FormatException {
         // A key that is not base64 opens nothing, the same as a key of the wrong length.
       }
-      throw const StoredTextUnreadableException(UnreadableReason.keyMissing);
     }
     if (await _hasFiles(directory)) {
-      _log.warn('A stored subject has files but no key, so they cannot be read');
+      _log.warn('A stored subject has files but no usable key, so they cannot be read');
       throw const StoredTextUnreadableException(UnreadableReason.keyMissing);
+    }
+    if (stored != null) {
+      try {
+        await _secureStorage.delete(_keyName(subjectHash));
+      } catch (e) {
+        throw StoredTextStorageException('delete a malformed key', _cause(e));
+      }
+      _log.warn('Deleted a malformed key of a stored subject that had no files left');
     }
     return null;
   }
@@ -318,7 +377,7 @@ class EncryptedTextFileStore {
   /// The secure store name of a subject's key: a SHA-256 of the subject hash, so the secure store's own log lines
   /// never print the subject hash.
   static String _keyName(String subjectHash) =>
-      'statementTextKey.${sha256.convert(utf8.encode('libredb.statement_text.key\u0000$subjectHash'))}';
+      '$_keyPrefix${sha256.convert(utf8.encode('libredb.statement_text.key\u0000$subjectHash'))}';
 
   static Uint8List _aad(String subjectHash, String name) =>
       utf8.encode('libredb.statement_text.v1\u0000$subjectHash\u0000$name');
@@ -348,8 +407,8 @@ class EncryptedTextFileStore {
   }
 
   static Future<_Opened> _open(Uint8List key, Uint8List bytes, Uint8List aad) async {
-    if (bytes.isEmpty || bytes.first != _version) return const _Opened.unreadable(UnreadableReason.version);
     if (bytes.length < 1 + _nonceLength + _tagLength) return const _Opened.unreadable(UnreadableReason.authentication);
+    if (bytes.first != _version) return const _Opened.unreadable(UnreadableReason.version);
     final List<int> clear;
     try {
       clear = await DartAesGcm.with256bits().decrypt(
