@@ -23,10 +23,13 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// its kind screen here instead. On the first entry of a connection the level opens its session-default container by
 /// itself.
 class ContainerLevelPage extends StatelessWidget {
-  const ContainerLevelPage({super.key, required this.connectionId, this.parent = const []});
+  const ContainerLevelPage({super.key, required this.connectionId, this.parent = const [], this.headingAction});
 
   final String connectionId;
   final List<String> parent;
+
+  /// What the heading row offers at its end, such as the Browse root's search.
+  final Widget? headingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +42,17 @@ class ContainerLevelPage extends StatelessWidget {
         schemaChanges: context.read<SchemaChangeNotifier>().changes,
         entry: context.read<SessionDefaultEntry>(),
       )..add(const ContainerBrowserRequested()),
-      child: _ContainerLevelView(connectionId: connectionId, parent: parent),
+      child: _ContainerLevelView(connectionId: connectionId, parent: parent, headingAction: headingAction),
     );
   }
 }
 
 class _ContainerLevelView extends StatelessWidget {
-  const _ContainerLevelView({required this.connectionId, required this.parent});
+  const _ContainerLevelView({required this.connectionId, required this.parent, this.headingAction});
 
   final String connectionId;
   final List<String> parent;
+  final Widget? headingAction;
 
   void _open(BuildContext context, ContainerBrowserLoaded level, ObjectContainer container) {
     if (level.opensKinds(container)) {
@@ -83,7 +87,11 @@ class _ContainerLevelView extends StatelessWidget {
       },
       builder: (context, state) => switch (state) {
         ContainerBrowserLoading() => const Center(child: CircularProgressIndicator()),
-        ContainerBrowserNoLevels() => KindCountsPage(connectionId: connectionId, container: const []),
+        ContainerBrowserNoLevels() => KindCountsPage(
+          connectionId: connectionId,
+          container: const [],
+          headingAction: headingAction,
+        ),
         ContainerBrowserLoaded() => _buildLevel(context, state),
         ContainerBrowserFailure(:final error, :final previous?) => _buildLevel(context, previous, error: error),
         ContainerBrowserFailure(:final error) => RefreshIndicator(
@@ -121,7 +129,7 @@ class _ContainerLevelView extends StatelessWidget {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                BrowseHeading(title: level.level.labelPlural, overline: overline),
+                BrowseHeading(title: level.level.labelPlural, overline: overline, actions: [?headingAction]),
                 if (level.containers.isEmpty)
                   Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(S.of(context).browse_level_empty))
                 else ...[

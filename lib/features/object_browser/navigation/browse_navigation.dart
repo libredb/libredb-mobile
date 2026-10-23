@@ -10,6 +10,7 @@ class BrowseRouteNames {
   static const source = 'browseSource';
   static const keys = 'browseKeys';
   static const detail = 'browseDetail';
+  static const search = 'browseSearch';
 }
 
 /// The query key that carries a container path, once per segment and in order.
@@ -72,6 +73,10 @@ void _openObject(BuildContext context, String name, String connectionId, List<St
       pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
       queryParameters: path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browsePathKey: path},
     );
+
+/// Opens the name search across every container of [connectionId].
+void openBrowseSearch(BuildContext context, String connectionId) =>
+    context.pushNamed(BrowseRouteNames.search, pathParameters: {browseConnectionIdKey: connectionId});
 
 /// Opens the objects of [kind] in [container] of [connectionId].
 void openBrowseObjects(BuildContext context, String connectionId, List<String> container, String kind) =>

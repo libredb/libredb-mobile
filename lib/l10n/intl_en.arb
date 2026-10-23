@@ -428,6 +428,32 @@
   "@browse_object_view_source": {},
   "browse_object_name_copied": "Name copied",
   "@browse_object_name_copied": {},
+  "browse_search_action": "Search objects",
+  "@browse_search_action": {},
+  "browse_search_title": "Search",
+  "@browse_search_title": {},
+  "browse_search_hint": "Search by name",
+  "@browse_search_hint": {},
+  "browse_search_clear": "Clear search",
+  "@browse_search_clear": {},
+  "browse_search_min_length": "Type at least {count} characters to search.",
+  "@browse_search_min_length": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browse_search_no_results": "No object's name holds \"{term}\".",
+  "@browse_search_no_results": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_search_not_available": "Search is not available on this connection; browse instead",
+  "@browse_search_not_available": {},
   "local_filter_hint": "Filter",
   "@local_filter_hint": {},
   "local_filter_clear": "Clear filter",

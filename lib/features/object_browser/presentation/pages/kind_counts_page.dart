@@ -19,10 +19,13 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// the container holds, grouped under the kind's folder when it has one. An empty [container] is the connection
 /// itself, on an engine with no container level.
 class KindCountsPage extends StatelessWidget {
-  const KindCountsPage({super.key, required this.connectionId, required this.container});
+  const KindCountsPage({super.key, required this.connectionId, required this.container, this.headingAction});
 
   final String connectionId;
   final List<String> container;
+
+  /// What the heading row offers at its end, such as the Browse root's search.
+  final Widget? headingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -34,16 +37,17 @@ class KindCountsPage extends StatelessWidget {
         container: container,
         schemaChanges: context.read<SchemaChangeNotifier>().changes,
       )..add(const KindCountsRequested()),
-      child: _KindCountsView(connectionId: connectionId, container: container),
+      child: _KindCountsView(connectionId: connectionId, container: container, headingAction: headingAction),
     );
   }
 }
 
 class _KindCountsView extends StatelessWidget {
-  const _KindCountsView({required this.connectionId, required this.container});
+  const _KindCountsView({required this.connectionId, required this.container, this.headingAction});
 
   final String connectionId;
   final List<String> container;
+  final Widget? headingAction;
 
   Future<void> _refresh(BuildContext context) => refreshBrowseUnlessOffline(context, () async {
     final bloc = context.read<KindCountsBloc>();
@@ -105,7 +109,11 @@ class _KindCountsView extends StatelessWidget {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                BrowseHeading(title: kinds.container?.name ?? S.of(context).browse_objects, overline: kinds.levelLabel),
+                BrowseHeading(
+                  title: kinds.container?.name ?? S.of(context).browse_objects,
+                  overline: kinds.levelLabel,
+                  actions: [?headingAction],
+                ),
                 if (kinds.browsesKeys)
                   ListTile(
                     leading: const Icon(Icons.key_outlined),

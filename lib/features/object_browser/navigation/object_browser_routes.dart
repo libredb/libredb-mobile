@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/pages/key_br
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_detail_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_list_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/object_search_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_source_page.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 
@@ -88,6 +89,15 @@ class ObjectBrowserFeatureRoutes {
               path: browsePathOf(state),
               kind: browseKindOf(state),
             ),
+          ),
+        ),
+        GoRoute(
+          name: BrowseRouteNames.search,
+          path: ApplicationRoutesConstants.browseSearch,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: ObjectSearchPage(connectionId: browseConnectionIdOf(state)),
           ),
         ),
       ],

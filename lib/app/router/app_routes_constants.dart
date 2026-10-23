@@ -38,6 +38,9 @@ class ApplicationRoutesConstants {
   /// The columns, indexes and foreign keys of an object of a kind, its path as repeated `path` query parameters.
   static const browseDetail = ':connectionId/detail/:kind';
 
+  /// The name search across every container of a connection.
+  static const browseSearch = ':connectionId/search';
+
   // The root of the SQL tab
   static const sql = '/sql';
 
