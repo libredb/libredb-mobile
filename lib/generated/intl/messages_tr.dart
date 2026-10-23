@@ -185,14 +185,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
-    "account": MessageLookupByLibrary.simpleMessage("Hesabım"),
     "account_refusal_title": MessageLookupByLibrary.simpleMessage("Hesabınızın Studio\'ya erişimi yok"),
     "active": MessageLookupByLibrary.simpleMessage("Aktif"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
     "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Uygula"),
-    "authorities": MessageLookupByLibrary.simpleMessage("Roller"),
-    "back": MessageLookupByLibrary.simpleMessage("Geri"),
     "browse_count_failed": m0,
     "browse_count_rows": MessageLookupByLibrary.simpleMessage("Satırları say"),
     "browse_detail_columns": MessageLookupByLibrary.simpleMessage("Sütunlar"),
@@ -410,8 +407,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Studio bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın ya da Studio\'nun güncellenmesi gerekebilir.",
     ),
-    "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Yönetici kullanıcı silinemez"),
-    "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("Yetki bulunamadı"),
     "failed": MessageLookupByLibrary.simpleMessage("Başarısız"),
     "help_resources": MessageLookupByLibrary.simpleMessage("Yardım ve Kaynaklar"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("GitHub\'daki dokümantasyonu ve rehberleri okuyun"),
@@ -661,7 +656,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
     "studio_unreachable_title": MessageLookupByLibrary.simpleMessage("Studio\'ya ulaşılamıyor"),
-    "submit": MessageLookupByLibrary.simpleMessage("Gönder"),
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
@@ -679,7 +673,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "unsaved_changes": MessageLookupByLibrary.simpleMessage(
       "Kaydedilmemiş değişiklikleriniz var. Çıkmak istediğinize emin misiniz?",
     ),
-    "users": MessageLookupByLibrary.simpleMessage("Kullanıcılar"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("İptal"),
     "write_confirm_name_label": m71,
