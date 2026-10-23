@@ -93,7 +93,7 @@ Done: every child is merged, and the walkthrough was recorded on Android 13 in [
 
 Type and run statements on a phone, on the SQL tab.
 Epic [#33][e33], end-to-end walkthrough [#124][i124].
-In progress: the editor, the write confirmation, cancel, the catalog picker, script and selection runs, the background rule, drafts, history and opening a statement were merged between [PR #131][p131] and [PR #153][p153].
+In progress: the editor, the write confirmation, cancel, the catalog picker, script and selection runs, the background rule, drafts, history and opening a statement were merged between [PR #133][p133] and [PR #153][p153].
 The walkthrough and two defects ([#140][i140], [#150][i150]) are open.
 
 - Run a statement with a fail-closed write confirmation, and cancel it.
@@ -177,7 +177,7 @@ These stay out of the app; Studio's web UI serves them.
 [p78]: https://github.com/libredb/libredb-mobile/pull/78
 [p101]: https://github.com/libredb/libredb-mobile/pull/101
 [p128]: https://github.com/libredb/libredb-mobile/pull/128
-[p131]: https://github.com/libredb/libredb-mobile/pull/131
+[p133]: https://github.com/libredb/libredb-mobile/pull/133
 [p137]: https://github.com/libredb/libredb-mobile/pull/137
 [p146]: https://github.com/libredb/libredb-mobile/pull/146
 [p153]: https://github.com/libredb/libredb-mobile/pull/153

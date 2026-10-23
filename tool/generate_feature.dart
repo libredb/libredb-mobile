@@ -17,7 +17,7 @@
 //   assets/mock/              the mock JSON that MockInterceptor serves for the generated repository's requests
 //
 // The generated Dart files are formatted with dart format. After generation, follow the printed steps to register
-// the repository, the routes, the menu entry and the translations, and to add the repository methods to
+// the repository, the routes and the translations, and to add the repository methods to
 // test/architecture/mock_asset_coverage_test.dart.
 //
 // test/architecture/feature_generator_test.dart runs this generator and checks that its output is formatted,
