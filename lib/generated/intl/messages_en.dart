@@ -222,6 +222,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_objects_count": m7,
     "browse_objects_empty": MessageLookupByLibrary.simpleMessage("Studio lists no objects of this kind here."),
     "browse_objects_match": m8,
+    "browse_open_in_editor": MessageLookupByLibrary.simpleMessage("Open in editor"),
     "browse_preview_unavailable": MessageLookupByLibrary.simpleMessage("Preview is not available for this engine yet"),
     "browse_rows_database_says": MessageLookupByLibrary.simpleMessage("The database says"),
     "browse_search_action": MessageLookupByLibrary.simpleMessage("Search objects"),

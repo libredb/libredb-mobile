@@ -1,0 +1,15 @@
+{
+  "@@locale": "en",
+  "sql_history_replace": "Replace",
+  "@sql_history_replace": {
+    "description": "First copy"
+  },
+  "sql_history_title": "History",
+  "@sql_history_replace": {
+    "description": "Second copy, the one a JSON reader keeps",
+    "placeholders": {
+      "count": {"type": "int"},
+      "count": {"type": "String"}
+    }
+  }
+}

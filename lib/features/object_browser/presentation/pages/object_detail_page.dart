@@ -24,7 +24,7 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// Indexes, Foreign keys, and Source when the kind has source.
 ///
 /// The heading offers 'View rows' and 'Count rows' by `objectRowsAction`, online only, with the count on a line under
-/// it; the top bar is the shell's.
+/// it, and 'Open in editor' beside them, offline too; the top bar is the shell's.
 class ObjectDetailPage extends StatelessWidget {
   const ObjectDetailPage({super.key, required this.connectionId, required this.path, required this.kind});
 
@@ -229,8 +229,9 @@ class _DetailTabs extends StatelessWidget {
   }
 }
 
-/// 'View rows' and, when the engine offers a count, 'Count rows', disabled offline with the reason; 'View rows' is
-/// disabled too for an engine whose preview the app does not write, which the page says under the heading.
+/// 'View rows', 'Open in editor' and, when the engine offers a count, 'Count rows', View rows and Count rows disabled
+/// offline with the reason; 'View rows' is disabled too for an engine whose preview the app does not write, which the
+/// page says under the heading, and 'Open in editor' is then absent.
 class _RowsActions extends StatelessWidget {
   const _RowsActions({required this.action});
 
@@ -251,6 +252,9 @@ class _RowsActions extends StatelessWidget {
             },
             child: Text(s.browse_view_rows),
           ),
+          // It sends nothing to Studio, so it stays enabled offline; the editor's Run is online only.
+          if (action case ObjectRowsOpen(:final openInEditor))
+            TextButton(onPressed: openInEditor, child: Text(s.browse_open_in_editor)),
           if (action case ObjectRowsOpen(:final count?)) CountRowsButton(statement: count, enabled: online),
         ],
       ),

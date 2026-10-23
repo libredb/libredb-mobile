@@ -2012,6 +2012,16 @@ class S {
     );
   }
 
+  /// `Open in editor`
+  String get browse_open_in_editor {
+    return Intl.message(
+      'Open in editor',
+      name: 'browse_open_in_editor',
+      desc: 'Opens the generated SELECT of a table, a view or a collection in the SQL editor, without running it.',
+      args: [],
+    );
+  }
+
   /// `Count rows`
   String get browse_count_rows {
     return Intl.message(

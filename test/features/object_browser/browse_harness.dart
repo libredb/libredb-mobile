@@ -28,6 +28,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/editor_open_request.dart';
 import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -69,6 +70,10 @@ class BrowseHarness {
   /// The app's refusal of the account, which a request meeting Studio's refusal reports.
   final refusal = StudioAccountRefusalCubit();
   late GoRouter router;
+
+  /// The open requests the SQL tab received, in order; the tab itself is a stand-in, since the editor is not under
+  /// test.
+  final editorRequests = <EditorOpenRequest>[];
 
   static const _online = ConnectivityState(status: ConnectivityStatus.online);
   static const _offline = ConnectivityState(status: ConnectivityStatus.offline);
@@ -123,6 +128,15 @@ class BrowseHarness {
           routes: [
             GoRoute(path: ApplicationRoutesConstants.connectionList, builder: (_, _) => const Text('connections page')),
             ...ObjectBrowserFeatureRoutes.routes,
+            GoRoute(
+              path: ApplicationRoutesConstants.sql,
+              builder: (_, state) {
+                if (state.extra case final EditorOpenDelivery delivery) {
+                  if (delivery.take() case final request?) editorRequests.add(request);
+                }
+                return const Text('sql page');
+              },
+            ),
           ],
         ),
       ],
