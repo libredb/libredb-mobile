@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -406,6 +407,63 @@ void main() {
 
       expect(_copied, [masked]);
       expect(plain, isEmpty);
+    });
+
+    /// Every semantics node that offers Copy and reads [text], as its label or its value.
+    List<SemanticsNode> copyNodes(WidgetTester tester, String text) {
+      final found = <SemanticsNode>[];
+      bool visit(SemanticsNode node) {
+        final data = node.getSemanticsData();
+        if (data.hasAction(SemanticsAction.copy) && (data.label == text || data.value == text)) found.add(node);
+        node.visitChildren(visit);
+        return true;
+      }
+
+      visit(tester.binding.renderViews.single.owner!.semanticsOwner!.rootSemanticsNode!);
+      return found;
+    }
+
+    testWidgets('the screen reader\'s Copy goes through the sensitive clipboard only', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      // Focus and a selection, which the editable text needs before it offers its own Copy.
+      await tester.tap(value('name'));
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      final nodes = copyNodes(tester, 'Alice');
+      expect(nodes, isNotEmpty);
+      for (final node in nodes) {
+        tester.binding.renderViews.single.owner!.semanticsOwner!.performAction(node.id, SemanticsAction.copy);
+        await tester.pumpAndSettle();
+      }
+
+      expect(plain, isEmpty);
+      expect(_copied, ['Alice']);
+      handle.dispose();
+    });
+
+    testWidgets('a screen reader still reads the value and can copy it without a selection', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      expect(find.semantics.byLabel('second'), findsNothing);
+      final nodes = copyNodes(tester, 'Bob');
+      expect(nodes, isEmpty, reason: 'row 1 is not on screen');
+      final alice = copyNodes(tester, 'Alice');
+      expect(alice, hasLength(1));
+      tester.binding.renderViews.single.owner!.semanticsOwner!.performAction(alice.single.id, SemanticsAction.copy);
+      await tester.pumpAndSettle();
+
+      expect(_copied, ['Alice']);
+      expect(plain, isEmpty);
+      handle.dispose();
     });
 
     testWidgets('Ctrl+A then Ctrl+C goes through the sensitive clipboard only', (tester) async {

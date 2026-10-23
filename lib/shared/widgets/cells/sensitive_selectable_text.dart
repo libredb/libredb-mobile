@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 /// The toolbar keeps only Copy and Select all: Share would hand the value to another app, and Look Up and Search Web
 /// to the system. Ctrl+C (Cmd+C) is routed to [onCopy] too, by overriding [CopySelectionTextIntent], which
 /// [EditableText] declares overridable.
+///
+/// A screen reader reads the value from a node of its own whose Copy hands the whole value to [onCopy]: the editable
+/// text's own semantics are excluded, because its Copy action calls `Clipboard.setData` directly and no intent or
+/// action can route it. A screen reader user therefore copies the whole value rather than a part of it.
 class SensitiveSelectableText extends StatefulWidget {
   const SensitiveSelectableText(this.text, {super.key, required this.onCopy, this.style});
 
@@ -30,7 +34,14 @@ class _SensitiveSelectableTextState extends State<SensitiveSelectableText> {
   }
 
   @override
-  Widget build(BuildContext context) => Actions(
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: widget.text,
+    onCopy: () => widget.onCopy(widget.text),
+    child: ExcludeSemantics(child: _selectable()),
+  );
+
+  Widget _selectable() => Actions(
     actions: {
       CopySelectionTextIntent: CallbackAction<CopySelectionTextIntent>(
         onInvoke: (intent) {
