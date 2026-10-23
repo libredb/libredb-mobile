@@ -364,6 +364,8 @@
   "@pick_connection_first": {},
   "pick_connection_first_description": "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
   "@pick_connection_first_description": {},
+  "browse_not_available_yet": "Bir bağlantının nesnelerine göz atmak henüz kullanılamıyor.",
+  "@browse_not_available_yet": {},
   "account_refusal_title": "Hesabınızın Studio'ya erişimi yok",
   "@account_refusal_title": {},
   "connection_vanished": "{name} artık kullanılamıyor",

@@ -1205,6 +1205,16 @@ class S {
     );
   }
 
+  /// `Browsing the objects of a connection is not available yet.`
+  String get browse_not_available_yet {
+    return Intl.message(
+      'Browsing the objects of a connection is not available yet.',
+      name: 'browse_not_available_yet',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Your account has no access to Studio`
   String get account_refusal_title {
     return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);

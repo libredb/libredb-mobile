@@ -56,6 +56,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "apply": MessageLookupByLibrary.simpleMessage("Apply"),
     "authorities": MessageLookupByLibrary.simpleMessage("Authorities"),
     "back": MessageLookupByLibrary.simpleMessage("Back"),
+    "browse_not_available_yet": MessageLookupByLibrary.simpleMessage(
+      "Browsing the objects of a connection is not available yet.",
+    ),
     "cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Contribute"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Documentation"),
