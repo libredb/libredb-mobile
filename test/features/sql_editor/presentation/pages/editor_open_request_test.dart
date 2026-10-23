@@ -22,9 +22,11 @@ import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.d
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
@@ -43,6 +45,8 @@ import 'package:libredb_mobile/shared/models/editor_open_request.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
@@ -71,6 +75,10 @@ void main() {
   late MockAnalyticsService analytics;
   late SchemaChangeNotifier schemaChanges;
   late List<ActiveConnectionState> switches;
+  late MockIStatementTextStore textStore;
+
+  /// The drafts the phone keeps, by connection, for the one account these tests sign in.
+  late Map<String, StatementDraft> drafts;
 
   setUp(() {
     final store = MockIActiveConnectionStore();
@@ -96,6 +104,14 @@ void main() {
     history = MockIStatementHistoryRepository();
     when(() => history.read(any())).thenAnswer((_) async => const Success([]));
     analytics = MockAnalyticsService();
+    drafts = {};
+    textStore = MockIStatementTextStore();
+    when(() => textStore.readDraft(any(), any()))
+        .thenAnswer((invocation) async => Success(drafts[invocation.positionalArguments[1] as String]));
+    when(() => textStore.saveDraft(any(), any(), any())).thenAnswer((invocation) async {
+      drafts[invocation.positionalArguments[1] as String] = invocation.positionalArguments[2] as StatementDraft;
+      return const Success(DraftSaveOutcome.kept);
+    });
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   });
 
@@ -157,6 +173,12 @@ void main() {
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IContainersRepository>.value(value: containers),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IStatementTextStore>.value(value: textStore),
+          RepositoryProvider<IAppLifecycleSource>(
+            create: (_) => BindingAppLifecycleSource(),
+            dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
+          ),
+          RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -275,16 +297,18 @@ void main() {
     final router = await pumpShell(tester);
     await open(tester, const EditorOpenRequest(connectionId: 'seed:dev-postgres', text: 'SELECT 1'));
     expect(editorText(tester), 'SELECT 1');
+    await type(tester, 'SELECT 2');
 
-    // Another connection and back builds the editor of dev-postgres afresh.
+    // Another connection and back builds the editor of dev-postgres afresh, which shows its draft and not the request.
     active.select(_server);
     await tester.pumpAndSettle();
     active.select(_postgres);
     await tester.pumpAndSettle();
-    expect(editorText(tester), isEmpty);
+    expect(find.text("Replace the editor's text?"), findsNothing);
+    expect(editorText(tester), 'SELECT 2');
 
     // Another tab and back through the tab bar.
-    await type(tester, 'SELECT 2');
+    await type(tester, 'SELECT 3');
     router.go('/browse');
     await tester.pumpAndSettle();
     await tester.tap(find.text('SQL'));
@@ -292,7 +316,7 @@ void main() {
 
     expect(router.state.uri.toString(), ApplicationRoutesConstants.sql);
     expect(find.text("Replace the editor's text?"), findsNothing);
-    expect(editorText(tester), isEmpty);
+    expect(editorText(tester), 'SELECT 3');
     verifyNothingSent();
   });
 
@@ -431,6 +455,58 @@ void main() {
     expect(find.text("Replace the editor's text?"), findsNothing);
     expect(editorText(tester), 'SELECT * FROM archive_orders');
     verifyNothingSent();
+
+    // The text typed on dev-postgres was kept as its draft and comes back with it.
+    expect(drafts[_postgres.id]?.text, 'SELECT 2');
+    active.select(_postgres);
+    await tester.pumpAndSettle();
+    expect(editorText(tester), 'SELECT 2');
+  });
+
+  group('a connection with a draft', () {
+    setUp(() => drafts[_server.id] = const StatementDraft(text: 'SELECT draft', catalog: 'postgres'));
+
+    testWidgets('restores the draft first, then asks before the request replaces it', (tester) async {
+      await pumpShell(tester, location: '/browse');
+
+      openEditor(
+        anyPage(tester),
+        const EditorOpenRequest(connectionId: 'seed:dev-postgres-server', text: 'SELECT 1', catalog: 'archive'),
+      );
+      await tester.pumpAndSettle();
+      expect(editorText(tester), 'SELECT draft');
+      expect(find.text("Replace the editor's text?"), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
+      await tester.pumpAndSettle();
+
+      expect(editorText(tester), 'SELECT 1');
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+      verifyNothingSent();
+    });
+
+    testWidgets('a cancel keeps the draft and its database', (tester) async {
+      await pumpShell(tester, location: '/browse');
+
+      openEditor(
+        anyPage(tester),
+        const EditorOpenRequest(connectionId: 'seed:dev-postgres-server', text: 'SELECT 1', catalog: 'archive'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(editorText(tester), 'SELECT draft');
+      expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+    });
+
+    testWidgets('the same text as the draft asks nothing', (tester) async {
+      await pumpShell(tester, location: '/browse');
+
+      await open(tester, const EditorOpenRequest(connectionId: 'seed:dev-postgres-server', text: 'SELECT draft'));
+
+      expect(find.text("Replace the editor's text?"), findsNothing);
+      expect(editorText(tester), 'SELECT draft');
+    });
   });
 
   testWidgets('the request travels in memory only: the extra encodes as nothing', (tester) async {

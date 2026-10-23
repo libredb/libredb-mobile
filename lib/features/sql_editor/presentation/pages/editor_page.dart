@@ -205,6 +205,7 @@ class _EditorViewState extends State<_EditorView> {
     _lifecycle = AppLifecycleListener(
       onHide: () => context.read<EditorDraftBloc>().add(const EditorDraftFlushRequested()),
     );
+    _receive(widget.openRequest);
   }
 
   @override
@@ -285,12 +286,6 @@ class _EditorViewState extends State<_EditorView> {
   int _runStart = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _receive(widget.openRequest);
-  }
-
-  @override
   void didUpdateWidget(_EditorView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(widget.openRequest, oldWidget.openRequest)) _receive(widget.openRequest);
@@ -298,19 +293,45 @@ class _EditorViewState extends State<_EditorView> {
 
   /// Takes the open request out of [delivery] once the frame is built, since the replace prompt needs this page in the
   /// tree; a delivery taken before has nothing left to hand over, so a rebuild never puts the text in again.
+  ///
+  /// The request waits for the connection's draft: a draft restored after the request would take its place, so the
+  /// request is put in once the draft is read, and asks before it replaces a restored draft that differs.
   void _receive(EditorOpenDelivery? delivery) {
     if (delivery == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      if (delivery.take() case final request?) await _putInField(request.text, catalog: request.catalog);
+      final request = delivery.take();
+      if (request == null) return;
+      final drafts = context.read<EditorDraftBloc>();
+      if (!_draftSettled(drafts.state)) {
+        await drafts.stream.firstWhere(_draftSettled, orElse: () => drafts.state);
+        // The restored draft reaches the field through its listener before this await resumes.
+        if (!mounted) return;
+      }
+      await _putInField(request.text, catalog: request.catalog);
     });
   }
+
+  /// Whether the draft no longer stands to replace the field's text: it was read (or there is none to read), and no
+  /// question about a text typed before Studio named the account is open.
+  static bool _draftSettled(EditorDraftState state) => switch (state) {
+    EditorDraftInitial() || EditorDraftLoading() || EditorDraftConflict() => false,
+    EditorDraftOff() ||
+    EditorDraftRestored() ||
+    EditorDraftKept() ||
+    EditorDraftNotKept() ||
+    EditorDraftSaveFailed() ||
+    EditorDraftUnreadable() ||
+    EditorDraftReadFailed() => true,
+  };
 
   /// Puts [text] in the field, after asking when it would replace another text, then makes [catalog] the active
   /// database; nothing runs, and a cancel changes neither.
   Future<void> _putInField(String text, {String? catalog}) async {
     if (!await confirmReplaceEditorText(context, current: _text.text, incoming: text)) return;
     if (!mounted) return;
+    // The text of a restored draft is gone, and so is its claim on the database.
+    _restoredCatalog = null;
     _text.value = TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
