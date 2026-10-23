@@ -233,6 +233,29 @@ void main() {
     );
 
     blocTest<EditorRunBloc, EditorRunState>(
+      'a script runs in the database Run named',
+      setUp: () => answerScript(() => Success(_script([_success(0, 'SELECT 1', customers)]))),
+      build: build,
+      act: (bloc) async {
+        bloc.add(const EditorRunRequested(text: 'SELECT 1; SELECT 2', role: _user, catalog: 'archive'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const EditorConfirmationAnswered(confirmed: true));
+      },
+      skip: 2,
+      expect: () => [isA<EditorScriptAnswered>().having((s) => s.statement.catalog, 'catalog', 'archive')],
+      verify: (_) => verify(
+        () => repository.runScript(
+          _postgres,
+          'SELECT 1; SELECT 2',
+          queryId: 'run-1',
+          catalog: 'archive',
+          page: QueryPage.first,
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).called(1),
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
       'a line holding only GO makes a script',
       setUp: () => answerScript(() => Success(_script([_success(0, 'SELECT 1', customers)]))),
       build: build,

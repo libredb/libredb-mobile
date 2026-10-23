@@ -22,7 +22,11 @@ import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_co
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -45,6 +49,12 @@ ScriptResult _recordedScript(String name) => SqlEditorJson.scriptResult(_fixture
 const _postgres = StudioConnection(
   id: 'seed:dev-postgres',
   name: 'Dev Postgres',
+  type: 'postgres',
+  environment: 'development',
+);
+const _server = StudioConnection(
+  id: 'seed:dev-postgres-server',
+  name: 'Dev Postgres server',
   type: 'postgres',
   environment: 'development',
 );
@@ -88,6 +98,8 @@ void main() {
   late MockIProviderMetaRepository providerMeta;
   late MockActiveConnectionCubit active;
   late SchemaChangeNotifier schemaChanges;
+  late MockIContainersRepository containers;
+  late ActiveCatalogCubit catalog;
 
   setUp(() {
     repository = MockISqlEditorRepository();
@@ -96,11 +108,21 @@ void main() {
       when(() => providerMeta.providerMeta(connection.id))
           .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_postgres'))));
     }
+    when(() => providerMeta.providerMeta(_server.id))
+        .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
+    containers = MockIContainersRepository();
+    final catalogStore = MockIActiveCatalogStore();
+    when(() => catalogStore.read(any(), any())).thenAnswer((_) async => null);
+    when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
+    catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
     active = MockActiveConnectionCubit();
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   });
 
-  tearDown(() => schemaChanges.dispose());
+  tearDown(() async {
+    await schemaChanges.dispose();
+    await catalog.close();
+  });
 
   void answerScript(String sql, Result<ScriptResult> Function() answer) => when(
     () => repository.runScript(
@@ -143,10 +165,12 @@ void main() {
           RepositoryProvider<ISqlEditorRepository>.value(value: repository),
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
+          RepositoryProvider<IContainersRepository>.value(value: containers),
         ],
         child: MultiBlocProvider(
           providers: [
             BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider<ActiveCatalogCubit>.value(value: catalog),
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
           ],
           child: MaterialApp(
@@ -269,6 +293,33 @@ void main() {
 
     expect(find.text('1'), findsOneWidget);
     expect(find.byKey(ScriptResultView.cardKey(1)), findsOneWidget);
+  });
+
+  testWidgets('a script on a server-level connection runs in the active database', (tester) async {
+    const text = 'SELECT 1 AS a; SELECT 2 AS b';
+    when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer(
+      (_) async =>
+          Success(Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026))),
+    );
+    answerScript(text, () => Success(_recordedScript('multi_postgres_rows')));
+    await pump(tester, connection: _server);
+    await tester.pumpAndSettle();
+    final active = catalog.catalogOf(_server.id);
+    expect(active, isNotNull);
+    await type(tester, text);
+
+    await runAndConfirm(tester);
+
+    verify(
+      () => repository.runScript(
+        _server.id,
+        text,
+        queryId: any(named: 'queryId'),
+        catalog: active,
+        page: QueryPage.first,
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).called(1);
   });
 
   group('the rolled-back notice', () {
