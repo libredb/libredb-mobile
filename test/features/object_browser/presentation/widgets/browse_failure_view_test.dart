@@ -36,11 +36,13 @@ void main() {
     expect(retries, 1);
   });
 
-  testWidgets('a network failure without a code loads again too', (tester) async {
+  testWidgets('a network failure without a code waits for Retry, since its request may have reached Studio', (
+    tester,
+  ) async {
     await tester.pumpWidget(app(const NetworkError('socket closed'), offline: true));
     await tester.pumpWidget(app(const NetworkError('socket closed'), offline: false));
 
-    expect(retries, 1);
+    expect(retries, 0);
   });
 
   testWidgets('a failure shown online sends nothing by itself', (tester) async {

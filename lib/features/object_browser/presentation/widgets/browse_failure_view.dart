@@ -13,8 +13,8 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 /// active connection's vanish flow, which names the connection and closes the pages that showed it when it is the
 /// active one.
 ///
-/// A network failure that a connection cures, such as a request the offline device never sent, calls [onRetry] by
-/// itself once the device is back online, as the connection list does; any other failure waits for the user's Retry.
+/// A request the offline device never sent (`network.offline`) calls [onRetry] by itself once the device is back
+/// online, as the connection list does; any other failure waits for the user's Retry.
 class BrowseFailureView extends StatefulWidget {
   const BrowseFailureView({super.key, required this.connectionId, required this.error, this.onRetry});
 
@@ -48,9 +48,9 @@ class _BrowseFailureViewState extends State<BrowseFailureView> {
     });
   }
 
-  /// Whether coming back online can cure the failure: a network error other than a refused certificate.
-  bool get _curedByConnection =>
-      widget.error is NetworkError && widget.error.code != AppErrorCode.networkCertInvalid.key;
+  /// Whether coming back online cures the failure: a request the offline device never sent, so sending it again runs
+  /// nothing twice. Any other network error may have reached Studio, and a statement is never run again on its own.
+  bool get _curedByConnection => widget.error.code == AppErrorCode.networkOffline.key;
 
   @override
   Widget build(BuildContext context) {
