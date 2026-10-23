@@ -209,6 +209,83 @@ void main() {
     );
 
     blocTest<ResultViewBloc, ResultViewState>(
+      'a page with fields: [] that still carries rows is masked under the columns on screen',
+      build: () => build(
+        (_) async => Success(
+          _page(
+            const [
+              {'id': 3, 'email': 'carol@example.com'},
+            ],
+            fields: const [],
+            offset: 2,
+            hasMore: false,
+          ),
+        ),
+      ),
+      act: (bloc) => bloc.add(const ResultViewLoadMoreRequested()),
+      skip: 1,
+      verify: (bloc) {
+        final state = bloc.state as ResultViewLoaded;
+        expect(state.result.fields, ['id', 'email']);
+        expect(state.result.rows.map((row) => row['id']), [1, 2, 3]);
+        expect(state.maskedColumns, {'email'});
+        expect(state.result.rows.last['email'], isNot('carol@example.com'));
+        expect(state.toString(), isNot(contains('@example.com')));
+      },
+    );
+
+    test('a tap after the caller replaced the result sends one request for the new result, and the old page is '
+        'never appended to it', () async {
+      final oldAnswer = Completer<Result<QueryResult>>();
+      final newAnswer = Completer<Result<QueryResult>>();
+      final bloc = build((page) => page.limit == 2 ? oldAnswer.future : newAnswer.future);
+      addTearDown(bloc.close);
+      final replacement = maskResult(
+        _page(const [
+          {'id': 10, 'email': 'dan@example.com'},
+          {'id': 11, 'email': null},
+        ], limit: 5),
+        policy,
+      );
+
+      bloc.add(const ResultViewLoadMoreRequested());
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(ResultViewReplaced(replacement));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const ResultViewLoadMoreRequested());
+      await Future<void>.delayed(Duration.zero);
+
+      expect(requested, [const QueryPage(limit: 2, offset: 2), const QueryPage(limit: 5, offset: 2)]);
+      expect(
+        bloc.state,
+        ResultViewLoaded(result: replacement.result, maskedColumns: const {'email'}, loadingMore: true),
+      );
+
+      oldAnswer.complete(Success(page2));
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        bloc.state,
+        ResultViewLoaded(result: replacement.result, maskedColumns: const {'email'}, loadingMore: true),
+      );
+
+      final newPage = _page(
+        const [
+          {'id': 12, 'email': 'erin@example.com'},
+        ],
+        offset: 2,
+        limit: 5,
+        hasMore: false,
+      );
+      newAnswer.complete(Success(newPage));
+      await Future<void>.delayed(Duration.zero);
+
+      final state = bloc.state as ResultViewLoaded;
+      expect(state.result.rows.map((row) => row['id']), [10, 11, 12]);
+      expect(state.loadingMore, isFalse);
+      expect(requested, hasLength(2));
+    });
+
+    blocTest<ResultViewBloc, ResultViewState>(
       'a failed page keeps the rows and holds the error itself, for the banner and its retry delay',
       build: () => build(
         (_) async =>

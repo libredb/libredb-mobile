@@ -17,8 +17,8 @@ final class ResultViewReplaced extends ResultViewEvent {
   List<Object?> get props => [masked];
 }
 
-/// The user asked for the next page, or to retry the one that failed. Droppable: one sent while a page is in flight
-/// sends nothing.
+/// The user asked for the next page, or to retry the one that failed. One sent while a page is in flight sends
+/// nothing; a [ResultViewReplaced] cancels the page in flight, so the next one runs for the new result.
 final class ResultViewLoadMoreRequested extends ResultViewEvent {
   const ResultViewLoadMoreRequested();
 }
