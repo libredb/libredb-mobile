@@ -3,10 +3,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -94,6 +97,45 @@ void main() {
       await tester.pumpAndSettle();
       expect(harness.router.state.uri.path, '/browse');
       expect(backArrow(), findsNothing);
+    });
+
+    testWidgets('each page left after a pop keeps its own container in the location and on rebuild', (tester) async {
+      when(
+        () => harness.repository.list(
+          _server.id,
+          container: const ['app', 'public'],
+          kind: 'table',
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async => Success(objectsAnswer('list_postgres')));
+      harness.active.select(_server);
+      await harness.pump(tester);
+      await tester.tap(find.text('app'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('public'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tables'));
+      await tester.pumpAndSettle();
+      expect(harness.location, '/browse/seed%3Adev-postgres-server/objects/table?container=app&container=public');
+
+      await tester.tap(backArrow());
+      await tester.pumpAndSettle();
+      // Going offline and back rebuilds the pages, which read their container from the route again.
+      await harness.setOffline(tester, true);
+      await harness.setOffline(tester, false);
+      expect(harness.location, '/browse/seed%3Adev-postgres-server/kinds?container=app&container=public');
+      expect(tester.widget<KindCountsPage>(find.byType(KindCountsPage)).container, ['app', 'public']);
+
+      await tester.tap(backArrow());
+      await tester.pumpAndSettle();
+      await harness.setOffline(tester, true);
+      await harness.setOffline(tester, false);
+      expect(harness.location, '/browse/seed%3Adev-postgres-server/containers?container=app');
+      expect(tester.widget<ContainerLevelPage>(find.byType(ContainerLevelPage)).parent, ['app']);
+
+      await tester.tap(backArrow());
+      await tester.pumpAndSettle();
+      expect(harness.location, '/browse');
     });
 
     testWidgets('returns a page opened by a link with nothing under it to the Browse root', (tester) async {
