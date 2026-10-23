@@ -342,6 +342,16 @@ record query_types_postgres /db/query '{"connectionId":"seed:dev-postgres","sql"
 record describe_postgres_orders_readonly /db/objects/describe '{"connectionId":"seed:dev-postgres-readonly","path":["public","orders"],"kind":"table"}'
 ```
 
+The row previews and counts of #98 were recorded the same way, from a fresh volume, with the statements the app's generator writes:
+
+```shell
+record query_preview_postgres_customers /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM public.customers;","options":{"limit":50,"offset":0}}'
+record query_count_postgres_customers /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT COUNT(*) AS row_count\nFROM public.customers;","options":{"offset":0}}'
+record query_preview_postgres_server_orders /db/query '{"connectionId":"seed:dev-postgres-server","sql":"SELECT * FROM app.public.orders;","options":{"limit":50,"offset":0},"catalog":"app"}'
+record query_preview_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT * FROM public.customers;","options":{"limit":50,"offset":0}}'
+record query_count_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT COUNT(*) AS row_count\nFROM public.customers;","options":{"offset":0}}'
+```
+
 The Redis answers were recorded as `admin` from the same image.
 The key-scan pages walk `user:*` in database 1 with Studio's default batch: the first page is asked without a cursor, every later page with the cursor of the page before, and `keyscan_next.json` is the second page and `keyscan_last.json` the one whose cursor is back at `0`.
 `keyscan_requests.json` keeps the body each of the three was asked with, so a test can check that they chain.

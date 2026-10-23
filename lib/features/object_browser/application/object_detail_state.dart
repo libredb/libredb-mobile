@@ -14,6 +14,7 @@ final class ObjectDetailLoading extends ObjectDetailState {
 /// The object's columns, indexes, foreign keys and exclusion constraints.
 final class ObjectDetailLoaded extends ObjectDetailState {
   const ObjectDetailLoaded({
+    required this.meta,
     required this.detail,
     this.kind,
     required this.foreignKeyTargets,
@@ -21,6 +22,9 @@ final class ObjectDetailLoaded extends ObjectDetailState {
     required this.loadedAt,
     this.isRefreshing = false,
   });
+
+  /// The connection's provider-meta, which decides what the heading's View rows and Count rows offer.
+  final ProviderMeta meta;
 
   final ObjectDetail detail;
 
@@ -41,7 +45,7 @@ final class ObjectDetailLoaded extends ObjectDetailState {
   final bool isRefreshing;
 
   @override
-  List<Object?> get props => [detail, kind, foreignKeyTargets, foreignKeyLookupError, loadedAt, isRefreshing];
+  List<Object?> get props => [meta, detail, kind, foreignKeyTargets, foreignKeyLookupError, loadedAt, isRefreshing];
 }
 
 /// The detail could not be read.

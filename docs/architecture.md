@@ -43,7 +43,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | --- | --- |
 | `lib/features/auth/` | Sign-in through Keycloak, the only sign-in ([oidc.md](oidc.md)), `StudioIdentityRepository` for `GET /api/auth/me` and the sign-out record at `POST /api/auth/logout`, and `StudioIdentityCubit`, which holds Studio's latest answer about the user for the shell and every feature |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
-| `lib/features/object_browser/` | Containers, counts, objects, details, source, search and key scan |
+| `lib/features/object_browser/` | Containers, counts, objects, details, source, search, key scan, and the rows and row count of an object |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
 | `lib/features/lifecycle/` | The maintenance and forced update check at start ([below](#maintenance-and-forced-updates)) |
 | `lib/features/studio_status/` | Studio's liveness and readiness: the unreachable page and the wording of a governance outage ([below](#studio-reachability)) |
@@ -219,6 +219,10 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   Studio pages a SELECT only when it adds the row bound itself; `QueryPage.after` asks for the next page, and `pagination.hasMore` says whether there is one.
   `appendResultPage` appends that page to the rows on screen by Studio's own rule (`src/lib/results/append-page.ts`).
   `database`, sent only when set and always as a JSON number, names the numbered database a key was walked in; Studio refuses it with a 400 on an engine that scans no keys, so only a Redis key read sends it.
+- The object browser's View rows and Count rows run the statements Studio's own generators write (`generateTableQuery` and `generateCountQuery`), ported to `PreviewStatementGenerator`, through `IStatementRepository`: the preview with a page of 50 rows and no row bound in its text, in the path's `catalog` on a server-level connection, and the count once per tap.
+  Neither is ever retried by itself, after a failure or a schema change; only the user's pull, retry or tap runs one again.
+  An engine whose preview the app does not write yet (a declared query dialect, `previewProjection`, `previewTimeWindow`, `containerNameSpelling: "engine"`, Couchbase, or a query language other than `sql` and `json`) shows View rows disabled and offers no count.
+  The rows page shows the database's own words for `studio.query_error`, as the editor does, on screen only.
 - The fields of a result that report lost or incomplete data (`pagination` with its `wasLimited`, `warnings`, and `openTransaction`, which Studio sends only as `rolled-back`) are read strictly in every reader that builds a `QueryResult`: present but malformed fails the read, so the screen shows a failure instead of hiding that rows or notices are missing.
 - `runScript` sends several statements, which Studio splits and runs in order, stopping at the first failure.
   It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values.
@@ -258,7 +262,7 @@ Studio's error body is `{error, code?, ...}`.
 
 A sign-in that `GET /api/auth/me` refuses with any other `AuthError`, a 401 that reached the caller, shows `studio.account_refused`.
 A screen shows the translated message of the code.
-The SQL editor also shows the database's own words, the `message` of the error, because a syntax error is what the user needs to read there.
+The SQL editor and the object browser's rows page also show the database's own words, the `message` of the error, because a syntax error or a refused read is what the user needs to read there.
 
 ## Governance
 

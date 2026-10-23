@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -157,6 +158,54 @@ void main() {
       }
       expect(read({}).identifierQuoting, isNull);
       expect(read({'identifierQuoting': false}).identifierQuoting, isNull);
+    });
+
+    test('defaultPort is the whole number Studio declares, absent for a null or another type', () {
+      expect(read({'defaultPort': 5432}).defaultPort, 5432);
+      expect(read({}).defaultPort, isNull);
+      expect(read({'defaultPort': null}).defaultPort, isNull, reason: 'SQLite declares defaultPort: null');
+      expect(read({'defaultPort': '5432'}).defaultPort, isNull);
+      expect(read({'defaultPort': 5432.5}).defaultPort, isNull);
+    });
+
+    test('statementTerminator is read as an opaque string', () {
+      expect(read({'statementTerminator': 'none'}).statementTerminator, 'none');
+      expect(read({'statementTerminator': 'semicolon'}).statementTerminator, 'semicolon');
+      expect(read({}).statementTerminator, isNull);
+      expect(read({'statementTerminator': false}).statementTerminator, isNull);
+    });
+
+    test('previewProjection and previewTimeWindow are declared when Studio sends any value', () {
+      final projected = read({
+        'previewProjection': {'rules': <Object>[]},
+      });
+      expect(projected.declaresPreviewProjection, isTrue);
+      expect(projected.declaresPreviewTimeWindow, isFalse);
+      final windowed = read({
+        'previewTimeWindow': {'column': 'time'},
+      });
+      expect(windowed.declaresPreviewTimeWindow, isTrue);
+      expect(windowed.declaresPreviewProjection, isFalse);
+      expect(read({'previewProjection': null, 'previewTimeWindow': null}).declaresPreviewProjection, isFalse);
+      expect(read({'previewProjection': null, 'previewTimeWindow': null}).declaresPreviewTimeWindow, isFalse);
+    });
+
+    test('containerNameSpelling is declared only as the literal engine', () {
+      expect(read({'containerNameSpelling': 'engine'}).spellsContainerNamesAsEngine, isTrue);
+      expect(read({}).spellsContainerNamesAsEngine, isFalse);
+      expect(read({'containerNameSpelling': 'plain'}).spellsContainerNamesAsEngine, isFalse);
+      expect(read({'containerNameSpelling': true}).spellsContainerNamesAsEngine, isFalse);
+    });
+
+    test('the recorded Postgres answers declare port 5432 and no terminator, projection, window or spelling', () {
+      for (final name in ['meta_postgres', 'meta_postgres_server']) {
+        final meta = ProviderMetaJson.read(File('test/fixtures/studio/$name.json').readAsStringSync());
+        expect(meta.defaultPort, 5432, reason: name);
+        expect(meta.statementTerminator, isNull, reason: name);
+        expect(meta.declaresPreviewProjection, isFalse, reason: name);
+        expect(meta.declaresPreviewTimeWindow, isFalse, reason: name);
+        expect(meta.spellsContainerNamesAsEngine, isFalse, reason: name);
+      }
     });
 
     test('containerPathShapes is read as an opaque string, exact when absent', () {

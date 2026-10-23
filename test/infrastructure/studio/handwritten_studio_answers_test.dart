@@ -181,6 +181,32 @@ void main() {
     });
   });
 
+  group('preview fields of provider-meta', () {
+    test('MongoDB declares port 27017 and nothing else the row preview reads', () {
+      final meta = ProviderMetaJson.read(answer('mongodb/meta'));
+      expect(meta.defaultPort, 27017);
+      expect(meta.statementTerminator, isNull);
+      expect(meta.declaresPreviewProjection, isFalse);
+      expect(meta.declaresPreviewTimeWindow, isFalse);
+      expect(meta.spellsContainerNamesAsEngine, isFalse);
+    });
+
+    test('Oracle declares port 1521 and statementTerminator none', () {
+      final meta = ProviderMetaJson.read(answer('oracle/meta'));
+      expect(meta.defaultPort, 1521);
+      expect(meta.statementTerminator, 'none');
+      expect(meta.declaresPreviewProjection, isFalse);
+      expect(meta.declaresPreviewTimeWindow, isFalse);
+    });
+
+    test('MSSQL declares port 1433 and the default terminator', () {
+      final meta = ProviderMetaJson.read(answer('mssql/meta'));
+      expect(meta.defaultPort, 1433);
+      expect(meta.statementTerminator, isNull);
+      expect(meta.identifierQuoting, isNull);
+    });
+  });
+
   group('edge answers', () {
     test('counts in all three states', () {
       final counts = ObjectBrowserJson.counts(answer('rabbitmq/counts'));

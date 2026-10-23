@@ -97,6 +97,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
         if (emit.isDone) return;
         emit(
           ObjectDetailLoaded(
+            meta: providerMeta,
             detail: detail,
             kind: _kindOf(providerMeta),
             foreignKeyTargets: targets,
@@ -151,6 +152,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
   }
 
   static ObjectDetailLoaded _copy(ObjectDetailLoaded loaded, {bool isRefreshing = false}) => ObjectDetailLoaded(
+    meta: loaded.meta,
     detail: loaded.detail,
     kind: loaded.kind,
     foreignKeyTargets: loaded.foreignKeyTargets,

@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/object_browser/data/models/object_browse
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/features/object_browser/domain/row_count.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/features/studio_status/data/models/studio_status_json.dart';
 import 'package:libredb_mobile/features/studio_status/domain/entities/governance_outage.dart';
@@ -501,6 +502,38 @@ void main() {
       expect(row['null_value'], isNull);
       expect(result.columnTypes['bytea_value'], 'bytea');
       expect(result.columnTypes['jsonb_value'], 'jsonb');
+    });
+
+    test('POST /api/db/query of the customers preview: a page of 50 that Studio bounded, with the masked columns', () {
+      final result = QueryResultJson.read(fixture('query_preview_postgres_customers'));
+
+      expect(result.fields, ['id', 'name', 'email', 'card_number', 'created_at']);
+      expect(result.rows, hasLength(3));
+      expect(result.pagination?.limit, 50);
+      expect(result.pagination?.hasMore, isFalse);
+    });
+
+    test('POST /api/db/query of the customers count answers one row_count as a bigint string', () {
+      final result = QueryResultJson.read(fixture('query_count_postgres_customers'));
+
+      expect(result.fields, ['row_count']);
+      expect(result.rows.single['row_count'], '3');
+      expect(readRowCount(result), 3);
+    });
+
+    test('POST /api/db/query of the orders preview in the catalog app of the server-level seed', () {
+      final result = QueryResultJson.read(fixture('query_preview_postgres_server_orders'));
+
+      expect(result.rows, hasLength(4));
+      expect(result.pagination?.limit, 50);
+    });
+
+    test('the preview and the count run the same on the read-only seed, whose describe carries no keys', () {
+      expect(
+        QueryResultJson.read(fixture('query_preview_postgres_readonly_customers')).rows,
+        QueryResultJson.read(fixture('query_preview_postgres_customers')).rows,
+      );
+      expect(readRowCount(QueryResultJson.read(fixture('query_count_postgres_readonly_customers'))), 3);
     });
 
     test('POST /api/db/transaction begins on one database of a server-level seed', () {

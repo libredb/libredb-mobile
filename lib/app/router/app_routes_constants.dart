@@ -41,6 +41,9 @@ class ApplicationRoutesConstants {
   /// The name search across every container of a connection.
   static const browseSearch = ':connectionId/search';
 
+  /// The first rows of an object of a kind, its path as repeated `path` query parameters.
+  static const browseRows = ':connectionId/rows/:kind';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

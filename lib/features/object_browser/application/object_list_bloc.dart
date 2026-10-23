@@ -105,6 +105,7 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
         _foldedNames = [for (final object in data) foldForSearch(object.name)];
         emit(
           ObjectListLoaded(
+            meta: providerMeta,
             kind: declared,
             childKindLabels: _childKindLabels(providerMeta, declared),
             objects: data,
@@ -173,6 +174,7 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
 
   /// [loaded] with the filter as it is now.
   ObjectListLoaded _copy(ObjectListLoaded loaded, {bool isRefreshing = false}) => ObjectListLoaded(
+    meta: loaded.meta,
     kind: loaded.kind,
     childKindLabels: loaded.childKindLabels,
     objects: loaded.objects,

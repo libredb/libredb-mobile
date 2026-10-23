@@ -11,6 +11,8 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../browse_answers.dart';
@@ -271,6 +273,7 @@ void main() {
       await tester.longPress(find.text('order_total'));
       await tester.pumpAndSettle();
       expect(find.text('Copy name'), findsOneWidget);
+      expect(find.text('View rows'), findsNothing, reason: 'a routine never gets a SELECT');
       await tester.tap(find.text('View source'));
       await tester.pumpAndSettle();
 
@@ -341,32 +344,109 @@ void main() {
   });
 
   group('long press', () {
-    testWidgets('offers Details and Copy name on a table, which has columns and no source, and copies the name', (
-      tester,
-    ) async {
-      final copied = <String>[];
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-        if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
-        return null;
-      });
-      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    testWidgets(
+      'offers View rows, Details and Copy name on a table, which has columns and no source, and copies the name',
+      (tester) async {
+        final copied = <String>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
+          return null;
+        });
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
+        );
+        answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+        await harness.pump(tester, location: _tables);
+
+        await tester.longPress(find.text('orders'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Copy name'), findsOneWidget);
+        expect(find.text('View source'), findsNothing);
+        expect(find.text('Details'), findsOneWidget);
+        expect(find.text('View rows'), findsOneWidget);
+
+        await tester.tap(find.text('Copy name'));
+        await tester.pumpAndSettle();
+
+        expect(copied, ['orders']);
+        expect(find.text('Name copied'), findsOneWidget);
+        expect(find.text('Copy name'), findsNothing);
+      },
+    );
+  });
+
+  group('View rows', () {
+    testWidgets('from the long press of a table opens its rows, and back returns to the list', (tester) async {
       answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          'SELECT * FROM public.orders;',
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer(
+        (_) async => const Success(QueryResult(fields: ['id'], rows: [], rowCount: 0, executionTime: Duration.zero)),
+      );
       await harness.pump(tester, location: _tables);
 
       await tester.longPress(find.text('orders'));
       await tester.pumpAndSettle();
-
-      expect(find.text('Copy name'), findsOneWidget);
-      expect(find.text('View source'), findsNothing);
-      expect(find.text('Details'), findsOneWidget);
-      expect(find.text('View rows'), findsNothing);
-
-      await tester.tap(find.text('Copy name'));
+      await tester.tap(find.text('View rows'));
       await tester.pumpAndSettle();
 
-      expect(copied, ['orders']);
-      expect(find.text('Name copied'), findsOneWidget);
-      expect(find.text('Copy name'), findsNothing);
+      expect(harness.router.state.name, BrowseRouteNames.rows);
+      expect(harness.router.state.uri.queryParametersAll['path'], ['public', 'orders']);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(harness.location, _tables);
+    });
+
+    testWidgets('offline, the long press shows View rows disabled with the reason', (tester) async {
+      answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+      await harness.pump(tester, location: _tables, offline: true);
+
+      await tester.longPress(find.text('orders'));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'View rows')).enabled, isFalse);
+      expect(find.text('Needs an internet connection'), findsOneWidget);
+      expect(find.text('Copy name'), findsOneWidget);
+    });
+
+    testWidgets('a relation kind whose preview the app does not write shows it disabled and says why', (tester) async {
+      const spark = 'seed:spark';
+      harness.answerMeta(
+        spark,
+        const ProviderMeta(
+          queryLanguage: 'sql',
+          schemaRefreshPattern: '',
+          identifierQuoting: 'backtick',
+          spellsContainerNamesAsEngine: true,
+          containerLevels: [ContainerLevel(id: 'schema', label: 'Namespace', labelPlural: 'Namespaces')],
+          objectKinds: [
+            ObjectKind(id: 'table', role: 'relation', label: 'Table', labelPlural: 'Tables', hasColumns: true),
+          ],
+        ),
+      );
+      answerList(
+        spark,
+        ['lake'],
+        'table',
+        const Success([
+          DatabaseObject(path: ['lake', 'events'], name: 'events', kind: 'table'),
+        ]),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Aspark/objects/table?container=lake');
+
+      await tester.longPress(find.text('events'));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'View rows')).enabled, isFalse);
+      expect(find.text('Preview is not available for this engine yet'), findsOneWidget);
     });
   });
 

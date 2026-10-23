@@ -50,6 +50,13 @@ final class ProviderMetaJson {
       // Studio declares only the literal `true`; absent means a request costs nothing to send.
       resumesBilledCompute: capabilities['resumesBilledCompute'] == true,
       identifierQuoting: _optionalString(capabilities['identifierQuoting']),
+      defaultPort: capabilities['defaultPort'] is int ? capabilities['defaultPort'] as int : null,
+      statementTerminator: _optionalString(capabilities['statementTerminator']),
+      // Studio tests both for `!== undefined`, so any value declares them; reading one as declared only refuses a
+      // preview the app would otherwise write differently from Studio.
+      declaresPreviewProjection: capabilities['previewProjection'] != null,
+      declaresPreviewTimeWindow: capabilities['previewTimeWindow'] != null,
+      spellsContainerNamesAsEngine: capabilities['containerNameSpelling'] == 'engine',
       containerPathShapes: _optionalString(capabilities['containerPathShapes']) ?? 'exact',
       rowActions: [
         if (rowActions is List)

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
+import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 
@@ -33,3 +34,48 @@ VoidCallback? objectSourceAction(
   required ObjectKind kind,
   required DatabaseObject object,
 }) => kind.hasSource ? () => openBrowseSource(context, connectionId, object.path, kind.id) : null;
+
+/// What 'View rows' offers for an object, from [objectRowsAction].
+sealed class ObjectRowsAction {
+  const ObjectRowsAction();
+}
+
+/// 'View rows' opens the object's rows; [count] is Studio's count statement when the engine offers a count, else null.
+final class ObjectRowsOpen extends ObjectRowsAction {
+  const ObjectRowsOpen({required this.open, this.count});
+
+  final VoidCallback open;
+  final PreviewStatement? count;
+}
+
+/// 'View rows' shows disabled, saying preview is not available for this engine yet, and no count is offered.
+final class ObjectRowsRefused extends ObjectRowsAction {
+  const ObjectRowsRefused();
+}
+
+/// What 'View rows' and 'Count rows' offer for the object at [path] of [connectionId], of [kind], in the long-press
+/// menu of the object list and the search and in the detail page's heading: null, nothing, for a kind that is not a
+/// relation kind or that only the key browser lists, so a routine never gets a SELECT; [ObjectRowsRefused] for a
+/// relation kind whose preview the generator refuses; else [ObjectRowsOpen], which opens `browseRows`.
+///
+/// A tap on the object never runs a statement: View rows is offered only from these two places.
+ObjectRowsAction? objectRowsAction(
+  BuildContext context, {
+  required String connectionId,
+  required ProviderMeta meta,
+  required ObjectKind kind,
+  required List<String> path,
+}) {
+  if (kind.role != 'relation' || kind.keyBrowserOnly) return null;
+  const generator = PreviewStatementGenerator();
+  return switch (generator.preview(meta, kind, path)) {
+    PreviewUnavailable() => const ObjectRowsRefused(),
+    PreviewStatement() => ObjectRowsOpen(
+      open: () => openBrowseRows(context, connectionId, path, kind.id),
+      count: switch (generator.count(meta, kind, path)) {
+        final PreviewStatement count => count,
+        PreviewUnavailable() => null,
+      },
+    ),
+  };
+}

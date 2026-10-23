@@ -703,5 +703,15 @@
   "result_copied": "Kopyalandı",
   "@result_copied": {"description": "A result value or row was copied."},
   "result_copy_failed": "Kopyalanamadı ({code})",
-  "@result_copy_failed": {"description": "A copy of a result value failed; code is the error's code.", "placeholders": {"code": {"type": "String"}}}
+  "@result_copy_failed": {"description": "A copy of a result value failed; code is the error's code.", "placeholders": {"code": {"type": "String"}}},
+  "browse_view_rows": "Satırları göster",
+  "@browse_view_rows": {"description": "Opens the first rows of a table, a view or a collection."},
+  "browse_count_rows": "Satırları say",
+  "@browse_count_rows": {"description": "Runs a count of the rows of a table, a view or a collection."},
+  "browse_preview_unavailable": "Bu motor için önizleme henüz kullanılamıyor",
+  "@browse_preview_unavailable": {"description": "Why View rows is disabled for an object whose engine's preview the app does not write yet."},
+  "browse_count_failed": "Satırlar sayılamadı ({code})",
+  "@browse_count_failed": {"description": "In a heading, when the row count was refused or could not be read, with its error code.", "placeholders": {"code": {"type": "String"}}},
+  "browse_rows_database_says": "Veritabanının yanıtı",
+  "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."}
 }

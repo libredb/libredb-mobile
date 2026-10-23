@@ -3,23 +3,28 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_detail_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_source_bloc.dart';
+import 'package:libredb_mobile/features/object_browser/application/row_count_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/object_tap_rule.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/object_source_view.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/widgets/row_count.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 /// The detail of the object at [path] of [connectionId], of [kind]: its name as the heading, then the tabs Columns,
 /// Indexes, Foreign keys, and Source when the kind has source.
 ///
-/// The heading row's action slot stays empty until M4 adds 'View rows' there; the top bar is the shell's.
+/// The heading offers 'View rows' and 'Count rows' by `objectRowsAction`, online only, with the count on a line under
+/// it; the top bar is the shell's.
 class ObjectDetailPage extends StatelessWidget {
   const ObjectDetailPage({super.key, required this.connectionId, required this.path, required this.kind});
 
@@ -29,15 +34,23 @@ class ObjectDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ObjectDetailBloc(
-        repository: context.read<IObjectBrowserRepository>(),
-        providerMeta: context.read<IProviderMetaRepository>(),
-        connectionId: connectionId,
-        path: path,
-        kind: kind,
-        schemaChanges: context.read<SchemaChangeNotifier>().changes,
-      )..add(const ObjectDetailRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              RowCountBloc(statements: context.read<IStatementRepository>(), connectionId: connectionId),
+        ),
+        BlocProvider(
+          create: (context) => ObjectDetailBloc(
+            repository: context.read<IObjectBrowserRepository>(),
+            providerMeta: context.read<IProviderMetaRepository>(),
+            connectionId: connectionId,
+            path: path,
+            kind: kind,
+            schemaChanges: context.read<SchemaChangeNotifier>().changes,
+          )..add(const ObjectDetailRequested()),
+        ),
+      ],
       child: BlocBuilder<ObjectDetailBloc, ObjectDetailState>(
         builder: (context, state) => switch (state) {
           ObjectDetailLoading() => _withHeading(context, const Center(child: CircularProgressIndicator())),
@@ -105,6 +118,10 @@ class _DetailTabs extends StatelessWidget {
     final detail = loaded.detail;
     final hasSource = loaded.kind?.hasSource ?? false;
     final error = this.error;
+    final kind = loaded.kind;
+    final rowsAction = kind == null
+        ? null
+        : objectRowsAction(context, connectionId: page.connectionId, meta: loaded.meta, kind: kind, path: page.path);
     Widget refreshable(List<Widget> children) => RefreshIndicator(
       onRefresh: () => _refresh(context),
       child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: children),
@@ -121,7 +138,13 @@ class _DetailTabs extends StatelessWidget {
               error: error,
               onRetry: () => context.read<ObjectDetailBloc>().add(const ObjectDetailRefreshed()),
             ),
-          BrowseHeading(title: page._title, overline: loaded.kind?.label ?? page.kind),
+          BrowseHeading(
+            title: page._title,
+            overline: loaded.kind?.label ?? page.kind,
+            wrappedActions: [if (rowsAction != null) _RowsActions(action: rowsAction)],
+          ),
+          if (rowsAction is ObjectRowsRefused) _Caption(s.browse_preview_unavailable),
+          const RowCountLine(),
           TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -201,6 +224,35 @@ class _DetailTabs extends StatelessWidget {
             subtitle: Text(s.browse_detail_references(key.referencedTable, key.referencedColumn)),
           ),
     ];
+  }
+}
+
+/// 'View rows' and, when the engine offers a count, 'Count rows', disabled offline with the reason; 'View rows' is
+/// disabled too for an engine whose preview the app does not write, which the page says under the heading.
+class _RowsActions extends StatelessWidget {
+  const _RowsActions({required this.action});
+
+  final ObjectRowsAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final action = this.action;
+    return OnlineOnlyAction(
+      builder: (context, online) => Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          TextButton(
+            onPressed: switch (action) {
+              ObjectRowsOpen(:final open) when online => open,
+              ObjectRowsOpen() || ObjectRowsRefused() => null,
+            },
+            child: Text(s.browse_view_rows),
+          ),
+          if (action case ObjectRowsOpen(:final count?)) CountRowsButton(statement: count, enabled: online),
+        ],
+      ),
+    );
   }
 }
 
