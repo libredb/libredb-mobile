@@ -66,21 +66,21 @@ final class SqlEditorJson {
     );
   }
 
+  /// A successful statement's `rowCount` must be a whole number, since Studio always sends the provider's count
+  /// (`runStatement` in `multi-query/route.ts`); a failed statement without `error` keeps a generic text.
   static StatementResult _statement(Map<String, dynamic> json) {
     final failed = json['status'] == 'error';
     final error = json['error'];
+    final rowCount = failed ? null : _int(json['rowCount'], 'rowCount');
     return StatementResult(
       index: _int(json['index'], 'index'),
       sql: _string(json['sql'], 'sql'),
       startLine: _int(json['startLine'], 'startLine'),
       executionTime: _duration(json['executionTime'], 'executionTime'),
+      rowCount: rowCount,
       error: failed ? (error is String ? error : 'The statement failed') : null,
       result: !failed && json['fields'] is List
-          ? QueryResultJson.fromJson({
-              ...json,
-              'rows': json['rows'] ?? const <Object?>[],
-              'rowCount': json['rowCount'] is int ? json['rowCount'] : 0,
-            })
+          ? QueryResultJson.fromJson({...json, 'rows': json['rows'] ?? const <Object?>[]})
           : null,
     );
   }

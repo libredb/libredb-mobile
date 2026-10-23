@@ -68,6 +68,71 @@ void main() {
     expect(script.hasError, isTrue);
   });
 
+  group('scriptResult reads each statement for its card', () {
+    String statement(String fields) =>
+        '{"statements":[{"index":2,"sql":"SELECT 3","startLine":4,$fields}],"statementCount":4,"executedCount":3,'
+        '"executionTime":9}';
+
+    test('a success with its index, text, line, time, row count and rows', () {
+      final script = SqlEditorJson.scriptResult(
+        statement('"status":"success","rows":[{"n":3}],"fields":["n"],"rowCount":3,"executionTime":7'),
+      );
+      final read = script.statements.single;
+
+      expect(read.index, 2);
+      expect(read.sql, 'SELECT 3');
+      expect(read.startLine, 4);
+      expect(read.executionTime, const Duration(milliseconds: 7));
+      expect(read.rowCount, 3);
+      expect(read.result?.rowCount, 3);
+      expect(read.result?.rows, [
+        {'n': 3},
+      ]);
+      expect(read.error, isNull);
+      expect(script.statementCount, 4);
+      expect(script.executedCount, 3);
+      expect(script.executionTime, const Duration(milliseconds: 9));
+      expect(script.hasError, isFalse);
+    });
+
+    test('a write that answered no rows keeps its row count', () {
+      final read = SqlEditorJson.scriptResult(
+        statement('"status":"success","rows":[],"fields":[],"rowCount":2,"executionTime":1'),
+      ).statements.single;
+
+      expect(read.rowCount, 2);
+      expect(read.result?.rows, isEmpty);
+    });
+
+    test("a failure with the database's words and no row count", () {
+      final read = SqlEditorJson.scriptResult(
+        statement('"status":"error","executionTime":2,"error":"relation \\"nope\\" does not exist"'),
+      ).statements.single;
+
+      expect(read.error, 'relation "nope" does not exist');
+      expect(read.rowCount, isNull);
+      expect(read.result, isNull);
+    });
+
+    final unreadable = {
+      'a string row count': '"rowCount":"3"',
+      'a fractional row count': '"rowCount":3.5',
+      'a null row count': '"rowCount":null',
+      'no row count': '',
+    };
+    for (final MapEntry(key: name, value: rowCount) in unreadable.entries) {
+      test('$name on a success fails the read', () {
+        final more = rowCount.isEmpty ? '' : ',$rowCount';
+        expect(
+          () => SqlEditorJson.scriptResult(
+            statement('"status":"success","rows":[{"n":3}],"fields":["n"],"executionTime":7$more'),
+          ),
+          throwsFormatException,
+        );
+      });
+    }
+  });
+
   test('transactionRun reads several statements as a script', () {
     final run = SqlEditorJson.transactionRun(
       '{"inTransaction":false,"multiStatement":true,"statements":[],"statementCount":2,"executedCount":2,'

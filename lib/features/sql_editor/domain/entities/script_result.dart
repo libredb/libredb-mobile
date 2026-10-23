@@ -26,13 +26,14 @@ class ScriptResult extends Equatable {
   List<Object?> get props => [statements, statementCount, executedCount, executionTime, openTransactionRolledBack];
 }
 
-/// One statement of a script: its [result], or the database's [error] text.
+/// One statement of a script: its [result] and [rowCount], or the database's [error] text.
 class StatementResult extends Equatable {
   const StatementResult({
     required this.index,
     required this.sql,
     required this.startLine,
     required this.executionTime,
+    this.rowCount,
     this.result,
     this.error,
   });
@@ -43,9 +44,12 @@ class StatementResult extends Equatable {
   /// The line of the script the statement starts on, as Studio reports it.
   final int startLine;
   final Duration executionTime;
+
+  /// The provider's row count of a successful statement, which Studio always sends; null for a failed one.
+  final int? rowCount;
   final QueryResult? result;
   final String? error;
 
   @override
-  List<Object?> get props => [index, sql, startLine, executionTime, result, error];
+  List<Object?> get props => [index, sql, startLine, executionTime, rowCount, result, error];
 }
