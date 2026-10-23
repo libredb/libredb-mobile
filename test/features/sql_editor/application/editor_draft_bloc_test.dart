@@ -39,9 +39,16 @@ void main() {
       ..add(const EditorDraftTextChanged('select 1'))
       ..add(const EditorDraftFlushRequested()),
     wait: _delay * 3,
-    expect: () => const <EditorDraftState>[],
+    expect: () => const [EditorDraftOff()],
     verify: (_) => verifyZeroInteractions(store),
   );
+
+  test('starts in a state of its own, before the page tells it the account', () {
+    final bloc = build();
+    addTearDown(bloc.close);
+
+    expect(bloc.state, const EditorDraftInitial());
+  });
 
   blocTest<EditorDraftBloc, EditorDraftState>(
     'reads the draft of the connection for the subject, and with none saved has nothing to restore',

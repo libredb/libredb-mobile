@@ -7,6 +7,11 @@ sealed class EditorDraftState extends Equatable {
   List<Object?> get props => const [];
 }
 
+/// The page has not told the draft the account yet; nothing is shown, read or saved.
+final class EditorDraftInitial extends EditorDraftState {
+  const EditorDraftInitial();
+}
+
 /// Studio has named no account, so no draft is read or saved; the field stays editable.
 final class EditorDraftOff extends EditorDraftState {
   const EditorDraftOff();

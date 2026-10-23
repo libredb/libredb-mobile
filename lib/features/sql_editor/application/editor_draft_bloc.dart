@@ -26,7 +26,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     required this.connectionId,
     this.saveDelay = defaultSaveDelay,
     this.onLateOutcome,
-  }) : super(const EditorDraftOff()) {
+  }) : super(const EditorDraftInitial()) {
     on<EditorDraftSubjectChanged>(_onSubjectChanged, transformer: EventTransformers.queue());
     // The pause is a timer of the bloc's own rather than a debouncing transformer: stream_transform's debounce emits its
     // last event when the bloc closes and keeps its timer running after the editor is gone, while close() saves the
@@ -91,6 +91,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
 
   bool get _canSave => switch (state) {
     EditorDraftRestored() || EditorDraftKept() || EditorDraftNotKept() || EditorDraftSaveFailed() => true,
+    EditorDraftInitial() ||
     EditorDraftOff() ||
     EditorDraftLoading() ||
     EditorDraftConflict() ||
@@ -109,7 +110,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
 
   Future<void> _onSubjectChanged(EditorDraftSubjectChanged event, Emitter<EditorDraftState> emit) async {
     final previous = _subject;
-    if (event.subjectHash == previous) return;
+    if (event.subjectHash == previous && state is! EditorDraftInitial) return;
     if (previous != null) {
       // The text was typed for the previous account, so it is saved there and is not the next account's draft.
       if (_pending case final draft?) _saveLate(previous, draft);

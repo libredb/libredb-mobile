@@ -21,6 +21,7 @@ class EditorDraftNotice extends StatelessWidget {
     return BlocBuilder<EditorDraftBloc, EditorDraftState>(
       builder: (context, state) => switch (state) {
         EditorDraftOff() => _line(context, Icons.info_outline, s.sql_editor_draft_no_account),
+        EditorDraftInitial() ||
         EditorDraftLoading() ||
         EditorDraftConflict() ||
         EditorDraftRestored() ||

@@ -121,6 +121,7 @@ class EditorPage extends StatelessWidget {
       EditorDraftNotKept() => s.sql_editor_draft_not_kept,
       EditorDraftSaveFailed(:final errorCode) => s.sql_editor_draft_not_saved(errorCode.resolve(context)),
       EditorDraftUnreadable() => AppErrorCode.editorSavedTextUnreadable.resolve(context),
+      EditorDraftInitial() ||
       EditorDraftOff() ||
       EditorDraftLoading() ||
       EditorDraftConflict() ||

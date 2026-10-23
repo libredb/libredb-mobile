@@ -2892,7 +2892,7 @@ class S {
     return Intl.message(
       'Text is not kept until Studio names your account.',
       name: 'sql_editor_draft_no_account',
-      desc: 'Shown under the editor\'s read-only field while Studio has not named the signed-in account, so no draft can be read or kept.',
+      desc: 'Shown under the editor\'s field while Studio has not named the signed-in account: the field stays editable, but no draft is read or kept.',
       args: [],
     );
   }

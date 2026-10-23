@@ -368,6 +368,19 @@ void main() {
       verifyZeroInteractions(store);
     });
 
+    testWidgets('with an account the first frame says nothing about a missing account', (tester) async {
+      whenListen(active, connections.stream, initialState: const ActiveConnectionSelected(_postgres));
+      final showEditor = ValueNotifier(true);
+      addTearDown(showEditor.dispose);
+      await tester.pumpWidget(app(showEditor: showEditor, subject: _alice));
+
+      expect(find.byKey(EditorInput.fieldKey), findsOneWidget);
+      expect(find.text('Text is not kept until Studio names your account.'), findsNothing);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Text is not kept until Studio names your account.'), findsNothing);
+    });
+
     group('a text typed before Studio names the account, with a saved draft', () {
       Future<void> nameTheAccount(WidgetTester tester) async {
         when(() => store.readDraft(_alice, _postgres.id))
