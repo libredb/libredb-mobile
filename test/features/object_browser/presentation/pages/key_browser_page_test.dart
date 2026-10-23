@@ -11,8 +11,11 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/key_value_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/object_source_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/key_browser_list.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/pick_connection_first.dart';
@@ -114,7 +117,21 @@ void main() {
   });
 
   group('Redis', () {
-    setUp(() => harness.answerMeta(_redis.id, metaAnswer('meta_redis')));
+    setUp(() {
+      harness.answerMeta(_redis.id, metaAnswer('meta_redis'));
+      when(
+        () => harness.statements.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          database: any(named: 'database'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            Success(QueryResultJson.read(File('test/fixtures/studio/query_redis_set.json').readAsStringSync())),
+      );
+    });
 
     testWidgets('user:* on db1 pages with Load more and groups its keys into folders with counts and type chips', (
       tester,
@@ -149,7 +166,41 @@ void main() {
       await tester.pumpAndSettle();
       final roles = find.widgetWithText(ListTile, 'roles');
       expect(find.descendant(of: roles, matching: find.widgetWithText(KeyTypeChip, 'set')), findsOneWidget);
-      expect(tester.widget<ListTile>(roles).onTap, isNull, reason: 'a key opens nothing until M4-07');
+
+      await tester.tap(roles);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(KeyValuePage), findsOneWidget);
+      expect(harness.location, '/browse/seed%3Adev-redis/value?container=1&path=user%3A2%3Aroles&type=set');
+    });
+
+    testWidgets('a key of a level page opens with its whole key, not the label its row shows', (tester) async {
+      answerPages(
+        (_) => const Success(
+          KeyScanPage(keys: ['cache:greeting'], cursor: '0', types: {'cache:greeting': 'string'}, total: 1),
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0');
+
+      await tester.tap(find.widgetWithText(ListTile, 'cache:'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'greeting'));
+      await tester.pumpAndSettle();
+
+      final value = tester.widget<KeyValuePage>(find.byType(KeyValuePage));
+      expect(value.keyName, 'cache:greeting');
+      expect(value.container, ['0']);
+      expect(value.type, 'string');
+    });
+
+    testWidgets('a key without a type opens with no type', (tester) async {
+      answerPages((_) => const Success(KeyScanPage(keys: ['plain'], cursor: '0', types: {}, total: 1)));
+      await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0');
+
+      await tester.tap(find.widgetWithText(ListTile, 'plain'));
+      await tester.pumpAndSettle();
+
+      expect(harness.location, '/browse/seed%3Adev-redis/value?container=0&path=plain');
     });
 
     testWidgets('says the counts are one node\'s on a clustered server', (tester) async {
@@ -241,6 +292,28 @@ void main() {
       ]);
       expect(find.widgetWithText(ListTile, '/'), findsOneWidget, reason: 'grouped by the declared separator');
     });
+
+    testWidgets('a key opens the key kind\'s source for the path [key] and runs no statement', (tester) async {
+      when(() => harness.repository.source(_etcd, path: const ['/apisix/routes/1'], kind: 'key'))
+          .thenAnswer((_) async => const Failure(NotFoundError('gone', code: 'studio.object_not_found')));
+      answerPages((_) => const Success(KeyScanPage(keys: ['/apisix/routes/1'], cursor: '0', types: {}, total: 1)));
+      await harness.pump(tester, location: '/browse/seed%3Aetcd/keys');
+
+      await tester.tap(find.widgetWithText(ListTile, '/'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'apisix/'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'routes/'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithIcon(ListTile, Icons.key_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ObjectSourcePage), findsOneWidget);
+      expect(harness.router.state.pathParameters['kind'], 'key');
+      expect(harness.router.state.uri.queryParametersAll['path'], ['/apisix/routes/1']);
+      verify(() => harness.repository.source(_etcd, path: const ['/apisix/routes/1'], kind: 'key')).called(1);
+      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+    });
   });
 
   testWidgets('draws each proven loss in the warning style, under the plain read outcome', (tester) async {
@@ -280,6 +353,9 @@ void main() {
     await harness.pump(tester, location: '/browse/seed%3Amqtt/keys');
 
     expect(progress(tester), 'Scanned 2 keys');
+    await tester.tap(find.widgetWithText(ListTile, 'a/'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'b')).onTap, isNull, reason: 'no key kind, not Redis');
   });
 
   group('Firestore level pages', () {
@@ -344,6 +420,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(harness.location, '/browse/seed%3Afirestore/keys');
       expect(find.widgetWithText(ListTile, 'audit_log/'), findsOneWidget);
+    });
+
+    testWidgets('a document key opens the document kind\'s source and runs no statement', (tester) async {
+      when(() => harness.repository.source(_firestore, path: const ['carts/c1'], kind: 'document'))
+          .thenAnswer((_) async => Success(sourceAnswer('handwritten/firestore/source_document')));
+      answerPages(
+        (request) => Success(
+          request['pattern'] == 'carts/'
+              ? const KeyScanPage(keys: ['carts/c1'], cursor: '0', types: {}, total: 0, prefixes: [])
+              : _page('handwritten/firestore/keyscan_level'),
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Afirestore/keys?prefix=carts%2F');
+
+      await tester.tap(find.widgetWithText(ListTile, 'c1'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ObjectSourcePage), findsOneWidget);
+      expect(harness.router.state.uri.queryParametersAll['path'], ['carts/c1']);
+      verify(() => harness.repository.source(_firestore, path: const ['carts/c1'], kind: 'document')).called(1);
+      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
     });
 
     testWidgets('a folder page opened by a link goes back to the Browse root', (tester) async {

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_browser_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_tree.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/object_tap_rule.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 
@@ -180,7 +181,12 @@ class _KeyBrowserListState extends State<KeyBrowserList> {
           expanded: row.expanded,
           onTap: () => setState(() => row.expanded ? _expanded.remove(row.prefix) : _expanded.add(row.prefix)),
         ),
-        KeyTreeKey() => (context) => _KeyTile(label: row.label, depth: row.depth, type: row.type),
+        KeyTreeKey() => (context) => _KeyTile(
+          label: row.label,
+          depth: row.depth,
+          type: row.type,
+          onTap: _openOf(context, row.key, row.type),
+        ),
       },
   ];
 
@@ -195,9 +201,21 @@ class _KeyBrowserListState extends State<KeyBrowserList> {
           depth: 0,
           onTap: () => openBrowseKeys(context, widget.connectionId, widget.container, prefix: folder),
         ),
-      for (final key in walk.keys) (context) => _KeyTile(label: below(key), depth: 0, type: walk.types[key]),
+      for (final key in walk.keys)
+        (context) =>
+            _KeyTile(label: below(key), depth: 0, type: walk.types[key], onTap: _openOf(context, key, walk.types[key])),
     ];
   }
+
+  /// What a tap on [key], the whole key rather than the label its row shows, opens.
+  VoidCallback? _openOf(BuildContext context, String key, String? type) => keyOpenAction(
+    context,
+    connectionId: widget.connectionId,
+    meta: widget.walk.meta,
+    container: widget.container,
+    key: key,
+    type: type,
+  );
 }
 
 class _FolderTile extends StatelessWidget {
@@ -231,11 +249,14 @@ class _FolderTile extends StatelessWidget {
 }
 
 class _KeyTile extends StatelessWidget {
-  const _KeyTile({required this.label, required this.depth, this.type});
+  const _KeyTile({required this.label, required this.depth, required this.onTap, this.type});
 
   final String label;
   final int depth;
   final String? type;
+
+  /// Opens the key, or null on an engine whose keys open nothing.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -246,6 +267,7 @@ class _KeyTile extends StatelessWidget {
       leading: const Icon(Icons.key_outlined),
       title: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: type == null ? null : KeyTypeChip(type: type),
+      onTap: onTap,
     );
   }
 }

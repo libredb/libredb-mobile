@@ -79,3 +79,22 @@ ObjectRowsAction? objectRowsAction(
     ),
   };
 }
+
+/// What a tap on [key] in the key browser of [connectionId], walked in [container], opens, or null when it opens
+/// nothing, as Studio's `onOpenKey` (`src/components/Studio.tsx:1158-1169`) decides: on an engine with a key-browser
+/// kind (`keyBrowserKind`, the first kind `enumeratedBy: "key-browser"`), that kind's source for the path `[key]`,
+/// which runs nothing; on an engine whose `queryDialect` is `redis`, the key's value page with the [type] its page
+/// read; on any other engine nothing.
+VoidCallback? keyOpenAction(
+  BuildContext context, {
+  required String connectionId,
+  required ProviderMeta meta,
+  required List<String> container,
+  required String key,
+  String? type,
+}) {
+  final keyKind = meta.objectKinds.where((kind) => kind.keyBrowserOnly).firstOrNull;
+  if (keyKind != null) return () => openBrowseSource(context, connectionId, [key], keyKind.id);
+  if (meta.queryDialect == 'redis') return () => openBrowseKeyValue(context, connectionId, container, key, type: type);
+  return null;
+}

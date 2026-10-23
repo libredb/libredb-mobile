@@ -2066,6 +2066,66 @@ class S {
       args: [],
     );
   }
+
+  /// `Key`
+  String get keys_value_overline {
+    return Intl.message(
+      'Key',
+      name: 'keys_value_overline',
+      desc: 'Over a key\'s name, at the head of its value page.',
+      args: [],
+    );
+  }
+
+  /// `This key no longer exists. Pull to read it again.`
+  String get keys_value_vanished {
+    return Intl.message(
+      'This key no longer exists. Pull to read it again.',
+      name: 'keys_value_vanished',
+      desc: 'On a key\'s value page, when Redis answered that the key was deleted or expired after the key list was read.',
+      args: [],
+    );
+  }
+
+  /// `Studio says this key's type is {type}.`
+  String keys_value_type(String type) {
+    return Intl.message(
+      'Studio says this key\'s type is $type.',
+      name: 'keys_value_type',
+      desc: 'On a key\'s value page when the key list named no type, with the type Redis answered.',
+      args: [type],
+    );
+  }
+
+  /// `Read value`
+  String get keys_value_read {
+    return Intl.message(
+      'Read value',
+      name: 'keys_value_read',
+      desc: 'Runs the read of a key\'s value for the type Redis answered.',
+      args: [],
+    );
+  }
+
+  /// `The app has no read for this type.`
+  String get keys_value_no_read {
+    return Intl.message(
+      'The app has no read for this type.',
+      name: 'keys_value_no_read',
+      desc: 'On a key\'s value page, under a type that none of the app\'s key reads covers.',
+      args: [],
+    );
+  }
+
+  /// `Reading a key's value is not available for this engine.`
+  String get keys_value_unavailable {
+    return Intl.message(
+      'Reading a key\'s value is not available for this engine.',
+      name: 'keys_value_unavailable',
+      desc: 'On a key\'s value page opened for an engine that is not read with Redis commands.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
