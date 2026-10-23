@@ -7,8 +7,7 @@ typedef PublicEndpoint = ({String method, String path});
 ///
 /// The Studio status check reads Studio's liveness when the app starts and when it comes back to the foreground, so
 /// before sign-in as well. Studio serves `/api/health` and `/api/ready` without a session (libredb-studio
-/// `src/proxy.ts`). The sign-in and the token refresh go to the identity provider,
-/// never to the API.
+/// `src/proxy.ts`). The sign-in and the token refresh go to the identity provider, never to the API.
 ///
 /// `AuthInterceptor` sends no token to them, `TokenRefreshInterceptor` passes a 401 from them on without a refresh, and
 /// `MockInterceptor` answers them without a token. Any other method on the same path is not public. The app's own

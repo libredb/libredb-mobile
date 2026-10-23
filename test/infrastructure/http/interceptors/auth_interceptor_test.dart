@@ -8,10 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// HTTP request depends on:
 /// 1. JWT present → `Authorization: Bearer <token>` is attached.
 /// 2. JWT absent or empty → no `Authorization` header is written.
-/// 3. Public endpoint (sign-in, OTP, registration, password reset, token
-///    refresh, app config) → no `Authorization` header, whatever is
-///    stored. Any other method on the same path, and any path that is not
-///    a public API endpoint, gets the token.
+/// 3. Public endpoint (Studio's `GET /health` and `GET /ready`) → no
+///    `Authorization` header, whatever is stored. Any other method on the
+///    same path, and any path that is not a public API endpoint, gets the
+///    token.
 /// 4. Secure read throws → request proceeds anonymously (does NOT
 ///    crash the interceptor chain).
 /// 5. Any other request records the session generation it goes out

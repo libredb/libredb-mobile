@@ -110,13 +110,13 @@ class _SlowAccessTokenStorage implements ISecureStorage {
   Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
-/// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or
-/// read-only disk does.
 /// Leaves a cached response as a GET outside Studio's live endpoints does. Since the app config check is gone, the app
 /// caches nothing on its way to the connection list, whose requests are all live.
 Future<void> _cacheResponse() =>
     SharedPrefsCacheStorage().write('GET_https://api.example.test/storage/config', '{"storageProvider":"local"}');
 
+/// A SharedPreferences platform store that keeps the cached responses when asked to remove them, as a full or
+/// read-only disk does.
 class _CacheKeepingStore extends InMemorySharedPreferencesStore {
   _CacheKeepingStore() : super.empty();
 

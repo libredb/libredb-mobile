@@ -195,8 +195,8 @@ class TokenRefreshInterceptor extends Interceptor {
     final requestPath = err.requestOptions.path;
 
     // A public endpoint is sent without a token, so its 401 is not about the
-    // session: no refresh, and no session to end. The app config is public:
-    // the lifecycle checks read it before sign-in.
+    // session: no refresh, and no session to end. Studio's /health and /ready
+    // are public: the Studio status check reads them before sign-in.
     if (isPublicEndpoint(err.requestOptions)) {
       _log.debug('401 from public endpoint {}: no token refresh', [requestPath]);
       handler.next(err);

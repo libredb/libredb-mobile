@@ -293,7 +293,7 @@ There is no token file: the sign-in and the token refresh go to the identity pro
 
 | Method | Path | Sent by |
 | --- | --- | --- |
-| `GET` | `/health` | Studio's liveness check, at start and on a return to the foreground, `StudioStatusRepository.liveness` |
+| `GET` | `/health` | Studio's liveness check, at start and on a return to the foreground after more than 5 minutes away, `StudioStatusRepository.liveness` |
 | `GET` | `/ready` | Studio's readiness, `StudioStatusRepository.readiness` |
 
 The path is the one the `ApiClient` method is called with, before any path parameters.
