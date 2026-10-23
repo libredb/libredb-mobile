@@ -65,6 +65,7 @@ class ObjectDetailPage extends StatelessWidget {
             ListView(
               children: [
                 BrowseFailureView(
+                  runsStatement: false,
                   connectionId: connectionId,
                   error: error,
                   onRetry: () => context.read<ObjectDetailBloc>().add(const ObjectDetailRequested()),
@@ -134,6 +135,7 @@ class _DetailTabs extends StatelessWidget {
           OfflineStaleMarker(loadedAt: loaded.loadedAt),
           if (error != null)
             BrowseFailureView(
+              runsStatement: false,
               connectionId: page.connectionId,
               error: error,
               onRetry: () => context.read<ObjectDetailBloc>().add(const ObjectDetailRefreshed()),
@@ -325,6 +327,7 @@ class _SourceTabState extends State<_SourceTab> with AutomaticKeepAliveClientMix
           ObjectSourceFailure(:final error) => ListView(
             children: [
               BrowseFailureView(
+                runsStatement: false,
                 connectionId: widget.connectionId,
                 error: error,
                 onRetry: () => context.read<ObjectSourceBloc>().add(const ObjectSourceRequested()),

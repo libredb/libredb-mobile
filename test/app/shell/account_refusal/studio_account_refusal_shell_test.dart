@@ -124,10 +124,52 @@ void main() {
     studio.refused.clear();
     await tester.tap(find.byKey(accountRefusalRetryKey));
     await tester.pumpAndSettle();
+    // The connection list that failed under the page asks again, which the mock answers after its simulated latency.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     expect(find.byType(StudioAccountRefusalPage), findsNothing);
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
     expect(appContext(tester).read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+  });
+
+  // The connection list stays mounted under the page and met the refusal itself; once Studio accepts the account, the
+  // list asks again on its own, once, instead of showing the refusal it got while hidden.
+  testWidgets('Retry that clears the refusal loads a connection list that failed under the page, once', (tester) async {
+    studio.refused.addAll(['/auth/me', '/connections/managed', '/connections/policy']);
+    await pumpSignedIn(tester);
+    final listedBefore = studio.requests.where((path) => path == '/connections/managed').length;
+
+    studio.refused.clear();
+    await tester.tap(find.byKey(accountRefusalRetryKey));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StudioAccountRefusalPage), findsNothing);
+    expect(studio.requests.where((path) => path == '/connections/managed'), hasLength(listedBefore + 1));
+    expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
+  });
+
+  testWidgets('Retry that clears the refusal leaves a loaded connection list as it is', (tester) async {
+    await pumpSignedIn(tester);
+    expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
+    studio.refused.add('/auth/me');
+    final apiClient = appContext(tester).read<ApiClient>();
+    await tester.runAsync(() => apiClient.get('/auth/me').then<void>((_) {}, onError: (Object _) {}));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudioAccountRefusalPage), findsOneWidget);
+    final listedBefore = studio.requests.where((path) => path == '/connections/managed').length;
+
+    studio.refused.clear();
+    await tester.tap(find.byKey(accountRefusalRetryKey));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StudioAccountRefusalPage), findsNothing);
+    expect(studio.requests.where((path) => path == '/connections/managed'), hasLength(listedBefore));
+    expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
   });
 
   testWidgets('Logout signs out as the profile sheet does, and the next user starts with no refusal', (tester) async {

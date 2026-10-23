@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 void main() {
@@ -14,12 +15,20 @@ void main() {
 
   setUp(() => retries = 0);
 
-  Widget app(AppError error, {required bool offline}) => MaterialApp(
+  Widget app(AppError error, {required bool offline, bool refused = false, bool runsStatement = false}) => MaterialApp(
     localizationsDelegates: const [S.delegate],
     home: OfflineStatus(
       isOffline: offline,
-      child: Scaffold(
-        body: BrowseFailureView(connectionId: 'seed:dev-postgres', error: error, onRetry: () => retries++),
+      child: AccountRefusalStatus(
+        isRefused: refused,
+        child: Scaffold(
+          body: BrowseFailureView(
+            connectionId: 'seed:dev-postgres',
+            error: error,
+            runsStatement: runsStatement,
+            onRetry: () => retries++,
+          ),
+        ),
       ),
     ),
   );
@@ -62,4 +71,25 @@ void main() {
       expect(retries, 0);
     });
   }
+
+  // The page stayed mounted under the shell's refusal page and failed there; Studio accepting the account again loads it
+  // once, as a pull to refresh would.
+  final refusedAccount = AuthError('No role', code: AppErrorCode.studioAccountHasNoRole.key);
+
+  testWidgets('a failure loads again once, when Studio accepts the account again', (tester) async {
+    await tester.pumpWidget(app(refusedAccount, offline: false, refused: true));
+    expect(retries, 0);
+
+    await tester.pumpWidget(app(refusedAccount, offline: false));
+    await tester.pumpWidget(app(refusedAccount, offline: false));
+
+    expect(retries, 1);
+  });
+
+  testWidgets('a failure whose retry runs a statement waits for Retry after the account is accepted', (tester) async {
+    await tester.pumpWidget(app(refusedAccount, offline: false, refused: true, runsStatement: true));
+    await tester.pumpWidget(app(refusedAccount, offline: false, runsStatement: true));
+
+    expect(retries, 0);
+  });
 }

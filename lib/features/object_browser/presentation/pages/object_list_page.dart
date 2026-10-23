@@ -73,6 +73,7 @@ class _ObjectListView extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               BrowseFailureView(
+                runsStatement: false,
                 connectionId: connectionId,
                 error: error,
                 onRetry: () => context.read<ObjectListBloc>().add(const ObjectListRequested()),
@@ -96,6 +97,7 @@ class _ObjectListView extends StatelessWidget {
         OfflineStaleMarker(loadedAt: list.loadedAt),
         if (error != null)
           BrowseFailureView(
+            runsStatement: false,
             connectionId: connectionId,
             error: error,
             onRetry: () => context.read<ObjectListBloc>().add(const ObjectListRefreshed()),
