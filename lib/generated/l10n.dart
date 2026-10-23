@@ -2446,6 +2446,56 @@ class S {
       args: [],
     );
   }
+
+  /// `Database`
+  String get sql_editor_catalog_label {
+    return Intl.message(
+      'Database',
+      name: 'sql_editor_catalog_label',
+      desc: 'The SQL editor\'s name for the database a server-level connection runs statements in, when Studio sends no label for its level.',
+      args: [],
+    );
+  }
+
+  /// `{label}: {catalog}`
+  String sql_editor_catalog_chip(String label, String catalog) {
+    return Intl.message(
+      '$label: $catalog',
+      name: 'sql_editor_catalog_chip',
+      desc: 'The SQL editor\'s chip of the database a server-level connection runs statements in, which opens the picker.',
+      args: [label, catalog],
+    );
+  }
+
+  /// `Run statements in`
+  String get sql_editor_catalog_picker_title {
+    return Intl.message(
+      'Run statements in',
+      name: 'sql_editor_catalog_picker_title',
+      desc: 'The title of the SQL editor\'s picker of the database a server-level connection runs statements in.',
+      args: [],
+    );
+  }
+
+  /// `The databases to run statements in could not be listed.`
+  String get sql_editor_catalog_failed {
+    return Intl.message(
+      'The databases to run statements in could not be listed.',
+      name: 'sql_editor_catalog_failed',
+      desc: 'The SQL editor could not read the databases of a server-level connection, shown above Studio\'s error with its retry; Run waits for a database.',
+      args: [],
+    );
+  }
+
+  /// `The server lists no database to run statements in.`
+  String get sql_editor_catalog_none {
+    return Intl.message(
+      'The server lists no database to run statements in.',
+      name: 'sql_editor_catalog_none',
+      desc: 'A server-level connection lists no database, so the SQL editor offers no Run.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

@@ -31,7 +31,8 @@ part 'editor_run_state.dart';
 /// sent for either. Any other text the check flags waits in [EditorAwaitingConfirmation] for the user's answer, and
 /// the text sent is the one carried there, never read again from the field. A text is sent whole through
 /// [ISqlEditorRepository.run] with a fresh run id, never to `runScript`, and never sent again by the bloc: a failure,
-/// a rate limit included, waits for the user's next Run, and a Run while one is in flight is dropped.
+/// a rate limit included, waits for the user's next Run, and a Run while one is in flight is dropped. On a server-level
+/// connection the text runs in the database Run named, and each page of its result in the same one.
 ///
 /// Cancel of the run in flight: when the engine supports it, the bloc posts [ISqlEditorRepository.cancel] with the
 /// run's id while the run's request is still open, because Studio stops a run as soon as its request is dropped and a
@@ -119,14 +120,14 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       case final AsksBeforeRunning asks:
         emit(
           EditorAwaitingConfirmation(
-            statement: EditorStatement(text: text, asks: asks),
+            statement: EditorStatement(text: text, asks: asks, catalog: event.catalog),
             previous: state,
             meta: meta,
             role: event.role,
           ),
         );
       case RunsWithoutAsking():
-        await _run(emit, EditorStatement(text: text), meta, event.role);
+        await _run(emit, EditorStatement(text: text, catalog: event.catalog), meta, event.role);
     }
   }
 
@@ -194,7 +195,13 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     final queryId = _newRunId();
     final signal = _inFlight = CancelSignal();
     emit(EditorRunning(queryId: queryId, supportsCancel: meta.supportsQueryCancel));
-    final result = await _repository.run(connectionId, statement.text, queryId: queryId, cancelSignal: signal);
+    final result = await _repository.run(
+      connectionId,
+      statement.text,
+      queryId: queryId,
+      cancelSignal: signal,
+      catalog: statement.catalog,
+    );
     if (identical(_inFlight, signal)) _inFlight = null;
     if (emit.isDone) return;
     switch (state) {
@@ -228,17 +235,23 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     }
   }
 
-  /// Runs [statement], the text of the result on screen, again for [page] with a fresh run id, for the result view's
-  /// Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks [confirm] first,
-  /// and nothing is sent unless it answers true; the answer is then null. The state does not change, and a failure is
-  /// answered, never sent again by itself.
+  /// Runs [statement], the text of the result on screen, again for [page] with a fresh run id and in its database, for
+  /// the result view's Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks
+  /// [confirm] first, and nothing is sent unless it answers true; the answer is then null. The state does not change,
+  /// and a failure is answered, never sent again by itself.
   Future<Result<QueryResult>?> loadPage(
     EditorStatement statement,
     QueryPage page, {
     required Future<bool> Function() confirm,
   }) async {
     if (statement.asks != null && !await confirm()) return null;
-    final answer = await _repository.run(connectionId, statement.text, queryId: _newRunId(), page: page);
+    final answer = await _repository.run(
+      connectionId,
+      statement.text,
+      queryId: _newRunId(),
+      page: page,
+      catalog: statement.catalog,
+    );
     if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
     return answer;
   }

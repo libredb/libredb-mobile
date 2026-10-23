@@ -132,22 +132,24 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m49(count) => "${Intl.plural(count, one: '1 uyarı', other: '${count} uyarı')}";
 
-  static String m50(keyword) =>
+  static String m50(label, catalog) => "${label}: ${catalog}";
+
+  static String m51(keyword) =>
       "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı. Korumak için ${keyword} ekleyin.";
 
-  static String m51(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m52(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
 
-  static String m52(message) => "Hata: ${message}";
+  static String m53(message) => "Hata: ${message}";
 
-  static String m53(detail) => "Ayrıntı: ${detail}";
+  static String m54(detail) => "Ayrıntı: ${detail}";
 
-  static String m54(host) => "Studio adresi: ${host}";
+  static String m55(host) => "Studio adresi: ${host}";
 
-  static String m55(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m56(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
-  static String m56(name) => "Onaylamak için \"${name}\" yazın";
+  static String m57(name) => "Onaylamak için \"${name}\" yazın";
 
-  static String m57(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
+  static String m58(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -519,9 +521,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_editor_cancelled": MessageLookupByLibrary.simpleMessage("İptal edildi"),
     "sql_editor_cancelling": MessageLookupByLibrary.simpleMessage("İptal ediliyor"),
+    "sql_editor_catalog_chip": m50,
+    "sql_editor_catalog_failed": MessageLookupByLibrary.simpleMessage(
+      "Deyimlerin çalışacağı veritabanları listelenemedi.",
+    ),
+    "sql_editor_catalog_label": MessageLookupByLibrary.simpleMessage("Veritabanı"),
+    "sql_editor_catalog_none": MessageLookupByLibrary.simpleMessage(
+      "Sunucu, deyimlerin çalışacağı bir veritabanı listelemiyor.",
+    ),
+    "sql_editor_catalog_picker_title": MessageLookupByLibrary.simpleMessage("Deyimlerin çalışacağı yer"),
     "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Deyim"),
     "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Bir deyim yazın"),
-    "sql_editor_rolled_back": m50,
+    "sql_editor_rolled_back": m51,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Çalıştır"),
     "sql_editor_stop_waiting": MessageLookupByLibrary.simpleMessage("Beklemeyi bırak"),
     "sql_editor_stopped_waiting": MessageLookupByLibrary.simpleMessage(
@@ -531,17 +542,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m51,
-    "studio_error_semantics": m52,
+    "studio_error_retry_in": m52,
+    "studio_error_semantics": m53,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m53,
+    "studio_governance_detail": m54,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
     ),
-    "studio_unreachable_host": m54,
+    "studio_unreachable_host": m55,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
@@ -550,7 +561,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m55,
+    "table_rows_listed": m56,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),
@@ -567,7 +578,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "users": MessageLookupByLibrary.simpleMessage("Kullanıcılar"),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("İptal"),
-    "write_confirm_name_label": m56,
+    "write_confirm_name_label": m57,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "Bu üretim bağlantısının yazılacak bir adı yok, bu yüzden deyim burada onaylanamaz.",
     ),
@@ -583,7 +594,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "Veriyi değiştirebilir: uygulama deyimin nasıl başladığını okuyamıyor",
     ),
-    "write_confirm_reason_may_write_at": m57,
+    "write_confirm_reason_may_write_at": m58,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "Uygulama bu motorun bir komutunun ne yaptığını okuyamaz",
     ),

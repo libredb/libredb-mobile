@@ -2,16 +2,16 @@ import 'package:clock/clock.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 
 /// Studio's object routes, all `POST` with the connection named in the body. The paths are relative to
 /// `PROD_API_URL`, which ends in Studio's `/api`. It keeps no answer, so every read, a refresh or not, is a request.

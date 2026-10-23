@@ -7,15 +7,17 @@ sealed class EditorRunEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-/// Run [text] for [role], the role Studio names now, whose policy masks the answer.
+/// Run [text] for [role], the role Studio names now, whose policy masks the answer, in [catalog], the database picked
+/// on a server-level connection, or null on any other.
 final class EditorRunRequested extends EditorRunEvent {
-  const EditorRunRequested({required this.text, required this.role});
+  const EditorRunRequested({required this.text, required this.role, this.catalog});
 
   final String text;
   final StudioRole? role;
+  final String? catalog;
 
   @override
-  List<Object?> get props => [text, role];
+  List<Object?> get props => [text, role, catalog];
 
   /// Prints the length, never the text, which can hold customer data in its literals.
   @override

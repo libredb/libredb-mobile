@@ -16,6 +16,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 
 class AppSessionListeners extends StatefulWidget {
@@ -150,11 +151,14 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             }
           },
         ),
-        // Studio's answer names the subject the active connection is remembered for.
+        // Studio's answer names the subject the active connection and database are remembered for.
         BlocListener<StudioIdentityCubit, StudioIdentityState>(
           listenWhen: (previous, current) => current is StudioIdentityLoaded,
-          listener: (context, state) =>
-              context.read<ActiveConnectionCubit>().signedIn((state as StudioIdentityLoaded).identity.subject),
+          listener: (context, state) {
+            final subject = (state as StudioIdentityLoaded).identity.subject;
+            context.read<ActiveConnectionCubit>().signedIn(subject);
+            context.read<ActiveCatalogCubit>().signedIn(subject);
+          },
         ),
         // A switch drops the cached object answers past their time and keeps the fresh ones, so going back to a
         // connection soon sends no request.
@@ -209,14 +213,15 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
 
   /// The app-scoped blocs and caches outlive the session, so the next user to sign in would see what they hold about
   /// the one who signed out: the sign-in form state, a password shown in plain text among it, who Studio said the user
-  /// was, with the role, what it allowed them, whether it refused their account, the connection they had open, and
-  /// the provider-meta and object browser answers kept in memory.
+  /// was, with the role, what it allowed them, whether it refused their account, the connection and database they had
+  /// open, and the provider-meta and object browser answers kept in memory.
   void _forgetSignedOutUser(BuildContext context) {
     context.read<LoginBloc>().add(const LoginReset());
     context.read<StudioIdentityCubit>().clear();
     context.read<ConnectionPolicyCubit>().clear();
     context.read<StudioAccountRefusalCubit>().clear();
     context.read<ActiveConnectionCubit>().clear();
+    context.read<ActiveCatalogCubit>().clear();
     context.read<CachedObjectBrowserRepository>().clear();
     context.read<CachedProviderMetaRepository>().clear();
   }

@@ -11,16 +11,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -55,6 +61,12 @@ const _production = StudioConnection(
   environment: 'production',
 );
 const _redis = StudioConnection(id: 'seed:dev-redis', name: 'Dev Redis', type: 'redis', environment: 'development');
+const _server = StudioConnection(
+  id: 'seed:dev-postgres-server',
+  name: 'Dev Postgres server',
+  type: 'postgres',
+  environment: 'development',
+);
 
 const _rolledBack = QueryResult(
   fields: [],
@@ -69,6 +81,9 @@ void main() {
   late MockIProviderMetaRepository providerMeta;
   late MockActiveConnectionCubit active;
   late SchemaChangeNotifier schemaChanges;
+  late MockIContainersRepository containers;
+  late MockIActiveCatalogStore catalogStore;
+  late ActiveCatalogCubit catalog;
 
   setUp(() {
     repository = MockISqlEditorRepository();
@@ -79,11 +94,21 @@ void main() {
     }
     when(() => providerMeta.providerMeta(_redis.id))
         .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_redis'))));
+    when(() => providerMeta.providerMeta(_server.id))
+        .thenAnswer((_) async => Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
+    containers = MockIContainersRepository();
+    catalogStore = MockIActiveCatalogStore();
+    when(() => catalogStore.read(any(), any())).thenAnswer((_) async => null);
+    when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
+    catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
     active = MockActiveConnectionCubit();
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   });
 
-  tearDown(() => schemaChanges.dispose());
+  tearDown(() async {
+    await schemaChanges.dispose();
+    await catalog.close();
+  });
 
   void answerRun(String sql, Result<QueryResult> Function() answer, {QueryPage? page}) => when(
     () => repository.run(
@@ -141,10 +166,12 @@ void main() {
           RepositoryProvider<ISqlEditorRepository>.value(value: repository),
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
+          RepositoryProvider<IContainersRepository>.value(value: containers),
         ],
         child: MultiBlocProvider(
           providers: [
             BlocProvider<ActiveConnectionCubit>.value(value: active),
+            BlocProvider<ActiveCatalogCubit>.value(value: catalog),
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
           ],
           child: MaterialApp(
@@ -415,6 +442,227 @@ void main() {
           cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1);
+    });
+  });
+
+  group('the database of a server-level connection', () {
+    const sql = 'SELECT current_database()';
+    const subject = '6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10';
+
+    Finder chip() => find.byKey(EditorCatalogChip.chipKey);
+
+    void answerDatabases() => when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer(
+      (_) async =>
+          Success(Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026))),
+    );
+
+    void answerCurrentDatabase() =>
+        when(
+          () => repository.run(
+            _server.id,
+            sql,
+            queryId: any(named: 'queryId'),
+            page: any(named: 'page'),
+            cancelSignal: any(named: 'cancelSignal'),
+            catalog: any(named: 'catalog'),
+          ),
+        ).thenAnswer((invocation) async {
+          // The recorded answer of `archive`, as the database Studio ran in names itself.
+          final database = invocation.namedArguments[#catalog] as String;
+          return Success(
+            QueryResultJson.read(_fixture('query_catalog_postgres_server').replaceAll('"archive"', '"$database"')),
+          );
+        });
+
+    List<Object?> sentCatalogs() => verify(
+      () => repository.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+        catalog: captureAny(named: 'catalog'),
+      ),
+    ).captured;
+
+    Future<void> pick(WidgetTester tester, String database) async {
+      await tester.tap(chip());
+      await tester.pumpAndSettle();
+      expect(find.text('Run statements in'), findsOneWidget);
+      await tester.tap(find.descendant(of: find.byType(BottomSheet), matching: find.text(database)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('on seed:dev-postgres no chip shows and no database is sent', (tester) async {
+      answerRun('SELECT 1', () => Success(_recorded('query_preview_postgres_customers')));
+      await pump(tester);
+      await tester.pumpAndSettle();
+
+      expect(chip(), findsNothing);
+      await type(tester, 'SELECT 1');
+      await run(tester);
+
+      expect(sentCatalogs(), [null]);
+      verifyNever(() => containers.containers(any(), refresh: any(named: 'refresh')));
+    });
+
+    testWidgets('runs in the first listed database, then in the picked one, keeping the text', (tester) async {
+      answerDatabases();
+      answerCurrentDatabase();
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      await type(tester, sql);
+      await run(tester);
+      expect(find.text('app'), findsWidgets);
+
+      await pick(tester, 'archive');
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+      expect(tester.widget<TextField>(find.byKey(EditorInput.fieldKey)).controller!.text, sql);
+      await run(tester);
+
+      expect(sentCatalogs(), ['app', 'archive']);
+      expect(find.text('archive'), findsWidgets);
+      expect(catalog.catalogOf(_server.id), 'archive');
+    });
+
+    testWidgets('shows the database opened in Browse', (tester) async {
+      answerDatabases();
+      catalog.choose(_server.id, 'archive');
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+    });
+
+    testWidgets('chooses the remembered database again while the server lists it', (tester) async {
+      answerDatabases();
+      when(() => catalogStore.read(subject, _server.id)).thenAnswer((_) async => 'archive');
+      catalog.signedIn(subject);
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+    });
+
+    testWidgets('chooses the first listed when the server no longer lists the remembered one', (tester) async {
+      answerDatabases();
+      when(() => catalogStore.read(subject, _server.id)).thenAnswer((_) async => 'gone');
+      catalog.signedIn(subject);
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      verify(() => catalogStore.write(subject, _server.id, 'app')).called(1);
+    });
+
+    testWidgets('a failed list shows its error with a retry, and Run waits for a database', (tester) async {
+      when(() => containers.containers(_server.id, refresh: any(named: 'refresh')))
+          .thenAnswer((_) async => const Failure(ServerError('down', code: 'studio.internal_error')));
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+      await type(tester, sql);
+
+      expect(find.text('The databases to run statements in could not be listed.'), findsOneWidget);
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expect(runEnabled(tester), isFalse);
+
+      answerDatabases();
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      expect(runEnabled(tester), isTrue);
+    });
+
+    testWidgets('Run waits while the engine is still read, so nothing is sent without a database', (tester) async {
+      final meta = Completer<Result<ProviderMeta>>();
+      when(() => providerMeta.providerMeta(_server.id)).thenAnswer((_) => meta.future);
+      answerDatabases();
+      await pump(tester, connection: _server);
+      await type(tester, sql);
+
+      expect(runEnabled(tester), isFalse);
+      expect(chip(), findsNothing);
+
+      meta.complete(Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      expect(runEnabled(tester), isTrue);
+    });
+
+    testWidgets('a provider-meta failure on an ordinary connection shows Studio\'s error with a retry, no databases', (
+      tester,
+    ) async {
+      var calls = 0;
+      when(() => providerMeta.providerMeta(_postgres.id)).thenAnswer((_) async {
+        if (++calls == 1) return const Failure(ServerError('down', code: 'studio.internal_error'));
+        return Success(ProviderMetaJson.read(_fixture('meta_postgres')));
+      });
+      await pump(tester);
+      await tester.pumpAndSettle();
+      await type(tester, 'SELECT 1');
+
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expect(find.text('The databases to run statements in could not be listed.'), findsNothing);
+      expect(runEnabled(tester), isFalse);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(chip(), findsNothing);
+      expect(runEnabled(tester), isTrue);
+    });
+
+    testWidgets('a server that lists no database offers no Run', (tester) async {
+      when(() => containers.containers(_server.id, refresh: any(named: 'refresh')))
+          .thenAnswer((_) async => Success(Answered(const [], at: DateTime(2026))));
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+      await type(tester, sql);
+
+      expect(find.text('The server lists no database to run statements in.'), findsOneWidget);
+      expect(runEnabled(tester), isFalse);
+    });
+
+    testWidgets('Load more sends the same database as the first page', (tester) async {
+      const orders = 'SELECT * FROM public.orders';
+      answerDatabases();
+      when(
+        () => repository.run(
+          _server.id,
+          orders,
+          queryId: any(named: 'queryId'),
+          page: QueryPage.first,
+          cancelSignal: any(named: 'cancelSignal'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer((_) async => Success(_recorded('query_page_postgres_first')));
+      when(
+        () => repository.run(
+          _server.id,
+          orders,
+          queryId: any(named: 'queryId'),
+          page: QueryPage.after(_recorded('query_page_postgres_first').pagination!),
+          cancelSignal: any(named: 'cancelSignal'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer((_) async => Success(_recorded('query_page_postgres_second')));
+      await pump(tester, connection: _server);
+      await tester.pumpAndSettle();
+      await pick(tester, 'archive');
+      await type(tester, orders);
+      await run(tester);
+
+      await tester.ensureVisible(find.byKey(const ValueKey('result-load-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Load 50 more'));
+      await tester.pumpAndSettle();
+
+      expect(sentCatalogs(), ['archive', 'archive']);
     });
   });
 

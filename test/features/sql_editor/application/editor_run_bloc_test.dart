@@ -27,6 +27,7 @@ ProviderMeta _meta(String name) => ProviderMetaJson.read(_fixture(name));
 
 const _postgres = 'seed:dev-postgres';
 const _redis = 'seed:dev-redis';
+const _server = 'seed:dev-postgres-server';
 
 void main() {
   late MockISqlEditorRepository repository;
@@ -47,6 +48,7 @@ void main() {
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(_postgres)).thenAnswer((_) async => Success(_meta('meta_postgres')));
     when(() => providerMeta.providerMeta(_redis)).thenAnswer((_) async => Success(_meta('meta_redis')));
+    when(() => providerMeta.providerMeta(_server)).thenAnswer((_) async => Success(_meta('meta_postgres_server')));
     invalidated = [];
     changed = [];
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: invalidated.add);
@@ -491,6 +493,98 @@ void main() {
       expect(answer, isA<Failure<QueryResult>>());
       expect(sentTexts(), ['SELECT * FROM sales.ledger', 'SELECT * FROM sales.ledger']);
     });
+  });
+
+  group('the database of a server-level connection', () {
+    final archive = _recorded('query_catalog_postgres_server');
+
+    void answerCatalogRun(Result<QueryResult> Function() answer) => when(
+      () => repository.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+        catalog: any(named: 'catalog'),
+      ),
+    ).thenAnswer((_) async => answer());
+
+    List<Object?> sentCatalogs() => verify(
+      () => repository.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+        catalog: captureAny(named: 'catalog'),
+      ),
+    ).captured;
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'Run sends the database the user picked, and the result keeps it',
+      setUp: () => answerCatalogRun(() => Success(archive)),
+      build: () => build(connectionId: _server),
+      act: (bloc) =>
+          bloc.add(const EditorRunRequested(text: 'SELECT current_database()', role: user, catalog: 'archive')),
+      expect: () => [
+        const EditorRunning(queryId: 'run-1', supportsCancel: true),
+        isA<EditorSucceeded>()
+            .having((s) => s.masked.result.rows.single['current_database'], 'database', 'archive')
+            .having((s) => s.statement.catalog, 'catalog', 'archive'),
+      ],
+      verify: (_) {
+        verify(
+          () => repository.run(
+            _server,
+            'SELECT current_database()',
+            queryId: 'run-1',
+            catalog: 'archive',
+            cancelSignal: any(named: 'cancelSignal'),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a confirmed text runs in the database picked when Run was tapped',
+      setUp: () => answerCatalogRun(() => Success(_recorded('query'))),
+      build: () => build(connectionId: _server),
+      act: (bloc) async {
+        bloc.add(const EditorRunRequested(text: 'DELETE FROM orders WHERE false', role: user, catalog: 'app'));
+        await bloc.stream.firstWhere((s) => s is EditorAwaitingConfirmation);
+        bloc.add(const EditorConfirmationAnswered(confirmed: true));
+      },
+      skip: 2,
+      expect: () => [isA<EditorSucceeded>().having((s) => s.statement.catalog, 'catalog', 'app')],
+      verify: (_) => expect(sentCatalogs(), ['app']),
+    );
+
+    test('Load more sends the same database as the first page', () async {
+      answerCatalogRun(() => Success(firstPage));
+      final bloc = build(connectionId: _server);
+      addTearDown(bloc.close);
+      bloc.add(const EditorRunRequested(text: 'SELECT * FROM public.orders', role: user, catalog: 'archive'));
+      final succeeded = await bloc.stream.firstWhere((s) => s is EditorSucceeded) as EditorSucceeded;
+      answerCatalogRun(() => Success(secondPage));
+
+      final answer = await bloc.loadPage(
+        succeeded.statement,
+        QueryPage.after(firstPage.pagination!),
+        confirm: () async => true,
+      );
+
+      expect(answer, Success(secondPage));
+      expect(sentCatalogs(), ['archive', 'archive']);
+    });
+
+    blocTest<EditorRunBloc, EditorRunState>(
+      'a connection without catalogSessions sends no database',
+      setUp: () => answerCatalogRun(() => Success(customers)),
+      build: build,
+      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT * FROM customers', role: user)),
+      skip: 2,
+      verify: (_) => expect(sentCatalogs(), [null]),
+    );
   });
 
   group('the schema notifier', () {

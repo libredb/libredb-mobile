@@ -6,15 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 
 /// Counts the requests the cache lets through, and names each answer after the request that got it, so a test can
 /// tell a stored answer from a new one.
@@ -215,6 +216,18 @@ void main() {
 
       expect(inner.calls, ['scanKeys $_sales c1 users/ 10 2 true', 'scanKeys $_sales null null null null false']);
     });
+  });
+
+  test('read as the shared containers interface, the top level shares the kept answer of Browse', () async {
+    final IContainersRepository shared = cache;
+    final browsed = await cache.containers('seed:a');
+    final read = await shared.containers('seed:a');
+
+    expect(inner.calls, ['containers seed:a null']);
+    expect((read as Success).data, (browsed as Success).data);
+
+    await shared.containers('seed:a', refresh: true);
+    expect(inner.calls, hasLength(2));
   });
 
   test('an answer older than ten minutes is read again', () {

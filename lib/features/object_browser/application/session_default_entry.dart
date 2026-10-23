@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 
 /// Decides when a container level opens its session-default container by itself: on the first entry of a connection
 /// only, so a user who goes back to the level stays there.

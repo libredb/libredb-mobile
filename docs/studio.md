@@ -393,6 +393,7 @@ The row previews and counts of #98 were recorded the same way, from a fresh volu
 record query_preview_postgres_customers /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT * FROM public.customers;","options":{"limit":50,"offset":0}}'
 record query_count_postgres_customers /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT COUNT(*) AS row_count\nFROM public.customers;","options":{"offset":0}}'
 record query_preview_postgres_server_orders /db/query '{"connectionId":"seed:dev-postgres-server","sql":"SELECT * FROM app.public.orders;","options":{"limit":50,"offset":0},"catalog":"app"}'
+record query_catalog_postgres_server /db/query '{"connectionId":"seed:dev-postgres-server","sql":"SELECT current_database()","options":{"limit":50,"offset":0},"catalog":"archive"}'
 record query_preview_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT * FROM public.customers;","options":{"limit":50,"offset":0}}'
 record query_count_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT COUNT(*) AS row_count\nFROM public.customers;","options":{"offset":0}}'
 ```

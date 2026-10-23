@@ -33,6 +33,7 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
     this.openOnEntry,
     this.query = '',
     required this.searchesObjects,
+    this.catalogSessions = false,
   });
 
   /// The level, in the engine's own words.
@@ -57,6 +58,9 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
   /// [ProviderMeta.searchesObjects] of the engine.
   final bool searchesObjects;
 
+  /// [ProviderMeta.catalogSessions] of the engine: a statement may name a database of the top level to run in.
+  final bool catalogSessions;
+
   /// The containers whose name holds [query], compared by the shared search fold; all of them while not filtering.
   List<ObjectContainer> get visibleContainers => [
     for (final container in containers)
@@ -67,7 +71,17 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
   bool opensKinds(ObjectContainer container) => container.path.length >= depth;
 
   @override
-  List<Object?> get props => [level, depth, containers, loadedAt, isRefreshing, openOnEntry, query, searchesObjects];
+  List<Object?> get props => [
+    level,
+    depth,
+    containers,
+    loadedAt,
+    isRefreshing,
+    openOnEntry,
+    query,
+    searchesObjects,
+    catalogSessions,
+  ];
 }
 
 /// The level could not be read.
