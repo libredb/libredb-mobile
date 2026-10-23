@@ -8,6 +8,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/application/connection_check_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_test_result.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
@@ -64,6 +65,41 @@ void main() {
     build: build,
     act: (bloc) => bloc.add(const ConnectionCheckRequested()),
     expect: () => const [ConnectionCheckChecking(), ConnectionCheckDegraded(message: 'Connected, but no health data')],
+  );
+
+  blocTest<ConnectionCheckBloc, ConnectionCheckState>(
+    'an answer with warnings carries them, online or degraded',
+    setUp: () {
+      var degraded = false;
+      when(() => connections.test(_id)).thenAnswer((_) async {
+        final result = ConnectionTestResult(
+          message: degraded ? 'no health' : 'Connection successful',
+          latency: degraded ? null : const Duration(milliseconds: 42),
+          degraded: degraded,
+          warnings: const [QueryWarning(message: 'careful')],
+        );
+        degraded = true;
+        return Success(result);
+      });
+    },
+    build: build,
+    act: (bloc) async {
+      bloc.add(const ConnectionCheckRequested());
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const ConnectionCheckRequested());
+    },
+    expect: () => const [
+      ConnectionCheckChecking(),
+      ConnectionCheckOnline(
+        latency: Duration(milliseconds: 42),
+        warnings: [QueryWarning(message: 'careful')],
+      ),
+      ConnectionCheckChecking(),
+      ConnectionCheckDegraded(
+        message: 'no health',
+        warnings: [QueryWarning(message: 'careful')],
+      ),
+    ],
   );
 
   blocTest<ConnectionCheckBloc, ConnectionCheckState>(

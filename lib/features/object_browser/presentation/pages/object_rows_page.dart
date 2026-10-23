@@ -101,7 +101,12 @@ class _ObjectRowsView extends StatelessWidget {
         children: [
           if (loaded != null) OfflineStaleMarker(loadedAt: loaded.loadedAt),
           if (error != null) ...[
-            BrowseFailureView(connectionId: page.connectionId, error: error, onRetry: () => _run(context)),
+            BrowseFailureView(
+              connectionId: page.connectionId,
+              error: error,
+              runsStatement: true,
+              onRetry: () => _run(context),
+            ),
             if (browseDatabaseWordsOf(error) case final words?) BrowseDatabaseWords(words),
           ],
           BrowseHeading(

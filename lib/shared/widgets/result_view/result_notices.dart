@@ -9,8 +9,22 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 NumberFormat resultNumberFormat(BuildContext context) =>
     NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
 
-/// The engine's warnings, one per line, each as Studio's `describeWarning` writes it (the severity, then the message,
-/// or `Warning` without one) with the code under it. Studio's text is shown as Studio wrote it.
+/// One warning as Studio's `describeWarning` writes it (`src/components/results-grid/utils.ts:43-49` at libredb-studio
+/// `c9989a6b5`): the severity, then the message, or without a message `Warning` followed by the code when there is one.
+/// Studio's text is shown as Studio wrote it.
+String describeWarning(S s, QueryWarning warning) {
+  final code = warning.code;
+  final message = warning.message.isNotEmpty
+      ? warning.message
+      : code == null
+      ? s.result_warning_fallback
+      : s.result_warning_fallback_code(code);
+  final severity = warning.severity;
+  return severity == null || severity.isEmpty ? message : s.result_warning_line(severity, message);
+}
+
+/// The engine's warnings, one per line, each as [describeWarning] writes it, with the code under a warning that has a
+/// message.
 class ResultWarningList extends StatelessWidget {
   const ResultWarningList({super.key, required this.warnings});
 
@@ -34,18 +48,14 @@ class ResultWarningList extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_line(s, warning), style: style),
-              if (warning.code case final code?) Text(s.result_warning_code(code), style: codeStyle),
+              Text(describeWarning(s, warning), style: style),
+              // A blank warning's line already ends with its code.
+              if (warning.code case final code? when warning.message.isNotEmpty)
+                Text(s.result_warning_code(code), style: codeStyle),
             ],
           ),
       ],
     );
-  }
-
-  static String _line(S s, QueryWarning warning) {
-    final message = warning.message.isEmpty ? s.result_warning_fallback : warning.message;
-    final severity = warning.severity;
-    return severity == null || severity.isEmpty ? message : s.result_warning_line(severity, message);
   }
 }
 

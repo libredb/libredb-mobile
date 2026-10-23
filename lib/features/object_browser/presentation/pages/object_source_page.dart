@@ -52,6 +52,7 @@ class ObjectSourcePage extends StatelessWidget {
                 ObjectSourceFailure(:final error) => ListView(
                   children: [
                     BrowseFailureView(
+                      runsStatement: false,
                       connectionId: connectionId,
                       error: error,
                       onRetry: () => context.read<ObjectSourceBloc>().add(const ObjectSourceRequested()),

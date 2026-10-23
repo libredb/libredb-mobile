@@ -389,8 +389,8 @@ void main() {
       expect(find.text('WARNING: Segment 3 is unavailable'), findsOneWidget);
       expect(find.text('Code W042'), findsOneWidget);
       expect(find.text('plain notice'), findsOneWidget);
-      expect(find.text('Warning'), findsOneWidget);
-      expect(find.text('Code 99'), findsOneWidget);
+      expect(find.text('Warning 99'), findsOneWidget, reason: "Studio's describeWarning names the code of a blank one");
+      expect(find.text('Code 99'), findsNothing, reason: 'the line already names the code, as Studio shows it once');
 
       await tester.tap(find.byKey(const ValueKey('result-warnings-chip')));
       await tester.pump();

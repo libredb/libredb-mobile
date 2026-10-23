@@ -110,6 +110,7 @@ class _ContainerLevelView extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               BrowseFailureView(
+                runsStatement: false,
                 connectionId: connectionId,
                 error: error,
                 onRetry: () => context.read<ContainerBrowserBloc>().add(const ContainerBrowserRequested()),
@@ -129,6 +130,7 @@ class _ContainerLevelView extends StatelessWidget {
         OfflineStaleMarker(loadedAt: level.loadedAt),
         if (error != null)
           BrowseFailureView(
+            runsStatement: false,
             connectionId: connectionId,
             error: error,
             onRetry: () => context.read<ContainerBrowserBloc>().add(const ContainerBrowserRefreshed()),

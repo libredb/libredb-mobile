@@ -18,6 +18,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
@@ -128,6 +129,75 @@ void main() {
 
     expect(find.descendant(of: status(), matching: find.text('Reachable, 42 ms')), findsOneWidget);
     expect(find.bySemanticsLabel('Status: Reachable, 42 ms'), findsOneWidget);
+  });
+
+  testWidgets('a check with Studio its warnings shows Reachable and each warning under it', (tester) async {
+    when(() => connections.test(_connection.id)).thenAnswer(
+      (_) async => const Success(
+        ConnectionTestResult(
+          message: 'Connection successful',
+          latency: Duration(milliseconds: 42),
+          warnings: [
+            QueryWarning(message: 'database "nope" does not exist', severity: 'notice'),
+            QueryWarning(message: 'index not ready'),
+            QueryWarning(message: '', code: 'MZ1'),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester);
+
+    await tester.tap(checkButton());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.descendant(of: status(), matching: find.text('Reachable, 42 ms')), findsOneWidget);
+    final warnings = find.byKey(const ValueKey('connection-check-warnings'));
+    expect(
+      find.descendant(of: warnings, matching: find.text('notice: database "nope" does not exist')),
+      findsOneWidget,
+    );
+    expect(find.descendant(of: warnings, matching: find.text('index not ready')), findsOneWidget);
+    expect(find.descendant(of: warnings, matching: find.text('Warning MZ1')), findsOneWidget);
+    expect(find.descendant(of: warnings, matching: find.byIcon(Icons.warning_amber)), findsNWidgets(3));
+  });
+
+  testWidgets('a check without warnings shows Reachable alone', (tester) async {
+    when(() => connections.test(_connection.id)).thenAnswer(
+      (_) async =>
+          const Success(ConnectionTestResult(message: 'Connection successful', latency: Duration(milliseconds: 42))),
+    );
+    await pumpSheet(tester);
+
+    await tester.tap(checkButton());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.descendant(of: status(), matching: find.text('Reachable, 42 ms')), findsOneWidget);
+    expect(find.byKey(const ValueKey('connection-check-warnings')), findsNothing);
+  });
+
+  testWidgets('a degraded check shows its message and then the warnings', (tester) async {
+    when(() => connections.test(_connection.id)).thenAnswer(
+      (_) async => const Success(
+        ConnectionTestResult(
+          message: 'no health',
+          degraded: true,
+          warnings: [QueryWarning(message: 'careful')],
+        ),
+      ),
+    );
+    await pumpSheet(tester);
+
+    await tester.tap(checkButton());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('no health'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byKey(const ValueKey('connection-check-warnings')), matching: find.text('careful')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows the check running and disables the button until Studio answers', (tester) async {

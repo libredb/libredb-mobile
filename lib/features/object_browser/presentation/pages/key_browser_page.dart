@@ -62,6 +62,7 @@ class _KeyBrowserView extends StatelessWidget {
           children: [
             heading,
             BrowseFailureView(
+              runsStatement: false,
               connectionId: connectionId,
               error: error,
               onRetry: () => context.read<KeyBrowserBloc>().add(const KeyBrowserStarted()),
@@ -83,6 +84,7 @@ class _KeyBrowserView extends StatelessWidget {
         KeyPatternField(walk: walk),
         if (error != null)
           BrowseFailureView(
+            runsStatement: false,
             connectionId: connectionId,
             error: error,
             onRetry: () => context.read<KeyBrowserBloc>().add(const KeyBrowserMoreRequested()),

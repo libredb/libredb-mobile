@@ -755,6 +755,8 @@
   "@result_warning_line": {"description": "One warning with its severity, both as Studio wrote them.", "placeholders": {"severity": {"type": "String"}, "message": {"type": "String"}}},
   "result_warning_fallback": "Warning",
   "@result_warning_fallback": {"description": "A warning the engine sent without a message."},
+  "result_warning_fallback_code": "Warning {code}",
+  "@result_warning_fallback_code": {"description": "A warning the engine sent without a message but with its code, as Studio's describeWarning words it.", "placeholders": {"code": {"type": "String"}}},
   "result_warning_code": "Code {code}",
   "@result_warning_code": {"description": "The engine's code of a warning.", "placeholders": {"code": {"type": "String"}}},
   "result_engine_reported": "The engine reported:",

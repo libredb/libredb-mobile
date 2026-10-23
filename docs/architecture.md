@@ -122,7 +122,7 @@ Which 401 starts a refresh is Studio's rule, in `isStudioSessionExpired`, and wh
 | 401 `AUTH_ERROR` (the database refused its credential) | shows the error; the session stays |
 | 401 `LLM_AUTH` | the same; the AI routes are not used |
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE`, on any route and from libredb-studio#1922 on also on `GET /api/auth/me` | shows the error as transient with the screen's retry; no refresh, the token stays |
-| 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | no refresh, the session stays; signed in, the shell covers every screen with the refusal page, which offers Retry and Logout; at sign-in the sign-in is refused |
+| 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | no refresh, the session stays; signed in, the shell covers every screen with the refusal page, which offers Retry and Logout, and once Retry is accepted a screen that failed under the page loads once by itself unless its request runs a statement; at sign-in the sign-in is refused |
 | 401 `AUTH_REQUIRED` on `POST /api/auth/logout` (from libredb-studio#1922 on) | refreshes the token and posts the sign-out record again, within the sign-out's 3 seconds; the sign-out goes on either way |
 
 The rule after a refresh ([#12](https://github.com/libredb/libredb-mobile/issues/12)):
@@ -186,6 +186,7 @@ Studio counts requests per user in buckets, per Studio process (`src/lib/api/rat
 - A refused request answers 429 with `Retry-After`, which reaches the caller as `studio.rate_limited`.
 - `POST /api/db/test-connection` spends a slot and opens a connection to the database, so the app checks a connection only when the user taps Check in its details sheet, never on the list or on open, and drops a second tap while a check runs.
   Like Studio, it does not check a connection whose `provider-meta` declares `resumesBilledCompute`, since the check would wake compute the engine bills for, unless the user chooses Check anyway.
+  The `warnings` Studio sends on either success shape, such as Materialize opening a database that does not exist, show under Reachable in a caution style, each as Studio's `describeWarning` writes it (the severity, then the message, or `Warning` and the code for a warning without one); a `warnings` that is not a list fails the check, and an entry without a string message is left out.
 
 ### The object tree
 

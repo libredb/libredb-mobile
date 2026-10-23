@@ -11,7 +11,9 @@ import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
@@ -31,6 +33,7 @@ import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:mocktail/mocktail.dart';
@@ -62,6 +65,10 @@ class BrowseHarness {
   late final SessionDefaultEntry entry;
   late final SchemaChangeNotifier schemaChanges;
   final _connectivity = StreamController<ConnectivityState>.broadcast();
+  final _identity = StreamController<StudioIdentityState>.broadcast();
+
+  /// The app's refusal of the account, which a request meeting Studio's refusal reports.
+  final refusal = StudioAccountRefusalCubit();
   late GoRouter router;
 
   /// The open requests the SQL tab received, in order; the tab itself is a stand-in, since the editor is not under
@@ -102,7 +109,11 @@ class BrowseHarness {
     bool settle = true,
   }) async {
     final identity = MockStudioIdentityCubit();
-    whenListen(identity, const Stream<StudioIdentityState>.empty(), initialState: const StudioIdentityLoading());
+    whenListen(identity, _identity.stream, initialState: const StudioIdentityLoading());
+    // The refusal page's Retry: Studio accepts the account.
+    when(identity.load).thenAnswer(
+      (_) async => _identity.add(const StudioIdentityLoaded(StudioIdentity(username: 'ada', role: StudioUserRole()))),
+    );
     final policy = MockConnectionPolicyCubit();
     whenListen(policy, const Stream<ConnectionPolicyState>.empty(), initialState: const ConnectionPolicyLoading());
     final connectivity = MockConnectivityCubit();
@@ -137,6 +148,8 @@ class BrowseHarness {
       await catalog.close();
       await active.close();
       await _connectivity.close();
+      await _identity.close();
+      await refusal.close();
     });
     await tester.pumpWidget(
       MultiRepositoryProvider(
@@ -155,7 +168,7 @@ class BrowseHarness {
             BlocProvider<ConnectionPolicyCubit>.value(value: policy),
             BlocProvider<ConnectivityCubit>.value(value: connectivity),
             BlocProvider<StudioStatusBloc>.value(value: studioStatus),
-            BlocProvider<StudioAccountRefusalCubit>(create: (_) => StudioAccountRefusalCubit()),
+            BlocProvider<StudioAccountRefusalCubit>.value(value: refusal),
             BlocProvider<ResultViewModeCubit>(create: (_) => ResultViewModeCubit(store: MockIResultViewModeStore())),
             BlocProvider<SignOutBloc>(create: (_) => SignOutBloc(logoutUseCase: LogoutUseCase(MockIAuthRepository()))),
           ],
@@ -182,6 +195,21 @@ class BrowseHarness {
       await tester.pump();
       await tester.pump();
     }
+  }
+
+  /// Studio refuses the account with [code], which the shell covers with the refusal page, as a request that met the
+  /// refusal reports it, and `/api/auth/me` fails with it.
+  Future<void> refuseAccount(WidgetTester tester, AppErrorCode code) async {
+    refusal.refuse(code);
+    // `/api/auth/me` met the refusal too, so Retry is offered rather than a check in progress.
+    _identity.add(StudioIdentityFailure(code));
+    await tester.pumpAndSettle();
+  }
+
+  /// Taps the refusal page's Retry, which Studio accepts, so the page uncovers the screen under it.
+  Future<void> retryAccepted(WidgetTester tester) async {
+    await tester.tap(find.byKey(accountRefusalRetryKey));
+    await tester.pumpAndSettle();
   }
 
   /// Takes the device offline, or back online.

@@ -6,11 +6,14 @@ sealed class AppError {
   final String message;
   final String? code;
 
+  /// Equal only to an error of the same type with the same message and code; a subclass with fields of its own compares
+  /// them too.
   @override
-  bool operator ==(Object other) => other is AppError && other.message == message && other.code == code;
+  bool operator ==(Object other) =>
+      other is AppError && other.runtimeType == runtimeType && other.message == message && other.code == code;
 
   @override
-  int get hashCode => Object.hash(message, code);
+  int get hashCode => Object.hash(runtimeType, message, code);
 
   @override
   String toString() => '$runtimeType($message${code != null ? ', code: $code' : ''})';
@@ -82,6 +85,12 @@ final class RateLimitedError extends AppError {
   const RateLimitedError(super.message, {super.code, this.retryAfter});
 
   final Duration? retryAfter;
+
+  @override
+  bool operator ==(Object other) => other is RateLimitedError && super == other && other.retryAfter == retryAfter;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, retryAfter);
 }
 
 /// A request the app dropped itself: the user cancelled it or left the page that waited for it. No screen shows it as

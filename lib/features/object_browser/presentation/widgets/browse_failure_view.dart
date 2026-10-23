@@ -4,6 +4,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
@@ -15,11 +16,23 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 ///
 /// A request the offline device never sent (`network.offline`) calls [onRetry] by itself once the device is back
 /// online, as the connection list does; any other failure waits for the user's Retry.
+///
+/// Studio accepting the signed-in account again after the shell's refusal page covered the page calls [onRetry] once
+/// too, unless it [runsStatement]: a statement is never run again on its own.
 class BrowseFailureView extends StatefulWidget {
-  const BrowseFailureView({super.key, required this.connectionId, required this.error, this.onRetry});
+  const BrowseFailureView({
+    super.key,
+    required this.connectionId,
+    required this.error,
+    required this.runsStatement,
+    this.onRetry,
+  });
 
   final String connectionId;
   final AppError error;
+
+  /// Whether [onRetry] runs a statement, such as the rows of an object, rather than a lookup of Studio's metadata.
+  final bool runsStatement;
   final VoidCallback? onRetry;
 
   @override
@@ -59,7 +72,8 @@ class _BrowseFailureViewState extends State<BrowseFailureView> {
       child: StudioErrorBanner(error: widget.error, onRetry: widget.onRetry),
     );
     final onRetry = widget.onRetry;
-    if (onRetry == null || !_curedByConnection) return banner;
-    return OnReconnect(onReconnect: onRetry, child: banner);
+    if (onRetry == null) return banner;
+    final view = _curedByConnection ? OnReconnect(onReconnect: onRetry, child: banner) : banner;
+    return widget.runsStatement ? view : OnAccountAccepted(onAccepted: onRetry, child: view);
   }
 }

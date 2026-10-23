@@ -71,6 +71,7 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
           children: [
             heading,
             BrowseFailureView(
+              runsStatement: false,
               connectionId: widget.connectionId,
               error: error,
               onRetry: () => context.read<ObjectSearchBloc>().add(const ObjectSearchStarted()),
@@ -107,6 +108,7 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
           ListView(
             children: [
               BrowseFailureView(
+                runsStatement: false,
                 connectionId: widget.connectionId,
                 error: error,
                 onRetry: () => context.read<ObjectSearchBloc>().add(ObjectSearchSubmitted(term ?? _controller.text)),

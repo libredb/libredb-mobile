@@ -78,6 +78,7 @@ class _KindCountsView extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               BrowseFailureView(
+                runsStatement: false,
                 connectionId: connectionId,
                 error: error,
                 onRetry: () => context.read<KindCountsBloc>().add(const KindCountsRequested()),
@@ -100,6 +101,7 @@ class _KindCountsView extends StatelessWidget {
         OfflineStaleMarker(loadedAt: kinds.loadedAt),
         if (error != null)
           BrowseFailureView(
+            runsStatement: false,
             connectionId: connectionId,
             error: error,
             onRetry: () => context.read<KindCountsBloc>().add(const KindCountsRefreshed()),

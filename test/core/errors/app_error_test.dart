@@ -131,6 +131,29 @@ void main() {
     });
 
     group('equality', () {
+      test('errors of different types are not equal, even with the same message and code', () {
+        expect(const NetworkError('x', code: 'c'), isNot(const ServerError('x', code: 'c')));
+        expect(const ServerError('x', code: 'c'), isNot(const NetworkError('x', code: 'c')));
+        expect(const UnknownError('x'), isNot(const NotFoundError('x')));
+        expect(const NetworkError('x', code: 'c'), const NetworkError('x', code: 'c'));
+      });
+
+      test('RateLimitedError compares the retryAfter', () {
+        const error = RateLimitedError('x', code: 'studio.rate_limited', retryAfter: Duration(seconds: 2));
+        const same = RateLimitedError('x', code: 'studio.rate_limited', retryAfter: Duration(seconds: 2));
+        expect(error, same);
+        expect(error.hashCode, same.hashCode);
+        expect(
+          error,
+          isNot(const RateLimitedError('x', code: 'studio.rate_limited', retryAfter: Duration(seconds: 30))),
+        );
+        expect(error, isNot(const RateLimitedError('x', code: 'studio.rate_limited')));
+      });
+
+      test('hashCode differs for the same message and code in a different type', () {
+        expect(const NetworkError('x', code: 'c').hashCode, isNot(const ServerError('x', code: 'c').hashCode));
+      });
+
       test('same type, same message, same code should be equal', () {
         const a = NetworkError('msg', code: 'c');
         const b = NetworkError('msg', code: 'c');
@@ -154,13 +177,6 @@ void main() {
         const a = NetworkError('msg', code: 'c1');
         const b = NetworkError('msg', code: 'c2');
         expect(a, isNot(equals(b)));
-      });
-
-      test('different types with same message should still be equal (AppError equality)', () {
-        // The == operator is defined on AppError and checks message + code only
-        const a = NetworkError('msg');
-        const b = ServerError('msg');
-        expect(a == b, isTrue);
       });
     });
 
