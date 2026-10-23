@@ -24,6 +24,11 @@ void main() {
     expect(() => ObjectBrowserJson.counts('{"table":7}'), throwsFormatException);
   });
 
+  test('objects refuse an object without a name or without a path', () {
+    expect(() => ObjectBrowserJson.objects('[{"path":["public","t"],"kind":"table"}]'), throwsFormatException);
+    expect(() => ObjectBrowserJson.objects('[{"name":"t","kind":"table"}]'), throwsFormatException);
+  });
+
   test('objects leave out optional fields of an unexpected type', () {
     final object = ObjectBrowserJson.objects('[{"path":["t"],"name":"t","kind":"table","rowCount":"12"}]').single;
 

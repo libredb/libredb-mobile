@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
@@ -19,3 +20,4 @@ List<ObjectContainer> containersAnswer(String name) => ObjectBrowserJson.contain
 Map<String, KindCount> countsAnswer(String name) => ObjectBrowserJson.counts(_answer(name));
 
 ObjectSource sourceAnswer(String name) => ObjectBrowserJson.source(_answer(name));
+List<DatabaseObject> objectsAnswer(String name) => ObjectBrowserJson.objects(_answer(name));

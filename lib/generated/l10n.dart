@@ -1280,6 +1280,111 @@ class S {
     return Intl.message('Could not share ($code)', name: 'browse_source_share_failed', desc: '', args: [code]);
   }
 
+  /// `{count, plural, =1{1 object} other{{formatted} objects}}`
+  String browse_objects_count(int count, String formatted) {
+    return Intl.plural(
+      count,
+      one: '1 object',
+      other: '$formatted objects',
+      name: 'browse_objects_count',
+      desc: 'How many objects of a kind a container holds.',
+      args: [count, formatted],
+    );
+  }
+
+  /// `{matched} of {total} match`
+  String browse_objects_match(int matched, int total) {
+    final NumberFormat matchedNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String matchedString = matchedNumberFormat.format(matched);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
+    return Intl.message(
+      '$matchedString of $totalString match',
+      name: 'browse_objects_match',
+      desc: 'While filtering a list: how many of its objects the filter matches.',
+      args: [matchedString, totalString],
+    );
+  }
+
+  /// `Studio lists no objects of this kind here.`
+  String get browse_objects_empty {
+    return Intl.message('Studio lists no objects of this kind here.', name: 'browse_objects_empty', desc: '', args: []);
+  }
+
+  /// `{count, plural, =1{1 row} other{{formatted} rows}}`
+  String browse_object_rows(int count, String formatted) {
+    return Intl.plural(
+      count,
+      one: '1 row',
+      other: '$formatted rows',
+      name: 'browse_object_rows',
+      desc: 'The row count an engine reports for a table, an estimate on most engines.',
+      args: [count, formatted],
+    );
+  }
+
+  /// `On {parent}`
+  String browse_object_attached_to(String parent) {
+    return Intl.message(
+      'On $parent',
+      name: 'browse_object_attached_to',
+      desc: 'Secondary text of an attached object, such as a trigger: the object it hangs under.',
+      args: [parent],
+    );
+  }
+
+  /// `Invalid`
+  String get browse_object_status_invalid {
+    return Intl.message(
+      'Invalid',
+      name: 'browse_object_status_invalid',
+      desc: 'Badge of an object the engine reports as INVALID, such as an Oracle package that does not compile.',
+      args: [],
+    );
+  }
+
+  /// `Disabled`
+  String get browse_object_status_disabled {
+    return Intl.message(
+      'Disabled',
+      name: 'browse_object_status_disabled',
+      desc: 'Badge of an object the engine reports as DISABLED, such as a trigger.',
+      args: [],
+    );
+  }
+
+  /// `Copy name`
+  String get browse_object_copy_name {
+    return Intl.message('Copy name', name: 'browse_object_copy_name', desc: '', args: []);
+  }
+
+  /// `View source`
+  String get browse_object_view_source {
+    return Intl.message('View source', name: 'browse_object_view_source', desc: '', args: []);
+  }
+
+  /// `Name copied`
+  String get browse_object_name_copied {
+    return Intl.message('Name copied', name: 'browse_object_name_copied', desc: '', args: []);
+  }
+
+  /// `Filter`
+  String get local_filter_hint {
+    return Intl.message('Filter', name: 'local_filter_hint', desc: '', args: []);
+  }
+
+  /// `Clear filter`
+  String get local_filter_clear {
+    return Intl.message('Clear filter', name: 'local_filter_clear', desc: '', args: []);
+  }
+
+  /// `Nothing matches the filter.`
+  String get local_filter_no_match {
+    return Intl.message('Nothing matches the filter.', name: 'local_filter_no_match', desc: '', args: []);
+  }
+
   /// `Your account has no access to Studio`
   String get account_refusal_title {
     return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);

@@ -14,6 +14,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 
 /// One level of [connectionId]'s containers: the top level, or the one under [parent].
@@ -104,6 +105,7 @@ class _ContainerLevelView extends StatelessWidget {
 
   Widget _buildLevel(BuildContext context, ContainerBrowserLoaded level, {AppError? error}) {
     final overline = parent.isEmpty ? null : parent.last;
+    final visible = level.visibleContainers;
     return Column(
       children: [
         OfflineStaleMarker(loadedAt: level.loadedAt),
@@ -121,8 +123,20 @@ class _ContainerLevelView extends StatelessWidget {
               children: [
                 BrowseHeading(title: level.level.labelPlural, overline: overline),
                 if (level.containers.isEmpty)
-                  Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(S.of(context).browse_level_empty)),
-                for (final container in level.containers)
+                  Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(S.of(context).browse_level_empty))
+                else ...[
+                  LocalFilterField(
+                    key: const ValueKey('container-level-filter'),
+                    onChanged: (query) =>
+                        context.read<ContainerBrowserBloc>().add(ContainerBrowserFilterChanged(query)),
+                  ),
+                  if (visible.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(S.of(context).local_filter_no_match),
+                    ),
+                ],
+                for (final container in visible)
                   ListTile(
                     leading: const Icon(Icons.folder_outlined),
                     title: Text(container.name),

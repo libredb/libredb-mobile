@@ -180,6 +180,7 @@ void main() {
           role: 'relation',
           label: 'Stream',
           labelPlural: 'Streams',
+          countIsListing: true,
           group: ObjectKindGroup(id: 'streaming', label: 'Streaming'),
         ),
         ObjectKind(id: 'exchange', role: 'relation', label: 'Exchange', labelPlural: 'Exchanges'),
@@ -219,10 +220,62 @@ void main() {
       expect(find.text('Keys'), findsNothing);
     });
 
-    testWidgets('carries no tap on a kind row', (tester) async {
+    testWidgets('opens a kind\'s objects on a tap, with the container in the location', (tester) async {
+      when(
+        () => harness.repository.list(
+          rabbit.id,
+          container: ['/'],
+          kind: 'queue',
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async => const Success([]));
       await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
 
-      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Queues')).onTap, isNull);
+      await tester.tap(find.text('Queues'));
+      await tester.pumpAndSettle();
+
+      expect(harness.location, '/browse/seed%3Arabbit/objects/queue?container=%2F');
+    });
+
+    testWidgets('opens a countIsListing kind whose count Studio answered', (tester) async {
+      harness.answerMeta(
+        rabbit.id,
+        const ProviderMeta(
+          queryLanguage: 'json',
+          schemaRefreshPattern: 'x',
+          containerLevels: [ContainerLevel(id: 'schema', label: 'Virtual host', labelPlural: 'Virtual hosts')],
+          objectKinds: [
+            ObjectKind(id: 'queue', role: 'config', label: 'Queue', labelPlural: 'Queues', countIsListing: true),
+          ],
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Queues')).onTap, isNotNull);
+    });
+
+    testWidgets('opens a kind whose count Studio refused when the kind does not declare countIsListing', (
+      tester,
+    ) async {
+      harness.answerMeta(
+        rabbit.id,
+        const ProviderMeta(
+          queryLanguage: 'json',
+          schemaRefreshPattern: 'x',
+          containerLevels: [ContainerLevel(id: 'schema', label: 'Virtual host', labelPlural: 'Virtual hosts')],
+          objectKinds: [ObjectKind(id: 'stream', role: 'relation', label: 'Stream', labelPlural: 'Streams')],
+        ),
+      );
+      await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Streams')).onTap, isNotNull);
+    });
+
+    testWidgets('carries no tap on a kind whose refused count is a refused listing', (tester) async {
+      await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
+
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Streams')).onTap, isNull);
+      expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'Exchanges')).onTap, isNotNull);
     });
   });
 

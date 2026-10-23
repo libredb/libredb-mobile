@@ -5,6 +5,7 @@ import 'package:libredb_mobile/features/object_browser/application/kind_counts_b
 import 'package:libredb_mobile/features/object_browser/application/kind_sections.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';
@@ -33,15 +34,16 @@ class KindCountsPage extends StatelessWidget {
         container: container,
         schemaChanges: context.read<SchemaChangeNotifier>().changes,
       )..add(const KindCountsRequested()),
-      child: _KindCountsView(connectionId: connectionId),
+      child: _KindCountsView(connectionId: connectionId, container: container),
     );
   }
 }
 
 class _KindCountsView extends StatelessWidget {
-  const _KindCountsView({required this.connectionId});
+  const _KindCountsView({required this.connectionId, required this.container});
 
   final String connectionId;
+  final List<String> container;
 
   Future<void> _refresh(BuildContext context) => refreshBrowseUnlessOffline(context, () async {
     final bloc = context.read<KindCountsBloc>();
@@ -82,6 +84,10 @@ class _KindCountsView extends StatelessWidget {
     );
   }
 
+  /// Whether a kind row opens its objects: every kind does, but one whose count and listing are one read once Studio
+  /// refused its count, since its listing would meet the same refusal (Studio's agent sends none for it either).
+  static bool _opens(KindRow row) => !(row.kind.countIsListing && row.count is KindCountUnavailable);
+
   Widget _buildKinds(BuildContext context, KindCountsLoaded kinds, {AppError? error}) {
     final theme = Theme.of(context);
     return Column(
@@ -114,7 +120,13 @@ class _KindCountsView extends StatelessWidget {
                         ),
                       ),
                     ),
-                  for (final row in section.rows) _KindTile(row: row),
+                  for (final row in section.rows)
+                    _KindTile(
+                      row: row,
+                      onTap: _opens(row)
+                          ? () => openBrowseObjects(context, connectionId, container, row.kind.id)
+                          : null,
+                    ),
                 ],
               ],
             ),
@@ -126,11 +138,12 @@ class _KindCountsView extends StatelessWidget {
 }
 
 /// One kind and its count: `42`, `12+` for a floor Studio measured from a read that stopped short, or Studio's
-/// sentence for why the engine could not count it.
+/// sentence for why the engine could not count it. [onTap] opens the kind's objects.
 class _KindTile extends StatelessWidget {
-  const _KindTile({required this.row});
+  const _KindTile({required this.row, this.onTap});
 
   final KindRow row;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +152,12 @@ class _KindTile extends StatelessWidget {
       KindCounted(:final count, :final isFloor) => ListTile(
         title: Text(row.kind.labelPlural),
         trailing: Text(isFloor ? '$count+' : '$count', style: theme.textTheme.bodyMedium),
+        onTap: onTap,
       ),
       KindCountUnavailable(:final reason) => ListTile(
         title: Text(row.kind.labelPlural),
         subtitle: Text(reason, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        onTap: onTap,
       ),
     };
   }

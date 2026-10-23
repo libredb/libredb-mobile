@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
@@ -7,6 +11,9 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/kind_coun
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/test_env.dart';
@@ -108,9 +115,69 @@ void main() {
     });
   });
 
+  group('what it sends', () {
+    late _RecordingAdapter adapter;
+
+    setUp(() {
+      adapter = _RecordingAdapter();
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
+      client.instance.httpClientAdapter = adapter;
+      repository = ObjectBrowserRepository(client);
+    });
+
+    // On a server-level connection the catalog is container[0]; Studio's list route reads no catalog field.
+    test('list names the connection, the container path and the kind as JSON, and no catalog', () async {
+      await repository.list(connection, container: const ['app', 'public'], kind: 'table');
+
+      expect(adapter.lastPath, '/db/objects/list');
+      expect(adapter.lastContentType, startsWith('application/json'));
+      expect(adapter.lastBody, {
+        'connectionId': connection,
+        'container': ['app', 'public'],
+        'kind': 'table',
+      });
+    });
+  });
+
   test('a request without a session fails with an AuthError', () async {
     final result = await repository.containers(connection);
 
     expect(result, isA<Failure<List<ObjectContainer>>>().having((f) => f.error, 'error', isA<AuthError>()));
   });
+}
+
+const _prodConfig = AppConfig(
+  environment: Environment.prod,
+  apiBaseUrl: 'https://studio.example.test/api',
+  certificatePins: [],
+  idleTimeout: null,
+);
+
+/// Answers every request with an empty list and records the last one.
+class _RecordingAdapter implements HttpClientAdapter {
+  String? lastPath;
+  String? lastContentType;
+  Object? lastBody;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastPath = options.path;
+    lastContentType = options.contentType ?? '${options.headers[Headers.contentTypeHeader]}';
+    final data = options.data;
+    lastBody = data is String ? jsonDecode(data) : data;
+    return ResponseBody.fromString(
+      '[]',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
