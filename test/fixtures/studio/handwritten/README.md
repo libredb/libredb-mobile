@@ -9,6 +9,7 @@ Record a real answer instead wherever `tool/studio-dev` can produce one.
 | --- | --- |
 | `mongodb/meta.json`, `oracle/meta.json`, `mssql/meta.json` | `src/app/api/db/provider-meta/route.ts`, the provider's `getCapabilities()` and `getLabels()` |
 | `mongodb/containers.json`, `mongodb/list_collection.json` | `src/lib/db/providers/document/mongodb/index.ts`, `listContainers` and `objectsFrom` |
+| `mongodb/query_find.json` | `src/lib/db/providers/document/mongodb/values.ts`, `serializeMongoDocument` (an ObjectId as its hex string, a Date as its ISO text), and `index.ts`, `uniquelyKeyedRows` over `unionFields`, through the body of `src/lib/api/editor-query.ts`; libredb-studio at c9989a6b5 |
 | `mongodb/describe_collection.json` | `src/lib/db/providers/document/mongodb/index.ts`, `objectDetailFrom` |
 | `oracle/list_package.json` | `src/lib/db/providers/sql/oracle.ts`, `collapsePackages` |
 | `oracle/source_package.json` | `src/lib/db/providers/sql/oracle.ts`, `readObjectSource` and `sourcePart`; the DDL text from `tests/integration/db/oracle-provider.test.ts` |

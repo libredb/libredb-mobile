@@ -659,5 +659,7 @@
   "keys_empty": "Studio burada anahtar bulamadı.",
   "@keys_empty": {},
   "keys_unavailable": "Studio bu bağlantı için anahtar tarayıcısı sunmuyor.",
-  "@keys_unavailable": {}
+  "@keys_unavailable": {},
+  "cell_null_semantics": "Boş değer",
+  "@cell_null_semantics": {}
 }
