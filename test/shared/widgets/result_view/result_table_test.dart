@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
@@ -452,6 +453,61 @@ void main() {
       expect(harness.requested, hasLength(2));
       expect(find.byType(StudioErrorBanner), findsNothing);
       expect(find.descendant(of: _row(3), matching: find.text('person 4')), findsOneWidget);
+    });
+
+    // #150: the SQL editor answers a page dropped while the app was in the background as interrupted.
+    testWidgets('an interrupted page of a read keeps the rows, says so, and loads again only on the user\'s retry', (
+      tester,
+    ) async {
+      final harness = _Harness(tester);
+      var calls = 0;
+      await harness.pump(
+        _page(from: 1, count: 2),
+        loadPage: (page) async => ++calls == 1
+            ? Failure(InterruptedError('interrupted', code: AppErrorCode.editorPageInterrupted.key))
+            : Success(_page(from: 3, count: 2, hasMore: false)),
+      );
+
+      await tester.tap(_loadMore);
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Loading more was interrupted when the app went to the background; Studio cancelled it.'),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: _row(1), matching: find.text('person 2')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      expect(harness.requested, hasLength(1));
+
+      await tester.tap(find.descendant(of: find.byType(StudioErrorBanner), matching: find.byType(OutlinedButton)));
+      await tester.pump();
+      await tester.pump();
+
+      expect(harness.requested, hasLength(2));
+      expect(find.descendant(of: _row(3), matching: find.text('person 4')), findsOneWidget);
+    });
+
+    testWidgets('an interrupted page with an unknown outcome keeps the rows and offers no retry', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump(
+        _page(from: 1, count: 2),
+        loadPage: (page) async =>
+            Failure(InterruptedError('interrupted', code: AppErrorCode.editorPageOutcomeUnknown.key)),
+      );
+
+      await tester.tap(_loadMore);
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.textContaining('Loading more was interrupted in the background, and its outcome is unknown'),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: _row(1), matching: find.text('person 2')), findsOneWidget);
+      expect(find.descendant(of: find.byType(StudioErrorBanner), matching: find.byType(OutlinedButton)), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+      expect(harness.requested, hasLength(1));
     });
 
     testWidgets('two quick taps send one request', (tester) async {

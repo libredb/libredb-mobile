@@ -99,6 +99,13 @@ final class RequestCancelledError extends AppError {
   const RequestCancelledError(super.message);
 }
 
+/// A request that failed after it was sent, without an answer from the server, while or after the app was in the
+/// background, so the server may have run it, or cancelled it when the request dropped. Its [code] says which outcome
+/// the app can claim. The app never sends such a request again by itself.
+final class InterruptedError extends AppError {
+  const InterruptedError(super.message, {required String super.code});
+}
+
 /// Unknown/unexpected error.
 final class UnknownError extends AppError {
   const UnknownError(super.message, {super.code});

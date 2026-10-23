@@ -43,6 +43,8 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.studioStatementTooLarge => s.error_studio_statement_too_large,
       AppErrorCode.editorSavedTextUnreadable => s.error_editor_saved_text_unreadable,
       AppErrorCode.editorSavedTextNotStored => s.error_editor_saved_text_not_stored,
+      AppErrorCode.editorPageInterrupted => s.error_editor_page_interrupted,
+      AppErrorCode.editorPageOutcomeUnknown => s.error_editor_page_outcome_unknown,
       AppErrorCode.generic => s.error_generic,
     };
   }

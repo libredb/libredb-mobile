@@ -14,6 +14,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
@@ -392,6 +393,243 @@ void main() {
       },
       expect: () => [running, isA<EditorFailed>()],
     );
+  });
+
+  group('a page of Load more (#150)', () {
+    final firstPage = QueryResultJson.read(_fixture('query_page_postgres_first'));
+    final secondPage = QueryResultJson.read(_fixture('query_page_postgres_second'));
+    final next = QueryPage.after(firstPage.pagination!);
+    late Completer<Result<QueryResult>> pageAnswer;
+    const read = 'SELECT * FROM sales.ledger';
+    // The comment's keyword makes the check ask, as a data-modifying text does.
+    const flagged = 'SELECT * FROM sales.ledger -- note: update';
+
+    /// Runs [text] to its first page, then answers every later request with pageAnswer.
+    Future<EditorSucceeded> firstPageOf(EditorRunBloc bloc, String text) async {
+      await run(bloc, text);
+      if (bloc.state is EditorAwaitingConfirmation) {
+        bloc.add(const EditorConfirmationAnswered(confirmed: true));
+        await pumpEventQueue();
+      }
+      runAnswer.complete(Success(firstPage));
+      await pumpEventQueue();
+      pageAnswer = Completer();
+      when(
+        () => repository.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer((_) => pageAnswer.future);
+      return bloc.state as EditorSucceeded;
+    }
+
+    Future<Result<QueryResult>?> loadPage(EditorRunBloc bloc, EditorSucceeded shown) =>
+        bloc.loadPage(shown.statement, next, confirm: () async => true);
+
+    void verifyPageSentOnce() => verify(
+      () => repository.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: next,
+        cancelSignal: any(named: 'cancelSignal'),
+        catalog: any(named: 'catalog'),
+      ),
+    ).called(1);
+
+    Matcher interrupted(AppErrorCode code) => isA<Failure<QueryResult>>().having(
+      (failure) => failure.error,
+      'error',
+      isA<InterruptedError>().having((error) => error.code, 'code', code.key),
+    );
+
+    test('a page of a read dropped after the app left is interrupted as a read, and is not sent again', () async {
+      final bloc = build();
+      addTearDown(bloc.close);
+      final shown = await firstPageOf(bloc, read);
+
+      final answer = loadPage(bloc, shown);
+      await pumpEventQueue();
+      lifecycle.leave();
+      pageAnswer.complete(const Failure(reset));
+
+      expect(await answer, interrupted(AppErrorCode.editorPageInterrupted));
+      await pumpEventQueue();
+      verifyPageSentOnce();
+      expect(bloc.state, shown, reason: 'the page leaves the run on screen as it is');
+    });
+
+    test('a page whose request times out after the app came back is interrupted too', () async {
+      final bloc = build();
+      addTearDown(bloc.close);
+      final shown = await firstPageOf(bloc, read);
+
+      final answer = loadPage(bloc, shown);
+      await pumpEventQueue();
+      lifecycle
+        ..leave()
+        ..comeBack();
+      pageAnswer.complete(const Failure(TimeoutError('TimeoutException')));
+
+      expect(await answer, interrupted(AppErrorCode.editorPageInterrupted));
+    });
+
+    test('a page of a confirmed text is interrupted with its outcome unknown, and is not sent again', () async {
+      final bloc = build();
+      addTearDown(bloc.close);
+      final shown = await firstPageOf(bloc, flagged);
+
+      final answer = loadPage(bloc, shown);
+      await pumpEventQueue();
+      lifecycle.leave();
+      pageAnswer.complete(const Failure(reset));
+
+      expect(await answer, interrupted(AppErrorCode.editorPageOutcomeUnknown));
+      await pumpEventQueue();
+      verifyPageSentOnce();
+    });
+
+    test('a background before the page was sent does not count for it', () async {
+      final bloc = build();
+      addTearDown(bloc.close);
+      final shown = await firstPageOf(bloc, read);
+      lifecycle
+        ..leave()
+        ..comeBack();
+
+      final answer = loadPage(bloc, shown);
+      pageAnswer.complete(const Failure(reset));
+
+      expect(await answer, const Failure<QueryResult>(reset));
+    });
+
+    group('a page that got an answer from Studio, or never reached it, shows as it does today', () {
+      final cases = <(String, Result<QueryResult>)>[
+        ('a page answered in the background', Success(secondPage)),
+        ("the database's refusal", Failure(ValidationError('no column', code: AppErrorCode.studioQueryError.key))),
+        ("Studio's own timeout", Failure(TimeoutError('timed out', code: AppErrorCode.studioTimeout.key))),
+        ('a rate limit', Failure(RateLimitedError('slow down', code: AppErrorCode.studioRateLimited.key))),
+        ('a request refused offline', Failure(NetworkError('offline', code: AppErrorCode.networkOffline.key))),
+        ('a timeout before the request was sent', const Failure(TimeoutError('connect', sent: false))),
+      ];
+      for (final (name, studioAnswer) in cases) {
+        test(name, () async {
+          final bloc = build();
+          addTearDown(bloc.close);
+          final shown = await firstPageOf(bloc, flagged);
+
+          final answer = loadPage(bloc, shown);
+          await pumpEventQueue();
+          lifecycle.leave();
+          pageAnswer.complete(studioAnswer);
+
+          final got = await answer;
+          expect(got, studioAnswer);
+          if (got case Failure(:final error)) expect(error, isNot(isA<InterruptedError>()));
+        });
+      }
+
+      test('a dropped page while the app stayed on screen', () async {
+        final bloc = build();
+        addTearDown(bloc.close);
+        final shown = await firstPageOf(bloc, flagged);
+
+        final answer = loadPage(bloc, shown);
+        await pumpEventQueue();
+        lifecycle.go(AppLifecycleState.inactive);
+        pageAnswer.complete(const Failure(reset));
+
+        final got = await answer;
+        expect(got, const Failure<QueryResult>(reset));
+        expect((got! as Failure<QueryResult>).error, isA<NetworkError>());
+      });
+    });
+
+    test('logs neither the statement nor an error text', () async {
+      const secret = "SELECT * FROM sales.ledger WHERE note = 'ada@example.com' -- note: update";
+      final bloc = build();
+      addTearDown(bloc.close);
+      final shown = await firstPageOf(bloc, secret);
+      final printed = <String>[];
+
+      await runZoned(() async {
+        final answer = loadPage(bloc, shown);
+        await pumpEventQueue();
+        lifecycle.leave();
+        pageAnswer.complete(const Failure(NetworkError('reset while reading ada@example.com')));
+        await answer;
+      }, zoneSpecification: ZoneSpecification(print: (_, _, _, line) => printed.add(line)));
+
+      expect(printed, isNotEmpty, reason: 'the interrupted page is logged');
+      expect(printed.join('\n'), isNot(contains('ada@')));
+      expect(printed.join('\n'), isNot(contains('sales.ledger')));
+    });
+
+    group('background time', () {
+      test('is asked when the page is sent and given back on its answer', () async {
+        final bloc = build();
+        addTearDown(bloc.close);
+        final shown = await firstPageOf(bloc, read);
+        await pumpEventQueue();
+        expect(platformCalls, ['begin 1', 'end 1']);
+
+        final answer = loadPage(bloc, shown);
+        await pumpEventQueue();
+        expect(platformCalls, ['begin 1', 'end 1', 'begin 2']);
+        pageAnswer.complete(Success(secondPage));
+        await answer;
+        await pumpEventQueue();
+
+        expect(platformCalls, ['begin 1', 'end 1', 'begin 2', 'end 2']);
+      });
+
+      test('is given back when the page is interrupted', () async {
+        final bloc = build();
+        addTearDown(bloc.close);
+        final shown = await firstPageOf(bloc, read);
+
+        final answer = loadPage(bloc, shown);
+        await pumpEventQueue();
+        lifecycle.leave();
+        pageAnswer.complete(const Failure(reset));
+        await answer;
+        await pumpEventQueue();
+
+        expect(platformCalls, ['begin 1', 'end 1', 'begin 2', 'end 2']);
+      });
+
+      test('is given back when the editor closes while the page is in flight, and not again on its answer', () async {
+        final bloc = build();
+        final shown = await firstPageOf(bloc, read);
+
+        final answer = loadPage(bloc, shown);
+        await pumpEventQueue();
+        await bloc.close();
+        await pumpEventQueue();
+        expect(platformCalls, ['begin 1', 'end 1', 'begin 2', 'end 2']);
+
+        pageAnswer.complete(Success(secondPage));
+        await answer;
+        await pumpEventQueue();
+        expect(platformCalls, ['begin 1', 'end 1', 'begin 2', 'end 2']);
+      });
+
+      test('is not asked for a page the user declined', () async {
+        final bloc = build();
+        addTearDown(bloc.close);
+        final shown = await firstPageOf(bloc, flagged);
+        await pumpEventQueue();
+
+        expect(await bloc.loadPage(shown.statement, next, confirm: () async => false), isNull);
+        await pumpEventQueue();
+
+        expect(platformCalls, ['begin 1', 'end 1']);
+      });
+    });
   });
 
   group('background time', () {

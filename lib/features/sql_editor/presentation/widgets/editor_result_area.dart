@@ -4,6 +4,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/script_result_view.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/browse_database_words.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
@@ -17,7 +18,8 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 /// what was on screen before stays. While a script runs, its elapsed time shows under the progress, since a script
 /// waits without a timeout. A cancelled run says what the cancel did, as a notice; a failed cancel shows its failure
 /// above the run's progress. A run the app's switch to the background interrupted says so: a read with Run again,
-/// anything else that its outcome is unknown, with no Run again, so the user checks the data before running it.
+/// anything else that its outcome is unknown, with no Run again, so the user checks the data before running it. A page
+/// of Load more refused with `studio.connection_not_available` goes to the active connection's vanish flow.
 class EditorResultArea extends StatelessWidget {
   const EditorResultArea({super.key, required this.confirm, required this.onRunAgain});
 
@@ -163,6 +165,10 @@ class EditorResultArea extends StatelessWidget {
         supportsResultPagination: state.supportsResultPagination,
       );
     },
-    child: ResultView(rolledBackNotice: S.of(context).sql_editor_rolled_back(state.commitKeyword)),
+    child: ResultView(
+      rolledBackNotice: S.of(context).sql_editor_rolled_back(state.commitKeyword),
+      onConnectionUnavailable: () =>
+          context.read<ActiveConnectionCubit>().reportUnavailable(context.read<EditorRunBloc>().connectionId),
+    ),
   );
 }
