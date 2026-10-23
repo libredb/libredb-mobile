@@ -1370,6 +1370,51 @@ class S {
     return Intl.message('Name copied', name: 'browse_object_name_copied', desc: '', args: []);
   }
 
+  /// `Search objects`
+  String get browse_search_action {
+    return Intl.message('Search objects', name: 'browse_search_action', desc: '', args: []);
+  }
+
+  /// `Search`
+  String get browse_search_title {
+    return Intl.message('Search', name: 'browse_search_title', desc: '', args: []);
+  }
+
+  /// `Search by name`
+  String get browse_search_hint {
+    return Intl.message('Search by name', name: 'browse_search_hint', desc: '', args: []);
+  }
+
+  /// `Clear search`
+  String get browse_search_clear {
+    return Intl.message('Clear search', name: 'browse_search_clear', desc: '', args: []);
+  }
+
+  /// `Type at least {count} characters to search.`
+  String browse_search_min_length(int count) {
+    return Intl.message(
+      'Type at least $count characters to search.',
+      name: 'browse_search_min_length',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `No object's name holds "{term}".`
+  String browse_search_no_results(String term) {
+    return Intl.message('No object\'s name holds "$term".', name: 'browse_search_no_results', desc: '', args: [term]);
+  }
+
+  /// `Search is not available on this connection; browse instead`
+  String get browse_search_not_available {
+    return Intl.message(
+      'Search is not available on this connection; browse instead',
+      name: 'browse_search_not_available',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Filter`
   String get local_filter_hint {
     return Intl.message('Filter', name: 'local_filter_hint', desc: '', args: []);

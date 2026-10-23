@@ -75,7 +75,7 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
         'connectionId': connectionId,
         'term': term,
         'kinds': ?kinds,
-      }, ObjectBrowserJson.objects);
+      }, ObjectBrowserJson.searchResults);
 
   @override
   Future<Result<KeyScanPage>> scanKeys(

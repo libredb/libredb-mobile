@@ -428,6 +428,32 @@
   "@browse_object_view_source": {},
   "browse_object_name_copied": "Ad kopyalandı",
   "@browse_object_name_copied": {},
+  "browse_search_action": "Nesnelerde ara",
+  "@browse_search_action": {},
+  "browse_search_title": "Ara",
+  "@browse_search_title": {},
+  "browse_search_hint": "Ada göre ara",
+  "@browse_search_hint": {},
+  "browse_search_clear": "Aramayı temizle",
+  "@browse_search_clear": {},
+  "browse_search_min_length": "Aramak için en az {count} karakter yazın.",
+  "@browse_search_min_length": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browse_search_no_results": "Adında \"{term}\" geçen nesne yok.",
+  "@browse_search_no_results": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_search_not_available": "Bu bağlantıda arama yapılamaz; bunun yerine göz atın",
+  "@browse_search_not_available": {},
   "local_filter_hint": "Filtrele",
   "@local_filter_hint": {},
   "local_filter_clear": "Filtreyi temizle",

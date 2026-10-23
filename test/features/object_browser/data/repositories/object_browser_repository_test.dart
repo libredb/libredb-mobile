@@ -138,6 +138,22 @@ void main() {
         'kind': 'table',
       });
     });
+
+    test('search names the connection and the term as JSON, and the kinds only when given', () async {
+      await repository.search(connection, term: 'ord');
+
+      expect(adapter.lastPath, '/db/objects/search');
+      expect(adapter.lastContentType, startsWith('application/json'));
+      expect(adapter.lastBody, {'connectionId': connection, 'term': 'ord'});
+
+      await repository.search(connection, term: 'ord', kinds: const ['table']);
+
+      expect(adapter.lastBody, {
+        'connectionId': connection,
+        'term': 'ord',
+        'kinds': ['table'],
+      });
+    });
   });
 
   group('what scanKeys sends', () {

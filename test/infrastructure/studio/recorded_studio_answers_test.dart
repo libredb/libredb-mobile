@@ -230,7 +230,7 @@ void main() {
 
   test('POST /api/db/objects/list and search', () {
     expect(ObjectBrowserJson.objects(fixture('list')).map((o) => o.name), contains('employee'));
-    expect(ObjectBrowserJson.objects(fixture('search')), isNotEmpty);
+    expect(ObjectBrowserJson.searchResults(fixture('search')), isNotEmpty);
   });
 
   test('POST /api/db/objects/describe', () {
@@ -486,7 +486,7 @@ void main() {
     });
 
     test('POST /api/db/objects/search for ord', () {
-      final objects = ObjectBrowserJson.objects(fixture('search_postgres'));
+      final objects = ObjectBrowserJson.searchResults(fixture('search_postgres'));
 
       expect(objects.map((o) => o.name), containsAll(['orders', 'order_items']));
     });
