@@ -4,8 +4,10 @@ import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dar
 import 'package:libredb_mobile/shared/security/result_masking/sensitive_columns.dart';
 
 /// A result with its sensitive values masked, and the columns that were.
+///
+/// Only [maskResult] builds one, so its rows are always masked as its policy asks.
 class MaskedResult extends Equatable {
-  const MaskedResult({required this.result, required this.maskedColumns});
+  const MaskedResult._({required this.result, required this.maskedColumns});
 
   /// The result with the values of [maskedColumns] replaced by their masks.
   final QueryResult result;
@@ -23,10 +25,10 @@ class MaskedResult extends Equatable {
 /// The masked result replaces the clear one: the caller keeps no state, bloc, cache or log of [result]'s rows, which
 /// are not changed. A result with no masked column comes back as it was.
 MaskedResult maskResult(QueryResult result, MaskingPolicy policy) {
-  if (!policy.masks) return MaskedResult(result: result, maskedColumns: const {});
+  if (!policy.masks) return MaskedResult._(result: result, maskedColumns: const {});
   final masked = splitMaskedColumns(result.fields, policy.config, policy.exempt).masked;
-  if (masked.isEmpty) return MaskedResult(result: result, maskedColumns: const {});
-  return MaskedResult(
+  if (masked.isEmpty) return MaskedResult._(result: result, maskedColumns: const {});
+  return MaskedResult._(
     result: QueryResult(
       fields: result.fields,
       rows: applyMaskingToRows(result.rows, result.fields, masked),

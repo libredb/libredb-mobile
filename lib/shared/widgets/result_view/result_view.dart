@@ -16,6 +16,9 @@ class ResultView extends StatelessWidget {
 
   final ValueChanged<int>? onRowTap;
 
+  /// The share of the view's height the stats strip takes at most; a taller strip scrolls.
+  static const maxNoticeShare = 0.4;
+
   @override
   Widget build(BuildContext context) => BlocBuilder<ResultViewBloc, ResultViewState>(
     builder: (context, state) => switch (state) {
@@ -26,7 +29,7 @@ class ResultView extends StatelessWidget {
           children: [
             ResultStatsStrip(
               result: result,
-              warningsMaxHeight: constraints.hasBoundedHeight ? constraints.maxHeight * 0.3 : double.infinity,
+              maxHeight: constraints.hasBoundedHeight ? constraints.maxHeight * maxNoticeShare : double.infinity,
             ),
             const Divider(height: 1),
             Expanded(

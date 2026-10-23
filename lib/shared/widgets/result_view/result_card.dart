@@ -103,11 +103,20 @@ class ResultCard extends StatelessWidget {
                           ],
                         ),
                         if (id != null && id != primary && row[id] != null)
-                          Text(
-                            s.result_card_id(_cell(id).compactText),
-                            style: theme.textTheme.bodySmall?.copyWith(color: muted, fontFamily: 'monospace'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  s.result_card_id(_cell(id).compactText),
+                                  style: _isMasked(id)
+                                      ? theme.textTheme.bodySmall?.merge(maskedStyle)
+                                      : theme.textTheme.bodySmall?.copyWith(color: muted, fontFamily: 'monospace'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_isMasked(id)) _Lock(label: s.result_masked_semantics),
+                            ],
                           ),
                       ],
                     ),

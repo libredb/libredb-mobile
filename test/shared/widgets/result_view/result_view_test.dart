@@ -58,7 +58,13 @@ Future<ResultViewBloc> _pump(
   Locale locale = const Locale('en'),
   double textScale = 1,
   ValueChanged<int>? onRowTap,
+  Size? screen,
 }) async {
+  if (screen != null) {
+    tester.view.physicalSize = screen;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+  }
   final bloc = ResultViewBloc(masked: maskResult(result, _policy), policy: _policy);
   addTearDown(bloc.close);
   await tester.pumpWidget(
@@ -75,6 +81,7 @@ Future<ResultViewBloc> _pump(
         builder: (context) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: Scaffold(
+            appBar: screen == null ? null : AppBar(title: const Text('rows')),
             body: BlocProvider.value(
               value: bloc,
               child: ResultView(onRowTap: onRowTap),
@@ -122,6 +129,35 @@ void main() {
       expect(_inCard(0, find.text('Izmir')), findsOneWidget);
       expect(_inCard(0, find.text('name')), findsNothing);
       expect(_inCard(0, find.text('id')), findsNothing);
+    });
+
+    testWidgets('without an id field, the fields a card leaves out are counted', (tester) async {
+      await _pump(
+        tester,
+        _result(
+          fields: const ['name', 'a', 'b', 'c', 'd', 'e', 'f'],
+          rows: const [
+            {'name': 'Alice', 'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5, 'f': 6},
+          ],
+        ),
+      );
+
+      expect(_inCard(0, find.text('+2 more fields')), findsOneWidget);
+    });
+
+    testWidgets('a title that is also the id field is counted once', (tester) async {
+      await _pump(
+        tester,
+        _result(
+          fields: const ['id', 'a', 'b', 'c', 'd', 'e', 'f'],
+          rows: const [
+            {'id': 1, 'a': 2, 'b': 3, 'c': 4, 'd': 5, 'e': 6, 'f': 7},
+          ],
+        ),
+      );
+
+      expect(_inCard(0, find.text('1')), findsOneWidget);
+      expect(_inCard(0, find.text('+2 more fields')), findsOneWidget);
     });
 
     testWidgets('a NULL title reads Row n', (tester) async {
@@ -237,6 +273,27 @@ void main() {
 
       expect(find.textContaining(clearEmail), findsNothing);
       expect(_inCard(0, find.byIcon(Icons.lock_outline)), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Masked value')), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('a masked id field shows its mask and a lock, never the clear value', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        _result(
+          fields: const ['name', 'national_id'],
+          rows: const [
+            {'name': 'Alice', 'national_id': '123-45-6789'},
+          ],
+        ),
+      );
+
+      expect(find.textContaining('123-45-6789'), findsNothing);
+      expect(_inCard(0, find.textContaining('#')), findsOneWidget);
+      expect(_inCard(0, find.byIcon(Icons.lock_outline)), findsOneWidget);
+      final id = tester.widget<Text>(_inCard(0, find.textContaining('#')));
+      expect(id.style?.fontStyle, FontStyle.italic);
       expect(find.bySemanticsLabel(RegExp('Masked value')), findsOneWidget);
       handle.dispose();
     });
@@ -376,6 +433,50 @@ void main() {
       );
       expect(find.byType(ResultCard), findsWidgets);
     });
+
+    for (final screen in const [Size(360, 640), Size(800, 360)]) {
+      testWidgets('at ${screen.width.toInt()}x${screen.height.toInt()} and text scale 2 every notice is reachable and '
+          'the cards keep room', (tester) async {
+        final rows = [
+          for (var i = 0; i < 50; i++) {'id': i, 'name': 'person $i', 'city': 'city $i'},
+        ];
+        await _pump(
+          tester,
+          _result(
+            rows: rows,
+            warnings: const [
+              QueryWarning(message: 'Segment 3 is unavailable', code: 'W042', severity: 'WARNING'),
+              QueryWarning(message: 'the last notice of the engine'),
+            ],
+            wasLimited: true,
+            rolledBack: true,
+          ),
+          textScale: 2,
+          screen: screen,
+        );
+
+        expect(tester.takeException(), isNull);
+        final notices = find.byKey(const ValueKey('result-notices'));
+        final body = tester.getRect(find.byType(ResultView));
+        expect(tester.getSize(notices).height, lessThanOrEqualTo(body.height * 0.5));
+        expect(find.byType(ResultCard), findsWidgets);
+
+        final strip = find.descendant(of: notices, matching: find.byType(Scrollable)).first;
+        for (final notice in [
+          find.text('limited'),
+          find.byKey(const ValueKey('result-warnings-chip')),
+          find.text('the last notice of the engine'),
+          find.byKey(const ValueKey('result-rolled-back')),
+        ]) {
+          await tester.scrollUntilVisible(notice, 40, scrollable: strip);
+          final rect = tester.getRect(notice);
+          final shown = tester.getRect(notices);
+          expect(rect.top, greaterThanOrEqualTo(shown.top - 0.5));
+          expect(rect.top, lessThan(shown.bottom));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('a replaced result is shown', (tester) async {
       final bloc = await _pump(tester, _result());

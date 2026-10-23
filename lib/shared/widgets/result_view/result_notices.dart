@@ -80,14 +80,15 @@ class ResultRolledBackBanner extends StatelessWidget {
 
 /// The strip above the cards (Studio's `StatsBar`): the rows and execution time, the `limited` chip with Studio's
 /// notice when Studio bounded the result, a chip that opens and shuts the warnings, open at first as Studio's is, and
-/// the rollback banner. Each loss notice stays on screen: a shut warning list keeps its chip.
+/// the rollback banner. Each loss notice stays reachable: a shut warning list keeps its chip, and a strip taller than
+/// [maxHeight], as at a large text size, scrolls inside that height, so the cards keep their room.
 class ResultStatsStrip extends StatefulWidget {
-  const ResultStatsStrip({super.key, required this.result, this.warningsMaxHeight = double.infinity});
+  const ResultStatsStrip({super.key, required this.result, this.maxHeight = double.infinity});
 
   final QueryResult result;
 
-  /// The most height the open warning list takes; a longer list scrolls inside it, so the cards keep their room.
-  final double warningsMaxHeight;
+  /// The most height the strip takes.
+  final double maxHeight;
 
   @override
   State<ResultStatsStrip> createState() => _ResultStatsStripState();
@@ -95,6 +96,13 @@ class ResultStatsStrip extends StatefulWidget {
 
 class _ResultStatsStripState extends State<ResultStatsStrip> {
   bool _warningsOpen = true;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +114,7 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
     final count = result.rows.length;
     final warnings = result.warnings;
     final chipStyle = theme.textTheme.labelSmall;
-    return Padding(
+    final strip = Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,13 +177,18 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
                 ),
             ],
           ),
-          if (warnings.isNotEmpty && _warningsOpen)
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: widget.warningsMaxHeight),
-              child: SingleChildScrollView(child: ResultWarningList(warnings: warnings)),
-            ),
+          if (warnings.isNotEmpty && _warningsOpen) ResultWarningList(warnings: warnings),
           if (result.openTransactionRolledBack) const ResultRolledBackBanner(),
         ],
+      ),
+    );
+    return ConstrainedBox(
+      key: const ValueKey('result-notices'),
+      constraints: BoxConstraints(maxHeight: widget.maxHeight),
+      child: Scrollbar(
+        controller: _scroll,
+        thumbVisibility: true,
+        child: SingleChildScrollView(controller: _scroll, child: strip),
       ),
     );
   }
