@@ -92,6 +92,24 @@ void main() {
       await expectLater(FlutterSecureStorageAdapter().keys(), throwsA(isA<PlatformException>()));
     });
 
+    test('keys asks Android not to reset the store when a value cannot be decrypted', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final sent = <String, Map<Object?, Object?>>{};
+      mockChannel((call) async {
+        sent[call.method] = (call.arguments as Map<Object?, Object?>)['options']! as Map<Object?, Object?>;
+        return call.method == 'readAll' ? <String, String>{} : null;
+      });
+
+      final adapter = FlutterSecureStorageAdapter();
+      await adapter.keys();
+      await adapter.read('jwtToken');
+
+      // readAll decrypts every value; with resetOnError a single corrupt one would make the plugin delete them all.
+      expect(sent['readAll'], containsPair('resetOnError', 'false'));
+      expect(sent['read'], containsPair('resetOnError', 'true'), reason: 'every other call keeps the default');
+    });
+
     test('keys answers the names of the stored values', () async {
       mockChannel((call) async {
         expect(call.method, 'readAll');

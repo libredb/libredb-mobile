@@ -365,6 +365,19 @@ void main() {
       expect(await other.read(alice, 'b'), 'second');
     });
 
+    test('a store over the same directory written with a trailing slash shares the queue', () async {
+      final other = EncryptedTextFileStore(
+        secureStorage: secure,
+        supportDirectory: () async => Directory('${root.path}/'),
+      );
+
+      await Future.wait([write(alice, 'a', 'first'), other.update(alice, 'b', (_) => const WriteFile('second', null))]);
+
+      expect(secure.written, hasLength(1));
+      expect(await store.read(alice, 'a'), 'first');
+      expect(await other.read(alice, 'b'), 'second');
+    });
+
     test('a write the device refuses throws a storage error that names no path', () async {
       await write(alice, 'history', 'a');
       Directory(fileOf(alice, 'history.tmp').path).createSync();

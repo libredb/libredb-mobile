@@ -91,8 +91,9 @@ final class KeepFile<T> extends FileChange<T> {
 ///
 /// Writes go to `<name>.tmp`, flushed, and are then renamed over the file, so an interrupted write leaves the old file
 /// and a `.tmp` that is never read. Every call runs in one queue per application support directory, shared by every
-/// instance, so a read-modify-write is never interleaved with another. Encryption, decryption and JSON run in [Isolate.run]; neither the content nor the key is kept between
-/// calls. No log line and no exception names the content, the key, the subject hash or a path.
+/// instance, so a read-modify-write is never interleaved with another. Encryption, decryption and JSON run in
+/// [Isolate.run]; neither the content nor the key is kept between calls. No log line and no exception names the
+/// content, the key, the subject hash or a path.
 class EncryptedTextFileStore {
   EncryptedTextFileStore({required this._secureStorage, Future<Directory> Function()? supportDirectory})
     : _supportDirectory = supportDirectory ?? getApplicationSupportDirectory;
@@ -229,7 +230,8 @@ class EncryptedTextFileStore {
       _rootDirectory = null;
       rethrow;
     }
-    final path = root.absolute.path;
+    // Normalized, so `x`, `x/` and `x/./` name one queue.
+    final path = Uri.directory(root.absolute.path).normalizePath().path;
     final result = (_queues[path] ?? Future<void>.value()).then((_) => operation(root));
     final tail = result.then<void>((_) {}, onError: (Object _) {});
     _queues[path] = tail;
