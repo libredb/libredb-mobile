@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
@@ -228,6 +229,71 @@ void main() {
       expect(source.parts.take(2), everyElement(isA<SourceText>()));
       expect(statement, isA<SourceStatement>());
       expect((statement as SourceStatement).statement, startsWith('Studio cannot list the subcollections'));
+    });
+  });
+
+  group('key scan', () {
+    test('Firestore provider-meta declares level pages over a prefix walk with no total and no container level', () {
+      final meta = ProviderMetaJson.read(answer('firestore/meta'));
+
+      expect(meta.containerLevels, isEmpty);
+      expect(
+        meta.keyScan,
+        const KeyScanSpec(
+          defaultCount: 100,
+          maxCount: 1000,
+          separator: '/',
+          cursor: 'opaque',
+          pattern: 'prefix',
+          totalScope: 'none',
+          levels: KeyScanLevels(rootKind: 'collection'),
+        ),
+      );
+      expect(meta.objectKinds.singleWhere((k) => k.id == 'document').keyBrowserOnly, isTrue);
+    });
+
+    test('etcd provider-meta declares a counted prefix walk with an opaque cursor and no levels', () {
+      final meta = ProviderMetaJson.read(answer('etcd/meta'));
+
+      expect(meta.containerLevels, isEmpty);
+      expect(
+        meta.keyScan,
+        const KeyScanSpec(
+          defaultCount: 500,
+          maxCount: 1000,
+          separator: '/',
+          cursor: 'opaque',
+          pattern: 'prefix',
+          totalScope: 'walk',
+        ),
+      );
+      expect(meta.objectKinds.singleWhere((k) => k.id == 'key').keyBrowserOnly, isTrue);
+    });
+
+    test('a Firestore level page carries its folders, the keys it left out and why the read is short', () {
+      final page = ObjectBrowserJson.keyScanPage(answer('firestore/keyscan_level'));
+
+      expect(page.keys, isEmpty);
+      expect(page.prefixes, ['audit_log/', 'carts/', 'coupons/']);
+      expect(page.isLast, isFalse);
+      expect(page.cursor, startsWith('fsk1.'), reason: 'an opaque cursor, sent back as it came');
+      expect(page.skipped?.count, 1);
+      expect(page.skipped?.reason, startsWith("Ids that break Firestore's id rules"));
+      expect(page.readOutcome?.isIncomplete, isTrue);
+      expect(page.readOutcome?.endReason, startsWith('Studio stops after 10 id listing requests'));
+      expect(page.readOutcome?.provenLoss, isEmpty);
+      expect(page.clustered, isNull);
+    });
+
+    test('a Redis page from one node of a cluster says so', () {
+      final page = ObjectBrowserJson.keyScanPage(answer('redis/keyscan_clustered'));
+
+      expect(page.clustered, isTrue);
+      expect(page.total, 2093);
+      expect(page.keys, ['user:1', 'user:2', 'user:2:roles', 'session:9f2c']);
+      expect(page.types['user:2'], 'hash');
+      expect(page.prefixes, isNull);
+      expect(page, isA<KeyScanPage>().having((p) => p.isLast, 'isLast', isFalse));
     });
   });
 

@@ -1,0 +1,136 @@
+{
+  "capabilities": {
+    "queryLanguage": "json",
+    "queryDialect": "etcd",
+    "supportsExplain": false,
+    "supportsTransactions": false,
+    "supportsInlineRowEdit": false,
+    "supportsTestDataGeneration": false,
+    "supportsResultPagination": false,
+    "supportsExternalQueryLimiting": false,
+    "supportsConnectionString": false,
+    "declaresForeignKeys": false,
+    "supportsMaintenance": true,
+    "maintenanceOperations": [
+      "compact",
+      "defragment",
+      "disarm"
+    ],
+    "maintenanceOperationSpecs": {
+      "compact": {
+        "label": "Compact history",
+        "title": "Compact history",
+        "description": "Removes every revision before the current one. History reads before it fail, and a watch from an older revision is cancelled.",
+        "perEntity": false,
+        "global": true,
+        "confirmation": "typed"
+      },
+      "defragment": {
+        "label": "Defragment",
+        "title": "Defragment the member",
+        "description": "Rebuilds the database file of the member this connection reaches, and only that member. That member blocks reads and writes while it runs.",
+        "perEntity": false,
+        "global": true,
+        "confirmation": "typed"
+      },
+      "disarm": {
+        "label": "Disarm alarms",
+        "title": "Disarm alarms",
+        "description": "Clears every raised alarm. Defragment every member that alarm list names first: a NOSPACE alarm comes back on the next write if the database is still over its quota.",
+        "perEntity": false,
+        "global": true,
+        "confirmation": "typed"
+      }
+    },
+    "tablesAreDerivedGroupings": true,
+    "statementTerminator": "none",
+    "defaultPort": 2379,
+    "containerLevels": [],
+    "objectKinds": [
+      {
+        "id": "prefix",
+        "role": "relation",
+        "label": "Key Prefix",
+        "labelPlural": "Key Prefixes",
+        "hasColumns": true
+      },
+      {
+        "id": "key",
+        "role": "config",
+        "label": "Key",
+        "labelPlural": "Keys",
+        "enumeratedBy": "key-browser",
+        "hasSource": true,
+        "sourceLanguage": "json",
+        "acceptsSourceEdits": true
+      },
+      {
+        "id": "member",
+        "role": "config",
+        "label": "Member",
+        "labelPlural": "Members",
+        "hasSource": true,
+        "sourceLanguage": "json"
+      },
+      {
+        "id": "lease",
+        "role": "config",
+        "label": "Lease",
+        "labelPlural": "Leases",
+        "hasSource": true,
+        "sourceLanguage": "json",
+        "countIsListing": true
+      },
+      {
+        "id": "user",
+        "role": "config",
+        "label": "User",
+        "labelPlural": "Users",
+        "hasSource": true,
+        "sourceLanguage": "json",
+        "countIsListing": true
+      },
+      {
+        "id": "role",
+        "role": "config",
+        "label": "Role",
+        "labelPlural": "Roles",
+        "hasSource": true,
+        "sourceLanguage": "json",
+        "countIsListing": true
+      }
+    ],
+    "keyScan": {
+      "defaultCount": 500,
+      "maxCount": 1000,
+      "separator": "/",
+      "cursor": "opaque",
+      "pattern": "prefix",
+      "totalScope": "walk"
+    },
+    "enforcesReadOnly": true,
+    "schemaRefreshPattern": "^(?:\\s*(?:\\\\[\\r\\n]\\s*)*#[^\\r\\n]*(?:\\r\\n|\\r(?!\\n)|\\n))*\\s*(?:\\\\[\\r\\n]\\s*)*(?:(?:''|\"\")*[$%](?:''|\"\")*(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)?(?:['\"]*\\\\?e['\"]*\\\\?n['\"]*\\\\?v['\"]*(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)?(?:(?:''|\"\")*E(?:''|\"\")*T(?:''|\"\")*C(?:''|\"\")*D(?:''|\"\")*C(?:''|\"\")*T(?:''|\"\")*L(?:''|\"\")*_(?:''|\"\")*A(?:''|\"\")*P(?:''|\"\")*I(?:''|\"\")*=['\"]*\\\\?3['\"]*(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)*(?:(?:(?!#)[^ \\t\\r\\n'\"\\\\]*(?:(?:\\\\[^\\r\\n]|'[^']*'|\"[^\"\\\\]*(?:\\\\[^\\r\\n][^\"\\\\]*)*\")[^ \\t\\r\\n'\"\\\\]*)*(?:\\\\?/|'[^']*/|\"[^\"\\\\]*(?:\\\\[^\\r\\n][^\"\\\\]*)*\\\\?/))?['\"]*\\\\?e['\"]*\\\\?t['\"]*\\\\?c['\"]*\\\\?d['\"]*\\\\?c['\"]*\\\\?t['\"]*\\\\?l['\"]*(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)?(?:['\"]*\\\\?-['\"]*\\\\?-['\"]*\\\\?c['\"]*\\\\?o['\"]*\\\\?m['\"]*\\\\?m['\"]*\\\\?a['\"]*\\\\?n['\"]*\\\\?d['\"]*\\\\?-['\"]*\\\\?t['\"]*\\\\?i['\"]*\\\\?m['\"]*\\\\?e['\"]*\\\\?o['\"]*\\\\?u['\"]*\\\\?t['\"]*(?:\\\\?=|(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)\\S+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)*(?:['\"]*\\\\?p['\"]*\\\\?u['\"]*\\\\?t['\"]*|['\"]*\\\\?d['\"]*\\\\?e['\"]*\\\\?l['\"]*|['\"]*\\\\?t['\"]*\\\\?x['\"]*\\\\?n['\"]*|['\"]*\\\\?l['\"]*\\\\?e['\"]*\\\\?a['\"]*\\\\?s['\"]*\\\\?e['\"]*(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?(?:['\"]*\\\\?-['\"]*\\\\?-['\"]*\\\\?c['\"]*\\\\?o['\"]*\\\\?m['\"]*\\\\?m['\"]*\\\\?a['\"]*\\\\?n['\"]*\\\\?d['\"]*\\\\?-['\"]*\\\\?t['\"]*\\\\?i['\"]*\\\\?m['\"]*\\\\?e['\"]*\\\\?o['\"]*\\\\?u['\"]*\\\\?t['\"]*(?:\\\\?=|(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)\\S+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?[ \\t]+(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n)[ \\t]*)?)*(?:['\"]*\\\\?g['\"]*\\\\?r['\"]*\\\\?a['\"]*\\\\?n['\"]*\\\\?t['\"]*|['\"]*\\\\?r['\"]*\\\\?e['\"]*\\\\?v['\"]*\\\\?o['\"]*\\\\?k['\"]*\\\\?e['\"]*))(?=(?:\\\\(?:\\r\\n|\\r(?!\\n)|\\n))?(?:[ \\t\\r\\n]|$))",
+    "supportsQueryCancel": true
+  },
+  "labels": {
+    "entityName": "Key Prefix",
+    "entityNamePlural": "Key Prefixes",
+    "rowName": "Key",
+    "rowNamePlural": "Keys",
+    "selectAction": "Get Keys",
+    "generateAction": "Generate Command",
+    "searchPlaceholder": "Search key prefixes...",
+    "statementLanguage": "the etcdctl command this editor runs: exactly one command per run, written as etcdctl writes it, with no pipe, no redirect, no second command and no connection flag such as --endpoints or --cacert, because the connection decides where a command runs and as whom; plan mode drafts only a read, one of get <key> [<range_end>] [--prefix] [--from-key] [--limit=<n>] [--rev=<n>] [--keys-only] [--count-only] [--consistency=l|s], watch <key> [<range_end>] [--prefix] [--rev=<n>] [--prev-kv], lease timetolive <hex id> [--keys], lease list, member list [--consistency=l|s], endpoint status, endpoint health, alarm list, auth status, user list, user get <name> [--detail], role list, role get <name>, with --limit at most 500; a key-prefix row such as /app/config/* is read with get /app/config/ --prefix, never with a * in the key; for example get /app/config/ --prefix --limit=50 or member list --consistency=s; a txn and every write (put, del, lease grant, lease revoke, lease keep-alive) is typed by the user in the editor and never drafted",
+    "slowQueriesEmptyState": "etcd keeps no query log",
+    "sessionsEmptyState": "etcd does not report client sessions",
+    "tableStatsCaption": "The key-prefix groups; a key in no group is counted in the Overview and not here",
+    "analyzeAction": "Key Prefix Statistics",
+    "vacuumAction": "Compact History",
+    "analyzeGlobalLabel": "Statistics",
+    "analyzeGlobalTitle": "Not available",
+    "analyzeGlobalDesc": "etcd keeps no statistics to update; the Tables tab counts each key-prefix group when it opens.",
+    "vacuumGlobalLabel": "Compact",
+    "vacuumGlobalTitle": "Not available",
+    "vacuumGlobalDesc": "Compaction is the Compact history card of Global Operations, which asks for a typed confirmation."
+  }
+}

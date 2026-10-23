@@ -1,0 +1,17 @@
+{
+  "keys": [
+    "user:1",
+    "user:2",
+    "user:2:roles",
+    "session:9f2c"
+  ],
+  "cursor": "5120",
+  "total": 2093,
+  "types": {
+    "user:1": "string",
+    "user:2": "hash",
+    "user:2:roles": "set",
+    "session:9f2c": "string"
+  },
+  "clustered": true
+}

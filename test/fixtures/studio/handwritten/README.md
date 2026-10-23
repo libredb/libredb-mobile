@@ -18,3 +18,6 @@ Record a real answer instead wherever `tool/studio-dev` can produce one.
 | `firestore/source_document.json`, `firestore/source_document_colon_id.json` | `src/lib/db/providers/document/firestore/objects.ts`, `readFirestoreSource`, through `boundSourceDocument` in `src/lib/api/object-route.ts` |
 | `clickhouse/describe_indexes_unavailable.json` | `src/lib/db/providers/sql/clickhouse/objects.ts`, `describeObject` |
 | `postgres/describe_exclusion.json` | `src/lib/db/providers/sql/postgres.ts`, `objectDetailFromRow` |
+| `firestore/meta.json`, `etcd/meta.json` | `src/app/api/db/provider-meta/route.ts`, the provider's `getCapabilities()` and `getLabels()`; `keyScan` from `document/firestore/key-scan.ts`, `FIRESTORE_KEY_SCAN`, and `keyvalue/etcd/key-scan.ts`, `ETCD_KEY_SCAN` |
+| `firestore/keyscan_level.json` | `src/lib/db/providers/document/firestore/key-scan.ts`, `scanIdLevel` on the root level with a count of 3, over a stubbed `listCollectionIds` that returns a page token on each of Studio's 10 requests and one reserved id (`__stats__`) |
+| `redis/keyscan_clustered.json` | `src/lib/db/providers/keyvalue/redis.ts`, `scanKeysPage`, with stubbed `SCAN`, `DBSIZE`, `INFO cluster` (`cluster_enabled:1`) and `TYPE` replies |
