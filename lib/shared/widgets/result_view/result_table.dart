@@ -6,6 +6,7 @@ import 'package:libredb_mobile/shared/models/vector_column.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/compact_cell.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/column_sizing.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
 
 /// The rows of a result as a table (Studio's phone table, `src/components/ResultsGrid.tsx:1429-1491`): a header row
 /// pinned above the rows, each column named with its declared type under it when `columnTypes` names one, and the
@@ -14,14 +15,14 @@ import 'package:libredb_mobile/shared/widgets/result_view/column_sizing.dart';
 /// Every value comes from the masked rows; the header of a column in [maskedColumns] carries a lock that a screen reader
 /// reads as a masked value. Each column opens at the width its header and its first rows need
 /// ([contentFitColumnWidth]), scaled with the system text size.
+///
+/// As on a card, a tap on a row opens its detail sheet and a long press on a cell the copy menu of that value and its
+/// row (`showRowDetailSheet` and `showRowCopyMenu`), which copy the masked values through the sensitive clipboard.
 class ResultTable extends StatefulWidget {
-  const ResultTable({super.key, required this.result, required this.maskedColumns, this.onRowTap});
+  const ResultTable({super.key, required this.result, required this.maskedColumns});
 
   final QueryResult result;
   final Set<String> maskedColumns;
-
-  /// Opens the row detail with the row's index; without it a row is not tappable.
-  final ValueChanged<int>? onRowTap;
 
   @override
   State<ResultTable> createState() => _ResultTableState();
@@ -59,7 +60,7 @@ class _ResultTableState extends State<ResultTable> {
     final result = widget.result;
     final widths = _widths(context);
     final total = widths.fold<double>(0, (sum, width) => sum + width);
-    final onRowTap = widget.onRowTap;
+    final maskedColumns = widget.maskedColumns;
     return Scrollbar(
       controller: _horizontal,
       child: SingleChildScrollView(
@@ -86,7 +87,15 @@ class _ResultTableState extends State<ResultTable> {
                       widths: widths,
                       maskedColumns: widget.maskedColumns,
                       vectorColumns: result.vectorColumns,
-                      onTap: onRowTap == null ? null : () => onRowTap(index),
+                      onTap: () =>
+                          showRowDetailSheet(context, result: result, maskedColumns: maskedColumns, index: index),
+                      onCellLongPress: (field) => showRowCopyMenu(
+                        context,
+                        result: result,
+                        maskedColumns: maskedColumns,
+                        index: index,
+                        field: field,
+                      ),
                     ),
                   ),
                 ),
@@ -180,6 +189,7 @@ class ResultTableRow extends StatelessWidget {
     required this.maskedColumns,
     required this.vectorColumns,
     this.onTap,
+    this.onCellLongPress,
   });
 
   final Map<String, Object?> row;
@@ -187,7 +197,12 @@ class ResultTableRow extends StatelessWidget {
   final List<double> widths;
   final Set<String> maskedColumns;
   final Map<String, VectorColumn> vectorColumns;
+
+  /// Opens the row's detail.
   final VoidCallback? onTap;
+
+  /// Opens the copy menu of the field whose cell was long pressed.
+  final ValueChanged<String>? onCellLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -206,12 +221,17 @@ class ResultTableRow extends StatelessWidget {
         child: Row(
           children: [
             for (final (index, field) in fields.indexed)
-              Container(
-                width: widths[index],
-                padding: _cellPadding,
-                child: CompactCell(
-                  cell: _cellOf(row, field, vectorColumns),
-                  style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+              GestureDetector(
+                key: ValueKey('result-cell-$field'),
+                behavior: HitTestBehavior.opaque,
+                onLongPress: onCellLongPress == null ? null : () => onCellLongPress!(field),
+                child: Container(
+                  width: widths[index],
+                  padding: _cellPadding,
+                  child: CompactCell(
+                    cell: _cellOf(row, field, vectorColumns),
+                    style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+                  ),
                 ),
               ),
           ],

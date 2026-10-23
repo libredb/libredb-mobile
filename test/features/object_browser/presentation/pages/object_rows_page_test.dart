@@ -11,6 +11,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_rows_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
+import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -344,5 +345,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(harness.router.state.uri.path, '/browse');
     expect(find.byType(ObjectRowsPage), findsNothing);
+  });
+
+  group('Load more on the recorded sales.ledger', () {
+    const ledger = ['sales', 'ledger'];
+    const ledgerPreview = 'SELECT * FROM sales.ledger;';
+    final ledgerLocation = _location(_postgres.id, 'table', ledger);
+    const orderNotice = 'Without an ORDER BY the engine may return rows that repeat or are skipped between pages.';
+
+    void answerPage(QueryPage page, String fixture) => when(
+      () => harness.statements.run(
+        _postgres.id,
+        ledgerPreview,
+        queryId: any(named: 'queryId'),
+        page: page,
+        catalog: any(named: 'catalog'),
+      ),
+    ).thenAnswer((_) async => Success(_recorded(fixture)));
+
+    setUp(() {
+      answerPage(const QueryPage(limit: 50), 'query_page_postgres_first');
+      answerPage(const QueryPage(limit: 50, offset: 50), 'query_page_postgres_second');
+    });
+
+    testWidgets('offers 50 more with the order notice, runs the same preview for the next page, and then ends', (
+      tester,
+    ) async {
+      await harness.pump(tester, location: ledgerLocation);
+
+      expect(find.text('Load 50 more'), findsOneWidget);
+      expect(find.text(orderNotice), findsOneWidget);
+      await tester.tap(find.text('Load 50 more'));
+      await tester.pumpAndSettle();
+
+      final captured = verify(
+        () => harness.statements.run(
+          _postgres.id,
+          ledgerPreview,
+          queryId: captureAny(named: 'queryId'),
+          page: captureAny(named: 'page'),
+          catalog: null,
+        ),
+      ).captured;
+      expect(captured, hasLength(4));
+      // mocktail lists the captured named arguments by name: the page, then the run id, of each call.
+      expect([captured[0], captured[2]], [const QueryPage(limit: 50), const QueryPage(limit: 50, offset: 50)]);
+      expect(captured[3], isNot(captured[1]));
+      expect(find.text('Load 50 more'), findsNothing);
+      expect(find.text(orderNotice), findsNothing);
+      expect(find.textContaining('100 rows'), findsOneWidget);
+    });
+
+    testWidgets('an engine that cannot page offers no Load more', (tester) async {
+      final meta = File('test/fixtures/studio/meta_postgres.json')
+          .readAsStringSync()
+          .replaceFirst('"supportsResultPagination":true', '"supportsResultPagination":false');
+      harness.answerMeta(_postgres.id, ProviderMetaJson.read(meta));
+      await harness.pump(tester, location: ledgerLocation);
+
+      expect(find.textContaining('50 rows'), findsOneWidget);
+      expect(find.text('Load 50 more'), findsNothing);
+      expect(find.text(orderNotice), findsNothing);
+    });
   });
 }

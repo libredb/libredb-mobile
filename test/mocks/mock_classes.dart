@@ -39,6 +39,7 @@ import 'package:libredb_mobile/shared/active_connection/active_connection_store.
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 
 // Interface repository mocks (for use case tests)
 class MockIAuthRepository extends Mock implements IAuthRepository {}
@@ -66,6 +67,8 @@ class MockIStatementRepository extends Mock implements IStatementRepository {}
 class MockIObjectBrowserRepository extends Mock implements IObjectBrowserRepository {}
 
 class MockIActiveConnectionStore extends Mock implements IActiveConnectionStore {}
+
+class MockIResultViewModeStore extends Mock implements IResultViewModeStore {}
 
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}

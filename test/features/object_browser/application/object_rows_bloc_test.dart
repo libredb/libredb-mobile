@@ -322,4 +322,45 @@ void main() {
       ),
     ).called(1),
   );
+
+  group('a later page', () {
+    test(
+      'runs the same preview with the page asked for, a fresh run id and the catalog, and changes no state',
+      () async {
+        final second = _recorded('query_page_postgres_second');
+        answerRun(server, () => Success(second));
+        final bloc = build(connectionId: server, path: const ['app', 'public', 'orders']);
+        addTearDown(bloc.close);
+        const preview = PreviewStatement(statement: 'SELECT * FROM app.public.orders;', catalog: 'app');
+
+        final answer = await bloc.loadPage(preview, const QueryPage(limit: 50, offset: 50));
+
+        expect(answer, Success(second));
+        expect(bloc.state, const ObjectRowsLoading());
+        final call = verify(
+          () => statements.run(
+            server,
+            'SELECT * FROM app.public.orders;',
+            queryId: captureAny(named: 'queryId'),
+            page: const QueryPage(limit: 50, offset: 50),
+            catalog: 'app',
+          ),
+        )..called(1);
+        expect(call.captured.single, startsWith('run-'));
+      },
+    );
+
+    test('answers a refused page as its failure, for the result view to show', () async {
+      answerRun(postgres, () => const Failure(ServerError('relation is locked', code: 'studio.query_error')));
+      final bloc = build();
+      addTearDown(bloc.close);
+
+      final answer = await bloc.loadPage(
+        const PreviewStatement(statement: preview),
+        const QueryPage(limit: 50, offset: 50),
+      );
+
+      expect(answer, isA<Failure<QueryResult>>());
+    });
+  });
 }
