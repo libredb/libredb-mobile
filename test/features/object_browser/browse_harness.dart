@@ -28,6 +28,7 @@ import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -47,6 +48,7 @@ class BrowseHarness {
 
   final repository = MockIObjectBrowserRepository();
   final providerMeta = MockIProviderMetaRepository();
+  final statements = MockIStatementRepository();
   late final ActiveConnectionCubit active;
   late final SessionDefaultEntry entry;
   late final SchemaChangeNotifier schemaChanges;
@@ -116,6 +118,7 @@ class BrowseHarness {
         providers: [
           RepositoryProvider<IObjectBrowserRepository>.value(value: repository),
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
+          RepositoryProvider<IStatementRepository>.value(value: statements),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<SessionDefaultEntry>.value(value: entry),
         ],

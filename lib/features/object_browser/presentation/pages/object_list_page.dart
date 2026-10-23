@@ -138,6 +138,7 @@ class _ObjectListView extends StatelessWidget {
                     itemCount: visible.length,
                     itemBuilder: (context, index) => ObjectTile(
                       connectionId: connectionId,
+                      meta: list.meta,
                       kind: list.kind,
                       childKindLabels: list.childKindLabels,
                       object: visible[index],

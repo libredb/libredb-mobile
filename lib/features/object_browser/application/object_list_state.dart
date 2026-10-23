@@ -14,6 +14,7 @@ final class ObjectListLoading extends ObjectListState {
 /// The objects of one kind in a container, and the ones the filter leaves on screen.
 final class ObjectListLoaded extends ObjectListState {
   const ObjectListLoaded({
+    required this.meta,
     required this.kind,
     required this.childKindLabels,
     required this.objects,
@@ -22,6 +23,9 @@ final class ObjectListLoaded extends ObjectListState {
     required this.loadedAt,
     this.isRefreshing = false,
   });
+
+  /// The connection's provider-meta, which decides what a row's View rows offers.
+  final ProviderMeta meta;
 
   /// The kind, as the engine declares it.
   final ObjectKind kind;
@@ -48,7 +52,7 @@ final class ObjectListLoaded extends ObjectListState {
   bool get isFiltering => normalizeSearchQuery(query).isNotEmpty;
 
   @override
-  List<Object?> get props => [kind, childKindLabels, objects, visible, query, loadedAt, isRefreshing];
+  List<Object?> get props => [meta, kind, childKindLabels, objects, visible, query, loadedAt, isRefreshing];
 }
 
 /// The list could not be read.

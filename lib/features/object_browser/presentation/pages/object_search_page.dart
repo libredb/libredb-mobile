@@ -208,6 +208,7 @@ class _MatchTile extends StatelessWidget {
     }
     return ObjectTile(
       connectionId: connectionId,
+      meta: meta,
       kind: kind,
       childKindLabels: _childKindLabels(kind),
       object: match.object,

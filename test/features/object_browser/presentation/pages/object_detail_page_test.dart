@@ -17,6 +17,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/object_source_view.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:mocktail/mocktail.dart';
@@ -297,6 +298,167 @@ void main() {
       tester.getTopLeft(find.text('reservations_pkey')).dy,
       lessThan(tester.getTopLeft(find.text('Exclusion constraints')).dy),
     );
+  });
+
+  group('View rows and Count rows in the heading', () {
+    const count = 'SELECT COUNT(*) AS row_count\nFROM app.public.orders;';
+
+    setUp(() {
+      answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders')));
+      answerList('table', _tables());
+    });
+
+    Finder viewRows() => find.widgetWithText(TextButton, 'View rows');
+    Finder countRows() => find.widgetWithText(TextButton, 'Count rows');
+
+    testWidgets('View rows opens the rows of the object, and back returns to its detail', (tester) async {
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          'SELECT * FROM app.public.orders;',
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer(
+        (_) async => const Success(QueryResult(fields: ['id'], rows: [], rowCount: 0, executionTime: Duration.zero)),
+      );
+      await harness.pump(tester, location: ordersLocation);
+
+      await tester.tap(viewRows());
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.name, BrowseRouteNames.rows);
+      expect(harness.router.state.pathParameters['kind'], 'table');
+      expect(harness.router.state.uri.queryParametersAll['path'], orders);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(harness.router.state.name, BrowseRouteNames.detail);
+      expect(harness.router.state.uri.queryParametersAll['path'], orders);
+    });
+
+    testWidgets('Count rows runs the count in the path\'s catalog and shows it grouped under the heading', (
+      tester,
+    ) async {
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          count,
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: 'app',
+        ),
+      ).thenAnswer(
+        (_) async => const Success(
+          QueryResult(
+            fields: ['row_count'],
+            rows: [
+              {'row_count': '1204'},
+            ],
+            rowCount: 1,
+            executionTime: Duration.zero,
+          ),
+        ),
+      );
+      await harness.pump(tester, location: ordersLocation);
+      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+
+      await tester.tap(countRows());
+      await tester.pumpAndSettle();
+
+      expect(find.text('1,204 rows'), findsOneWidget);
+      expect(find.widgetWithText(Tab, 'Columns'), findsOneWidget);
+    });
+
+    testWidgets('a refused count says so with its code, and the detail stays', (tester) async {
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          count,
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: any(named: 'catalog'),
+        ),
+      ).thenAnswer((_) async => const Failure(ServerError('down', code: 'studio.database_unreachable')));
+      await harness.pump(tester, location: ordersLocation);
+
+      await tester.tap(countRows());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not count the rows (studio.database_unreachable)'), findsOneWidget);
+      expect(find.text('customer_id'), findsOneWidget);
+    });
+
+    testWidgets('offline, both are disabled with the reason', (tester) async {
+      await harness.pump(tester, location: ordersLocation, offline: true);
+
+      expect(tester.widget<TextButton>(viewRows()).onPressed, isNull);
+      expect(tester.widget<TextButton>(countRows()).onPressed, isNull);
+      expect(find.text('Needs an internet connection'), findsOneWidget);
+    });
+
+    testWidgets('fit beside a long name at twice the text size on a small phone', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await harness.pump(tester, location: ordersLocation);
+
+      expect(tester.takeException(), isNull);
+      expect(viewRows(), findsOneWidget);
+      expect(countRows(), findsOneWidget);
+    });
+
+    testWidgets('an engine whose preview the app does not write offers View rows disabled, says why, and no count', (
+      tester,
+    ) async {
+      const db2 = 'seed:db2';
+      const path = ['APP', 'ORDERS'];
+      harness.answerMeta(
+        db2,
+        const ProviderMeta(
+          queryLanguage: 'sql',
+          schemaRefreshPattern: '',
+          defaultPort: 50000,
+          identifierQuoting: 'double',
+          declaresPreviewProjection: true,
+          containerLevels: [ContainerLevel(id: 'schema', label: 'Schema', labelPlural: 'Schemas')],
+          objectKinds: [
+            ObjectKind(id: 'table', role: 'relation', label: 'Table', labelPlural: 'Tables', hasColumns: true),
+          ],
+        ),
+      );
+      answerDescribe(db2, path, 'table', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+      await harness.pump(tester, location: _location(db2, 'table', path));
+
+      expect(tester.widget<TextButton>(viewRows()).onPressed, isNull);
+      expect(find.text('Preview is not available for this engine yet'), findsOneWidget);
+      expect(countRows(), findsNothing);
+    });
+
+    testWidgets('a kind that is not a relation offers neither', (tester) async {
+      const docs = ['orders'];
+      harness.answerMeta(
+        _documents,
+        const ProviderMeta(
+          queryLanguage: 'json',
+          schemaRefreshPattern: '',
+          containerLevels: [],
+          objectKinds: [
+            ObjectKind(id: 'index', role: 'config', label: 'Index', labelPlural: 'Indexes', hasColumns: true),
+          ],
+        ),
+      );
+      answerDescribe(_documents, docs, 'index', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+      await harness.pump(tester, location: _location(_documents, 'index', docs));
+
+      expect(find.text('customer_id'), findsOneWidget);
+      expect(viewRows(), findsNothing);
+      expect(countRows(), findsNothing);
+    });
   });
 
   group('a view, whose kind has source', () {

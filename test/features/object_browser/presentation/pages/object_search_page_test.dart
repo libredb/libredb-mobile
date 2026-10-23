@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/database_
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../browse_answers.dart';
@@ -275,6 +276,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
+  });
+
+  testWidgets('a table match offers View rows from its long press, which opens its rows; a function match does not', (
+    tester,
+  ) async {
+    tallScreen(tester);
+    answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
+    when(
+      () => harness.statements.run(
+        _postgres.id,
+        'SELECT * FROM public.orders;',
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        catalog: any(named: 'catalog'),
+      ),
+    ).thenAnswer(
+      (_) async => const Success(QueryResult(fields: ['id'], rows: [], rowCount: 0, executionTime: Duration.zero)),
+    );
+    await harness.pump(tester, location: _search);
+    await type(tester, 'ord');
+
+    await tester.longPress(find.text('order_total'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy name'), findsOneWidget);
+    expect(find.text('View rows'), findsNothing);
+    Navigator.of(tester.element(find.text('Copy name'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('orders'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View rows'));
+    await tester.pumpAndSettle();
+
+    expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/rows/table');
+    expect(harness.router.state.uri.queryParametersAll['path'], ['public', 'orders']);
   });
 
   for (final viaMenu in [false, true]) {

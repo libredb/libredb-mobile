@@ -1962,6 +1962,56 @@ class S {
       args: [code],
     );
   }
+
+  /// `View rows`
+  String get browse_view_rows {
+    return Intl.message(
+      'View rows',
+      name: 'browse_view_rows',
+      desc: 'Opens the first rows of a table, a view or a collection.',
+      args: [],
+    );
+  }
+
+  /// `Count rows`
+  String get browse_count_rows {
+    return Intl.message(
+      'Count rows',
+      name: 'browse_count_rows',
+      desc: 'Runs a count of the rows of a table, a view or a collection.',
+      args: [],
+    );
+  }
+
+  /// `Preview is not available for this engine yet`
+  String get browse_preview_unavailable {
+    return Intl.message(
+      'Preview is not available for this engine yet',
+      name: 'browse_preview_unavailable',
+      desc: 'Why View rows is disabled for an object whose engine\'s preview the app does not write yet.',
+      args: [],
+    );
+  }
+
+  /// `Could not count the rows ({code})`
+  String browse_count_failed(String code) {
+    return Intl.message(
+      'Could not count the rows ($code)',
+      name: 'browse_count_failed',
+      desc: 'In a heading, when the row count was refused or could not be read, with its error code.',
+      args: [code],
+    );
+  }
+
+  /// `The database says`
+  String get browse_rows_database_says {
+    return Intl.message(
+      'The database says',
+      name: 'browse_rows_database_says',
+      desc: 'Over the database\'s own words for a failed preview.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

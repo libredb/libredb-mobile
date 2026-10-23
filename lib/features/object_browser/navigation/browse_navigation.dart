@@ -11,6 +11,7 @@ class BrowseRouteNames {
   static const keys = 'browseKeys';
   static const detail = 'browseDetail';
   static const search = 'browseSearch';
+  static const rows = 'browseRows';
 }
 
 /// The query key that carries a container path, once per segment and in order.
@@ -66,6 +67,10 @@ void openBrowseSource(BuildContext context, String connectionId, List<String> pa
 /// Opens the columns, indexes and foreign keys of the object at [path] of [connectionId], of [kind].
 void openBrowseDetail(BuildContext context, String connectionId, List<String> path, String kind) =>
     _openObject(context, BrowseRouteNames.detail, connectionId, path, kind);
+
+/// Opens the first rows of the object at [path] of [connectionId], of [kind].
+void openBrowseRows(BuildContext context, String connectionId, List<String> path, String kind) =>
+    _openObject(context, BrowseRouteNames.rows, connectionId, path, kind);
 
 void _openObject(BuildContext context, String name, String connectionId, List<String> path, String kind) =>
     context.pushNamed(

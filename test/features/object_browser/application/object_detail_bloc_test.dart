@@ -15,6 +15,8 @@ import 'package:mocktail/mocktail.dart';
 import '../../../mocks/mock_classes.dart';
 import '../browse_answers.dart';
 
+const _kindless = ProviderMeta(queryLanguage: 'sql', schemaRefreshPattern: '', containerLevels: [], objectKinds: []);
+
 void main() {
   late MockIObjectBrowserRepository repository;
   late MockIProviderMetaRepository providerMeta;
@@ -62,7 +64,8 @@ void main() {
   final ordersDetail = detailAnswer('describe_postgres_orders');
   final tables = objectsAnswer('list_postgres');
   final customers = tables.firstWhere((object) => object.name == 'customers');
-  final table = metaAnswer('meta_postgres').objectKinds.firstWhere((kind) => kind.id == 'table');
+  final postgresMeta = metaAnswer('meta_postgres');
+  final table = postgresMeta.objectKinds.firstWhere((kind) => kind.id == 'table');
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
     'describes the object, and a foreign key opens the table of that name the container lists',
@@ -73,7 +76,13 @@ void main() {
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
     expect: () => [
-      ObjectDetailLoaded(detail: ordersDetail, kind: table, foreignKeyTargets: {'customers': customers}, loadedAt: at),
+      ObjectDetailLoaded(
+        meta: postgresMeta,
+        detail: ordersDetail,
+        kind: table,
+        foreignKeyTargets: {'customers': customers},
+        loadedAt: at,
+      ),
     ],
     verify: (_) {
       verify(() => repository.describe(connection, path: orders, kind: 'table', refresh: false)).called(1);
@@ -93,7 +102,15 @@ void main() {
     },
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
-    expect: () => [ObjectDetailLoaded(detail: ordersDetail, kind: table, foreignKeyTargets: const {}, loadedAt: at)],
+    expect: () => [
+      ObjectDetailLoaded(
+        meta: postgresMeta,
+        detail: ordersDetail,
+        kind: table,
+        foreignKeyTargets: const {},
+        loadedAt: at,
+      ),
+    ],
     verify: (_) {
       for (final kind in ['table', 'view', 'materialized_view', 'sequence']) {
         verify(() => repository.list(connection, container: ['public'], kind: kind, refresh: false)).called(1);
@@ -120,7 +137,15 @@ void main() {
     },
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
-    expect: () => [ObjectDetailLoaded(detail: ordersDetail, kind: table, foreignKeyTargets: const {}, loadedAt: at)],
+    expect: () => [
+      ObjectDetailLoaded(
+        meta: postgresMeta,
+        detail: ordersDetail,
+        kind: table,
+        foreignKeyTargets: const {},
+        loadedAt: at,
+      ),
+    ],
   );
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
@@ -136,6 +161,7 @@ void main() {
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
     expect: () => [
       ObjectDetailLoaded(
+        meta: postgresMeta,
         detail: ordersDetail,
         kind: table,
         foreignKeyTargets: const {},
@@ -152,6 +178,7 @@ void main() {
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
     expect: () => [
       ObjectDetailLoaded(
+        meta: postgresMeta,
         detail: detailAnswer('describe_postgres_orders_readonly'),
         kind: table,
         foreignKeyTargets: const {},
@@ -171,16 +198,14 @@ void main() {
   blocTest<ObjectDetailBloc, ObjectDetailState>(
     'a kind the engine does not declare shows the detail without a kind',
     setUp: () {
-      when(() => providerMeta.providerMeta(connection)).thenAnswer(
-        (_) async => const Success(
-          ProviderMeta(queryLanguage: 'sql', schemaRefreshPattern: '', containerLevels: [], objectKinds: []),
-        ),
-      );
+      when(() => providerMeta.providerMeta(connection)).thenAnswer((_) async => const Success(_kindless));
       answerDescribe(orders, () => Success(ordersDetail));
     },
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
-    expect: () => [ObjectDetailLoaded(detail: ordersDetail, foreignKeyTargets: const {}, loadedAt: at)],
+    expect: () => [
+      ObjectDetailLoaded(meta: _kindless, detail: ordersDetail, foreignKeyTargets: const {}, loadedAt: at),
+    ],
   );
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
@@ -204,7 +229,13 @@ void main() {
     expect: () => [
       const ObjectDetailFailure(error: ServerError('gone', code: 'studio.connection_not_available')),
       const ObjectDetailLoading(),
-      ObjectDetailLoaded(detail: ordersDetail, kind: table, foreignKeyTargets: {'customers': customers}, loadedAt: at),
+      ObjectDetailLoaded(
+        meta: postgresMeta,
+        detail: ordersDetail,
+        kind: table,
+        foreignKeyTargets: {'customers': customers},
+        loadedAt: at,
+      ),
     ],
   );
 
@@ -227,6 +258,7 @@ void main() {
 
   group('refresh', () {
     final loaded = ObjectDetailLoaded(
+      meta: postgresMeta,
       detail: ordersDetail,
       kind: table,
       foreignKeyTargets: {'customers': customers},
@@ -245,6 +277,7 @@ void main() {
       act: (bloc) => bloc.add(const ObjectDetailRefreshed()),
       expect: () => [
         ObjectDetailLoaded(
+          meta: postgresMeta,
           detail: ordersDetail,
           kind: table,
           foreignKeyTargets: {'customers': customers},
@@ -252,6 +285,7 @@ void main() {
           isRefreshing: true,
         ),
         ObjectDetailLoaded(
+          meta: postgresMeta,
           detail: ordersDetail,
           kind: table,
           foreignKeyTargets: {'customers': customers},
@@ -270,6 +304,7 @@ void main() {
       act: (bloc) => bloc.add(const ObjectDetailRefreshed()),
       expect: () => [
         ObjectDetailLoaded(
+          meta: postgresMeta,
           detail: ordersDetail,
           kind: table,
           foreignKeyTargets: {'customers': customers},
@@ -289,6 +324,7 @@ void main() {
       act: (bloc) => bloc.add(const ObjectDetailRefreshed()),
       expect: () => [
         ObjectDetailLoaded(
+          meta: postgresMeta,
           detail: ordersDetail,
           kind: table,
           foreignKeyTargets: {'customers': customers},

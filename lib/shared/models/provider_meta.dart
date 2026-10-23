@@ -28,6 +28,11 @@ class ProviderMeta extends Equatable {
     this.tablesAreDerivedGroupings = false,
     this.resumesBilledCompute = false,
     this.identifierQuoting,
+    this.defaultPort,
+    this.statementTerminator,
+    this.declaresPreviewProjection = false,
+    this.declaresPreviewTimeWindow = false,
+    this.spellsContainerNamesAsEngine = false,
     this.containerPathShapes = 'exact',
     this.rowActions = const [],
     this.keyScan,
@@ -78,6 +83,24 @@ class ProviderMeta extends Equatable {
 
   /// How the engine quotes an identifier: `double`, `backtick`, `double-always` or `backtick-always`.
   final String? identifierQuoting;
+
+  /// The engine's default port, which Studio's generators read as its SQL dialect when no [identifierQuoting] is
+  /// declared: 1521 Oracle, 1433 SQL Server, 3306 MySQL, 8888 Druid, 8091 Couchbase, and the PostgreSQL rule for any
+  /// other port or none.
+  final int? defaultPort;
+
+  /// How a generated statement ends: `none` for an engine whose grammar has no terminator, else `;`.
+  final String? statementTerminator;
+
+  /// Whether the engine declares `previewProjection`, a preview that names its columns, which the app does not write.
+  final bool declaresPreviewProjection;
+
+  /// Whether the engine declares `previewTimeWindow`, a preview of a recent window, which the app does not write.
+  final bool declaresPreviewTimeWindow;
+
+  /// Whether the engine declares `containerNameSpelling: "engine"`, a container segment that may hold several names,
+  /// which the app does not quote.
+  final bool spellsContainerNamesAsEngine;
 
   /// `exact` when a container path names one container, `prefixes` when each of its prefixes is a container too.
   final String containerPathShapes;
@@ -131,6 +154,11 @@ class ProviderMeta extends Equatable {
     tablesAreDerivedGroupings,
     resumesBilledCompute,
     identifierQuoting,
+    defaultPort,
+    statementTerminator,
+    declaresPreviewProjection,
+    declaresPreviewTimeWindow,
+    spellsContainerNamesAsEngine,
     containerPathShapes,
     rowActions,
     keyScan,

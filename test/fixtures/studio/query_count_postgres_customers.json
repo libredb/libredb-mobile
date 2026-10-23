@@ -1,0 +1,1 @@
+{"rows":[{"row_count":"3"}],"fields":["row_count"],"columnTypes":{"row_count":"bigint"},"rowCount":1,"executionTime":1,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}
