@@ -20,6 +20,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -100,6 +101,14 @@ void main() {
   }
 
   String path(GoRouter router) => router.state.uri.path;
+
+  testWidgets('a page in the shell reads no role while the identity loads, so it masks with the user settings', (
+    tester,
+  ) async {
+    await pumpShellOn(tester, '/connections');
+
+    expect(StudioRoleScope.of(tester.element(find.text('connections page'))), isNull);
+  });
 
   testWidgets('a switch returns a deeper Browse page to the Browse root', (tester) async {
     active.select(sales);

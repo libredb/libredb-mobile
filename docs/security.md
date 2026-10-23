@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens, how it checks the server's certificate, how it hides sensitive screens and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -78,6 +78,32 @@ class _QueryResultPageState extends State<QueryResultPage> with ScreenCapturePro
 
 Protect a screen that shows a credential, a token or data the user should not share by accident.
 Leave it off where the user is expected to capture the screen.
+
+## Result masking
+
+The phone masks a statement's result before any row reaches a widget, the clipboard, a share or an export, so an account never sees more than Studio's web grid shows the same account.
+It is display masking and not a control: Studio masks only in the browser and answers clear values to a bearer too (S-07), so the values do cross the network.
+
+The rules are a Dart port of Studio's defaults in `lib/shared/security/result_masking/`, from `src/lib/data-masking.ts` at libredb-studio c9989a6b5, and `masking_config_test.dart` pins the pattern list and mask types to that commit.
+
+- A column is masked when an enabled built-in pattern (email, password, SSN, card, phone, token or key, address, IP, financial, birthdate) matches its whole name, ignoring case; a repeated column numbered `email (2)` is matched as `email`, and the first matching pattern wins.
+- Matching reads column names only, so a sensitive value inside a Redis hash or a nested document stays clear, as in Studio's grid (S-22).
+- NULL stays NULL; any other value is masked as JavaScript's `String` prints it, so a document is `[object Object]` and never masked from its own text.
+- An engine may exempt a column (`ProviderMeta.maskingExemptColumns`, such as a Modbus register `address`); an exemption Dart cannot compile exempts nothing and logs one warning.
+- The per-user masking config is not safely readable from the phone (S-08), so the phone always uses the defaults.
+
+The role comes from `StudioRoleScope`, which `AppShell` provides from Studio's `GET /api/auth/me`.
+`MaskingPolicy.forRole` gives the admin Studio's admin settings, and a user, a role the app does not know and an identity not yet loaded or failed the user settings.
+Studio gives an unknown role the admin settings; the phone gives it the least on purpose.
+Every role masks: the admin's toggle and reveal stay off until M7-13 (#35).
+The screen that runs a statement builds one policy per result of one connection and hands it to the result view, which masks every later page with it.
+The masked result replaces the clear one, so no state, bloc, cache or log keeps the clear rows.
+
+Three of Studio's mask functions have open bugs, which the port corrects until Studio merges its own fixes:
+
+- `partial` (Token/Key) shows 8 of 9 or 10 characters in Studio (libredb/libredb-studio#1915); the phone masks up to 8 characters fully and from 9 on shows `min(4, floor(n / 8))` characters at each end, keeping the length.
+- `email` prints `undefined` for an empty local part or domain in Studio (#1915); the phone gives `***@***.***`.
+- `date` (Birthdate) keeps the last two characters of any value in Studio (#1917), so a timestamp shows `****-**-0Z`; the phone keeps the day only of a bare `YYYY-MM-DD` date and masks anything else as `****-**-**`.
 
 ## Inactivity sign-out
 

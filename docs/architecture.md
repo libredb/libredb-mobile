@@ -54,6 +54,8 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/shared/models/provider_meta_repository.dart` | `IProviderMetaRepository`, the one way a feature asks for `ProviderMeta` |
 | `lib/shared/models/query_result.dart`, `query_page.dart`, `query_id.dart`, `vector_column.dart` | The shared statement models: `QueryResult` with its `QueryWarning`s and `VectorColumn`s, `appendResultPage` (Load more), `QueryPage` and `QueryPagination`, and `newQueryId`, read by the object browser, the SQL editor and the result view |
 | `lib/shared/models/statement_repository.dart` | `IStatementRepository`, the one way a feature runs a statement and reads its `QueryResult` |
+| `lib/shared/security/result_masking/` | The port of Studio's default result masking: the patterns, the mask functions, the role rules, `MaskingPolicy` and `maskResult` ([security.md](security.md#result-masking)) |
+| `lib/shared/widgets/studio_role_scope.dart` | `StudioRoleScope`, the role Studio named for the user, or null before it has, which `AppShell` provides from `StudioIdentityCubit` so a feature builds its `MaskingPolicy` without importing the auth feature |
 | `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser |
 | `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, `ProviderMetaRepository` with its reader, and `StatementRepository` with its reader `query_result_json.dart` |
 | `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
