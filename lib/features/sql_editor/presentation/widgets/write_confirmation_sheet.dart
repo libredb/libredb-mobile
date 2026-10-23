@@ -11,7 +11,7 @@ import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 enum WriteConfirmation { confirmed, cancelled }
 
 /// Asks the user to confirm [text] on [connection] before it runs, for the reasons [answer] gives, in a full-height
-/// modal sheet; a dismissed sheet answers [WriteConfirmation.cancelled].
+/// modal sheet on the root navigator, which covers the shell; a dismissed sheet answers [WriteConfirmation.cancelled].
 ///
 /// The caller sends exactly the [text] it showed here, and only on [WriteConfirmation.confirmed]. The sheet keeps
 /// nothing once it closes and logs nothing.
@@ -23,6 +23,9 @@ Future<WriteConfirmation> showWriteConfirmationSheet(
 }) async {
   final confirmation = await showModalBottomSheet<WriteConfirmation>(
     context: context,
+    // Above the shell, so its top bar and tab bar cannot switch the connection or the tab, and close the editor that
+    // waits for this answer, while the sheet is open.
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,

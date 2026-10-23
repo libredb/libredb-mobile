@@ -92,7 +92,10 @@ class _EditorViewState extends State<_EditorView> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<EditorRunBloc, EditorRunState>(
-      listenWhen: (previous, current) => current is EditorAwaitingConfirmation || current is EditorStatementFailed,
+      // A failure restored by a cancelled confirmation is no new answer, so the cursor stays where the user put it.
+      listenWhen: (previous, current) =>
+          current is EditorAwaitingConfirmation ||
+          (current is EditorStatementFailed && previous is! EditorAwaitingConfirmation),
       listener: _onStateChanged,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

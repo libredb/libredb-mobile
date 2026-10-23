@@ -84,9 +84,9 @@ class ResultRolledBackBanner extends StatelessWidget {
 /// The strip above the rows (Studio's `StatsBar`): the rows and execution time, the `limited` chip with Studio's
 /// notice when Studio bounded the result, a chip that opens and shuts the warnings, open at first as Studio's is, a
 /// [trailing] widget after the chips, Studio's notice that rows may repeat or be skipped between pages when
-/// [orderNotice] asks for it, and the rollback banner, worded by [rolledBackNotice] when given. Each loss notice stays reachable: a shut warning list keeps its
-/// chip, and a strip taller than [maxHeight], as at a large text size, scrolls inside that height, so the rows keep
-/// their room.
+/// [orderNotice] asks for it, and the rollback banner, worded by [rolledBackNotice] when given. Each loss notice stays
+/// reachable: a shut warning list keeps its chip, and a strip taller than [maxHeight], as at a large text size, scrolls
+/// inside that height, so the rows keep their room.
 class ResultStatsStrip extends StatefulWidget {
   const ResultStatsStrip({
     super.key,

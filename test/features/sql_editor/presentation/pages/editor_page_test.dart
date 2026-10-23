@@ -325,6 +325,7 @@ void main() {
     await confirm(tester);
 
     expect(find.byType(StudioErrorBanner), findsOneWidget);
+    expect(find.text('The database did not allow this. You may lack a privilege on this object.'), findsOneWidget);
     expect(find.textContaining('permission denied for table orders'), findsNothing);
     expect(runsOf(delete), 1);
   });
@@ -422,6 +423,31 @@ void main() {
     final field = tester.widget<TextField>(find.byKey(EditorInput.fieldKey));
     expect(field.controller!.selection, const TextSelection.collapsed(offset: 9));
     expect(field.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('a cancelled confirmation after a database error leaves the cursor where the user put it', (
+    tester,
+  ) async {
+    answerRun(
+      'SELECT 1 FORM t',
+      () => const Failure(ValidationError('syntax error at or near "FORM"', code: 'studio.query_error', position: 10)),
+    );
+    await pump(tester);
+    await type(tester, 'SELECT 1 FORM t');
+    await run(tester);
+    final controller = tester.widget<TextField>(find.byKey(EditorInput.fieldKey)).controller!;
+    expect(controller.selection, const TextSelection.collapsed(offset: 9));
+
+    await type(tester, 'DELETE FROM orders WHERE id = 1234567890');
+    controller.selection = const TextSelection.collapsed(offset: 30);
+    await tester.pump();
+    await run(tester);
+    expect(find.byType(WriteConfirmationSheet), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(controller.selection, const TextSelection.collapsed(offset: 30));
+    expect(runsOf('SELECT 1 FORM t'), 1);
   });
 
   testWidgets('a rate limit shows the countdown, Run stays disabled until it ends, and nothing is retried', (
