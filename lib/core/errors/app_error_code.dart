@@ -71,6 +71,11 @@ enum AppErrorCode {
   /// background; whether its run wrote is unknown.
   editorPageOutcomeUnknown('editor.page_outcome_unknown'),
 
+  // --- Browse ---
+  /// The preview of an object's rows dropped without an answer while or after the app was in the background; Studio
+  /// cancelled its run.
+  browseRowsInterrupted('browse.rows_interrupted'),
+
   // --- generic fallback ---
   generic('error.generic');
 

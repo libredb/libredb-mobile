@@ -335,6 +335,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bu uygulamadan çıkış yaptınız, ancak kimlik sağlayıcıdaki oturumunuz hâlâ açık olabilir.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Oturum kaydedilemedi"),
+    "error_browse_rows_interrupted": MessageLookupByLibrary.simpleMessage(
+      "Uygulama arka plana geçtiğinde satırları okuma kesildi; Studio onu iptal etti.",
+    ),
     "error_editor_page_interrupted": MessageLookupByLibrary.simpleMessage(
       "Uygulama arka plana geçtiğinde daha fazla satır yükleme kesildi; Studio onu iptal etti.",
     ),

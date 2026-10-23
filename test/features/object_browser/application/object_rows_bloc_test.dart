@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -15,6 +16,8 @@ import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
@@ -23,6 +26,15 @@ import '../browse_answers.dart';
 QueryResult _recorded(String name) => QueryResultJson.read(File('test/fixtures/studio/$name.json').readAsStringSync());
 
 const _exempt = MaskingExemptColumn(column: 'email', reason: 'The engine names this column itself.');
+
+/// An app that stays on the screen; backgrounding is covered by object_rows_background_test.dart.
+class _ResumedLifecycle implements IAppLifecycleSource {
+  @override
+  AppLifecycleState? get current => AppLifecycleState.resumed;
+
+  @override
+  Stream<AppLifecycleState> get changes => const Stream.empty();
+}
 
 void main() {
   late MockIStatementRepository statements;
@@ -45,6 +57,8 @@ void main() {
       ObjectRowsBloc(
         statements: statements,
         providerMeta: providerMeta,
+        lifecycle: _ResumedLifecycle(),
+        backgroundRunTime: const NoBackgroundRunTime(),
         connectionId: connectionId,
         path: path,
         kind: kind,

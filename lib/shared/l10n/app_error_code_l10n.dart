@@ -43,6 +43,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.editorSavedTextNotStored => s.error_editor_saved_text_not_stored,
       AppErrorCode.editorPageInterrupted => s.error_editor_page_interrupted,
       AppErrorCode.editorPageOutcomeUnknown => s.error_editor_page_outcome_unknown,
+      AppErrorCode.browseRowsInterrupted => s.error_browse_rows_interrupted,
       AppErrorCode.generic => s.error_generic,
     };
   }
