@@ -57,7 +57,6 @@ Future<ResultViewBloc> _pump(
   QueryResult result, {
   Locale locale = const Locale('en'),
   double textScale = 1,
-  ValueChanged<int>? onRowTap,
   Size? screen,
 }) async {
   if (screen != null) {
@@ -82,10 +81,7 @@ Future<ResultViewBloc> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: Scaffold(
             appBar: screen == null ? null : AppBar(title: const Text('rows')),
-            body: BlocProvider.value(
-              value: bloc,
-              child: ResultView(onRowTap: onRowTap),
-            ),
+            body: BlocProvider.value(value: bloc, child: const ResultView()),
           ),
         ),
       ),
@@ -214,14 +210,6 @@ void main() {
       );
 
       expect(_inCard(0, find.text('NULL')), findsOneWidget);
-    });
-
-    testWidgets('a tap on a card hands its index to the caller', (tester) async {
-      final tapped = <int>[];
-      await _pump(tester, _result(), onRowTap: tapped.add);
-
-      await tester.tap(find.byKey(const ValueKey('result-card-1')));
-      expect(tapped, [1]);
     });
 
     testWidgets('cards grow with the system text size and do not overflow', (tester) async {

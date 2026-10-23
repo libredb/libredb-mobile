@@ -693,5 +693,15 @@
   "result_more_fields": "{count, plural, =1{+1 alan daha} other{+{count} alan daha}}",
   "@result_more_fields": {"description": "Under a result card: the fields it does not show.", "placeholders": {"count": {"type": "int"}}},
   "result_masked_semantics": "Maskelenmiş değer",
-  "@result_masked_semantics": {"description": "What a screen reader says for the lock on a masked field."}
+  "@result_masked_semantics": {"description": "What a screen reader says for the lock on a masked field."},
+  "result_row_position": "Satır {index} / {count}",
+  "@result_row_position": {"description": "The row detail sheet's title: the row's place among the rows loaded.", "placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
+  "result_copy_value": "Değeri kopyala",
+  "@result_copy_value": {"description": "Copies one field of a result row."},
+  "result_copy_row": "Satırı JSON olarak kopyala",
+  "@result_copy_row": {"description": "Copies a whole result row as JSON."},
+  "result_copied": "Kopyalandı",
+  "@result_copied": {"description": "A result value or row was copied."},
+  "result_copy_failed": "Kopyalanamadı ({code})",
+  "@result_copy_failed": {"description": "A copy of a result value failed; code is the error's code.", "placeholders": {"code": {"type": "String"}}}
 }

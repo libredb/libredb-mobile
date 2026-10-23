@@ -6,15 +6,14 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_card.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_notices.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
 
 /// The result of the [ResultViewBloc] above it: the stats strip over a card per row, or an empty state.
 ///
-/// It shows no error: a failed run is its caller's, shown with `StudioErrorBanner`. A tap on a card hands the row's
-/// index to [onRowTap].
+/// It shows no error: a failed run is its caller's, shown with `StudioErrorBanner`. A tap on a card opens the row's
+/// detail sheet, and a long press on a card's field its copy menu.
 class ResultView extends StatelessWidget {
-  const ResultView({super.key, this.onRowTap});
-
-  final ValueChanged<int>? onRowTap;
+  const ResultView({super.key});
 
   /// The share of the view's height the stats strip takes at most; a taller strip scrolls.
   static const maxNoticeShare = 0.4;
@@ -38,7 +37,10 @@ class ResultView extends StatelessWidget {
                 rows: result.rows,
                 maskedColumns: maskedColumns,
                 vectorColumns: result.vectorColumns,
-                onRowTap: onRowTap,
+                onRowTap: (index) =>
+                    showRowDetailSheet(context, result: result, maskedColumns: maskedColumns, index: index),
+                onFieldLongPress: (index, field) =>
+                    showRowCopyMenu(context, result: result, maskedColumns: maskedColumns, index: index, field: field),
               ),
             ),
           ],

@@ -251,6 +251,29 @@ CellValue classifyCell(Object? value, {VectorColumn? vector, bool isAbsent = fal
   throw ArgumentError.value(value, 'value', 'is not a JSON value');
 }
 
+/// [row] as the result grid's Copy Row as JSON writes it (`copyRow`, `src/components/ResultsGrid.tsx:491-514`):
+/// `jsonText(binaryCellsAsHex(row), 2)`. Each field in the row's own order, a binary field as its `\x` hex string, a
+/// binary value nested in a document as the document spells it, a number JavaScript cannot carry (NaN or an infinity)
+/// as its word (`jsonSafe`, `src/lib/db/sql-writing/export-shared.ts`), and every other value as Studio sent it, so a
+/// number stays a number and a number string a string. An integer past 2^53 keeps every digit, where Studio's reader
+/// would round it. A masked row holds its masks, so they are written as the strings they are.
+String rowJsonText(Map<String, Object?> row) => _JsJson.stringify({
+  for (final MapEntry(:key, :value) in row.entries)
+    key: switch (value == null ? null : _asBytes(value)) {
+      final Uint8List bytes => BinaryCell._(bytes).detailText,
+      null => _jsonSafe(value),
+    },
+}, indent: '  ');
+
+/// [value] with every number JSON cannot carry written as its word, as Studio's `jsonSafe` does.
+Object? _jsonSafe(Object? value) => switch (value) {
+  final double number when number.isNaN => 'NaN',
+  final double number when number.isInfinite => number > 0 ? 'Infinity' : '-Infinity',
+  final List<dynamic> list => [for (final item in list) _jsonSafe(item)],
+  final Map<dynamic, dynamic> map => {for (final MapEntry(:key, :value) in map.entries) key: _jsonSafe(value)},
+  _ => value,
+};
+
 /// [value] as JavaScript's `String` prints a number, with no rounding: an `int` prints every digit (Dart's reader keeps
 /// all 64 bits, where JavaScript would round past 2^53), and a `double` prints Dart's shortest form, which is
 /// JavaScript's, except that a whole number drops the `.0` Dart adds and -0 prints as `0`.

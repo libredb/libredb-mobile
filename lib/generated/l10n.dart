@@ -1922,6 +1922,46 @@ class S {
       args: [],
     );
   }
+
+  /// `Row {index} of {count}`
+  String result_row_position(int index, int count) {
+    return Intl.message(
+      'Row $index of $count',
+      name: 'result_row_position',
+      desc: 'The row detail sheet\'s title: the row\'s place among the rows loaded.',
+      args: [index, count],
+    );
+  }
+
+  /// `Copy value`
+  String get result_copy_value {
+    return Intl.message('Copy value', name: 'result_copy_value', desc: 'Copies one field of a result row.', args: []);
+  }
+
+  /// `Copy row as JSON`
+  String get result_copy_row {
+    return Intl.message(
+      'Copy row as JSON',
+      name: 'result_copy_row',
+      desc: 'Copies a whole result row as JSON.',
+      args: [],
+    );
+  }
+
+  /// `Copied`
+  String get result_copied {
+    return Intl.message('Copied', name: 'result_copied', desc: 'A result value or row was copied.', args: []);
+  }
+
+  /// `Could not copy ({code})`
+  String result_copy_failed(String code) {
+    return Intl.message(
+      'Could not copy ($code)',
+      name: 'result_copy_failed',
+      desc: 'A copy of a result value failed; code is the error\'s code.',
+      args: [code],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
