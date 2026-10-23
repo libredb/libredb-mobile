@@ -25,8 +25,10 @@ void main() {
   late MockIProviderMetaRepository providerMeta;
   late MockIActiveCatalogStore store;
   late ActiveCatalogCubit catalog;
+  late List<(String, String?)> notListed;
 
   setUp(() {
+    notListed = [];
     containers = MockIContainersRepository();
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(server))
@@ -50,6 +52,7 @@ void main() {
     providerMeta: providerMeta,
     activeCatalog: catalog,
     connectionId: connectionId,
+    onRequestedNotListed: (requested, used) => notListed.add((requested, used)),
   );
 
   test('starts checking the engine, and Run waits meanwhile', () {
@@ -171,4 +174,85 @@ void main() {
       expect(bloc.state.withholdsRun(null), isTrue);
     },
   );
+
+  group('an open request', () {
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'made before the databases are listed makes its database active once the server lists it',
+      build: () => build(server),
+      act: (bloc) => bloc
+        ..add(const EditorCatalogOpenRequested('archive'))
+        ..add(const EditorCatalogRequested()),
+      skip: 1,
+      expect: () => const [
+        EditorCatalogListed(label: 'Database', catalogs: ['app', 'archive', 'postgres']),
+      ],
+      verify: (_) => expect(catalog.catalogOf(server), 'archive'),
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'made once the databases are listed makes its database active at once',
+      build: () => build(server),
+      act: (bloc) async {
+        bloc.add(const EditorCatalogRequested());
+        await bloc.stream.firstWhere((s) => s is EditorCatalogListed);
+        expect(catalog.catalogOf(server), 'app');
+        bloc.add(const EditorCatalogOpenRequested('archive'));
+      },
+      skip: 2,
+      expect: () => const <EditorCatalogState>[],
+      verify: (_) => expect(catalog.catalogOf(server), 'archive'),
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'naming a database the server no longer lists keeps the active one and says which is used',
+      build: () => build(server),
+      act: (bloc) async {
+        bloc.add(const EditorCatalogRequested());
+        await bloc.stream.firstWhere((s) => s is EditorCatalogListed);
+        bloc.add(const EditorCatalogOpenRequested('gone'));
+      },
+      verify: (_) {
+        expect(catalog.catalogOf(server), 'app');
+        expect(notListed, [('gone', 'app')]);
+      },
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'naming one before the databases are listed uses the default and says so',
+      build: () => build(server),
+      act: (bloc) => bloc
+        ..add(const EditorCatalogOpenRequested('gone'))
+        ..add(const EditorCatalogRequested()),
+      skip: 1,
+      expect: () => const [
+        EditorCatalogListed(label: 'Database', catalogs: ['app', 'archive', 'postgres']),
+      ],
+      verify: (_) {
+        expect(catalog.catalogOf(server), 'app');
+        expect(notListed, [('gone', 'app')]);
+      },
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'a listed database says nothing',
+      build: () => build(server),
+      act: (bloc) => bloc
+        ..add(const EditorCatalogOpenRequested('archive'))
+        ..add(const EditorCatalogRequested()),
+      verify: (_) => expect(notListed, isEmpty),
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'on a connection without catalogSessions names no database',
+      build: () => build(postgres),
+      act: (bloc) => bloc
+        ..add(const EditorCatalogOpenRequested('archive'))
+        ..add(const EditorCatalogRequested()),
+      expect: () => const [EditorCatalogNotUsed()],
+      verify: (_) {
+        expect(catalog.catalogOf(postgres), isNull);
+        verifyNever(() => store.write(any(), any(), any()));
+      },
+    );
+  });
 }

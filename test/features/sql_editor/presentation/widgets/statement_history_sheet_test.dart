@@ -196,7 +196,9 @@ void main() {
     expect(find.text('No statements yet'), findsOneWidget);
   });
 
-  testWidgets('a tap on an entry of the open connection answers it; others answer nothing', (tester) async {
+  testWidgets('a tap on a kept entry answers it, of another connection too; one too long to keep answers nothing', (
+    tester,
+  ) async {
     answerRead(Success([_orders, _invoices, _tooLong]));
     await open(tester);
     await tester.tap(find.byKey(StatementHistorySheet.allConnectionsKey));
@@ -205,16 +207,24 @@ void main() {
     expect(find.text('Too long to keep'), findsOneWidget);
     await tester.tap(entry(_tooLong));
     await tester.pumpAndSettle();
-    await tester.tap(entry(_invoices));
-    await tester.pumpAndSettle();
     expect(picked, isEmpty);
     expect(find.text('History'), findsOneWidget);
+
+    await tester.tap(entry(_invoices));
+    await tester.pumpAndSettle();
+
+    expect(picked, [_invoices]);
+    expect(find.text('History'), findsNothing);
+  });
+
+  testWidgets('a tap on an entry of the open connection answers it', (tester) async {
+    answerRead(Success([_orders]));
+    await open(tester);
 
     await tester.tap(entry(_orders));
     await tester.pumpAndSettle();
 
     expect(picked, [_orders]);
-    expect(find.text('History'), findsNothing);
   });
 
   testWidgets('a history that cannot be read offers Discard behind a confirmation', (tester) async {

@@ -43,8 +43,8 @@ final class StatementHistoryLoaded extends StatementHistoryState {
         entry,
   ];
 
-  /// Whether [entry] can be put in the editor: a kept text of the connection open in it.
-  bool opens(StatementHistoryEntry entry) => entry.connectionId == activeConnectionId && entry.text != null;
+  /// Whether [entry] can be put in the editor: a kept text, of any connection, since the editor opens the entry's own.
+  bool opens(StatementHistoryEntry entry) => entry.text != null;
 
   bool _keepsStatus(StatementRunStatus status) => switch (statusFilter) {
     HistoryStatusFilter.all => true,

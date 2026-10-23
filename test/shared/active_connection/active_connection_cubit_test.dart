@@ -284,4 +284,30 @@ void main() {
     },
     expect: () => const [ActiveConnectionSelected(sales), ActiveConnectionNone(), ActiveConnectionSelected(billing)],
   );
+
+  group('listed', () {
+    test('names a connection of the last managed list Studio answered', () {
+      final cubit = build()..connectionsListed(listed);
+      addTearDown(cubit.close);
+
+      expect(cubit.listed(billing.id), billing);
+      expect(cubit.listed('seed:gone'), isNull);
+    });
+
+    test('names none before Studio answered a managed list in this session', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+
+      expect(cubit.listed(sales.id), isNull);
+    });
+
+    test('names none once the session ended', () {
+      final cubit = build()
+        ..connectionsListed(listed)
+        ..clear();
+      addTearDown(cubit.close);
+
+      expect(cubit.listed(sales.id), isNull);
+    });
+  });
 }

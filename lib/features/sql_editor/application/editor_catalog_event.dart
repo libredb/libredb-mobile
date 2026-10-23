@@ -11,3 +11,14 @@ sealed class EditorCatalogEvent extends Equatable {
 final class EditorCatalogRequested extends EditorCatalogEvent {
   const EditorCatalogRequested();
 }
+
+/// An open request named [catalog] as the database its statement runs in: it becomes the active database once the
+/// server lists it, and nothing changes on a connection that names no database.
+final class EditorCatalogOpenRequested extends EditorCatalogEvent {
+  const EditorCatalogOpenRequested(this.catalog);
+
+  final String catalog;
+
+  @override
+  List<Object?> get props => [catalog];
+}
