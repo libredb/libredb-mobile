@@ -105,8 +105,4 @@ void main() {
     expect(() => SqlEditorJson.transactionCommitted('{"status":"rolled_back"}'), throwsFormatException);
     expect(() => SqlEditorJson.transactionRolledBack('{"status":"committed"}'), throwsFormatException);
   });
-
-  test('cancelled refuses an answer without the flag', () {
-    expect(() => SqlEditorJson.cancelled('{"error":"x"}'), throwsFormatException);
-  });
 }

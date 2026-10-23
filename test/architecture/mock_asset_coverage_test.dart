@@ -54,6 +54,8 @@ void main() {
     'IObjectBrowserRepository.scanKeys': (client) => ObjectBrowserRepository(client).scanKeys('seed:cache'),
     'IStatementRepository.run': (client) =>
         StatementRepository(client, ConnectionQueryTimeouts()).run('seed:sales-db', 'select 1'),
+    'IStatementRepository.cancel': (client) =>
+        StatementRepository(client, ConnectionQueryTimeouts()).cancel('seed:sales-db', 'q-1'),
     'ISqlEditorRepository.run': (client) => _sqlEditor(client).run('seed:sales-db', 'select 1'),
     'ISqlEditorRepository.runScript': (client) => _sqlEditor(client).runScript('seed:sales-db', 'select 1; select 2'),
     'ISqlEditorRepository.cancel': (client) => _sqlEditor(client).cancel('seed:sales-db', 'q-1'),

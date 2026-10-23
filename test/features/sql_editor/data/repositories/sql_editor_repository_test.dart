@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -98,9 +99,11 @@ void main() {
         page: any(named: 'page'),
         params: any(named: 'params'),
         catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) async => const Success(answer));
     final repository = SqlEditorRepository(TestEnv.apiClient(), statements, ConnectionQueryTimeouts());
+    final signal = CancelSignal();
 
     final result = await repository.run(
       connection,
@@ -109,6 +112,7 @@ void main() {
       page: const QueryPage(limit: 10),
       params: [1],
       catalog: 'app',
+      cancelSignal: signal,
     );
 
     expect(data(result), answer);
@@ -120,8 +124,18 @@ void main() {
         page: const QueryPage(limit: 10),
         params: [1],
         catalog: 'app',
+        cancelSignal: signal,
       ),
     ).called(1);
+  });
+
+  test('cancel is the shared one, so the app posts /db/cancel from one place', () async {
+    final statements = MockIStatementRepository();
+    when(() => statements.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+    final repository = SqlEditorRepository(TestEnv.apiClient(), statements, ConnectionQueryTimeouts());
+
+    expect(await repository.cancel(connection, 'q-4'), const Success(true));
+    verify(() => statements.cancel(connection, 'q-4')).called(1);
   });
 
   group('what it sends', () {

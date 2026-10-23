@@ -1,4 +1,5 @@
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
@@ -9,7 +10,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_s
 abstract class ISqlEditorRepository {
   /// Runs one statement through the shared `IStatementRepository`. [queryId], from `newQueryId()`, lets [cancel] stop
   /// it; [params] are positional bind values (strings, numbers, booleans or null); [catalog] is the database to run in
-  /// on a server-level connection.
+  /// on a server-level connection; [cancelSignal] drops the request, which then answers `RequestCancelledError`.
   Future<Result<QueryResult>> run(
     String connectionId,
     String sql, {
@@ -17,6 +18,7 @@ abstract class ISqlEditorRepository {
     QueryPage page = QueryPage.first,
     List<Object?>? params,
     String? catalog,
+    CancelSignal? cancelSignal,
   });
 
   /// Runs a text of several statements in order. It takes no bind values. [page] bounds the last statement when it is
@@ -29,7 +31,7 @@ abstract class ISqlEditorRepository {
     QueryPage? page,
   });
 
-  /// Asks Studio to stop the run [queryId]. True when the engine stopped it; false when it had already finished or the
+  /// Asks Studio to stop the run [queryId], through the shared `IStatementRepository.cancel`. True when the engine stopped it; false when it had already finished or the
   /// engine did not stop it. The stopped run itself fails with `studio.query_cancelled`.
   Future<Result<bool>> cancel(String connectionId, String queryId);
 

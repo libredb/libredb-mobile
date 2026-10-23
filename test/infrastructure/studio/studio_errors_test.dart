@@ -174,6 +174,10 @@ void main() {
       );
     });
 
+    test('a request the app dropped is a RequestCancelledError with no code, which no screen shows', () {
+      expect(studioError(RequestCancelledException()), isA<RequestCancelledError>().having((e) => e.code, 'code', null));
+    });
+
     test('an answer that does not have the documented shape is a ServerError', () {
       expect(
         studioError(const FormatException('no connections list')),

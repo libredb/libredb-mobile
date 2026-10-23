@@ -81,6 +81,12 @@ final class OfflineException extends FetchDataException {
   OfflineException() : super('No Internet connection');
 }
 
+/// Thrown for a request the app dropped itself through its cancel signal: the user cancelled it or left the page that
+/// waited for it. It is no failure to show; a repository reports it as `RequestCancelledError`.
+final class RequestCancelledException extends FetchDataException {
+  RequestCancelledException() : super('Request cancelled');
+}
+
 final class BadRequestException extends AppException {
   BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage, super.position})
     : super(message, "Invalid Request: ");

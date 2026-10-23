@@ -29,6 +29,8 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 /// - A TLS failure (a certificate pin mismatch, a certificate the device does not trust, see [isTlsError]) passes
 ///   through immediately and does not count against the circuit breaker either: the handshake failed before the
 ///   request reached the server, and the user must see the insecure-connection error, not a circuit-open one.
+/// - A request the app dropped itself (a cancel token, Dio's `cancel`) passes through and does not count either: the
+///   endpoint did not fail.
 /// - Max retries: 3, exponential backoff with jitter (200ms base).
 /// - Respects the `Retry-After` header when present.
 /// - Retries go through the adapter of the Dio given to [forDio], so they keep its certificate
@@ -198,6 +200,13 @@ class ResilienceInterceptor extends Interceptor {
     // only delay the cached answer, and the endpoint did not fail. The request interceptors after it never ran either,
     // so a retry would also go out without the Authorization header.
     if (err.error is ConnectivityException) {
+      handler.next(err);
+      return;
+    }
+
+    // The app dropped the request itself (Cancel, or a page the user left), so the endpoint did not fail, and a
+    // dropped request is never sent again.
+    if (err.type == DioExceptionType.cancel) {
       handler.next(err);
       return;
     }

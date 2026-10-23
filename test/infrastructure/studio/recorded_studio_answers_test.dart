@@ -19,6 +19,7 @@ import 'package:libredb_mobile/features/studio_status/domain/entities/studio_rea
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/cancel_answer_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
@@ -272,7 +273,7 @@ void main() {
   });
 
   test('POST /api/db/cancel of a run that is not running', () {
-    expect(SqlEditorJson.cancelled(fixture('cancel')), isFalse);
+    expect(CancelAnswerJson.cancelled(fixture('cancel')), isFalse);
   });
 
   test("a database error keeps the database's words", () {
@@ -335,6 +336,17 @@ void main() {
             .having((e) => e.code, 'code', AppErrorCode.studioQueryError.key)
             .having((e) => e.position, 'position', 1),
       );
+    });
+
+    test('POST /api/db/cancel of a running pg_sleep stopped it', () {
+      expect(CancelAnswerJson.cancelled(fixture('cancel_postgres')), isTrue);
+    });
+
+    test('POST /api/db/query of the cancelled pg_sleep answers 499 QUERY_CANCELLED', () {
+      final body = fixture('query_cancelled_postgres');
+      final error = studioError(FetchDataException(body, statusCode: 499, errorCode: ApiClient.errorCodeOf(body)));
+
+      expect(error, isA<ServerError>().having((e) => e.code, 'code', AppErrorCode.studioQueryCancelled.key));
     });
 
     test("POST /api/db/query of an UPDATE answers the rows it changed and no field", () {

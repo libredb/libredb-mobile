@@ -1,6 +1,7 @@
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
@@ -16,10 +17,10 @@ import 'package:libredb_mobile/shared/models/statement_repository.dart';
 ///
 /// `/db/transaction` waits the connection's query timeout plus a margin ([ConnectionQueryTimeouts]). `/db/multi-query`
 /// waits without a limit: Studio gives each statement of a script its own query timeout, so any limit the phone set
-/// could cancel a script Studio may still finish; Cancel and leaving the app end one the user gives up on. `cancel`
-/// runs no statement and keeps the client's default.
+/// could cancel a script Studio may still finish; Cancel and leaving the app end one the user gives up on.
 ///
-/// [run] goes through the shared [IStatementRepository], so the app sends `/db/query` from one place.
+/// [run] and [cancel] go through the shared [IStatementRepository], so the app sends `/db/query` and `/db/cancel` from
+/// one place.
 class SqlEditorRepository implements ISqlEditorRepository {
   SqlEditorRepository(this._apiClient, this._statements, this._queryTimeouts);
 
@@ -40,7 +41,16 @@ class SqlEditorRepository implements ISqlEditorRepository {
     QueryPage page = QueryPage.first,
     List<Object?>? params,
     String? catalog,
-  }) => _statements.run(connectionId, sql, queryId: queryId, page: page, params: params, catalog: catalog);
+    CancelSignal? cancelSignal,
+  }) => _statements.run(
+    connectionId,
+    sql,
+    queryId: queryId,
+    page: page,
+    params: params,
+    catalog: catalog,
+    cancelSignal: cancelSignal,
+  );
 
   @override
   Future<Result<ScriptResult>> runScript(
@@ -58,13 +68,7 @@ class SqlEditorRepository implements ISqlEditorRepository {
   );
 
   @override
-  Future<Result<bool>> cancel(String connectionId, String queryId) => _post(
-    'cancel',
-    '/db/cancel',
-    {'connectionId': connectionId, 'queryId': queryId},
-    SqlEditorJson.cancelled,
-    receiveTimeout: null,
-  );
+  Future<Result<bool>> cancel(String connectionId, String queryId) => _statements.cancel(connectionId, queryId);
 
   @override
   Future<Result<bool?>> beginTransaction(String connectionId, {String? catalog}) => _post(

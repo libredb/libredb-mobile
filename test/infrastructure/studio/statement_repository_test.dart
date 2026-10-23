@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -12,6 +13,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
@@ -164,6 +166,68 @@ void main() {
       expect(result, isA<Failure<QueryResult>>());
     });
 
+    test('a run dropped through its cancel signal fails as cancelled, after one request', () async {
+      final signal = CancelSignal();
+      adapter.hold = Completer<void>();
+
+      final sent = repository.run(connection, 'select pg_sleep(30)', queryId: 'q-9', cancelSignal: signal);
+      await pumpEventQueue();
+      signal.cancel();
+
+      expect((await sent as Failure<QueryResult>).error, isA<RequestCancelledError>());
+      expect(adapter.requests, 1);
+    });
+
+    group('cancel', () {
+      test('posts the connection id and the run id as JSON to /db/cancel', () async {
+        adapter.answer = (200, '{"cancelled":true}');
+
+        await repository.cancel(connection, 'q-7');
+
+        expect(adapter.requests, 1);
+        expect(adapter.lastMethod, 'POST');
+        expect(adapter.lastPath, '/db/cancel');
+        expect(adapter.lastContentType, startsWith('application/json'));
+        expect(adapter.lastBody, {'connectionId': connection, 'queryId': 'q-7'});
+      });
+
+      test("keeps the client's 30 seconds, since it runs no statement", () async {
+        adapter.answer = (200, '{"cancelled":true}');
+
+        await repository.cancel(connection, 'q-7');
+
+        expect(adapter.lastReceiveTimeout, const Duration(seconds: 30));
+      });
+
+      test('answers whether the engine stopped the run', () async {
+        adapter.answer = (200, '{"cancelled":true}');
+        expect(await repository.cancel(connection, 'q-7'), const Success(true));
+
+        adapter.answer = (200, '{"cancelled":false}');
+        expect(await repository.cancel(connection, 'q-7'), const Success(false));
+      });
+
+      test('a rate limit is a RateLimitedError with its delay, and is not sent again', () async {
+        adapter
+          ..answer = (429, '{"error":"Too many requests","code":"RATE_LIMITED"}')
+          ..retryAfter = '12';
+
+        final result = await repository.cancel(connection, 'q-7');
+
+        expect(
+          (result as Failure<bool>).error,
+          isA<RateLimitedError>().having((e) => e.retryAfter, 'retryAfter', const Duration(seconds: 12)),
+        );
+        expect(adapter.requests, 1);
+      });
+
+      test('an answer without cancelled is a failure', () async {
+        adapter.answer = (200, '{}');
+
+        expect(await repository.cancel(connection, 'q-7'), isA<Failure<bool>>());
+      });
+    });
+
     group('logs', () {
       late List<String> lines;
 
@@ -209,6 +273,10 @@ class _RecordingAdapter implements HttpClientAdapter {
   String? lastRawBody;
   Object? lastBody;
   Duration? lastReceiveTimeout;
+  String? retryAfter;
+
+  /// While set, a request waits for it, or for the client to drop the request.
+  Completer<void>? hold;
 
   @override
   Future<ResponseBody> fetch(
@@ -224,12 +292,14 @@ class _RecordingAdapter implements HttpClientAdapter {
     final data = options.data;
     lastRawBody = data is String ? data : jsonEncode(data);
     lastBody = jsonDecode(lastRawBody!);
+    if (hold case final hold?) await Future.any([hold.future, ?cancelFuture]);
     final (status, body) = answer;
     return ResponseBody.fromString(
       body,
       status,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
+        if (retryAfter case final seconds?) 'retry-after': [seconds],
       },
     );
   }

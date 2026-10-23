@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:convert' show jsonDecode, utf8;
 
 import 'package:dio/dio.dart';
@@ -21,6 +22,7 @@ import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 
 /// Metadata describing one entry in the [ApiClient] interceptor chain.
 ///
@@ -63,6 +65,9 @@ class InterceptorChainEntry {
 ///
 /// [post] takes `receiveTimeout`, which replaces the 30 seconds the client waits for the answer of that one request,
 /// for a Studio route that runs a statement (`studio_timeouts.dart`); `Duration.zero` waits without a limit.
+///
+/// [post] takes `cancelSignal`: once it is cancelled the client stops waiting, and the request fails with
+/// [RequestCancelledException], which a caller reports as no error; a request is never sent again after it.
 ///
 /// [post] sends no header or content type of its own: every request carries the `Content-Type: application/json` of
 /// the client's base options, which LibreDB Studio requires of a POST that has no `Origin` header.
@@ -283,9 +288,11 @@ class ApiClient {
     bool idempotent = false,
     Set<String> sensitiveKeys = const {},
     Duration? receiveTimeout,
+    CancelSignal? cancelSignal,
   }) async {
     final fullPath = pathParams != null ? '$path/$pathParams' : path;
     final serialized = _serializeData(data);
+    final cancelToken = _cancelTokenOf(cancelSignal);
     final options = Options(
       receiveTimeout: receiveTimeout,
       extra: {
@@ -296,7 +303,7 @@ class ApiClient {
       },
     );
     try {
-      return await instance.post<String>(fullPath, data: serialized, options: options);
+      return await instance.post<String>(fullPath, data: serialized, options: options, cancelToken: cancelToken);
     } on DioException catch (e) {
       throw _mapDioException(e);
     }
@@ -369,6 +376,18 @@ class ApiClient {
     }
   }
 
+  /// Dio's token for [signal], so no caller imports Dio; null without a signal.
+  static CancelToken? _cancelTokenOf(CancelSignal? signal) {
+    if (signal == null) return null;
+    final token = CancelToken();
+    if (signal.isCancelled) {
+      token.cancel();
+    } else {
+      unawaited(signal.whenCancelled.then((_) => token.cancel()));
+    }
+    return token;
+  }
+
   // ---------------------------------------------------------------------------
   // Error mapping — converts DioException to AppException hierarchy
   // ---------------------------------------------------------------------------
@@ -395,7 +414,7 @@ class ApiClient {
       case DioExceptionType.badResponse:
         return _mapBadResponse(e);
       case DioExceptionType.cancel:
-        return FetchDataException('Request cancelled');
+        return RequestCancelledException();
       case DioExceptionType.badCertificate:
         return _untrustedCertificate(e);
       case DioExceptionType.unknown:
