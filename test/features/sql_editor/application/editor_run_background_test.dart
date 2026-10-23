@@ -10,6 +10,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
@@ -286,6 +287,38 @@ void main() {
         const EditorFailed(error: reset),
       ],
     );
+  });
+
+  group('history', () {
+    const target = EditorHistoryTarget(subjectHash: 'account', connectionName: 'Dev Postgres');
+
+    Future<void> runFor(EditorRunBloc bloc, {required bool leave, required AppError error}) async {
+      bloc.add(const EditorRunRequested(text: 'SELECT pg_sleep(20)', role: _user, history: target));
+      await pumpEventQueue();
+      if (leave) lifecycle.leave();
+      runAnswer.complete(Failure(error));
+      await pumpEventQueue();
+    }
+
+    for (final error in [reset, const TimeoutError('TimeoutException')]) {
+      test('an interrupted run (${error.runtimeType}) keeps no entry, as Stop waiting keeps none', () async {
+        final bloc = build();
+        await runFor(bloc, leave: true, error: error);
+        expect(bloc.state, const EditorInterrupted(queryId: 'run-1', wasRead: true));
+        await bloc.close();
+
+        verifyNever(() => history.record(any(), any()));
+      });
+    }
+
+    test('a timeout after sending while the app stayed on screen is still kept as Failed', () async {
+      final bloc = build();
+      await runFor(bloc, leave: false, error: const TimeoutError('TimeoutException'));
+      await bloc.close();
+
+      final run = verify(() => history.record('account', captureAny())).captured.single as FinishedRun;
+      expect(run.status, StatementRunStatus.failure);
+    });
   });
 
   group('shows the answer as usual', () {

@@ -33,8 +33,9 @@ abstract final class BackgroundRunTime {
 /// iOS: `beginBackgroundTask` and `endBackgroundTask` through a method channel that `AppDelegate` answers. The native
 /// side ends a task itself when its time runs out, as iOS requires, and ignores a later end of it.
 ///
-/// A begin the platform refused is logged as an error and the run goes on without background time, so a switch to
-/// another app may still interrupt it; the run's own answer, or the interrupted message, tells the user what happened.
+/// A begin the platform refused is logged as an error and the run goes on without background time. That is accepted
+/// because a run a switch to another app then drops still ends in the editor's interrupted state, which reports the
+/// outcome honestly: a read was cancelled, anything else has an unknown outcome.
 /// A refused end is logged as an error too; iOS then ends the task itself when its time runs out.
 class ChannelBackgroundRunTime implements IBackgroundRunTime {
   const ChannelBackgroundRunTime();

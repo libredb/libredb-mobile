@@ -66,9 +66,9 @@ part 'editor_run_state.dart';
 /// Each run that reached Studio adds one entry to the account's history through [IStatementHistoryRepository], when
 /// the run names an [EditorHistoryTarget]: Succeeded, or Failed for any failure but one before the request reached
 /// Studio (a [NetworkError], or a [TimeoutError] before it was sent), without the error's text; a cancelled run is
-/// Failed, and a request dropped by Stop waiting adds none. A script adds one entry for its whole text, Failed when a
-/// statement failed. A text refused here, a
-/// cancelled confirmation and a page of Load more add none. The entry is written even when the editor closed before
+/// Failed, and a request dropped by Stop waiting adds none, nor does an interrupted run. A script adds one entry for
+/// its whole text, Failed when a statement failed. A text refused here, a cancelled confirmation and a page of Load
+/// more add none. The entry is written even when the editor closed before
 /// the answer came, and a write the store refused is told to [onHistoryNotKept] then too.
 ///
 /// Backgrounding: each run asks [IBackgroundRunTime] for background time when it is sent and gives it back when its
@@ -312,8 +312,18 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     }
     final cancelAnswered = identical(_cancelAnswered, signal);
     if (cancelAnswered) _cancelAnswered = null;
+    final interrupted = backgrounded && result is Failure<Object> && _droppedWithoutAnswer(result.error);
     if (history != null) {
-      unawaited(_record(history, statement.text, result, watch.elapsed, cancelAnswered: cancelAnswered));
+      unawaited(
+        _record(
+          history,
+          statement.text,
+          result,
+          watch.elapsed,
+          cancelAnswered: cancelAnswered,
+          interrupted: interrupted,
+        ),
+      );
     }
     if (emit.isDone) return;
     switch (state) {
@@ -327,9 +337,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       // Only a cancel drops the request, and it says what happened itself.
       case Failure(:final error) when error is RequestCancelledError:
         return;
-      case Failure(:final error) when backgrounded && _droppedWithoutAnswer(error):
+      case Failure() when interrupted:
         _log.info('the run was interrupted while the app was in the background');
-        // A script asks before it runs, so it is never a read; the phone cannot split it.
+        // Every script already asks before it runs, so `asks == null` excludes it; isScript says so explicitly.
         emit(EditorInterrupted(queryId: queryId, wasRead: statement.asks == null && !statement.isScript));
       case Failure(:final error) when error.code == AppErrorCode.studioQueryCancelled.key:
         _log.info('the run was cancelled');
@@ -416,7 +426,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
 
   /// Adds the run of [text] that answered [result] after [elapsed] to the history of [history], unless it never
   /// reached Studio, or was dropped without a cancel Studio answered ([cancelAnswered]): Stop waiting, which leaves the
-  /// outcome unknown. A cancelled run, by the user's answered cancel or Studio's 499, is Failed, as Studio's web keeps
+  /// outcome unknown, and so does a run the background [interrupted]. A cancelled run, by the user's answered cancel or Studio's 499, is Failed, as Studio's web keeps
   /// its 499. A success keeps Studio's own time and row count, and the time measured here when Studio timed it
   /// as zero, as Studio's web does (`resultData.executionTime || executionTime`).
   Future<void> _record(
@@ -425,7 +435,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     Result<Object> result,
     Duration elapsed, {
     required bool cancelAnswered,
+    required bool interrupted,
   }) async {
+    if (interrupted) return;
     final FinishedRun run;
     switch (result) {
       // A script is one entry for its whole text, as Studio's web keeps it: Failed when a statement failed, with
