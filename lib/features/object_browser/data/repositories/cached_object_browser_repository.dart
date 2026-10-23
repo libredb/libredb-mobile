@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
@@ -13,7 +14,8 @@ import 'package:libredb_mobile/infrastructure/cache/session_memory_cache.dart';
 /// Keeps the containers, counts, lists and describe answers of [IObjectBrowserRepository] in memory for [ttl], so
 /// browsing back and forth spends none of the user's Studio request budget, which every object route charges.
 ///
-/// Source, search and key pages are always read afresh. Each answer is stored under its connection id, its method,
+/// A kept answer keeps the time Studio gave it ([Answered.at]), so a screen showing it names that time, not the time
+/// it was read from memory. Source, search and key pages are always read afresh. Each answer is stored under its connection id, its method,
 /// its container or object path and its kind; on a server-level connection the database is the path's first segment,
 /// so it needs no key of its own. The session end, [invalidate] and [invalidateContainer] also keep an answer still on
 /// its way from being stored (see [SessionMemoryCache]).
@@ -32,15 +34,18 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   int get entryCount => _cache.length;
 
   @override
-  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent, bool refresh = false}) =>
-      _read(
-        _BrowserKey(connectionId, 'containers', parent),
-        () => _inner.containers(connectionId, parent: parent),
-        refresh,
-      );
+  Future<Result<Answered<List<ObjectContainer>>>> containers(
+    String connectionId, {
+    List<String>? parent,
+    bool refresh = false,
+  }) => _read(
+    _BrowserKey(connectionId, 'containers', parent),
+    () => _inner.containers(connectionId, parent: parent),
+    refresh,
+  );
 
   @override
-  Future<Result<Map<String, KindCount>>> counts(
+  Future<Result<Answered<Map<String, KindCount>>>> counts(
     String connectionId, {
     required List<String> container,
     bool refresh = false,
@@ -51,7 +56,7 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   );
 
   @override
-  Future<Result<List<DatabaseObject>>> list(
+  Future<Result<Answered<List<DatabaseObject>>>> list(
     String connectionId, {
     required List<String> container,
     required String kind,
@@ -63,7 +68,7 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   );
 
   @override
-  Future<Result<ObjectDetail>> describe(
+  Future<Result<Answered<ObjectDetail>>> describe(
     String connectionId, {
     required List<String> path,
     required String kind,

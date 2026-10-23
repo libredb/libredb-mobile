@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,7 +44,7 @@ void main() {
           kind: kind,
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => answer);
+      ).thenAnswer((_) async => answeredResult(answer));
 
   ObjectListBloc build(
     String connectionId,
@@ -60,6 +61,28 @@ void main() {
   );
 
   List<String> names(List<DatabaseObject> objects) => [for (final o in objects) o.name];
+
+  test('a kept answer shows the time Studio gave it, not the time the bloc got it', () async {
+    final studioAt = DateTime.utc(2026, 10, 23, 14);
+    answerMeta('seed:dev-postgres', metaAnswer('meta_postgres'));
+    when(
+      () => repository.list(
+        'seed:dev-postgres',
+        container: ['public'],
+        kind: 'table',
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async => answered(objectsAnswer('list_postgres'), at: studioAt));
+    final bloc = withClock(
+      Clock.fixed(studioAt.add(const Duration(minutes: 9))),
+      () => build('seed:dev-postgres', const ['public'], 'table')..add(const ObjectListRequested()),
+    );
+    addTearDown(bloc.close);
+
+    final loaded = await bloc.stream.firstWhere((state) => state is ObjectListLoaded) as ObjectListLoaded;
+
+    expect(loaded.loadedAt, studioAt);
+  });
 
   group('load', () {
     blocTest<ObjectListBloc, ObjectListState>(
@@ -309,7 +332,7 @@ void main() {
       answerMeta(_postgres, metaAnswer('meta_postgres'));
       final answer = Completer<Result<List<DatabaseObject>>>();
       when(() => repository.list(_postgres, container: const ['public'], kind: 'table', refresh: false))
-          .thenAnswer((_) => answer.future);
+          .thenAnswer((_) async => answeredResult(await answer.future));
       final bloc = build(_postgres, const ['public'], 'table')..add(const ObjectListRequested());
       bloc.add(const ObjectListFilterChanged('ankara'));
       await Future<void>.delayed(const Duration(milliseconds: 250));

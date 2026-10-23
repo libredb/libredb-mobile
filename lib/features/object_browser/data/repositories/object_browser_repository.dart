@@ -1,6 +1,8 @@
+import 'package:clock/clock.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
@@ -21,41 +23,44 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
   static final _log = AppLogger.getLogger('ObjectBrowserRepository');
 
   @override
-  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent, bool refresh = false}) =>
-      _post('containers', '/db/objects/containers', {
-        'connectionId': connectionId,
-        'parent': ?parent,
-      }, ObjectBrowserJson.containers);
+  Future<Result<Answered<List<ObjectContainer>>>> containers(
+    String connectionId, {
+    List<String>? parent,
+    bool refresh = false,
+  }) => _answered('containers', '/db/objects/containers', {
+    'connectionId': connectionId,
+    'parent': ?parent,
+  }, ObjectBrowserJson.containers);
 
   @override
-  Future<Result<Map<String, KindCount>>> counts(
+  Future<Result<Answered<Map<String, KindCount>>>> counts(
     String connectionId, {
     required List<String> container,
     bool refresh = false,
-  }) => _post('counts', '/db/objects/counts', {
+  }) => _answered('counts', '/db/objects/counts', {
     'connectionId': connectionId,
     'container': container,
   }, ObjectBrowserJson.counts);
 
   @override
-  Future<Result<List<DatabaseObject>>> list(
+  Future<Result<Answered<List<DatabaseObject>>>> list(
     String connectionId, {
     required List<String> container,
     required String kind,
     bool refresh = false,
-  }) => _post('list', '/db/objects/list', {
+  }) => _answered('list', '/db/objects/list', {
     'connectionId': connectionId,
     'container': container,
     'kind': kind,
   }, ObjectBrowserJson.objects);
 
   @override
-  Future<Result<ObjectDetail>> describe(
+  Future<Result<Answered<ObjectDetail>>> describe(
     String connectionId, {
     required List<String> path,
     required String kind,
     bool refresh = false,
-  }) => _post('describe', '/db/objects/describe', {
+  }) => _answered('describe', '/db/objects/describe', {
     'connectionId': connectionId,
     'path': path,
     'kind': kind,
@@ -93,6 +98,14 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
     'database': ?database,
     if (level) 'level': true,
   }, ObjectBrowserJson.keyScanPage);
+
+  /// [_post], with the time the answer arrived.
+  Future<Result<Answered<T>>> _answered<T>(
+    String operation,
+    String path,
+    Map<String, Object?> body,
+    T Function(String body) read,
+  ) => _post(operation, path, body, (body) => Answered(read(body), at: clock.now()));
 
   Future<Result<T>> _post<T>(
     String operation,

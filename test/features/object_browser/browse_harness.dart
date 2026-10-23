@@ -34,6 +34,7 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
+import 'browse_answers.dart';
 
 /// The Browse tab inside the real shell and its real routes, on mocktail repositories that answer what each test
 /// gives them, for the Browse widget and router tests.
@@ -68,7 +69,7 @@ class BrowseHarness {
       parent: parent,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(containers));
+  ).thenAnswer((_) async => answered(containers));
 
   void answerCounts(String connectionId, List<String> container, Map<String, KindCount> counts) => when(
     () => repository.counts(
@@ -76,7 +77,7 @@ class BrowseHarness {
       container: container,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(counts));
+  ).thenAnswer((_) async => answered(counts));
 
   /// The location the router shows, path and query.
   String get location => router.state.uri.toString();

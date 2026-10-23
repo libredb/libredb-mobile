@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -99,7 +99,7 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
     switch (result) {
       case Failure(:final error):
         _fail(error, onScreen, emit);
-      case Success(:final data):
+      case Success(data: Answered(value: final data, :final at)):
         // An empty kind shows no filter field, so a filter kept from before would hide what a later refresh brings.
         if (data.isEmpty) _query = '';
         _foldedNames = [for (final object in data) foldForSearch(object.name)];
@@ -111,7 +111,7 @@ class ObjectListBloc extends Bloc<ObjectListEvent, ObjectListState> {
             objects: data,
             visible: _visible(data),
             query: _query,
-            loadedAt: clock.now(),
+            loadedAt: at,
           ),
         );
     }

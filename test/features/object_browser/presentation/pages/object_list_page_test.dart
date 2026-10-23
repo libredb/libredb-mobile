@@ -45,7 +45,7 @@ void main() {
           kind: kind,
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => answer);
+      ).thenAnswer((_) async => answeredResult(answer));
 
   /// The row of the object named [name].
   Finder rowOf(String name) => find.widgetWithText(ListTile, name);
@@ -103,7 +103,7 @@ void main() {
     ).thenAnswer(
       (_) async => answers++ == 0
           ? Failure(NetworkError('offline', code: AppErrorCode.networkOffline.key))
-          : Success(objectsAnswer('list_postgres')),
+          : answered(objectsAnswer('list_postgres')),
     );
     await harness.pump(tester, location: _tables, offline: true);
     expect(find.text('orders'), findsNothing);
@@ -332,7 +332,7 @@ void main() {
           kind: 'view',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(detailAnswer('describe_postgres_orders_readonly')));
+      ).thenAnswer((_) async => answered(detailAnswer('describe_postgres_orders_readonly')));
       await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/view?container=public');
 
       await tester.tap(find.text('v_orders'));

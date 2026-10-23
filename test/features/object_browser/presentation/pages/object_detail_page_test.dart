@@ -76,7 +76,7 @@ void main() {
           kind: kind,
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => answer());
+      ).thenAnswer((_) async => answeredResult(answer()));
 
   void answerList(String kind, List<DatabaseObject> objects) => when(
     () => harness.repository.list(
@@ -85,7 +85,7 @@ void main() {
       kind: kind,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(objects));
+  ).thenAnswer((_) async => answered(objects));
 
   Future<void> openTab(WidgetTester tester, String label) async {
     await tester.tap(find.widgetWithText(Tab, label));

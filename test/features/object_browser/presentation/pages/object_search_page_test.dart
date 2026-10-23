@@ -325,7 +325,7 @@ void main() {
           kind: 'table',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(detailAnswer('describe_postgres_orders')));
+      ).thenAnswer((_) async => answered(detailAnswer('describe_postgres_orders')));
       // The detail page lists the schema's tables to link the foreign keys.
       when(
         () => harness.repository.list(
@@ -334,7 +334,7 @@ void main() {
           kind: 'table',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(objectsAnswer('list_postgres')));
+      ).thenAnswer((_) async => answered(objectsAnswer('list_postgres')));
       await harness.pump(tester, location: _search);
       await type(tester, 'ord');
 

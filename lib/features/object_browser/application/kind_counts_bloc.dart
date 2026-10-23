@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +8,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/kind_sections.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -80,7 +80,7 @@ class KindCountsBloc extends Bloc<KindCountsEvent, KindCountsState> {
               _fail(error, onScreen, emit);
               return;
             case Success(:final data):
-              named = _find(data);
+              named = _find(data.value);
           }
           final levels = providerMeta.containerLevels;
           levelLabel = container.length <= levels.length ? levels[container.length - 1].label : null;
@@ -95,13 +95,13 @@ class KindCountsBloc extends Bloc<KindCountsEvent, KindCountsState> {
         switch (counts) {
           case Failure(:final error):
             _fail(error, onScreen, emit);
-          case Success(:final data):
+          case Success(data: Answered(value: final data, :final at)):
             emit(
               KindCountsLoaded(
                 container: named,
                 levelLabel: levelLabel,
                 sections: kindSectionsOf(providerMeta, data, containerKinds: named?.kinds),
-                loadedAt: clock.now(),
+                loadedAt: at,
                 browsesKeys: providerMeta.keyScan != null,
               ),
             );

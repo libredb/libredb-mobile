@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
@@ -107,7 +106,7 @@ void main() {
           kind: 'table',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(objectsAnswer('list_postgres')));
+      ).thenAnswer((_) async => answered(objectsAnswer('list_postgres')));
       harness.active.select(_server);
       await harness.pump(tester);
       await tester.tap(find.text('app'));

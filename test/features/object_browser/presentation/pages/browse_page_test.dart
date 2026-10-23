@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -320,7 +321,7 @@ void main() {
           kind: 'queue',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => const Success([]));
+      ).thenAnswer((_) async => answered(const <DatabaseObject>[]));
       await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
 
       await tester.tap(find.text('Queues'));
@@ -403,7 +404,7 @@ void main() {
         calls++;
         return calls == 1
             ? const Failure(ServerError('down', code: 'studio.database_unreachable'))
-            : Success(containersAnswer('containers_postgres'));
+            : answered(containersAnswer('containers_postgres'));
       });
       harness.answerCounts(_postgres.id, ['public'], countsAnswer('counts_postgres'));
       await seen(tester, _postgres);

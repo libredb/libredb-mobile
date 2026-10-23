@@ -37,7 +37,7 @@ void main() {
       kind: 'table',
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => answer());
+  ).thenAnswer((_) async => answeredResult(answer()));
 
   void answerList(String kind, Result<List<DatabaseObject>> answer) => when(
     () => repository.list(
@@ -46,7 +46,7 @@ void main() {
       kind: kind,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => answer);
+  ).thenAnswer((_) async => answeredResult(answer));
 
   // Built under a fixed clock, which the bloc's handlers run in, so a loaded state's time is known.
   ObjectDetailBloc build({DateTime? now, Stream<String> schemaChanges = const Stream.empty()}) => withClock(
@@ -66,6 +66,25 @@ void main() {
   final customers = tables.firstWhere((object) => object.name == 'customers');
   final postgresMeta = metaAnswer('meta_postgres');
   final table = postgresMeta.objectKinds.firstWhere((kind) => kind.id == 'table');
+
+  test('a kept answer shows the time Studio gave the describe, not the time the bloc got it', () async {
+    final studioAt = at.subtract(const Duration(minutes: 9));
+    when(
+      () => repository.describe(
+        connection,
+        path: orders,
+        kind: 'table',
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async => answered(ordersDetail, at: studioAt));
+    answerList('table', Success(tables));
+    final bloc = build()..add(const ObjectDetailRequested());
+    addTearDown(bloc.close);
+
+    final loaded = await bloc.stream.firstWhere((state) => state is ObjectDetailLoaded) as ObjectDetailLoaded;
+
+    expect(loaded.loadedAt, studioAt);
+  });
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
     'describes the object, and a foreign key opens the table of that name the container lists',

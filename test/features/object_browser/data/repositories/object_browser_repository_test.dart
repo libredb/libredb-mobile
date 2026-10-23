@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:clock/clock.dart';
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
@@ -30,18 +32,30 @@ void main() {
 
   T data<T>(Result<T> result) => (result as Success<T>).data;
 
+  T answer<T>(Result<Answered<T>> result) => data(result).value;
+
   group('with a session', () {
     setUp(TestEnv.authenticate);
 
     test('containers reads the top level', () async {
-      expect(data(await repository.containers(connection)), const [
+      expect(answer(await repository.containers(connection)), const [
         ObjectContainer(path: ['public'], name: 'public', level: 0, isSessionDefault: true),
         ObjectContainer(path: ['sales'], name: 'sales', level: 0),
       ]);
     });
 
+    test('each answer that may be kept carries the time it arrived', () async {
+      final at = DateTime.utc(2026, 10, 23, 14, 5);
+      await withClock(Clock.fixed(at), () async {
+        expect(data(await repository.containers(connection)).at, at);
+        expect(data(await repository.counts(connection, container: const ['public'])).at, at);
+        expect(data(await repository.list(connection, container: const ['public'], kind: 'table')).at, at);
+        expect(data(await repository.describe(connection, path: const ['public', 'orders'], kind: 'table')).at, at);
+      });
+    });
+
     test('counts reads exact, floor and unavailable counts', () async {
-      expect(data(await repository.counts(connection, container: const ['public'])), const {
+      expect(answer(await repository.counts(connection, container: const ['public'])), const {
         'table': KindCounted(42),
         'view': KindCounted(1000, sampledFrom: 'pg_class'),
         'function': KindCountUnavailable('permission denied for schema sales'),
@@ -50,7 +64,7 @@ void main() {
     });
 
     test('list reads the objects of a kind', () async {
-      final objects = data(await repository.list(connection, container: const ['public'], kind: 'table'));
+      final objects = answer(await repository.list(connection, container: const ['public'], kind: 'table'));
 
       expect(
         objects.first,
@@ -66,7 +80,7 @@ void main() {
     });
 
     test('describe reads columns, indexes and foreign keys', () async {
-      final detail = data(await repository.describe(connection, path: const ['public', 'orders'], kind: 'table'));
+      final detail = answer(await repository.describe(connection, path: const ['public', 'orders'], kind: 'table'));
 
       expect(
         detail.columns.first,
@@ -214,7 +228,7 @@ void main() {
   test('a request without a session fails with an AuthError', () async {
     final result = await repository.containers(connection);
 
-    expect(result, isA<Failure<List<ObjectContainer>>>().having((f) => f.error, 'error', isA<AuthError>()));
+    expect(result, isA<Failure<Answered<List<ObjectContainer>>>>().having((f) => f.error, 'error', isA<AuthError>()));
   });
 }
 

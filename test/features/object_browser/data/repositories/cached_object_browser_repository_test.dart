@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
@@ -37,41 +39,50 @@ class _CountingBrowser implements IObjectBrowserRepository {
     return error == null ? Success(data) : Failure(error);
   }
 
+  /// [_send], answered by Studio at the time the answer arrives.
+  Future<Result<Answered<T>>> _sendAnswered<T>(String call, T data) async => switch (await _send(call, data)) {
+    Success(:final data) => Success(Answered(data, at: clock.now())),
+    Failure(:final error) => Failure(error),
+  };
+
   /// Answers the oldest waiting request with [result], or the one at [index] of those still waiting.
   void answer(Object result, {int index = 0}) => pending.removeAt(index).complete(result);
 
   String get _n => '${calls.length + 1}';
 
   @override
-  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent, bool refresh = false}) =>
-      _send('containers $connectionId $parent', [
-        ObjectContainer(path: const ['public'], name: 'public $_n', level: 0),
-      ]);
+  Future<Result<Answered<List<ObjectContainer>>>> containers(
+    String connectionId, {
+    List<String>? parent,
+    bool refresh = false,
+  }) => _sendAnswered('containers $connectionId $parent', [
+    ObjectContainer(path: const ['public'], name: 'public $_n', level: 0),
+  ]);
 
   @override
-  Future<Result<Map<String, KindCount>>> counts(
+  Future<Result<Answered<Map<String, KindCount>>>> counts(
     String connectionId, {
     required List<String> container,
     bool refresh = false,
-  }) => _send('counts $connectionId $container', {'table': KindCounted(calls.length + 1)});
+  }) => _sendAnswered('counts $connectionId $container', {'table': KindCounted(calls.length + 1)});
 
   @override
-  Future<Result<List<DatabaseObject>>> list(
+  Future<Result<Answered<List<DatabaseObject>>>> list(
     String connectionId, {
     required List<String> container,
     required String kind,
     bool refresh = false,
-  }) => _send('list $connectionId $container $kind', [
+  }) => _sendAnswered('list $connectionId $container $kind', [
     DatabaseObject(path: [...container, 'orders'], name: 'orders $_n', kind: kind),
   ]);
 
   @override
-  Future<Result<ObjectDetail>> describe(
+  Future<Result<Answered<ObjectDetail>>> describe(
     String connectionId, {
     required List<String> path,
     required String kind,
     bool refresh = false,
-  }) => _send(
+  }) => _sendAnswered(
     'describe $connectionId $path $kind',
     ObjectDetail(path: [...path, _n], columns: const [], foreignKeys: const []),
   );
@@ -98,7 +109,7 @@ class _CountingBrowser implements IObjectBrowserRepository {
   );
 }
 
-T _data<T>(Result<T> result) => (result as Success<T>).data;
+T _data<T>(Result<Answered<T>> result) => (result as Success<Answered<T>>).data.value;
 
 const _sales = 'seed:sales-db';
 const _crm = 'seed:crm-db';
@@ -147,6 +158,35 @@ void main() {
       expect(second.single.name, 'orders 1');
     });
 
+    test('a stored answer keeps the time Studio gave it, not the time it is read again', () async {
+      var now = DateTime.utc(2026, 10, 23, 14);
+      final answeredAt = now;
+      await withClock(Clock(() => now), () async {
+        cache = CachedObjectBrowserRepository(inner, now: () => now);
+        await cache.containers(_sales);
+        await cache.counts(_sales, container: _public);
+        await cache.list(_sales, container: _public, kind: 'table');
+        await cache.describe(_sales, path: const ['public', 'orders'], kind: 'table');
+
+        now = now.add(const Duration(minutes: 9));
+        final times = [
+          (await cache.containers(_sales) as Success<Answered<Object>>).data.at,
+          (await cache.counts(_sales, container: _public) as Success<Answered<Object>>).data.at,
+          (await cache.list(_sales, container: _public, kind: 'table') as Success<Answered<Object>>).data.at,
+          (await cache.describe(
+            _sales,
+            path: const ['public', 'orders'],
+            kind: 'table',
+          ) as Success<Answered<Object>>).data.at,
+        ];
+
+        expect(inner.calls, hasLength(4), reason: 'every second read came from the cache');
+        expect(times, everyElement(answeredAt));
+        final refreshed = await cache.containers(_sales, refresh: true);
+        expect((refreshed as Success<Answered<Object>>).data.at, now, reason: 'a fresh answer has its own time');
+      });
+    });
+
     test('each connection, method, container, kind and path has its own entry', () async {
       await cache.list(_sales, container: _public, kind: 'table');
       await cache.list(_sales, container: _public, kind: 'view');
@@ -189,7 +229,7 @@ void main() {
       expect(inner.calls, hasLength(1));
 
       async.elapse(const Duration(seconds: 1));
-      Result<Map<String, KindCount>>? result;
+      Result<Answered<Map<String, KindCount>>>? result;
       cache.counts(_sales, container: _public).then((r) => result = r);
       async.flushMicrotasks();
 
@@ -216,7 +256,7 @@ void main() {
   group('a failure', () {
     test('is not stored', () async {
       inner.failWith = const ServerError('boom');
-      expect(await cache.containers(_sales), isA<Failure<List<ObjectContainer>>>());
+      expect(await cache.containers(_sales), isA<Failure<Answered<List<ObjectContainer>>>>());
 
       inner.failWith = null;
       expect(_data(await cache.containers(_sales)).single.name, 'public 2');
@@ -229,7 +269,10 @@ void main() {
 
       final refreshed = await cache.list(_sales, container: _public, kind: 'table', refresh: true);
 
-      expect(refreshed, isA<Failure<List<DatabaseObject>>>().having((f) => f.error, 'error', isA<RateLimitedError>()));
+      expect(
+        refreshed,
+        isA<Failure<Answered<List<DatabaseObject>>>>().having((f) => f.error, 'error', isA<RateLimitedError>()),
+      );
       expect(_data(await cache.list(_sales, container: _public, kind: 'table')).single.name, 'orders 1');
       expect(inner.calls, hasLength(2));
     });
