@@ -441,6 +441,11 @@ void main() {
       expect(detail.foreignKeys.single.columnName, 'customer_id');
       expect(detail.foreignKeys.single.referencedTable, contains('customers'));
       expect(detail.indexes!.map((i) => i.name), contains('orders_customer_id_idx'));
+      final total = detail.columns.firstWhere((c) => c.name == 'total');
+      expect((total.type, total.declaredType), ('numeric', 'numeric(20,2)'));
+      expect(detail.columns.firstWhere((c) => c.name == 'status').defaultValue, "'new'::text");
+      expect(detail.columns.any((c) => c.sampled), isFalse);
+      expect(detail.exclusionConstraints, isEmpty);
     });
 
     // Studio reads the keys from information_schema views, which show foreign keys only to the owner, and primary keys

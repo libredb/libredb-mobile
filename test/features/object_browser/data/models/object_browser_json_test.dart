@@ -1,5 +1,6 @@
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,6 +52,99 @@ void main() {
     test('refuses a detail without columns', () {
       expect(() => ObjectBrowserJson.detail('{"path":["t"],"indexes":[],"foreignKeys":[]}'), throwsFormatException);
     });
+
+    const column = '{"name":"id","type":"integer","nullable":false,"isPrimary":true}';
+    String detail({
+      String path = '["public","t"]',
+      String columns = '[$column]',
+      String? indexes = '[]',
+      String? foreignKeys = '[]',
+      String? exclusion,
+    }) => [
+      '{"path":$path,"columns":$columns',
+      if (indexes != null) ',"indexes":$indexes',
+      if (foreignKeys != null) ',"foreignKeys":$foreignKeys',
+      if (exclusion != null) ',"exclusionConstraints":$exclusion',
+      '}',
+    ].join();
+
+    test('keeps a declared type and the exclusion constraints as Studio sends them', () {
+      final read = ObjectBrowserJson.detail(
+        detail(
+          columns:
+              '[{"name":"total","type":"numeric","declaredType":"numeric(20,2)","nullable":true,"isPrimary":false}]',
+          exclusion: '[{"name":"no_overlap","definition":"EXCLUDE USING gist (room WITH =)"}]',
+        ),
+      );
+
+      expect(read.columns.single.declaredType, 'numeric(20,2)');
+      expect(read.exclusionConstraints, const [
+        ExclusionConstraintSchema(name: 'no_overlap', definition: 'EXCLUDE USING gist (room WITH =)'),
+      ]);
+    });
+
+    test('an answer without exclusion constraints has none, and an unexpected type is left out', () {
+      expect(ObjectBrowserJson.detail(detail()).exclusionConstraints, isEmpty);
+      expect(ObjectBrowserJson.detail(detail(exclusion: '"x"')).exclusionConstraints, isEmpty);
+      final column = ObjectBrowserJson.detail(
+        detail(columns: '[{"name":"id","type":"integer","declaredType":7,"nullable":false,"isPrimary":true}]'),
+      ).columns.single;
+      expect(column.declaredType, isNull);
+    });
+
+    test('a blank declared type is left out, as no declaration', () {
+      final column = ObjectBrowserJson.detail(
+        detail(columns: '[{"name":"id","type":"integer","declaredType":" ","nullable":false,"isPrimary":true}]'),
+      ).columns.single;
+
+      expect(column.declaredType, isNull);
+    });
+
+    final refused = <String, String>{
+      'a path that is not a list of strings': detail(path: '["public",1]'),
+      'a missing path': '{"columns":[$column],"indexes":[],"foreignKeys":[]}',
+      'a column without a name': detail(columns: '[{"type":"integer","nullable":false,"isPrimary":true}]'),
+      'a column with a blank name': detail(
+        columns: '[{"name":" ","type":"integer","nullable":false,"isPrimary":true}]',
+      ),
+      'a column without a type': detail(columns: '[{"name":"id","nullable":false,"isPrimary":true}]'),
+      'a column with a blank type': detail(columns: '[{"name":"id","type":"","nullable":false,"isPrimary":true}]'),
+      'a column without nullable': detail(columns: '[{"name":"id","type":"integer","isPrimary":true}]'),
+      'a column whose isPrimary is not a bool': detail(
+        columns: '[{"name":"id","type":"integer","nullable":false,"isPrimary":"yes"}]',
+      ),
+      'a column that is not an object': detail(columns: '["id"]'),
+      // A loss notice: a sampled column says the list may lack keys, so a provenance the app cannot read is refused.
+      'a provenance Studio does not send': detail(
+        columns: '[{"name":"id","type":"integer","nullable":false,"isPrimary":true,"provenance":"guessed"}]',
+      ),
+      'a blank provenance': detail(
+        columns: '[{"name":"id","type":"integer","nullable":false,"isPrimary":true,"provenance":""}]',
+      ),
+      'missing indexes': detail(indexes: null),
+      'indexes that are neither a list nor unavailable': detail(indexes: '{"count":2}'),
+      'a blank unavailable sentence': detail(indexes: '{"unavailable":" "}'),
+      'an index without a name': detail(indexes: '[{"columns":["id"],"unique":true}]'),
+      'an index with a blank name': detail(indexes: '[{"name":"","columns":["id"],"unique":true}]'),
+      'an index without columns': detail(indexes: '[{"name":"pk","unique":true}]'),
+      'an index without unique': detail(indexes: '[{"name":"pk","columns":["id"]}]'),
+      'missing foreign keys': detail(foreignKeys: null),
+      'a foreign key without a referenced table': detail(
+        foreignKeys: '[{"columnName":"customer_id","referencedColumn":"id"}]',
+      ),
+      'a foreign key with a blank column': detail(
+        foreignKeys: '[{"columnName":"","referencedTable":"customers","referencedColumn":"id"}]',
+      ),
+      'a foreign key with a blank referenced column': detail(
+        foreignKeys: '[{"columnName":"customer_id","referencedTable":"customers","referencedColumn":" "}]',
+      ),
+      'an exclusion constraint without a definition': detail(exclusion: '[{"name":"no_overlap"}]'),
+      'an exclusion constraint with a blank name': detail(exclusion: '[{"name":"","definition":"EXCLUDE"}]'),
+      'an exclusion constraint that is not an object': detail(exclusion: '["no_overlap"]'),
+    };
+    for (final MapEntry(key: what, value: body) in refused.entries) {
+      test('refuses $what', () => expect(() => ObjectBrowserJson.detail(body), throwsFormatException));
+    }
   });
 
   group('source', () {
