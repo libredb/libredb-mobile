@@ -125,9 +125,10 @@ class _ObjectRowsView extends StatelessWidget {
     if (loaded != null) {
       return RefreshIndicator(
         onRefresh: () => _refresh(context),
+        notificationPredicate: browseResultRefreshPredicate,
         // A short result still pulls to refresh.
         child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(physics: const AlwaysScrollableScrollPhysics()),
+          behavior: alwaysScrollableBrowseBehavior(context),
           child: BlocProvider(
             // Each run is a result of its own, masked with the policy of its own run.
             key: ValueKey(loaded.run),

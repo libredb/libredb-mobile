@@ -13,3 +13,16 @@ Future<void> refreshBrowseUnlessOffline(BuildContext context, Future<void> Funct
   }
   await refresh();
 }
+
+/// The scroll behaviour above a result view, so that a result shorter than the page still pulls to refresh: every
+/// scrollable below it is always scrollable, on top of the platform's physics, which stop it at its ends. Bare
+/// [AlwaysScrollableScrollPhysics] would replace them, and a drag past an end would stay there.
+ScrollBehavior alwaysScrollableBrowseBehavior(BuildContext context) {
+  final behavior = ScrollConfiguration.of(context);
+  return behavior.copyWith(physics: const AlwaysScrollableScrollPhysics().applyTo(behavior.getScrollPhysics(context)));
+}
+
+/// Which scrolls pull a result view to refresh: a vertical one at depth 0, the card list, or at depth 1, the table's
+/// rows inside its sideways scroll. The default predicate takes depth 0 only, so a pull on the table refreshed nothing.
+bool browseResultRefreshPredicate(ScrollNotification notification) =>
+    notification.metrics.axis == Axis.vertical && notification.depth <= 1;
