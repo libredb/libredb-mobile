@@ -21,6 +21,7 @@ import 'package:libredb_mobile/features/sql_editor/presentation/widgets/highligh
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/replace_text_prompt.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
@@ -89,7 +90,11 @@ class EditorPage extends StatelessWidget {
                 ..load(),
         ),
         BlocProvider(
-          create: (context) => EditorDraftBloc(store: context.read<IStatementTextStore>(), connectionId: connectionId),
+          create: (context) => EditorDraftBloc(
+            store: context.read<IStatementTextStore>(),
+            connectionId: connectionId,
+            onLateOutcome: (outcome) => _sayDraftNotKept(messenger, outcome),
+          ),
         ),
       ],
       child: _EditorView(connectionId: connectionId),
@@ -103,6 +108,28 @@ class EditorPage extends StatelessWidget {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(code.resolve(messenger.context))));
+  }
+
+  /// Says on the app's messenger that a draft saved as the editor closed, or for the previous account, was not kept.
+  static void _sayDraftNotKept(ScaffoldMessengerState messenger, EditorDraftState outcome) {
+    if (!messenger.mounted) {
+      throw StateError('The app\'s ScaffoldMessenger is gone, so a draft that was not kept cannot be shown');
+    }
+    final context = messenger.context;
+    final s = S.of(context);
+    final text = switch (outcome) {
+      EditorDraftNotKept() => s.sql_editor_draft_not_kept,
+      EditorDraftSaveFailed(:final errorCode) => s.sql_editor_draft_not_saved(errorCode.resolve(context)),
+      EditorDraftUnreadable() => AppErrorCode.editorSavedTextUnreadable.resolve(context),
+      EditorDraftOff() ||
+      EditorDraftLoading() ||
+      EditorDraftRestored() ||
+      EditorDraftKept() ||
+      EditorDraftReadFailed() => throw ArgumentError.value(outcome, 'outcome', 'not an outcome of a save'),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
@@ -130,7 +157,8 @@ class _EditorViewState extends State<_EditorView> {
   String? _subject;
   bool _subjectTold = false;
 
-  /// The database of the restored draft, made active once the server lists it.
+  /// The database of the restored draft, made active once the server lists it, and kept with the draft until then and
+  /// while the databases cannot be listed.
   String? _restoredCatalog;
 
   @override
@@ -154,10 +182,18 @@ class _EditorViewState extends State<_EditorView> {
     }
   }
 
-  /// The database a Run would send now, which the draft keeps with its text.
-  String? get _catalog => context.read<EditorCatalogBloc>().state.catalogToSend(
-    context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
-  );
+  /// The database the draft keeps with its text: the one a Run would send once the databases are listed, and the
+  /// restored draft's own until then, so a list that fails or a page left early never saves the draft without it.
+  String? get _catalog => switch (context.read<EditorCatalogBloc>().state) {
+    final EditorCatalogListed listed => listed.catalogToSend(
+      context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
+    ),
+    EditorCatalogNotUsed() => null,
+    EditorCatalogChecking() ||
+    EditorCatalogMetaFailure() ||
+    EditorCatalogLoading() ||
+    EditorCatalogFailure() => _restoredCatalog,
+  };
 
   /// Tells the draft the text and the database, when either changed.
   void _tellDraft() {
@@ -353,7 +389,8 @@ class _EditorViewState extends State<_EditorView> {
           Flexible(
             flex: 2,
             child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
-              selector: (state) => state is EditorDraftLoading,
+              // Read only until the account's draft is read, so the saved draft is never replaced by a text typed before.
+              selector: (state) => state is EditorDraftLoading || state is EditorDraftOff,
               builder: (context, loading) => EditorInput(
                 controller: _text,
                 focusNode: _focus,

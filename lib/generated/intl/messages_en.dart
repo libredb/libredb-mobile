@@ -549,6 +549,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "The server lists no database to run statements in.",
     ),
     "sql_editor_catalog_picker_title": MessageLookupByLibrary.simpleMessage("Run statements in"),
+    "sql_editor_draft_no_account": MessageLookupByLibrary.simpleMessage(
+      "Text is not kept until Studio names your account.",
+    ),
     "sql_editor_draft_not_kept": MessageLookupByLibrary.simpleMessage(
       "This text is longer than 100,000 characters, so it is not kept on this phone, and the text saved earlier for this connection was removed.",
     ),

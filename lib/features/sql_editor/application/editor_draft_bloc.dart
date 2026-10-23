@@ -21,8 +21,12 @@ part 'editor_draft_state.dart';
 /// refused save is shown ([EditorDraftSaveFailed]); a saved draft that cannot be read stays until the user discards
 /// it, and no text is saved over it before that ([EditorDraftUnreadable]).
 class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
-  EditorDraftBloc({required this._store, required this.connectionId, this.saveDelay = defaultSaveDelay})
-    : super(const EditorDraftOff()) {
+  EditorDraftBloc({
+    required this._store,
+    required this.connectionId,
+    this.saveDelay = defaultSaveDelay,
+    this.onLateOutcome,
+  }) : super(const EditorDraftOff()) {
     on<EditorDraftSubjectChanged>(_onSubjectChanged, transformer: EventTransformers.queue());
     // The pause is a timer of the bloc's own rather than a debouncing transformer: stream_transform's debounce emits its
     // last event when the bloc closes and keeps its timer running after the editor is gone, while close() saves the
@@ -46,6 +50,11 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
 
   /// How long typing pauses before the text is saved.
   final Duration saveDelay;
+
+  /// Told what became of a save this bloc can no longer show as its state, when it was not kept: the save as the
+  /// editor closes, and the save for the previous account on an account change. It gets [EditorDraftNotKept],
+  /// [EditorDraftSaveFailed] or [EditorDraftUnreadable], for a screen that outlives the editor to say.
+  final void Function(EditorDraftState outcome)? onLateOutcome;
 
   /// The subject hash of the account the drafts are read and saved for.
   String? _subject;
@@ -75,9 +84,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     _pause?.cancel();
     // The editor closes when the user leaves the tab or switches the connection: the text waiting for its pause is
     // saved now, and the store finishes the write after this bloc is gone.
-    if ((_subject, _pending) case (final subject?, final draft?)) {
-      unawaited(_store.saveDraft(subject, connectionId, draft));
-    }
+    if ((_subject, _pending) case (final subject?, final draft?)) _saveLate(subject, draft);
     return super.close();
   }
 
@@ -100,7 +107,7 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     if (event.subjectHash == previous) return;
     if (previous != null) {
       // The text was typed for the previous account, so it is saved there and is not the next account's draft.
-      if (_pending case final draft?) unawaited(_store.saveDraft(previous, connectionId, draft));
+      if (_pending case final draft?) _saveLate(previous, draft);
       _latest = null;
     }
     _subject = event.subjectHash;
@@ -127,14 +134,13 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     switch (result) {
       case Success(:final data):
         _stored = data;
-        final typed = _latest;
-        if (data != null && (typed == null || typed.text.isEmpty)) {
-          // The field shows the restored draft from now on.
+        if (data != null) {
+          // The saved draft wins over what the field held, which the page keeps read only until the draft is read;
+          // the field shows the restored draft from now on.
           _latest = data;
           emit(EditorDraftRestored(data));
           return;
         }
-        // A text the user typed meanwhile is kept over the saved one and replaces it.
         emit(const EditorDraftKept());
         await _saveLatest(emit);
       case Failure(:final error):
@@ -156,6 +162,8 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
       case Success(data: DraftSaveOutcome.kept):
         emit(const EditorDraftKept());
       case Success(data: DraftSaveOutcome.notKept):
+        // The store removed the connection's draft, so it holds none: an empty field after this saves nothing.
+        if (_stored == draft) _stored = null;
         emit(const EditorDraftNotKept());
       case Failure(:final error):
         // Not stored, so the same text is saved again on the next pause or flush.
@@ -165,6 +173,23 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
           code == AppErrorCode.editorSavedTextUnreadable ? const EditorDraftUnreadable() : EditorDraftSaveFailed(code),
         );
     }
+  }
+
+  /// Saves [draft] for [subject] after this bloc stopped showing saves, and tells [onLateOutcome] when it was not kept.
+  void _saveLate(String subject, StatementDraft draft) {
+    unawaited(
+      _store.saveDraft(subject, connectionId, draft).then((result) {
+        final outcome = switch (result) {
+          Success(data: DraftSaveOutcome.kept) => null,
+          Success(data: DraftSaveOutcome.notKept) => const EditorDraftNotKept(),
+          Failure(:final error) => switch (AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic) {
+            AppErrorCode.editorSavedTextUnreadable => const EditorDraftUnreadable(),
+            final code => EditorDraftSaveFailed(code),
+          },
+        };
+        if (outcome != null) onLateOutcome?.call(outcome);
+      }),
+    );
   }
 
   Future<void> _onDiscard(EditorDraftDiscardRequested event, Emitter<EditorDraftState> emit) async {

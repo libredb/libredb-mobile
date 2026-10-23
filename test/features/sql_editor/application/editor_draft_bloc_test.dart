@@ -70,7 +70,7 @@ void main() {
   );
 
   blocTest<EditorDraftBloc, EditorDraftState>(
-    'a text typed while the draft is read is kept over the saved one, and saved',
+    'the saved draft wins over a text the field held before the account was known, which is not saved',
     setUp: () {
       final read = Completer<Result<StatementDraft?>>();
       when(() => store.readDraft(_alice, _connection)).thenAnswer((_) => read.future);
@@ -78,11 +78,14 @@ void main() {
     },
     build: build,
     act: (bloc) => bloc
-      ..add(const EditorDraftSubjectChanged(_alice))
-      ..add(const EditorDraftTextChanged('typed')),
+      ..add(const EditorDraftTextChanged('typed'))
+      ..add(const EditorDraftSubjectChanged(_alice)),
     wait: _delay * 4,
-    expect: () => const [EditorDraftLoading(), EditorDraftKept()],
-    verify: (_) => expect(saved(), [const StatementDraft(text: 'typed')]),
+    expect: () => const [EditorDraftLoading(), EditorDraftRestored(StatementDraft(text: 'older'))],
+    verify: (bloc) async {
+      await bloc.close();
+      verifyNever(() => store.saveDraft(any(), any(), any()));
+    },
   );
 
   blocTest<EditorDraftBloc, EditorDraftState>(
@@ -162,6 +165,91 @@ void main() {
     wait: _delay * 3,
     expect: () => const [EditorDraftLoading(), EditorDraftKept(), EditorDraftNotKept(), EditorDraftKept()],
   );
+
+  blocTest<EditorDraftBloc, EditorDraftState>(
+    'after a text over the bound, an empty field saves no empty draft, since the store holds none',
+    setUp: () =>
+        when(() => store.saveDraft(_alice, _connection, any()))
+            .thenAnswer((_) async => const Success(DraftSaveOutcome.notKept)),
+    build: build,
+    act: (bloc) async {
+      bloc.add(const EditorDraftSubjectChanged(_alice));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const EditorDraftTextChanged('far too long'));
+      await Future<void>.delayed(_delay * 2);
+      bloc.add(const EditorDraftTextChanged(''));
+    },
+    wait: _delay * 3,
+    verify: (bloc) async {
+      await bloc.close();
+      expect(saved(), [const StatementDraft(text: 'far too long')]);
+    },
+  );
+
+  group('a save after the editor closed', () {
+    late List<EditorDraftState> late;
+
+    setUp(() => late = []);
+
+    EditorDraftBloc lateBuild() => EditorDraftBloc(
+      store: store,
+      connectionId: _connection,
+      saveDelay: const Duration(seconds: 5),
+      onLateOutcome: late.add,
+    );
+
+    test('that the device refuses is reported', () async {
+      when(() => store.saveDraft(_alice, _connection, any()))
+          .thenAnswer((_) async => _failure(AppErrorCode.editorSavedTextNotStored));
+      final bloc = lateBuild();
+      bloc.add(const EditorDraftSubjectChanged(_alice));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const EditorDraftTextChanged('select 1'));
+      await bloc.close();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(late, [const EditorDraftSaveFailed(AppErrorCode.editorSavedTextNotStored)]);
+    });
+
+    test('that is over the bound is reported as not kept', () async {
+      when(() => store.saveDraft(_alice, _connection, any()))
+          .thenAnswer((_) async => const Success(DraftSaveOutcome.notKept));
+      final bloc = lateBuild();
+      bloc.add(const EditorDraftSubjectChanged(_alice));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const EditorDraftTextChanged('far too long'));
+      await bloc.close();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(late, [const EditorDraftNotKept()]);
+    });
+
+    test('that is kept reports nothing', () async {
+      final bloc = lateBuild();
+      bloc.add(const EditorDraftSubjectChanged(_alice));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const EditorDraftTextChanged('select 1'));
+      await bloc.close();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(late, isEmpty);
+    });
+
+    test('for the previous account on an account change, refused, is reported', () async {
+      when(() => store.saveDraft(_alice, _connection, any()))
+          .thenAnswer((_) async => _failure(AppErrorCode.editorSavedTextNotStored));
+      final bloc = lateBuild();
+      addTearDown(bloc.close);
+      bloc.add(const EditorDraftSubjectChanged(_alice));
+      await Future<void>.delayed(Duration.zero);
+      bloc
+        ..add(const EditorDraftTextChanged('typed by alice'))
+        ..add(const EditorDraftSubjectChanged(_bob));
+      await Future<void>.delayed(_delay);
+
+      expect(late, [const EditorDraftSaveFailed(AppErrorCode.editorSavedTextNotStored)]);
+    });
+  });
 
   blocTest<EditorDraftBloc, EditorDraftState>(
     'a save the device refuses is shown, and the next save that works clears it',

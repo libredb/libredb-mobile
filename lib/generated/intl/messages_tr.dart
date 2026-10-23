@@ -552,6 +552,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Sunucu, deyimlerin çalışacağı bir veritabanı listelemiyor.",
     ),
     "sql_editor_catalog_picker_title": MessageLookupByLibrary.simpleMessage("Deyimlerin çalışacağı yer"),
+    "sql_editor_draft_no_account": MessageLookupByLibrary.simpleMessage(
+      "Studio hesabınızı bildirene kadar metin saklanmaz.",
+    ),
     "sql_editor_draft_not_kept": MessageLookupByLibrary.simpleMessage(
       "Bu metin 100.000 karakterden uzun olduğu için bu telefonda saklanmıyor ve bu bağlantı için daha önce kaydedilen metin silindi.",
     ),

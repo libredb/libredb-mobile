@@ -34,6 +34,7 @@ import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dar
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/answered.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/object_container.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -355,12 +356,43 @@ void main() {
       verifyNever(() => store.readDraft(_alice, any()));
     });
 
-    testWidgets('without an account named by Studio nothing is read or saved', (tester) async {
+    testWidgets('until Studio names the account the field is read only, says why, and nothing is read or saved', (
+      tester,
+    ) async {
       await pump(tester, subject: null);
-      await type(tester, 'select 1');
-      await tester.pump(const Duration(seconds: 2));
 
+      expect(tester.widget<TextField>(field()).readOnly, isTrue);
+      expect(find.text('Text is not kept until Studio names your account.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
       verifyZeroInteractions(store);
+    });
+
+    testWidgets('once Studio names the account the saved draft is restored and the field opens', (tester) async {
+      when(() => store.readDraft(_alice, _postgres.id))
+          .thenAnswer((_) async => const Success(StatementDraft(text: 'select 14')));
+      final showEditor = await pump(tester, subject: null);
+
+      await tester.pumpWidget(app(showEditor: showEditor, subject: _alice));
+      await tester.pump();
+      await tester.pump();
+
+      expect(controller(tester).text, 'select 14');
+      expect(tester.widget<TextField>(field()).readOnly, isFalse);
+      expect(find.text('Text is not kept until Studio names your account.'), findsNothing);
+    });
+
+    testWidgets('a save refused as the editor closes is said on the app messenger', (tester) async {
+      when(() => store.saveDraft(any(), any(), any()))
+          .thenAnswer((_) async => _failure(AppErrorCode.editorSavedTextNotStored));
+      final showEditor = await pump(tester);
+      await type(tester, 'select 15');
+
+      showEditor.value = false;
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('browse root'), findsOneWidget);
+      expect(find.textContaining('The text could not be saved on this phone.'), findsOneWidget);
     });
 
     testWidgets('typing is saved once it pauses for a second', (tester) async {
@@ -440,6 +472,8 @@ void main() {
 
       expect(find.textContaining('The text could not be saved on this phone.'), findsOneWidget);
       expect(find.textContaining('Check its free storage'), findsOneWidget);
+      // The editor saves again as the test closes it, which the app's messenger, gone by then, could not say.
+      when(() => store.saveDraft(any(), any(), any())).thenAnswer((_) async => const Success(DraftSaveOutcome.kept));
     });
 
     testWidgets('a text over 100,000 characters is not kept, and the page says so once', (tester) async {
@@ -496,6 +530,38 @@ void main() {
     });
 
     group('on a server-level connection', () {
+      testWidgets('a restored draft keeps its database while the databases cannot be listed', (tester) async {
+        when(
+          () => containers.containers(_server.id, refresh: any(named: 'refresh')),
+        ).thenAnswer((_) async => Failure(UnknownError('down', code: AppErrorCode.studioConnectionNotAvailable.key)));
+        when(() => store.readDraft(_alice, _server.id))
+            .thenAnswer((_) async => const Success(StatementDraft(text: 'select 16', catalog: 'archive')));
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+        expect(controller(tester).text, 'select 16');
+
+        await type(tester, 'select 17');
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(saved(_server.id), [const StatementDraft(text: 'select 17', catalog: 'archive')]);
+      });
+
+      testWidgets('leaving before the databases are listed keeps the restored draft and its database', (tester) async {
+        final listed = Completer<Result<Answered<List<ObjectContainer>>>>();
+        when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer((_) => listed.future);
+        when(() => store.readDraft(_alice, _server.id))
+            .thenAnswer((_) async => const Success(StatementDraft(text: 'select 18', catalog: 'archive')));
+        final showEditor = await pump(tester, connection: _server);
+        await tester.pump();
+        expect(controller(tester).text, 'select 18');
+
+        showEditor.value = false;
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 2));
+
+        verifyNever(() => store.saveDraft(any(), any(), any()));
+      });
+
       testWidgets('the draft is saved with the active database', (tester) async {
         await pump(tester, connection: _server);
         await tester.pumpAndSettle();
