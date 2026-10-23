@@ -7,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_rows_bloc.dart';
+import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -17,6 +18,7 @@ import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
+import '../../../support/printed_lines.dart';
 import '../browse_answers.dart';
 
 QueryResult _recorded(String name) => QueryResultJson.read(File('test/fixtures/studio/$name.json').readAsStringSync());
@@ -382,4 +384,47 @@ void main() {
     await bloc.close();
     expect(backgroundRunTime.calls.skip(5), unorderedEquals(['end 2', 'end 3', 'end 4']));
   });
+
+  test(
+    'logs neither the statement nor the error\'s text over the bloc\'s whole lifetime, and logs each interruption',
+    () async {
+      const statement = 'SELECT * FROM public.customers;';
+      const dropped = NetworkError('socket closed while running $statement');
+      final lines = await printedLines(() async {
+        final bloc = build();
+        bloc.add(const ObjectRowsRequested(role: _user));
+        await untilCalled(
+          () => statements.run(
+            any(),
+            any(),
+            queryId: any(named: 'queryId'),
+            page: any(named: 'page'),
+            catalog: any(named: 'catalog'),
+            cancelSignal: any(named: 'cancelSignal'),
+          ),
+        );
+        lifecycle.leave();
+        runAnswer.complete(const Failure(dropped));
+        await bloc.stream.firstWhere((state) => state is ObjectRowsFailure);
+        lifecycle.comeBack();
+
+        runAnswer = Completer();
+        const preview = PreviewStatement(statement: statement);
+        final page = bloc.loadPage(preview, nextPage);
+        await pumpEventQueue();
+        lifecycle.leave();
+        runAnswer.complete(const Failure(dropped));
+        expect((await page as Failure<QueryResult>).error, isA<InterruptedError>());
+        await bloc.close();
+      });
+
+      // The positive control: the capture covers both requests.
+      expect(
+        lines.where((line) => line.contains('a request was interrupted while the app was in the background')),
+        hasLength(2),
+      );
+      expect(lines.where((line) => line.contains('public.customers')), isEmpty);
+      expect(lines.where((line) => line.contains('socket closed')), isEmpty);
+    },
+  );
 }
