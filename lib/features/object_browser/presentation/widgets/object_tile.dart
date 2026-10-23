@@ -12,8 +12,9 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// One object: its name, a badge when the engine reports a status (`INVALID` and `DISABLED` in the user's words, any
 /// other as Studio sends it), and what else Studio says of it as secondary text: [kindLabel] when set, the object it
 /// hangs under when its kind declares `attachedTo`, the kinds a group object holds, its row count and size. A tap opens
-/// by the object tap rule, and a long press offers View rows (by `objectRowsAction`, online only), Details, View source
-/// and Copy name. The object list and the search share it, each passing its connection's [meta].
+/// by the object tap rule, and a long press offers View rows (by `objectRowsAction`, online only), Open in editor
+/// (wherever View rows opens, offline too), Details, View source and Copy name. The object list and the search share
+/// it, each passing its connection's [meta].
 class ObjectTile extends StatelessWidget {
   const ObjectTile({
     super.key,
@@ -83,7 +84,7 @@ class ObjectTile extends StatelessWidget {
       context: context,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
-        // Four entries outgrow a short sheet, such as a phone held sideways.
+        // Five entries outgrow a short sheet, such as a phone held sideways.
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -109,6 +110,16 @@ class ObjectTile extends StatelessWidget {
                         enabled: false,
                       ),
                     };
+                  },
+                ),
+              // It sends nothing to Studio, so it is offered offline too; the editor's Run is online only.
+              if (viewRows case ObjectRowsOpen(:final openInEditor))
+                ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: Text(S.of(sheetContext).browse_open_in_editor),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    openInEditor();
                   },
                 ),
               if (details != null)

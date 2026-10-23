@@ -310,6 +310,15 @@ void main() {
 
     Finder viewRows() => find.widgetWithText(TextButton, 'View rows');
     Finder countRows() => find.widgetWithText(TextButton, 'Count rows');
+    Finder openInEditor() => find.widgetWithText(TextButton, 'Open in editor');
+
+    testWidgets('Open in editor sits beside View rows in the heading', (tester) async {
+      await harness.pump(tester, location: ordersLocation);
+
+      expect(tester.widget<TextButton>(openInEditor()).onPressed, isNotNull);
+      final wrap = find.ancestor(of: viewRows(), matching: find.byType(Wrap)).first;
+      expect(find.descendant(of: wrap, matching: openInEditor()), findsOneWidget);
+    });
 
     testWidgets('View rows opens the rows of the object, and back returns to its detail', (tester) async {
       when(
@@ -406,6 +415,7 @@ void main() {
       expect(tester.widget<TextButton>(viewRows()).onPressed, isNull);
       expect(tester.widget<TextButton>(countRows()).onPressed, isNull);
       expect(find.text('Needs an internet connection'), findsOneWidget);
+      expect(tester.widget<TextButton>(openInEditor()).onPressed, isNotNull, reason: 'it sends nothing to Studio');
     });
 
     testWidgets('fit beside a long name at twice the text size on a small phone', (tester) async {
@@ -420,6 +430,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(viewRows(), findsOneWidget);
       expect(countRows(), findsOneWidget);
+      expect(openInEditor(), findsOneWidget);
     });
 
     testWidgets('an engine whose preview the app does not write offers View rows disabled, says why, and no count', (
@@ -447,6 +458,7 @@ void main() {
       expect(tester.widget<TextButton>(viewRows()).onPressed, isNull);
       expect(find.text('Preview is not available for this engine yet'), findsOneWidget);
       expect(countRows(), findsNothing);
+      expect(openInEditor(), findsNothing);
     });
 
     testWidgets('a kind that is not a relation offers neither', (tester) async {
@@ -468,6 +480,7 @@ void main() {
       expect(find.text('customer_id'), findsOneWidget);
       expect(viewRows(), findsNothing);
       expect(countRows(), findsNothing);
+      expect(openInEditor(), findsNothing);
     });
   });
 
