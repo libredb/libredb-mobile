@@ -59,6 +59,29 @@ void main() {
       });
     });
 
+    group('queryTimeout', () {
+      test('keeps a positive number of milliseconds', () {
+        expect(only({'queryTimeout': 120000}).queryTimeout, const Duration(minutes: 2));
+        expect(only({'queryTimeout': 1500.4}).queryTimeout, const Duration(milliseconds: 1500));
+      });
+
+      test("keeps Studio's largest timeout, 2147483647 milliseconds", () {
+        expect(only({'queryTimeout': 2147483647}).queryTimeout, const Duration(milliseconds: 2147483647));
+      });
+
+      test("is left out above Studio's largest timeout, which would overflow the wait", () {
+        for (final value in [2147483648, 9.3e15, 1e20]) {
+          expect(only({'queryTimeout': value}).queryTimeout, isNull, reason: '$value');
+        }
+      });
+
+      test('is left out when absent, not positive or not a number', () {
+        for (final value in [null, 0, -1, -0.5, '120000', true, <Object?>[], <String, Object?>{}]) {
+          expect(only({'queryTimeout': ?value}).queryTimeout, isNull, reason: '$value');
+        }
+      });
+    });
+
     group('access', () {
       test('reads a read grant and a write grant', () {
         expect(only({'access': 'read'}).access, StudioAccess.read);
@@ -116,6 +139,13 @@ void main() {
         expect(read({}, cacheHint: null).cacheHint, isNull);
         expect(read({}, cacheHint: -1).cacheHint, isNull);
         expect(read({}, cacheHint: '60000').cacheHint, isNull);
+      });
+
+      test('keeps 2147483647 milliseconds and leaves out anything above it', () {
+        expect(read({}, cacheHint: 2147483647).cacheHint, const Duration(milliseconds: 2147483647));
+        for (final value in [2147483648, 9.3e15, 1e20]) {
+          expect(read({}, cacheHint: value).cacheHint, isNull, reason: '$value');
+        }
       });
     });
 

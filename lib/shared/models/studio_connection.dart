@@ -19,6 +19,7 @@ class StudioConnection extends Equatable {
     this.managed = false,
     this.seedId,
     this.access,
+    this.queryTimeout,
   });
 
   final String id;
@@ -49,6 +50,10 @@ class StudioConnection extends Equatable {
   /// The level of the signed-in user's grant under governance; null without governance or from an older Studio.
   final StudioAccess? access;
 
+  /// How long Studio lets a statement run on this connection, when the connection sets its own or governance sends its
+  /// runtime setting; null means Studio's default of 60 seconds.
+  final Duration? queryTimeout;
+
   /// Whether Studio refuses every statement that writes on this connection for the signed-in user.
   ///
   /// The lock in the list and the app bar and the write confirmation read this, never [readOnly] or [access] alone.
@@ -73,5 +78,6 @@ class StudioConnection extends Equatable {
     managed,
     seedId,
     access,
+    queryTimeout,
   ];
 }

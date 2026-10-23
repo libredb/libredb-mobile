@@ -83,20 +83,27 @@ void main() {
     expect(SqlEditorJson.transactionBegun('{"status":"active","stateReported":null}'), isNull);
   });
 
-  test('transactionEnded reads a commit and a rollback', () {
+  test('transactionCommitted reads the answer Studio sends after a commit', () {
     expect(
-      () => SqlEditorJson.transactionEnded('{"status":"committed","message":"Transaction committed"}'),
-      returnsNormally,
-    );
-    expect(
-      () => SqlEditorJson.transactionEnded('{"status":"rolled_back","message":"Transaction rolled back"}'),
+      () => SqlEditorJson.transactionCommitted('{"status":"committed","message":"Transaction committed"}'),
       returnsNormally,
     );
   });
 
-  test('transactionEnded refuses an answer without a status', () {
-    expect(() => SqlEditorJson.transactionEnded('{"message":"Transaction committed"}'), throwsFormatException);
-    expect(() => SqlEditorJson.transactionEnded('{"status":1}'), throwsFormatException);
+  test('transactionRolledBack reads the answer Studio sends after a rollback', () {
+    expect(
+      () => SqlEditorJson.transactionRolledBack('{"status":"rolled_back","message":"Transaction rolled back"}'),
+      returnsNormally,
+    );
+  });
+
+  test('transactionCommitted and transactionRolledBack refuse any other status, or none', () {
+    for (final body in ['{"message":"Transaction ended"}', '{"status":1}', '{"status":"active"}', '[]', 'not json']) {
+      expect(() => SqlEditorJson.transactionCommitted(body), throwsFormatException, reason: body);
+      expect(() => SqlEditorJson.transactionRolledBack(body), throwsFormatException, reason: body);
+    }
+    expect(() => SqlEditorJson.transactionCommitted('{"status":"rolled_back"}'), throwsFormatException);
+    expect(() => SqlEditorJson.transactionRolledBack('{"status":"committed"}'), throwsFormatException);
   });
 
   test('cancelled refuses an answer without the flag', () {

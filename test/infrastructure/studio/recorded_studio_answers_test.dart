@@ -22,6 +22,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -162,6 +163,14 @@ void main() {
 
     expect(connections.map((c) => c.access), [StudioAccess.write, StudioAccess.read]);
     expect(connections.map((c) => c.readOnlyForUser), [false, true], reason: 'user holds a read grant on sales-prod');
+  });
+
+  test("GET /api/connections/managed under governance reads the query timeout of Studio's runtime setting", () {
+    final connections = ManagedConnectionsModel.read(fixture('managed_governed')).connections;
+    final queryTimeouts = ConnectionQueryTimeouts()..replaceAll(connections);
+
+    expect(connections.map((c) => c.queryTimeout), [const Duration(minutes: 1), const Duration(minutes: 1)]);
+    expect(queryTimeouts.statementReceiveTimeout('seed:sales-dev'), const Duration(seconds: 75));
   });
 
   test('GET /api/connections/managed under governance from Studio before libredb-studio#1922', () {
@@ -575,7 +584,7 @@ void main() {
     });
 
     test('POST /api/db/transaction commits that transaction', () {
-      expect(() => SqlEditorJson.transactionEnded(fixture('txcommit')), returnsNormally);
+      expect(() => SqlEditorJson.transactionCommitted(fixture('txcommit')), returnsNormally);
     });
   });
 

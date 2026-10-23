@@ -2,6 +2,19 @@ import 'package:equatable/equatable.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 
+/// How a commit or a rollback that Studio answered with success ended the transaction.
+///
+/// Studio answers 2xx to either only after the engine ended the transaction (libredb-studio
+/// `src/app/api/db/transaction/route.ts`), so both values mean the transaction is over and Commit must not be offered
+/// again; a refused commit or rollback is a `Failure` instead.
+enum TransactionEnd {
+  /// Studio's answer named the end: `committed` for a commit, `rolled_back` for a rollback.
+  confirmed,
+
+  /// Studio answered 2xx, but the phone could not read the end in its answer.
+  unreadableAnswer,
+}
+
 /// Whether a connection has an open transaction, and whose it is.
 ///
 /// Without governance Studio keeps one transaction per connection for every user of it, owned by the account that

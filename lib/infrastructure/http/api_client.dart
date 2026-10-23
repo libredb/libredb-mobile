@@ -62,7 +62,7 @@ class InterceptorChainEntry {
 /// console, the verbose log and the error text mask those values too.
 ///
 /// [post] takes `receiveTimeout`, which replaces the 30 seconds the client waits for the answer of that one request,
-/// for a Studio route that runs a statement (`studioStatementReceiveTimeout`).
+/// for a Studio route that runs a statement (`studio_timeouts.dart`); `Duration.zero` waits without a limit.
 ///
 /// [post] sends no header or content type of its own: every request carries the `Content-Type: application/json` of
 /// the client's base options, which LibreDB Studio requires of a POST that has no `Origin` header.

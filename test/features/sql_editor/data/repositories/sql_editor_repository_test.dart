@@ -6,6 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/transaction_state.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -13,6 +14,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,7 +32,8 @@ void main() {
     setUp(() {
       TestEnv.authenticate();
       final client = TestEnv.apiClient();
-      repository = SqlEditorRepository(client, StatementRepository(client));
+      final queryTimeouts = ConnectionQueryTimeouts();
+      repository = SqlEditorRepository(client, StatementRepository(client, queryTimeouts), queryTimeouts);
     });
 
     test('run reads rows, types and paging', () async {
@@ -62,8 +65,9 @@ void main() {
     test('the transaction actions read their answers', () async {
       expect(data(await repository.beginTransaction(connection)), isTrue);
       expect(data(await repository.runInTransaction(connection, 'update orders set status = 1')).inTransaction, isTrue);
-      expect(await repository.commit(connection), isA<Success<void>>());
-      expect(await repository.rollback(connection), isA<Success<void>>());
+      // The mock answers one body for every transaction action, so it confirms neither end; both still ended.
+      expect(await repository.commit(connection), isA<Success<TransactionEnd>>());
+      expect(await repository.rollback(connection), isA<Success<TransactionEnd>>());
       final status = data(await repository.transactionStatus(connection));
       expect(status.ownedByYou, isTrue);
       expect(status.startedAt, DateTime.utc(2026, 10, 22, 9));
@@ -83,7 +87,7 @@ void main() {
         catalog: any(named: 'catalog'),
       ),
     ).thenAnswer((_) async => const Success(answer));
-    final repository = SqlEditorRepository(TestEnv.apiClient(), statements);
+    final repository = SqlEditorRepository(TestEnv.apiClient(), statements, ConnectionQueryTimeouts());
 
     final result = await repository.run(
       connection,
@@ -109,13 +113,15 @@ void main() {
 
   group('what it sends', () {
     late _RecordingAdapter adapter;
+    late ConnectionQueryTimeouts queryTimeouts;
     late SqlEditorRepository repository;
 
     setUp(() {
       adapter = _RecordingAdapter();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
-      repository = SqlEditorRepository(client, StatementRepository(client));
+      queryTimeouts = ConnectionQueryTimeouts();
+      repository = SqlEditorRepository(client, StatementRepository(client, queryTimeouts), queryTimeouts);
     });
 
     test('run sends the connection id, the statement, the page, the run id and the bind values as JSON', () async {
@@ -222,12 +228,50 @@ void main() {
       });
     });
 
-    test('an ending answer without a status is a failure', () async {
-      adapter.answer = (200, '{"message":"Transaction committed"}');
+    group('ends a transaction', () {
+      // Studio answers 2xx to commit and rollback only after the engine ended the transaction
+      // (src/app/api/db/transaction/route.ts), so a 2xx it cannot read still means the transaction is over.
+      final endingActions = <String, (String, Future<Result<TransactionEnd>> Function())>{
+        'commit': ('committed', () => repository.commit(connection)),
+        'rollback': ('rolled_back', () => repository.rollback(connection)),
+      };
+      for (final MapEntry(key: action, value: (status, call)) in endingActions.entries) {
+        test('$action is confirmed by the status Studio sends for it', () async {
+          adapter.answer = (200, '{"status":"$status","message":"Transaction ended"}');
 
-      final result = await repository.commit(connection);
+          expect(await call(), const Success(TransactionEnd.confirmed));
+        });
 
-      expect(result, isA<Failure<void>>());
+        test('$action answered 2xx without a status ended the transaction, unconfirmed', () async {
+          adapter.answer = (200, '{"message":"Transaction ended"}');
+
+          expect(await call(), const Success(TransactionEnd.unreadableAnswer));
+          expect(adapter.requests, 1, reason: 'never sent again');
+        });
+
+        test('$action answered 2xx with a body that is not its status ended the transaction, unconfirmed', () async {
+          for (final body in ['{"status":1}', '{"status":"active"}', '<html>OK</html>', '', '[]']) {
+            adapter.answer = (200, body);
+
+            expect(await call(), const Success(TransactionEnd.unreadableAnswer), reason: body);
+          }
+        });
+
+        test('$action refused by Studio is a failure', () async {
+          adapter.answer = (400, '{"error":"No active transaction","statusCode":400}');
+
+          expect(await call(), isA<Failure<TransactionEnd>>());
+          expect(adapter.requests, 1, reason: 'never sent again');
+        });
+      }
+
+      test('the other action\'s status does not confirm an end', () async {
+        adapter.answer = (200, '{"status":"rolled_back","message":"Transaction rolled back"}');
+        expect(await repository.commit(connection), const Success(TransactionEnd.unreadableAnswer));
+
+        adapter.answer = (200, '{"status":"committed","message":"Transaction committed"}');
+        expect(await repository.rollback(connection), const Success(TransactionEnd.unreadableAnswer));
+      });
     });
 
     test("a database error keeps the database's words and the query error code", () async {
@@ -250,7 +294,6 @@ void main() {
     group('waits for the answer', () {
       final statementCalls = <String, Future<Object?> Function()>{
         'run': () => repository.run(connection, 'select pg_sleep(40)'),
-        'runScript': () => repository.runScript(connection, 'select 1; select pg_sleep(40)'),
         'beginTransaction': () => repository.beginTransaction(connection),
         'runInTransaction': () => repository.runInTransaction(connection, 'update orders set status = 1'),
         'commit': () => repository.commit(connection),
@@ -259,15 +302,43 @@ void main() {
       };
 
       for (final MapEntry(key: name, value: call) in statementCalls.entries) {
-        test('as long as Studio lets a statement run, for $name', () async {
+        test("Studio's default statement timeout plus the margin, for $name on a connection without its own", () async {
           await call();
 
           expect(adapter.lastReceiveTimeout, studioStatementReceiveTimeout);
         });
+
+        test("the connection's own query timeout plus the margin, for $name", () async {
+          queryTimeouts.replaceAll([
+            const StudioConnection(id: connection, name: 'Sales', type: 'postgres', queryTimeout: Duration(minutes: 2)),
+          ]);
+
+          await call();
+
+          expect(adapter.lastReceiveTimeout, const Duration(seconds: 135));
+        });
       }
 
-      test("Studio's 60 second statement timeout plus a 15 second margin", () {
-        expect(studioStatementReceiveTimeout, const Duration(seconds: 75));
+      group('without a limit for runScript, since Studio gives each statement of a script its own timeout', () {
+        test('on a connection without its own query timeout', () async {
+          adapter.answer = (200, _scriptAnswer);
+
+          await repository.runScript(connection, 'select pg_sleep(40); select pg_sleep(40)');
+
+          expect(adapter.lastPath, '/db/multi-query');
+          expect(adapter.lastReceiveTimeout, Duration.zero, reason: 'Dio reads zero as no receive timeout');
+        });
+
+        test('on a connection with its own query timeout', () async {
+          queryTimeouts.replaceAll([
+            const StudioConnection(id: connection, name: 'Sales', type: 'postgres', queryTimeout: Duration(minutes: 2)),
+          ]);
+          adapter.answer = (200, _scriptAnswer);
+
+          await repository.runScript(connection, 'select pg_sleep(100); select pg_sleep(100)');
+
+          expect(adapter.lastReceiveTimeout, Duration.zero);
+        });
       });
 
       test('the default 30 seconds for cancel, which runs no statement', () async {
@@ -307,6 +378,7 @@ const _prodConfig = AppConfig(
 /// Answers every request with [answer] and records the last one.
 class _RecordingAdapter implements HttpClientAdapter {
   (int, String) answer = (200, '{}');
+  int requests = 0;
   String? lastPath;
   String? lastContentType;
   Object? lastBody;
@@ -318,6 +390,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    requests++;
     lastPath = options.path;
     lastReceiveTimeout = options.receiveTimeout;
     lastContentType = options.contentType ?? '${options.headers[Headers.contentTypeHeader]}';

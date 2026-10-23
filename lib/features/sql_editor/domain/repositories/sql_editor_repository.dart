@@ -47,10 +47,12 @@ abstract class ISqlEditorRepository {
 
   /// Commits the open transaction. On a server-level connection Studio keeps one transaction per database, so
   /// [catalog] must name the database the transaction was begun in, or Studio finds none open.
-  Future<Result<void>> commit(String connectionId, {String? catalog});
+  ///
+  /// A success ended the transaction, even as [TransactionEnd.unreadableAnswer]; only a `Failure` leaves it open.
+  Future<Result<TransactionEnd>> commit(String connectionId, {String? catalog});
 
-  /// Rolls the open transaction back; [catalog] as for [commit].
-  Future<Result<void>> rollback(String connectionId, {String? catalog});
+  /// Rolls the open transaction back; [catalog] and the answer as for [commit].
+  Future<Result<TransactionEnd>> rollback(String connectionId, {String? catalog});
 
   /// Whether a transaction is open, and whose it is; [catalog] as for [commit].
   Future<Result<TransactionStatus>> transactionStatus(String connectionId, {String? catalog});

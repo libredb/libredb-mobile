@@ -37,6 +37,7 @@ import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_reposi
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -125,8 +126,9 @@ class AppDependencies {
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>
       OidcTokenRotation(client: client, secureStorage: secureStorage);
 
-  /// Studio's connection API.
-  IConnectionRepository createConnectionRepository(ApiClient apiClient) => ConnectionRepository(apiClient);
+  /// Studio's connection API, which fills [queryTimeouts] from every list it reads.
+  IConnectionRepository createConnectionRepository(ApiClient apiClient, ConnectionQueryTimeouts queryTimeouts) =>
+      ConnectionRepository(apiClient, queryTimeouts);
 
   /// The sections of the connection list the user collapsed on this device.
   ICollapsedSectionsRepository createCollapsedSectionsRepository() => CollapsedSectionsRepository();
@@ -151,12 +153,18 @@ class AppDependencies {
   CachedObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) =>
       CachedObjectBrowserRepository(ObjectBrowserRepository(apiClient));
 
-  /// The one way a feature runs a statement and reads its result: `POST /api/db/query`.
-  IStatementRepository createStatementRepository(ApiClient apiClient) => StatementRepository(apiClient);
+  /// The one way a feature runs a statement and reads its result: `POST /api/db/query`, waiting the connection's
+  /// query timeout from [queryTimeouts].
+  IStatementRepository createStatementRepository(ApiClient apiClient, ConnectionQueryTimeouts queryTimeouts) =>
+      StatementRepository(apiClient, queryTimeouts);
 
-  /// Studio's statement routes, with a single statement run through [statements].
-  ISqlEditorRepository createSqlEditorRepository(ApiClient apiClient, IStatementRepository statements) =>
-      SqlEditorRepository(apiClient, statements);
+  /// Studio's statement routes, with a single statement run through [statements]; a transaction waits the
+  /// connection's query timeout from [queryTimeouts].
+  ISqlEditorRepository createSqlEditorRepository(
+    ApiClient apiClient,
+    IStatementRepository statements,
+    ConnectionQueryTimeouts queryTimeouts,
+  ) => SqlEditorRepository(apiClient, statements, queryTimeouts);
 
   /// Reads the remote app config that decides whether the app opens, shows the maintenance screen or asks for an
   /// update.

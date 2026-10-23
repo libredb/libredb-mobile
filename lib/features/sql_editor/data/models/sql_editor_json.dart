@@ -28,9 +28,16 @@ final class SqlEditorJson {
     return stateReported is bool ? stateReported : null;
   }
 
-  /// `commit` and `rollback` of `POST /api/db/transaction`: `{status, message}`.
-  static void transactionEnded(String body) {
-    _string(_object(body)['status'], 'status');
+  /// `commit` of `POST /api/db/transaction`: `{status: "committed", message}`; any other status is refused.
+  static void transactionCommitted(String body) => _transactionEnded(body, 'committed');
+
+  /// `rollback` of `POST /api/db/transaction`: `{status: "rolled_back", message}`; any other status is refused.
+  static void transactionRolledBack(String body) => _transactionEnded(body, 'rolled_back');
+
+  static void _transactionEnded(String body, String status) {
+    if (_string(_object(body)['status'], 'status') != status) {
+      throw FormatException('The transaction answer does not say $status');
+    }
   }
 
   /// `query` of `POST /api/db/transaction`: a query or script answer plus `inTransaction`.

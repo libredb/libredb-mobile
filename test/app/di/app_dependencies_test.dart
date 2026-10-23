@@ -14,6 +14,7 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
@@ -275,10 +276,14 @@ void main() {
   });
 
   test('app dependencies expose the shared statement runner, which the SQL editor runs through', () {
-    final statements = dependencies.createStatementRepository(TestEnv.apiClient());
+    final queryTimeouts = ConnectionQueryTimeouts();
+    final statements = dependencies.createStatementRepository(TestEnv.apiClient(), queryTimeouts);
 
     expect(statements, isA<IStatementRepository>());
-    expect(dependencies.createSqlEditorRepository(TestEnv.apiClient(), statements), isA<ISqlEditorRepository>());
+    expect(
+      dependencies.createSqlEditorRepository(TestEnv.apiClient(), statements, queryTimeouts),
+      isA<ISqlEditorRepository>(),
+    );
   });
 
   test('every feature reads provider-meta and the object routes through the in-memory caches', () {

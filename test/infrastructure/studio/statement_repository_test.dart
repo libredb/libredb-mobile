@@ -15,6 +15,7 @@ import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:logger/logger.dart' show Logger, OutputEvent;
 
 import '../../support/test_env.dart';
@@ -23,13 +24,16 @@ void main() {
   const connection = 'seed:sales-db';
 
   test('is the shared statement runner', () {
-    expect(StatementRepository(TestEnv.apiClient()), isA<IStatementRepository>());
+    expect(StatementRepository(TestEnv.apiClient(), ConnectionQueryTimeouts()), isA<IStatementRepository>());
   });
 
   test('run reads the recorded answer', () async {
     TestEnv.authenticate();
 
-    final result = await StatementRepository(TestEnv.apiClient()).run(connection, 'select * from orders');
+    final result = await StatementRepository(
+      TestEnv.apiClient(),
+      ConnectionQueryTimeouts(),
+    ).run(connection, 'select * from orders');
 
     final data = (result as Success<QueryResult>).data;
     expect(data.fields, ['id', 'status', 'total', 'note']);
@@ -38,13 +42,15 @@ void main() {
 
   group('what it sends', () {
     late _RecordingAdapter adapter;
+    late ConnectionQueryTimeouts queryTimeouts;
     late StatementRepository repository;
 
     setUp(() {
       adapter = _RecordingAdapter();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
-      repository = StatementRepository(client);
+      queryTimeouts = ConnectionQueryTimeouts();
+      repository = StatementRepository(client, queryTimeouts);
     });
 
     test('the connection id, the statement, the page, the run id, the bind values and the catalog as JSON', () async {
@@ -104,10 +110,20 @@ void main() {
       });
     });
 
-    test('waits as long as Studio lets a statement run', () async {
+    test("waits Studio's default statement timeout plus the margin on a connection without its own", () async {
       await repository.run(connection, 'select pg_sleep(40)');
 
       expect(adapter.lastReceiveTimeout, studioStatementReceiveTimeout);
+    });
+
+    test("waits the connection's own query timeout plus the margin, as the managed list sent it", () async {
+      queryTimeouts.replaceAll([
+        const StudioConnection(id: connection, name: 'Sales', type: 'postgres', queryTimeout: Duration(minutes: 2)),
+      ]);
+
+      await repository.run(connection, 'select pg_sleep(100)');
+
+      expect(adapter.lastReceiveTimeout, const Duration(seconds: 135));
     });
 
     test('a Studio outage without a code is not sent again: a statement may have changed data', () async {

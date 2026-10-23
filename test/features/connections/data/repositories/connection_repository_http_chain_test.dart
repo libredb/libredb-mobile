@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/connections/domain/entities/connection_t
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 
@@ -25,7 +26,7 @@ void main() {
     adapter = _QueuedAdapter();
     final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
-    repository = ConnectionRepository(client);
+    repository = ConnectionRepository(client, ConnectionQueryTimeouts());
   });
 
   tearDown(() => ResilienceInterceptor.instance.resetAll());
