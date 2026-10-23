@@ -34,6 +34,8 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:mocktail/mocktail.dart';
@@ -69,6 +71,9 @@ class BrowseHarness {
 
   /// The app's refusal of the account, which a request meeting Studio's refusal reports.
   final refusal = StudioAccountRefusalCubit();
+
+  /// The app's lifecycle the rows page follows, driven by the test.
+  final lifecycle = BrowseLifecycle();
   late GoRouter router;
 
   /// The open requests the SQL tab received, in order; the tab itself is a stand-in, since the editor is not under
@@ -150,6 +155,7 @@ class BrowseHarness {
       await _connectivity.close();
       await _identity.close();
       await refusal.close();
+      await lifecycle._changes.close();
     });
     await tester.pumpWidget(
       MultiRepositoryProvider(
@@ -159,6 +165,8 @@ class BrowseHarness {
           RepositoryProvider<IStatementRepository>.value(value: statements),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<SessionDefaultEntry>.value(value: entry),
+          RepositoryProvider<IAppLifecycleSource>.value(value: lifecycle),
+          RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -216,5 +224,35 @@ class BrowseHarness {
   Future<void> setOffline(WidgetTester tester, bool offline) async {
     _connectivity.add(offline ? _offline : _online);
     await tester.pumpAndSettle();
+  }
+}
+
+/// The app's lifecycle for a Browse test, which goes to another app and back when the test says.
+class BrowseLifecycle implements IAppLifecycleSource {
+  final _changes = StreamController<AppLifecycleState>.broadcast(sync: true);
+
+  @override
+  AppLifecycleState? current = AppLifecycleState.resumed;
+
+  @override
+  Stream<AppLifecycleState> get changes => _changes.stream;
+
+  void _go(AppLifecycleState state) {
+    current = state;
+    _changes.add(state);
+  }
+
+  /// To another app and back, as iOS and Android report it.
+  void leaveAndComeBack() {
+    for (final state in const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      _go(state);
+    }
   }
 }

@@ -2216,6 +2216,16 @@ class S {
     );
   }
 
+  /// `Reading the rows was interrupted when the app went to the background; Studio cancelled it.`
+  String get error_browse_rows_interrupted {
+    return Intl.message(
+      'Reading the rows was interrupted when the app went to the background; Studio cancelled it.',
+      name: 'error_browse_rows_interrupted',
+      desc: 'The rows of an object on the Browse rows page were not read because the app went to the background, and Studio cancelled the run.',
+      args: [],
+    );
+  }
+
   /// `Discard`
   String get editor_saved_text_discard {
     return Intl.message(

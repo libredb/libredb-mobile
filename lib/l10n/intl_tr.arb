@@ -823,6 +823,8 @@
   "@error_editor_page_interrupted": {"description": "Load more of a read was interrupted because the app went to the background, and Studio cancelled the run of that page."},
   "error_editor_page_outcome_unknown": "Daha fazla satır yükleme arka planda kesildi ve sonucu bilinmiyor: her sayfa ifadenin tamamını yeniden çalıştırır, bu yüzden yeniden çalıştırmadan önce verileri kontrol edin.",
   "@error_editor_page_outcome_unknown": {"description": "Load more of a statement that may write was interrupted while the app was in the background, so whether the run of that page wrote is unknown."},
+  "error_browse_rows_interrupted": "Uygulama arka plana geçtiğinde satırları okuma kesildi; Studio onu iptal etti.",
+  "@error_browse_rows_interrupted": {"description": "The rows of an object on the Browse rows page were not read because the app went to the background, and Studio cancelled the run."},
   "editor_saved_text_discard": "Sil",
   "@editor_saved_text_discard": {"description": "Deletes saved statement text that cannot be read, after a confirmation."},
   "editor_saved_text_discard_title": "Kayıtlı metin silinsin mi?",
