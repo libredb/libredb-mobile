@@ -13,9 +13,11 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
@@ -104,6 +106,7 @@ void main() {
   late MockIContainersRepository containers;
   late ActiveCatalogCubit catalog;
   late MockIStatementHistoryRepository history;
+  late MockIStatementTextStore textStore;
 
   setUp(() {
     repository = MockISqlEditorRepository();
@@ -121,6 +124,9 @@ void main() {
     catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
     active = MockActiveConnectionCubit();
     history = MockIStatementHistoryRepository();
+    textStore = MockIStatementTextStore();
+    when(() => textStore.readDraft(any(), any())).thenAnswer((_) async => const Success(null));
+    when(() => textStore.saveDraft(any(), any(), any())).thenAnswer((_) async => const Success(DraftSaveOutcome.kept));
     when(() => history.record(any(), any())).thenAnswer((invocation) async {
       final run = invocation.positionalArguments[1] as FinishedRun;
       return Success(
@@ -187,6 +193,7 @@ void main() {
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IContainersRepository>.value(value: containers),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
+          RepositoryProvider<IStatementTextStore>.value(value: textStore),
         ],
         child: MultiBlocProvider(
           providers: [

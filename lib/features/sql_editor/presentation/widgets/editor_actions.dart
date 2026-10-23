@@ -45,7 +45,12 @@ class EditorActions extends StatelessWidget {
     final state = context.watch<EditorRunBloc>().state;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      child: Row(
+      // A Wrap, so at the largest text scale Run moves under History instead of overflowing the row.
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
         children: [
           TextButton.icon(
             key: historyKey,
@@ -53,50 +58,41 @@ class EditorActions extends StatelessWidget {
             icon: const Icon(Icons.history),
             label: Text(s.sql_history_open),
           ),
-          Expanded(
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: switch (state) {
-                EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
-                    // stop, so the request can also be dropped without posting another cancel.
-                    if (cancelFailure != null && cancelFailure is! RateLimitedError)
-                      OutlinedButton(
-                        key: stopWaitingKey,
-                        onPressed: onStopWaiting,
-                        child: Text(s.sql_editor_stop_waiting),
-                      ),
-                    FilledButton.tonalIcon(
-                      key: runKey,
-                      onPressed: waitingForRetry ? null : onCancel,
-                      icon: const Icon(Icons.stop),
-                      label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
-                    ),
-                  ],
-                ),
-                EditorCancelling() => FilledButton.tonalIcon(
+          switch (state) {
+            EditorRunning(:final supportsCancel, :final waitingForRetry, :final cancelFailure) => Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              alignment: WrapAlignment.end,
+              children: [
+                // A cancel that failed, other than a rate limit, can leave the user waiting on a run Studio may never
+                // stop, so the request can also be dropped without posting another cancel.
+                if (cancelFailure != null && cancelFailure is! RateLimitedError)
+                  OutlinedButton(key: stopWaitingKey, onPressed: onStopWaiting, child: Text(s.sql_editor_stop_waiting)),
+                FilledButton.tonalIcon(
                   key: runKey,
-                  onPressed: null,
-                  icon: SizedBox.square(
-                    dimension: MediaQuery.textScalerOf(context).scale(16),
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  label: Text(s.sql_editor_cancelling),
+                  onPressed: waitingForRetry ? null : onCancel,
+                  icon: const Icon(Icons.stop),
+                  label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
                 ),
-                EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
-                EditorIdle() ||
-                EditorSucceeded() ||
-                EditorScriptAnswered() ||
-                EditorStatementFailed() ||
-                EditorFailed() ||
-                EditorCancelled() => _run(busy: false),
-              },
+              ],
             ),
-          ),
+            EditorCancelling() => FilledButton.tonalIcon(
+              key: runKey,
+              onPressed: null,
+              icon: SizedBox.square(
+                dimension: MediaQuery.textScalerOf(context).scale(16),
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+              label: Text(s.sql_editor_cancelling),
+            ),
+            EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true) => _run(busy: true),
+            EditorIdle() ||
+            EditorSucceeded() ||
+            EditorScriptAnswered() ||
+            EditorStatementFailed() ||
+            EditorFailed() ||
+            EditorCancelled() => _run(busy: false),
+          },
         ],
       ),
     );

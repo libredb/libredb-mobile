@@ -34,6 +34,7 @@ import 'package:libredb_mobile/features/connections/domain/repositories/favorite
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
@@ -125,6 +126,7 @@ void registerAllFallbackValues() {
   registerFallbackValue(<String>{});
   registerFallbackValue(ConnectionFavorites.empty);
   registerFallbackValue(QueryPage.first);
+  registerFallbackValue(const StatementDraft(text: ''));
   registerFallbackValue(
     const FinishedRun(
       connectionId: 'fallback',

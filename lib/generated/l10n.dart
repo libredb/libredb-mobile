@@ -2795,6 +2795,107 @@ class S {
       args: [keyword],
     );
   }
+
+  /// `Tab`
+  String get sql_editor_tab {
+    return Intl.message(
+      'Tab',
+      name: 'sql_editor_tab',
+      desc: 'Tooltip of the editor\'s accessory button that inserts two spaces at the cursor.',
+      args: [],
+    );
+  }
+
+  /// `Undo`
+  String get sql_editor_undo {
+    return Intl.message(
+      'Undo',
+      name: 'sql_editor_undo',
+      desc: 'Tooltip of the editor\'s accessory button that undoes the last edit.',
+      args: [],
+    );
+  }
+
+  /// `Redo`
+  String get sql_editor_redo {
+    return Intl.message(
+      'Redo',
+      name: 'sql_editor_redo',
+      desc: 'Tooltip of the editor\'s accessory button that redoes the edit last undone.',
+      args: [],
+    );
+  }
+
+  /// `Language: {language}`
+  String sql_editor_language(String language) {
+    return Intl.message(
+      'Language: $language',
+      name: 'sql_editor_language',
+      desc: 'The small label that names the statement language of the connection\'s engine, as Studio names it, such as sql or redis.',
+      args: [language],
+    );
+  }
+
+  /// `The language of this connection could not be read, so the text is not highlighted. {reason}`
+  String sql_editor_language_unknown(String reason) {
+    return Intl.message(
+      'The language of this connection could not be read, so the text is not highlighted. $reason',
+      name: 'sql_editor_language_unknown',
+      desc: 'Shown in place of the language label when Studio did not answer the engine\'s meta, with the reason.',
+      args: [reason],
+    );
+  }
+
+  /// `This text is longer than 100,000 characters, so it is not kept on this phone, and the text saved earlier for this connection was removed.`
+  String get sql_editor_draft_not_kept {
+    return Intl.message(
+      'This text is longer than 100,000 characters, so it is not kept on this phone, and the text saved earlier for this connection was removed.',
+      name: 'sql_editor_draft_not_kept',
+      desc: 'Said once when the editor\'s text is over the bound of a saved draft.',
+      args: [],
+    );
+  }
+
+  /// `The text could not be saved on this phone. {reason}`
+  String sql_editor_draft_not_saved(String reason) {
+    return Intl.message(
+      'The text could not be saved on this phone. $reason',
+      name: 'sql_editor_draft_not_saved',
+      desc: 'Shown when the device refused to save the editor\'s draft, with the reason.',
+      args: [reason],
+    );
+  }
+
+  /// `New text is not kept until you discard the saved text.`
+  String get sql_editor_draft_unreadable_note {
+    return Intl.message(
+      'New text is not kept until you discard the saved text.',
+      name: 'sql_editor_draft_unreadable_note',
+      desc: 'Shown under the unreadable saved draft message: the editor keeps no new text until the user discards it.',
+      args: [],
+    );
+  }
+
+  /// `The text saved for this connection could not be read, so new text is not kept. {reason}`
+  String sql_editor_draft_read_failed(String reason) {
+    return Intl.message(
+      'The text saved for this connection could not be read, so new text is not kept. $reason',
+      name: 'sql_editor_draft_read_failed',
+      desc:
+          'Shown when reading the editor\'s saved draft failed for a reason other than an unreadable file, with Retry.',
+      args: [reason],
+    );
+  }
+
+  /// `Text is not kept until Studio names your account.`
+  String get sql_editor_draft_no_account {
+    return Intl.message(
+      'Text is not kept until Studio names your account.',
+      name: 'sql_editor_draft_no_account',
+      desc: 'Shown under the editor\'s field while Studio has not named the signed-in account: the field stays editable, but no draft is read or kept.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

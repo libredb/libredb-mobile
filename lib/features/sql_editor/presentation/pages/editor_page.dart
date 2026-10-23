@@ -2,17 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_catalog_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/application/editor_draft_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/application/editor_language_cubit.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/editor_language.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_accessory_row.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_draft_notice.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_language_label.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_result_area.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/highlighting_text_controller.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/replace_text_prompt.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
@@ -23,12 +32,19 @@ import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 
-/// The SQL editor of [connectionId]: the statement capture note while governance records statements in full, the text
-/// field, Run (Cancel while a statement runs), and the result under them.
+/// The SQL editor of [connectionId]: the statement capture note while governance records statements in full, the
+/// engine's language, the text field coloured by it, what the draft store says, Run (Cancel while a statement runs),
+/// the result, and, while the field has focus, the accessory row above the keyboard.
 ///
-/// One column at every size, so a rotation rebuilds the same widgets: the text and its selection live in this page's
-/// controller and the result in the blocs above the result area, and none of them reloads. The shell's scaffold resizes
-/// the column above the keyboard, so the keyboard never covers the result.
+/// One column at every size, so a rotation rebuilds the same widgets: the text, its selection, its scroll position and
+/// its undo history live in this page's controllers and the result in the blocs above the result area, and none of
+/// them reloads. The shell's scaffold resizes the column above the keyboard, so neither the keyboard nor the accessory
+/// row ever covers the result.
+///
+/// The text is the connection's draft for the signed-in account (`EditorDraftBloc`), kept with the database it is
+/// typed for: restored when the editor opens, with its database made active again while the server still lists it,
+/// and saved after a pause in typing, when the app goes to the background and when the editor closes, which leaving
+/// the tab, switching the connection and a vanished connection all do.
 ///
 /// Run sends the text's non-blank selection when there is one, else the whole text. A text the write check flags runs
 /// only after the confirmation sheet, for the first run and for each Load more.
@@ -68,6 +84,18 @@ class EditorPage extends StatelessWidget {
             connectionId: connectionId,
           )..add(const EditorCatalogRequested()),
         ),
+        BlocProvider(
+          create: (context) =>
+              EditorLanguageCubit(providerMeta: context.read<IProviderMetaRepository>(), connectionId: connectionId)
+                ..load(),
+        ),
+        BlocProvider(
+          create: (context) => EditorDraftBloc(
+            store: context.read<IStatementTextStore>(),
+            connectionId: connectionId,
+            onLateOutcome: (outcome) => _sayDraftNotKept(messenger, outcome),
+          ),
+        ),
       ],
       child: _EditorView(connectionId: connectionId),
     );
@@ -81,6 +109,30 @@ class EditorPage extends StatelessWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(code.resolve(messenger.context))));
   }
+
+  /// Says on the app's messenger that a draft saved as the editor closed, or for the previous account, was not kept.
+  static void _sayDraftNotKept(ScaffoldMessengerState messenger, EditorDraftState outcome) {
+    if (!messenger.mounted) {
+      throw StateError('The app\'s ScaffoldMessenger is gone, so a draft that was not kept cannot be shown');
+    }
+    final context = messenger.context;
+    final s = S.of(context);
+    final text = switch (outcome) {
+      EditorDraftNotKept() => s.sql_editor_draft_not_kept,
+      EditorDraftSaveFailed(:final errorCode) => s.sql_editor_draft_not_saved(errorCode.resolve(context)),
+      EditorDraftUnreadable() => AppErrorCode.editorSavedTextUnreadable.resolve(context),
+      EditorDraftInitial() ||
+      EditorDraftOff() ||
+      EditorDraftLoading() ||
+      EditorDraftConflict() ||
+      EditorDraftRestored() ||
+      EditorDraftKept() ||
+      EditorDraftReadFailed() => throw ArgumentError.value(outcome, 'outcome', 'not an outcome of a save'),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
 }
 
 class _EditorView extends StatefulWidget {
@@ -93,8 +145,100 @@ class _EditorView extends StatefulWidget {
 }
 
 class _EditorViewState extends State<_EditorView> {
-  final _text = TextEditingController();
+  final _text = HighlightingTextController();
   final _focus = FocusNode();
+  final _undo = UndoHistoryController();
+  final _scroll = ScrollController();
+  late final AppLifecycleListener _lifecycle;
+
+  /// The text and the database last told to the draft, so a move of the cursor or a change of colouring alone tells
+  /// it nothing.
+  (String, String?) _told = ('', null);
+
+  /// The account the draft is kept for, as the subject hash last told to the draft.
+  String? _subject;
+  bool _subjectTold = false;
+
+  /// The database of the restored draft, made active once the server lists it, and kept with the draft until then and
+  /// while the databases cannot be listed.
+  String? _restoredCatalog;
+
+  @override
+  void initState() {
+    super.initState();
+    _text.addListener(_tellDraft);
+    // The app may be killed in the background, so the draft is saved as it leaves the screen.
+    _lifecycle = AppLifecycleListener(
+      onHide: () => context.read<EditorDraftBloc>().add(const EditorDraftFlushRequested()),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final subject = StudioSubjectScope.of(context);
+    if (!_subjectTold || subject != _subject) {
+      _subjectTold = true;
+      _subject = subject;
+      context.read<EditorDraftBloc>().add(EditorDraftSubjectChanged(subject));
+    }
+  }
+
+  /// The database the draft keeps with its text: the one a Run would send once the databases are listed, and the
+  /// restored draft's own until then, so a list that fails or a page left early never saves the draft without it.
+  String? get _catalog => switch (context.read<EditorCatalogBloc>().state) {
+    final EditorCatalogListed listed => listed.catalogToSend(
+      context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
+    ),
+    EditorCatalogNotUsed() => null,
+    EditorCatalogChecking() ||
+    EditorCatalogMetaFailure() ||
+    EditorCatalogLoading() ||
+    EditorCatalogFailure() => _restoredCatalog,
+  };
+
+  /// Tells the draft the text and the database, when either changed.
+  void _tellDraft() {
+    final told = (_text.text, _catalog);
+    if (told == _told) return;
+    _told = told;
+    context.read<EditorDraftBloc>().add(EditorDraftTextChanged(told.$1, catalog: told.$2));
+  }
+
+  /// Shows the restored draft in the field, with the cursor at its end, and makes its database active again; the
+  /// field tells the draft its text as for any change, which the draft does not save again.
+  void _restore(EditorDraftState state) {
+    if (state case EditorDraftRestored(:final draft)) {
+      _restoredCatalog = draft.catalog;
+      _applyRestoredCatalog();
+      _text.value = TextEditingValue(
+        text: draft.text,
+        selection: TextSelection.collapsed(offset: draft.text.length),
+      );
+    }
+  }
+
+  /// Asks whether the account's saved draft takes the place of the text typed before Studio named the account; either
+  /// answer goes to the draft, which restores the saved one or saves the typed one.
+  Future<void> _askConflict(EditorDraftState state) async {
+    if (state case EditorDraftConflict(:final draft)) {
+      final bloc = context.read<EditorDraftBloc>();
+      final restore = await confirmReplaceEditorText(context, current: _text.text, incoming: draft.text);
+      if (!mounted) return;
+      bloc.add(EditorDraftConflictAnswered(restore: restore));
+    }
+  }
+
+  /// Makes the restored draft's database active once the server's databases are listed and still hold it; a database
+  /// the server no longer lists leaves the one the editor chose.
+  void _applyRestoredCatalog() {
+    final catalog = _restoredCatalog;
+    if (catalog == null) return;
+    if (context.read<EditorCatalogBloc>().state case EditorCatalogListed(:final catalogs)) {
+      _restoredCatalog = null;
+      if (catalogs.contains(catalog)) context.read<ActiveCatalogCubit>().choose(widget.connectionId, catalog);
+    }
+  }
 
   /// The confirmation sheet this page shows, while it is open.
   Route<WriteConfirmation>? _sheet;
@@ -124,8 +268,11 @@ class _EditorViewState extends State<_EditorView> {
       });
     }
     _historySheet = null;
+    _lifecycle.dispose();
     _text.dispose();
     _focus.dispose();
+    _undo.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -219,21 +366,58 @@ class _EditorViewState extends State<_EditorView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<EditorRunBloc, EditorRunState>(
-      // A failure restored by a cancelled confirmation is no new answer, so the cursor stays where the user put it.
-      listenWhen: (previous, current) =>
-          current is EditorAwaitingConfirmation ||
-          (current is EditorStatementFailed && previous is! EditorAwaitingConfirmation),
-      listener: _onStateChanged,
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<EditorRunBloc, EditorRunState>(
+          // A failure restored by a cancelled confirmation is no new answer, so the cursor stays where the user put it.
+          listenWhen: (previous, current) =>
+              current is EditorAwaitingConfirmation ||
+              (current is EditorStatementFailed && previous is! EditorAwaitingConfirmation),
+          listener: _onStateChanged,
+        ),
+        BlocListener<EditorLanguageCubit, EditorLanguageState>(
+          listener: (context, state) => _text.highlighting = switch (state) {
+            EditorLanguageKnown(:final language) => language.highlighting,
+            EditorLanguageLoading() || EditorLanguageUnknown() => EditorHighlighting.plain,
+          },
+        ),
+        BlocListener<EditorDraftBloc, EditorDraftState>(
+          listenWhen: (previous, current) => current is EditorDraftRestored,
+          listener: (context, state) => _restore(state),
+        ),
+        BlocListener<EditorDraftBloc, EditorDraftState>(
+          listenWhen: (previous, current) => current is EditorDraftConflict,
+          listener: (context, state) => _askConflict(state),
+        ),
+        BlocListener<EditorCatalogBloc, EditorCatalogState>(
+          listener: (context, state) {
+            _applyRestoredCatalog();
+            _tellDraft();
+          },
+        ),
+        BlocListener<ActiveCatalogCubit, ActiveCatalogState>(listener: (context, state) => _tellDraft()),
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (StatementCaptureScope.recordsInFullOf(context)) const StatementCaptureNote(),
           EditorCatalogChip(connectionId: widget.connectionId),
+          const EditorLanguageLabel(),
           Flexible(
             flex: 2,
-            child: EditorInput(controller: _text, focusNode: _focus),
+            child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
+              // Read only while the account's draft is read; a text typed before Studio named the account is asked about.
+              selector: (state) => state is EditorDraftLoading,
+              builder: (context, loading) => EditorInput(
+                controller: _text,
+                focusNode: _focus,
+                undoController: _undo,
+                scrollController: _scroll,
+                readOnly: loading,
+              ),
+            ),
           ),
+          const EditorDraftNotice(),
           EditorActions(
             text: _text,
             onRun: _run,
@@ -249,6 +433,12 @@ class _EditorViewState extends State<_EditorView> {
           ),
           const Divider(height: 1),
           Expanded(flex: 3, child: EditorResultArea(confirm: _confirm)),
+          ListenableBuilder(
+            listenable: _focus,
+            builder: (context, _) => _focus.hasFocus
+                ? EditorAccessoryRow(controller: _text, undoController: _undo)
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
