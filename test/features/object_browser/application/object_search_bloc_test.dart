@@ -423,6 +423,26 @@ void main() {
         async.flushMicrotasks();
       });
     });
+    test('a cleared term and a submit of the term on screen in one burst send that term again', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+
+        bloc
+          ..add(const ObjectSearchTermChanged(''))
+          ..add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord', 'ord']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
   });
 
   group('minimum length', () {
