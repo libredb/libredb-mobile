@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -185,6 +186,23 @@ void main() {
         'sql': 'select 1; select * from orders',
         'options': {'limit': 50, 'offset': 0},
       });
+    });
+
+    test('a script dropped through its cancel signal fails as cancelled, after one request', () async {
+      final signal = CancelSignal();
+      adapter.hold = Completer<void>();
+
+      final sent = repository.runScript(
+        connection,
+        'select pg_sleep(40); select pg_sleep(40)',
+        queryId: 'q-8',
+        cancelSignal: signal,
+      );
+      await pumpEventQueue();
+      signal.cancel();
+
+      expect((await sent as Failure<Object>).error, isA<RequestCancelledError>());
+      expect(adapter.requests, 1);
     });
 
     test('runScript without a page sends no options', () async {
@@ -411,6 +429,9 @@ class _RecordingAdapter implements HttpClientAdapter {
   Object? lastBody;
   Duration? lastReceiveTimeout;
 
+  /// Holds the answer until it completes, so a request can be dropped while it is open.
+  Completer<void>? hold;
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -423,6 +444,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     lastContentType = options.contentType ?? '${options.headers[Headers.contentTypeHeader]}';
     final data = options.data;
     lastBody = data is String ? jsonDecode(data) : data;
+    if (hold case final hold?) await Future.any([hold.future, ?cancelFuture]);
     final (status, body) = answer;
     return ResponseBody.fromString(
       body,

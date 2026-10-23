@@ -25,21 +25,29 @@ final class EditorHistoryTarget extends Equatable {
 
 /// Run [text] for [role], the role Studio names now, whose policy masks the answer, in [catalog], the database picked
 /// on a server-level connection, or null on any other, and add it to the history of [history]; null while Studio has
-/// named no account, when nothing is kept.
+/// named no account, when nothing is kept. [isSelection] says that [text] is the editor's non-blank selection rather
+/// than its whole text.
 final class EditorRunRequested extends EditorRunEvent {
-  const EditorRunRequested({required this.text, required this.role, this.catalog, this.history});
+  const EditorRunRequested({
+    required this.text,
+    required this.role,
+    this.catalog,
+    this.history,
+    this.isSelection = false,
+  });
 
   final String text;
   final StudioRole? role;
   final String? catalog;
   final EditorHistoryTarget? history;
+  final bool isSelection;
 
   @override
-  List<Object?> get props => [text, role, catalog, history];
+  List<Object?> get props => [text, role, catalog, history, isSelection];
 
   /// Prints the length, never the text, which can hold customer data in its literals.
   @override
-  String toString() => 'EditorRunRequested(${text.length} characters)';
+  String toString() => 'EditorRunRequested(${text.length} characters, selection: $isSelection)';
 }
 
 /// The user's answer to the write confirmation: run the text it showed, or not.

@@ -200,18 +200,6 @@ void main() {
 
   group('refused locally, before anything is sent', () {
     blocTest<EditorRunBloc, EditorRunState>(
-      'a text of several statements, with the one-statement message',
-      build: build,
-      act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT 1; SELECT 2', role: user)),
-      expect: () => [
-        isA<EditorFailed>()
-            .having((s) => s.error.code, 'code', AppErrorCode.editorSeveralStatements.key)
-            .having((s) => s.waitingForRetry, 'waiting', isFalse),
-      ],
-      verify: (_) => verifyNothingSent(),
-    );
-
-    blocTest<EditorRunBloc, EditorRunState>(
       'a text over 1,000,000 characters, with the too-large message',
       build: build,
       act: (bloc) => bloc.add(EditorRunRequested(text: 'SELECT 1 ${'x' * EditorRunBloc.maxTextLength}', role: user)),
@@ -763,8 +751,6 @@ void main() {
       'a text refused before it was sent writes nothing',
       build: build,
       act: (bloc) async {
-        bloc.add(const EditorRunRequested(text: 'SELECT 1; SELECT 2', role: user, history: target));
-        await bloc.stream.firstWhere((s) => s is EditorFailed);
         bloc.add(EditorRunRequested(text: 'x' * (EditorRunBloc.maxTextLength + 1), role: user, history: target));
         await pumpEventQueue();
       },
@@ -883,6 +869,26 @@ void main() {
         previous: const EditorIdle(),
         meta: _meta('meta_postgres'),
         role: user,
+      ).toString(),
+      isNot(contains('ada@example.com')),
+    );
+    const scriptStatement = EditorScriptStatement(
+      index: 0,
+      sql: text,
+      executionTime: Duration.zero,
+      error: 'invalid input: ada@example.com',
+    );
+    expect(scriptStatement.toString(), isNot(contains('ada@example.com')));
+    expect(
+      EditorScriptAnswered(
+        statements: const [scriptStatement],
+        statementCount: 2,
+        executedCount: 1,
+        openTransactionRolledBack: false,
+        policy: MaskingPolicy.forRole(user),
+        statement: const EditorStatement(text: '$text; SELECT 2', isScript: true),
+        meta: _meta('meta_postgres'),
+        run: 1,
       ).toString(),
       isNot(contains('ada@example.com')),
     );

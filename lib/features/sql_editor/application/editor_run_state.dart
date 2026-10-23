@@ -1,21 +1,28 @@
 part of 'editor_run_bloc.dart';
 
 /// A text the editor sends, and why it asked before running, null when the check cleared it; [catalog] is the
-/// database it runs in on a server-level connection, which each later page of its result names again.
+/// database it runs in on a server-level connection, which each later page of its result names again. [isScript]
+/// sends it to `runScript`, which splits it under the connection's grammar.
 class EditorStatement extends Equatable {
-  const EditorStatement({required this.text, this.asks, this.catalog});
+  const EditorStatement({required this.text, this.asks, this.catalog, this.isScript = false});
 
   final String text;
   final AsksBeforeRunning? asks;
   final String? catalog;
+  final bool isScript;
 
   @override
-  List<Object?> get props => [text, asks, catalog];
+  List<Object?> get props => [text, asks, catalog, isScript];
 
   /// Prints the length, never the text, which can hold customer data in its literals.
   @override
-  String toString() => 'EditorStatement(${text.length} characters, asks: ${asks != null})';
+  String toString() => 'EditorStatement(${text.length} characters, asks: ${asks != null}, script: $isScript)';
 }
+
+/// The keyword that keeps a transaction's changes on [meta]'s engine, for the rolled-back notice: `EXEC` for Redis,
+/// whose open transaction is a `MULTI`, and `COMMIT` for every other engine, as Studio's web names it
+/// (`src/lib/db/providers/keyvalue/redis-execution-ui.ts`, `src/lib/db/execution-ui/shared.ts`).
+String _commitKeywordOf(ProviderMeta meta) => meta.queryDialect == 'redis' ? 'EXEC' : 'COMMIT';
 
 sealed class EditorRunState extends Equatable {
   const EditorRunState();
@@ -134,16 +141,94 @@ final class EditorSucceeded extends EditorRunState {
   /// Whether the engine applies an offset, so Load more may be offered.
   bool get supportsResultPagination => meta.supportsResultPagination;
 
-  /// The keyword that keeps a transaction's changes on this engine, for the rolled-back notice: `EXEC` for Redis,
-  /// whose open transaction is a `MULTI`, and `COMMIT` for every other engine, as Studio's web names it
-  /// (`src/lib/db/providers/keyvalue/redis-execution-ui.ts`, `src/lib/db/execution-ui/shared.ts`).
-  String get commitKeyword => meta.queryDialect == 'redis' ? 'EXEC' : 'COMMIT';
+  /// The keyword that keeps a transaction's changes on this engine, for the rolled-back notice.
+  String get commitKeyword => _commitKeywordOf(meta);
 
   @override
   List<Object?> get props => [masked, policy, statement, meta, run];
 
   @override
   String toString() => 'EditorSucceeded(run: $run, $statement)';
+}
+
+/// One statement of a script answer, with its rows masked: [index] from 0, the start of its [sql] for the card, its
+/// time, and either its [rowCount] and [masked] rows, or the database's own [error] words, shown on screen only and
+/// never logged. A successful statement whose answer carried no columns has a row count and no rows.
+class EditorScriptStatement extends Equatable {
+  const EditorScriptStatement({
+    required this.index,
+    required this.sql,
+    required this.executionTime,
+    this.rowCount,
+    this.masked,
+    this.error,
+  });
+
+  final int index;
+  final String sql;
+  final Duration executionTime;
+  final int? rowCount;
+  final MaskedResult? masked;
+  final String? error;
+
+  bool get failed => error != null;
+
+  @override
+  List<Object?> get props => [index, sql, executionTime, rowCount, masked, error];
+
+  /// Prints neither the text nor the error, which can hold customer data.
+  @override
+  String toString() => 'EditorScriptStatement($index, failed: $failed, rows: $rowCount)';
+}
+
+/// The answer of the script [statement]: a card per statement Studio ran, in order and stopping at the first failure,
+/// each masked with [policy]; [statementCount] is how many Studio found, so `notRun` were never started. Studio
+/// answers no paging for a script, so no statement offers Load more. [run] tells it from the next answer.
+final class EditorScriptAnswered extends EditorRunState {
+  const EditorScriptAnswered({
+    required this.statements,
+    required this.statementCount,
+    required this.executedCount,
+    required this.openTransactionRolledBack,
+    required this.policy,
+    required this.statement,
+    required this.meta,
+    required this.run,
+  });
+
+  final List<EditorScriptStatement> statements;
+  final int statementCount;
+  final int executedCount;
+
+  /// The script left a transaction open, and Studio rolled it back.
+  final bool openTransactionRolledBack;
+  final MaskingPolicy policy;
+  final EditorStatement statement;
+  final ProviderMeta meta;
+  final int run;
+
+  bool get hasError => statements.any((statement) => statement.failed);
+
+  /// The statements Studio found but did not run, after a failure.
+  int get notRun => statementCount > executedCount ? statementCount - executedCount : 0;
+
+  /// The keyword that keeps a transaction's changes on this engine, for the rolled-back notice.
+  String get commitKeyword => _commitKeywordOf(meta);
+
+  @override
+  List<Object?> get props => [
+    statements,
+    statementCount,
+    executedCount,
+    openTransactionRolledBack,
+    policy,
+    statement,
+    meta,
+    run,
+  ];
+
+  @override
+  String toString() => 'EditorScriptAnswered(run: $run, $executedCount of $statementCount, $statement)';
 }
 
 /// The database refused the statement (`studio.query_error`): [error] carries its own words, shown on screen only and

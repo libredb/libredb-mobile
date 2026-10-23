@@ -59,12 +59,14 @@ class SqlEditorRepository implements ISqlEditorRepository {
     String? queryId,
     String? catalog,
     QueryPage? page,
+    CancelSignal? cancelSignal,
   }) => _post(
     'runScript',
     '/db/multi-query',
     {'connectionId': connectionId, 'sql': sql, 'options': ?page?.toJson(), 'queryId': ?queryId, 'catalog': ?catalog},
     SqlEditorJson.scriptResult,
     receiveTimeout: _noReceiveTimeout,
+    cancelSignal: cancelSignal,
   );
 
   @override
@@ -151,9 +153,10 @@ class SqlEditorRepository implements ISqlEditorRepository {
     Map<String, Object?> body,
     T Function(String body) read, {
     required Duration? receiveTimeout,
+    CancelSignal? cancelSignal,
   }) async {
     try {
-      final response = await _apiClient.post(path, body, receiveTimeout: receiveTimeout);
+      final response = await _apiClient.post(path, body, receiveTimeout: receiveTimeout, cancelSignal: cancelSignal);
       return Success(read(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       return _failure(operation, e);

@@ -2341,22 +2341,12 @@ class S {
     );
   }
 
-  /// `This text holds more than one statement. Run one statement at a time.`
-  String get error_editor_several_statements {
-    return Intl.message(
-      'This text holds more than one statement. Run one statement at a time.',
-      name: 'error_editor_several_statements',
-      desc: 'The editor refused a text of several statements before sending it.',
-      args: [],
-    );
-  }
-
-  /// `Type one statement`
+  /// `Type one or more statements`
   String get sql_editor_hint {
     return Intl.message(
-      'Type one statement',
+      'Type one or more statements',
       name: 'sql_editor_hint',
-      desc: 'The hint of the empty SQL editor.',
+      desc: 'The hint of the empty SQL editor, which runs one statement or a script.',
       args: [],
     );
   }
@@ -2701,6 +2691,108 @@ class S {
       name: 'sql_history_replace',
       desc: 'Confirms that a history entry replaces the text in the editor.',
       args: [],
+    );
+  }
+
+  /// `Run selection`
+  String get sql_editor_run_selection {
+    return Intl.message(
+      'Run selection',
+      name: 'sql_editor_run_selection',
+      desc: 'Runs only the text selected in the SQL editor, shown on Run while a non-blank selection exists.',
+      args: [],
+    );
+  }
+
+  /// `Running for {time}`
+  String sql_editor_script_elapsed(String time) {
+    return Intl.message(
+      'Running for $time',
+      name: 'sql_editor_script_elapsed',
+      desc: 'The time a script has run so far, in minutes and seconds.',
+      args: [time],
+    );
+  }
+
+  /// `Statement {number}`
+  String sql_editor_script_statement(int number) {
+    return Intl.message(
+      'Statement $number',
+      name: 'sql_editor_script_statement',
+      desc: 'The title of a script statement\'s card, numbered from 1.',
+      args: [number],
+    );
+  }
+
+  /// `Succeeded`
+  String get sql_editor_script_succeeded {
+    return Intl.message(
+      'Succeeded',
+      name: 'sql_editor_script_succeeded',
+      desc: 'A script statement that ran without an error.',
+      args: [],
+    );
+  }
+
+  /// `Failed`
+  String get sql_editor_script_failed {
+    return Intl.message(
+      'Failed',
+      name: 'sql_editor_script_failed',
+      desc: 'A script statement the database refused.',
+      args: [],
+    );
+  }
+
+  /// `{time} ms`
+  String sql_editor_script_failed_time(String time) {
+    return Intl.message(
+      '$time ms',
+      name: 'sql_editor_script_failed_time',
+      desc: 'The time a failed script statement took, in milliseconds.',
+      args: [time],
+    );
+  }
+
+  /// `{count, plural, =1{1 statement not run} other{{count} statements not run}}`
+  String sql_editor_script_not_run(int count) {
+    return Intl.plural(
+      count,
+      one: '1 statement not run',
+      other: '$count statements not run',
+      name: 'sql_editor_script_not_run',
+      desc: 'The statements of a script Studio did not run after a failure.',
+      args: [count],
+    );
+  }
+
+  /// `Show rows`
+  String get sql_editor_script_show_rows {
+    return Intl.message(
+      'Show rows',
+      name: 'sql_editor_script_show_rows',
+      desc: 'The accessible action of a script statement\'s card, which shows its rows.',
+      args: [],
+    );
+  }
+
+  /// `The script left a transaction open, and Studio rolled it back, so its changes were discarded.`
+  String get sql_editor_script_rolled_back {
+    return Intl.message(
+      'The script left a transaction open, and Studio rolled it back, so its changes were discarded.',
+      name: 'sql_editor_script_rolled_back',
+      desc: 'Studio rolled back a transaction a failed script left open; nothing complete is left to keep.',
+      args: [],
+    );
+  }
+
+  /// `The script left a transaction open, and Studio rolled it back, so its changes were discarded. Add {keyword} to keep them.`
+  String sql_editor_script_rolled_back_keep(String keyword) {
+    return Intl.message(
+      'The script left a transaction open, and Studio rolled it back, so its changes were discarded. Add $keyword to keep them.',
+      name: 'sql_editor_script_rolled_back_keep',
+      desc: 'Studio rolled back a transaction a script left open after every statement succeeded, with the engine\'s commit keyword.',
+      args: [keyword],
     );
   }
 }
