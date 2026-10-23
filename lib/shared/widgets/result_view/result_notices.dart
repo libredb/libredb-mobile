@@ -23,7 +23,8 @@ String describeWarning(S s, QueryWarning warning) {
   return severity == null || severity.isEmpty ? message : s.result_warning_line(severity, message);
 }
 
-/// The engine's warnings, one per line, each as [describeWarning] writes it, with the code under it.
+/// The engine's warnings, one per line, each as [describeWarning] writes it, with the code under a warning that has a
+/// message.
 class ResultWarningList extends StatelessWidget {
   const ResultWarningList({super.key, required this.warnings});
 
@@ -48,7 +49,9 @@ class ResultWarningList extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(describeWarning(s, warning), style: style),
-              if (warning.code case final code?) Text(s.result_warning_code(code), style: codeStyle),
+              // A blank warning's line already ends with its code.
+              if (warning.code case final code? when warning.message.isNotEmpty)
+                Text(s.result_warning_code(code), style: codeStyle),
             ],
           ),
       ],
