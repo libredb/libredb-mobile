@@ -72,7 +72,9 @@ void main() {
       expect(_pieces(result), [('select * from orders', SourceTokenKind.plain)]);
     });
 
-    test('a text over 20,000 characters is shown plain, and one of exactly 20,000 is highlighted', () {
+    test('a text over 10,000 characters is shown plain, and one of exactly 10,000 is highlighted', () {
+      // 10,000 keeps an edit within one frame at 60 Hz on the API 33 emulator; 20,000 took about two.
+      expect(HighlightingTextController.maxHighlightedLength, 10000);
       final atLimit = 'select ${'x' * (HighlightingTextController.maxHighlightedLength - 7)}';
       final overLimit = '${atLimit}x';
       expect(atLimit.length, HighlightingTextController.maxHighlightedLength);
