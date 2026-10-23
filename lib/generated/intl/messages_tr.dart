@@ -159,6 +159,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "browse_source_truncated": m12,
     "browse_source_unavailable": MessageLookupByLibrary.simpleMessage("Bu tanım okunamadı"),
     "cancel": MessageLookupByLibrary.simpleMessage("İptal"),
+    "cell_null_semantics": MessageLookupByLibrary.simpleMessage("Boş değer"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Katkıda Bulun"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),
     "community_issue": MessageLookupByLibrary.simpleMessage("Sorun Bildir"),

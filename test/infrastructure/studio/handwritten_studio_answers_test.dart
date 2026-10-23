@@ -6,6 +6,7 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
+import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,6 +88,21 @@ void main() {
       expect(detail.columns.any((c) => c.sampled), isFalse, reason: 'Studio 02dc26057 marks no MongoDB column sampled');
       expect(detail.indexes?.map((i) => (i.name, i.unique)), [('_id_', false), ('email_1', true)]);
       expect(detail.foreignKeys, isEmpty);
+    });
+
+    test('a find answer keys each document by its own fields, the columns their union', () {
+      final result = QueryResultJson.read(answer('mongodb/query_find'));
+
+      expect(result.fields, ['_id', 'name', 'address', 'tags', 'created', 'payload', 'visits']);
+      expect(result.rowCount, 2);
+      expect(result.rows.map((row) => row.keys.length), [5, 5]);
+      expect(result.rows.first['address'], isA<Map<String, dynamic>>());
+      expect(result.rows.last['payload'], {
+        'type': 'Buffer',
+        'data': [1, 'two'],
+      });
+      expect(result.columnTypes, isEmpty);
+      expect(result.pagination?.hasMore, isFalse);
     });
   });
 
