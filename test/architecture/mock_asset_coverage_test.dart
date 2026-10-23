@@ -110,6 +110,30 @@ void main() {
     expect(paths.where((path) => path.startsWith('/api/')), isEmpty);
   });
 
+  // MockInterceptor answers each action of POST /db/transaction from its own file, as Studio answers each in its own
+  // shape, so a method that sent another action would read another answer and still succeed above.
+  test('each /db/transaction method reads the recorded answer of its action', () async {
+    const files = {
+      'ISqlEditorRepository.beginTransaction': 'POST_db_transaction_begin.json',
+      'ISqlEditorRepository.runInTransaction': 'POST_db_transaction_query.json',
+      'ISqlEditorRepository.commit': 'POST_db_transaction_commit.json',
+      'ISqlEditorRepository.rollback': 'POST_db_transaction_rollback.json',
+      'ISqlEditorRepository.transactionStatus': 'POST_db_transaction_status.json',
+    };
+    for (final MapEntry(key: name, value: file) in files.entries) {
+      final actions = <Object?>[];
+      TestEnv.authenticate();
+      final client = TestEnv.apiClient();
+      client.instance.interceptors.insert(0, _ActionRecordingInterceptor(actions));
+
+      expect(await requests[name]!(client), isA<Success<Object?>>(), reason: name);
+
+      expect(actions, hasLength(1), reason: name);
+      expect('POST_db_transaction_${actions.single}.json', file, reason: name);
+      expect(File('assets/mock/$file').existsSync(), isTrue, reason: file);
+    }
+  });
+
   test('every method of a repository that sends requests through ApiClient is driven above', () {
     final driven = requests.keys.map((name) => name.split(' ').first).toSet();
     final methods = _apiClientRepositoryMethods();
@@ -167,6 +191,21 @@ class _PathRecordingInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     _paths.add(options.extra['_basePath'] as String? ?? options.path);
+    handler.next(options);
+  }
+}
+
+/// Records the body's `action` of every `/db/transaction` request it sees.
+class _ActionRecordingInterceptor extends Interceptor {
+  _ActionRecordingInterceptor(this._actions);
+
+  final List<Object?> _actions;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if ((options.extra['_basePath'] as String? ?? options.path) == '/db/transaction') {
+      _actions.add((options.data as Map)['action']);
+    }
     handler.next(options);
   }
 }
