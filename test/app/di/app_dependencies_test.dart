@@ -18,6 +18,7 @@ import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_env.dart';
@@ -284,6 +285,10 @@ void main() {
       dependencies.createSqlEditorRepository(TestEnv.apiClient(), statements, queryTimeouts),
       isA<ISqlEditorRepository>(),
     );
+  });
+
+  test('app dependencies expose the encrypted statement text store, keyed through the secure storage', () {
+    expect(dependencies.createStatementTextStore(dependencies.createSecureStorage()), isA<IStatementTextStore>());
   });
 
   test('every feature reads provider-meta and the object routes through the in-memory caches', () {

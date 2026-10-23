@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
+import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 
 /// Keeps the active connection of each signed-in user in the device preferences, under
 /// [StorageKeys.activeConnection], as a JSON object from the SHA-256 of the subject to the connection id, so the
@@ -57,5 +57,5 @@ class ActiveConnectionPreferences implements IActiveConnectionStore {
     return decoded.cast<String, String>();
   }
 
-  static String _hash(String subject) => sha256.convert(utf8.encode(subject)).toString();
+  static String _hash(String subject) => subjectHash(subject);
 }

@@ -60,6 +60,22 @@ void main() {
     }
   });
 
+  group('SQL editor error codes', () {
+    const sentences = {
+      AppErrorCode.editorSavedTextUnreadable:
+          'The statement text saved on this phone cannot be read. It may have come from a backup of another device, '
+          'or the file was changed. Discard it to keep new text again.',
+      AppErrorCode.editorSavedTextNotStored:
+          'This phone could not save the statement text. Check its free storage and try again.',
+    };
+
+    for (final MapEntry(key: code, value: sentence) in sentences.entries) {
+      testWidgets('${code.name} resolves to its English sentence', (tester) async {
+        expect(await resolved(tester, code), sentence);
+      });
+    }
+  });
+
   group('single sign-on error codes', () {
     const sentences = {
       AppErrorCode.authOidcConfig:

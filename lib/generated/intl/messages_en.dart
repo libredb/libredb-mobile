@@ -253,6 +253,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "delete_confirmation": MessageLookupByLibrary.simpleMessage("Are you sure you want to delete?"),
     "documentation": MessageLookupByLibrary.simpleMessage("Documentation"),
     "edit": MessageLookupByLibrary.simpleMessage("Edit"),
+    "editor_saved_text_discard": MessageLookupByLibrary.simpleMessage("Discard"),
+    "editor_saved_text_discard_message": MessageLookupByLibrary.simpleMessage(
+      "The saved text that cannot be read is deleted from this phone. This cannot be undone.",
+    ),
+    "editor_saved_text_discard_title": MessageLookupByLibrary.simpleMessage("Discard the saved text?"),
     "english": MessageLookupByLibrary.simpleMessage("English"),
     "error_auth_invalid_access_token": MessageLookupByLibrary.simpleMessage("Invalid access token"),
     "error_auth_oidc_config": MessageLookupByLibrary.simpleMessage(
@@ -266,6 +271,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "You are signed out of this app, but your session at the identity provider may still be active.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
+    "error_editor_saved_text_not_stored": MessageLookupByLibrary.simpleMessage(
+      "This phone could not save the statement text. Check its free storage and try again.",
+    ),
+    "error_editor_saved_text_unreadable": MessageLookupByLibrary.simpleMessage(
+      "The statement text saved on this phone cannot be read. It may have come from a backup of another device, or the file was changed. Discard it to keep new text again.",
+    ),
     "error_generic": MessageLookupByLibrary.simpleMessage("Something went wrong"),
     "error_link_open_failed": m18,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(

@@ -735,5 +735,15 @@
   "keys_value_no_read": "Uygulamanın bu tür için bir okuması yok.",
   "@keys_value_no_read": {"description": "On a key's value page, under a type that none of the app's key reads covers."},
   "keys_value_unavailable": "Bu motor için anahtar değeri okunamıyor.",
-  "@keys_value_unavailable": {"description": "On a key's value page opened for an engine that is not read with Redis commands."}
+  "@keys_value_unavailable": {"description": "On a key's value page opened for an engine that is not read with Redis commands."},
+  "error_editor_saved_text_unreadable": "Bu telefonda kayıtlı sorgu metni okunamıyor. Başka bir cihazın yedeğinden gelmiş ya da dosya değiştirilmiş olabilir. Yeni metnin yeniden kaydedilmesi için onu silin.",
+  "@error_editor_saved_text_unreadable": {"description": "A saved draft or statement history cannot be read; the screen offers Discard next to it."},
+  "error_editor_saved_text_not_stored": "Bu telefon sorgu metnini kaydedemedi. Boş depolama alanını kontrol edip tekrar deneyin.",
+  "@error_editor_saved_text_not_stored": {"description": "The device refused to store or remove saved statement text."},
+  "editor_saved_text_discard": "Sil",
+  "@editor_saved_text_discard": {"description": "Deletes saved statement text that cannot be read, after a confirmation."},
+  "editor_saved_text_discard_title": "Kayıtlı metin silinsin mi?",
+  "@editor_saved_text_discard_title": {"description": "Title of the confirmation before saved statement text that cannot be read is deleted."},
+  "editor_saved_text_discard_message": "Okunamayan kayıtlı metin bu telefondan silinir. Bu işlem geri alınamaz.",
+  "@editor_saved_text_discard_message": {"description": "Body of the confirmation before saved statement text that cannot be read is deleted."}
 }

@@ -10,12 +10,18 @@
      "Failed to unwrap key" and the plugin deletes it. The whole directory is excluded because the plugin's
      file names differ between versions and with AndroidOptions.storageNamespace. This also leaves out the
      language and theme settings, and the cached username and roles, which are only valid together with
-     the session. -->
+     the session.
+
+     statement_text/ in the file domain holds the statement text that the app keeps for each account, encrypted
+     with AES-GCM under a key in flutter_secure_storage. The key never leaves the device, so a copy could not be
+     read, and the files stay out of a backup and a transfer anyway. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="."/>
+        <exclude domain="file" path="statement_text/"/>
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="."/>
+        <exclude domain="file" path="statement_text/"/>
     </device-transfer>
 </data-extraction-rules>

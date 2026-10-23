@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -8,6 +8,35 @@ What the app sends to Studio and what it never holds is in [architecture.md](arc
 The provider's tokens live in `flutter_secure_storage` (`lib/infrastructure/storage/secure_storage.dart`).
 On Android it encrypts them with AES-GCM under an RSA-OAEP wrapped Android Keystore key.
 On iOS the Keychain accessibility is pinned to `first_unlock_this_device`, so a background refresh can read the tokens while the device is locked, and they never move to another device through a backup or iCloud Keychain.
+
+## Statement text on the device
+
+A statement can carry customer data and credentials in its literals, such as an e-mail in a `WHERE` or `ALTER ROLE app PASSWORD '...'`.
+The editor's drafts (one per connection, with its catalog) and the statement history are the only statement text the app keeps after it closes, and they are kept encrypted, per signed-in account, through `IStatementTextStore` (`lib/features/sql_editor/domain/repositories/statement_text_store.dart`) over `EncryptedTextFileStore` (`lib/infrastructure/storage/encrypted_text_file_store.dart`).
+
+- Place: `<application support>/statement_text/<subjectHash>/`, where `subjectHash` is the SHA-256 hex of Studio's subject (`lib/shared/utils/subject_hash.dart`), so the subject itself is never stored.
+  Each connection's draft is a file named by the SHA-256 hex of the connection id, and the history is one `history` file, newest first.
+- Cipher: AES-256-GCM through the pure Dart `DartAesGcm` of `cryptography` 2.9.0, run in `Isolate.run`.
+  A file is a version byte (1), a random 12-byte nonce, the ciphertext and the 16-byte tag.
+  The additional data is `libredb.statement_text.v1`, the subject hash and the file name, so a file copied under another account or name fails authentication instead of showing someone else's text.
+  This is plain AES-GCM, which pointycastle also reads, so the package can be replaced without a migration.
+- Key: 32 bytes from `Random.secure()` per account, in base64 in `flutter_secure_storage`, written before the account's first file, under a name derived from the subject hash that does not contain it.
+  A sign-out keeps the key and the files, so the same account reads its text after the next sign-in, and another account never reads it.
+  Neither the text nor the key is kept in memory between calls.
+- Writes go to `<name>.tmp`, flushed, and are then renamed over the file, so an interrupted write leaves the old file; a stale `.tmp` is never read.
+  One queue runs every call, so a draft save and a history append never interleave.
+- Bounds, counted as `String.length`: a draft keeps at most 100,000 characters, and a longer one removes the connection's saved draft, so an older and shorter one is never restored, and the editor says it was not kept.
+  The history keeps at most 500 entries (Studio's `MAX_HISTORY_ITEMS`) and 1,000,000 characters of statement text, dropping the oldest entries first; an entry over 100,000 characters is kept without its text and marked.
+  It never keeps the database's error text.
+- Unreadable: a missing key while files are left, a failed authentication, an unknown version or content that does not decode answers `editor.saved_text_unreadable`, which the screen shows with Discard behind a confirmation.
+  It is never treated as empty and never deleted on its own; until the user discards it no write replaces that file, and with the key gone no new key is made over the account's files.
+  A key is lost when an iOS backup is restored on another device (the files come back, the `first_unlock_this_device` Keychain item does not) or when the Android plugin deletes a key it cannot decrypt.
+- A write the device refuses answers `editor.saved_text_not_stored`, which the screen shows.
+- Backups: Android excludes `statement_text/` in the `file` domain from cloud backup and device transfer (`data_extraction_rules.xml`, `backup_rules.xml`).
+  iOS keeps the default, so a backup may hold the files but never the key; excluding the directory needs Swift that no build here checks, and moves to M6 with the iOS build.
+- Clears: `clearSubject` deletes the account's key first and its files after it, so an interrupted clear leaves only ciphertext no key opens, and it reports a failure; `clearAll` does that for every account directory.
+  Both are for 'Remove my data' in M6; a plain sign-out keeps the text.
+- Logs and errors carry no text, key, subject, subject hash or path; a decode failure is reported without the decrypted bytes.
 
 ## Certificate pinning
 
