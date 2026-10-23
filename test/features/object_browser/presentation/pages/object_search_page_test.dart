@@ -114,6 +114,16 @@ void main() {
     expect(find.widgetWithText(TextField, 'Search by name'), findsOneWidget);
   });
 
+  testWidgets('uses the app\'s own hint on an engine with a key browser, whose search finds names, not keys', (
+    tester,
+  ) async {
+    harness.answerMeta('seed:dev-redis', metaAnswer('meta_redis'));
+    await harness.pump(tester, location: '/browse/seed%3Adev-redis/search');
+
+    expect(find.widgetWithText(TextField, 'Search by name'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Search keys...'), findsNothing);
+  });
+
   testWidgets('ord finds orders and order_items, grouped by schema, each row with its kind\'s label', (tester) async {
     tallScreen(tester);
     answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
