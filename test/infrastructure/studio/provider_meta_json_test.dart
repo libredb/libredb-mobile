@@ -278,6 +278,14 @@ void main() {
       expect(_kind({}).acceptsRowWrites, isFalse);
     });
 
+    // The local build answers from this mock; Studio's Postgres provider declares the flag on its table kind, as the
+    // recorded test/fixtures/studio/meta_postgres.json does.
+    test('the local provider-meta mock declares acceptsRowWrites on its table kind, as Studio\'s Postgres does', () {
+      final meta = ProviderMetaJson.read(File('assets/mock/POST_db_provider_meta.json').readAsStringSync());
+
+      expect(meta.objectKinds.where((k) => k.acceptsRowWrites).map((k) => k.id), ['table']);
+    });
+
     test('countIsListing is false unless Studio says true', () {
       expect(_kind({'countIsListing': true}).countIsListing, isTrue);
       expect(_kind({}).countIsListing, isFalse);

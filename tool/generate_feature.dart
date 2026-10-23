@@ -17,7 +17,7 @@
 //   assets/mock/              the mock JSON that MockInterceptor serves for the generated repository's requests
 //
 // The generated Dart files are formatted with dart format. After generation, follow the printed steps to register
-// the repository, the routes, the menu entry and the translations, and to add the repository methods to
+// the repository, the routes and the translations, and to add the repository methods to
 // test/architecture/mock_asset_coverage_test.dart.
 //
 // test/architecture/feature_generator_test.dart runs this generator and checks that its output is formatted,
@@ -109,17 +109,14 @@ void _printNextSteps(_FeatureNames f) {
   print("   static const ${f.camel}Edit = '/${f.kebab}/:id/edit';");
   print("   static const ${f.camel}View = '/${f.kebab}/:id/view';");
   print('');
-  print('5. Add a sidebar menu entry with url /${f.kebab} to assets/mock/menus.json, and a case for its name to');
-  print('   translate_menu_title in lib/l10n/intl_en.arb and intl_tr.arb; otherwise the sidebar shows "Other".');
-  print('');
-  print('6. Move the literal strings in lib/features/${f.snake}/presentation/pages to lib/l10n/intl_en.arb and');
+  print('5. Move the literal strings in lib/features/${f.snake}/presentation/pages to lib/l10n/intl_en.arb and');
   print('   lib/l10n/intl_tr.arb, then run:');
   print('   scripts/generate_l10n.sh');
   print('');
-  print('7. Add the repository methods to the table in test/architecture/mock_asset_coverage_test.dart:');
+  print('6. Add the repository methods to the table in test/architecture/mock_asset_coverage_test.dart:');
   print('   I${f.singularPascal}Repository.retrieve, create, update, list and delete.');
   print('');
-  print('8. Check the feature:');
+  print('7. Check the feature:');
   print('   fvm flutter analyze');
   print('   fvm flutter test test/features/${f.snake}');
   print('');

@@ -8,7 +8,7 @@
     "catalogSessions": false,
     "containerLevels": [{ "id": "schema", "label": "Schema", "labelPlural": "Schemas" }],
     "objectKinds": [
-      { "id": "table", "role": "relation", "label": "Table", "labelPlural": "Tables", "hasColumns": true },
+      { "id": "table", "role": "relation", "label": "Table", "labelPlural": "Tables", "acceptsRowWrites": true, "hasColumns": true },
       { "id": "view", "role": "relation", "label": "View", "labelPlural": "Views", "hasColumns": true, "hasSource": true, "sourceLanguage": "sql" },
       { "id": "function", "role": "routine", "label": "Function", "labelPlural": "Functions", "hasSource": true, "sourceLanguage": "sql" },
       { "id": "trigger", "role": "attached", "label": "Trigger", "labelPlural": "Triggers", "hasSource": true, "attachedTo": "table" }
