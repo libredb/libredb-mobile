@@ -300,6 +300,7 @@ void main() {
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
         catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer(
       (_) async => const Success(QueryResult(fields: ['id'], rows: [], rowCount: 0, executionTime: Duration.zero)),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -8,6 +9,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_rows_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -56,6 +58,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) async => answer());
 
@@ -84,6 +87,7 @@ void main() {
             queryId: captureAny(named: 'queryId'),
             page: const QueryPage(limit: 50),
             catalog: null,
+            cancelSignal: any(named: 'cancelSignal'),
           ),
         )..called(1);
         expect(call.captured.single, startsWith('run-'));
@@ -103,6 +107,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: const QueryPage(limit: 50),
           catalog: 'app',
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1),
     );
@@ -167,6 +172,7 @@ void main() {
             queryId: captureAny(named: 'queryId'),
             page: any(named: 'page'),
             catalog: any(named: 'catalog'),
+            cancelSignal: any(named: 'cancelSignal'),
           ),
         ).captured;
         expect(ids, hasLength(2));
@@ -184,7 +190,14 @@ void main() {
       build: () => build(connectionId: 'seed:dev-redis', path: const ['0', 'user:*'], kind: 'keyspace'),
       act: (bloc) => bloc.add(const ObjectRowsRequested(role: null)),
       expect: () => [isA<ObjectRowsUnavailable>()],
-      verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+      verify: (_) => verifyNever(
+        () => statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ),
     );
 
     blocTest<ObjectRowsBloc, ObjectRowsState>(
@@ -192,7 +205,14 @@ void main() {
       build: () => build(kind: 'nonesuch'),
       act: (bloc) => bloc.add(const ObjectRowsRequested(role: null)),
       expect: () => [isA<ObjectRowsFailure>().having((s) => s.error, 'error', isA<ValidationError>())],
-      verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+      verify: (_) => verifyNever(
+        () => statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ),
     );
 
     blocTest<ObjectRowsBloc, ObjectRowsState>(
@@ -202,7 +222,14 @@ void main() {
       build: build,
       act: (bloc) => bloc.add(const ObjectRowsRequested(role: null)),
       expect: () => [const ObjectRowsFailure(error: ServerError('down'))],
-      verify: (_) => verifyNever(() => statements.run(any(), any(), page: any(named: 'page'))),
+      verify: (_) => verifyNever(
+        () => statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ),
     );
   });
 
@@ -231,6 +258,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1),
     );
@@ -302,6 +330,7 @@ void main() {
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
         catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).thenAnswer((_) => Future.delayed(const Duration(milliseconds: 20), () => Success(customerRows))),
     build: build,
@@ -319,9 +348,54 @@ void main() {
         queryId: any(named: 'queryId'),
         page: any(named: 'page'),
         catalog: any(named: 'catalog'),
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).called(1),
   );
+
+  // Leaving the page closes its bloc: the request it waits for is dropped, which Studio's abort bridge turns into a
+  // cancel of the run, and no /db/cancel is posted, so no request slot is spent (#116).
+  group('closing', () {
+    late List<CancelSignal?> signals;
+
+    setUp(() {
+      signals = [];
+      when(
+        () => statements.run(
+          any(),
+          any(),
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((invocation) {
+        signals.add(invocation.namedArguments[#cancelSignal] as CancelSignal?);
+        return Completer<Result<QueryResult>>().future;
+      });
+    });
+
+    test('drops the preview in flight', () async {
+      final bloc = build()..add(const ObjectRowsRequested(role: StudioUserRole()));
+      await pumpEventQueue();
+      expect(signals.single!.isCancelled, isFalse);
+
+      await bloc.close();
+
+      expect(signals.single!.isCancelled, isTrue);
+      verifyNever(() => statements.cancel(any(), any()));
+    });
+
+    test('drops a later page in flight', () async {
+      final bloc = build();
+      unawaited(bloc.loadPage(const PreviewStatement(statement: preview), const QueryPage(limit: 50, offset: 50)));
+      await pumpEventQueue();
+
+      await bloc.close();
+
+      expect(signals.single!.isCancelled, isTrue);
+    });
+  });
 
   group('a later page', () {
     test(
@@ -344,6 +418,7 @@ void main() {
             queryId: captureAny(named: 'queryId'),
             page: const QueryPage(limit: 50, offset: 50),
             catalog: 'app',
+            cancelSignal: any(named: 'cancelSignal'),
           ),
         )..called(1);
         expect(call.captured.single, startsWith('run-'));

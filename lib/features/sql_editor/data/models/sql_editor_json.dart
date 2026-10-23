@@ -16,12 +16,6 @@ final class SqlEditorJson {
   /// `POST /api/db/multi-query`, which answers 200 even when a statement failed.
   static ScriptResult scriptResult(String body) => _scriptResult(_object(body));
 
-  /// `POST /api/db/cancel`: `{cancelled}`.
-  static bool cancelled(String body) {
-    final cancelled = _object(body)['cancelled'];
-    return cancelled is bool ? cancelled : throw const FormatException('The cancel answer has no cancelled flag');
-  }
-
   /// `begin` of `POST /api/db/transaction`: `{status, message, stateReported: bool | null}`.
   static bool? transactionBegun(String body) {
     final stateReported = _object(body)['stateReported'];

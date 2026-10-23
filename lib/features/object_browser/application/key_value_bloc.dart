@@ -6,6 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/redis_key_read_generator.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_id.dart';
@@ -27,6 +28,9 @@ part 'key_value_state.dart';
 /// bloc never holds a clear row. A read runs only when the page asks, on open, a pull, a retry or 'Read value', never
 /// again by itself, and a request while one runs is dropped. Neither the key's value, the command nor a database error
 /// text is logged.
+///
+/// Closing the bloc, which leaving the page does, drops the read still in flight; Studio then cancels it where the
+/// engine supports it, and no `/db/cancel` spends a request slot.
 class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
   KeyValueBloc({
     required this._statements,
@@ -67,6 +71,9 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
 
   /// The value answers so far, which tells one result on screen from the next.
   int _runs = 0;
+
+  /// Drops the read in flight; null while none is.
+  CancelSignal? _inFlight;
 
   /// The numbered database the key was walked in: the container's first segment when it is all digits, else null.
   /// Throws a [FormatException] for digits too many for an int, which name no database the app can send.
@@ -122,7 +129,15 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
       return;
     }
     final read = _generator.read(keyName, _type);
-    final result = await _statements.run(connectionId, read.statement, queryId: _newRunId(), database: database);
+    final signal = _inFlight = CancelSignal();
+    final result = await _statements.run(
+      connectionId,
+      read.statement,
+      queryId: _newRunId(),
+      database: database,
+      cancelSignal: signal,
+    );
+    if (identical(_inFlight, signal)) _inFlight = null;
     if (emit.isDone) return;
     switch (result) {
       case Failure(:final error):
@@ -143,6 +158,12 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
           ),
         );
     }
+  }
+
+  @override
+  Future<void> close() {
+    _inFlight?.cancel();
+    return super.close();
   }
 
   static bool _vanished(QueryResult result) =>

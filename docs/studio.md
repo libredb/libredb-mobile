@@ -408,6 +408,18 @@ record query_update_postgres /db/query '{"connectionId":"seed:dev-postgres","sql
 `queryerror_postgres.json` carries `details.position` as the string `"1"`, as node-postgres reports it, and `query_begin_postgres.json` answers `openTransaction: "rolled-back"`.
 Studio at `c9989a6b5` refuses `readOnly: true` on a Postgres seed (`READ_ONLY_ENFORCED.postgres` is false in `src/lib/db/compatibility.ts`, and the seed file then fails to load), so `seed:dev-postgres-readonly` is not marked read only; a confirmed `DELETE FROM orders WHERE false` there answers 403 `PERMISSION_DENIED` from the role's grants.
 
+The cancel answers of #116 were recorded against a running `SELECT pg_sleep(30)`, with the cancel posted two seconds after the run while its request was still open; the run's request writes its 499 when the cancel lands:
+
+```shell
+record query_cancelled_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"SELECT pg_sleep(30)","options":{"offset":0},"queryId":"7d1c2a52-0000-4000-8000-00000000000b"}' &
+sleep 2
+record cancel_postgres /db/cancel '{"connectionId":"seed:dev-postgres","queryId":"7d1c2a52-0000-4000-8000-00000000000b"}'
+wait
+```
+
+`cancel_postgres.json` answers `{"cancelled":true}` and `query_cancelled_postgres.json` the 499 `QUERY_CANCELLED`.
+A cancel posted after the run's request was dropped answers `{"cancelled":false}`, because Studio's abort bridge had already stopped the run.
+
 The three `query_page_postgres_*.json` pages were recorded from a fresh volume.
 The first answers `hasMore: true`; the second answers `hasMore: false`, since Studio asks for one row past the page and that row is missing; the third, past the last row, has no rows and pins the append of an empty page.
 

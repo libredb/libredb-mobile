@@ -24,6 +24,7 @@ import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -782,6 +783,61 @@ void main() {
       expect(sent.method, 'POST');
       expect(sent.contentType, 'application/json');
       expect(sent.headers.keys.map((key) => key.toLowerCase()), isNot(contains('origin')));
+    });
+  });
+
+  // The SQL editor's Cancel and a page the user left drop the request they sent (#116).
+  group('ApiClient.post with a cancel signal', () {
+    late _HeldRequestAdapter adapter;
+    late ApiClient client;
+
+    setUp(() {
+      ResilienceInterceptor.instance.resetAll();
+      adapter = _HeldRequestAdapter();
+      client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
+        appConfig: const AppConfig(
+          environment: Environment.prod,
+          apiBaseUrl: 'https://studio.example.test/api',
+          certificatePins: [],
+          idleTimeout: null,
+        ),
+      );
+      client.instance.httpClientAdapter = adapter;
+    });
+
+    tearDown(ResilienceInterceptor.instance.resetAll);
+
+    test('a request dropped while it waits fails with RequestCancelledException, sent once', () async {
+      final signal = CancelSignal();
+
+      final sent = client.post('/db/query', {'sql': 'select pg_sleep(30)'}, cancelSignal: signal);
+      await adapter.received.future;
+      signal.cancel();
+
+      await expectLater(sent, throwsA(isA<RequestCancelledException>()));
+      expect(adapter.requests, 1);
+      expect(adapter.droppedByClient, isTrue);
+    });
+
+    test('a signal cancelled before the request is sent sends nothing', () async {
+      final signal = CancelSignal()..cancel();
+
+      await expectLater(
+        client.post('/db/query', {'sql': 'select 1'}, cancelSignal: signal),
+        throwsA(isA<RequestCancelledException>()),
+      );
+      expect(adapter.requests, 0);
+    });
+
+    test('a request answered before the signal is cancelled keeps its answer', () async {
+      final signal = CancelSignal();
+      adapter.release.complete();
+
+      final response = await client.post('/db/query', {'sql': 'select 1'}, cancelSignal: signal);
+      signal.cancel();
+
+      expect(response.data, '{}');
     });
   });
 
@@ -2084,4 +2140,34 @@ class _TestRequestHandler extends Interceptor {
     requests.add(options);
     handler.resolve(Response(requestOptions: options, statusCode: 200, data: '{}'));
   }
+}
+
+/// Holds every request until [release] completes, or until the client drops it, which [droppedByClient] records.
+class _HeldRequestAdapter implements HttpClientAdapter {
+  int requests = 0;
+  bool droppedByClient = false;
+  final received = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests++;
+    if (!received.isCompleted) received.complete();
+    unawaited(cancelFuture?.then((_) => droppedByClient = true));
+    await Future.any([release.future, ?cancelFuture]);
+    return ResponseBody.fromString(
+      '{}',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

@@ -75,6 +75,7 @@ AppError _transportError(AppException error) {
   if (error is UntrustedCertificateException) {
     return NetworkError(error.toString(), code: AppErrorCode.networkCertInvalid.key);
   }
+  if (error is RequestCancelledException) return RequestCancelledError(error.toString());
   if (error is OfflineException) return NetworkError(error.toString(), code: AppErrorCode.networkOffline.key);
   final message = error.toString();
   if (message.toLowerCase().contains('timeout')) return TimeoutError(message);

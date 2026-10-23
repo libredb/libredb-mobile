@@ -275,8 +275,27 @@ void main() {
         final err = DioException(requestOptions: options, type: DioExceptionType.cancel);
 
         final result = _captureOnErrorSync(interceptor, err);
-        // cancel is non-retryable and non-client-error, so it records failure
         expect(result.passed, isTrue);
+      });
+
+      // The SQL editor's Cancel and a page the user left drop their request (#116): the endpoint did not fail, and
+      // five cancels in a row must not open the circuit of /db/query.
+      test('should pass a request the app dropped through without recording a failure', () {
+        final interceptor = ResilienceInterceptor(
+          failureThreshold: 1,
+          cooldownDuration: const Duration(hours: 1),
+          maxRetries: 3,
+        );
+        final err = DioException(
+          requestOptions: RequestOptions(path: '/db/query', method: 'POST'),
+          type: DioExceptionType.cancel,
+        );
+
+        expect(_captureOnErrorSync(interceptor, err).passed, isTrue);
+
+        final next = _TestRequestHandler();
+        interceptor.onRequest(RequestOptions(path: '/db/query', method: 'POST'), next);
+        expect(next.result.passed, isTrue, reason: 'one recorded failure would have opened the circuit');
       });
 
       test('should not retry bad certificate errors', () async {

@@ -75,6 +75,12 @@ final class RateLimitedError extends AppError {
   final Duration? retryAfter;
 }
 
+/// A request the app dropped itself: the user cancelled it or left the page that waited for it. No screen shows it as
+/// an error; it carries no code.
+final class RequestCancelledError extends AppError {
+  const RequestCancelledError(super.message);
+}
+
 /// Unknown/unexpected error.
 final class UnknownError extends AppError {
   const UnknownError(super.message, {super.code});

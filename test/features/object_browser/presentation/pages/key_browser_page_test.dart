@@ -126,6 +126,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           database: any(named: 'database'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).thenAnswer(
         (_) async =>
@@ -337,7 +338,14 @@ void main() {
       expect(harness.router.state.pathParameters['kind'], 'key');
       expect(harness.router.state.uri.queryParametersAll['path'], ['/apisix/routes/1']);
       verify(() => harness.repository.source(_etcd, path: const ['/apisix/routes/1'], kind: 'key')).called(1);
-      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+      verifyNever(
+        () => harness.statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      );
     });
   });
 
@@ -520,7 +528,14 @@ void main() {
       expect(find.byType(ObjectSourcePage), findsOneWidget);
       expect(harness.router.state.uri.queryParametersAll['path'], ['carts/c1']);
       verify(() => harness.repository.source(_firestore, path: const ['carts/c1'], kind: 'document')).called(1);
-      verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+      verifyNever(
+        () => harness.statements.run(
+          any(),
+          any(),
+          page: any(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      );
     });
 
     testWidgets('a folder page opened by a link goes back to the Browse root', (tester) async {

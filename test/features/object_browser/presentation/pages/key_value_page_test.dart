@@ -8,12 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/key_value_page.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
@@ -93,6 +95,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       database: any(named: 'database'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) async => answer());
 
@@ -103,6 +106,7 @@ void main() {
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
       database: any(named: 'database'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).callCount;
 
@@ -125,6 +129,7 @@ void main() {
           queryId: any(named: 'queryId', that: isNotEmpty),
           page: QueryPage.first,
           database: 1,
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       ).called(1);
     });
@@ -164,6 +169,33 @@ void main() {
     });
   });
 
+  // The read's request is dropped when the page goes, and no /db/cancel is posted (#116).
+  testWidgets('leaving the page during a read drops its request and posts no cancel', (tester) async {
+    final signals = <CancelSignal?>[];
+    when(
+      () => harness.statements.run(
+        any(),
+        any(),
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        database: any(named: 'database'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).thenAnswer((invocation) {
+      signals.add(invocation.namedArguments[#cancelSignal] as CancelSignal?);
+      return Completer<Result<QueryResult>>().future;
+    });
+    await harness.pump(tester, location: _location('cache:greeting', type: 'string'), settle: false);
+    expect(signals.single!.isCancelled, isFalse);
+
+    harness.router.go(ApplicationRoutesConstants.connectionList);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KeyValuePage), findsNothing);
+    expect(signals.single!.isCancelled, isTrue);
+    verifyNever(() => harness.statements.cancel(any(), any()));
+  });
+
   testWidgets('a stream field named email is masked', (tester) async {
     answerRun(
       'XRANGE events - + COUNT 100',
@@ -198,6 +230,7 @@ void main() {
         'GET cache:greeting',
         queryId: any(named: 'queryId'),
         page: QueryPage.first,
+        cancelSignal: any(named: 'cancelSignal'),
       ),
     ).called(1);
   });
@@ -280,6 +313,7 @@ void main() {
           queryId: any(named: 'queryId'),
           page: any(named: 'page'),
           database: any(named: 'database'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       );
 
@@ -437,7 +471,14 @@ void main() {
     );
 
     expect(find.text("Reading a key's value is not available for this engine."), findsOneWidget);
-    verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+    verifyNever(
+      () => harness.statements.run(
+        any(),
+        any(),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    );
   });
 
   testWidgets('a key holding /, a space, a quote and İ survives the round trip through browseKeyValue', (tester) async {
@@ -465,7 +506,14 @@ void main() {
     await harness.pump(tester, location: '/browse/seed%3Adev-redis/value?container=1&path=a&path=b');
 
     expect(find.byType(KeyValuePage), findsNothing);
-    verifyNever(() => harness.statements.run(any(), any(), page: any(named: 'page')));
+    verifyNever(
+      () => harness.statements.run(
+        any(),
+        any(),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    );
   });
 
   group('scrolling a loaded result', () {

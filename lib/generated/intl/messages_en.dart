@@ -510,11 +510,20 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
+    "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
+    "sql_editor_cancel_not_confirmed": MessageLookupByLibrary.simpleMessage(
+      "Studio could not confirm the cancel. The statement may still run on the server.",
+    ),
+    "sql_editor_cancelled": MessageLookupByLibrary.simpleMessage("Cancelled"),
+    "sql_editor_cancelling": MessageLookupByLibrary.simpleMessage("Cancelling"),
     "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Statement"),
     "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Type one statement"),
     "sql_editor_rolled_back": m50,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Run"),
-    "sql_editor_running": MessageLookupByLibrary.simpleMessage("Running"),
+    "sql_editor_stop_waiting": MessageLookupByLibrary.simpleMessage("Stop waiting"),
+    "sql_editor_stopped_waiting": MessageLookupByLibrary.simpleMessage(
+      "Stopped waiting. This database cannot cancel a statement, so it may still run on the server.",
+    ),
     "studio_error_copy_statement": MessageLookupByLibrary.simpleMessage("Copy statement"),
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",

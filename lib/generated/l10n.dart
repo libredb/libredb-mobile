@@ -2376,16 +2376,6 @@ class S {
     return Intl.message('Run', name: 'sql_editor_run', desc: 'Runs the statement in the SQL editor.', args: []);
   }
 
-  /// `Running`
-  String get sql_editor_running {
-    return Intl.message(
-      'Running',
-      name: 'sql_editor_running',
-      desc: 'Shown on Run while the statement runs.',
-      args: [],
-    );
-  }
-
   /// `This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add {keyword} to keep them.`
   String sql_editor_rolled_back(String keyword) {
     return Intl.message(
@@ -2393,6 +2383,67 @@ class S {
       name: 'sql_editor_rolled_back',
       desc: 'The SQL editor\'s notice that Studio rolled back a transaction the statement left open, with the engine\'s commit keyword.',
       args: [keyword],
+    );
+  }
+
+  /// `Cancel`
+  String get sql_editor_cancel {
+    return Intl.message(
+      'Cancel',
+      name: 'sql_editor_cancel',
+      desc: 'Asks Studio to stop the statement that runs, shown on Run while it runs.',
+      args: [],
+    );
+  }
+
+  /// `Stop waiting`
+  String get sql_editor_stop_waiting {
+    return Intl.message(
+      'Stop waiting',
+      name: 'sql_editor_stop_waiting',
+      desc:
+          'Shown on Run while a statement runs on an engine that cannot cancel: the app stops waiting for the answer.',
+      args: [],
+    );
+  }
+
+  /// `Cancelling`
+  String get sql_editor_cancelling {
+    return Intl.message(
+      'Cancelling',
+      name: 'sql_editor_cancelling',
+      desc: 'Shown on Run while Studio is asked to stop the statement.',
+      args: [],
+    );
+  }
+
+  /// `Cancelled`
+  String get sql_editor_cancelled {
+    return Intl.message(
+      'Cancelled',
+      name: 'sql_editor_cancelled',
+      desc: 'The SQL editor\'s notice that Studio stopped the statement; not an error.',
+      args: [],
+    );
+  }
+
+  /// `Studio could not confirm the cancel. The statement may still run on the server.`
+  String get sql_editor_cancel_not_confirmed {
+    return Intl.message(
+      'Studio could not confirm the cancel. The statement may still run on the server.',
+      name: 'sql_editor_cancel_not_confirmed',
+      desc: 'The SQL editor\'s notice that Studio did not confirm the cancel, so the statement may still run.',
+      args: [],
+    );
+  }
+
+  /// `Stopped waiting. This database cannot cancel a statement, so it may still run on the server.`
+  String get sql_editor_stopped_waiting {
+    return Intl.message(
+      'Stopped waiting. This database cannot cancel a statement, so it may still run on the server.',
+      name: 'sql_editor_stopped_waiting',
+      desc: 'The SQL editor\'s notice after Stop waiting, on an engine that cannot cancel.',
+      args: [],
     );
   }
 }

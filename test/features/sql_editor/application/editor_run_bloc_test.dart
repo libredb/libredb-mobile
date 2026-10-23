@@ -69,6 +69,7 @@ void main() {
       any(),
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).thenAnswer((_) async => answer());
 
@@ -78,6 +79,7 @@ void main() {
       captureAny(),
       queryId: any(named: 'queryId'),
       page: any(named: 'page'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   ).captured.cast<String>();
 
@@ -89,6 +91,7 @@ void main() {
       page: any(named: 'page'),
       params: any(named: 'params'),
       catalog: any(named: 'catalog'),
+      cancelSignal: any(named: 'cancelSignal'),
     ),
   );
 
@@ -99,7 +102,7 @@ void main() {
       build: build,
       act: (bloc) => bloc.add(const EditorRunRequested(text: 'SELECT * FROM customers', role: user)),
       expect: () => [
-        const EditorRunning(queryId: 'run-1'),
+        const EditorRunning(queryId: 'run-1', supportsCancel: true),
         isA<EditorSucceeded>()
             .having((s) => s.masked.maskedColumns, 'masked columns', contains('email'))
             .having((s) => s.masked.result.rows.first['email'], 'masked email', isNot('ada@example.com'))
@@ -111,7 +114,12 @@ void main() {
       ],
       verify: (_) {
         final call = verify(
-          () => repository.run(_postgres, 'SELECT * FROM customers', queryId: captureAny(named: 'queryId')),
+          () => repository.run(
+            _postgres,
+            'SELECT * FROM customers',
+            queryId: captureAny(named: 'queryId'),
+            cancelSignal: any(named: 'cancelSignal'),
+          ),
         );
         call.called(1);
         expect(call.captured, ['run-1']);
@@ -148,9 +156,9 @@ void main() {
         bloc.add(const EditorRunRequested(text: 'SELECT 1', role: user));
       },
       expect: () => [
-        const EditorRunning(queryId: 'run-1'),
+        const EditorRunning(queryId: 'run-1', supportsCancel: true),
         isA<EditorSucceeded>().having((s) => s.run, 'run', 1),
-        const EditorRunning(queryId: 'run-2'),
+        const EditorRunning(queryId: 'run-2', supportsCancel: true),
         isA<EditorSucceeded>().having((s) => s.run, 'run', 2),
       ],
     );
@@ -238,7 +246,7 @@ void main() {
       },
       expect: () => [
         isA<EditorAwaitingConfirmation>(),
-        const EditorRunning(queryId: 'run-1'),
+        const EditorRunning(queryId: 'run-1', supportsCancel: true),
         isA<EditorSucceeded>()
             .having((s) => s.statement.text, 'text', delete)
             .having((s) => s.statement.asks, 'asks', isNotNull),
@@ -301,7 +309,7 @@ void main() {
         isA<EditorAwaitingConfirmation>().having((s) => s.statement.asks?.reasons, 'reasons', {
           WriteCheckReason.notSql,
         }),
-        const EditorRunning(queryId: 'run-1'),
+        const EditorRunning(queryId: 'run-1', supportsCancel: false),
         isA<EditorSucceeded>()
             .having((s) => s.commitKeyword, 'commit keyword', 'EXEC')
             .having((s) => s.supportsResultPagination, 'pagination', isFalse),
@@ -427,6 +435,7 @@ void main() {
           'SELECT * FROM sales.ledger',
           queryId: captureAny(named: 'queryId'),
           page: captureAny(named: 'page'),
+          cancelSignal: any(named: 'cancelSignal'),
         ),
       );
       expect(call.captured, [QueryPage.first, 'run-1', QueryPage.after(firstPage.pagination!), 'run-2']);
