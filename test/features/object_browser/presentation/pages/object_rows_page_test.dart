@@ -18,12 +18,14 @@ import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_table.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../browse_answers.dart';
 import '../../browse_harness.dart';
+import '../../result_scroll.dart';
 
 const _postgres = StudioConnection(id: 'seed:dev-postgres', name: 'Dev (PostgreSQL)', type: 'postgres');
 const _server = StudioConnection(id: 'seed:dev-postgres-server', name: 'Dev server', type: 'postgres');
@@ -225,6 +227,81 @@ void main() {
       expect(harness.router.state.uri.path, '/browse');
       expect(find.byType(ObjectRowsPage), findsNothing);
     });
+  });
+
+  group('scrolling a loaded result', () {
+    final platforms = TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS});
+
+    Future<void> showTable(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Table'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the cards settle at the first and the last row', (tester) async {
+      answerPreview(Success(wideResult()));
+      await harness.pump(tester, location: customersLocation);
+      // Offline a pull past the first row runs nothing, so the same list is measured at both ends.
+      await harness.setOffline(tester, true);
+
+      await expectSettlesAtEachEnd(tester, cardListScrollable());
+    }, variant: platforms);
+
+    testWidgets('the table settles at the first and the last row', (tester) async {
+      answerPreview(Success(wideResult()));
+      await harness.pump(tester, location: customersLocation);
+      await showTable(tester);
+      await harness.setOffline(tester, true);
+
+      await expectSettlesAtEachEnd(tester, tableRowsScrollable());
+    }, variant: platforms);
+
+    testWidgets('the table settles at the first and the last column', (tester) async {
+      answerPreview(Success(wideResult()));
+      await harness.pump(tester, location: customersLocation);
+      await showTable(tester);
+
+      await expectSettlesAtEachEnd(tester, tableColumnsScrollable());
+    }, variant: platforms);
+
+    testWidgets('a pull on the cards springs back, offline', (tester) async {
+      answerPreview(Success(wideResult()));
+      await harness.pump(tester, location: customersLocation);
+      await harness.setOffline(tester, true);
+
+      await pullAndExpectSpringBack(tester, cardListScrollable());
+      expect(find.widgetWithText(SnackBar, 'No internet connection'), findsOneWidget);
+      expect(runsOf(_postgres.id, _preview), 1);
+    }, variant: platforms);
+
+    testWidgets('a one-row result on the cards still pulls to refresh, and springs back', (tester) async {
+      answerPreview(Success(wideResult(rows: 1, columns: 2)));
+      await harness.pump(tester, location: customersLocation);
+
+      await pullAndExpectSpringBack(tester, cardListScrollable());
+      expect(runsOf(_postgres.id, _preview), 2);
+    }, variant: platforms);
+
+    for (final (rows, name) in [(100, '100 rows'), (1, 'one row')]) {
+      testWidgets('a pull on a table of $name refreshes once, and springs back', (tester) async {
+        answerPreview(Success(wideResult(rows: rows)));
+        await harness.pump(tester, location: customersLocation);
+        await showTable(tester);
+
+        await pullAndExpectSpringBack(tester, tableRowsScrollable());
+        expect(runsOf(_postgres.id, _preview), 2);
+      }, variant: platforms);
+    }
+
+    testWidgets('a sideways scroll of the table past either end refreshes nothing', (tester) async {
+      answerPreview(Success(wideResult()));
+      await harness.pump(tester, location: customersLocation);
+      await showTable(tester);
+
+      await expectSettlesAtEachEnd(tester, tableColumnsScrollable());
+      await tester.flingFrom(tester.getCenter(find.byType(ResultTable)), const Offset(400, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(runsOf(_postgres.id, _preview), 1);
+    }, variant: platforms);
   });
 
   testWidgets('a connection switch returns Browse to the new connection\'s first entry', (tester) async {
