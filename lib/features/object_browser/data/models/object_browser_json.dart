@@ -216,8 +216,9 @@ final class ObjectBrowserJson {
   /// A text, a refusal (`unavailable`) or a neutral statement (`unavailable` with `statement: true`), refused as
   /// Studio's client refuses it (`isPartShape` in `src/components/object-source/source-reader.ts`): a part with both a
   /// text and a refusal, a `statement` that is not `true` or sits on a part without `unavailable`, an empty or blank
-  /// string where Studio needs a filled one, a `form` or `origin` it does not send, and a `truncated` that is not a
-  /// limit with a filled reason. `edit` is left out: the app does not edit source.
+  /// string where Studio needs a filled one, a text, refusal or truncation reason longer than [sourceCharacterLimit],
+  /// a `form` or `origin` it does not send, and a `truncated` that is not a numeric limit with a filled reason. `edit`
+  /// is left out: the app does not edit source.
   static SourcePart _sourcePart(Object? item) {
     final part = _map(item, 'source part');
     final id = _filled(part['id'], 'id');
@@ -228,7 +229,7 @@ final class ObjectBrowserJson {
       throw const FormatException('A source part has a statement that is not a refusal marked true');
     }
     if (refused) {
-      final reason = _filled(part['unavailable'], 'unavailable');
+      final reason = _bounded(part['unavailable'], 'unavailable');
       return part['statement'] == true
           ? SourceStatement(id: id, label: label, statement: reason)
           : SourceUnavailable(id: id, label: label, reason: reason);
@@ -236,7 +237,7 @@ final class ObjectBrowserJson {
     return SourceText(
       id: id,
       label: label,
-      text: _filled(part['text'], 'text'),
+      text: _bounded(part['text'], 'text'),
       language: _filled(part['language'], 'language'),
       origin: _origin(part['origin']),
       complete: _complete(part['form']),
@@ -246,7 +247,20 @@ final class ObjectBrowserJson {
 
   static SourceTruncation _truncation(Object? value) {
     final truncated = _map(value, 'truncation');
-    return SourceTruncation(limit: _int(truncated['limit'], 'limit'), reason: _filled(truncated['reason'], 'reason'));
+    final limit = truncated['limit'];
+    if (limit is! num) throw const FormatException('The limit is not a number');
+    final whole = limit is double && limit.isFinite && limit == limit.truncateToDouble();
+    return SourceTruncation(limit: whole ? limit.toInt() : limit, reason: _bounded(truncated['reason'], 'reason'));
+  }
+
+  /// Studio's `SOURCE_CHARACTER_LIMIT` (`src/lib/db/object-kinds.ts`), in UTF-16 code units as Dart's `String.length`
+  /// counts them.
+  static const sourceCharacterLimit = 1000000;
+
+  /// A filled string of at most [sourceCharacterLimit] code units, as Studio's client renders; a longer one is refused.
+  static String _bounded(Object? value, String what) {
+    final string = _filled(value, what);
+    return string.length > sourceCharacterLimit ? throw FormatException('The $what is over the source limit') : string;
   }
 
   static bool _complete(Object? form) => switch (form) {

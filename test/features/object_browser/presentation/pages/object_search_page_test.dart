@@ -114,6 +114,16 @@ void main() {
     expect(find.widgetWithText(TextField, 'Search by name'), findsOneWidget);
   });
 
+  testWidgets('uses the app\'s own hint on an engine with a key browser, whose search finds names, not keys', (
+    tester,
+  ) async {
+    harness.answerMeta('seed:dev-redis', metaAnswer('meta_redis'));
+    await harness.pump(tester, location: '/browse/seed%3Adev-redis/search');
+
+    expect(find.widgetWithText(TextField, 'Search by name'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Search keys...'), findsNothing);
+  });
+
   testWidgets('ord finds orders and order_items, grouped by schema, each row with its kind\'s label', (tester) async {
     tallScreen(tester);
     answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
@@ -325,7 +335,7 @@ void main() {
           kind: 'table',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(detailAnswer('describe_postgres_orders')));
+      ).thenAnswer((_) async => answered(detailAnswer('describe_postgres_orders')));
       // The detail page lists the schema's tables to link the foreign keys.
       when(
         () => harness.repository.list(
@@ -334,7 +344,7 @@ void main() {
           kind: 'table',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => Success(objectsAnswer('list_postgres')));
+      ).thenAnswer((_) async => answered(objectsAnswer('list_postgres')));
       await harness.pump(tester, location: _search);
       await type(tester, 'ord');
 

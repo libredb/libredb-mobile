@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_rows_page.dart';
@@ -87,6 +88,30 @@ void main() {
   ).callCount;
 
   Finder countButton() => find.widgetWithText(TextButton, 'Count rows');
+
+  group('back online after a failed preview', () {
+    testWidgets('a failure without a code runs nothing again by itself, since its statement may have run', (
+      tester,
+    ) async {
+      answerPreview(const Failure(NetworkError('socket closed')));
+      await harness.pump(tester, location: customersLocation);
+      expect(find.byType(BrowseFailureView), findsOneWidget);
+
+      await harness.setOffline(tester, true);
+      await harness.setOffline(tester, false);
+
+      expect(runsOf(_postgres.id, _preview), 1);
+    });
+
+    testWidgets('a preview the offline device never sent runs once the device is back online', (tester) async {
+      answerPreview(Failure(NetworkError('offline', code: AppErrorCode.networkOffline.key)));
+      await harness.pump(tester, location: customersLocation, offline: true);
+
+      await harness.setOffline(tester, false);
+
+      expect(runsOf(_postgres.id, _preview), 2);
+    });
+  });
 
   group('the recorded customers table', () {
     setUp(() => answerPreview(Success(_recorded('query_preview_postgres_customers'))));

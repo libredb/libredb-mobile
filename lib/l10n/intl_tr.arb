@@ -506,19 +506,27 @@
   "@keys_pattern_glob": {},
   "keys_pattern_prefix": "Şununla başlar",
   "@keys_pattern_prefix": {},
-  "keys_scanned": "{count, plural, =1{1 anahtar tarandı} other{{count} anahtar tarandı}}",
+  "keys_scanned": "{count, plural, =1{1 anahtar tarandı} other{{formatted} anahtar tarandı}}",
   "@keys_scanned": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
-  "keys_scanned_more": "{count, plural, =1{1 anahtar tarandı; devamı var} other{{count} anahtar tarandı; devamı var}}",
+  "keys_scanned_more": "{count, plural, =1{1 anahtar tarandı; devamı var} other{{formatted} anahtar tarandı; devamı var}}",
   "@keys_scanned_more": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
@@ -526,10 +534,12 @@
   "@keys_scanned_of_database": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -537,10 +547,12 @@
   "@keys_scanned_of_database_more": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -548,10 +560,12 @@
   "@keys_scanned_of_walk": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -559,36 +573,132 @@
   "@keys_scanned_of_walk_more": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
-  "keys_listed": "{count, plural, =1{1 öğe listelendi} other{{count} öğe listelendi}}",
+  "keys_found": "{count, plural, =1{Eşleşen 1 anahtar bulundu} other{Eşleşen {formatted} anahtar bulundu}}",
+  "@keys_found": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_more": "{count, plural, =1{Eşleşen 1 anahtar bulundu; devamı var} other{Eşleşen {formatted} anahtar bulundu; devamı var}}",
+  "@keys_found_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_database": "{count, plural, =1{Eşleşen 1 anahtar bulundu; veritabanında {total} anahtar var} other{Eşleşen {formatted} anahtar bulundu; veritabanında {total} anahtar var}}",
+  "@keys_found_of_database": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,203"
+      },
+      "total": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_database_more": "{count, plural, =1{Eşleşen 1 anahtar bulundu; veritabanında {total} anahtar var; devamı var} other{Eşleşen {formatted} anahtar bulundu; veritabanında {total} anahtar var; devamı var}}",
+  "@keys_found_of_database_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,203"
+      },
+      "total": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_walk": "Bu taramanın kapsadığı {total} anahtardan {count} tanesi bulundu",
+  "@keys_found_of_walk": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "keys_found_of_walk_more": "Bu taramanın kapsadığı {total} anahtardan {count} tanesi bulundu; devamı var",
+  "@keys_found_of_walk_more": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "keys_listed": "{count, plural, =1{1 öğe listelendi} other{{formatted} öğe listelendi}}",
   "@keys_listed": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
-  "keys_listed_more": "{count, plural, =1{1 öğe listelendi; devamı var} other{{count} öğe listelendi; devamı var}}",
+  "keys_listed_more": "{count, plural, =1{1 öğe listelendi; devamı var} other{{formatted} öğe listelendi; devamı var}}",
   "@keys_listed_more": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
   "keys_clustered": "Kümelenmiş sunucu: SCAN ve DBSIZE her seferinde tek bir düğüm için yanıt verir, bu yüzden bu sayılar bu düğümündür.",
   "@keys_clustered": {},
-  "keys_skipped": "{count, plural, =1{Bu taramada 1 anahtar dışarıda kaldı: {reason}} other{Bu taramada {count} anahtar dışarıda kaldı: {reason}}}",
+  "keys_skipped": "{count, plural, =1{Bu taramada 1 anahtar dışarıda kaldı: {reason}} other{Bu taramada {formatted} anahtar dışarıda kaldı: {reason}}}",
   "@keys_skipped": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       },
       "reason": {
         "type": "String"

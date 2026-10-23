@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
@@ -92,7 +92,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
     switch (described) {
       case Failure(:final error):
         _fail(error, onScreen, emit);
-      case Success(data: final detail):
+      case Success(data: Answered(value: final detail, :final at)):
         final (targets, lookupError) = await _foreignKeyTargets(providerMeta, detail);
         if (emit.isDone) return;
         emit(
@@ -102,7 +102,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
             kind: _kindOf(providerMeta),
             foreignKeyTargets: targets,
             foreignKeyLookupError: lookupError,
-            loadedAt: clock.now(),
+            loadedAt: at,
           ),
         );
     }
@@ -131,7 +131,7 @@ class ObjectDetailBloc extends Bloc<ObjectDetailEvent, ObjectDetailState> {
           refused ??= error;
         case Success(:final data):
           for (final name in wanted.toList()) {
-            final named = data.where((object) => object.name == name).toList();
+            final named = data.value.where((object) => object.name == name).toList();
             if (named.isEmpty) continue;
             wanted.remove(name);
             if (named.length == 1) found[name] = named.single;

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -40,7 +41,7 @@ void main() {
       parent: parent,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(containers));
+  ).thenAnswer((_) async => answered(containers));
 
   ContainerBrowserBloc build(
     String connectionId, {
@@ -63,13 +64,29 @@ void main() {
           .having((s) => s.isRefreshing, 'isRefreshing', isFalse)
           .having((s) => s.openOnEntry?.path, 'openOnEntry', opens);
 
+  test('a kept answer shows the time Studio gave it, not the time the bloc got it', () async {
+    final studioAt = DateTime.utc(2026, 10, 23, 14);
+    answerMeta('seed:dev-postgres', metaAnswer('meta_postgres'));
+    when(() => repository.containers('seed:dev-postgres', parent: null, refresh: any(named: 'refresh')))
+        .thenAnswer((_) async => answered(containersAnswer('containers_postgres'), at: studioAt));
+    final bloc = withClock(
+      Clock.fixed(studioAt.add(const Duration(minutes: 9))),
+      () => build('seed:dev-postgres')..add(const ContainerBrowserRequested()),
+    );
+    addTearDown(bloc.close);
+
+    final loaded = await bloc.stream.firstWhere((state) => state is ContainerBrowserLoaded) as ContainerBrowserLoaded;
+
+    expect(loaded.loadedAt, studioAt);
+  });
+
   group('by depth', () {
     blocTest<ContainerBrowserBloc, ContainerBrowserState>(
       'SQLite has no container level, so it asks for no containers',
       setUp: () => answerMeta('seed:sample', metaAnswer('meta')),
       build: () => build('seed:sample'),
       act: (bloc) => bloc.add(const ContainerBrowserRequested()),
-      expect: () => const [ContainerBrowserLoading(), ContainerBrowserNoLevels()],
+      expect: () => const [ContainerBrowserLoading(), ContainerBrowserNoLevels(searchesObjects: true)],
       verify: (_) => verifyNever(
         () => repository.containers(
           any(),

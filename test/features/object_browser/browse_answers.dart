@@ -1,6 +1,9 @@
 import 'dart:io';
 
+import 'package:clock/clock.dart';
+import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
@@ -25,3 +28,12 @@ ObjectSource sourceAnswer(String name) => ObjectBrowserJson.source(_answer(name)
 List<DatabaseObject> objectsAnswer(String name) => ObjectBrowserJson.objects(_answer(name));
 
 ObjectDetail detailAnswer(String name) => ObjectBrowserJson.detail(_answer(name));
+
+/// [value] as the repository hands it over, answered by Studio [at], now by default.
+Success<Answered<T>> answered<T>(T value, {DateTime? at}) => Success(Answered(value, at: at ?? clock.now()));
+
+/// [result] as the repository hands it over, a success answered by Studio now.
+Result<Answered<T>> answeredResult<T>(Result<T> result) => switch (result) {
+  Success(:final data) => answered(data),
+  Failure(:final error, :final stackTrace) => Failure(error, stackTrace: stackTrace),
+};

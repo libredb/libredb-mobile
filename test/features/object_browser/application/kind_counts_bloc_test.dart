@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -32,7 +33,7 @@ void main() {
       parent: parent,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(containers));
+  ).thenAnswer((_) async => answered(containers));
 
   void answerCounts(String connectionId, List<String> container, Map<String, KindCount> counts) => when(
     () => repository.counts(
@@ -40,7 +41,7 @@ void main() {
       container: container,
       refresh: any(named: 'refresh'),
     ),
-  ).thenAnswer((_) async => Success(counts));
+  ).thenAnswer((_) async => answered(counts));
 
   KindCountsBloc build(
     String connectionId,
@@ -65,6 +66,29 @@ void main() {
           },
         ),
   ];
+
+  test('a kept answer shows the time Studio gave the counts, not the time the bloc got them', () async {
+    final studioAt = DateTime.utc(2026, 10, 23, 14);
+    when(() => providerMeta.providerMeta('seed:dev-postgres'))
+        .thenAnswer((_) async => Success(metaAnswer('meta_postgres')));
+    answerContainers('seed:dev-postgres', null, containersAnswer('containers_postgres'));
+    when(
+      () => repository.counts(
+        'seed:dev-postgres',
+        container: ['public'],
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async => answered(countsAnswer('counts_postgres'), at: studioAt));
+    final bloc = withClock(
+      Clock.fixed(studioAt.add(const Duration(minutes: 9))),
+      () => build('seed:dev-postgres', const ['public'])..add(const KindCountsRequested()),
+    );
+    addTearDown(bloc.close);
+
+    final loaded = await bloc.stream.firstWhere((state) => state is KindCountsLoaded) as KindCountsLoaded;
+
+    expect(loaded.loadedAt, studioAt);
+  });
 
   blocTest<KindCountsBloc, KindCountsState>(
     'SQLite counts its kinds at the connection itself, with no container to name',

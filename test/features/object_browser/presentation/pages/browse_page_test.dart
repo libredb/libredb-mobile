@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -87,6 +88,80 @@ void main() {
           refresh: any(named: 'refresh'),
         ),
       );
+    });
+
+    group('search action', () {
+      const topic = ObjectKind(
+        id: 'topic',
+        role: 'relation',
+        label: 'Topic',
+        labelPlural: 'Topics',
+        keyBrowserOnly: true,
+      );
+      const keyScan = KeyScanSpec(
+        defaultCount: 100,
+        maxCount: 500,
+        separator: '/',
+        pattern: 'prefix',
+        totalScope: 'none',
+      );
+      Finder search() => find.byTooltip(S.current.browse_search_action);
+
+      testWidgets('is offered where the search can list a kind', (tester) async {
+        harness.answerMeta(_sample.id, metaAnswer('meta'));
+        harness.answerCounts(_sample.id, const [], countsAnswer('counts'));
+        harness.active.select(_sample);
+
+        await harness.pump(tester);
+
+        expect(search(), findsOneWidget);
+      });
+
+      testWidgets('is not offered on an engine with no container level whose every kind only the key browser lists', (
+        tester,
+      ) async {
+        const mqtt = StudioConnection(id: 'seed:mqtt', name: 'MQTT', type: 'mqtt');
+        harness.answerMeta(
+          mqtt.id,
+          const ProviderMeta(
+            queryLanguage: 'mqtt',
+            schemaRefreshPattern: 'x',
+            containerLevels: [],
+            objectKinds: [topic],
+            keyScan: keyScan,
+          ),
+        );
+        harness.answerCounts(mqtt.id, const [], const {});
+        harness.active.select(mqtt);
+
+        await harness.pump(tester);
+
+        expect(find.text(S.current.keys_browse), findsOneWidget);
+        expect(search(), findsNothing);
+      });
+
+      testWidgets('is not offered on a container level of such an engine', (tester) async {
+        const opc = StudioConnection(id: 'seed:opc', name: 'OPC', type: 'opcua');
+        harness.answerMeta(
+          opc.id,
+          const ProviderMeta(
+            queryLanguage: 'opcua',
+            schemaRefreshPattern: 'x',
+            containerLevels: [ContainerLevel(id: 'schema', label: 'Server', labelPlural: 'Servers')],
+            objectKinds: [topic],
+            keyScan: keyScan,
+          ),
+        );
+        harness.answerContainers(opc.id, null, const [
+          ObjectContainer(path: ['plant'], name: 'plant', level: 0),
+        ]);
+        harness.active.select(opc);
+
+        await harness.pump(tester);
+
+        expect(find.text('plant'), findsOneWidget);
+        expect(search(), findsNothing);
+      });
     });
 
     testWidgets('seed:dev-postgres-server shows its databases and then the schemas of the one tapped', (tester) async {
@@ -211,6 +286,24 @@ void main() {
       expect(find.textContaining('Other queue types fill this virtual host'), findsOneWidget);
     });
 
+    for (final (locale, floor, exact) in [
+      (const Locale('en'), '12,000+', '1,207'),
+      (const Locale('tr'), '12.000+', '1.207'),
+    ]) {
+      testWidgets('groups each count and floor in the locale\'s way ($locale)', (tester) async {
+        harness.answerCounts(
+          rabbit.id,
+          ['/'],
+          const {'queue': KindCounted(12000, sampledFrom: 'one page'), 'exchange': KindCounted(1207)},
+        );
+
+        await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F', locale: locale);
+
+        expect(tester.widget<Text>(countOf('Queues')).data, floor);
+        expect(tester.widget<Text>(countOf('Exchanges')).data, exact);
+      });
+    }
+
     testWidgets('draws a kind under its group label and leaves out a kind only the key browser lists', (tester) async {
       await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
 
@@ -228,7 +321,7 @@ void main() {
           kind: 'queue',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => const Success([]));
+      ).thenAnswer((_) async => answered(const <DatabaseObject>[]));
       await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
 
       await tester.tap(find.text('Queues'));
@@ -311,7 +404,7 @@ void main() {
         calls++;
         return calls == 1
             ? const Failure(ServerError('down', code: 'studio.database_unreachable'))
-            : Success(containersAnswer('containers_postgres'));
+            : answered(containersAnswer('containers_postgres'));
       });
       harness.answerCounts(_postgres.id, ['public'], countsAnswer('counts_postgres'));
       await seen(tester, _postgres);

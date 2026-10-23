@@ -1510,91 +1510,195 @@ class S {
     );
   }
 
-  /// `{count, plural, =1{Scanned 1 key} other{Scanned {count} keys}}`
-  String keys_scanned(int count) {
+  /// `{count, plural, =1{Scanned 1 key} other{Scanned {formatted} keys}}`
+  String keys_scanned(int count, String formatted) {
     return Intl.plural(
       count,
       one: 'Scanned 1 key',
-      other: 'Scanned $count keys',
+      other: 'Scanned $formatted keys',
       name: 'keys_scanned',
       desc: '',
-      args: [count],
+      args: [count, formatted],
     );
   }
 
-  /// `{count, plural, =1{Scanned 1 key; more remain} other{Scanned {count} keys; more remain}}`
-  String keys_scanned_more(int count) {
+  /// `{count, plural, =1{Scanned 1 key; more remain} other{Scanned {formatted} keys; more remain}}`
+  String keys_scanned_more(int count, String formatted) {
     return Intl.plural(
       count,
       one: 'Scanned 1 key; more remain',
-      other: 'Scanned $count keys; more remain',
+      other: 'Scanned $formatted keys; more remain',
       name: 'keys_scanned_more',
       desc: '',
-      args: [count],
+      args: [count, formatted],
     );
   }
 
   /// `Scanned {count} of the {total} keys this database holds`
   String keys_scanned_of_database(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
     return Intl.message(
-      'Scanned $count of the $total keys this database holds',
+      'Scanned $countString of the $totalString keys this database holds',
       name: 'keys_scanned_of_database',
       desc: '',
-      args: [count, total],
+      args: [countString, totalString],
     );
   }
 
   /// `Scanned {count} of the {total} keys this database holds; more remain`
   String keys_scanned_of_database_more(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
     return Intl.message(
-      'Scanned $count of the $total keys this database holds; more remain',
+      'Scanned $countString of the $totalString keys this database holds; more remain',
       name: 'keys_scanned_of_database_more',
       desc: '',
-      args: [count, total],
+      args: [countString, totalString],
     );
   }
 
   /// `Scanned {count} of the {total} keys this walk covers`
   String keys_scanned_of_walk(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
     return Intl.message(
-      'Scanned $count of the $total keys this walk covers',
+      'Scanned $countString of the $totalString keys this walk covers',
       name: 'keys_scanned_of_walk',
       desc: '',
-      args: [count, total],
+      args: [countString, totalString],
     );
   }
 
   /// `Scanned {count} of the {total} keys this walk covers; more remain`
   String keys_scanned_of_walk_more(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
     return Intl.message(
-      'Scanned $count of the $total keys this walk covers; more remain',
+      'Scanned $countString of the $totalString keys this walk covers; more remain',
       name: 'keys_scanned_of_walk_more',
       desc: '',
-      args: [count, total],
+      args: [countString, totalString],
     );
   }
 
-  /// `{count, plural, =1{Listed 1 entry} other{Listed {count} entries}}`
-  String keys_listed(int count) {
+  /// `{count, plural, =1{Found 1 matching key} other{Found {formatted} matching keys}}`
+  String keys_found(int count, String formatted) {
+    return Intl.plural(
+      count,
+      one: 'Found 1 matching key',
+      other: 'Found $formatted matching keys',
+      name: 'keys_found',
+      desc: 'The key browser\'s progress under a pattern: the keys the walk returned, which match the pattern.',
+      args: [count, formatted],
+    );
+  }
+
+  /// `{count, plural, =1{Found 1 matching key; more remain} other{Found {formatted} matching keys; more remain}}`
+  String keys_found_more(int count, String formatted) {
+    return Intl.plural(
+      count,
+      one: 'Found 1 matching key; more remain',
+      other: 'Found $formatted matching keys; more remain',
+      name: 'keys_found_more',
+      desc: '',
+      args: [count, formatted],
+    );
+  }
+
+  /// `{count, plural, =1{Found 1 matching key; the database holds {total}} other{Found {formatted} matching keys; the database holds {total}}}`
+  String keys_found_of_database(int count, String formatted, String total) {
+    return Intl.plural(
+      count,
+      one: 'Found 1 matching key; the database holds $total',
+      other: 'Found $formatted matching keys; the database holds $total',
+      name: 'keys_found_of_database',
+      desc: 'The key browser\'s progress under a pattern, with the count of every key the database holds; {total} is formatted.',
+      args: [count, formatted, total],
+    );
+  }
+
+  /// `{count, plural, =1{Found 1 matching key; the database holds {total}; more remain} other{Found {formatted} matching keys; the database holds {total}; more remain}}`
+  String keys_found_of_database_more(int count, String formatted, String total) {
+    return Intl.plural(
+      count,
+      one: 'Found 1 matching key; the database holds $total; more remain',
+      other: 'Found $formatted matching keys; the database holds $total; more remain',
+      name: 'keys_found_of_database_more',
+      desc: '',
+      args: [count, formatted, total],
+    );
+  }
+
+  /// `Found {count} of the {total} keys this walk covers`
+  String keys_found_of_walk(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
+    return Intl.message(
+      'Found $countString of the $totalString keys this walk covers',
+      name: 'keys_found_of_walk',
+      desc: '',
+      args: [countString, totalString],
+    );
+  }
+
+  /// `Found {count} of the {total} keys this walk covers; more remain`
+  String keys_found_of_walk_more(int count, int total) {
+    final NumberFormat countNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String countString = countNumberFormat.format(count);
+
+    final NumberFormat totalNumberFormat = NumberFormat.decimalPattern(Intl.getCurrentLocale());
+    final String totalString = totalNumberFormat.format(total);
+
+    return Intl.message(
+      'Found $countString of the $totalString keys this walk covers; more remain',
+      name: 'keys_found_of_walk_more',
+      desc: '',
+      args: [countString, totalString],
+    );
+  }
+
+  /// `{count, plural, =1{Listed 1 entry} other{Listed {formatted} entries}}`
+  String keys_listed(int count, String formatted) {
     return Intl.plural(
       count,
       one: 'Listed 1 entry',
-      other: 'Listed $count entries',
+      other: 'Listed $formatted entries',
       name: 'keys_listed',
       desc: '',
-      args: [count],
+      args: [count, formatted],
     );
   }
 
-  /// `{count, plural, =1{Listed 1 entry; more remain} other{Listed {count} entries; more remain}}`
-  String keys_listed_more(int count) {
+  /// `{count, plural, =1{Listed 1 entry; more remain} other{Listed {formatted} entries; more remain}}`
+  String keys_listed_more(int count, String formatted) {
     return Intl.plural(
       count,
       one: 'Listed 1 entry; more remain',
-      other: 'Listed $count entries; more remain',
+      other: 'Listed $formatted entries; more remain',
       name: 'keys_listed_more',
       desc: '',
-      args: [count],
+      args: [count, formatted],
     );
   }
 
@@ -1608,15 +1712,15 @@ class S {
     );
   }
 
-  /// `{count, plural, =1{1 key left out of this walk: {reason}} other{{count} keys left out of this walk: {reason}}}`
-  String keys_skipped(int count, String reason) {
+  /// `{count, plural, =1{1 key left out of this walk: {reason}} other{{formatted} keys left out of this walk: {reason}}}`
+  String keys_skipped(int count, String formatted, String reason) {
     return Intl.plural(
       count,
       one: '1 key left out of this walk: $reason',
-      other: '$count keys left out of this walk: $reason',
+      other: '$formatted keys left out of this walk: $reason',
       name: 'keys_skipped',
       desc: '',
-      args: [count, reason],
+      args: [count, formatted, reason],
     );
   }
 

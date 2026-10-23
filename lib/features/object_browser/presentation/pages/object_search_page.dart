@@ -139,7 +139,9 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
               onSubmitted: (term) => bloc.add(ObjectSearchSubmitted(term)),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: meta.labels.searchPlaceholder ?? s.browse_search_hint,
+                // On an engine with a key browser Studio's hint names keys, which the search never lists: it finds
+                // object names, such as key patterns, so the app's own wording is shown there.
+                hintText: (meta.keyScan == null ? meta.labels.searchPlaceholder : null) ?? s.browse_search_hint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: value.text.isEmpty
                     ? null

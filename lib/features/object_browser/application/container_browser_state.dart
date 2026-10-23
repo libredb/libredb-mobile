@@ -13,7 +13,13 @@ final class ContainerBrowserLoading extends ContainerBrowserState {
 
 /// The engine nests its objects in no container, as SQLite does, so the connection opens on its kinds.
 final class ContainerBrowserNoLevels extends ContainerBrowserState {
-  const ContainerBrowserNoLevels();
+  const ContainerBrowserNoLevels({required this.searchesObjects});
+
+  /// [ProviderMeta.searchesObjects] of the engine.
+  final bool searchesObjects;
+
+  @override
+  List<Object?> get props => [searchesObjects];
 }
 
 /// The containers of one level, such as the schemas of a database.
@@ -26,6 +32,7 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
     this.isRefreshing = false,
     this.openOnEntry,
     this.query = '',
+    required this.searchesObjects,
   });
 
   /// The level, in the engine's own words.
@@ -47,6 +54,9 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
   /// The filter as typed.
   final String query;
 
+  /// [ProviderMeta.searchesObjects] of the engine.
+  final bool searchesObjects;
+
   /// The containers whose name holds [query], compared by the shared search fold; all of them while not filtering.
   List<ObjectContainer> get visibleContainers => [
     for (final container in containers)
@@ -57,7 +67,7 @@ final class ContainerBrowserLoaded extends ContainerBrowserState {
   bool opensKinds(ObjectContainer container) => container.path.length >= depth;
 
   @override
-  List<Object?> get props => [level, depth, containers, loadedAt, isRefreshing, openOnEntry, query];
+  List<Object?> get props => [level, depth, containers, loadedAt, isRefreshing, openOnEntry, query, searchesObjects];
 }
 
 /// The level could not be read.

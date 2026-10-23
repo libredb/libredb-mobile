@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -8,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -86,7 +86,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     }
     final levels = providerMeta.containerLevels;
     if (levels.isEmpty) {
-      emit(const ContainerBrowserNoLevels());
+      emit(ContainerBrowserNoLevels(searchesObjects: providerMeta.searchesObjects));
       return;
     }
     if (parent.length >= levels.length) {
@@ -101,7 +101,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     switch (result) {
       case Failure(:final error):
         _fail(error, onScreen, emit);
-      case Success(:final data):
+      case Success(data: Answered(value: final data, :final at)):
         // An empty level shows no filter field, so a filter kept from before would hide what a later refresh brings.
         if (data.isEmpty) _query = '';
         final first = !_answered;
@@ -111,9 +111,10 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
             level: levels[parent.length],
             depth: levels.length,
             containers: data,
-            loadedAt: clock.now(),
+            loadedAt: at,
             openOnEntry: first && event is ContainerBrowserRequested ? _entry?.take(connectionId, parent, data) : null,
             query: _query,
+            searchesObjects: providerMeta.searchesObjects,
           ),
         );
     }
@@ -149,6 +150,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     loadedAt: loaded.loadedAt,
     isRefreshing: isRefreshing,
     query: _query,
+    searchesObjects: loaded.searchesObjects,
   );
 
   @override

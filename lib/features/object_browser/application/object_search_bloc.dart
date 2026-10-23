@@ -52,6 +52,10 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   /// The term whose request is in flight, null when none is.
   String? _inFlight;
 
+  /// The term whose results are on screen, or will be once the emit queued for them runs; null when none are. Kept
+  /// here, not read from `state`, because a clearing queued in the same burst has not reached `state` yet.
+  String? _shown;
+
   /// Counts every request sent and every clearing, so only the answer to the latest request is shown.
   int _generation = 0;
 
@@ -60,6 +64,7 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   static bool _searchable(String term) => _trimmed(term).runes.length >= minimumLength;
 
   Future<void> _onStarted(ObjectSearchStarted event, Emitter<ObjectSearchState> emit) async {
+    _shown = null;
     if (state is! ObjectSearchPreparing) emit(const ObjectSearchPreparing());
     final result = await _providerMeta.providerMeta(connectionId);
     if (emit.isDone) return;
@@ -83,6 +88,7 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
       _cancelWait();
       _generation++;
       _inFlight = null;
+      _shown = null;
       add(const _ObjectSearchCleared());
       return;
     }
@@ -107,15 +113,13 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   bool _isCurrent(String term) {
     final inFlight = _inFlight;
     if (inFlight != null) return inFlight == term;
-    return switch (state) {
-      ObjectSearchResults(term: final shown) => shown == term,
-      _ => false,
-    };
+    return _shown == term;
   }
 
   void _send(String term) {
     _generation++;
     _inFlight = term;
+    _shown = null;
     add(_ObjectSearchSent(term, _generation));
   }
 
@@ -141,6 +145,7 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
             _log.warn('search failed: {}', [error.code ?? error.runtimeType]);
             emit(ObjectSearchFailure(error: error, meta: meta, term: term));
           case Success(:final data):
+            _shown = term;
             emit(ObjectSearchResults(meta: meta, term: term, groups: _group(meta, data)));
         }
     }

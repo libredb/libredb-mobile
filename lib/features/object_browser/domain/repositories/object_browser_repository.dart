@@ -1,4 +1,5 @@
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/answered.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
@@ -13,19 +14,24 @@ import 'package:libredb_mobile/features/object_browser/domain/entities/object_so
 /// comes from `IProviderMetaRepository`.
 ///
 /// [refresh] is a pull to refresh: it skips an answer kept from before and replaces it. A repository that keeps no
-/// answer reads afresh either way.
+/// answer reads afresh either way. The containers, counts, lists and describe answers, which may be kept, come
+/// [Answered] with the time Studio gave them.
 abstract class IObjectBrowserRepository {
   /// The containers at the top, or the ones under [parent].
-  Future<Result<List<ObjectContainer>>> containers(String connectionId, {List<String>? parent, bool refresh = false});
+  Future<Result<Answered<List<ObjectContainer>>>> containers(
+    String connectionId, {
+    List<String>? parent,
+    bool refresh = false,
+  });
 
   /// How many objects of each kind [container] holds, keyed by kind id.
-  Future<Result<Map<String, KindCount>>> counts(
+  Future<Result<Answered<Map<String, KindCount>>>> counts(
     String connectionId, {
     required List<String> container,
     bool refresh = false,
   });
 
-  Future<Result<List<DatabaseObject>>> list(
+  Future<Result<Answered<List<DatabaseObject>>>> list(
     String connectionId, {
     required List<String> container,
     required String kind,
@@ -33,7 +39,7 @@ abstract class IObjectBrowserRepository {
   });
 
   /// The columns, indexes and foreign keys of an object whose kind has columns.
-  Future<Result<ObjectDetail>> describe(
+  Future<Result<Answered<ObjectDetail>>> describe(
     String connectionId, {
     required List<String> path,
     required String kind,
