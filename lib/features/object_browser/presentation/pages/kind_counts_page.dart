@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/object_browser/application/kind_counts_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/kind_sections.dart';
@@ -152,7 +153,7 @@ class _KindCountsView extends StatelessWidget {
   }
 }
 
-/// One kind and its count: `42`, `12+` for a floor Studio measured from a read that stopped short, or Studio's
+/// One kind and its count, grouped in the locale's way: `1,207`, `12,000+` for a floor Studio measured from a read that stopped short, or Studio's
 /// sentence for why the engine could not count it. [onTap] opens the kind's objects.
 class _KindTile extends StatelessWidget {
   const _KindTile({required this.row, this.onTap});
@@ -166,7 +167,7 @@ class _KindTile extends StatelessWidget {
     return switch (row.count) {
       KindCounted(:final count, :final isFloor) => ListTile(
         title: Text(row.kind.labelPlural),
-        trailing: Text(isFloor ? '$count+' : '$count', style: theme.textTheme.bodyMedium),
+        trailing: Text(_grouped(context, count, isFloor: isFloor), style: theme.textTheme.bodyMedium),
         onTap: onTap,
       ),
       KindCountUnavailable(:final reason) => ListTile(
@@ -175,5 +176,10 @@ class _KindTile extends StatelessWidget {
         onTap: onTap,
       ),
     };
+  }
+
+  static String _grouped(BuildContext context, int count, {required bool isFloor}) {
+    final formatted = NumberFormat.decimalPattern(Localizations.localeOf(context).toString()).format(count);
+    return isFloor ? '$formatted+' : formatted;
   }
 }

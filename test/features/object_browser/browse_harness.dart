@@ -81,11 +81,12 @@ class BrowseHarness {
   /// The location the router shows, path and query.
   String get location => router.state.uri.toString();
 
-  /// Pumps the app on [location], online unless [offline].
+  /// Pumps the app on [location], online unless [offline], in [locale] (English by default).
   Future<void> pump(
     WidgetTester tester, {
     String location = ApplicationRoutesConstants.browse,
     bool offline = false,
+    Locale? locale,
   }) async {
     final identity = MockStudioIdentityCubit();
     whenListen(identity, const Stream<StudioIdentityState>.empty(), initialState: const StudioIdentityLoading());
@@ -137,6 +138,7 @@ class BrowseHarness {
           child: AppConnectivityScope(
             child: MaterialApp.router(
               routerConfig: router,
+              locale: locale,
               localizationsDelegates: const [
                 S.delegate,
                 GlobalMaterialLocalizations.delegate,

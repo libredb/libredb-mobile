@@ -211,6 +211,24 @@ void main() {
       expect(find.textContaining('Other queue types fill this virtual host'), findsOneWidget);
     });
 
+    for (final (locale, floor, exact) in [
+      (const Locale('en'), '12,000+', '1,207'),
+      (const Locale('tr'), '12.000+', '1.207'),
+    ]) {
+      testWidgets('groups each count and floor in the locale\'s way ($locale)', (tester) async {
+        harness.answerCounts(
+          rabbit.id,
+          ['/'],
+          const {'queue': KindCounted(12000, sampledFrom: 'one page'), 'exchange': KindCounted(1207)},
+        );
+
+        await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F', locale: locale);
+
+        expect(tester.widget<Text>(countOf('Queues')).data, floor);
+        expect(tester.widget<Text>(countOf('Exchanges')).data, exact);
+      });
+    }
+
     testWidgets('draws a kind under its group label and leaves out a kind only the key browser lists', (tester) async {
       await harness.pump(tester, location: '/browse/seed%3Arabbit/kinds?container=%2F');
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_browser_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_tree.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
@@ -71,9 +72,10 @@ class KeyWalkSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: AppSpacing.xs,
         children: [
-          Text(_progress(s), key: const ValueKey('key-progress'), style: theme.textTheme.bodyMedium),
+          Text(_progress(context, s), key: const ValueKey('key-progress'), style: theme.textTheme.bodyMedium),
           if (walk.clustered == true) Text(s.keys_clustered, style: note),
-          if (skipped != null) Text(s.keys_skipped(skipped.count, skipped.reason), style: warning),
+          if (skipped != null)
+            Text(s.keys_skipped(skipped.count, _number(context).format(skipped.count), skipped.reason), style: warning),
           if (readOutcome != null) ...[
             Text(
               readOutcome.isIncomplete
@@ -114,20 +116,31 @@ class KeyWalkSummary extends StatelessWidget {
   }
 
   /// 'Scanned n keys; more remain' until the cursor returns to `0`, with the total in the scope `totalScope` names:
-  /// the database's key count, the walk's exact count, or none.
-  String _progress(S s) {
+  /// the database's key count, the walk's exact count, or none. Under a pattern the pages hand over only the keys that
+  /// match it, so the line says how many were found rather than scanned. Counts are grouped in the locale's way.
+  String _progress(BuildContext context, S s) {
+    final number = _number(context);
     // Capped for display only, as Studio's panel does: the screen never holds more than the limit.
     final count = walk.scanned < KeyBrowserBloc.heldKeyLimit ? walk.scanned : KeyBrowserBloc.heldKeyLimit;
+    final formatted = number.format(count);
     final more = walk.hasMore;
     final total = walk.total;
-    if (walk.usesLevels) return more ? s.keys_listed_more(count) : s.keys_listed(count);
+    final found = walk.pattern.isNotEmpty && !(walk.spec.pattern == 'glob' && walk.pattern == '*');
+    if (walk.usesLevels) return more ? s.keys_listed_more(count, formatted) : s.keys_listed(count, formatted);
     if (total != null && walk.spec.totalScope == 'database') {
+      if (found) {
+        return more
+            ? s.keys_found_of_database_more(count, formatted, number.format(total))
+            : s.keys_found_of_database(count, formatted, number.format(total));
+      }
       return more ? s.keys_scanned_of_database_more(count, total) : s.keys_scanned_of_database(count, total);
     }
     if (total != null && walk.spec.totalScope == 'walk') {
+      if (found) return more ? s.keys_found_of_walk_more(count, total) : s.keys_found_of_walk(count, total);
       return more ? s.keys_scanned_of_walk_more(count, total) : s.keys_scanned_of_walk(count, total);
     }
-    return more ? s.keys_scanned_more(count) : s.keys_scanned(count);
+    if (found) return more ? s.keys_found_more(count, formatted) : s.keys_found(count, formatted);
+    return more ? s.keys_scanned_more(count, formatted) : s.keys_scanned(count, formatted);
   }
 }
 
@@ -242,7 +255,7 @@ class _FolderTile extends StatelessWidget {
         null => Icons.folder_outlined,
       }),
       title: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: count == null ? const Icon(Icons.chevron_right) : Text('$count'),
+      trailing: count == null ? const Icon(Icons.chevron_right) : Text(_number(context).format(count)),
       onTap: onTap,
     );
   }
@@ -290,3 +303,6 @@ class KeyTypeChip extends StatelessWidget {
     );
   }
 }
+
+/// Groups a count in the locale's way, as the object list does.
+NumberFormat _number(BuildContext context) => NumberFormat.decimalPattern(Localizations.localeOf(context).toString());

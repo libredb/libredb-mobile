@@ -143,7 +143,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'user:*');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
-      expect(progress(tester), 'Scanned 497 of the 1207 keys this database holds; more remain');
+      expect(progress(tester), 'Found 497 matching keys; the database holds 1,207; more remain');
 
       await tester.tap(find.text(S.current.keys_load_more));
       await tester.pumpAndSettle();
@@ -155,10 +155,10 @@ void main() {
         {'cursor': '406', 'pattern': 'user:*', 'database': 1},
         {'cursor': '907', 'pattern': 'user:*', 'database': 1},
       ]);
-      expect(progress(tester), 'Scanned 1203 of the 1207 keys this database holds');
+      expect(progress(tester), 'Found 1,203 matching keys; the database holds 1,207');
       expect(find.text(S.current.keys_load_more), findsNothing, reason: 'the cursor returned to 0');
       final folder = find.widgetWithText(ListTile, 'user:');
-      expect(find.descendant(of: folder, matching: find.text('1203')), findsOneWidget);
+      expect(find.descendant(of: folder, matching: find.text('1,203')), findsOneWidget);
 
       await tester.tap(folder);
       await tester.pumpAndSettle();
@@ -173,6 +173,30 @@ void main() {
       expect(find.byType(KeyValuePage), findsOneWidget);
       expect(harness.location, '/browse/seed%3Adev-redis/value?container=1&path=user%3A2%3Aroles&type=set');
     });
+
+    for (final (locale, found, folderCount) in [
+      (const Locale('en'), 'Found 1,203 matching keys; the database holds 1,207', '1,203'),
+      (const Locale('tr'), 'Eşleşen 1.203 anahtar bulundu; veritabanında 1.207 anahtar var', '1.203'),
+    ]) {
+      testWidgets('a finished user:* walk says the keys it found, not scanned, grouped in the locale ($locale)', (
+        tester,
+      ) async {
+        answerRedisWalk();
+        await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=1', locale: locale);
+
+        await tester.enterText(find.byType(TextField), 'user:*');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
+        for (var page = 0; page < 2; page++) {
+          await tester.tap(find.text(S.current.keys_load_more));
+          await tester.pumpAndSettle();
+        }
+
+        expect(progress(tester), found);
+        final folder = find.widgetWithText(ListTile, 'user:');
+        expect(find.descendant(of: folder, matching: find.text(folderCount)), findsOneWidget);
+      });
+    }
 
     testWidgets('a key of a level page opens with its whole key, not the label its row shows', (tester) async {
       answerPages(
@@ -210,7 +234,7 @@ void main() {
       answerPages((_) => Success(clustered));
       await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0');
 
-      expect(progress(tester), 'Scanned 4 of the 2093 keys this database holds; more remain');
+      expect(progress(tester), 'Scanned 4 of the 2,093 keys this database holds; more remain');
       expect(find.text(S.current.keys_clustered), findsOneWidget);
     });
 
@@ -225,7 +249,7 @@ void main() {
       await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=0');
 
       expect(find.text(S.current.keys_cap), findsOneWidget);
-      expect(progress(tester), 'Scanned 10000 of the 12000 keys this database holds');
+      expect(progress(tester), 'Scanned 10,000 of the 12,000 keys this database holds');
       expect(find.text(S.current.keys_load_more), findsNothing);
     });
 
@@ -290,6 +314,7 @@ void main() {
         const <String, Object?>{},
         {'pattern': '/apisix/routes'},
       ]);
+      expect(progress(tester), 'Found 1 of the 1 keys this walk covers');
       expect(find.widgetWithText(ListTile, '/'), findsOneWidget, reason: 'grouped by the declared separator');
     });
 
@@ -353,6 +378,10 @@ void main() {
     await harness.pump(tester, location: '/browse/seed%3Amqtt/keys');
 
     expect(progress(tester), 'Scanned 2 keys');
+    await tester.enterText(find.byType(TextField), 'a/');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(progress(tester), 'Found 2 matching keys');
     await tester.tap(find.widgetWithText(ListTile, 'a/'));
     await tester.pumpAndSettle();
     expect(tester.widget<ListTile>(find.widgetWithText(ListTile, 'b')).onTap, isNull, reason: 'no key kind, not Redis');
@@ -375,6 +404,7 @@ void main() {
         find.text(
           S.current.keys_skipped(
             1,
+            '1',
             "Ids that break Firestore's id rules cannot be shown or opened, so they are counted here and not listed.",
           ),
         ),

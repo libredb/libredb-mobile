@@ -514,19 +514,27 @@
   "@keys_pattern_prefix": {
     "description": "The label of the key browser's pattern field when the engine takes a literal prefix."
   },
-  "keys_scanned": "{count, plural, =1{Scanned 1 key} other{Scanned {count} keys}}",
+  "keys_scanned": "{count, plural, =1{Scanned 1 key} other{Scanned {formatted} keys}}",
   "@keys_scanned": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
-  "keys_scanned_more": "{count, plural, =1{Scanned 1 key; more remain} other{Scanned {count} keys; more remain}}",
+  "keys_scanned_more": "{count, plural, =1{Scanned 1 key; more remain} other{Scanned {formatted} keys; more remain}}",
   "@keys_scanned_more": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
@@ -534,10 +542,12 @@
   "@keys_scanned_of_database": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -545,10 +555,12 @@
   "@keys_scanned_of_database_more": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -556,10 +568,12 @@
   "@keys_scanned_of_walk": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
@@ -567,36 +581,134 @@
   "@keys_scanned_of_walk_more": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       },
       "total": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },
-  "keys_listed": "{count, plural, =1{Listed 1 entry} other{Listed {count} entries}}",
+  "keys_found": "{count, plural, =1{Found 1 matching key} other{Found {formatted} matching keys}}",
+  "@keys_found": {
+    "description": "The key browser's progress under a pattern: the keys the walk returned, which match the pattern.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_more": "{count, plural, =1{Found 1 matching key; more remain} other{Found {formatted} matching keys; more remain}}",
+  "@keys_found_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_database": "{count, plural, =1{Found 1 matching key; the database holds {total}} other{Found {formatted} matching keys; the database holds {total}}}",
+  "@keys_found_of_database": {
+    "description": "The key browser's progress under a pattern, with the count of every key the database holds; {total} is formatted.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,203"
+      },
+      "total": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_database_more": "{count, plural, =1{Found 1 matching key; the database holds {total}; more remain} other{Found {formatted} matching keys; the database holds {total}; more remain}}",
+  "@keys_found_of_database_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,203"
+      },
+      "total": {
+        "type": "String",
+        "example": "1,207"
+      }
+    }
+  },
+  "keys_found_of_walk": "Found {count} of the {total} keys this walk covers",
+  "@keys_found_of_walk": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "keys_found_of_walk_more": "Found {count} of the {total} keys this walk covers; more remain",
+  "@keys_found_of_walk_more": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "keys_listed": "{count, plural, =1{Listed 1 entry} other{Listed {formatted} entries}}",
   "@keys_listed": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
-  "keys_listed_more": "{count, plural, =1{Listed 1 entry; more remain} other{Listed {count} entries; more remain}}",
+  "keys_listed_more": "{count, plural, =1{Listed 1 entry; more remain} other{Listed {formatted} entries; more remain}}",
   "@keys_listed_more": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       }
     }
   },
   "keys_clustered": "Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node's.",
   "@keys_clustered": {},
-  "keys_skipped": "{count, plural, =1{1 key left out of this walk: {reason}} other{{count} keys left out of this walk: {reason}}}",
+  "keys_skipped": "{count, plural, =1{1 key left out of this walk: {reason}} other{{formatted} keys left out of this walk: {reason}}}",
   "@keys_skipped": {
     "placeholders": {
       "count": {
         "type": "int"
+      },
+      "formatted": {
+        "type": "String",
+        "example": "1,207"
       },
       "reason": {
         "type": "String"
