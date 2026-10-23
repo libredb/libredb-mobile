@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_detail.dart';
@@ -247,6 +249,47 @@ void main() {
       );
       expect(
         () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":true}')),
+        throwsFormatException,
+      );
+    });
+
+    test('accepts any number as the truncation limit, as Studio\'s client does, a whole one read as an int', () {
+      SourceTruncation? truncation(String limit) =>
+          (ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"limit":$limit,"reason":"cut"}}'))
+                      .parts
+                      .single
+                  as SourceText)
+              .truncated;
+
+      expect(truncation('2.5'), const SourceTruncation(limit: 2.5, reason: 'cut'));
+      expect(truncation('20.0')?.limit, isA<int>().having((limit) => limit, 'limit', 20));
+      expect(truncation('20'), const SourceTruncation(limit: 20, reason: 'cut'));
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"limit":"20","reason":"cut"}}')),
+        throwsFormatException,
+      );
+    });
+
+    test('refuses a text, a refusal or a truncation reason over Studio\'s 1,000,000 UTF-16 code units', () {
+      const limit = 1000000;
+      // An emoji is two UTF-16 code units, so a string at the limit in code units holds half as many runes.
+      final atLimit = '\u{1F600}' * (limit ~/ 2);
+      final over = '${atLimit}x';
+      String part(String field, String value) => switch (field) {
+        'text' =>
+          '{"id":"b","label":"B","text":${jsonEncode(value)},"language":"sql","form":"complete","origin":"stored"}',
+        'unavailable' => '{"id":"b","label":"B","unavailable":${jsonEncode(value)}}',
+        _ => '{$text,"origin":"stored","truncated":{"limit":10,"reason":${jsonEncode(value)}}}',
+      };
+
+      for (final field in ['text', 'unavailable', 'reason']) {
+        expect(ObjectBrowserJson.source(answer(part(field, atLimit))).parts, hasLength(1), reason: field);
+        expect(() => ObjectBrowserJson.source(answer(part(field, over))), throwsFormatException, reason: field);
+      }
+      expect(
+        () => ObjectBrowserJson.source(
+          answer('{"id":"b","label":"B","unavailable":${jsonEncode(over)},"statement":true}'),
+        ),
         throwsFormatException,
       );
     });

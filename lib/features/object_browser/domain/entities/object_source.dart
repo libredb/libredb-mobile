@@ -36,10 +36,11 @@ enum SourceOrigin {
 
 /// Studio cut a part's text: [limit] counts what the producer counts, characters at the route's bound and collection
 /// ids for a Firestore document's subcollections, and only [reason], the producer's own sentence, names that unit.
+/// [limit] is any number, as Studio's client accepts, and an int when it is whole.
 class SourceTruncation extends Equatable {
   const SourceTruncation({required this.limit, required this.reason});
 
-  final int limit;
+  final num limit;
   final String reason;
 
   @override
