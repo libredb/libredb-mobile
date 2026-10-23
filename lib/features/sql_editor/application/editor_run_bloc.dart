@@ -6,8 +6,10 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/statement_position.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -45,11 +47,19 @@ part 'editor_run_state.dart';
 /// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
 /// bloc never holds a clear row. After a success [SchemaChangeNotifier.statementSucceeded] tells the object browser.
 /// Neither the statement nor a database error text is logged; only an error's code is.
+///
+/// Each run that reached Studio adds one entry to the account's history through [IStatementHistoryRepository], when
+/// the run names an [EditorHistoryTarget]: Succeeded, or Failed for any failure but one before the request reached
+/// Studio (a [NetworkError], or a [TimeoutError] before it was sent), without the error's text. A text refused here, a
+/// cancelled confirmation and a page of Load more add none. The entry is written even when the editor closed before
+/// the answer came, and a write the store refused is told to [onHistoryNotKept] then too.
 class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   EditorRunBloc({
     required this._repository,
     required this._providerMeta,
     required this._schemaChanges,
+    required this._history,
+    required this._onHistoryNotKept,
     required this.connectionId,
     this._check = const InterimWriteCheck(),
     this._newRunId = newQueryId,
@@ -69,6 +79,11 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   final ISqlEditorRepository _repository;
   final IProviderMetaRepository _providerMeta;
   final SchemaChangeNotifier _schemaChanges;
+  final IStatementHistoryRepository _history;
+
+  /// Told the code of each history entry the store refused to keep, also after this bloc closed, so the editor that
+  /// ran it can say so wherever the user is.
+  final void Function(AppErrorCode code) _onHistoryNotKept;
   final InterimWriteCheck _check;
   final String Function() _newRunId;
 
@@ -124,10 +139,11 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
             previous: state,
             meta: meta,
             role: event.role,
+            history: event.history,
           ),
         );
       case RunsWithoutAsking():
-        await _run(emit, EditorStatement(text: text, catalog: event.catalog), meta, event.role);
+        await _run(emit, EditorStatement(text: text, catalog: event.catalog), meta, event.role, event.history);
     }
   }
 
@@ -138,7 +154,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       emit(awaiting.previous);
       return;
     }
-    await _run(emit, awaiting.statement, awaiting.meta, awaiting.role);
+    await _run(emit, awaiting.statement, awaiting.meta, awaiting.role, awaiting.history);
   }
 
   void _onRateLimitElapsed(EditorRateLimitElapsed event, Emitter<EditorRunState> emit) {
@@ -191,10 +207,12 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     EditorStatement statement,
     ProviderMeta meta,
     StudioRole? role,
+    EditorHistoryTarget? history,
   ) async {
     final queryId = _newRunId();
     final signal = _inFlight = CancelSignal();
     emit(EditorRunning(queryId: queryId, supportsCancel: meta.supportsQueryCancel));
+    final watch = Stopwatch()..start();
     final result = await _repository.run(
       connectionId,
       statement.text,
@@ -203,6 +221,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       catalog: statement.catalog,
     );
     if (identical(_inFlight, signal)) _inFlight = null;
+    if (history != null) unawaited(_record(history, statement.text, result, watch.elapsed));
     if (emit.isDone) return;
     switch (state) {
       case EditorRunning(queryId: final id) || EditorCancelling(queryId: final id) when id == queryId:
@@ -254,6 +273,38 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     );
     if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
     return answer;
+  }
+
+  /// Adds the run of [text] that answered [result] after [elapsed] to the history of [history], unless it never
+  /// reached Studio. A success keeps Studio's own time and row count, and the time measured here when Studio timed it
+  /// as zero, as Studio's web does (`resultData.executionTime || executionTime`).
+  Future<void> _record(EditorHistoryTarget history, String text, Result<QueryResult> result, Duration elapsed) async {
+    final FinishedRun run;
+    switch (result) {
+      case Success(:final data):
+        run = FinishedRun(
+          connectionId: connectionId,
+          connectionName: history.connectionName,
+          text: text,
+          status: StatementRunStatus.success,
+          duration: data.executionTime == Duration.zero ? elapsed : data.executionTime,
+          rowCount: data.rowCount,
+        );
+      case Failure(:final error) when error is NetworkError || (error is TimeoutError && !error.sent):
+        return;
+      case Failure():
+        run = FinishedRun(
+          connectionId: connectionId,
+          connectionName: history.connectionName,
+          text: text,
+          status: StatementRunStatus.failure,
+          duration: elapsed,
+        );
+    }
+    if (await _history.record(history.subjectHash, run) case Failure(:final error)) {
+      _log.warn('history entry not kept: {}', [error.code ?? error.runtimeType]);
+      _onHistoryNotKept(AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic);
+    }
   }
 
   void _fail(Emitter<EditorRunState> emit, AppError error, {EditorStatement? statement}) {

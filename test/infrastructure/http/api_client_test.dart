@@ -350,6 +350,22 @@ void main() {
         );
       });
 
+      test('a connect or send timeout says the request was never sent; a receive timeout does not', () async {
+        for (final type in [DioExceptionType.connectionTimeout, DioExceptionType.sendTimeout]) {
+          stub.stubDioError(type, message: 'Timeout');
+          await expectLater(
+            client.post('/test', {'data': 'test'}),
+            throwsA(isA<TimeoutBeforeSentException>()),
+            reason: '$type',
+          );
+        }
+        stub.stubDioError(DioExceptionType.receiveTimeout, message: 'Timeout');
+        await expectLater(
+          client.post('/test', {'data': 'test'}),
+          throwsA(allOf([isA<FetchDataException>(), isNot(isA<TimeoutBeforeSentException>())])),
+        );
+      });
+
       test('given valid data when get request is made then should return success 200', () async {
         stub.stubSuccess(data: '{"success": true}', statusCode: 200);
         final response = await client.get('/test');

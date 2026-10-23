@@ -17,6 +17,7 @@ import 'package:libredb_mobile/features/connections/domain/repositories/favorite
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
@@ -210,6 +211,9 @@ class AppScope extends StatelessWidget {
         // One store for the app, so a draft save and a history append share its queue.
         RepositoryProvider<IStatementTextStore>(
           create: (context) => dependencies.createStatementTextStore(context.read<ISecureStorage>()),
+        ),
+        RepositoryProvider<IStatementHistoryRepository>(
+          create: (context) => dependencies.createStatementHistoryRepository(context.read<IStatementTextStore>()),
         ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(

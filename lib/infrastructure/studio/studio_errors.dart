@@ -78,6 +78,7 @@ AppError _transportError(AppException error) {
   if (error is RequestCancelledException) return RequestCancelledError(error.toString());
   if (error is OfflineException) return NetworkError(error.toString(), code: AppErrorCode.networkOffline.key);
   final message = error.toString();
+  if (error is TimeoutBeforeSentException) return TimeoutError(message, sent: false);
   if (message.toLowerCase().contains('timeout')) return TimeoutError(message);
   return NetworkError(message);
 }

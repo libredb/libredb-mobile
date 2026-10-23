@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_catalog_bloc.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_result_area.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/replace_text_prompt.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
+import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 
 /// The SQL editor of [connectionId]: the statement capture note while governance records statements in full, the text
 /// field, Run (Cancel while a statement runs), and the result under them.
@@ -27,33 +34,52 @@ import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 ///
 /// On a server-level connection the database chip sits above the text, and Run sends the active database; switching
 /// database keeps the text.
+///
+/// Each run that reached Studio is added to the account's history on the phone, which History opens; an entry tapped
+/// there replaces the text, after asking when the text differs, and never runs.
 class EditorPage extends StatelessWidget {
   const EditorPage({super.key, required this.connectionId});
 
   final String connectionId;
 
   @override
-  Widget build(BuildContext context) => MultiBlocProvider(
-    providers: [
-      BlocProvider(
-        create: (context) => EditorRunBloc(
-          repository: context.read<ISqlEditorRepository>(),
-          providerMeta: context.read<IProviderMetaRepository>(),
-          schemaChanges: context.read<SchemaChangeNotifier>(),
-          connectionId: connectionId,
+  Widget build(BuildContext context) {
+    // The app's messenger, which outlives this page, so a history write refused after the editor closed is still said
+    // on whatever page the user is on.
+    final messenger = ScaffoldMessenger.of(context);
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => EditorRunBloc(
+            repository: context.read<ISqlEditorRepository>(),
+            providerMeta: context.read<IProviderMetaRepository>(),
+            schemaChanges: context.read<SchemaChangeNotifier>(),
+            history: context.read<IStatementHistoryRepository>(),
+            onHistoryNotKept: (code) => _sayHistoryNotKept(messenger, code),
+            connectionId: connectionId,
+          ),
         ),
-      ),
-      BlocProvider(
-        create: (context) => EditorCatalogBloc(
-          containers: context.read<IContainersRepository>(),
-          providerMeta: context.read<IProviderMetaRepository>(),
-          activeCatalog: context.read<ActiveCatalogCubit>(),
-          connectionId: connectionId,
-        )..add(const EditorCatalogRequested()),
-      ),
-    ],
-    child: _EditorView(connectionId: connectionId),
-  );
+        BlocProvider(
+          create: (context) => EditorCatalogBloc(
+            containers: context.read<IContainersRepository>(),
+            providerMeta: context.read<IProviderMetaRepository>(),
+            activeCatalog: context.read<ActiveCatalogCubit>(),
+            connectionId: connectionId,
+          )..add(const EditorCatalogRequested()),
+        ),
+      ],
+      child: _EditorView(connectionId: connectionId),
+    );
+  }
+
+  static void _sayHistoryNotKept(ScaffoldMessengerState messenger, AppErrorCode code) {
+    if (!messenger.mounted) {
+      throw StateError('The app\'s ScaffoldMessenger is gone, so a refused history write cannot be shown');
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(code.resolve(messenger.context))));
+  }
 }
 
 class _EditorView extends StatefulWidget {
@@ -72,6 +98,9 @@ class _EditorViewState extends State<_EditorView> {
   /// The confirmation sheet this page shows, while it is open.
   Route<WriteConfirmation>? _sheet;
 
+  /// The History sheet this page shows, while it is open.
+  Route<StatementHistoryEntry>? _historySheet;
+
   @override
   void dispose() {
     // The sheet sits on the root navigator, above the shell, so a deep link or a session end that disposes this page
@@ -83,6 +112,13 @@ class _EditorViewState extends State<_EditorView> {
       });
     }
     _sheet = null;
+    // The History sheet sits there too, and closes the same way.
+    if (_historySheet case final sheet?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (sheet.isActive) sheet.navigator?.removeRoute(sheet);
+      });
+    }
+    _historySheet = null;
     _text.dispose();
     _focus.dispose();
     super.dispose();
@@ -93,8 +129,38 @@ class _EditorViewState extends State<_EditorView> {
     final catalog = context.read<EditorCatalogBloc>().state.catalogToSend(
       context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
     );
+    final subject = StudioSubjectScope.of(context);
+    final connection = context.read<ActiveConnectionCubit>().state.connection;
     context.read<EditorRunBloc>().add(
-      EditorRunRequested(text: _text.text, role: StudioRoleScope.of(context), catalog: catalog),
+      EditorRunRequested(
+        text: _text.text,
+        role: StudioRoleScope.of(context),
+        catalog: catalog,
+        history: subject == null || connection == null
+            ? null
+            : EditorHistoryTarget(subjectHash: subject, connectionName: connection.name),
+      ),
+    );
+  }
+
+  /// Opens the account's History over this editor and puts the tapped entry's text in the field, after asking when it
+  /// would replace another text; nothing runs.
+  Future<void> _openHistory(String subjectHash) async {
+    final connectionId = context.read<EditorRunBloc>().connectionId;
+    final entry = await showStatementHistorySheet(
+      context,
+      subjectHash: subjectHash,
+      activeConnectionId: connectionId,
+      onRoute: (route) => _historySheet = route,
+    );
+    _historySheet = null;
+    final text = entry?.text;
+    if (!mounted || text == null) return;
+    if (!await confirmReplaceEditorText(context, current: _text.text, incoming: text)) return;
+    if (!mounted) return;
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 
@@ -165,6 +231,10 @@ class _EditorViewState extends State<_EditorView> {
             withheld: context.watch<EditorCatalogBloc>().state.withholdsRun(
               context.select<ActiveCatalogCubit, String?>((cubit) => cubit.catalogOf(widget.connectionId)),
             ),
+            onHistory: switch (StudioSubjectScope.of(context)) {
+              final subject? => () => _openHistory(subject),
+              null => null,
+            },
           ),
           const Divider(height: 1),
           Expanded(flex: 3, child: EditorResultArea(confirm: _confirm)),

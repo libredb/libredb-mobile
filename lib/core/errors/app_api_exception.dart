@@ -73,6 +73,12 @@ final class UntrustedCertificateException extends FetchDataException {
   UntrustedCertificateException(super.message);
 }
 
+/// Thrown for a request whose connect or send timed out, so the server never received it; its message is
+/// `TimeoutException`, as every timeout's is.
+final class TimeoutBeforeSentException extends FetchDataException {
+  TimeoutBeforeSentException() : super('TimeoutException');
+}
+
 /// Thrown for a request that was never sent because the device is offline (`ConnectivityInterceptor`).
 ///
 /// A repository should report it with `AppErrorCode.networkOffline`, so a screen keeps the data it loaded and says that

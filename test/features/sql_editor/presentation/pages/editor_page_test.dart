@@ -12,11 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_catalog_chip.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/statement_history_sheet.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
@@ -40,6 +43,7 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
+import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -68,6 +72,8 @@ const _server = StudioConnection(
   environment: 'development',
 );
 
+const _account = 'account-hash';
+
 const _rolledBack = QueryResult(
   fields: [],
   rows: [],
@@ -80,6 +86,7 @@ void main() {
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late MockActiveConnectionCubit active;
+  late MockIStatementHistoryRepository history;
   late SchemaChangeNotifier schemaChanges;
   late MockIContainersRepository containers;
   late MockIActiveCatalogStore catalogStore;
@@ -102,6 +109,22 @@ void main() {
     when(() => catalogStore.write(any(), any(), any())).thenAnswer((_) async {});
     catalog = ActiveCatalogCubit(store: catalogStore, connectionIds: const Stream.empty());
     active = MockActiveConnectionCubit();
+    history = MockIStatementHistoryRepository();
+    when(() => history.record(any(), any())).thenAnswer((invocation) async {
+      final run = invocation.positionalArguments[1] as FinishedRun;
+      return Success(
+        StatementHistoryEntry(
+          id: 'entry',
+          connectionId: run.connectionId,
+          connectionName: run.connectionName,
+          text: run.text,
+          status: run.status,
+          duration: run.duration,
+          rowCount: run.rowCount,
+          executedAt: DateTime.utc(2026, 10, 23),
+        ),
+      );
+    });
     schemaChanges = SchemaChangeNotifier(providerMeta: providerMeta, invalidateConnection: (_) {});
   });
 
@@ -147,6 +170,7 @@ void main() {
     StudioConnection? connection = _postgres,
     bool offline = false,
     bool recordsInFull = false,
+    String? subject = _account,
     Size? size,
     Locale? locale,
   }) async {
@@ -167,6 +191,7 @@ void main() {
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IContainersRepository>.value(value: containers),
+          RepositoryProvider<IStatementHistoryRepository>.value(value: history),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -186,9 +211,12 @@ void main() {
             home: Scaffold(
               body: StudioRoleScope(
                 role: const StudioUserRole(),
-                child: StatementCaptureScope(
-                  recordsInFull: recordsInFull,
-                  child: OfflineStatus(isOffline: offline, child: const SqlPage()),
+                child: StudioSubjectScope(
+                  subjectHash: subject,
+                  child: StatementCaptureScope(
+                    recordsInFull: recordsInFull,
+                    child: OfflineStatus(isOffline: offline, child: const SqlPage()),
+                  ),
                 ),
               ),
             ),
@@ -948,5 +976,143 @@ void main() {
     expect(find.textContaining('Ada Lovelace'), findsWidgets);
     expect(BlocProvider.of<ResultViewBloc>(tester.element(find.textContaining('Ada Lovelace').first)), same(results));
     expect(runsOf('SELECT * FROM customers'), 1);
+  });
+
+  group('the history', () {
+    StatementHistoryEntry kept(String id, String text, {String connectionId = 'seed:dev-postgres'}) =>
+        StatementHistoryEntry(
+          id: id,
+          connectionId: connectionId,
+          connectionName: 'Dev Postgres',
+          text: text,
+          status: StatementRunStatus.success,
+          duration: const Duration(milliseconds: 3),
+          executedAt: DateTime.utc(2026, 10, 23),
+        );
+
+    String editorText(WidgetTester tester) =>
+        tester.widget<TextField>(find.byKey(EditorInput.fieldKey)).controller!.text;
+
+    Future<void> pick(WidgetTester tester, StatementHistoryEntry entry) async {
+      await tester.tap(find.byKey(EditorActions.historyKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(StatementHistorySheet.entryKey(entry.id)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a run writes one entry for the account, on the open connection', (tester) async {
+      final customers = _recorded('query_preview_postgres_customers');
+      answerRun('SELECT * FROM customers', () => Success(customers));
+      await pump(tester);
+      await type(tester, 'SELECT * FROM customers');
+
+      await run(tester);
+
+      final call = verify(() => history.record(_account, captureAny()));
+      call.called(1);
+      expect(
+        call.captured.single,
+        FinishedRun(
+          connectionId: _postgres.id,
+          connectionName: 'Dev Postgres',
+          text: 'SELECT * FROM customers',
+          status: StatementRunStatus.success,
+          duration: customers.executionTime,
+          rowCount: customers.rowCount,
+        ),
+      );
+    });
+
+    testWidgets('a cancelled confirmation writes no entry', (tester) async {
+      await pump(tester);
+      await type(tester, 'DELETE FROM orders WHERE false');
+
+      await run(tester);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => history.record(any(), any()));
+    });
+
+    testWidgets('while Studio has named no account, History is disabled and a run writes nothing', (tester) async {
+      answerRun('SELECT 1', () => const Success(_rolledBack));
+      await pump(tester, subject: null);
+      await type(tester, 'SELECT 1');
+
+      await run(tester);
+
+      expect(tester.widget<ButtonStyleButton>(find.byKey(EditorActions.historyKey)).enabled, isFalse);
+      verifyNever(() => history.record(any(), any()));
+    });
+
+    testWidgets('History works offline', (tester) async {
+      when(() => history.read(_account)).thenAnswer((_) async => const Success([]));
+      await pump(tester, offline: true);
+
+      await tester.tap(find.byKey(EditorActions.historyKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StatementHistorySheet), findsOneWidget);
+    });
+
+    testWidgets('a tap puts the entry in an empty editor and never runs it', (tester) async {
+      final entry = kept('1', 'SELECT * FROM orders');
+      when(() => history.read(_account)).thenAnswer((_) async => Success([entry]));
+      await pump(tester);
+
+      await pick(tester, entry);
+
+      expect(find.byType(StatementHistorySheet), findsNothing);
+      expect(find.text("Replace the editor's text?"), findsNothing);
+      expect(editorText(tester), 'SELECT * FROM orders');
+      verifyNothingSent();
+    });
+
+    testWidgets('a different, non-empty editor text is replaced only after asking', (tester) async {
+      final entry = kept('1', 'SELECT * FROM orders');
+      when(() => history.read(_account)).thenAnswer((_) async => Success([entry]));
+      await pump(tester);
+      await type(tester, 'SELECT 1');
+
+      await pick(tester, entry);
+      expect(find.text("Replace the editor's text?"), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(editorText(tester), 'SELECT 1');
+
+      await pick(tester, entry);
+      await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
+      await tester.pumpAndSettle();
+
+      expect(editorText(tester), 'SELECT * FROM orders');
+      verifyNothingSent();
+    });
+
+    testWidgets('the same text in the editor asks nothing', (tester) async {
+      final entry = kept('1', 'SELECT * FROM orders');
+      when(() => history.read(_account)).thenAnswer((_) async => Success([entry]));
+      await pump(tester);
+      await type(tester, 'SELECT * FROM orders');
+
+      await pick(tester, entry);
+
+      expect(find.text("Replace the editor's text?"), findsNothing);
+      expect(editorText(tester), 'SELECT * FROM orders');
+    });
+
+    testWidgets('a run whose entry the phone could not keep says so', (tester) async {
+      answerRun('SELECT 1', () => const Success(_rolledBack));
+      when(() => history.record(any(), any()))
+          .thenAnswer((_) async => const Failure(UnknownError('Could not add', code: 'editor.saved_text_not_stored')));
+      await pump(tester);
+      await type(tester, 'SELECT 1');
+
+      await run(tester);
+
+      expect(
+        find.text('This phone could not save the statement text. Check its free storage and try again.'),
+        findsOneWidget,
+      );
+    });
   });
 }

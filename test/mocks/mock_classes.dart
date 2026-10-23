@@ -34,6 +34,8 @@ import 'package:libredb_mobile/features/connections/domain/repositories/favorite
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
@@ -80,6 +82,8 @@ class MockIStatementTextStore extends Mock implements IStatementTextStore {}
 
 class MockISqlEditorRepository extends Mock implements ISqlEditorRepository {}
 
+class MockIStatementHistoryRepository extends Mock implements IStatementHistoryRepository {}
+
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}
 
@@ -121,4 +125,13 @@ void registerAllFallbackValues() {
   registerFallbackValue(<String>{});
   registerFallbackValue(ConnectionFavorites.empty);
   registerFallbackValue(QueryPage.first);
+  registerFallbackValue(
+    const FinishedRun(
+      connectionId: 'fallback',
+      connectionName: 'fallback',
+      text: '',
+      status: StatementRunStatus.success,
+      duration: Duration.zero,
+    ),
+  );
 }

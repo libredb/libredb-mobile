@@ -2496,6 +2496,213 @@ class S {
       args: [],
     );
   }
+
+  /// `History`
+  String get sql_history_open {
+    return Intl.message(
+      'History',
+      name: 'sql_history_open',
+      desc: 'Opens the statement history of this phone from the SQL editor.',
+      args: [],
+    );
+  }
+
+  /// `History`
+  String get sql_history_title {
+    return Intl.message('History', name: 'sql_history_title', desc: 'Title of the statement history sheet.', args: []);
+  }
+
+  /// `All connections`
+  String get sql_history_all_connections {
+    return Intl.message(
+      'All connections',
+      name: 'sql_history_all_connections',
+      desc: 'Switch on the history sheet that shows the entries of every connection, not only the open one.',
+      args: [],
+    );
+  }
+
+  /// `Search statements and connections`
+  String get sql_history_search_hint {
+    return Intl.message(
+      'Search statements and connections',
+      name: 'sql_history_search_hint',
+      desc: 'Hint of the history sheet\'s search field, which searches the statement text and the connection name on the phone.',
+      args: [],
+    );
+  }
+
+  /// `All`
+  String get sql_history_filter_all {
+    return Intl.message(
+      'All',
+      name: 'sql_history_filter_all',
+      desc: 'Status filter of the history sheet: every run.',
+      args: [],
+    );
+  }
+
+  /// `Succeeded`
+  String get sql_history_filter_success {
+    return Intl.message(
+      'Succeeded',
+      name: 'sql_history_filter_success',
+      desc: 'Status filter of the history sheet: only the runs that succeeded.',
+      args: [],
+    );
+  }
+
+  /// `Failed`
+  String get sql_history_filter_failure {
+    return Intl.message(
+      'Failed',
+      name: 'sql_history_filter_failure',
+      desc: 'Status filter of the history sheet: only the runs that failed.',
+      args: [],
+    );
+  }
+
+  /// `Succeeded`
+  String get sql_history_succeeded {
+    return Intl.message(
+      'Succeeded',
+      name: 'sql_history_succeeded',
+      desc: 'Status of a history entry whose run succeeded.',
+      args: [],
+    );
+  }
+
+  /// `Failed`
+  String get sql_history_failed {
+    return Intl.message(
+      'Failed',
+      name: 'sql_history_failed',
+      desc: 'Status of a history entry whose run failed; the database\'s words are never kept.',
+      args: [],
+    );
+  }
+
+  /// `Too long to keep`
+  String get sql_history_too_long {
+    return Intl.message(
+      'Too long to keep',
+      name: 'sql_history_too_long',
+      desc: 'Shown in place of a history entry\'s statement that was too long to keep on the phone.',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 row} other{{count} rows}}`
+  String sql_history_rows(int count) {
+    return Intl.plural(
+      count,
+      one: '1 row',
+      other: '$count rows',
+      name: 'sql_history_rows',
+      desc: 'The rows a history entry\'s run counted.',
+      args: [count],
+    );
+  }
+
+  /// `{milliseconds} ms`
+  String sql_history_duration(int milliseconds) {
+    return Intl.message(
+      '$milliseconds ms',
+      name: 'sql_history_duration',
+      desc: 'How long a history entry\'s run took.',
+      args: [milliseconds],
+    );
+  }
+
+  /// `Delete`
+  String get sql_history_delete {
+    return Intl.message(
+      'Delete',
+      name: 'sql_history_delete',
+      desc: 'Deletes one history entry; also the swipe\'s label.',
+      args: [],
+    );
+  }
+
+  /// `Clear all`
+  String get sql_history_clear_all {
+    return Intl.message(
+      'Clear all',
+      name: 'sql_history_clear_all',
+      desc: 'Deletes the whole statement history of this account on the phone, after a confirmation.',
+      args: [],
+    );
+  }
+
+  /// `Clear the history?`
+  String get sql_history_clear_title {
+    return Intl.message(
+      'Clear the history?',
+      name: 'sql_history_clear_title',
+      desc: 'Title of the confirmation before the whole history is deleted.',
+      args: [],
+    );
+  }
+
+  /// `Every statement in your history on this phone is deleted. This cannot be undone.`
+  String get sql_history_clear_message {
+    return Intl.message(
+      'Every statement in your history on this phone is deleted. This cannot be undone.',
+      name: 'sql_history_clear_message',
+      desc: 'Body of the confirmation before the whole history is deleted.',
+      args: [],
+    );
+  }
+
+  /// `No statements yet`
+  String get sql_history_empty {
+    return Intl.message(
+      'No statements yet',
+      name: 'sql_history_empty',
+      desc: 'Empty state of the history sheet.',
+      args: [],
+    );
+  }
+
+  /// `Statements you run appear here. They stay on this phone.`
+  String get sql_history_empty_description {
+    return Intl.message(
+      'Statements you run appear here. They stay on this phone.',
+      name: 'sql_history_empty_description',
+      desc: 'Description under the empty state of the history sheet.',
+      args: [],
+    );
+  }
+
+  /// `Replace the editor's text?`
+  String get sql_history_replace_title {
+    return Intl.message(
+      'Replace the editor\'s text?',
+      name: 'sql_history_replace_title',
+      desc: 'Title of the prompt before a history entry replaces the text in the editor.',
+      args: [],
+    );
+  }
+
+  /// `The statement from the history takes the place of the text in the editor. It does not run.`
+  String get sql_history_replace_message {
+    return Intl.message(
+      'The statement from the history takes the place of the text in the editor. It does not run.',
+      name: 'sql_history_replace_message',
+      desc: 'Body of the prompt before a history entry replaces the text in the editor.',
+      args: [],
+    );
+  }
+
+  /// `Replace`
+  String get sql_history_replace {
+    return Intl.message(
+      'Replace',
+      name: 'sql_history_replace',
+      desc: 'Confirms that a history entry replaces the text in the editor.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

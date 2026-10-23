@@ -6,6 +6,7 @@ import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
 import 'package:libredb_mobile/app/shell/app_statement_capture_scope.dart';
 import 'package:libredb_mobile/app/shell/app_studio_role_scope.dart';
+import 'package:libredb_mobile/app/shell/app_studio_subject_scope.dart';
 import 'package:libredb_mobile/app/shell/governance_status_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
@@ -107,7 +108,9 @@ class _AppShellState extends State<AppShell> {
                       ResponsiveScaffold(
                         activeRoute: widget.state.uri.path,
                         child: AppStudioRoleScope(
-                          child: AppStatementCaptureScope(child: GovernanceStatusScope(child: widget.child)),
+                          child: AppStudioSubjectScope(
+                            child: AppStatementCaptureScope(child: GovernanceStatusScope(child: widget.child)),
+                          ),
                         ),
                       ),
                     ),

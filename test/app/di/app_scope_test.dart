@@ -46,6 +46,7 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
@@ -1004,6 +1005,12 @@ void main() {
       await tester.pump();
 
       expect(catalog.state, const ActiveCatalogNone());
+    });
+
+    testWidgets('provides the statement history over the one statement text store', (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<IStatementHistoryRepository>(), isA<IStatementHistoryRepository>());
     });
 
     testWidgets('provides the result view mode, restored from the device', (tester) async {

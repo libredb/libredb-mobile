@@ -11,8 +11,10 @@ import 'package:libredb_mobile/features/connections/domain/repositories/favorite
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/data/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
@@ -176,6 +178,10 @@ class AppDependencies {
   /// account in [secureStorage].
   IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) =>
       StatementTextStore(EncryptedTextFileStore(secureStorage: secureStorage));
+
+  /// The statement history each account keeps on the device, in the history of [store].
+  IStatementHistoryRepository createStatementHistoryRepository(IStatementTextStore store) =>
+      StatementHistoryRepository(store);
 
   /// Studio's liveness and readiness, which tell an unreachable Studio apart from a session failure.
   IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => StudioStatusRepository(apiClient);

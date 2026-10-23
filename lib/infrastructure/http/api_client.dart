@@ -404,6 +404,8 @@ class ApiClient {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
+        // The request never reached the server, so a statement in it did not run.
+        return TimeoutBeforeSentException();
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.transformTimeout:
         return FetchDataException('TimeoutException');

@@ -30,25 +30,27 @@ final class EditorIdle extends EditorRunState {
 }
 
 /// [statement] waits for the user's confirmation before it is sent; [previous] is what stays on screen meanwhile and
-/// after a cancel. [meta] and [role] are the run's, read when Run was tapped.
+/// after a cancel. [meta], [role] and [history] are the run's, read when Run was tapped.
 final class EditorAwaitingConfirmation extends EditorRunState {
   const EditorAwaitingConfirmation({
     required this.statement,
     required this.previous,
     required this.meta,
     required this.role,
+    this.history,
   });
 
   final EditorStatement statement;
   final EditorRunState previous;
   final ProviderMeta meta;
   final StudioRole? role;
+  final EditorHistoryTarget? history;
 
   /// The asks of a statement waiting here, never null.
   AsksBeforeRunning get asks => statement.asks!;
 
   @override
-  List<Object?> get props => [statement, previous, meta, role];
+  List<Object?> get props => [statement, previous, meta, role, history];
 
   @override
   String toString() => 'EditorAwaitingConfirmation($statement, previous: ${previous.runtimeType})';

@@ -159,8 +159,15 @@ void main() {
       );
     });
 
-    test('a timeout is a TimeoutError', () {
-      expect(studioError(FetchDataException('TimeoutException')), isA<TimeoutError>());
+    test('a timeout is a TimeoutError of a request that was sent', () {
+      expect(
+        studioError(FetchDataException('TimeoutException')),
+        isA<TimeoutError>().having((e) => e.sent, 'sent', isTrue),
+      );
+    });
+
+    test('a timeout before the request was sent is a TimeoutError that says so', () {
+      expect(studioError(TimeoutBeforeSentException()), isA<TimeoutError>().having((e) => e.sent, 'sent', isFalse));
     });
 
     test('a dropped connection is a NetworkError', () {
