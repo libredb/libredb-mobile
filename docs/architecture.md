@@ -186,7 +186,7 @@ Studio counts requests per user in buckets, per Studio process (`src/lib/api/rat
 - A refused request answers 429 with `Retry-After`, which reaches the caller as `studio.rate_limited`.
 - `POST /api/db/test-connection` spends a slot and opens a connection to the database, so the app checks a connection only when the user taps Check in its details sheet, never on the list or on open, and drops a second tap while a check runs.
   Like Studio, it does not check a connection whose `provider-meta` declares `resumesBilledCompute`, since the check would wake compute the engine bills for, unless the user chooses Check anyway.
-  The `warnings` Studio sends on either success shape, such as Materialize opening a database that does not exist, show under Reachable in a caution style, each as Studio's `describeWarning` writes it.
+  The `warnings` Studio sends on either success shape, such as Materialize opening a database that does not exist, show under Reachable in a caution style, each as Studio's `describeWarning` writes it (the severity, then the message, or `Warning` and the code for a warning without one); a `warnings` that is not a list fails the check, and an entry without a string message is left out.
 
 ### The object tree
 

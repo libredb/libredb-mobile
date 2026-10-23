@@ -140,6 +140,7 @@ void main() {
           warnings: [
             QueryWarning(message: 'database "nope" does not exist', severity: 'notice'),
             QueryWarning(message: 'index not ready'),
+            QueryWarning(message: '', code: 'MZ1'),
           ],
         ),
       ),
@@ -157,7 +158,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.descendant(of: warnings, matching: find.text('index not ready')), findsOneWidget);
-    expect(find.descendant(of: warnings, matching: find.byIcon(Icons.warning_amber)), findsNWidgets(2));
+    expect(find.descendant(of: warnings, matching: find.text('Warning MZ1')), findsOneWidget);
+    expect(find.descendant(of: warnings, matching: find.byIcon(Icons.warning_amber)), findsNWidgets(3));
   });
 
   testWidgets('a check without warnings shows Reachable alone', (tester) async {

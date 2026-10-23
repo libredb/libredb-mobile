@@ -14,6 +14,7 @@ import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_notices.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
 /// Opens the details of [connection] in a bottom sheet, with a Check that asks Studio to connect once.
@@ -148,9 +149,8 @@ class _CheckSection extends StatelessWidget {
   }
 }
 
-/// What the server cautioned while the connection opened, one line each as Studio's `describeWarning` writes it (the
-/// severity, then the message, or `Warning` without one), in the caution's color with its icon. Studio's text is shown
-/// as Studio wrote it.
+/// What the server cautioned while the connection opened, one line each as [describeWarning] writes it, in the caution's
+/// color with its icon.
 class _CheckWarnings extends StatelessWidget {
   const _CheckWarnings({required this.warnings});
 
@@ -174,18 +174,12 @@ class _CheckWarnings extends StatelessWidget {
             children: [
               Icon(Icons.warning_amber, size: iconSize, color: color),
               Expanded(
-                child: Text(_line(l10n, warning), style: theme.textTheme.bodySmall?.copyWith(color: color)),
+                child: Text(describeWarning(l10n, warning), style: theme.textTheme.bodySmall?.copyWith(color: color)),
               ),
             ],
           ),
       ],
     );
-  }
-
-  static String _line(S l10n, QueryWarning warning) {
-    final message = warning.message.isEmpty ? l10n.result_warning_fallback : warning.message;
-    final severity = warning.severity;
-    return severity == null || severity.isEmpty ? message : l10n.result_warning_line(severity, message);
   }
 }
 

@@ -45,22 +45,25 @@ void main() {
       expect(result.warnings, isEmpty);
     });
 
-    test('leaves out an entry without a string message, and a code or severity of an unexpected type', () {
+    test('leaves out an entry without a string message, and a severity that is not a string', () {
       final result = ConnectionTestResultModel.fromJsonString(
         '{"success":true,"message":"Connection successful","latency":12,"warnings":['
         '{"code":"X1"},{"message":7},"not an object",null,'
-        '{"message":"kept","code":{"a":1},"severity":3}]}',
+        '{"message":"kept","severity":3}]}',
       );
 
       expect(result.warnings, const [QueryWarning(message: 'kept')]);
     });
 
-    test('reads none when warnings is not a list', () {
-      final result = ConnectionTestResultModel.fromJsonString(
-        '{"success":true,"message":"Connection successful","latency":12,"warnings":"x"}',
-      );
-
-      expect(result.warnings, isEmpty);
-    });
+    for (final warnings in ['"x"', 'null', '{"message":"one"}']) {
+      test('throws when warnings is present but not a list ($warnings), so no caution is hidden', () {
+        expect(
+          () => ConnectionTestResultModel.fromJsonString(
+            '{"success":true,"message":"Connection successful","latency":12,"warnings":$warnings}',
+          ),
+          throwsFormatException,
+        );
+      });
+    }
   });
 }

@@ -1838,6 +1838,16 @@ class S {
     );
   }
 
+  /// `Warning {code}`
+  String result_warning_fallback_code(String code) {
+    return Intl.message(
+      'Warning $code',
+      name: 'result_warning_fallback_code',
+      desc: 'A warning the engine sent without a message but with its code, as Studio\'s describeWarning words it.',
+      args: [code],
+    );
+  }
+
   /// `Code {code}`
   String result_warning_code(String code) {
     return Intl.message(

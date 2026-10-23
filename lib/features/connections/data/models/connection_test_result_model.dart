@@ -9,9 +9,9 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 final class ConnectionTestResultModel {
   const ConnectionTestResultModel._();
 
-  /// Throws a [FormatException] for an answer without `success: true` or a message. A `warnings` that is not a list
-  /// reads as none, and a warning without a string message is left out, as are a code that is neither a string nor a
-  /// number and a severity that is not a string.
+  /// Throws a [FormatException] for an answer without `success: true` or a message, and for a `warnings` that is present
+  /// but not a list, as `QueryResultJson` does, so a caution is never hidden; absent, it reads as none. A warning without
+  /// a string message is left out, a code is carried as its text, and a severity that is not a string is left out.
   static ConnectionTestResult fromJsonString(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map<String, dynamic> || decoded['success'] != true || decoded['message'] is! String) {
@@ -19,6 +19,9 @@ final class ConnectionTestResultModel {
     }
     final latency = decoded['latency'];
     final warnings = decoded['warnings'];
+    if (decoded.containsKey('warnings') && warnings is! List) {
+      throw const FormatException('The warnings are not a list');
+    }
     return ConnectionTestResult(
       message: decoded['message'] as String,
       latency: latency is num ? Duration(milliseconds: latency.round()) : null,
@@ -38,8 +41,8 @@ final class ConnectionTestResultModel {
     final severity = value['severity'];
     return QueryWarning(
       message: message,
-      // Carried verbatim: some engines number their warnings, others label them.
-      code: code is String || code is num ? '$code' : null,
+      // Carried verbatim, as QueryResultJson does: some engines number their warnings, others label them.
+      code: code == null ? null : '$code',
       severity: severity is String ? severity : null,
     );
   }
