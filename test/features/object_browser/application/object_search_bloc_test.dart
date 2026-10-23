@@ -283,6 +283,108 @@ void main() {
       });
     });
 
+    test('typing away from the term in flight and back within the pause sends nothing new', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        final answer = Completer<Result<List<DatabaseObject>>>();
+        when(
+          () => repository.search(
+            _postgres,
+            term: 'ord',
+            kinds: any(named: 'kinds'),
+          ),
+        ).thenAnswer((_) => answer.future);
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchTermChanged('orde'));
+        async.elapse(const Duration(milliseconds: 200));
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce * 2);
+        answer.complete(Success(objectsAnswer('search_postgres')));
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('a typed term keeps the search in flight until its own request is sent, then replaces it', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        final first = Completer<Result<List<DatabaseObject>>>();
+        when(
+          () => repository.search(
+            _postgres,
+            term: 'ord',
+            kinds: any(named: 'kinds'),
+          ),
+        ).thenAnswer((_) => first.future);
+        when(
+          () => repository.search(
+            _postgres,
+            term: 'orde',
+            kinds: any(named: 'kinds'),
+          ),
+        ).thenAnswer((_) async => Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchTermChanged('orde'));
+        async.elapse(const Duration(milliseconds: 200));
+        expect(bloc.state, isA<ObjectSearchSearching>().having((s) => s.term, 'term', 'ord'));
+
+        async.elapse(const Duration(milliseconds: 200));
+        first.complete(
+          const Success([
+            DatabaseObject(path: ['public', 'colors'], name: 'colors', kind: 'table'),
+          ]),
+        );
+        async.flushMicrotasks();
+
+        expect(terms(), ['ord', 'orde']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'orde'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('the answer in flight is shown when the typed term is dropped before its pause ends', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        final first = Completer<Result<List<DatabaseObject>>>();
+        when(
+          () => repository.search(
+            _postgres,
+            term: 'ord',
+            kinds: any(named: 'kinds'),
+          ),
+        ).thenAnswer((_) => first.future);
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchTermChanged('orde'));
+        async.elapse(const Duration(milliseconds: 100));
+        first.complete(Success(objectsAnswer('search_postgres')));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchTermChanged('ord'));
+        async.elapse(ObjectSearchBloc.debounce * 2);
+
+        expect(terms(), ['ord']);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord'));
+        unawaited(bloc.close());
+        async.flushMicrotasks();
+      });
+    });
+
     test('the same term is sent again from a failure, so Retry works', () {
       fakeAsync((async) {
         answerMeta(_postgres, metaAnswer('meta_postgres'));

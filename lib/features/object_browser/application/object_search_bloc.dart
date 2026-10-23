@@ -10,7 +10,6 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
-import 'package:stream_transform/stream_transform.dart';
 
 part 'object_search_event.dart';
 part 'object_search_state.dart';
@@ -19,14 +18,18 @@ part 'object_search_state.dart';
 /// so a search spends a request slot and is sent only on purpose: on a keyboard submit, or once the user stops typing
 /// for [debounce], and only for a term of at least [minimumLength] characters.
 ///
-/// Every new term cancels the wait and the search before it, so typing fast sends at most one request per pause and a
-/// late answer to an older term is never shown. A server-level connection (`catalogSessions`) sends no search at all:
-/// Studio refuses a walk over every database of its server. The results live in this bloc only and are never cached.
+/// A typed term only replaces the wait of the term before it; the search in flight goes on until another request is
+/// actually sent, which replaces it, so a late answer to an older term is never shown. A term that is in flight, or on
+/// screen with nothing in flight, is never sent again: typing away from it and back within the pause sends nothing,
+/// while after a failure the same term is sent again, so Retry works. A term too short to search clears the screen at
+/// once. A server-level connection (`catalogSessions`) sends no search at all: Studio refuses a walk over every
+/// database of its server. The results live in this bloc only and are never cached.
 class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   ObjectSearchBloc({required this._repository, required this._providerMeta, required this.connectionId})
     : super(const ObjectSearchPreparing()) {
     on<ObjectSearchStarted>(_onStarted, transformer: EventTransformers.restart());
-    on<ObjectSearchTermEvent>(_onTerm, transformer: _debounceTyping);
+    on<ObjectSearchTermEvent>(_onTerm);
+    on<_ObjectSearchRequest>(_onRequest, transformer: EventTransformers.restart());
   }
 
   /// How long the search waits after the last keystroke.
@@ -43,56 +46,14 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   /// The connection, from the page's route.
   final String connectionId;
 
-  /// The trimmed term of the last event that went on to the search, its wait or its request, null after a term too
-  /// short to search.
-  String? _lastTerm;
+  /// The wait of the last typed term.
+  Timer? _wait;
 
-  /// Restartable over every term event: a typed term long enough to search waits [debounce] first, while a submit and
-  /// a term too short to search act at once, and each event cancels the wait or the search of the one before it.
-  ///
-  /// A term already searched is not sent again, since each search spends a Studio request slot: a repeat of the term
-  /// that is waiting, in flight or on screen is dropped before it can cancel anything, and a return to the term on
-  /// screen while another waits only drops that wait. After a failure the same term is sent again, so Retry works.
-  Stream<ObjectSearchTermEvent> _debounceTyping(
-    Stream<ObjectSearchTermEvent> events,
-    Stream<ObjectSearchTermEvent> Function(ObjectSearchTermEvent) mapper,
-  ) => events.where((event) => !_repeatsLast(event)).switchMap((event) {
-    final searchable = _searchable(event.term);
-    final term = searchable ? _trimmed(event.term) : null;
-    _lastTerm = term;
-    if (state case ObjectSearchResults(term: final shown) when term != null && shown == term) {
-      return const Stream.empty();
-    }
-    final waits = event is ObjectSearchTermChanged && searchable;
-    return waits ? _after(debounce, event).switchMap(mapper) : mapper(event);
-  });
+  /// The term whose request is in flight, null when none is.
+  String? _inFlight;
 
-  /// Whether [event] asks again for the term that last went on, while it is still waiting, in flight or on screen.
-  bool _repeatsLast(ObjectSearchTermEvent event) {
-    if (!_searchable(event.term) || _trimmed(event.term) != _lastTerm) return false;
-    return switch (state) {
-      ObjectSearchFailure() || ObjectSearchIdle() => false,
-      _ => true,
-    };
-  }
-
-  /// [event] once [delay] has passed, with the timer cancelled when the listener goes, so a dropped wait leaves no
-  /// timer behind.
-  ///
-  /// The cancel answers a future of the current zone, which `switchMap` awaits before it listens to the next wait: a
-  /// plain callback would hand it the root zone's completed future, whose continuation a test's fake clock never runs.
-  static Stream<E> _after<E>(Duration delay, E event) {
-    Timer? timer;
-    late final StreamController<E> controller;
-    controller = StreamController<E>(
-      onListen: () => timer = Timer(delay, () {
-        controller.add(event);
-        unawaited(controller.close());
-      }),
-      onCancel: () async => timer?.cancel(),
-    );
-    return controller.stream;
-  }
+  /// Counts every request sent and every clearing, so only the answer to the latest request is shown.
+  int _generation = 0;
 
   static String _trimmed(String term) => term.trim();
 
@@ -114,26 +75,74 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
     }
   }
 
-  Future<void> _onTerm(ObjectSearchTermEvent event, Emitter<ObjectSearchState> emit) async {
-    final meta = state.meta;
+  void _onTerm(ObjectSearchTermEvent event, Emitter<ObjectSearchState> emit) {
     // No term is taken before provider-meta is read; a server-level connection is ObjectSearchNotAvailable, which
     // holds none, so it never searches.
-    if (meta == null) return;
+    if (state.meta == null) return;
     if (!_searchable(event.term)) {
-      emit(ObjectSearchIdle(meta: meta));
+      _cancelWait();
+      _generation++;
+      _inFlight = null;
+      add(const _ObjectSearchCleared());
       return;
     }
     final term = _trimmed(event.term);
-    emit(ObjectSearchSearching(meta: meta, term: term));
-    final result = await _repository.search(connectionId, term: term);
-    if (emit.isDone) return;
-    switch (result) {
-      case Failure(:final error):
-        // Only the code: the message of a 400 is Studio's English sentence, never shown nor logged.
-        _log.warn('search failed: {}', [error.code ?? error.runtimeType]);
-        emit(ObjectSearchFailure(error: error, meta: meta, term: term));
-      case Success(:final data):
-        emit(ObjectSearchResults(meta: meta, term: term, groups: _group(meta, data)));
+    if (_isCurrent(term)) {
+      _cancelWait();
+      return;
+    }
+    if (event is ObjectSearchSubmitted) {
+      _cancelWait();
+      _send(term);
+      return;
+    }
+    _cancelWait();
+    _wait = Timer(debounce, () {
+      _wait = null;
+      if (!isClosed) _send(term);
+    });
+  }
+
+  /// Whether [term] is the search in flight, or the one on screen while none is.
+  bool _isCurrent(String term) {
+    final inFlight = _inFlight;
+    if (inFlight != null) return inFlight == term;
+    return switch (state) {
+      ObjectSearchResults(term: final shown) => shown == term,
+      _ => false,
+    };
+  }
+
+  void _send(String term) {
+    _generation++;
+    _inFlight = term;
+    add(_ObjectSearchSent(term, _generation));
+  }
+
+  void _cancelWait() {
+    _wait?.cancel();
+    _wait = null;
+  }
+
+  Future<void> _onRequest(_ObjectSearchRequest event, Emitter<ObjectSearchState> emit) async {
+    final meta = state.meta;
+    if (meta == null) return;
+    switch (event) {
+      case _ObjectSearchCleared():
+        emit(ObjectSearchIdle(meta: meta));
+      case _ObjectSearchSent(:final term, :final generation):
+        emit(ObjectSearchSearching(meta: meta, term: term));
+        final result = await _repository.search(connectionId, term: term);
+        if (emit.isDone || generation != _generation) return;
+        _inFlight = null;
+        switch (result) {
+          case Failure(:final error):
+            // Only the code: the message of a 400 is Studio's English sentence, never shown nor logged.
+            _log.warn('search failed: {}', [error.code ?? error.runtimeType]);
+            emit(ObjectSearchFailure(error: error, meta: meta, term: term));
+          case Success(:final data):
+            emit(ObjectSearchResults(meta: meta, term: term, groups: _group(meta, data)));
+        }
     }
   }
 
@@ -160,4 +169,10 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
 
   /// A key that tells container paths apart whatever their names hold, since a name may hold any separator.
   static String _containerKey(List<String> container) => [for (final s in container) '${s.length}:$s'].join();
+
+  @override
+  Future<void> close() {
+    _cancelWait();
+    return super.close();
+  }
 }

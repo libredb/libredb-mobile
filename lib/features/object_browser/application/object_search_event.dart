@@ -31,3 +31,25 @@ final class ObjectSearchTermChanged extends ObjectSearchTermEvent {
 final class ObjectSearchSubmitted extends ObjectSearchTermEvent {
   const ObjectSearchSubmitted(super.term);
 }
+
+/// A request of the search: the one event stream that sends a search or clears the screen, each one replacing the
+/// request before it.
+sealed class _ObjectSearchRequest extends ObjectSearchEvent {
+  const _ObjectSearchRequest();
+}
+
+/// Sends a search for [term], the [generation]th request.
+final class _ObjectSearchSent extends _ObjectSearchRequest {
+  const _ObjectSearchSent(this.term, this.generation);
+
+  final String term;
+  final int generation;
+
+  @override
+  List<Object?> get props => [term, generation];
+}
+
+/// The term became too short to search: the screen waits for a term again.
+final class _ObjectSearchCleared extends _ObjectSearchRequest {
+  const _ObjectSearchCleared();
+}
