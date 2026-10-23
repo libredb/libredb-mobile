@@ -434,6 +434,65 @@
   "@local_filter_clear": {},
   "local_filter_no_match": "Filtreyle eşleşen bir şey yok.",
   "@local_filter_no_match": {},
+  "browse_details": "Ayrıntılar",
+  "@browse_details": {},
+  "browse_detail_columns": "Sütunlar",
+  "@browse_detail_columns": {},
+  "browse_detail_indexes": "Dizinler",
+  "@browse_detail_indexes": {},
+  "browse_detail_foreign_keys": "Yabancı anahtarlar",
+  "@browse_detail_foreign_keys": {},
+  "browse_detail_sampled": "Sütunlar örneklenen belgelerden çıkarıldı",
+  "@browse_detail_sampled": {},
+  "browse_detail_sampled_type": "{type} (örneklendi)",
+  "@browse_detail_sampled_type": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_detail_primary_key": "Birincil anahtar",
+  "@browse_detail_primary_key": {},
+  "browse_detail_nullable": "Boş olabilir",
+  "@browse_detail_nullable": {},
+  "browse_detail_default": "Varsayılan: {value}",
+  "@browse_detail_default": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_detail_unique": "Benzersiz",
+  "@browse_detail_unique": {},
+  "browse_detail_no_columns": "Studio hiç sütun listelemiyor.",
+  "@browse_detail_no_columns": {},
+  "browse_detail_no_indexes": "Studio hiç dizin listelemiyor.",
+  "@browse_detail_no_indexes": {},
+  "browse_detail_no_foreign_keys": "Studio hiç yabancı anahtar listelemiyor.",
+  "@browse_detail_no_foreign_keys": {},
+  "browse_detail_links_unchecked": "Bu anahtarların hangi tabloları açtığı denetlenemedi ({code})",
+  "@browse_detail_links_unchecked": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_detail_exclusion_constraints": "Dışlama kısıtlamaları",
+  "@browse_detail_exclusion_constraints": {},
+  "browse_detail_references": "Başvurduğu: {table}.{column}",
+  "@browse_detail_references": {
+    "placeholders": {
+      "table": {
+        "type": "String"
+      },
+      "column": {
+        "type": "String"
+      }
+    }
+  },
   "account_refusal_title": "Hesabınızın Studio'ya erişimi yok",
   "@account_refusal_title": {},
   "connection_vanished": "{name} artık kullanılamıyor",

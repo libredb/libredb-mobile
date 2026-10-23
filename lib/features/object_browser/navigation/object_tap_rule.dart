@@ -8,18 +8,23 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 /// The one rule of every object row, the object list's and search's: Details when the kind `hasColumns`, else Source
 /// when it `hasSource`, else nothing. A group object such as an Oracle package is a leaf like any other, since Studio
 /// lists no object's children.
-/// Details is the screen of its own issue and joins this rule with it; until then a kind with columns opens nothing,
-/// rather than its source, so its tap does not change meaning once Details arrives.
 VoidCallback? objectTapAction(
   BuildContext context, {
   required String connectionId,
   required ObjectKind kind,
   required DatabaseObject object,
-}) {
-  if (kind.hasColumns) return null;
-  if (kind.hasSource) return objectSourceAction(context, connectionId: connectionId, kind: kind, object: object);
-  return null;
-}
+}) =>
+    objectDetailAction(context, connectionId: connectionId, kind: kind, object: object) ??
+    objectSourceAction(context, connectionId: connectionId, kind: kind, object: object);
+
+/// Opens the detail of [object] when [kind] `hasColumns`, for the tap and the long-press menu's 'Details'; null
+/// otherwise.
+VoidCallback? objectDetailAction(
+  BuildContext context, {
+  required String connectionId,
+  required ObjectKind kind,
+  required DatabaseObject object,
+}) => kind.hasColumns ? () => openBrowseDetail(context, connectionId, object.path, kind.id) : null;
 
 /// Opens the source of [object] when [kind] `hasSource`, for the long-press menu's 'View source'; null otherwise.
 VoidCallback? objectSourceAction(

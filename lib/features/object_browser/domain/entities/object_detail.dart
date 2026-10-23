@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// The columns, indexes and foreign keys of an object with columns.
+/// The columns, indexes, foreign keys and exclusion constraints of an object with columns.
 class ObjectDetail extends Equatable {
   const ObjectDetail({
     required this.path,
@@ -8,6 +8,7 @@ class ObjectDetail extends Equatable {
     required this.foreignKeys,
     this.indexes,
     this.indexesUnavailable,
+    this.exclusionConstraints = const [],
   });
 
   final List<String> path;
@@ -18,8 +19,11 @@ class ObjectDetail extends Equatable {
   final List<IndexSchema>? indexes;
   final String? indexesUnavailable;
 
+  /// Only where the engine has them (PostgreSQL's `EXCLUDE`); empty elsewhere.
+  final List<ExclusionConstraintSchema> exclusionConstraints;
+
   @override
-  List<Object?> get props => [path, columns, foreignKeys, indexes, indexesUnavailable];
+  List<Object?> get props => [path, columns, foreignKeys, indexes, indexesUnavailable, exclusionConstraints];
 }
 
 class ColumnSchema extends Equatable {
@@ -28,21 +32,31 @@ class ColumnSchema extends Equatable {
     required this.type,
     required this.nullable,
     required this.isPrimary,
+    this.declaredType,
     this.defaultValue,
     this.sampled = false,
   });
 
   final String name;
+
+  /// The engine's base name of the type, such as `numeric`.
   final String type;
+
+  /// The type as the engine prints the declaration, modifier included, such as `numeric(20,2)`; absent where the
+  /// engine has nothing beyond [type].
+  final String? declaredType;
   final bool nullable;
   final bool isPrimary;
   final String? defaultValue;
 
-  /// Inferred from sampled documents, as for a MongoDB collection, rather than declared.
+  /// Inferred from sampled documents, as for a Firestore collection, rather than declared.
   final bool sampled;
 
+  /// The type a person is shown: the declaration when Studio sends one, else [type].
+  String get shownType => declaredType ?? type;
+
   @override
-  List<Object?> get props => [name, type, nullable, isPrimary, defaultValue, sampled];
+  List<Object?> get props => [name, type, declaredType, nullable, isPrimary, defaultValue, sampled];
 }
 
 class IndexSchema extends Equatable {
@@ -65,4 +79,15 @@ class ForeignKeySchema extends Equatable {
 
   @override
   List<Object?> get props => [columnName, referencedTable, referencedColumn];
+}
+
+/// A PostgreSQL `EXCLUDE` constraint: its name and the definition `pg_get_constraintdef()` prints.
+class ExclusionConstraintSchema extends Equatable {
+  const ExclusionConstraintSchema({required this.name, required this.definition});
+
+  final String name;
+  final String definition;
+
+  @override
+  List<Object?> get props => [name, definition];
 }

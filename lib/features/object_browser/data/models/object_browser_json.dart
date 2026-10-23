@@ -37,31 +37,52 @@ final class ObjectBrowserJson {
   ];
 
   /// `POST /api/db/objects/describe`: `ObjectDetail`.
+  ///
+  /// Every field Studio's type requires is read strictly, and a type, key or index name that is blank is refused,
+  /// since a row without one says nothing; a column's name may be empty, as MongoDB names a field of an empty key.
+  /// `indexes` is a list or Studio's filled `{unavailable}` sentence, and a column's `provenance` is a loss notice.
+  /// `exclusionConstraints` is optional and left out when it is not a list, but each constraint in it needs its name
+  /// and definition; a `declaredType` that is not a filled string is left out.
   static ObjectDetail detail(String body) {
     final json = _object(body);
     final indexes = json['indexes'];
+    final exclusion = json['exclusionConstraints'];
     return ObjectDetail(
       path: _strings(json['path'], 'path'),
       columns: [for (final column in _list(json['columns'], 'columns')) _column(column)],
-      foreignKeys: [
-        for (final key in _list(json['foreignKeys'] ?? const [], 'foreignKeys'))
-          ForeignKeySchema(
-            columnName: _string(_map(key, 'foreign key')['columnName'], 'columnName'),
-            referencedTable: _string((key as Map)['referencedTable'], 'referencedTable'),
-            referencedColumn: _string(key['referencedColumn'], 'referencedColumn'),
-          ),
+      foreignKeys: [for (final key in _list(json['foreignKeys'], 'foreignKeys')) _foreignKey(key)],
+      indexes: indexes is Map ? null : [for (final index in _list(indexes, 'indexes')) _index(index)],
+      indexesUnavailable: indexes is Map ? _filled(indexes['unavailable'], 'unavailable') : null,
+      exclusionConstraints: [
+        if (exclusion is List)
+          for (final constraint in exclusion) _exclusionConstraint(constraint),
       ],
-      indexes: indexes is List
-          ? [
-              for (final index in indexes)
-                IndexSchema(
-                  name: _string(_map(index, 'index')['name'], 'name'),
-                  columns: _strings((index as Map)['columns'], 'columns'),
-                  unique: index['unique'] == true,
-                ),
-            ]
-          : null,
-      indexesUnavailable: indexes is Map && indexes['unavailable'] is String ? indexes['unavailable'] as String : null,
+    );
+  }
+
+  static ForeignKeySchema _foreignKey(Object? item) {
+    final key = _map(item, 'foreign key');
+    return ForeignKeySchema(
+      columnName: _filled(key['columnName'], 'columnName'),
+      referencedTable: _filled(key['referencedTable'], 'referencedTable'),
+      referencedColumn: _filled(key['referencedColumn'], 'referencedColumn'),
+    );
+  }
+
+  static ExclusionConstraintSchema _exclusionConstraint(Object? item) {
+    final constraint = _map(item, 'exclusion constraint');
+    return ExclusionConstraintSchema(
+      name: _filled(constraint['name'], 'name'),
+      definition: _filled(constraint['definition'], 'definition'),
+    );
+  }
+
+  static IndexSchema _index(Object? item) {
+    final index = _map(item, 'index');
+    return IndexSchema(
+      name: _filled(index['name'], 'name'),
+      columns: _strings(index['columns'], 'columns'),
+      unique: _bool(index['unique'], 'unique'),
     );
   }
 
@@ -157,14 +178,24 @@ final class ObjectBrowserJson {
   static ColumnSchema _column(Object? item) {
     final column = _map(item, 'column');
     final defaultValue = column['defaultValue'] ?? column['defaultExpression'];
+    final declaredType = column['declaredType'];
     return ColumnSchema(
       name: _string(column['name'], 'name'),
-      type: _string(column['type'], 'type'),
-      nullable: column['nullable'] == true,
-      isPrimary: column['isPrimary'] == true,
+      type: _filled(column['type'], 'type'),
+      declaredType: declaredType is String && declaredType.trim().isNotEmpty ? declaredType : null,
+      nullable: _bool(column['nullable'], 'nullable'),
+      isPrimary: _bool(column['isPrimary'], 'isPrimary'),
       defaultValue: defaultValue is String ? defaultValue : null,
-      sampled: column['provenance'] == 'sampled',
+      sampled: _sampled(column),
     );
+  }
+
+  /// `provenance` is a loss notice: a sampled column says another row may carry a key the list lacks, so a value
+  /// Studio does not send is refused rather than read as declared.
+  static bool _sampled(Map<String, dynamic> column) {
+    if (!column.containsKey('provenance')) return false;
+    if (column['provenance'] == 'sampled') return true;
+    throw const FormatException('The provenance of a column is not one Studio sends');
   }
 
   /// A text, a refusal (`unavailable`) or a neutral statement (`unavailable` with `statement: true`), refused as
@@ -232,6 +263,9 @@ final class ObjectBrowserJson {
 
   static String _string(Object? value, String what) =>
       value is String ? value : throw FormatException('The $what is not a string');
+
+  static bool _bool(Object? value, String what) =>
+      value is bool ? value : throw FormatException('The $what is not true or false');
 
   static int _int(Object? value, String what) =>
       value is int ? value : throw FormatException('The $what is not a whole number');

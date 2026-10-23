@@ -206,6 +206,18 @@ void main() {
       expect(detail.columns.map((c) => c.name), ['id', 'table_id', 'starts_at', 'ends_at', 'status']);
       expect(detail.indexes?.map((i) => i.name), ['reservations_no_overlapping_active', 'reservations_pkey']);
       expect(detail.foreignKeys, isEmpty);
+      expect(detail.columns.map((c) => c.declaredType), [
+        'integer',
+        'integer',
+        'timestamp without time zone',
+        'timestamp without time zone',
+        'text',
+      ]);
+      expect(detail.exclusionConstraints.single.name, 'reservations_no_overlapping_active');
+      expect(
+        detail.exclusionConstraints.single.definition,
+        startsWith('EXCLUDE USING gist (table_id WITH =, tsrange('),
+      );
     });
 
     test('a source whose truncated part counts collection ids, named only by Studio\'s reason', () {
@@ -302,10 +314,7 @@ void main() {
   group('known gaps', () {
     dynamic json(String name) => jsonDecode(answer(name));
 
-    final gaps = <(String issue, String answer, String field, Object? Function(dynamic json) sent)>[
-      ('#56', 'postgres/describe_exclusion', 'columns[].declaredType', (j) => j['columns'][2]['declaredType']),
-      ('#56', 'postgres/describe_exclusion', 'exclusionConstraints', (j) => j['exclusionConstraints']),
-    ];
+    final gaps = <(String issue, String answer, String field, Object? Function(dynamic json) sent)>[];
 
     for (final (issue, name, field, sent) in gaps) {
       test('$issue reads $field of $name', () {

@@ -5,6 +5,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/pages/browse
 import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/key_browser_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/object_detail_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_list_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/object_source_page.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
@@ -73,6 +74,19 @@ class ObjectBrowserFeatureRoutes {
               connectionId: browseConnectionIdOf(state),
               container: browseContainerOf(state),
               prefix: browsePrefixOf(state),
+            ),
+          ),
+        ),
+        GoRoute(
+          name: BrowseRouteNames.detail,
+          path: ApplicationRoutesConstants.browseDetail,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: ObjectDetailPage(
+              connectionId: browseConnectionIdOf(state),
+              path: browsePathOf(state),
+              kind: browseKindOf(state),
             ),
           ),
         ),

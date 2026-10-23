@@ -277,23 +277,39 @@ void main() {
       expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
     });
 
-    testWidgets('a kind with columns waits for its Details screen: no tap, even when it also has source', (
+    testWidgets('a kind with columns opens the object\'s detail by its path, even when it also has source', (
       tester,
     ) async {
-      answerList(
-        _postgres.id,
-        ['public'],
-        'view',
-        const Success([
-          DatabaseObject(path: ['public', 'v_orders'], name: 'v_orders', kind: 'view'),
-        ]),
-      );
+      const view = DatabaseObject(path: ['public', 'v_orders'], name: 'v_orders', kind: 'view');
+      answerList(_postgres.id, ['public'], 'view', const Success([view]));
+      when(
+        () => harness.repository.describe(
+          _postgres.id,
+          path: view.path,
+          kind: 'view',
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async => Success(detailAnswer('describe_postgres_orders_readonly')));
       await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/view?container=public');
 
-      expect(tester.widget<ListTile>(rowOf('v_orders')).onTap, isNull);
+      await tester.tap(find.text('v_orders'));
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/detail/view');
+      expect(harness.router.state.uri.queryParametersAll['path'], view.path);
+      verify(() => harness.repository.describe(_postgres.id, path: view.path, kind: 'view', refresh: false)).called(1);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(harness.location, '/browse/seed%3Adev-postgres/objects/view?container=public');
+
       await tester.longPress(find.text('v_orders'));
       await tester.pumpAndSettle();
+      expect(find.text('Details'), findsOneWidget);
       expect(find.text('View source'), findsOneWidget);
+      await tester.tap(find.text('Details'));
+      await tester.pumpAndSettle();
+      expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/detail/view');
     });
 
     testWidgets('a kind with neither columns nor source opens nothing', (tester) async {
@@ -320,11 +336,14 @@ void main() {
       await tester.longPress(find.text('syn'));
       await tester.pumpAndSettle();
       expect(find.text('View source'), findsNothing);
+      expect(find.text('Details'), findsNothing);
     });
   });
 
   group('long press', () {
-    testWidgets('offers Copy name only on a kind without source, and copies the name', (tester) async {
+    testWidgets('offers Details and Copy name on a table, which has columns and no source, and copies the name', (
+      tester,
+    ) async {
       final copied = <String>[];
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
         if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
@@ -339,7 +358,7 @@ void main() {
 
       expect(find.text('Copy name'), findsOneWidget);
       expect(find.text('View source'), findsNothing);
-      expect(find.text('Details'), findsNothing);
+      expect(find.text('Details'), findsOneWidget);
       expect(find.text('View rows'), findsNothing);
 
       await tester.tap(find.text('Copy name'));

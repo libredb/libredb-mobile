@@ -210,6 +210,7 @@ class _ObjectTile extends StatelessWidget {
   }
 
   Future<void> _showMenu(BuildContext context) {
+    final details = objectDetailAction(context, connectionId: connectionId, kind: kind, object: object);
     final viewSource = objectSourceAction(context, connectionId: connectionId, kind: kind, object: object);
     return showModalBottomSheet<void>(
       context: context,
@@ -218,6 +219,15 @@ class _ObjectTile extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (details != null)
+              ListTile(
+                leading: const Icon(Icons.table_chart_outlined),
+                title: Text(S.of(sheetContext).browse_details),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  details();
+                },
+              ),
             if (viewSource != null)
               ListTile(
                 leading: const Icon(Icons.code),
