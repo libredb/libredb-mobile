@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -72,6 +73,29 @@ void main() {
     expect(find.descendant(of: rowOf('orders'), matching: find.text('48 KB')), findsOneWidget);
     expect(find.descendant(of: rowOf('customers'), matching: find.text('32 KB')), findsOneWidget);
     verify(() => harness.repository.list(_postgres.id, container: ['public'], kind: 'table', refresh: false)).called(1);
+  });
+
+  testWidgets('a list that failed offline loads again by itself once the device is back online', (tester) async {
+    var answers = 0;
+    when(
+      () => harness.repository.list(
+        _postgres.id,
+        container: ['public'],
+        kind: 'table',
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer(
+      (_) async => answers++ == 0
+          ? Failure(NetworkError('offline', code: AppErrorCode.networkOffline.key))
+          : Success(objectsAnswer('list_postgres')),
+    );
+    await harness.pump(tester, location: _tables, offline: true);
+    expect(find.text('orders'), findsNothing);
+
+    await harness.setOffline(tester, false);
+
+    expect(answers, 2);
+    expect(find.text('orders'), findsOneWidget);
   });
 
   testWidgets('back from a page opened by a link returns to the Browse root, with no query left over', (tester) async {
