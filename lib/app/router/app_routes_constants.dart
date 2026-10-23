@@ -35,6 +35,9 @@ class ApplicationRoutesConstants {
   /// The key browser of a container (`container`), or of one level folder of it (`prefix`).
   static const browseKeys = ':connectionId/keys';
 
+  /// The columns, indexes and foreign keys of an object of a kind, its path as repeated `path` query parameters.
+  static const browseDetail = ':connectionId/detail/:kind';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

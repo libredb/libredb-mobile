@@ -11,13 +11,23 @@ import '../browse_answers.dart';
 
 void main() {
   late MockIObjectBrowserRepository repository;
+  late MockIProviderMetaRepository providerMeta;
   const connection = 'seed:dev-postgres';
   const path = ['sales', 'order_totals'];
 
-  setUp(() => repository = MockIObjectBrowserRepository());
+  setUp(() {
+    repository = MockIObjectBrowserRepository();
+    providerMeta = MockIProviderMetaRepository();
+    when(() => providerMeta.providerMeta(connection)).thenAnswer((_) async => Success(metaAnswer('meta_postgres')));
+  });
 
-  ObjectSourceBloc build() =>
-      ObjectSourceBloc(repository: repository, connectionId: connection, path: path, kind: 'view');
+  ObjectSourceBloc build({String kind = 'view'}) => ObjectSourceBloc(
+    repository: repository,
+    providerMeta: providerMeta,
+    connectionId: connection,
+    path: path,
+    kind: kind,
+  );
 
   final view = sourceAnswer('source_postgres_view');
 
@@ -27,8 +37,33 @@ void main() {
         when(() => repository.source(connection, path: path, kind: 'view')).thenAnswer((_) async => Success(view)),
     build: build,
     act: (bloc) => bloc.add(const ObjectSourceRequested()),
-    expect: () => [ObjectSourceLoaded(view)],
+    expect: () => [ObjectSourceLoaded(view, hasDetails: true)],
     verify: (_) => verify(() => repository.source(connection, path: path, kind: 'view')).called(1),
+  );
+
+  blocTest<ObjectSourceBloc, ObjectSourceState>(
+    'an object of a kind without columns has no details to open',
+    setUp: () =>
+        when(() => repository.source(connection, path: path, kind: 'function')).thenAnswer((_) async => Success(view)),
+    build: () => build(kind: 'function'),
+    act: (bloc) => bloc.add(const ObjectSourceRequested()),
+    expect: () => [ObjectSourceLoaded(view)],
+  );
+
+  blocTest<ObjectSourceBloc, ObjectSourceState>(
+    'a provider-meta failure is the page\'s failure, and no source is read',
+    setUp: () =>
+        when(() => providerMeta.providerMeta(connection)).thenAnswer((_) async => const Failure(ServerError('down'))),
+    build: build,
+    act: (bloc) => bloc.add(const ObjectSourceRequested()),
+    expect: () => [const ObjectSourceFailure(ServerError('down'))],
+    verify: (_) => verifyNever(
+      () => repository.source(
+        any(),
+        path: any(named: 'path'),
+        kind: any(named: 'kind'),
+      ),
+    ),
   );
 
   blocTest<ObjectSourceBloc, ObjectSourceState>(
@@ -50,7 +85,7 @@ void main() {
     expect: () => [
       const ObjectSourceFailure(ServerError('refused', code: 'studio.connection_not_available')),
       const ObjectSourceLoading(),
-      ObjectSourceLoaded(view),
+      ObjectSourceLoaded(view, hasDetails: true),
     ],
   );
 

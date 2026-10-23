@@ -1385,6 +1385,96 @@ class S {
     return Intl.message('Nothing matches the filter.', name: 'local_filter_no_match', desc: '', args: []);
   }
 
+  /// `Details`
+  String get browse_details {
+    return Intl.message(
+      'Details',
+      name: 'browse_details',
+      desc: 'Opens the columns, indexes and foreign keys of an object from its source page.',
+      args: [],
+    );
+  }
+
+  /// `Columns`
+  String get browse_detail_columns {
+    return Intl.message('Columns', name: 'browse_detail_columns', desc: '', args: []);
+  }
+
+  /// `Indexes`
+  String get browse_detail_indexes {
+    return Intl.message('Indexes', name: 'browse_detail_indexes', desc: '', args: []);
+  }
+
+  /// `Foreign keys`
+  String get browse_detail_foreign_keys {
+    return Intl.message('Foreign keys', name: 'browse_detail_foreign_keys', desc: '', args: []);
+  }
+
+  /// `Columns inferred from sampled documents`
+  String get browse_detail_sampled {
+    return Intl.message(
+      'Columns inferred from sampled documents',
+      name: 'browse_detail_sampled',
+      desc: 'A caption above the columns when Studio inferred any of them from sampled documents.',
+      args: [],
+    );
+  }
+
+  /// `{type} (sampled)`
+  String browse_detail_sampled_type(String type) {
+    return Intl.message('$type (sampled)', name: 'browse_detail_sampled_type', desc: '', args: [type]);
+  }
+
+  /// `Primary key`
+  String get browse_detail_primary_key {
+    return Intl.message('Primary key', name: 'browse_detail_primary_key', desc: '', args: []);
+  }
+
+  /// `Nullable`
+  String get browse_detail_nullable {
+    return Intl.message('Nullable', name: 'browse_detail_nullable', desc: '', args: []);
+  }
+
+  /// `Default: {value}`
+  String browse_detail_default(String value) {
+    return Intl.message('Default: $value', name: 'browse_detail_default', desc: '', args: [value]);
+  }
+
+  /// `Unique`
+  String get browse_detail_unique {
+    return Intl.message('Unique', name: 'browse_detail_unique', desc: '', args: []);
+  }
+
+  /// `Studio lists no columns.`
+  String get browse_detail_no_columns {
+    return Intl.message('Studio lists no columns.', name: 'browse_detail_no_columns', desc: '', args: []);
+  }
+
+  /// `No indexes`
+  String get browse_detail_no_indexes {
+    return Intl.message('No indexes', name: 'browse_detail_no_indexes', desc: '', args: []);
+  }
+
+  /// `No foreign keys`
+  String get browse_detail_no_foreign_keys {
+    return Intl.message('No foreign keys', name: 'browse_detail_no_foreign_keys', desc: '', args: []);
+  }
+
+  /// `Exclusion constraints`
+  String get browse_detail_exclusion_constraints {
+    return Intl.message('Exclusion constraints', name: 'browse_detail_exclusion_constraints', desc: '', args: []);
+  }
+
+  /// `References {table}.{column}`
+  String browse_detail_references(String table, String column) {
+    return Intl.message(
+      'References $table.$column',
+      name: 'browse_detail_references',
+      desc: 'The table and column a foreign key points to.',
+      args: [table, column],
+    );
+  }
+
   /// `Your account has no access to Studio`
   String get account_refusal_title {
     return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);

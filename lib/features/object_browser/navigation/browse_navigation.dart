@@ -9,6 +9,7 @@ class BrowseRouteNames {
   static const objects = 'browseObjects';
   static const source = 'browseSource';
   static const keys = 'browseKeys';
+  static const detail = 'browseDetail';
 }
 
 /// The query key that carries a container path, once per segment and in order.
@@ -58,11 +59,19 @@ void openBrowseKinds(BuildContext context, String connectionId, List<String> con
 );
 
 /// Opens the source of the object at [path] of [connectionId], of [kind].
-void openBrowseSource(BuildContext context, String connectionId, List<String> path, String kind) => context.pushNamed(
-  BrowseRouteNames.source,
-  pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
-  queryParameters: path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browsePathKey: path},
-);
+void openBrowseSource(BuildContext context, String connectionId, List<String> path, String kind) =>
+    _openObject(context, BrowseRouteNames.source, connectionId, path, kind);
+
+/// Opens the columns, indexes and foreign keys of the object at [path] of [connectionId], of [kind].
+void openBrowseDetail(BuildContext context, String connectionId, List<String> path, String kind) =>
+    _openObject(context, BrowseRouteNames.detail, connectionId, path, kind);
+
+void _openObject(BuildContext context, String name, String connectionId, List<String> path, String kind) =>
+    context.pushNamed(
+      name,
+      pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
+      queryParameters: path.isEmpty ? const <String, dynamic>{} : <String, dynamic>{browsePathKey: path},
+    );
 
 /// Opens the objects of [kind] in [container] of [connectionId].
 void openBrowseObjects(BuildContext context, String connectionId, List<String> container, String kind) =>

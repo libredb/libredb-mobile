@@ -434,6 +434,58 @@
   "@local_filter_clear": {},
   "local_filter_no_match": "Nothing matches the filter.",
   "@local_filter_no_match": {},
+  "browse_details": "Details",
+  "@browse_details": {"description": "Opens the columns, indexes and foreign keys of an object from its source page."},
+  "browse_detail_columns": "Columns",
+  "@browse_detail_columns": {},
+  "browse_detail_indexes": "Indexes",
+  "@browse_detail_indexes": {},
+  "browse_detail_foreign_keys": "Foreign keys",
+  "@browse_detail_foreign_keys": {},
+  "browse_detail_sampled": "Columns inferred from sampled documents",
+  "@browse_detail_sampled": {"description": "A caption above the columns when Studio inferred any of them from sampled documents."},
+  "browse_detail_sampled_type": "{type} (sampled)",
+  "@browse_detail_sampled_type": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_detail_primary_key": "Primary key",
+  "@browse_detail_primary_key": {},
+  "browse_detail_nullable": "Nullable",
+  "@browse_detail_nullable": {},
+  "browse_detail_default": "Default: {value}",
+  "@browse_detail_default": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_detail_unique": "Unique",
+  "@browse_detail_unique": {},
+  "browse_detail_no_columns": "Studio lists no columns.",
+  "@browse_detail_no_columns": {},
+  "browse_detail_no_indexes": "No indexes",
+  "@browse_detail_no_indexes": {},
+  "browse_detail_no_foreign_keys": "No foreign keys",
+  "@browse_detail_no_foreign_keys": {},
+  "browse_detail_exclusion_constraints": "Exclusion constraints",
+  "@browse_detail_exclusion_constraints": {},
+  "browse_detail_references": "References {table}.{column}",
+  "@browse_detail_references": {
+    "description": "The table and column a foreign key points to.",
+    "placeholders": {
+      "table": {
+        "type": "String"
+      },
+      "column": {
+        "type": "String"
+      }
+    }
+  },
   "account_refusal_title": "Your account has no access to Studio",
   "@account_refusal_title": {},
   "connection_vanished": "{name} is no longer available",

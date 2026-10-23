@@ -12,12 +12,15 @@ final class ObjectSourceLoading extends ObjectSourceState {
 }
 
 final class ObjectSourceLoaded extends ObjectSourceState {
-  const ObjectSourceLoaded(this.source);
+  const ObjectSourceLoaded(this.source, {this.hasDetails = false});
 
   final ObjectSource source;
 
+  /// Whether the object's kind has columns, so its detail page can be opened from its source.
+  final bool hasDetails;
+
   @override
-  List<Object?> get props => [source];
+  List<Object?> get props => [source, hasDetails];
 }
 
 /// The source could not be read; [error] is shown by the Browse failure view, from its code.
