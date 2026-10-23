@@ -41,16 +41,22 @@ class _ResultTableState extends State<ResultTable> {
 
   List<double> _widths(BuildContext context) {
     final result = widget.result;
+    final theme = Theme.of(context);
     final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    final cellCharacterWidth = _measuredWidth(context, '0', _cellStyle(theme));
     final sample = result.rows.take(contentFitSampleRows).toList();
     return [
       for (final field in result.fields)
         scale *
             contentFitColumnWidth(
-              field,
-              result.columnTypes[field],
-              widget.maskedColumns.contains(field),
-              sample.map((row) => _cellOf(row, field, result.vectorColumns).compactText),
+              nameWidth: _measuredWidth(context, field, _nameStyle(theme)),
+              typeWidth: switch (result.columnTypes[field]) {
+                final type? => _measuredWidth(context, type, _typeStyle(theme)),
+                null => 0,
+              },
+              hasMarker: widget.maskedColumns.contains(field),
+              cellCharacterWidth: cellCharacterWidth,
+              values: sample.map((row) => _cellOf(row, field, result.vectorColumns).compactText),
             ),
     ];
   }
@@ -108,6 +114,31 @@ class _ResultTableState extends State<ResultTable> {
   }
 }
 
+/// The width of [text] on one line at text scale 1, laid out as a [Text] in [style] lays it out.
+double _measuredWidth(BuildContext context, String text, TextStyle? style) {
+  var effective = DefaultTextStyle.of(context).style.merge(style);
+  if (MediaQuery.boldTextOf(context)) {
+    effective = effective.merge(const TextStyle(fontWeight: FontWeight.bold));
+  }
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: effective),
+    textDirection: Directionality.of(context),
+    locale: Localizations.maybeLocaleOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+TextStyle? _nameStyle(ThemeData theme) =>
+    theme.textTheme.labelMedium?.copyWith(fontFamily: 'monospace', color: theme.colorScheme.onSurfaceVariant);
+
+TextStyle? _typeStyle(ThemeData theme) =>
+    theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8));
+
+TextStyle? _cellStyle(ThemeData theme) => theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
+
 CellValue _cellOf(Map<String, Object?> row, String field, Map<String, VectorColumn> vectorColumns) =>
     classifyCell(row[field], vector: vectorColumns[field], isAbsent: !row.containsKey(field));
 
@@ -123,7 +154,6 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
     return Container(
       key: const ValueKey('result-table-header'),
       color: theme.colorScheme.surfaceContainerHigh,
@@ -143,7 +173,7 @@ class _Header extends StatelessWidget {
                       Flexible(
                         child: Text(
                           field,
-                          style: theme.textTheme.labelMedium?.copyWith(fontFamily: 'monospace', color: muted),
+                          style: _nameStyle(theme),
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
@@ -165,7 +195,7 @@ class _Header extends StatelessWidget {
                     Text(
                       type,
                       key: ValueKey('result-column-type-$field'),
-                      style: theme.textTheme.labelSmall?.copyWith(color: muted.withValues(alpha: 0.8)),
+                      style: _typeStyle(theme),
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
@@ -207,7 +237,7 @@ class ResultTableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
+    final style = _cellStyle(theme);
     final maskedStyle = theme.textTheme.bodySmall?.copyWith(
       fontStyle: FontStyle.italic,
       color: theme.colorScheme.onSurfaceVariant,
