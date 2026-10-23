@@ -8,7 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/data/models/managed_connections_model.dart';
@@ -211,5 +213,45 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(inSheet(row('seed:billing-mysql')), findsOneWidget);
+  });
+
+  group('a governance outage', () {
+    final governanceUnavailable = Failure<ManagedConnections>(
+      ServerError('Governance unavailable', code: AppErrorCode.studioGovernanceUnavailable.key),
+    );
+
+    testWidgets('without a list loaded before says the connections are unavailable, with a retry', (tester) async {
+      when(() => connections.listManaged()).thenAnswer((_) async => governanceUnavailable);
+      await openSheet(tester);
+
+      expect(inSheet(find.byKey(const ValueKey('connection-switcher-unavailable'))), findsOneWidget);
+      expect(inSheet(find.text(S.current.connection_list_unavailable)), findsOneWidget);
+      expect(inSheet(find.text(S.current.connection_list_empty)), findsNothing);
+
+      when(() => connections.listManaged()).thenAnswer((_) async => Success(_mockAnswer()));
+      await tester.tap(inSheet(find.text(S.current.retry)));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(row('seed:billing-mysql')), findsOneWidget);
+    });
+
+    testWidgets('keeps the list loaded before greyed, and a tap on it opens nothing', (tester) async {
+      cubit.select(_mockAnswer().connections.firstWhere((c) => c.id == 'seed:catalog-mongo'));
+      await openSheet(tester);
+      when(() => connections.listManaged()).thenAnswer((_) async => governanceUnavailable);
+
+      tester
+          .element(find.byType(ConnectionSwitcherSheet))
+          .read<ConnectionListBloc>()
+          .add(const ConnectionListRefreshed());
+      await tester.pumpAndSettle();
+
+      expect(inSheet(row('seed:billing-mysql')), findsOneWidget);
+      await tester.tap(inSheet(row('seed:billing-mysql')), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.connection?.id, 'seed:catalog-mongo');
+      expect(find.byType(ConnectionSwitcherSheet), findsOneWidget);
+    });
   });
 }
