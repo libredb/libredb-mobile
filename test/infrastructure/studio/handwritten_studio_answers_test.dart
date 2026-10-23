@@ -123,7 +123,8 @@ void main() {
       expect(source.kind, 'package');
       expect(source.parts.map((p) => (p.id, p.label)), [('spec', 'Package specification'), ('body', 'Package body')]);
       final parts = source.parts.cast<SourceText>();
-      expect(parts.every((p) => p.language == 'sql' && p.complete && !p.truncated), isTrue);
+      expect(parts.every((p) => p.language == 'sql' && p.complete && p.truncated == null), isTrue);
+      expect(parts.map((p) => p.origin), everyElement(SourceOrigin.regenerated));
       expect(parts.last.text, contains('PACKAGE BODY "APP"."APP_ORDERS_PKG"'));
     });
   });
@@ -206,23 +207,27 @@ void main() {
       expect(detail.foreignKeys, isEmpty);
     });
 
-    test('a source with a truncated part', () {
+    test('a source whose truncated part counts collection ids, named only by Studio\'s reason', () {
       final source = ObjectBrowserJson.source(answer('firestore/source_document'));
 
       expect(source.parts.map((p) => p.id), ['data', 'document', 'subcollections']);
       final parts = source.parts.cast<SourceText>();
-      expect(parts.map((p) => p.truncated), [false, false, true]);
-      expect(parts.every((p) => p.language == 'json' && p.complete), isTrue);
+      expect(parts.map((p) => p.truncated), [
+        null,
+        null,
+        const SourceTruncation(limit: 20, reason: 'Studio stopped listing collection ids after 10 requests'),
+      ]);
+      expect(parts.every((p) => p.language == 'json' && p.complete && p.origin == SourceOrigin.rendered), isTrue);
     });
 
-    test('a source with a neutral statement part, read as a refusal until #57', () {
+    test('a source with a neutral statement part', () {
       final source = ObjectBrowserJson.source(answer('firestore/source_document_colon_id'));
       final statement = source.parts.last;
 
       expect(source.path, ['reports/2026:Q3']);
       expect(source.parts.take(2), everyElement(isA<SourceText>()));
-      expect(statement, isA<SourceUnavailable>());
-      expect((statement as SourceUnavailable).reason, startsWith('Studio cannot list the subcollections'));
+      expect(statement, isA<SourceStatement>());
+      expect((statement as SourceStatement).statement, startsWith('Studio cannot list the subcollections'));
     });
   });
 
@@ -234,10 +239,6 @@ void main() {
     final gaps = <(String issue, String answer, String field, Object? Function(dynamic json) sent)>[
       ('#56', 'postgres/describe_exclusion', 'columns[].declaredType', (j) => j['columns'][2]['declaredType']),
       ('#56', 'postgres/describe_exclusion', 'exclusionConstraints', (j) => j['exclusionConstraints']),
-      ('#57', 'oracle/source_package', 'parts[].origin', (j) => j['parts'][0]['origin']),
-      ('#57', 'firestore/source_document', 'parts[].truncated.limit', (j) => j['parts'][2]['truncated']['limit']),
-      ('#57', 'firestore/source_document', 'parts[].truncated.reason', (j) => j['parts'][2]['truncated']['reason']),
-      ('#57', 'firestore/source_document_colon_id', 'parts[].statement', (j) => j['parts'][2]['statement']),
     ];
 
     for (final (issue, name, field, sent) in gaps) {

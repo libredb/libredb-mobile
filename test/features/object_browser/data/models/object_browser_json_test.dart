@@ -48,15 +48,99 @@ void main() {
   });
 
   group('source', () {
-    test('a partial, truncated part', () {
+    String answer(String parts) => '{"path":["p"],"kind":"package","parts":[$parts]}';
+    const text = '"id":"body","label":"Body","text":"BEGIN","language":"plsql","form":"complete"';
+
+    test('a partial part keeps its origin and Studio\'s truncation, limit and reason as sent', () {
       final source = ObjectBrowserJson.source(
-        '{"path":["p"],"kind":"package","parts":[{"id":"body","label":"Body","text":"BEGIN","language":"plsql",'
-        '"form":"partial","origin":"stored","truncated":{"limit":1000000,"reason":"size"}}]}',
+        answer(
+          '{"id":"body","label":"Body","text":"BEGIN","language":"plsql","form":"partial","origin":"stored",'
+          '"truncated":{"limit":1000000,"reason":"the source read was bounded at 1,000,000 characters by its caller"}}',
+        ),
       );
 
       expect(
         source.parts.single,
-        isA<SourceText>().having((p) => p.complete, 'complete', isFalse).having((p) => p.truncated, 'truncated', true),
+        const SourceText(
+          id: 'body',
+          label: 'Body',
+          text: 'BEGIN',
+          language: 'plsql',
+          complete: false,
+          origin: SourceOrigin.stored,
+          truncated: SourceTruncation(
+            limit: 1000000,
+            reason: 'the source read was bounded at 1,000,000 characters by its caller',
+          ),
+        ),
+      );
+    });
+
+    test('reads each origin Studio sends', () {
+      for (final origin in SourceOrigin.values) {
+        final part = ObjectBrowserJson.source(answer('{$text,"origin":"${origin.name}"}')).parts.single as SourceText;
+
+        expect(part.origin, origin);
+        expect(part.truncated, isNull);
+      }
+    });
+
+    test('refuses a text part without an origin, or with one Studio does not send', () {
+      expect(() => ObjectBrowserJson.source(answer('{$text}')), throwsFormatException);
+      expect(() => ObjectBrowserJson.source(answer('{$text,"origin":"guessed"}')), throwsFormatException);
+    });
+
+    test('refuses a truncation without its limit or its reason', () {
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"reason":"cut"}}')),
+        throwsFormatException,
+      );
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"limit":10}}')),
+        throwsFormatException,
+      );
+      expect(() => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":true}')), throwsFormatException);
+    });
+
+    test('ignores the edit affordance', () {
+      final part = ObjectBrowserJson.source(
+        answer('{$text,"origin":"regenerated","edit":{"offered":false,"reason":"must be owner"}}'),
+      ).parts.single;
+
+      expect(part, isA<SourceText>().having((p) => p.origin, 'origin', SourceOrigin.regenerated));
+    });
+
+    test('a refusal and a neutral statement are told apart', () {
+      final parts = ObjectBrowserJson.source(
+        answer(
+          '{"id":"comment","label":"Comment","unavailable":"no comment is set"},'
+          '{"id":"subs","label":"Subcollections","unavailable":"Studio cannot list them","statement":true}',
+        ),
+      ).parts;
+
+      expect(parts, const [
+        SourceUnavailable(id: 'comment', label: 'Comment', reason: 'no comment is set'),
+        SourceStatement(id: 'subs', label: 'Subcollections', statement: 'Studio cannot list them'),
+      ]);
+    });
+
+    test('refuses the whole answer for a statement on a readable part, as Studio\'s client does', () {
+      expect(
+        () => ObjectBrowserJson.source(
+          answer('{"id":"c","label":"C","unavailable":"x"},{$text,"origin":"stored","statement":true}'),
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('refuses a statement that is not true, and a part with both a text and a refusal', () {
+      expect(
+        () => ObjectBrowserJson.source(answer('{"id":"c","label":"C","unavailable":"x","statement":false}')),
+        throwsFormatException,
+      );
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","unavailable":"x"}')),
+        throwsFormatException,
       );
     });
 

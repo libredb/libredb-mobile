@@ -463,7 +463,8 @@ void main() {
       expect(text.text, contains('order_items'));
       expect(text.language, 'pgsql');
       expect(text.complete, isFalse, reason: 'Studio regenerates the SELECT of a view, not its CREATE VIEW');
-      expect(text.truncated, isFalse);
+      expect(text.origin, SourceOrigin.regenerated);
+      expect(text.truncated, isNull);
     });
 
     test('POST /api/db/objects/source of a function', () {
@@ -473,6 +474,10 @@ void main() {
       expect(source.kind, 'function');
       expect(source.path.first, 'sales');
       expect(text.text, contains('CREATE OR REPLACE FUNCTION sales.order_total'));
+      expect(text.language, 'pgsql');
+      expect(text.complete, isTrue);
+      expect(text.origin, SourceOrigin.regenerated);
+      expect(text.truncated, isNull);
     });
 
     test('POST /api/db/objects/search for ord', () {

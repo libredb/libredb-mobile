@@ -125,21 +125,47 @@ final class ObjectBrowserJson {
     );
   }
 
+  /// A text, a refusal (`unavailable`) or a neutral statement (`unavailable` with `statement: true`). Like Studio's
+  /// client (`isPartShape` in `src/components/object-source/source-reader.ts`), it refuses the whole answer for a part
+  /// with both a text and a refusal, and for a `statement` that is not `true` or sits on a part without `unavailable`,
+  /// since no heading fits either. `edit` is left out: the app does not edit source.
   static SourcePart _sourcePart(Object? item) {
     final part = _map(item, 'source part');
     final id = _string(part['id'], 'id');
     final label = _string(part['label'], 'label');
-    if (part['unavailable'] is String) {
-      return SourceUnavailable(id: id, label: label, reason: part['unavailable'] as String);
+    final refused = part.containsKey('unavailable');
+    if (refused && part.containsKey('text')) throw const FormatException('A source part has a text and a refusal');
+    if (part.containsKey('statement') && (part['statement'] != true || !refused)) {
+      throw const FormatException('A source part has a statement that is not a refusal marked true');
     }
+    if (refused) {
+      final reason = _string(part['unavailable'], 'unavailable');
+      return part['statement'] == true
+          ? SourceStatement(id: id, label: label, statement: reason)
+          : SourceUnavailable(id: id, label: label, reason: reason);
+    }
+    final truncated = part['truncated'];
     return SourceText(
       id: id,
       label: label,
       text: _string(part['text'], 'text'),
       language: _string(part['language'], 'language'),
+      origin: _origin(part['origin']),
       complete: part['form'] != 'partial',
-      truncated: part['truncated'] != null,
+      truncated: truncated == null
+          ? null
+          : SourceTruncation(
+              limit: _int(_map(truncated, 'truncation')['limit'], 'limit'),
+              reason: _string(truncated['reason'], 'reason'),
+            ),
     );
+  }
+
+  static SourceOrigin _origin(Object? value) {
+    for (final origin in SourceOrigin.values) {
+      if (origin.name == value) return origin;
+    }
+    throw const FormatException('The origin of a source part is not one Studio sends');
   }
 
   static Map<String, dynamic> _object(String body) => _map(jsonDecode(body), 'answer');
