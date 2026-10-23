@@ -22,24 +22,28 @@ final class ConnectionCheckChecking extends ConnectionCheckState {
   const ConnectionCheckChecking();
 }
 
-/// Studio connected and read the server's health in [latency], when it sent one.
+/// Studio connected and read the server's health in [latency], when it sent one; [warnings] are what the server
+/// cautioned while the connection opened.
 final class ConnectionCheckOnline extends ConnectionCheckState {
-  const ConnectionCheckOnline({this.latency});
+  const ConnectionCheckOnline({this.latency, this.warnings = const []});
 
   final Duration? latency;
+  final List<QueryWarning> warnings;
 
   @override
-  List<Object?> get props => [latency];
+  List<Object?> get props => [latency, warnings];
 }
 
-/// Studio connected but could not read the server's health; [message] is Studio's sentence, which names why.
+/// Studio connected but could not read the server's health; [message] is Studio's sentence, which names why, and
+/// [warnings] are what the server cautioned while the connection opened.
 final class ConnectionCheckDegraded extends ConnectionCheckState {
-  const ConnectionCheckDegraded({required this.message});
+  const ConnectionCheckDegraded({required this.message, this.warnings = const []});
 
   final String message;
+  final List<QueryWarning> warnings;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, warnings];
 }
 
 /// The check failed. The sheet shows [error] through `StudioErrorBanner`, which shows the translated message of

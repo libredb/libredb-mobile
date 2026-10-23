@@ -6,6 +6,7 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'connection_check_event.dart';
@@ -55,11 +56,11 @@ class ConnectionCheckBloc extends Bloc<ConnectionCheckEvent, ConnectionCheckStat
     }
     switch (await _connectionRepository.test(connectionId)) {
       case Success(:final data) when data.degraded:
-        emit(ConnectionCheckDegraded(message: data.message));
-        _log.debug('END: onCheck degraded');
+        emit(ConnectionCheckDegraded(message: data.message, warnings: data.warnings));
+        _log.debug('END: onCheck degraded, warnings: {}', [data.warnings.length]);
       case Success(:final data):
-        emit(ConnectionCheckOnline(latency: data.latency));
-        _log.debug('END: onCheck online, latency: {}', [data.latency]);
+        emit(ConnectionCheckOnline(latency: data.latency, warnings: data.warnings));
+        _log.debug('END: onCheck online, latency: {}, warnings: {}', [data.latency, data.warnings.length]);
       case Failure(:final error):
         // The error text may be the database's own words, so only its code is logged.
         emit(ConnectionCheckFailed(error: error));

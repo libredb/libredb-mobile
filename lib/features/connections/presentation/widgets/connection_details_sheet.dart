@@ -9,6 +9,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
@@ -116,10 +117,15 @@ class _CheckSection extends StatelessWidget {
             Text(l10n.connection_status, style: Theme.of(context).textTheme.labelLarge),
             _StatusChip(state: state),
             ...switch (state) {
-              ConnectionCheckIdle() || ConnectionCheckOnline() => [_CheckButton(onPressed: check)],
+              ConnectionCheckIdle() => [_CheckButton(onPressed: check)],
+              ConnectionCheckOnline(:final warnings) => [
+                if (warnings.isNotEmpty) _CheckWarnings(warnings: warnings),
+                _CheckButton(onPressed: check),
+              ],
               ConnectionCheckChecking() => [const _CheckButton(onPressed: null)],
-              ConnectionCheckDegraded(:final message) => [
+              ConnectionCheckDegraded(:final message, :final warnings) => [
                 Text(message, style: Theme.of(context).textTheme.bodySmall),
+                if (warnings.isNotEmpty) _CheckWarnings(warnings: warnings),
                 _CheckButton(onPressed: check),
               ],
               ConnectionCheckNotChecked() => [
@@ -139,6 +145,47 @@ class _CheckSection extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// What the server cautioned while the connection opened, one line each as Studio's `describeWarning` writes it (the
+/// severity, then the message, or `Warning` without one), in the caution's color with its icon. Studio's text is shown
+/// as Studio wrote it.
+class _CheckWarnings extends StatelessWidget {
+  const _CheckWarnings({required this.warnings});
+
+  final List<QueryWarning> warnings;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context);
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.tertiary;
+    final iconSize = 16 * MediaQuery.textScalerOf(context).scale(1);
+    return Column(
+      key: const ValueKey('connection-check-warnings'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: AppSpacing.xs,
+      children: [
+        for (final warning in warnings)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: AppSpacing.sm,
+            children: [
+              Icon(Icons.warning_amber, size: iconSize, color: color),
+              Expanded(
+                child: Text(_line(l10n, warning), style: theme.textTheme.bodySmall?.copyWith(color: color)),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  static String _line(S l10n, QueryWarning warning) {
+    final message = warning.message.isEmpty ? l10n.result_warning_fallback : warning.message;
+    final severity = warning.severity;
+    return severity == null || severity.isEmpty ? message : l10n.result_warning_line(severity, message);
   }
 }
 
