@@ -39,8 +39,10 @@ jobs:
         run: flutter pub get
 
       - name: Check generated localizations
-        # lib/generated must be exactly what scripts/generate_l10n.sh writes from the ARB files.
+        # lib/generated must be exactly what scripts/generate_l10n.sh writes from the ARB files, and no ARB file under
+        # lib/l10n may hold a key twice, since the generator keeps the last copy without a diff.
         run: |
+          flutter test test/architecture/arb_translations_test.dart
           DART=dart scripts/generate_l10n.sh
           if [ -n "$(git status --porcelain -- lib/generated)" ]; then
             git status --porcelain -- lib/generated
