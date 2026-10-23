@@ -57,7 +57,7 @@ test/
 │   └── fake_data.dart         # Shared fixtures (mockUserFullPayload, ...)
 ├── architecture/              # Meta-tests enforcing rules (see below)
 │   ├── android_manifest_test.dart    # Android INTERNET, backup off
-│   ├── arb_translations_test.dart    # every English message has a Turkish one with the same placeholders
+│   ├── arb_translations_test.dart    # every English message has a Turkish one with the same placeholders, no ARB key twice
 │   ├── credential_to_string_test.dart # a class with a credential field keeps it out of toString
 │   ├── feature_generator_test.dart   # tool/generate_feature.dart output is clean and passes its tests
 │   ├── import_guard_test.dart        # layer dependency rules, url_launcher only in external_link.dart
