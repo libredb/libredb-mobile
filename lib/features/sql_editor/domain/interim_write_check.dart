@@ -274,7 +274,7 @@ class InterimWriteCheck {
 
   /// The characters that end a `--` comment on some engines but not on others: a carriage return (when no line feed
   /// follows it), a vertical tab, a form feed, NEL, the line separator and the paragraph separator.
-  static final _otherLineTerminator = RegExp('\r(?!\n)|[\x0B\x0C\u0085  ]');
+  static final _otherLineTerminator = RegExp('\r(?!\n)|[\x0B\x0C\u0085\u2028\u2029]');
 
   /// The white space MySQL needs after `--` to read a comment.
   static const _dashCommentSpace = {' ', '\t', '\n', '\r'};
