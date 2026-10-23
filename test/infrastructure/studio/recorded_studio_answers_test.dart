@@ -301,10 +301,13 @@ void main() {
         'seed:dev-postgres',
         'seed:dev-postgres-server',
         'seed:dev-postgres-readonly',
+        'seed:dev-postgres-prod',
       ]);
-      expect(postgres.map((c) => c.environment), ['development', 'staging', 'development']);
+      expect(postgres.map((c) => c.environment), ['development', 'staging', 'development', 'production']);
+      expect(postgres.map((c) => c.name).last, 'Prod Postgres');
       expect(postgres.map((c) => c.group), everyElement('Dev databases'));
-      expect(postgres.map((c) => c.database), ['app', null, 'app']);
+      expect(postgres.map((c) => c.database), ['app', null, 'app', 'app']);
+      expect(postgres.map((c) => c.readOnly), everyElement(isFalse));
       expect(postgres.every((c) => c.managed), isTrue);
       expect(managed.connections.map((c) => c.id), contains('seed:sqlite-embedded-sample'));
       final raw = (jsonDecode(fixture('managed_postgres')) as Map<String, dynamic>)['connections'] as List;
@@ -312,6 +315,43 @@ void main() {
         expect(connection, isNot(contains('password')), reason: 'Studio keeps a managed seed\'s secrets');
       }
       expect(fixture('managed_postgres'), isNot(contains('-dev-not-for-production')));
+    });
+
+    test("POST /api/db/query of a syntax error carries the database's words and its position as digits", () {
+      final body = fixture('queryerror_postgres');
+      final error = studioError(
+        BadRequestException(
+          body,
+          statusCode: 400,
+          errorCode: ApiClient.errorCodeOf(body),
+          serverMessage: 'syntax error at or near "SELEC"',
+          position: ApiClient.positionOf(body),
+        ),
+      );
+
+      expect(
+        error,
+        isA<ValidationError>()
+            .having((e) => e.code, 'code', AppErrorCode.studioQueryError.key)
+            .having((e) => e.position, 'position', 1),
+      );
+    });
+
+    test("POST /api/db/query of an UPDATE answers the rows it changed and no field", () {
+      final result = QueryResultJson.read(fixture('query_update_postgres'));
+
+      expect(result.fields, isEmpty);
+      expect(result.rows, isEmpty);
+      expect(result.rowCount, 2);
+      expect(result.openTransactionRolledBack, isFalse);
+    });
+
+    test('POST /api/db/query of a lone BEGIN says Studio rolled the open transaction back', () {
+      final result = QueryResultJson.read(fixture('query_begin_postgres'));
+
+      expect(result.openTransactionRolledBack, isTrue);
+      expect(result.rows, isEmpty);
+      expect(result.rowCount, 0);
     });
 
     test('POST /api/db/provider-meta of a database-level seed', () {

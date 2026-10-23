@@ -1,0 +1,193 @@
+import 'dart:async';
+
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/statement_position.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
+import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/query_id.dart';
+import 'package:libredb_mobile/shared/models/query_page.dart';
+import 'package:libredb_mobile/shared/models/query_result.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
+import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
+import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
+
+part 'editor_run_event.dart';
+part 'editor_run_state.dart';
+
+/// The SQL editor's run of one statement on [connectionId].
+///
+/// Run reads the text through [InterimWriteCheck] for the connection's engine: a text of several statements is refused
+/// here with the one-statement message, a text longer than [maxTextLength] with the too-large message, and nothing is
+/// sent for either. Any other text the check flags waits in [EditorAwaitingConfirmation] for the user's answer, and
+/// the text sent is the one carried there, never read again from the field. A text is sent whole through
+/// [ISqlEditorRepository.run] with a fresh run id, never to `runScript`, and never sent again by the bloc: a failure,
+/// a rate limit included, waits for the user's next Run, and a Run while one is in flight is dropped.
+///
+/// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
+/// bloc never holds a clear row. After a success [SchemaChangeNotifier.statementSucceeded] tells the object browser.
+/// Neither the statement nor a database error text is logged; only an error's code is.
+class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
+  EditorRunBloc({
+    required this._repository,
+    required this._providerMeta,
+    required this._schemaChanges,
+    required this.connectionId,
+    this._check = const InterimWriteCheck(),
+    this._newRunId = newQueryId,
+  }) : super(const EditorIdle()) {
+    on<EditorRunRequested>(_onRunRequested, transformer: EventTransformers.dropConcurrent());
+    on<EditorConfirmationAnswered>(_onConfirmationAnswered, transformer: EventTransformers.dropConcurrent());
+    on<EditorRateLimitElapsed>(_onRateLimitElapsed);
+  }
+
+  /// The longest text the phone sends, counted as `String.length`: Studio bounds the text of a console engine only
+  /// (a 413), so this is the phone's own cap for a SQL engine.
+  static const maxTextLength = 1000000;
+
+  static final _log = AppLogger.getLogger('EditorRunBloc');
+
+  final ISqlEditorRepository _repository;
+  final IProviderMetaRepository _providerMeta;
+  final SchemaChangeNotifier _schemaChanges;
+  final InterimWriteCheck _check;
+  final String Function() _newRunId;
+
+  /// The connection, the active one the page was built for.
+  final String connectionId;
+
+  /// The runs answered so far, which tells one result on screen from the next.
+  int _runs = 0;
+
+  Future<void> _onRunRequested(EditorRunRequested event, Emitter<EditorRunState> emit) async {
+    switch (state) {
+      case EditorRunning() || EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true):
+        return;
+      case EditorIdle() || EditorSucceeded() || EditorStatementFailed() || EditorFailed():
+        break;
+    }
+    final text = event.text;
+    if (text.trim().isEmpty) return;
+    if (text.length > maxTextLength) {
+      _log.info('a statement over the phone\'s length cap was not sent');
+      emit(
+        EditorFailed(
+          error: ValidationError('The statement is too large', code: AppErrorCode.studioStatementTooLarge.key),
+        ),
+      );
+      return;
+    }
+
+    final ProviderMeta meta;
+    switch (await _providerMeta.providerMeta(connectionId)) {
+      case Failure(:final error):
+        if (emit.isDone) return;
+        _fail(emit, error);
+        return;
+      case Success(:final data):
+        meta = data;
+    }
+    if (emit.isDone) return;
+
+    switch (_check.check(text, isSql: meta.isSql)) {
+      case AsksBeforeRunning(:final reasons) when reasons.contains(WriteCheckReason.severalStatements):
+        _log.info('a text of several statements was not sent');
+        emit(
+          EditorFailed(error: ValidationError('Several statements', code: AppErrorCode.editorSeveralStatements.key)),
+        );
+      case final AsksBeforeRunning asks:
+        emit(
+          EditorAwaitingConfirmation(
+            statement: EditorStatement(text: text, asks: asks),
+            previous: state,
+            meta: meta,
+            role: event.role,
+          ),
+        );
+      case RunsWithoutAsking():
+        await _run(emit, EditorStatement(text: text), meta, event.role);
+    }
+  }
+
+  Future<void> _onConfirmationAnswered(EditorConfirmationAnswered event, Emitter<EditorRunState> emit) async {
+    final awaiting = state;
+    if (awaiting is! EditorAwaitingConfirmation) return;
+    if (!event.confirmed) {
+      emit(awaiting.previous);
+      return;
+    }
+    await _run(emit, awaiting.statement, awaiting.meta, awaiting.role);
+  }
+
+  void _onRateLimitElapsed(EditorRateLimitElapsed event, Emitter<EditorRunState> emit) {
+    if (state case EditorFailed(:final error, waitingForRetry: true)) emit(EditorFailed(error: error));
+  }
+
+  /// Sends [statement] once and shows its answer.
+  Future<void> _run(
+    Emitter<EditorRunState> emit,
+    EditorStatement statement,
+    ProviderMeta meta,
+    StudioRole? role,
+  ) async {
+    final queryId = _newRunId();
+    emit(EditorRunning(queryId: queryId));
+    final result = await _repository.run(connectionId, statement.text, queryId: queryId);
+    if (emit.isDone) return;
+    switch (result) {
+      case Failure(:final error):
+        _fail(emit, error, statement: statement);
+      case Success(:final data):
+        final policy = MaskingPolicy.forRole(role, exempt: meta.maskingExemptColumns);
+        emit(
+          EditorSucceeded(
+            masked: maskResult(data, policy),
+            policy: policy,
+            statement: statement,
+            meta: meta,
+            run: ++_runs,
+          ),
+        );
+        unawaited(_schemaChanges.statementSucceeded(connectionId, statement.text));
+    }
+  }
+
+  /// Runs [statement], the text of the result on screen, again for [page] with a fresh run id, for the result view's
+  /// Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks [confirm] first,
+  /// and nothing is sent unless it answers true; the answer is then null. The state does not change, and a failure is
+  /// answered, never sent again by itself.
+  Future<Result<QueryResult>?> loadPage(
+    EditorStatement statement,
+    QueryPage page, {
+    required Future<bool> Function() confirm,
+  }) async {
+    if (statement.asks != null && !await confirm()) return null;
+    final answer = await _repository.run(connectionId, statement.text, queryId: _newRunId(), page: page);
+    if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
+    return answer;
+  }
+
+  void _fail(Emitter<EditorRunState> emit, AppError error, {EditorStatement? statement}) {
+    _log.warn('run failed: {}', [error.code ?? error.runtimeType]);
+    if (statement != null && error.code == AppErrorCode.studioQueryError.key) {
+      final position = error is ValidationError ? error.position : null;
+      emit(
+        EditorStatementFailed(
+          error: error,
+          position: position == null ? null : statementOffsetOf(statement.text, position),
+        ),
+      );
+      return;
+    }
+    final waiting = error is RateLimitedError && (error.retryAfter?.inSeconds ?? 0) > 0;
+    emit(EditorFailed(error: error, waitingForRetry: waiting));
+  }
+}

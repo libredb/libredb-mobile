@@ -628,6 +628,44 @@ void main() {
         }
       });
 
+      test('a query error keeps the position the database reported, as a whole number or a string of digits', () async {
+        for (final position in ['8', '"8"']) {
+          stub.stubDioError(
+            DioExceptionType.badResponse,
+            statusCode: 400,
+            data: '{"error":"syntax error","code":"QUERY_ERROR","details":{"position":$position,"detail":null}}',
+          );
+          await expectLater(
+            client.post('/db/query', {'sql': 'SELEC 1'}),
+            throwsA(isA<BadRequestException>().having((e) => e.position, 'position', 8)),
+            reason: position,
+          );
+        }
+      });
+
+      test('a position that is absent or not a whole number of digits gives none', () async {
+        for (final body in [
+          '{"error":"syntax error","code":"QUERY_ERROR"}',
+          '{"error":"syntax error","details":{"detail":"x"}}',
+          '{"error":"syntax error","details":7}',
+          '{"error":"syntax error","details":{"position":"8a"}}',
+          '{"error":"syntax error","details":{"position":""}}',
+          '{"error":"syntax error","details":{"position":"-3"}}',
+          '{"error":"syntax error","details":{"position":2.5}}',
+          '{"error":"syntax error","details":{"position":true}}',
+          '{"error":"syntax error","details":{"position":null}}',
+          '{"error":"syntax error","details":{"position":[8]}}',
+          'Bad Request',
+        ]) {
+          stub.stubDioError(DioExceptionType.badResponse, statusCode: 400, data: body);
+          await expectLater(
+            client.post('/db/query', {'sql': 'SELEC 1'}),
+            throwsA(isA<BadRequestException>().having((e) => e.position, 'position', isNull)),
+            reason: body,
+          );
+        }
+      });
+
       test('a body without a string error gives no error text', () async {
         for (final body in ['Bad Request', '{"code":"X"}', '{"error":7}']) {
           stub.stubDioError(DioExceptionType.badResponse, statusCode: 400, data: body);

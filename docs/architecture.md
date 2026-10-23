@@ -217,6 +217,13 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   It answers 200 even then, so a failed statement is part of the `ScriptResult`, not an error; it takes no bind values.
   A page given to it is sent as `options` and bounds the last statement when that is a SELECT, but Studio answers no paging for a script, so there is no next page.
   Deciding whether a text holds one statement or several is the editor's job (milestone M5).
+- The SQL editor ([#113](https://github.com/libredb/libredb-mobile/issues/113)) sends one statement through `run`, whole, with a fresh run id, and never sends it again by itself.
+  A text that `InterimWriteCheck` reads as several statements is refused on the phone with a message to run one at a time, as is a text over 1,000,000 characters, since Studio bounds the text of a console engine only.
+  Any other text the check flags runs only after the write confirmation, and so does each Load more of it, because every page runs the whole statement again on Studio; the text sent is the one confirmed.
+  A `studio.query_error` shows the database's own words under the editor and places the cursor at `details.position`, which counts characters from 1 and is converted to a UTF-16 offset.
+  The rolled-back notice advises the engine's commit keyword, `EXEC` on Redis and `COMMIT` elsewhere, as Studio's web does.
+- After a successful statement the editor calls `SchemaChangeNotifier.statementSucceeded`.
+  Decided in #113 for [#88](https://github.com/libredb/libredb-mobile/issues/88) item 3: when provider-meta cannot be read after a successful statement, the connection's browser answers are dropped and `changes` is told all the same, and the failure is logged by its code, because a needless reload costs one request while a stale tree shows a table that no longer exists.
 - `cancel` stops a run by the id the app gave it, from `newQueryId`, a UUID: Studio checks no owner on a cancel, so the id must be unguessable.
   The cancelled run fails with `studio.query_cancelled`.
 - A transaction's statements cannot be cancelled.
@@ -243,7 +250,7 @@ Decided in [#88](https://github.com/libredb/libredb-mobile/issues/88):
 ### Errors
 
 Studio's error body is `{error, code?, ...}`.
-`ApiClient` keeps the HTTP status, the code, the `Retry-After` delay and the scrubbed `error` text on the exception, and `studioError` maps them, the code first and the status after:
+`ApiClient` keeps the HTTP status, the code, the `Retry-After` delay, the scrubbed `error` text and, on a 400, `details.position` (a whole number or a string of digits, else none) on the exception, and `studioError` maps them, the code first and the status after:
 
 | Studio code | `AppErrorCode` |
 | --- | --- |
@@ -264,6 +271,7 @@ Studio's error body is `{error, code?, ...}`.
 | `RATE_LIMITED`, any 429 | `studio.rate_limited`, as a `RateLimitedError` with the delay |
 | `TRANSACTION_NOT_OWNED` | `studio.transaction_not_owned` |
 | `TRANSACTION_CREDENTIAL_CHANGED` | `studio.transaction_credential_changed` |
+| any 413, which only a console engine's text bound answers | `studio.statement_too_large` |
 | an answer the app cannot read | `studio.unreadable_answer` |
 
 A sign-in that `GET /api/auth/me` refuses with any other `AuthError`, a 401 that reached the caller, shows `studio.account_refused`.

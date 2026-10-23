@@ -216,6 +216,7 @@ The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/p
 | `seed:dev-postgres`, "Dev Postgres" | `development`, `Dev databases` | The database `app`, so the tree starts at its schemas |
 | `seed:dev-postgres-server`, "Dev Postgres server" | `staging`, `Dev databases` | The whole server, so the tree starts at its databases (`app`, `archive`, `postgres`) and a request names the database in `catalog` |
 | `seed:dev-postgres-readonly`, "Dev Postgres (read-only role)" | `development`, `Dev databases` | The database `app` through a role that may only read |
+| `seed:dev-postgres-prod`, "Prod Postgres" | `production`, `Dev databases` | The database `app` as `seed:dev-postgres` opens it, marked as production, so the editor's write confirmation asks for the typed name |
 
 `app` holds the schemas `public` and `sales`:
 
@@ -395,6 +396,17 @@ record query_preview_postgres_server_orders /db/query '{"connectionId":"seed:dev
 record query_preview_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT * FROM public.customers;","options":{"limit":50,"offset":0}}'
 record query_count_postgres_readonly_customers /db/query '{"connectionId":"seed:dev-postgres-readonly","sql":"SELECT COUNT(*) AS row_count\nFROM public.customers;","options":{"offset":0}}'
 ```
+
+The SQL editor's answers of #113 were recorded the same way, from a fresh volume, after `seed:dev-postgres-prod` joined the seeds, together with `managed_postgres.json` above, which lists it:
+
+```shell
+record queryerror_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"SELEC 1","options":{"offset":0}}'
+record query_begin_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"BEGIN","options":{"offset":0}}'
+record query_update_postgres /db/query '{"connectionId":"seed:dev-postgres","sql":"UPDATE public.orders SET status = status WHERE id <= 2","options":{"offset":0}}'
+```
+
+`queryerror_postgres.json` carries `details.position` as the string `"1"`, as node-postgres reports it, and `query_begin_postgres.json` answers `openTransaction: "rolled-back"`.
+Studio at `c9989a6b5` refuses `readOnly: true` on a Postgres seed (`READ_ONLY_ENFORCED.postgres` is false in `src/lib/db/compatibility.ts`, and the seed file then fails to load), so `seed:dev-postgres-readonly` is not marked read only; a confirmed `DELETE FROM orders WHERE false` there answers 403 `PERMISSION_DENIED` from the role's grants.
 
 The three `query_page_postgres_*.json` pages were recorded from a fresh volume.
 The first answers `hasMore: true`; the second answers `hasMore: false`, since Studio asks for one row past the page and that row is missing; the third, past the last row, has no rows and pins the append of an empty page.

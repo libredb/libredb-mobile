@@ -49,9 +49,12 @@ class ResultWarningList extends StatelessWidget {
   }
 }
 
-/// Studio rolled back a transaction the statement left open, so its changes were discarded.
+/// Studio rolled back a transaction the statement left open, so its changes were discarded: [notice] when the caller
+/// words it, such as the SQL editor's with the engine's commit keyword, else the plain sentence.
 class ResultRolledBackBanner extends StatelessWidget {
-  const ResultRolledBackBanner({super.key});
+  const ResultRolledBackBanner({super.key, this.notice});
+
+  final String? notice;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +71,7 @@ class ResultRolledBackBanner extends StatelessWidget {
           Icon(Icons.undo, color: scheme.onErrorContainer, size: MediaQuery.textScalerOf(context).scale(18)),
           Expanded(
             child: Text(
-              S.of(context).result_rolled_back,
+              notice ?? S.of(context).result_rolled_back,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onErrorContainer),
             ),
           ),
@@ -81,9 +84,9 @@ class ResultRolledBackBanner extends StatelessWidget {
 /// The strip above the rows (Studio's `StatsBar`): the rows and execution time, the `limited` chip with Studio's
 /// notice when Studio bounded the result, a chip that opens and shuts the warnings, open at first as Studio's is, a
 /// [trailing] widget after the chips, Studio's notice that rows may repeat or be skipped between pages when
-/// [orderNotice] asks for it, and the rollback banner. Each loss notice stays reachable: a shut warning list keeps its
-/// chip, and a strip taller than [maxHeight], as at a large text size, scrolls inside that height, so the rows keep
-/// their room.
+/// [orderNotice] asks for it, and the rollback banner, worded by [rolledBackNotice] when given. Each loss notice stays
+/// reachable: a shut warning list keeps its chip, and a strip taller than [maxHeight], as at a large text size, scrolls
+/// inside that height, so the rows keep their room.
 class ResultStatsStrip extends StatefulWidget {
   const ResultStatsStrip({
     super.key,
@@ -91,6 +94,7 @@ class ResultStatsStrip extends StatefulWidget {
     this.maxHeight = double.infinity,
     this.orderNotice = false,
     this.trailing,
+    this.rolledBackNotice,
   });
 
   final QueryResult result;
@@ -104,6 +108,9 @@ class ResultStatsStrip extends StatefulWidget {
 
   /// Shown after the chips, such as the card and table toggle.
   final Widget? trailing;
+
+  /// The rollback banner's sentence, when the caller words it.
+  final String? rolledBackNotice;
 
   @override
   State<ResultStatsStrip> createState() => _ResultStatsStripState();
@@ -212,7 +219,7 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
               ],
             ),
           if (warnings.isNotEmpty && _warningsOpen) ResultWarningList(warnings: warnings),
-          if (result.openTransactionRolledBack) const ResultRolledBackBanner(),
+          if (result.openTransactionRolledBack) ResultRolledBackBanner(notice: widget.rolledBackNotice),
         ],
       ),
     );

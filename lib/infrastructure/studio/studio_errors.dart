@@ -31,7 +31,7 @@ AppError studioError(Object error) {
     case 'CUSTOM_CONNECTIONS_DISABLED':
       return AuthError(message, code: AppErrorCode.studioCustomConnectionsDisabled.key);
     case 'QUERY_ERROR':
-      return ValidationError(message, code: AppErrorCode.studioQueryError.key);
+      return ValidationError(message, code: AppErrorCode.studioQueryError.key, position: error.position);
     case 'QUERY_CANCELLED':
       return ServerError(message, code: AppErrorCode.studioQueryCancelled.key);
     case 'CONFIG_ERROR':
@@ -60,6 +60,8 @@ AppError studioError(Object error) {
   }
   return switch (status) {
     400 => ValidationError(message),
+    // Only a console engine's text bound answers 413, with a sentence that names the size and never the text.
+    413 => ValidationError(message, code: AppErrorCode.studioStatementTooLarge.key),
     401 || 403 => AuthError(message),
     404 => NotFoundError(message),
     final int s when s >= 500 => ServerError(message),

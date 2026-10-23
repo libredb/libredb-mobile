@@ -57,12 +57,18 @@ enum AppErrorCode {
   studioTransactionCredentialChanged('studio.transaction_credential_changed'),
   studioUnreadableAnswer('studio.unreadable_answer'),
 
+  /// The statement is longer than the engine's text bound (a 413 from Studio) or the phone's own cap.
+  studioStatementTooLarge('studio.statement_too_large'),
+
   // --- SQL editor: the statement text kept on the device ---
   /// A saved draft or history cannot be read: its key is gone, the file was changed, or it is of an unknown version.
   editorSavedTextUnreadable('editor.saved_text_unreadable'),
 
   /// The device refused to store or remove saved statement text.
   editorSavedTextNotStored('editor.saved_text_not_stored'),
+
+  /// The text holds several statements, which the editor runs one at a time.
+  editorSeveralStatements('editor.several_statements'),
 
   // --- generic fallback ---
   generic('error.generic');

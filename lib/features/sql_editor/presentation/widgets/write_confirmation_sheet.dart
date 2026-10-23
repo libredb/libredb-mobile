@@ -11,22 +11,32 @@ import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 enum WriteConfirmation { confirmed, cancelled }
 
 /// Asks the user to confirm [text] on [connection] before it runs, for the reasons [answer] gives, in a full-height
-/// modal sheet; a dismissed sheet answers [WriteConfirmation.cancelled].
+/// modal sheet on the root navigator, which covers the shell; a dismissed sheet answers [WriteConfirmation.cancelled].
 ///
 /// The caller sends exactly the [text] it showed here, and only on [WriteConfirmation.confirmed]. The sheet keeps
 /// nothing once it closes and logs nothing.
+///
+/// [onRoute] receives the sheet's route once it is shown, so a caller that goes away first can remove the sheet with
+/// it and the sheet never outlives the page that asked.
 Future<WriteConfirmation> showWriteConfirmationSheet(
   BuildContext context, {
   required StudioConnection connection,
   required String text,
   required AsksBeforeRunning answer,
+  ValueChanged<Route<WriteConfirmation>>? onRoute,
 }) async {
   final confirmation = await showModalBottomSheet<WriteConfirmation>(
     context: context,
+    // Above the shell, so its top bar and tab bar cannot switch the connection or the tab, and close the editor that
+    // waits for this answer, while the sheet is open.
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => WriteConfirmationSheet(connection: connection, text: text, answer: answer),
+    builder: (sheetContext) {
+      if (ModalRoute.of(sheetContext) case final Route<WriteConfirmation> route) onRoute?.call(route);
+      return WriteConfirmationSheet(connection: connection, text: text, answer: answer);
+    },
   );
   return confirmation ?? WriteConfirmation.cancelled;
 }

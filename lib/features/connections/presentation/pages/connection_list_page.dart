@@ -20,6 +20,7 @@ import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
 /// The connections Studio offers the signed-in user, in sections by the operator's group, with a search and an
@@ -314,8 +315,7 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
   }
 }
 
-/// "Statements you run are recorded in full in this server's query log." under the app bar while governance records
-/// statements in full, as Studio's web client says it; nothing otherwise.
+/// The statement capture note under the app bar while governance records statements in full; nothing otherwise.
 class _StatementCaptureNote extends StatelessWidget {
   const _StatementCaptureNote();
 
@@ -327,26 +327,7 @@ class _StatementCaptureNote extends StatelessWidget {
         ConnectionPolicyInitial() || ConnectionPolicyLoading() || ConnectionPolicyFailure() => false,
       },
     );
-    if (!recordsInFull) return const SizedBox.shrink();
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      key: const ValueKey('connection-statement-capture-note'),
-      width: double.infinity,
-      color: cs.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Icon(Icons.policy_outlined, size: 18, color: cs.onSurfaceVariant),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              S.of(context).connection_statement_capture_full,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ),
-    );
+    return recordsInFull ? const StatementCaptureNote() : const SizedBox.shrink();
   }
 }
 

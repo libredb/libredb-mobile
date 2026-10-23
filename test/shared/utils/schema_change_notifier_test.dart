@@ -64,12 +64,23 @@ void main() {
     expect(told, isEmpty);
   });
 
-  test('a provider-meta failure is returned, and nothing is invalidated', () async {
-    when(() => providerMeta.providerMeta(_sales)).thenAnswer((_) async => const Failure(RateLimitedError('slow down')));
+  test(
+    'a provider-meta failure after a successful statement still drops the connection and tells the listeners',
+    () async {
+      when(() => providerMeta.providerMeta(_sales))
+          .thenAnswer((_) async => const Failure(RateLimitedError('slow down')));
+      final told = <String>[];
+      notifier.changes.listen((connectionId) {
+        expect(invalidated, [connectionId], reason: 'a screen that reloads must not get the dropped entries');
+        told.add(connectionId);
+      });
 
-    final result = await notifier.statementSucceeded(_sales, 'drop table orders');
+      final result = await notifier.statementSucceeded(_sales, 'create table scratch_m5 (id int)');
+      await pumpEventQueue();
 
-    expect(result, isA<Failure<bool>>().having((f) => f.error, 'error', isA<RateLimitedError>()));
-    expect(invalidated, isEmpty);
-  });
+      expect(result, isA<Failure<bool>>().having((f) => f.error, 'error', isA<RateLimitedError>()));
+      expect(invalidated, [_sales]);
+      expect(told, [_sales]);
+    },
+  );
 }

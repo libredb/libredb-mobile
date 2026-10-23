@@ -736,5 +736,19 @@
   "write_confirm_run": "Çalıştır",
   "@write_confirm_run": {"description": "Runs the confirmed statement."},
   "write_confirm_cancel": "İptal",
-  "@write_confirm_cancel": {"description": "Closes the confirmation sheet without running the statement."}
+  "@write_confirm_cancel": {"description": "Closes the confirmation sheet without running the statement."},
+  "error_studio_statement_too_large": "Bu deyim çalıştırılamayacak kadar büyük. Kısaltıp tekrar deneyin.",
+  "@error_studio_statement_too_large": {"description": "The statement is longer than the engine or the phone accepts."},
+  "error_editor_several_statements": "Bu metin birden fazla deyim içeriyor. Deyimleri tek tek çalıştırın.",
+  "@error_editor_several_statements": {"description": "The editor refused a text of several statements before sending it."},
+  "sql_editor_hint": "Bir deyim yazın",
+  "@sql_editor_hint": {"description": "The hint of the empty SQL editor."},
+  "sql_editor_field_label": "Deyim",
+  "@sql_editor_field_label": {"description": "The accessible name of the SQL editor's text field."},
+  "sql_editor_run": "Çalıştır",
+  "@sql_editor_run": {"description": "Runs the statement in the SQL editor."},
+  "sql_editor_running": "Çalışıyor",
+  "@sql_editor_running": {"description": "Shown on Run while the statement runs."},
+  "sql_editor_rolled_back": "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı. Korumak için {keyword} ekleyin.",
+  "@sql_editor_rolled_back": {"description": "The SQL editor's notice that Studio rolled back a transaction the statement left open, with the engine's commit keyword.", "placeholders": {"keyword": {"type": "String", "example": "COMMIT"}}}
 }

@@ -13,8 +13,9 @@ part 'result_view_event.dart';
 part 'result_view_state.dart';
 
 /// Runs the caller's statement again for [page] and answers its result, clear; the caller holds the statement, its
-/// catalog and its connection, so the view never holds statement text.
-typedef ResultPageLoader = Future<Result<QueryResult>> Function(QueryPage page);
+/// catalog and its connection, so the view never holds statement text. It answers null when it sent nothing, as when
+/// the user declined the confirmation the SQL editor asks before each page of a text that may write.
+typedef ResultPageLoader = Future<Result<QueryResult>?> Function(QueryPage page);
 
 /// One statement's result on screen, shared by the object browser's row preview and the SQL editor.
 ///
@@ -85,6 +86,8 @@ class ResultViewBloc extends Bloc<ResultViewEvent, ResultViewState> {
     emit(ResultViewLoaded(result: shown, maskedColumns: maskedColumns, loadingMore: true));
     final answer = await loadPage(QueryPage.after(shown.pagination!));
     switch (answer) {
+      case null:
+        emit(ResultViewLoaded(result: shown, maskedColumns: maskedColumns));
       case Success(:final data):
         // Masked under the columns it is shown under: a page without fields keeps the columns on screen, and their
         // masks apply to its rows too, as Studio masks after the append (`ResultsGrid.tsx:308`).
