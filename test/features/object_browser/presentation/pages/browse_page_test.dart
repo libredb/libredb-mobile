@@ -89,6 +89,80 @@ void main() {
       );
     });
 
+    group('search action', () {
+      const topic = ObjectKind(
+        id: 'topic',
+        role: 'relation',
+        label: 'Topic',
+        labelPlural: 'Topics',
+        keyBrowserOnly: true,
+      );
+      const keyScan = KeyScanSpec(
+        defaultCount: 100,
+        maxCount: 500,
+        separator: '/',
+        pattern: 'prefix',
+        totalScope: 'none',
+      );
+      Finder search() => find.byTooltip(S.current.browse_search_action);
+
+      testWidgets('is offered where the search can list a kind', (tester) async {
+        harness.answerMeta(_sample.id, metaAnswer('meta'));
+        harness.answerCounts(_sample.id, const [], countsAnswer('counts'));
+        harness.active.select(_sample);
+
+        await harness.pump(tester);
+
+        expect(search(), findsOneWidget);
+      });
+
+      testWidgets('is not offered on an engine with no container level whose every kind only the key browser lists', (
+        tester,
+      ) async {
+        const mqtt = StudioConnection(id: 'seed:mqtt', name: 'MQTT', type: 'mqtt');
+        harness.answerMeta(
+          mqtt.id,
+          const ProviderMeta(
+            queryLanguage: 'mqtt',
+            schemaRefreshPattern: 'x',
+            containerLevels: [],
+            objectKinds: [topic],
+            keyScan: keyScan,
+          ),
+        );
+        harness.answerCounts(mqtt.id, const [], const {});
+        harness.active.select(mqtt);
+
+        await harness.pump(tester);
+
+        expect(find.text(S.current.keys_browse), findsOneWidget);
+        expect(search(), findsNothing);
+      });
+
+      testWidgets('is not offered on a container level of such an engine', (tester) async {
+        const opc = StudioConnection(id: 'seed:opc', name: 'OPC', type: 'opcua');
+        harness.answerMeta(
+          opc.id,
+          const ProviderMeta(
+            queryLanguage: 'opcua',
+            schemaRefreshPattern: 'x',
+            containerLevels: [ContainerLevel(id: 'schema', label: 'Server', labelPlural: 'Servers')],
+            objectKinds: [topic],
+            keyScan: keyScan,
+          ),
+        );
+        harness.answerContainers(opc.id, null, const [
+          ObjectContainer(path: ['plant'], name: 'plant', level: 0),
+        ]);
+        harness.active.select(opc);
+
+        await harness.pump(tester);
+
+        expect(find.text('plant'), findsOneWidget);
+        expect(search(), findsNothing);
+      });
+    });
+
     testWidgets('seed:dev-postgres-server shows its databases and then the schemas of the one tapped', (tester) async {
       harness.answerMeta(_server.id, metaAnswer('meta_postgres_server'));
       harness.answerContainers(_server.id, null, containersAnswer('containers_postgres_server'));

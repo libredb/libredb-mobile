@@ -28,7 +28,8 @@ class ContainerLevelPage extends StatelessWidget {
   final String connectionId;
   final List<String> parent;
 
-  /// What the heading row offers at its end, such as the Browse root's search.
+  /// What the heading row offers at its end, the Browse root's object search, left out on an engine whose kinds the
+  /// search cannot list ([ProviderMeta.searchesObjects]).
   final Widget? headingAction;
 
   @override
@@ -90,10 +91,10 @@ class _ContainerLevelView extends StatelessWidget {
       },
       builder: (context, state) => switch (state) {
         ContainerBrowserLoading() => const Center(child: CircularProgressIndicator()),
-        ContainerBrowserNoLevels() => KindCountsPage(
+        ContainerBrowserNoLevels(:final searchesObjects) => KindCountsPage(
           connectionId: connectionId,
           container: const [],
-          headingAction: headingAction,
+          headingAction: searchesObjects ? headingAction : null,
         ),
         ContainerBrowserLoaded() => _buildLevel(context, state),
         ContainerBrowserFailure(:final error, :final previous?) => _buildLevel(context, previous, error: error),
@@ -132,7 +133,11 @@ class _ContainerLevelView extends StatelessWidget {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                BrowseHeading(title: level.level.labelPlural, overline: overline, actions: [?headingAction]),
+                BrowseHeading(
+                  title: level.level.labelPlural,
+                  overline: overline,
+                  actions: [if (level.searchesObjects) ?headingAction],
+                ),
                 if (level.containers.isEmpty)
                   Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(S.of(context).browse_level_empty))
                 else ...[

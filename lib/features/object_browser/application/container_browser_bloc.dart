@@ -86,7 +86,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     }
     final levels = providerMeta.containerLevels;
     if (levels.isEmpty) {
-      emit(const ContainerBrowserNoLevels());
+      emit(ContainerBrowserNoLevels(searchesObjects: providerMeta.searchesObjects));
       return;
     }
     if (parent.length >= levels.length) {
@@ -114,6 +114,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
             loadedAt: clock.now(),
             openOnEntry: first && event is ContainerBrowserRequested ? _entry?.take(connectionId, parent, data) : null,
             query: _query,
+            searchesObjects: providerMeta.searchesObjects,
           ),
         );
     }
@@ -149,6 +150,7 @@ class ContainerBrowserBloc extends Bloc<ContainerBrowserEvent, ContainerBrowserS
     loadedAt: loaded.loadedAt,
     isRefreshing: isRefreshing,
     query: _query,
+    searchesObjects: loaded.searchesObjects,
   );
 
   @override
