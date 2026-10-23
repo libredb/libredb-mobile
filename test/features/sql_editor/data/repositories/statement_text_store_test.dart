@@ -360,13 +360,18 @@ void main() {
       expect(secure.values, isEmpty);
     });
 
+    /// Three appends would already interleave if the queue let them. Each append opens and seals the history in two
+    /// isolates, and with ten appends (22 isolate runs) the case took 9 s of the 30 s test timeout in a folder run while
+    /// two other test runs compiled (#160); three appends take 8 isolate runs.
     test('a draft save and history appends sent together lose nothing', () async {
-      final entries = [for (var i = 0; i < 10; i++) entry('SELECT $i')];
-      await Future.wait([
+      final entries = [for (var i = 0; i < 3; i++) entry('SELECT $i')];
+      final results = await Future.wait<Result<Object?>>([
         for (final one in entries) store.appendHistory(alice, one),
         store.saveDraft(alice, sales, const StatementDraft(text: 'SELECT draft')),
       ]);
 
+      // A refused write is named here, not mistaken for a lost one below.
+      expect([for (final result in results) data(result)], [...entries, DraftSaveOutcome.kept]);
       expect(data(await store.readHistory(alice)), entries.reversed.toList());
       expect(data(await store.readDraft(alice, sales)), const StatementDraft(text: 'SELECT draft'));
     });
