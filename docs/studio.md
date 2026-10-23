@@ -111,6 +111,29 @@ How far this was verified:
 | Android emulator, API 30 Google APIs image, Studio main `c9989a6b5` (with libredb-studio#1922) | The refusals of #29: `norole` is refused at sign-in with `studio.account_has_no_role`; once the realm role of `user` is removed and the access token refreshed, a relaunch shows the refusal page after one 403 `BEARER_NO_ROLE` per route and no further request; Retry after the role is back and the token has expired refreshes once and opens the app; with Keycloak stopped and Studio restarted, the connection list shows `studio.identity_provider_unavailable` and the session stays |
 | iOS simulator | Not run |
 
+## M2 walkthrough
+
+The end-to-end walkthrough of milestone M2 (#30) was run on 2026-10-23 from `main` at `49c52ef`, built with Flutter 3.47.7 as a debug APK of `main_prod.dart`, once with `studio-dev.env` (the plain Studio) and once with `studio-dev-governed.env` (the governed Studio).
+The stack ran `libredb-studio:main-c9989a6` (Studio main `c9989a6b5`, with libredb/libredb-studio#1922) and Keycloak 26.8.1 with the `governed` profile, and the device was the Android emulator 37.2.12 with the AVD `libredb-dev-api30`: API 30 Google APIs image, Android 11, `sdk_gphone_x86_64`, after `tool/studio-dev/trust-android-emulator.sh`.
+Every step was walked through as `user` / `user`.
+
+| Step | Plain Studio | Governed Studio |
+| --- | --- | --- |
+| 1. Sign in; profile; settings | Passed: the SSO sign-in lands on the connection list; the profile sheet shows `user@example.com` (Studio's username) and the role User, with no governance chip; Settings opens | Passed: the same, and the profile sheet shows "Governed by LibreDB Platform" |
+| 2. Groups, Turkish i search, badges, offline | Passed: "Dev databases" (4) and "Other" (1); `REDİS` finds Dev Redis; airplane mode shows the offline banner and "Offline: showing what was loaded at ..." over the kept list, and both go when it ends | Passed: "Sales" (2) under the statement capture note; `PRODUCTİON` finds Sales (production); Sales (production) carries the red PROD badge and the "Read only" lock of the read grant; the offline banner as on the plain Studio |
+| 3. Governance source stopped | Not applicable: the plain Studio has no governance | Passed: within 30 seconds of `stop governance-source` the list shows "Connection access is temporarily unavailable. The list updates by itself once it is back." over greyed rows that take no tap; within 25 seconds of `start governance-source` the banner goes and the rows open again |
+| 4. Check, switcher, relaunch | Passed: the check of Dev Postgres reads "Reachable, 8 ms"; the app-bar switcher marks the active connection and switches from Dev Postgres to Dev Redis; after a force stop the app opens with Dev Redis active | Passed: the check of Sales (production) reads "Reachable, 13 ms"; the switcher switches from Sales (development) to Sales (production), whose app bar shows PROD and the lock; after a restart of the whole emulator the app opens with Sales (production) active |
+| 5. Grant revoked | Not applicable | Passed with a note: with Sales (production) active, the grant of `user` was deleted as in [Revoking a grant](#revoking-a-grant); the Connections tab then dropped the connection and showed "Sales (production) is no longer available", Browse said "Pick a connection first", and the connection came back once the grant was inserted again |
+| 6. Sign out | Passed: the app is back on the login page and Studio logged an audit line with `"event":"logout"`, `"outcome":"success"`, `"actor":"user@example.com"` and `"route":"POST /api/auth/logout"` | Passed: the governed Studio logged an audit line with the same fields |
+
+The note on step 5: the list asks Studio again only while the Connections tab is in the foreground, and Browse and SQL send no request to Studio yet, so while Browse was open the revoked connection stayed in its app bar for more than a minute, and the message came at the next list answer, on the return to the Connections tab.
+That is the trigger #26 asks for; once Browse and SQL send requests (M3), the 404 `CONNECTION_NOT_FOUND` of the first one ends the connection there as well.
+
+The emulator's keyboard (Gboard, English) types neither `İ` nor `ı`, so the Turkish search terms were copied in Chrome from a page served to the emulator and pasted from Gboard's clipboard.
+The emulator process exited once in the middle of step 4 on the governed Studio, with only graphics errors in its log; after a cold boot and `trust-android-emulator.sh` the walkthrough went on from the relaunch.
+
+The iOS simulator was not run, since the walkthrough ran on Linux, so no step is verified on iOS.
+
 ## Postgres seeds
 
 The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:
