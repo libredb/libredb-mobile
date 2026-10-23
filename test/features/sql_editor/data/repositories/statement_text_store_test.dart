@@ -196,6 +196,16 @@ void main() {
   });
 
   group('history', () {
+    /// Writes [newestFirst] as alice's history in one go, as that many appends would leave it.
+    ///
+    /// Each append decrypts and rewrites the whole file, so building a history near the 1,000,000-character bound
+    /// from ten appends costs about 17 MB of AES-GCM and ran past the 30 s test timeout under full-suite load (#144);
+    /// one write costs 1 MB.
+    Future<void> seedHistory(List<StatementHistoryEntry> newestFirst) => EncryptedTextFileStore(
+      secureStorage: secure,
+      supportDirectory: () async => root,
+    ).update(alice, 'history', (_) => WriteFile(StatementTextJson.historyToJson(newestFirst), null));
+
     test('reads an empty history on a fresh install', () async {
       expect(data(await store.readHistory(alice)), isEmpty);
     });
@@ -246,9 +256,8 @@ void main() {
     test('the 501st entry drops the oldest', () async {
       final entries = [for (var i = 0; i < 501; i++) entry('SELECT $i')];
       // The first 500 are written in one go, as 500 appends would; each append rewrites the whole file.
-      final files = EncryptedTextFileStore(secureStorage: secure, supportDirectory: () async => root);
       final first500 = entries.take(500).toList().reversed.toList();
-      await files.update(alice, 'history', (_) => WriteFile(StatementTextJson.historyToJson(first500), null));
+      await seedHistory(first500);
       expect(data(await store.readHistory(alice)), first500);
 
       data(await store.appendHistory(alice, entries.last));
@@ -261,10 +270,7 @@ void main() {
 
     test('an entry that takes the total past 1,000,000 characters drops the oldest entries until it fits', () async {
       final entries = [for (var i = 0; i < 10; i++) entry('$i' * 100000)];
-      for (final one in entries) {
-        data(await store.appendHistory(alice, one));
-      }
-      expect(data(await store.readHistory(alice)), hasLength(10), reason: 'exactly 1,000,000 characters fit');
+      await seedHistory(entries.reversed.toList());
 
       final small = entry('SELECT 1');
       data(await store.appendHistory(alice, small));
@@ -279,13 +285,15 @@ void main() {
 
     test('an entry kept without its text counts no characters toward the total', () async {
       final entries = [for (var i = 0; i < 10; i++) entry('$i' * 100000)];
-      for (final one in entries) {
-        data(await store.appendHistory(alice, one));
-      }
+      await seedHistory(entries.reversed.toList());
 
-      data(await store.appendHistory(alice, entry('z' * 100001)));
+      final long = entry('z' * 100001);
+      data(await store.appendHistory(alice, long));
 
-      expect(data(await store.readHistory(alice)), hasLength(11));
+      expect(data(await store.readHistory(alice)), [
+        long.withoutText(),
+        ...entries.reversed,
+      ], reason: 'exactly 1,000,000 characters fit beside an entry kept without its text');
     });
 
     test('deleteHistoryEntry removes one entry', () async {
