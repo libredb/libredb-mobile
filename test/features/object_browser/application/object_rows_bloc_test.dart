@@ -8,6 +8,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_rows_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -18,6 +19,8 @@ import '../../../mocks/mock_classes.dart';
 import '../browse_answers.dart';
 
 QueryResult _recorded(String name) => QueryResultJson.read(File('test/fixtures/studio/$name.json').readAsStringSync());
+
+const _exempt = MaskingExemptColumn(column: 'email', reason: 'The engine names this column itself.');
 
 void main() {
   late MockIStatementRepository statements;
@@ -102,6 +105,34 @@ void main() {
           catalog: 'app',
         ),
       ).called(1),
+    );
+
+    blocTest<ObjectRowsBloc, ObjectRowsState>(
+      'the engine\'s exempt column stays clear while another sensitive column is masked',
+      setUp: () {
+        when(() => providerMeta.providerMeta('seed:exempt')).thenAnswer(
+          (_) async => const Success(
+            ProviderMeta(
+              queryLanguage: 'sql',
+              schemaRefreshPattern: '',
+              defaultPort: 5432,
+              maskingExemptColumns: _exempt,
+              containerLevels: [ContainerLevel(id: 'schema', label: 'Schema', labelPlural: 'Schemas')],
+              objectKinds: [ObjectKind(id: 'table', role: 'relation', label: 'Table', labelPlural: 'Tables')],
+            ),
+          ),
+        );
+        answerRun('seed:exempt', () => Success(customerRows));
+      },
+      build: () => build(connectionId: 'seed:exempt'),
+      act: (bloc) => bloc.add(const ObjectRowsRequested(role: StudioUserRole())),
+      expect: () => [
+        isA<ObjectRowsLoaded>()
+            .having((s) => s.policy, 'policy', MaskingPolicy.forRole(const StudioUserRole(), exempt: _exempt))
+            .having((s) => s.masked.maskedColumns, 'masked columns', {'card_number'})
+            .having((s) => s.masked.result.rows.first['email'], 'exempt email', 'ada@example.com')
+            .having((s) => s.masked.result.rows.first['card_number'], 'masked card', isNot('4111111111111111')),
+      ],
     );
 
     blocTest<ObjectRowsBloc, ObjectRowsState>(
