@@ -31,7 +31,7 @@ class CompactCell extends StatelessWidget {
           base?.copyWith(fontStyle: FontStyle.italic, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ),
-      ScalarCell() || JsonCell() || BinaryCell() || VectorCell() => _line(_shown(cell.compactText), base),
+      ScalarCell() || JsonCell() || BinaryCell() || VectorCell() => _line(shownText(cell.compactText), base),
     };
   }
 
@@ -40,7 +40,7 @@ class CompactCell extends StatelessWidget {
 
   /// The start of [text] on one line, its runs of whitespace as single spaces, as a CSS cell that does not wrap shows
   /// them.
-  static String _shown(String text) {
+  static String shownText(String text) {
     final head = text.length > maxShownCharacters ? text.characters.take(maxShownCharacters).toString() : text;
     return head.replaceAll(_whitespace, ' ');
   }

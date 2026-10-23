@@ -40,25 +40,42 @@ class _ResultTableState extends State<ResultTable> {
   }
 
   List<double> _widths(BuildContext context) {
+    final cellCharacterWidth = _measuredWidth(context, '0', _cellStyle(Theme.of(context)));
+    final sample = widget.result.rows.take(contentFitSampleRows).toList();
+    return [for (final field in widget.result.fields) _columnWidth(context, field, sample, cellCharacterWidth)];
+  }
+
+  /// The content fit of [field]: one layout of its name, its declared type and its longest value in [sample].
+  double _columnWidth(
+    BuildContext context,
+    String field,
+    List<Map<String, Object?>> sample,
+    double cellCharacterWidth,
+  ) {
     final result = widget.result;
     final theme = Theme.of(context);
-    final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-    final cellCharacterWidth = _measuredWidth(context, '0', _cellStyle(theme));
-    final sample = result.rows.take(contentFitSampleRows).toList();
-    return [
-      for (final field in result.fields)
-        scale *
-            contentFitColumnWidth(
-              nameWidth: _measuredWidth(context, field, _nameStyle(theme)),
-              typeWidth: switch (result.columnTypes[field]) {
-                final type? => _measuredWidth(context, type, _typeStyle(theme)),
-                null => 0,
-              },
-              hasMarker: widget.maskedColumns.contains(field),
-              cellCharacterWidth: cellCharacterWidth,
-              values: sample.map((row) => _cellOf(row, field, result.vectorColumns).compactText),
-            ),
-    ];
+    final scaler = MediaQuery.textScalerOf(context);
+    final masked = widget.maskedColumns.contains(field);
+    final longest = _longestSampledCell(sample, field, result.vectorColumns);
+    return contentFitColumnWidth(
+      nameWidth: _measuredWidth(context, field, _nameStyle(theme)),
+      typeWidth: switch (result.columnTypes[field]) {
+        final type? => _measuredWidth(context, type, _typeStyle(theme)),
+        null => 0,
+      },
+      markerWidth: masked ? scaler.scale(_markerSize) : 0,
+      longestValueLength: longest?.cell.compactText.length ?? 0,
+      cellCharacterWidth: cellCharacterWidth,
+      longestValueWidth: switch (longest) {
+        null => 0,
+        (:final cell, :final raw) => _measuredWidth(
+          context,
+          cell is NullCell ? cell.compactText : CompactCell.shownText(cell.compactText),
+          _shownStyle(cell, masked && raw != null ? _maskedStyle(theme) : _cellStyle(theme)),
+        ),
+      },
+      scale: scaler.scale(12) / 12,
+    );
   }
 
   @override
@@ -114,7 +131,27 @@ class _ResultTableState extends State<ResultTable> {
   }
 }
 
-/// The width of [text] on one line at text scale 1, laid out as a [Text] in [style] lays it out.
+/// The cell with the most characters of [field] in [sample], with the row's raw value, or null for no rows.
+({CellValue cell, Object? raw})? _longestSampledCell(
+  List<Map<String, Object?>> sample,
+  String field,
+  Map<String, VectorColumn> vectorColumns,
+) {
+  ({CellValue cell, Object? raw})? longest;
+  for (final row in sample) {
+    final cell = _cellOf(row, field, vectorColumns);
+    if (longest == null || cell.compactText.length > longest.cell.compactText.length) {
+      longest = (cell: cell, raw: row[field]);
+    }
+  }
+  return longest;
+}
+
+/// The style [CompactCell] draws [cell] in, given its [style].
+TextStyle? _shownStyle(CellValue cell, TextStyle? style) =>
+    cell is NullCell ? style?.copyWith(fontStyle: FontStyle.italic) : style;
+
+/// The width of [text] on one line, laid out as a [Text] in [style] lays it out, with the system text scaler.
 double _measuredWidth(BuildContext context, String text, TextStyle? style) {
   var effective = DefaultTextStyle.of(context).style.merge(style);
   if (MediaQuery.boldTextOf(context)) {
@@ -123,6 +160,7 @@ double _measuredWidth(BuildContext context, String text, TextStyle? style) {
   final painter = TextPainter(
     text: TextSpan(text: text, style: effective),
     textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
     locale: Localizations.maybeLocaleOf(context),
     maxLines: 1,
   )..layout();
@@ -138,6 +176,11 @@ TextStyle? _typeStyle(ThemeData theme) =>
     theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8));
 
 TextStyle? _cellStyle(ThemeData theme) => theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
+
+TextStyle? _maskedStyle(ThemeData theme) =>
+    theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: theme.colorScheme.onSurfaceVariant);
+
+const _markerSize = 12.0;
 
 CellValue _cellOf(Map<String, Object?> row, String field, Map<String, VectorColumn> vectorColumns) =>
     classifyCell(row[field], vector: vectorColumns[field], isAbsent: !row.containsKey(field));
@@ -184,7 +227,7 @@ class _Header extends StatelessWidget {
                           padding: const EdgeInsetsDirectional.only(start: AppSpacing.xs),
                           child: Icon(
                             Icons.lock_outline,
-                            size: MediaQuery.textScalerOf(context).scale(12),
+                            size: MediaQuery.textScalerOf(context).scale(_markerSize),
                             color: theme.colorScheme.tertiary,
                             semanticLabel: S.of(context).result_masked_semantics,
                           ),
@@ -238,10 +281,7 @@ class ResultTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final style = _cellStyle(theme);
-    final maskedStyle = theme.textTheme.bodySmall?.copyWith(
-      fontStyle: FontStyle.italic,
-      color: theme.colorScheme.onSurfaceVariant,
-    );
+    final maskedStyle = _maskedStyle(theme);
     return InkWell(
       onTap: onTap,
       child: DecoratedBox(
