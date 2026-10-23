@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_search_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
-import 'package:libredb_mobile/features/object_browser/navigation/object_tap_rule.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/widgets/object_tile.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -165,6 +166,7 @@ class _Results extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final number = NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
     final rows = <Widget>[
       for (final group in groups) ...[
         if (group.container.isNotEmpty)
@@ -181,46 +183,43 @@ class _Results extends StatelessWidget {
             ),
           ),
         for (final match in group.matches)
-          _MatchTile(connectionId: connectionId, depth: group.container.length, match: match),
+          _MatchTile(connectionId: connectionId, meta: meta, match: match, number: number),
       ],
     ];
     return ListView(children: rows);
   }
 }
 
-/// One match: its name, and its kind's label with the object it hangs under when the kind declares `attachedTo`. A
-/// kind the engine does not declare shows no label and opens nothing.
+/// One match: the object list's tile with its kind's label first, or, for a kind the engine does not declare, its name
+/// alone, which opens nothing.
 class _MatchTile extends StatelessWidget {
-  const _MatchTile({required this.connectionId, required this.depth, required this.match});
+  const _MatchTile({required this.connectionId, required this.meta, required this.match, required this.number});
 
   final String connectionId;
-
-  /// How many segments of the path are the container's.
-  final int depth;
+  final ProviderMeta meta;
   final ObjectSearchMatch match;
+  final NumberFormat number;
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
-    final theme = Theme.of(context);
-    final object = match.object;
     final kind = match.kind;
-    final path = object.path;
-    final secondary = [
-      if (kind != null) kind.label,
-      if (kind?.attachedTo != null && path.length >= depth + 2) s.browse_object_attached_to(path[path.length - 2]),
-    ];
-    return ListTile(
-      title: Text(object.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: secondary.isEmpty
-          ? null
-          : Text(
-              secondary.join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-      onTap: kind == null ? null : objectTapAction(context, connectionId: connectionId, kind: kind, object: object),
+    if (kind == null) {
+      return ListTile(title: Text(match.object.name, maxLines: 1, overflow: TextOverflow.ellipsis));
+    }
+    return ObjectTile(
+      connectionId: connectionId,
+      kind: kind,
+      childKindLabels: _childKindLabels(kind),
+      object: match.object,
+      number: number,
+      kindLabel: kind.label,
     );
   }
+
+  /// The plural labels of [kind]'s child kinds the engine declares, as the object list shows them.
+  List<String> _childKindLabels(ObjectKind kind) => [
+    for (final child in kind.childKinds)
+      for (final declared in meta.objectKinds)
+        if (declared.id == child) declared.labelPlural,
+  ];
 }

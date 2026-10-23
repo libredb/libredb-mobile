@@ -19,6 +19,7 @@ import '../../browse_harness.dart';
 const _postgres = StudioConnection(id: 'seed:dev-postgres', name: 'Dev (PostgreSQL)', type: 'postgres');
 const _server = 'seed:dev-postgres-server';
 const _search = '/browse/seed%3Adev-postgres/search';
+const _sample = StudioConnection(id: 'seed:sample', name: 'Sample (SQLite)', type: 'sqlite');
 
 void main() {
   late BrowseHarness harness;
@@ -80,6 +81,20 @@ void main() {
     verifyNoSearch();
   });
 
+  testWidgets('on an engine with no container level the kinds at /browse carry the search action', (tester) async {
+    harness.answerMeta(_sample.id, metaAnswer('meta'));
+    harness.answerCounts(_sample.id, const [], countsAnswer('counts'));
+    harness.active.select(_sample);
+    await harness.pump(tester);
+    expect(harness.location, '/browse');
+
+    await tester.tap(find.byTooltip('Search objects'));
+    await tester.pumpAndSettle();
+
+    expect(harness.location, '/browse/seed%3Asample/search');
+    expect(field(), findsOneWidget);
+  });
+
   testWidgets('the pages under /browse carry no search action', (tester) async {
     harness.active.select(_postgres);
     await harness.pump(tester);
@@ -109,9 +124,12 @@ void main() {
     expect(find.text('sales'), findsOneWidget);
     expect(tester.getTopLeft(find.text('public')).dy, lessThan(tester.getTopLeft(find.text('orders')).dy));
     expect(tester.getTopLeft(find.text('orders')).dy, lessThan(tester.getTopLeft(find.text('sales')).dy));
-    expect(find.descendant(of: find.widgetWithText(ListTile, 'orders'), matching: find.text('Table')), findsOneWidget);
     expect(
-      find.descendant(of: find.widgetWithText(ListTile, 'order_items'), matching: find.text('Table')),
+      find.descendant(of: find.widgetWithText(ListTile, 'orders'), matching: find.text('Table · 48 KB')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.widgetWithText(ListTile, 'order_items'), matching: find.text('Table · 32 KB')),
       findsOneWidget,
     );
     expect(
@@ -217,6 +235,46 @@ void main() {
 
     expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
     expect(harness.router.state.uri.queryParametersAll['path'], ['sales', 'order_total(bigint)']);
+  });
+
+  testWidgets('a match carries the object list\'s status badge and size beside its kind\'s label', (tester) async {
+    answerSearch(
+      _postgres.id,
+      const Success([
+        DatabaseObject(path: ['sales', 'order_totals'], name: 'order_totals', kind: 'view', status: 'INVALID'),
+        DatabaseObject(path: ['public', 'orders'], name: 'orders', kind: 'table', sizeBytes: 49152),
+      ]),
+    );
+    await harness.pump(tester, location: _search);
+    await type(tester, 'ord');
+
+    expect(
+      find.descendant(of: find.widgetWithText(ListTile, 'order_totals'), matching: find.text('Invalid')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.widgetWithText(ListTile, 'orders'), matching: find.text('Table · 48 KB')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a long press on a match offers the object list\'s menu, whose View source opens the source', (
+    tester,
+  ) async {
+    tallScreen(tester);
+    answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
+    when(() => harness.repository.source(_postgres.id, path: ['sales', 'order_total(bigint)'], kind: 'function'))
+        .thenAnswer((_) async => Success(sourceAnswer('source_postgres_function')));
+    await harness.pump(tester, location: _search);
+    await type(tester, 'ord');
+
+    await tester.longPress(find.text('order_total'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy name'), findsOneWidget);
+    await tester.tap(find.text('View source'));
+    await tester.pumpAndSettle();
+
+    expect(harness.router.state.uri.path, '/browse/seed%3Adev-postgres/source/function');
   });
 
   testWidgets('a match of a kind the engine does not declare shows without a kind and opens nothing', (tester) async {
