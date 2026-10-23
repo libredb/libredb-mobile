@@ -10,7 +10,8 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 String? browseDatabaseWordsOf(AppError error) =>
     error.code == AppErrorCode.studioQueryError.key && error.message.trim().isNotEmpty ? error.message : null;
 
-/// The database's words for a failed read, in monospace and selectable, as the SQL editor shows them; never logged.
+/// The database's words for a failed read or statement, in monospace and selectable, for the object browser's pages and
+/// the SQL editor; never logged.
 class BrowseDatabaseWords extends StatelessWidget {
   const BrowseDatabaseWords(this.words, {super.key});
 

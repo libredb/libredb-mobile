@@ -113,19 +113,22 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m43(count) => "${Intl.plural(count, one: '1 warning', other: '${count} warnings')}";
 
-  static String m44(seconds) => "You can try again in ${seconds} s.";
+  static String m44(keyword) =>
+      "This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add ${keyword} to keep them.";
 
-  static String m45(message) => "Error: ${message}";
+  static String m45(seconds) => "You can try again in ${seconds} s.";
 
-  static String m46(detail) => "Details: ${detail}";
+  static String m46(message) => "Error: ${message}";
 
-  static String m47(host) => "Studio address: ${host}";
+  static String m47(detail) => "Details: ${detail}";
 
-  static String m48(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m48(host) => "Studio address: ${host}";
 
-  static String m49(name) => "Type \"${name}\" to confirm";
+  static String m49(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
-  static String m50(word, line) => "May change data: ${word} on line ${line}";
+  static String m50(name) => "Type \"${name}\" to confirm";
+
+  static String m51(word, line) => "May change data: ${word} on line ${line}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -277,6 +280,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_editor_saved_text_unreadable": MessageLookupByLibrary.simpleMessage(
       "The statement text saved on this phone cannot be read. It may have come from a backup of another device, or the file was changed. Discard it to keep new text again.",
     ),
+    "error_editor_several_statements": MessageLookupByLibrary.simpleMessage(
+      "This text holds more than one statement. Run one statement at a time.",
+    ),
     "error_generic": MessageLookupByLibrary.simpleMessage("Something went wrong"),
     "error_link_open_failed": m18,
     "error_network_cert_invalid": MessageLookupByLibrary.simpleMessage(
@@ -323,6 +329,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_query_error": MessageLookupByLibrary.simpleMessage("The statement failed."),
     "error_studio_rate_limited": MessageLookupByLibrary.simpleMessage(
       "Too many requests in a short time. Wait a moment and try again.",
+    ),
+    "error_studio_statement_too_large": MessageLookupByLibrary.simpleMessage(
+      "This statement is too large to run. Shorten it and try again.",
     ),
     "error_studio_timeout": MessageLookupByLibrary.simpleMessage("The database did not answer in time."),
     "error_studio_transaction_credential_changed": MessageLookupByLibrary.simpleMessage(
@@ -477,21 +486,26 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
+    "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Statement"),
+    "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Type one statement"),
+    "sql_editor_rolled_back": m44,
+    "sql_editor_run": MessageLookupByLibrary.simpleMessage("Run"),
+    "sql_editor_running": MessageLookupByLibrary.simpleMessage("Running"),
     "studio_error_copy_statement": MessageLookupByLibrary.simpleMessage("Copy statement"),
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m44,
-    "studio_error_semantics": m45,
+    "studio_error_retry_in": m45,
+    "studio_error_semantics": m46,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m46,
+    "studio_governance_detail": m47,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connection access is temporarily unavailable. The list updates by itself once it is back.",
     ),
-    "studio_unreachable_host": m47,
+    "studio_unreachable_host": m48,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -500,7 +514,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m48,
+    "table_rows_listed": m49,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),
@@ -517,7 +531,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "users": MessageLookupByLibrary.simpleMessage("Users"),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
-    "write_confirm_name_label": m49,
+    "write_confirm_name_label": m50,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "This production connection has no name to type, so the statement cannot be confirmed here.",
     ),
@@ -533,7 +547,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "May change data: the app cannot tell how the statement starts",
     ),
-    "write_confirm_reason_may_write_at": m50,
+    "write_confirm_reason_may_write_at": m51,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "The app cannot read what a command of this engine does",
     ),

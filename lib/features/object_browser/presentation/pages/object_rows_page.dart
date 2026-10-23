@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_rows_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/row_count_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
-import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_database_words.dart';
+import 'package:libredb_mobile/shared/widgets/browse_database_words.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_heading.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_refresh.dart';

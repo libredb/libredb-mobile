@@ -40,8 +40,10 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.studioTransactionNotOwned => s.error_studio_transaction_not_owned,
       AppErrorCode.studioTransactionCredentialChanged => s.error_studio_transaction_credential_changed,
       AppErrorCode.studioUnreadableAnswer => s.error_studio_unreadable_answer,
+      AppErrorCode.studioStatementTooLarge => s.error_studio_statement_too_large,
       AppErrorCode.editorSavedTextUnreadable => s.error_editor_saved_text_unreadable,
       AppErrorCode.editorSavedTextNotStored => s.error_editor_saved_text_not_stored,
+      AppErrorCode.editorSeveralStatements => s.error_editor_several_statements,
       AppErrorCode.generic => s.error_generic,
     };
   }

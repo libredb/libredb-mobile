@@ -163,7 +163,7 @@ void main() {
 
     setUp(requested.clear);
 
-    ResultViewBloc build(Future<Result<QueryResult>> Function(QueryPage page) loadPage) => ResultViewBloc(
+    ResultViewBloc build(Future<Result<QueryResult>?> Function(QueryPage page) loadPage) => ResultViewBloc(
       masked: masked1,
       policy: policy,
       supportsResultPagination: true,
@@ -192,6 +192,17 @@ void main() {
         expect(state.result.pagination!.hasMore, isFalse);
         expect(bloc.pageOffer(state.result), isNull);
       },
+    );
+
+    blocTest<ResultViewBloc, ResultViewState>(
+      'a page the caller did not send, as a declined confirmation, keeps the rows and offers the page again',
+      build: () => build((_) async => null),
+      act: (bloc) => bloc.add(const ResultViewLoadMoreRequested()),
+      expect: () => [
+        ResultViewLoaded(result: masked1.result, maskedColumns: const {'email'}, loadingMore: true),
+        ResultViewLoaded(result: masked1.result, maskedColumns: const {'email'}),
+      ],
+      verify: (bloc) => expect(bloc.pageOffer(bloc.state.result), 2),
     );
 
     blocTest<ResultViewBloc, ResultViewState>(

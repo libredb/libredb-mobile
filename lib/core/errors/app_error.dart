@@ -37,8 +37,19 @@ final class AuthError extends AppError {
 }
 
 /// Input validation error (invalid form data, bad request params).
+///
+/// [position] is where the database placed the error of a statement, counted in characters from 1 as the database
+/// reported it, when it reported one.
 final class ValidationError extends AppError {
-  const ValidationError(super.message, {super.code});
+  const ValidationError(super.message, {super.code, this.position});
+
+  final int? position;
+
+  @override
+  bool operator ==(Object other) => other is ValidationError && super == other && other.position == position;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, position);
 }
 
 /// Server-side error (500, 502, 503).

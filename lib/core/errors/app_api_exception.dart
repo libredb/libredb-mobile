@@ -29,6 +29,13 @@ abstract class AppException implements Exception {
   /// the user to copy (`src/lib/api/error-body.ts` in Studio).
   final String? fixStatement;
 
+  /// The `details.position` of a JSON error body, where the database placed a statement's error: a positive whole
+  /// number, sent as a number or as a string of digits; null when the body names none.
+  ///
+  /// LibreDB Studio sends it with a 400 `QUERY_ERROR` when the driver reports one (`src/lib/api/error-body.ts`);
+  /// node-postgres reports it as a string of digits counting characters from 1.
+  final int? position;
+
   AppException(
     String? message,
     String? prefix, {
@@ -37,6 +44,7 @@ abstract class AppException implements Exception {
     this.retryAfter,
     this.serverMessage,
     this.fixStatement,
+    this.position,
   }) : _message = message,
        _prefix = prefix;
 
@@ -74,7 +82,7 @@ final class OfflineException extends FetchDataException {
 }
 
 final class BadRequestException extends AppException {
-  BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage})
+  BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage, super.position})
     : super(message, "Invalid Request: ");
 }
 

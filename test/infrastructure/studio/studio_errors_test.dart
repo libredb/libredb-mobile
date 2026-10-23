@@ -11,8 +11,15 @@ void main() {
     String? serverMessage,
     Duration? retryAfter,
     String? fixStatement,
+    int? position,
   }) => switch (status) {
-    400 => BadRequestException('body', statusCode: status, errorCode: code, serverMessage: serverMessage),
+    400 => BadRequestException(
+      'body',
+      statusCode: status,
+      errorCode: code,
+      serverMessage: serverMessage,
+      position: position,
+    ),
     401 || 403 => UnauthorizedException(
       'body',
       statusCode: status,
@@ -90,6 +97,25 @@ void main() {
       studioError(response(401, 'AUTH_ERROR')),
       isA<AuthError>().having((e) => e.fixStatement, 'fixStatement', isNull),
     );
+  });
+
+  test('a query error carries the position the database reported', () {
+    expect(
+      studioError(response(400, 'QUERY_ERROR', position: 8)),
+      isA<ValidationError>()
+          .having((e) => e.code, 'code', AppErrorCode.studioQueryError.key)
+          .having((e) => e.position, 'position', 8),
+    );
+    expect(
+      studioError(response(400, 'QUERY_ERROR')),
+      isA<ValidationError>().having((e) => e.position, 'position', isNull),
+    );
+  });
+
+  test('a 413, the text bound of a console engine, says the statement is too large', () {
+    final error = studioError(response(413, null, serverMessage: 'The statement is 2000000 bytes in UTF-8'));
+
+    expect(error, isA<ValidationError>().having((e) => e.code, 'code', AppErrorCode.studioStatementTooLarge.key));
   });
 
   test('a 429 without a code is rate limited too', () {

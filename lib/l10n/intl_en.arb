@@ -744,5 +744,19 @@
   "write_confirm_run": "Run",
   "@write_confirm_run": {"description": "Runs the confirmed statement."},
   "write_confirm_cancel": "Cancel",
-  "@write_confirm_cancel": {"description": "Closes the confirmation sheet without running the statement."}
+  "@write_confirm_cancel": {"description": "Closes the confirmation sheet without running the statement."},
+  "error_studio_statement_too_large": "This statement is too large to run. Shorten it and try again.",
+  "@error_studio_statement_too_large": {"description": "The statement is longer than the engine or the phone accepts."},
+  "error_editor_several_statements": "This text holds more than one statement. Run one statement at a time.",
+  "@error_editor_several_statements": {"description": "The editor refused a text of several statements before sending it."},
+  "sql_editor_hint": "Type one statement",
+  "@sql_editor_hint": {"description": "The hint of the empty SQL editor."},
+  "sql_editor_field_label": "Statement",
+  "@sql_editor_field_label": {"description": "The accessible name of the SQL editor's text field."},
+  "sql_editor_run": "Run",
+  "@sql_editor_run": {"description": "Runs the statement in the SQL editor."},
+  "sql_editor_running": "Running",
+  "@sql_editor_running": {"description": "Shown on Run while the statement runs."},
+  "sql_editor_rolled_back": "This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add {keyword} to keep them.",
+  "@sql_editor_rolled_back": {"description": "The SQL editor's notice that Studio rolled back a transaction the statement left open, with the engine's commit keyword.", "placeholders": {"keyword": {"type": "String", "example": "COMMIT"}}}
 }

@@ -22,8 +22,13 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 ///
 /// Nothing in it reloads on a size change: the rows and the view mode live in blocs above it, so rotating the phone
 /// keeps them and the scroll position.
+///
+/// [rolledBackNotice] words the notice that Studio rolled back a transaction the statement left open, when the caller
+/// has more to say than the plain sentence, as the SQL editor names the engine's commit keyword.
 class ResultView extends StatelessWidget {
-  const ResultView({super.key});
+  const ResultView({super.key, this.rolledBackNotice});
+
+  final String? rolledBackNotice;
 
   /// The share of the view's height the stats strip takes at most, and the footer too; a taller one scrolls.
   static const maxNoticeShare = 0.4;
@@ -32,7 +37,7 @@ class ResultView extends StatelessWidget {
   Widget build(BuildContext context) => BlocBuilder<ResultViewBloc, ResultViewState>(
     builder: (context, state) {
       final result = state.result;
-      if (result.rows.isEmpty) return ResultEmptyView(result: result);
+      if (result.rows.isEmpty) return ResultEmptyView(result: result, rolledBackNotice: rolledBackNotice);
       final bloc = context.read<ResultViewBloc>();
       final pageSize = bloc.pageOffer(result);
       return LayoutBuilder(
@@ -46,6 +51,7 @@ class ResultView extends StatelessWidget {
                 maxHeight: maxHeight,
                 orderNotice: bloc.showsOrderNotice(result),
                 trailing: const ResultViewModeToggle(),
+                rolledBackNotice: rolledBackNotice,
               ),
               const Divider(height: 1),
               Expanded(
@@ -166,11 +172,13 @@ class ResultLoadMoreFooter extends StatelessWidget {
 
 /// A result without rows (Studio's empty grid, `ResultsGrid.tsx:1323-1335`): the rows a write affected, the line for a
 /// result Studio bounded before its first row, or no data; the warnings shown outright, since no strip is drawn; and
-/// the rollback banner.
+/// the rollback banner, worded by [rolledBackNotice] when given.
 class ResultEmptyView extends StatelessWidget {
-  const ResultEmptyView({super.key, required this.result});
+  const ResultEmptyView({super.key, required this.result, this.rolledBackNotice});
 
   final QueryResult result;
+
+  final String? rolledBackNotice;
 
   /// The rows a write affected: a result with no fields, no rows and a positive count (`affectedRowsLabel`,
   /// `ResultsGrid.tsx:80-84`). A zero count stays no data, since an engine that reports none and a write that matched
@@ -206,7 +214,7 @@ class ResultEmptyView extends StatelessWidget {
                   ResultWarningList(warnings: result.warnings),
                 ],
               ),
-            if (result.openTransactionRolledBack) const ResultRolledBackBanner(),
+            if (result.openTransactionRolledBack) ResultRolledBackBanner(notice: rolledBackNotice),
           ],
         ),
       ),

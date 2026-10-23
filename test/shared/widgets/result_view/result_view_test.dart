@@ -62,6 +62,7 @@ Future<ResultViewBloc> _pump(
   Locale locale = const Locale('en'),
   double textScale = 1,
   Size? screen,
+  String? rolledBackNotice,
 }) async {
   if (screen != null) {
     tester.view.physicalSize = screen;
@@ -94,7 +95,7 @@ Future<ResultViewBloc> _pump(
                   BlocProvider(create: (_) => ResultViewModeCubit(store: _CardsStore())),
                   BlocProvider.value(value: bloc),
                 ],
-                child: const ResultView(),
+                child: ResultView(rolledBackNotice: rolledBackNotice),
               ),
             ),
           ),
@@ -557,6 +558,23 @@ void main() {
         expect(find.byKey(const ValueKey('result-warnings-chip')), findsNothing);
       });
     }
+
+    testWidgets("the caller's rollback sentence replaces the plain one, over rows and on an empty answer", (
+      tester,
+    ) async {
+      const notice = 'Rolled back. Add COMMIT to keep them.';
+      for (final rows in [null, const <Map<String, Object?>>[]]) {
+        await _pump(tester, _result(rows: rows, rolledBack: true), rolledBackNotice: notice);
+
+        expect(find.text(notice), findsOneWidget);
+        expect(
+          find.text(
+            'This statement left a transaction open, and Studio rolled it back, so its changes were discarded.',
+          ),
+          findsNothing,
+        );
+      }
+    });
 
     testWidgets('an empty answer keeps the rollback notice', (tester) async {
       await _pump(tester, _result(rows: const [], rolledBack: true));

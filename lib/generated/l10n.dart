@@ -2226,6 +2226,71 @@ class S {
       args: [],
     );
   }
+
+  /// `This statement is too large to run. Shorten it and try again.`
+  String get error_studio_statement_too_large {
+    return Intl.message(
+      'This statement is too large to run. Shorten it and try again.',
+      name: 'error_studio_statement_too_large',
+      desc: 'The statement is longer than the engine or the phone accepts.',
+      args: [],
+    );
+  }
+
+  /// `This text holds more than one statement. Run one statement at a time.`
+  String get error_editor_several_statements {
+    return Intl.message(
+      'This text holds more than one statement. Run one statement at a time.',
+      name: 'error_editor_several_statements',
+      desc: 'The editor refused a text of several statements before sending it.',
+      args: [],
+    );
+  }
+
+  /// `Type one statement`
+  String get sql_editor_hint {
+    return Intl.message(
+      'Type one statement',
+      name: 'sql_editor_hint',
+      desc: 'The hint of the empty SQL editor.',
+      args: [],
+    );
+  }
+
+  /// `Statement`
+  String get sql_editor_field_label {
+    return Intl.message(
+      'Statement',
+      name: 'sql_editor_field_label',
+      desc: 'The accessible name of the SQL editor\'s text field.',
+      args: [],
+    );
+  }
+
+  /// `Run`
+  String get sql_editor_run {
+    return Intl.message('Run', name: 'sql_editor_run', desc: 'Runs the statement in the SQL editor.', args: []);
+  }
+
+  /// `Running`
+  String get sql_editor_running {
+    return Intl.message(
+      'Running',
+      name: 'sql_editor_running',
+      desc: 'Shown on Run while the statement runs.',
+      args: [],
+    );
+  }
+
+  /// `This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add {keyword} to keep them.`
+  String sql_editor_rolled_back(String keyword) {
+    return Intl.message(
+      'This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add $keyword to keep them.',
+      name: 'sql_editor_rolled_back',
+      desc: 'The SQL editor\'s notice that Studio rolled back a transaction the statement left open, with the engine\'s commit keyword.',
+      args: [keyword],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

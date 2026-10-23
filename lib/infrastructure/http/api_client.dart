@@ -427,7 +427,13 @@ class ApiClient {
     final retryAfter = _retryAfterOf(e.response?.headers);
     switch (statusCode) {
       case 400:
-        return BadRequestException(body, statusCode: statusCode, errorCode: code, serverMessage: serverMessage);
+        return BadRequestException(
+          body,
+          statusCode: statusCode,
+          errorCode: code,
+          serverMessage: serverMessage,
+          position: positionOf(e.response?.data),
+        );
       case 401 || 403:
         return UnauthorizedException(
           body,
@@ -471,6 +477,31 @@ class ApiClient {
       return null;
     }
   }
+
+  /// The `details.position` of a JSON object body, given as a decoded map or as text: a positive whole number, sent as
+  /// a JSON integer or as a string of ASCII digits, else null. A position holds no request data, so it is read before
+  /// the body is scrubbed.
+  static int? positionOf(Object? data) {
+    Object? decoded = data;
+    if (data is String) {
+      try {
+        decoded = jsonDecode(data);
+      } on FormatException {
+        return null;
+      }
+    }
+    if (decoded is! Map) return null;
+    final details = decoded['details'];
+    if (details is! Map) return null;
+    final position = switch (details['position']) {
+      final int number => number,
+      final String digits when _digits.hasMatch(digits) => int.tryParse(digits),
+      _ => null,
+    };
+    return position != null && position > 0 ? position : null;
+  }
+
+  static final _digits = RegExp(r'^[0-9]+$');
 
   /// The string `code` of a JSON object body, given as a decoded map or as text. A code names a kind of failure and
   /// holds no request data, so it is read before the body is scrubbed.
