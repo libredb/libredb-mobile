@@ -15,6 +15,9 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SensitiveClipboard") {
       SensitiveClipboard.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BackgroundRunTime") {
+      BackgroundRunTime.register(with: registrar)
+    }
   }
 }
 
@@ -46,5 +49,49 @@ final class SensitiveClipboard: NSObject, FlutterPlugin {
     }
     UIPasteboard.general.setItems([["public.utf8-plain-text": text]], options: options)
     result(nil)
+  }
+}
+
+/// The native side of `ChannelBackgroundRunTime` (lib/shared/utils/background_run_time.dart): background execution
+/// time while a statement runs, so a short switch to another app does not drop the run's request. `begin` answers the
+/// task's id, or nil when iOS grants none; `end` ends a task once. A task whose time runs out is ended here, as iOS
+/// requires, and a later `end` of it does nothing.
+final class BackgroundRunTime: NSObject, FlutterPlugin {
+  private var tasks = Set<Int>()
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(
+      name: "org.libredb.mobile/background_run_time", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(BackgroundRunTime(), channel: channel)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "begin":
+      var task = UIBackgroundTaskIdentifier.invalid
+      task = UIApplication.shared.beginBackgroundTask(withName: "statement run") { [weak self] in
+        self?.end(task.rawValue)
+      }
+      if task == .invalid {
+        result(nil)
+        return
+      }
+      tasks.insert(task.rawValue)
+      result(task.rawValue)
+    case "end":
+      guard let arguments = call.arguments as? [String: Any], let id = arguments["id"] as? Int else {
+        result(FlutterError(code: "bad_arguments", message: "end needs the task id", details: nil))
+        return
+      }
+      end(id)
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func end(_ id: Int) {
+    guard tasks.remove(id) != nil else { return }
+    UIApplication.shared.endBackgroundTask(UIBackgroundTaskIdentifier(rawValue: id))
   }
 }

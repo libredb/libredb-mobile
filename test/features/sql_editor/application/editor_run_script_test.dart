@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show AppLifecycleState;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:clock/clock.dart';
@@ -18,6 +19,8 @@ import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -29,6 +32,17 @@ const _postgres = 'seed:dev-postgres';
 const _redis = 'seed:dev-redis';
 const _trino = 'seed:dev-trino';
 const _user = StudioUserRole();
+
+/// An app that stays on screen; backgrounding is tested in editor_run_background_test.dart.
+class _OnScreen implements IAppLifecycleSource {
+  const _OnScreen();
+
+  @override
+  AppLifecycleState? get current => AppLifecycleState.resumed;
+
+  @override
+  Stream<AppLifecycleState> get changes => const Stream.empty();
+}
 
 /// A script answer of [statements], of which Studio found [statementCount].
 ScriptResult _script(List<StatementResult> statements, {int? statementCount, bool rolledBack = false}) => ScriptResult(
@@ -108,6 +122,8 @@ void main() {
     schemaChanges: schemaChanges,
     history: history,
     onHistoryNotKept: (_) {},
+    lifecycle: const _OnScreen(),
+    backgroundRunTime: const NoBackgroundRunTime(),
     connectionId: connectionId,
     newRunId: () => 'run-${++ids}',
   );

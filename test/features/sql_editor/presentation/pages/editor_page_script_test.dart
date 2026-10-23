@@ -43,6 +43,8 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -194,6 +196,11 @@ void main() {
           RepositoryProvider<IContainersRepository>.value(value: containers),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
           RepositoryProvider<IStatementTextStore>.value(value: textStore),
+          RepositoryProvider<IAppLifecycleSource>(
+            create: (_) => BindingAppLifecycleSource(),
+            dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
+          ),
+          RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
         ],
         child: MultiBlocProvider(
           providers: [

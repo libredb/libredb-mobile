@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppLifecycleState;
 
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
@@ -22,6 +23,8 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 
@@ -67,6 +70,14 @@ part 'editor_run_state.dart';
 /// statement failed. A text refused here, a
 /// cancelled confirmation and a page of Load more add none. The entry is written even when the editor closed before
 /// the answer came, and a write the store refused is told to [onHistoryNotKept] then too.
+///
+/// Backgrounding: each run asks [IBackgroundRunTime] for background time when it is sent and gives it back when its
+/// answer arrives, and at once when the bloc closes. The bloc follows [IAppLifecycleSource]: a run that fails without
+/// an answer from Studio (a dropped connection, or a timeout after the request was sent) while or after the app was in
+/// the background ends in [EditorInterrupted], because Studio cancels a run whose request drops, and a write's outcome
+/// is unknown when the drop races the commit. It is a read only when [InterimWriteCheck] ran the text without asking,
+/// so a script never is. Nothing is sent again by itself; a run that answers in the background shows its answer as
+/// usual, and so does any answer Studio sent, since it says what happened.
 class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   EditorRunBloc({
     required this._repository,
@@ -74,10 +85,16 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     required this._schemaChanges,
     required this._history,
     required this._onHistoryNotKept,
+    required IAppLifecycleSource lifecycle,
+    required this._backgroundRunTime,
     required this.connectionId,
     this._check = const InterimWriteCheck(),
     this._newRunId = newQueryId,
-  }) : super(const EditorIdle()) {
+  }) : _lifecycle = lifecycle,
+       super(const EditorIdle()) {
+    _lifecycleChanges = lifecycle.changes.listen((change) {
+      if (_inFlight != null && isInBackground(change)) _backgroundedDuringRun = true;
+    });
     on<EditorRunRequested>(_onRunRequested, transformer: EventTransformers.dropConcurrent());
     on<EditorConfirmationAnswered>(_onConfirmationAnswered, transformer: EventTransformers.dropConcurrent());
     on<EditorRateLimitElapsed>(_onRateLimitElapsed);
@@ -100,6 +117,15 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   final void Function(AppErrorCode code) _onHistoryNotKept;
   final InterimWriteCheck _check;
   final String Function() _newRunId;
+  final IAppLifecycleSource _lifecycle;
+  final IBackgroundRunTime _backgroundRunTime;
+  late final StreamSubscription<AppLifecycleState> _lifecycleChanges;
+
+  /// Whether the app was in the background at any time since the run in flight was sent.
+  bool _backgroundedDuringRun = false;
+
+  /// The background time of the run in flight; null while none is.
+  BackgroundRunLease? _lease;
 
   /// The connection, the active one the page was built for.
   final String connectionId;
@@ -127,7 +153,8 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
           EditorScriptAnswered() ||
           EditorStatementFailed() ||
           EditorFailed() ||
-          EditorCancelled():
+          EditorCancelled() ||
+          EditorInterrupted():
         break;
     }
     var text = event.text;
@@ -256,6 +283,8 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     final queryId = _newRunId();
     final signal = _inFlight = CancelSignal();
     _scriptStartedAt = statement.isScript ? clock.now() : null;
+    _backgroundedDuringRun = isInBackground(_lifecycle.current);
+    final lease = _lease = _backgroundRunTime.begin();
     emit(EditorRunning(queryId: queryId, supportsCancel: meta.supportsQueryCancel));
     final watch = Stopwatch()..start();
     final Result<Object> result = statement.isScript
@@ -274,6 +303,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
             cancelSignal: signal,
             catalog: statement.catalog,
           );
+    unawaited(lease.end());
+    if (identical(_lease, lease)) _lease = null;
+    final backgrounded = _backgroundedDuringRun;
     if (identical(_inFlight, signal)) {
       _inFlight = null;
       _scriptStartedAt = null;
@@ -295,6 +327,10 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       // Only a cancel drops the request, and it says what happened itself.
       case Failure(:final error) when error is RequestCancelledError:
         return;
+      case Failure(:final error) when backgrounded && _droppedWithoutAnswer(error):
+        _log.info('the run was interrupted while the app was in the background');
+        // A script asks before it runs, so it is never a read; the phone cannot split it.
+        emit(EditorInterrupted(queryId: queryId, wasRead: statement.asks == null && !statement.isScript));
       case Failure(:final error) when error.code == AppErrorCode.studioQueryCancelled.key:
         _log.info('the run was cancelled');
         emit(const EditorCancelled(outcome: EditorCancelOutcome.confirmed));
@@ -435,6 +471,24 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       _log.warn('history entry not kept: {}', [error.code ?? error.runtimeType]);
       _onHistoryNotKept(AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic);
     }
+  }
+
+  /// Whether [error] is a request that failed after it was sent without an answer from Studio: a dropped connection,
+  /// or a timeout while waiting for the answer. A refusal before the request left the device (offline, an untrusted
+  /// certificate, a timeout before it was sent) is not, and neither is any answer Studio sent.
+  static bool _droppedWithoutAnswer(AppError error) => switch (error) {
+    NetworkError(code: null) => true,
+    TimeoutError(sent: true, code: null) => true,
+    _ => false,
+  };
+
+  @override
+  Future<void> close() async {
+    await _lifecycleChanges.cancel();
+    // The page closed: the run's answer still adds its history entry, but the background time is given back now.
+    unawaited(_lease?.end());
+    _lease = null;
+    return super.close();
   }
 
   void _fail(Emitter<EditorRunState> emit, AppError error, {EditorStatement? statement}) {

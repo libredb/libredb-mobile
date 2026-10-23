@@ -565,11 +565,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_editor_field_label": MessageLookupByLibrary.simpleMessage("Deyim"),
     "sql_editor_hint": MessageLookupByLibrary.simpleMessage("Bir veya daha fazla deyim yazın"),
+    "sql_editor_interrupted_read": MessageLookupByLibrary.simpleMessage(
+      "Uygulama arka plana geçtiğinde çalıştırma kesildi; Studio onu iptal etti.",
+    ),
+    "sql_editor_interrupted_unknown": MessageLookupByLibrary.simpleMessage(
+      "Sonuç bilinmiyor: yeniden çalıştırmadan önce verileri kontrol edin.",
+    ),
     "sql_editor_language": m53,
     "sql_editor_language_unknown": m54,
     "sql_editor_redo": MessageLookupByLibrary.simpleMessage("Yinele"),
     "sql_editor_rolled_back": m55,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Çalıştır"),
+    "sql_editor_run_again": MessageLookupByLibrary.simpleMessage("Yeniden çalıştır"),
     "sql_editor_run_selection": MessageLookupByLibrary.simpleMessage("Seçimi çalıştır"),
     "sql_editor_script_elapsed": m56,
     "sql_editor_script_failed": MessageLookupByLibrary.simpleMessage("Başarısız"),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show AppLifecycleState;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,8 @@ import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -24,6 +27,17 @@ String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsSt
 const _postgres = 'seed:dev-postgres';
 const _redis = 'seed:dev-redis';
 const _user = StudioUserRole();
+
+/// An app that stays on screen; backgrounding is tested in editor_run_background_test.dart.
+class _OnScreen implements IAppLifecycleSource {
+  const _OnScreen();
+
+  @override
+  AppLifecycleState? get current => AppLifecycleState.resumed;
+
+  @override
+  Stream<AppLifecycleState> get changes => const Stream.empty();
+}
 
 /// Cancel of a running statement (#116): with the engine's cancel, the cancel is posted while the request is still
 /// open, because Studio's abort bridge stops the run as soon as the request is dropped and a cancel posted after that
@@ -99,6 +113,8 @@ void main() {
     schemaChanges: schemaChanges,
     history: history,
     onHistoryNotKept: (_) {},
+    lifecycle: const _OnScreen(),
+    backgroundRunTime: const NoBackgroundRunTime(),
     connectionId: connectionId,
     newRunId: () => 'run-${++ids}',
   );

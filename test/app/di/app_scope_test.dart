@@ -55,6 +55,8 @@ import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dar
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 
 import '../../support/test_env.dart';
 
@@ -1011,6 +1013,13 @@ void main() {
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IStatementHistoryRepository>(), isA<IStatementHistoryRepository>());
+    });
+
+    testWidgets("provides the app's lifecycle and the platform's background run time", (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<IAppLifecycleSource>(), isA<BindingAppLifecycleSource>());
+      expect(scope.read<IBackgroundRunTime>(), isA<NoBackgroundRunTime>(), reason: 'tests run as Android');
     });
 
     testWidgets('provides the result view mode, restored from the device', (tester) async {
