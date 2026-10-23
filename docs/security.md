@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -149,6 +149,49 @@ A screen reader's Copy on a value copies the whole value through `SensitiveClipb
 - A failed copy is shown to the user with its error code and logged with its error type, never with the value.
 
 The source viewer, the copy of an object's name and the copy of a failed statement keep the plain clipboard: they hold no row value.
+
+## Write confirmation
+
+The SQL editor asks the user to confirm a statement before it is sent unless `InterimWriteCheck` (`lib/features/sql_editor/domain/interim_write_check.dart`) can clear it.
+The check is pure and fail closed: it reads exactly the text that will be sent, logs nothing, and answers `RunsWithoutAsking` or `AsksBeforeRunning` with every reason that applies.
+It replaces Studio's own reading, about 4,500 lines of grammar code in `src/lib/sql`, which the phone does not port, until Studio offers an analysis endpoint (S-06, #122 and #123); it then stays as that analysis's fallback.
+
+A SQL text runs without asking only when all three of these hold:
+
+- The raw text holds no deny word, comments and quotes included, matched as a whole word in any ASCII case, where a word is a run of ASCII letters, digits and `_`; so `deleted` is not `DELETE`, while `x$delete` and `çdelete` hold it.
+- No `;` is followed by anything but white space, and no line holds only `GO` or only `/` (trimmed, in any case).
+- Its first keyword, read after leading comments only, is `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, `VALUES`, `TABLE` or `WITH`.
+  A `--` comment ends at a line feed or a carriage return, a `/* */` comment at the first `*/`, and a text whose leading comment never closes has no first keyword and asks.
+
+The deny words are `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, `GRANT`, `REVOKE`, `DENY`, `CALL`, `EXEC`, `EXECUTE`, `DO`, `COPY`, `LOCK`, `SET`, `RESET`, `COMMIT`, `ROLLBACK`, `BEGIN`, `VACUUM`, `REINDEX`, `CLUSTER`, `REFRESH`, `INTO`, `ANALYZE` and `ANALYSE`, and the T-SQL statements that need no separator and change data, rights, sessions or the server: `KILL`, `SHUTDOWN`, `BACKUP`, `RESTORE`, `DBCC`, `RECONFIGURE`, `DISABLE`, `ENABLE`, `SEND`, `RECEIVE`, `WRITETEXT`, `UPDATETEXT` and `SETUSER`.
+`ANALYZE` and `ANALYSE` cover `EXPLAIN ANALYZE` in every spelling, `EXPLAIN (FORMAT JSON, ANALYZE)` included, so a data-modifying CTE and `EXPLAIN ANALYZE` of a write, which Studio's own check still misses (libredb/libredb-studio#1862 and #1863), ask.
+`REPLACE` is not a deny word: it is a string function in every dialect, and its statement forms are caught by `INTO`, `CREATE`, the separator rule and the first-keyword rule.
+
+Comments are not removed before the scan, because the engines disagree about them, as Studio's own readers record from measurements (`src/lib/sql/update-target.ts:187-226`, `src/lib/sql/optimizer-hints.ts:1-44`): PostgreSQL and SQL Server end a `--` comment at a bare carriage return, MySQL and MariaDB run the body of `/*!` and `/*M!`, and MySQL needs a space after `--`.
+So `SELECT 1 -- x`, a bare carriage return and `; DELETE FROM t`, two statements to PostgreSQL, asks, and so do `SELECT * FROM t /*!50000 INTO OUTFILE '/tmp/x' */` and `SELECT 1 --1 INTO OUTFILE '/tmp/f'`.
+T-SQL needs no separator between statements, so `SELECT 1 KILL 52` asks on its deny word.
+With the deny scan and the separator rule on the raw text no quote or comment can hide a word or a separator, so a backslash, a `$`, a `#` or an unclosed quote does not ask by itself.
+
+Everything else asks, with every reason that applies:
+
+- May write: a deny word anywhere, or a first keyword off the allow list or none; the sheet names the first deny word, else that first keyword, and its line.
+- Several statements: a `;` followed by more text, or a `GO` or `/` line.
+- Not SQL: every text on an engine that does not speak SQL (MongoDB, Redis and the others), read as one statement and never split.
+
+This asks for more than Studio on purpose: `INSERT`, `CREATE`, a write word inside a comment or a string (`select 1 -- delete`, `SELECT * FROM audit WHERE op = 'DELETE'`), `SELECT 'a;b'` and every Redis or MongoDB command ask.
+A false prompt costs one tap, or the typed name on production; a missed write costs data.
+
+The known limits, which Studio's check shares and #123 fixes:
+
+- The check reads keywords, not what a function or procedure called inside an allowed statement does, so `SELECT pg_terminate_backend(42)` and `SELECT nextval('s')` run without asking.
+- A T-SQL statement whose keyword is not on the deny list is not seen.
+
+`WriteConfirmationSheet` (`lib/features/sql_editor/presentation/widgets/`) shows the connection's name and environment, every reason in words, and every line of the text in a lazily built list, never an excerpt, so a write far down a script can be found.
+Lines are split at a line feed, a carriage return and a CRLF pair, as the check counts them, so a statement after a bare carriage return shows on a line of its own.
+On a connection Studio refuses writes on (`StudioConnection.readOnlyForUser`) it says so, and words the two causes apart: a read grant is one an administrator can raise, and the connection's own read-only flag is the operator's setting.
+On a production connection the header is in the error colour and Run stays disabled until the user types the connection's name; that step is the phone's own and applies to every confirmation on such a connection.
+The typed name follows Studio's typed confirmation (`src/components/typed-confirm.tsx`): the comparison is exact, an empty field never matches, a connection without a name shows a sentence in place of the field and keeps Run disabled, the field turns autocorrect, suggestions, capitalisation and smart punctuation off, and it is empty each time the sheet opens.
+The sheet answers confirmed or cancelled and keeps no statement after it closes; neither the check nor the sheet logs, and no translated string carries the statement.
 
 ## Inactivity sign-out
 
