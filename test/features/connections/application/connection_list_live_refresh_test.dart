@@ -473,5 +473,34 @@ void main() {
         verify(() => repository.listManaged()).called(1);
       });
     });
+
+    test('a second 429 with a new Retry-After is shown and waits as long as the new one asks', () {
+      answer(Success(managed(connections, cacheHint: const Duration(seconds: 10))));
+      run((async, bloc, states) {
+        open(async, bloc);
+        answer(
+          const Failure(
+            RateLimitedError('Too many requests', code: 'studio.rate_limited', retryAfter: Duration(seconds: 12)),
+          ),
+        );
+        async.elapse(const Duration(seconds: 10));
+        const longer = RateLimitedError(
+          'Too many requests',
+          code: 'studio.rate_limited',
+          retryAfter: Duration(seconds: 45),
+        );
+        answer(const Failure(longer));
+        states.clear();
+
+        async.elapse(const Duration(seconds: 12));
+        expect(states, [isA<ConnectionListLoaded>().having((s) => s.refreshError, 'refreshError', longer)]);
+        clearInteractions(repository);
+
+        async.elapse(const Duration(seconds: 44));
+        verifyNever(() => repository.listManaged());
+        async.elapse(const Duration(seconds: 1));
+        verify(() => repository.listManaged()).called(1);
+      });
+    });
   });
 }
