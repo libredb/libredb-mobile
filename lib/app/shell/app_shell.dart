@@ -4,6 +4,7 @@ import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
+import 'package:libredb_mobile/app/shell/app_studio_role_scope.dart';
 import 'package:libredb_mobile/app/shell/governance_status_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
@@ -104,7 +105,7 @@ class _AppShellState extends State<AppShell> {
                     child: _accountRefusalOr(
                       ResponsiveScaffold(
                         activeRoute: widget.state.uri.path,
-                        child: GovernanceStatusScope(child: widget.child),
+                        child: AppStudioRoleScope(child: GovernanceStatusScope(child: widget.child)),
                       ),
                     ),
                   ),
