@@ -54,6 +54,7 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/printed_lines.dart';
 
 String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -184,6 +185,7 @@ void main() {
     String? subject = _account,
     Size? size,
     Locale? locale,
+    Stream<ActiveConnectionState> states = const Stream<ActiveConnectionState>.empty(),
   }) async {
     if (size != null) {
       tester.view.physicalSize = size;
@@ -192,7 +194,7 @@ void main() {
     }
     whenListen(
       active,
-      const Stream<ActiveConnectionState>.empty(),
+      states,
       initialState: connection == null ? const ActiveConnectionNone() : ActiveConnectionSelected(connection),
     );
     when(() => active.listed(any())).thenReturn(connection);
@@ -410,6 +412,32 @@ void main() {
     expect(find.text('The database did not allow this. You may lack a privilege on this object.'), findsOneWidget);
     expect(find.textContaining('permission denied for table orders'), findsNothing);
     expect(runsOf(delete), 1);
+  });
+
+  testWidgets('a run refused with studio.connection_not_available reports the connection, runs once, logs no text', (
+    tester,
+  ) async {
+    const statement = "SELECT * FROM customers WHERE email = 'ada@example.com'";
+    answerRun(statement, () => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')));
+    final states = StreamController<ActiveConnectionState>();
+    addTearDown(states.close);
+    when(() => active.reportUnavailable(any()))
+        .thenAnswer((_) => states.add(const ActiveConnectionVanished(_postgres)));
+    // The editor's blocs are created by pump, so the whole flow runs in the zone that captures their lines.
+    final lines = await printedLines(() async {
+      await pump(tester, states: states.stream);
+      await type(tester, statement);
+      await run(tester);
+    });
+
+    // The control that the zone sees the editor's lines: the bloc's own warning, with the code and nothing else.
+    expect(lines, contains(allOf(contains('run failed'), contains('studio.connection_not_available'))));
+
+    verify(() => active.reportUnavailable(_postgres.id)).called(1);
+    expect(find.byType(PickConnectionFirst), findsOneWidget);
+    expect(find.byKey(EditorInput.fieldKey), findsNothing);
+    expect(runsOf(statement), 1);
+    expect(lines.where((line) => line.contains('customers') || line.contains('ada@example.com')), isEmpty);
   });
 
   group('Load more', () {
@@ -665,6 +693,42 @@ void main() {
       expect(find.byType(StudioErrorBanner), findsNothing);
       expect(chip(), findsNothing);
       expect(runEnabled(tester), isTrue);
+    });
+
+    group('studio.connection_not_available', () {
+      const gone = Failure<ProviderMeta>(NotFoundError('gone', code: 'studio.connection_not_available'));
+
+      testWidgets('on the database list hands the connection to the vanish flow, which leaves the pick page', (
+        tester,
+      ) async {
+        when(() => containers.containers(_server.id, refresh: any(named: 'refresh')))
+            .thenAnswer((_) async => const Failure(NotFoundError('gone', code: 'studio.connection_not_available')));
+        final states = StreamController<ActiveConnectionState>();
+        addTearDown(states.close);
+        when(() => active.reportUnavailable(any()))
+            .thenAnswer((_) => states.add(const ActiveConnectionVanished(_server)));
+        await pump(tester, connection: _server, states: states.stream);
+        await tester.pumpAndSettle();
+
+        verify(() => active.reportUnavailable(_server.id)).called(1);
+        expect(find.byType(PickConnectionFirst), findsOneWidget);
+        expect(find.byKey(EditorInput.fieldKey), findsNothing);
+        verifyNothingSent();
+      });
+
+      testWidgets('on the engine read hands the connection to the vanish flow from the chip and the label', (
+        tester,
+      ) async {
+        when(() => providerMeta.providerMeta(_server.id)).thenAnswer((_) async => gone);
+        await pump(tester, connection: _server);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('The language of this connection could not be read'), findsOneWidget);
+        expect(find.byType(StudioErrorBanner), findsOneWidget);
+        // Once from the database chip's read and once from the language label's, whichever reads first.
+        verify(() => active.reportUnavailable(_server.id)).called(2);
+        verifyNothingSent();
+      });
     });
 
     testWidgets('a server that lists no database offers no Run', (tester) async {
