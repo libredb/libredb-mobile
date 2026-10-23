@@ -3,6 +3,7 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:libredb_mobile/shared/models/vector_column.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_functions.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
@@ -121,6 +122,36 @@ void main() {
     expect(masked.result.columnTypes, input.columnTypes);
     expect(masked.result.warnings, input.warnings);
     expect(masked.result.pagination, input.pagination);
+  });
+
+  // maskResult rebuilds the result field by field, so a field it forgot would fall back to its default. Every field here
+  // is set to a value other than its default, and every prop but the rows must come back unchanged; a field added to
+  // QueryResult later belongs in this result too.
+  test('keeps every field but the rows, each set to a value other than its default', () {
+    const input = QueryResult(
+      fields: ['email', 'emb'],
+      rows: [
+        {'email': 'alice@example.com', 'emb': '[1,2,3]'},
+      ],
+      rowCount: 1,
+      executionTime: Duration(milliseconds: 9),
+      columnTypes: {'email': 'text', 'emb': 'vector'},
+      warnings: [QueryWarning(message: 'notice', code: '01000', severity: 'NOTICE')],
+      pagination: QueryPagination(limit: 1, offset: 3, hasMore: true, totalReturned: 1, wasLimited: true),
+      openTransactionRolledBack: true,
+      vectorColumns: {'emb': VectorColumn(kind: 'dense', dtype: 'float32', dimension: 3)},
+    );
+
+    final masked = maskResult(input, MaskingPolicy.forRole(const StudioUserRole())).result;
+
+    expect(masked.rows, isNot(input.rows), reason: 'the rows must be masked, or this compares a result to itself');
+    List<Object?> withoutRows(QueryResult result) => [
+      for (final prop in result.props)
+        if (!identical(prop, result.rows)) prop,
+    ];
+    expect(withoutRows(input), hasLength(input.props.length - 1));
+    expect(withoutRows(masked), hasLength(masked.props.length - 1));
+    expect(withoutRows(masked), withoutRows(input));
   });
 
   test('a result with no sensitive column comes back as it was, with no masked column', () {
