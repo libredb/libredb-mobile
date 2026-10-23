@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/utils/sensitive_clipboard.dart';
 import 'package:libredb_mobile/shared/widgets/cells/detail_cell.dart';
+import 'package:libredb_mobile/shared/widgets/cells/sensitive_selectable_text.dart';
 
 // The row detail sheet and the copy of a field or a row, as Studio's `RowDetailSheet`
 // (`src/components/results-grid/RowDetailSheet.tsx`) and the grid's copy menu (`copyCell` and `copyRow`,
@@ -226,6 +227,7 @@ class _FieldTile extends StatelessWidget {
     final masked = isMaskedField(row, field, maskedColumns);
     final type = result.columnTypes[field];
     final valueStyle = theme.textTheme.bodyMedium;
+    void copySelection(String text) => copyResultText(ScaffoldMessenger.of(context), s, text);
     return Padding(
       key: ValueKey('row-field-$field'),
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xs, AppSpacing.xs, AppSpacing.sm),
@@ -276,13 +278,15 @@ class _FieldTile extends StatelessWidget {
             ),
           ),
           if (masked)
-            SelectableText(
+            SensitiveSelectableText(
               row[field]! as String,
+              onCopy: copySelection,
               style: valueStyle?.copyWith(fontStyle: FontStyle.italic, color: muted),
             )
           else
             DetailCell(
               cell: classifyCell(row[field], vector: result.vectorColumns[field], isAbsent: !row.containsKey(field)),
+              onCopy: copySelection,
               style: valueStyle,
             ),
         ],

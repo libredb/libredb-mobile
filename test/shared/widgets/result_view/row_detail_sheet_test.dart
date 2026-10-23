@@ -337,6 +337,94 @@ void main() {
     });
   });
 
+  group('copy of a selection', () {
+    /// The texts Flutter's own clipboard received, which must stay empty: that clip is not marked sensitive.
+    final plain = <Object?>[];
+
+    setUp(() {
+      plain.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') plain.add(call.arguments);
+          return null;
+        },
+      );
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+
+    Finder value(String field) => find.descendant(of: _field(field), matching: find.byType(EditableText));
+
+    testWidgets('Select all then Copy from the toolbar goes through the sensitive clipboard only', (tester) async {
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      await tester.longPress(value('name'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Select all'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy'));
+      await tester.pumpAndSettle();
+
+      expect(_copied, ['Alice']);
+      expect(plain, isEmpty);
+      expect(_inSheet(find.text('Copied')), findsOneWidget);
+    });
+
+    testWidgets('the toolbar offers no Share, which would hand the value to another app', (tester) async {
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      await tester.longPress(value('name'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Select all'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Copy'), findsOneWidget);
+      expect(find.text('Share'), findsNothing);
+      expect(find.text('Look Up'), findsNothing);
+      expect(find.text('Search Web'), findsNothing);
+    });
+
+    testWidgets('a masked value copies its selected mask the same way', (tester) async {
+      final masked = maskResult(_result(), _policy).result.rows.first['email']! as String;
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      await tester.longPress(value('email'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Select all'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy'));
+      await tester.pumpAndSettle();
+
+      expect(_copied, [masked]);
+      expect(plain, isEmpty);
+    });
+
+    testWidgets('Ctrl+A then Ctrl+C goes through the sensitive clipboard only', (tester) async {
+      await _pump(tester, _result());
+      await _openRow(tester, 0);
+
+      await tester.tap(value('note'));
+      await tester.pumpAndSettle();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      expect(_copied, ['null']);
+      expect(plain, isEmpty);
+    });
+  });
+
   group('Copy row', () {
     testWidgets('writes masked fields as their masks and keeps a number a JSON number', (tester) async {
       final masked = maskResult(_result(), _policy).result.rows.first['email']! as String;

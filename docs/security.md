@@ -109,6 +109,7 @@ Three of Studio's mask functions have open bugs, which the port corrects until S
 
 A result value or a whole row reaches the clipboard only through `SensitiveClipboard` (`lib/shared/utils/sensitive_clipboard.dart`), a method channel that `MainActivity` and `AppDelegate` answer.
 It copies what the screen shows, so a masked field is copied as its mask.
+A selected part of a value in the row sheet is copied the same way, from the toolbar's Copy or with Ctrl+C (`SensitiveSelectableText`), and that toolbar has no Share, Look Up or Search Web, which would hand the value to another app or the system.
 
 - On Android 13 (API 33) and later the clip carries `ClipDescription.EXTRA_IS_SENSITIVE`, so the system's clipboard preview hides the value.
   Android below 13 shows no preview, and the clip is plain there.

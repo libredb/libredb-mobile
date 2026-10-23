@@ -88,7 +88,7 @@ void main() {
 
     testWidgets('NULL shows null in muted italic, and is read as null', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_app(DetailCell(cell: classifyCell(null))));
+      await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell(null))));
 
       expect(find.text('null'), findsOneWidget);
       expect(styleOf(tester)?.fontStyle, FontStyle.italic);
@@ -98,7 +98,7 @@ void main() {
 
     testWidgets('a field the row lacks shows NULL in muted italic, and is read as null', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_app(DetailCell(cell: classifyCell(null, isAbsent: true))));
+      await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell(null, isAbsent: true))));
 
       expect(find.text('NULL'), findsOneWidget);
       expect(styleOf(tester)?.fontStyle, FontStyle.italic);
@@ -107,21 +107,23 @@ void main() {
     });
 
     testWidgets('a scalar is selectable text in the body font', (tester) async {
-      await tester.pumpWidget(_app(DetailCell(cell: classifyCell('9007199254740993'))));
+      await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell('9007199254740993'))));
 
       expect(find.text('9007199254740993'), findsOneWidget);
       expect(styleOf(tester)?.fontFamily, isNot('monospace'));
     });
 
     testWidgets('JSON is the pretty text in monospace', (tester) async {
-      await tester.pumpWidget(_app(DetailCell(cell: classifyCell({'a': 1}))));
+      await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell({'a': 1}))));
 
       expect(find.text('{\n  "a": 1\n}'), findsOneWidget);
       expect(styleOf(tester)?.fontFamily, 'monospace');
     });
 
     testWidgets('binary is the whole hex in monospace', (tester) async {
-      await tester.pumpWidget(_app(DetailCell(cell: classifyCell({'type': 'Buffer', 'data': List.filled(33, 0xab)}))));
+      await tester.pumpWidget(
+        _app(DetailCell(onCopy: (_) {}, cell: classifyCell({'type': 'Buffer', 'data': List.filled(33, 0xab)}))),
+      );
 
       expect(find.text('\\x${'ab' * 33}'), findsOneWidget);
       expect(styleOf(tester)?.fontFamily, 'monospace');
@@ -131,6 +133,7 @@ void main() {
       await tester.pumpWidget(
         _app(
           DetailCell(
+            onCopy: (_) {},
             cell: classifyCell([1, 0.5, 0], vector: const VectorColumn(kind: 'dense', dtype: 'float32', dimension: 3)),
           ),
         ),
