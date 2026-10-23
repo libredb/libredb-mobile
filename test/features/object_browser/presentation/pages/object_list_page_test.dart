@@ -82,6 +82,13 @@ void main() {
     expect(harness.router.state.uri.path, '/browse');
   });
 
+  testWidgets('starts its heading at the page\'s start edge, as every Browse page does', (tester) async {
+    answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+    await harness.pump(tester, location: _tables);
+
+    expect(tester.getTopLeft(find.text('Tables')).dx, tester.getTopLeft(find.text('orders')).dx);
+  });
+
   testWidgets('shows the row count and the size together when Studio sends both', (tester) async {
     answerList(
       _postgres.id,

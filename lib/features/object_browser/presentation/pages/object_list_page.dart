@@ -95,6 +95,7 @@ class _ObjectListView extends StatelessWidget {
     final total = list.objects.length;
     final visible = list.visible;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         OfflineStaleMarker(loadedAt: list.loadedAt),
         if (error != null)
