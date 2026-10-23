@@ -349,6 +349,49 @@ void main() {
       expect(error, isA<ServerError>().having((e) => e.code, 'code', AppErrorCode.studioQueryCancelled.key));
     });
 
+    test('POST /api/db/multi-query of three statements stops at the failed second, and one is not run', () {
+      final script = SqlEditorJson.scriptResult(fixture('multi_postgres'));
+
+      expect(script.statementCount, 3);
+      expect(script.executedCount, 2);
+      expect(script.hasError, isTrue);
+      expect(script.openTransactionRolledBack, isFalse);
+      final [first, failed] = script.statements;
+      expect(first.index, 0);
+      expect(first.sql, 'SELECT 1 AS a');
+      expect(first.rowCount, 1);
+      expect(first.result?.rows, [
+        {'a': 1},
+      ]);
+      expect(first.result?.columnTypes, {'a': 'integer'});
+      expect(first.error, isNull);
+      expect(failed.index, 1);
+      expect(failed.sql, 'SELECT * FROM nope');
+      expect(failed.error, 'relation "nope" does not exist');
+      expect(failed.rowCount, isNull);
+      expect(failed.result, isNull);
+    });
+
+    test('POST /api/db/multi-query of two SELECTs answers both, with no paging', () {
+      final script = SqlEditorJson.scriptResult(fixture('multi_postgres_rows'));
+
+      expect(script.statementCount, 2);
+      expect(script.executedCount, 2);
+      expect(script.hasError, isFalse);
+      expect(
+        [for (final statement in script.statements) statement.result?.rows],
+        [
+          [
+            {'a': 1},
+          ],
+          [
+            {'b': 2},
+          ],
+        ],
+      );
+      expect([for (final statement in script.statements) statement.result?.pagination], [null, null]);
+    });
+
     test("POST /api/db/query of an UPDATE answers the rows it changed and no field", () {
       final result = QueryResultJson.read(fixture('query_update_postgres'));
 

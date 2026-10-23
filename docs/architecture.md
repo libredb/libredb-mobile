@@ -218,7 +218,12 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   A page given to it is sent as `options` and bounds the last statement when that is a SELECT, but Studio answers no paging for a script, so there is no next page.
   Deciding whether a text holds one statement or several is the editor's job (milestone M5).
 - The SQL editor ([#113](https://github.com/libredb/libredb-mobile/issues/113)) sends one statement through `run`, whole, with a fresh run id, and never sends it again by itself.
-  A text that `InterimWriteCheck` reads as several statements is refused on the phone with a message to run one at a time, as is a text over 1,000,000 characters, since Studio bounds the text of a console engine only.
+  A text over 1,000,000 characters is refused on the phone, since Studio bounds the text of a console engine only.
+- The script run ([#117](https://github.com/libredb/libredb-mobile/issues/117)): on a SQL connection a text that `InterimWriteCheck` reads as several statements goes to `runScript` with the first page and the run id, after the write confirmation every script asks; any other text goes whole to `run`, and a non-SQL text is never split.
+  Run sends the editor's non-blank selection when there is one, read and routed the same way, and a selection read as one statement on an engine whose `statementTerminator` is `none` is sent without its trailing `;`, as Studio's `selectionTarget` does.
+  The answer shows a card per statement Studio ran, the statements it did not run as one line, and the last statement with rows open in the result view, masked with the run's policy and without Load more; a successful statement's `rowCount` must be a whole number, else the read fails.
+  The rolled-back notice keeps the commit advice only when every statement succeeded, and each successful statement's text is told to `SchemaChangeNotifier`.
+  A script shows its elapsed time while it runs, and Cancel stops it by its run id as it stops a run.
   Any other text the check flags runs only after the write confirmation, and so does each Load more of it, because every page runs the whole statement again on Studio; the text sent is the one confirmed.
   A `studio.query_error` shows the database's own words under the editor and places the cursor at `details.position`, which counts characters from 1 and is converted to a UTF-16 offset.
   The rolled-back notice advises the engine's commit keyword, `EXEC` on Redis and `COMMIT` elsewhere, as Studio's web does.

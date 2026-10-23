@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -7,6 +8,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
@@ -26,15 +28,24 @@ import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 part 'editor_run_event.dart';
 part 'editor_run_state.dart';
 
-/// The SQL editor's run of one statement on [connectionId].
+/// The SQL editor's run of a statement or a script on [connectionId].
 ///
-/// Run reads the text through [InterimWriteCheck] for the connection's engine: a text of several statements is refused
-/// here with the one-statement message, a text longer than [maxTextLength] with the too-large message, and nothing is
-/// sent for either. Any other text the check flags waits in [EditorAwaitingConfirmation] for the user's answer, and
-/// the text sent is the one carried there, never read again from the field. A text is sent whole through
-/// [ISqlEditorRepository.run] with a fresh run id, never to `runScript`, and never sent again by the bloc: a failure,
-/// a rate limit included, waits for the user's next Run, and a Run while one is in flight is dropped. On a server-level
-/// connection the text runs in the database Run named, and each page of its result in the same one.
+/// Run reads the text that is sent, the editor's non-blank selection or its whole text, through [InterimWriteCheck]
+/// for the connection's engine; a text longer than [maxTextLength] is refused with the too-large message and nothing
+/// is sent. A text the check flags waits in [EditorAwaitingConfirmation] for the user's answer, and the text sent is
+/// the one carried there, never read again from the field.
+///
+/// Routing: on a SQL connection, a text the check reads as several statements is a script, which always asks and goes
+/// to [ISqlEditorRepository.runScript] with the first page, where Studio splits it under the connection's grammar and
+/// answers each statement; any other text goes whole to [ISqlEditorRepository.run], and a non-SQL text is never split.
+/// A selection the check reads as one statement on an engine whose `statementTerminator` is `none` is sent without
+/// its trailing `;`, as Studio's web sends it (`selectionTarget`, `src/lib/sql/run-target.ts`).
+///
+/// Each request has a fresh run id and is never sent again by the bloc: a failure, a rate limit included, waits for
+/// the user's next Run, and a Run while one is in flight is dropped. A script waits without a receive timeout, so the
+/// bloc holds when it started ([scriptStartedAt]) for the elapsed time on screen, and Cancel ends it as it ends a run.
+/// On a server-level connection the text, a script included, runs in the database Run named, and each page of its
+/// result in the same one.
 ///
 /// Cancel of the run in flight: when the engine supports it, the bloc posts [ISqlEditorRepository.cancel] with the
 /// run's id while the run's request is still open, because Studio stops a run as soon as its request is dropped and a
@@ -45,13 +56,15 @@ part 'editor_run_state.dart';
 /// before the cancel shows its answer.
 ///
 /// The answer is masked at once with the policy of the role the request carries and the engine's exempt column, so the
-/// bloc never holds a clear row. After a success [SchemaChangeNotifier.statementSucceeded] tells the object browser.
-/// Neither the statement nor a database error text is logged; only an error's code is.
+/// bloc never holds a clear row; a script's every statement is. After a success [SchemaChangeNotifier.statementSucceeded]
+/// tells the object browser the text that ran, and after a script each successful statement's text. Neither the
+/// statement nor a database error text is logged; only an error's code is.
 ///
 /// Each run that reached Studio adds one entry to the account's history through [IStatementHistoryRepository], when
 /// the run names an [EditorHistoryTarget]: Succeeded, or Failed for any failure but one before the request reached
 /// Studio (a [NetworkError], or a [TimeoutError] before it was sent), without the error's text; a cancelled run is
-/// Failed, and a request dropped by Stop waiting adds none. A text refused here, a
+/// Failed, and a request dropped by Stop waiting adds none. A script adds one entry for its whole text, Failed when a
+/// statement failed. A text refused here, a
 /// cancelled confirmation and a page of Load more add none. The entry is written even when the editor closed before
 /// the answer came, and a write the store refused is told to [onHistoryNotKept] then too.
 class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
@@ -101,14 +114,23 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   /// Studio and was cancelled; a request dropped by Stop waiting has no known outcome.
   CancelSignal? _cancelAnswered;
 
+  /// When the script in flight was sent, for the elapsed time the editor shows while it runs; null while no script is.
+  DateTime? get scriptStartedAt => _scriptStartedAt;
+  DateTime? _scriptStartedAt;
+
   Future<void> _onRunRequested(EditorRunRequested event, Emitter<EditorRunState> emit) async {
     switch (state) {
       case EditorRunning() || EditorCancelling() || EditorAwaitingConfirmation() || EditorFailed(waitingForRetry: true):
         return;
-      case EditorIdle() || EditorSucceeded() || EditorStatementFailed() || EditorFailed() || EditorCancelled():
+      case EditorIdle() ||
+          EditorSucceeded() ||
+          EditorScriptAnswered() ||
+          EditorStatementFailed() ||
+          EditorFailed() ||
+          EditorCancelled():
         break;
     }
-    final text = event.text;
+    var text = event.text;
     if (text.trim().isEmpty) return;
     if (text.length > maxTextLength) {
       _log.info('a statement over the phone\'s length cap was not sent');
@@ -131,16 +153,20 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     }
     if (emit.isDone) return;
 
+    if (event.isSelection && meta.isSql && meta.statementTerminator == 'none' && !_isScript(text)) {
+      text = _withoutTrailingTerminator(text);
+    }
+
     switch (_check.check(text, isSql: meta.isSql)) {
-      case AsksBeforeRunning(:final reasons) when reasons.contains(WriteCheckReason.severalStatements):
-        _log.info('a text of several statements was not sent');
-        emit(
-          EditorFailed(error: ValidationError('Several statements', code: AppErrorCode.editorSeveralStatements.key)),
-        );
       case final AsksBeforeRunning asks:
         emit(
           EditorAwaitingConfirmation(
-            statement: EditorStatement(text: text, asks: asks, catalog: event.catalog),
+            statement: EditorStatement(
+              text: text,
+              asks: asks,
+              catalog: event.catalog,
+              isScript: meta.isSql && asks.reasons.contains(WriteCheckReason.severalStatements),
+            ),
             previous: state,
             meta: meta,
             role: event.role,
@@ -150,6 +176,18 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       case RunsWithoutAsking():
         await _run(emit, EditorStatement(text: text, catalog: event.catalog), meta, event.role, event.history);
     }
+  }
+
+  /// Whether the check reads the SQL [text] as several statements.
+  bool _isScript(String text) => switch (_check.check(text, isSql: true)) {
+    AsksBeforeRunning(:final reasons) => reasons.contains(WriteCheckReason.severalStatements),
+    RunsWithoutAsking() => false,
+  };
+
+  /// [text] without its trailing `;` and the white space around it.
+  static String _withoutTrailingTerminator(String text) {
+    final trimmed = text.trimRight();
+    return trimmed.endsWith(';') ? trimmed.substring(0, trimmed.length - 1).trimRight() : text;
   }
 
   Future<void> _onConfirmationAnswered(EditorConfirmationAnswered event, Emitter<EditorRunState> emit) async {
@@ -188,6 +226,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     final queryId = running.queryId;
     if (!running.supportsCancel || event.stopWaiting) {
       signal.cancel();
+      _scriptStartedAt = null;
       emit(const EditorCancelled(outcome: EditorCancelOutcome.stoppedWaiting));
       return;
     }
@@ -199,6 +238,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       case Success(:final data):
         _cancelAnswered = signal;
         signal.cancel();
+        _scriptStartedAt = null;
         emit(EditorCancelled(outcome: data ? EditorCancelOutcome.confirmed : EditorCancelOutcome.notConfirmed));
       case Failure(:final error):
         _log.warn('cancel failed: {}', [error.code ?? error.runtimeType]);
@@ -207,7 +247,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     }
   }
 
-  /// Sends [statement] once and shows its answer.
+  /// Sends [statement] once, to `runScript` when it is a script, and shows its answer.
   Future<void> _run(
     Emitter<EditorRunState> emit,
     EditorStatement statement,
@@ -217,16 +257,29 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   ) async {
     final queryId = _newRunId();
     final signal = _inFlight = CancelSignal();
+    _scriptStartedAt = statement.isScript ? clock.now() : null;
     emit(EditorRunning(queryId: queryId, supportsCancel: meta.supportsQueryCancel));
     final watch = Stopwatch()..start();
-    final result = await _repository.run(
-      connectionId,
-      statement.text,
-      queryId: queryId,
-      cancelSignal: signal,
-      catalog: statement.catalog,
-    );
-    if (identical(_inFlight, signal)) _inFlight = null;
+    final Result<Object> result = statement.isScript
+        ? await _repository.runScript(
+            connectionId,
+            statement.text,
+            queryId: queryId,
+            catalog: statement.catalog,
+            page: QueryPage.first,
+            cancelSignal: signal,
+          )
+        : await _repository.run(
+            connectionId,
+            statement.text,
+            queryId: queryId,
+            cancelSignal: signal,
+            catalog: statement.catalog,
+          );
+    if (identical(_inFlight, signal)) {
+      _inFlight = null;
+      _scriptStartedAt = null;
+    }
     final cancelAnswered = identical(_cancelAnswered, signal);
     if (cancelAnswered) _cancelAnswered = null;
     if (history != null) {
@@ -249,7 +302,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
         emit(const EditorCancelled(outcome: EditorCancelOutcome.confirmed));
       case Failure(:final error):
         _fail(emit, error, statement: statement);
-      case Success(:final data):
+      case Success(data: final ScriptResult script):
+        _scriptAnswered(emit, script, statement, meta, role);
+      case Success(data: final QueryResult data):
         final policy = MaskingPolicy.forRole(role, exempt: meta.maskingExemptColumns);
         emit(
           EditorSucceeded(
@@ -261,6 +316,46 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
           ),
         );
         unawaited(_schemaChanges.statementSucceeded(connectionId, statement.text));
+      case Success():
+        throw StateError('A run answered neither a result nor a script');
+    }
+  }
+
+  /// Shows the [script] answer of [statement], each statement masked, and tells the object browser each successful
+  /// statement's text.
+  void _scriptAnswered(
+    Emitter<EditorRunState> emit,
+    ScriptResult script,
+    EditorStatement statement,
+    ProviderMeta meta,
+    StudioRole? role,
+  ) {
+    final policy = MaskingPolicy.forRole(role, exempt: meta.maskingExemptColumns);
+    if (script.hasError) _log.info('a script stopped at a failed statement');
+    emit(
+      EditorScriptAnswered(
+        statements: [
+          for (final item in script.statements)
+            EditorScriptStatement(
+              index: item.index,
+              sql: item.sql,
+              executionTime: item.executionTime,
+              rowCount: item.rowCount,
+              masked: item.result == null ? null : maskResult(item.result!, policy),
+              error: item.error,
+            ),
+        ],
+        statementCount: script.statementCount,
+        executedCount: script.executedCount,
+        openTransactionRolledBack: script.openTransactionRolledBack,
+        policy: policy,
+        statement: statement,
+        meta: meta,
+        run: ++_runs,
+      ),
+    );
+    for (final item in script.statements) {
+      if (item.error == null) unawaited(_schemaChanges.statementSucceeded(connectionId, item.sql));
     }
   }
 
@@ -293,13 +388,27 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   Future<void> _record(
     EditorHistoryTarget history,
     String text,
-    Result<QueryResult> result,
+    Result<Object> result,
     Duration elapsed, {
     required bool cancelAnswered,
   }) async {
     final FinishedRun run;
     switch (result) {
-      case Success(:final data):
+      // A script is one entry for its whole text, as Studio's web keeps it: Failed when a statement failed, with
+      // Studio's total time and the row count of the result Studio shows, the last statement with rows.
+      case Success(data: final ScriptResult script):
+        final shown = script.statements.reversed
+            .where((statement) => statement.error == null && (statement.result?.rows.isNotEmpty ?? false))
+            .firstOrNull;
+        run = FinishedRun(
+          connectionId: connectionId,
+          connectionName: history.connectionName,
+          text: text,
+          status: script.hasError ? StatementRunStatus.failure : StatementRunStatus.success,
+          duration: script.executionTime == Duration.zero ? elapsed : script.executionTime,
+          rowCount: script.hasError ? null : (shown?.rowCount ?? 0),
+        );
+      case Success(data: final QueryResult data):
         run = FinishedRun(
           connectionId: connectionId,
           connectionName: history.connectionName,
@@ -308,6 +417,8 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
           duration: data.executionTime == Duration.zero ? elapsed : data.executionTime,
           rowCount: data.rowCount,
         );
+      case Success():
+        throw StateError('A run answered neither a result nor a script');
       case Failure(:final error)
           when error is NetworkError ||
               (error is TimeoutError && !error.sent) ||

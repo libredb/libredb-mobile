@@ -30,7 +30,8 @@ import 'package:libredb_mobile/shared/widgets/studio_subject_scope.dart';
 /// controller and the result in the blocs above the result area, and none of them reloads. The shell's scaffold resizes
 /// the column above the keyboard, so the keyboard never covers the result.
 ///
-/// A text the write check flags runs only after the confirmation sheet, for the first run and for each Load more.
+/// Run sends the text's non-blank selection when there is one, else the whole text. A text the write check flags runs
+/// only after the confirmation sheet, for the first run and for each Load more.
 ///
 /// On a server-level connection the database chip sits above the text, and Run sends the active database; switching
 /// database keeps the text.
@@ -101,6 +102,10 @@ class _EditorViewState extends State<_EditorView> {
   /// The History sheet this page shows, while it is open.
   Route<StatementHistoryEntry>? _historySheet;
 
+  /// Where the text of the last Run starts in the field: the selection's start, or 0 for the whole text, so a database
+  /// error's position in the text that ran points at the right place in the field.
+  int _runStart = 0;
+
   @override
   void dispose() {
     // The sheet sits on the root navigator, above the shell, so a deep link or a session end that disposes this page
@@ -125,6 +130,10 @@ class _EditorViewState extends State<_EditorView> {
   }
 
   void _run() {
+    final value = _text.value;
+    final selected = EditorActions.selectedText(value);
+    final isSelection = selected.trim().isNotEmpty;
+    _runStart = isSelection ? value.selection.start : 0;
     _focus.unfocus();
     final catalog = context.read<EditorCatalogBloc>().state.catalogToSend(
       context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
@@ -133,9 +142,10 @@ class _EditorViewState extends State<_EditorView> {
     final connection = context.read<ActiveConnectionCubit>().state.connection;
     context.read<EditorRunBloc>().add(
       EditorRunRequested(
-        text: _text.text,
+        text: isSelection ? selected : value.text,
         role: StudioRoleScope.of(context),
         catalog: catalog,
+        isSelection: isSelection,
         history: subject == null || connection == null
             ? null
             : EditorHistoryTarget(subjectHash: subject, connectionName: connection.name),
@@ -193,13 +203,14 @@ class _EditorViewState extends State<_EditorView> {
         if (!mounted) return;
         bloc.add(EditorConfirmationAnswered(confirmed: confirmed));
       case EditorStatementFailed(:final position?):
-        _text.selection = TextSelection.collapsed(offset: position.clamp(0, _text.text.length));
+        _text.selection = TextSelection.collapsed(offset: (_runStart + position).clamp(0, _text.text.length));
         _focus.requestFocus();
       case EditorIdle() ||
           EditorRunning() ||
           EditorCancelling() ||
           EditorCancelled() ||
           EditorSucceeded() ||
+          EditorScriptAnswered() ||
           EditorStatementFailed() ||
           EditorFailed():
         break;

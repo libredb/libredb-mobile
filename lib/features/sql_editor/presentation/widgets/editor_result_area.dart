@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
+import 'package:libredb_mobile/features/sql_editor/presentation/widgets/script_result_view.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/browse_database_words.dart';
@@ -9,10 +10,12 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
-/// What the last run answered, under the editor: its masked result in the result view, the database's own words of a
-/// refused statement (on screen only), or the failure in `StudioErrorBanner`, which offers no retry, since Run is the
-/// only way to send again. While a confirmation is open, what was on screen before stays. A cancelled run says what
-/// the cancel did, as a notice; a failed cancel shows its failure above the run's progress.
+/// What the last run answered, under the editor: its masked result in the result view, a script's statements in
+/// [ScriptResultView], the database's own words of a refused statement (on screen only), or the failure in
+/// `StudioErrorBanner`, which offers no retry, since Run is the only way to send again. While a confirmation is open,
+/// what was on screen before stays. While a script runs, its elapsed time shows under the progress, since a script
+/// waits without a timeout. A cancelled run says what the cancel did, as a notice; a failed cancel shows its failure
+/// above the run's progress.
 class EditorResultArea extends StatelessWidget {
   const EditorResultArea({super.key, required this.confirm});
 
@@ -30,9 +33,10 @@ class EditorResultArea extends StatelessWidget {
   Widget _of(BuildContext context, EditorRunState state) => switch (state) {
     EditorIdle() || EditorAwaitingConfirmation() => const SizedBox.shrink(),
     EditorRunning(:final cancelFailure?) => _running(context, cancelFailure: cancelFailure),
-    EditorRunning() || EditorCancelling() => const Center(child: CircularProgressIndicator()),
+    EditorRunning() || EditorCancelling() => _progress(context),
     EditorCancelled(:final outcome) => _cancelled(context, outcome),
     EditorSucceeded() => _result(context, state),
+    EditorScriptAnswered() => ScriptResultView(key: ValueKey(state.run), answer: state),
     EditorStatementFailed(:final error) => SingleChildScrollView(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Column(
@@ -65,9 +69,24 @@ class EditorResultArea extends StatelessWidget {
           onRetryAvailable: () => context.read<EditorRunBloc>().add(const EditorRateLimitElapsed()),
         ),
       ),
-      const Expanded(child: Center(child: CircularProgressIndicator())),
+      Expanded(child: _progress(context)),
     ],
   );
+
+  /// The progress of the run in flight, with a script's elapsed time under it.
+  Widget _progress(BuildContext context) {
+    final since = context.read<EditorRunBloc>().scriptStartedAt;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpacing.md,
+        children: [
+          const CircularProgressIndicator(),
+          if (since != null) ScriptElapsedTime(since: since),
+        ],
+      ),
+    );
+  }
 
   /// What a cancel did, as a notice and never as an error.
   Widget _cancelled(BuildContext context, EditorCancelOutcome outcome) {
