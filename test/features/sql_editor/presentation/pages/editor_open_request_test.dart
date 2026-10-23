@@ -269,6 +269,33 @@ void main() {
     expect(switches, isEmpty);
   });
 
+  testWidgets('the request is handed over once: returning to the editor does not put the text in again', (
+    tester,
+  ) async {
+    final router = await pumpShell(tester);
+    await open(tester, const EditorOpenRequest(connectionId: 'seed:dev-postgres', text: 'SELECT 1'));
+    expect(editorText(tester), 'SELECT 1');
+
+    // Another connection and back builds the editor of dev-postgres afresh.
+    active.select(_server);
+    await tester.pumpAndSettle();
+    active.select(_postgres);
+    await tester.pumpAndSettle();
+    expect(editorText(tester), isEmpty);
+
+    // Another tab and back through the tab bar.
+    await type(tester, 'SELECT 2');
+    router.go('/browse');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SQL'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.toString(), ApplicationRoutesConstants.sql);
+    expect(find.text("Replace the editor's text?"), findsNothing);
+    expect(editorText(tester), isEmpty);
+    verifyNothingSent();
+  });
+
   group('the replace prompt', () {
     testWidgets('an empty editor takes the text without asking', (tester) async {
       await pumpShell(tester);
@@ -340,6 +367,19 @@ void main() {
     expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
     expect(catalogOf(tester).catalogOf(_server.id), 'archive');
     verifyNothingSent();
+  });
+
+  testWidgets('a database the server does not list is named, and the default is used', (tester) async {
+    await pumpShell(tester, location: '/browse');
+
+    await open(
+      tester,
+      const EditorOpenRequest(connectionId: 'seed:dev-postgres-server', text: 'SELECT 1', catalog: 'gone'),
+    );
+
+    expect(editorText(tester), 'SELECT 1');
+    expect(find.text('The server does not list the database gone, so the editor uses app.'), findsOneWidget);
+    expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
   });
 
   testWidgets('a request on another connection opens it from deep in Browse and lands on the SQL tab', (tester) async {

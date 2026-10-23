@@ -2699,7 +2699,7 @@ class S {
     return Intl.message(
       'Replace the editor\'s text?',
       name: 'sql_history_replace_title',
-      desc: 'Title of the prompt before a history entry replaces the text in the editor.',
+      desc: 'Title of the prompt before a statement opened in the editor (from the history or another screen) replaces its text.',
       args: [],
     );
   }
@@ -2719,7 +2719,7 @@ class S {
     return Intl.message(
       'Replace',
       name: 'sql_history_replace',
-      desc: 'Confirms that a history entry replaces the text in the editor.',
+      desc: 'Confirms that a statement opened in the editor (from the history or another screen) replaces its text.',
       args: [],
     );
   }
@@ -2934,6 +2934,26 @@ class S {
       name: 'editor_open_connection_unavailable',
       desc: 'Shown when a statement was to open in the editor on a connection Studio no longer lists; nothing opens.',
       args: [],
+    );
+  }
+
+  /// `The server does not list the database {catalog}, so the editor uses {used}.`
+  String editor_catalog_not_listed(String catalog, String used) {
+    return Intl.message(
+      'The server does not list the database $catalog, so the editor uses $used.',
+      name: 'editor_catalog_not_listed',
+      desc: 'Shown when a statement opened in the editor names a database the server does not list; the editor runs in the default it names instead.',
+      args: [catalog, used],
+    );
+  }
+
+  /// `The server does not list the database {catalog}.`
+  String editor_catalog_not_listed_none(String catalog) {
+    return Intl.message(
+      'The server does not list the database $catalog.',
+      name: 'editor_catalog_not_listed_none',
+      desc: 'Shown when a statement opened in the editor names a database the server does not list, and the server lists none to use instead.',
+      args: [catalog],
     );
   }
 }

@@ -97,6 +97,7 @@ class EditorPage extends StatelessWidget {
             providerMeta: context.read<IProviderMetaRepository>(),
             activeCatalog: context.read<ActiveCatalogCubit>(),
             connectionId: connectionId,
+            onRequestedNotListed: (requested, used) => _sayCatalogNotListed(messenger, requested, used),
           )..add(const EditorCatalogRequested()),
         ),
         BlocProvider(
@@ -114,6 +115,23 @@ class EditorPage extends StatelessWidget {
       ],
       child: _EditorView(connectionId: connectionId, openRequest: openRequest),
     );
+  }
+
+  /// Names the database an open request asked for that the server does not list, and the one the editor uses.
+  static void _sayCatalogNotListed(ScaffoldMessengerState messenger, String requested, String? used) {
+    if (!messenger.mounted) {
+      throw StateError('The app\'s ScaffoldMessenger is gone, so a database the server does not list cannot be named');
+    }
+    final s = S.of(messenger.context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            used == null ? s.editor_catalog_not_listed_none(requested) : s.editor_catalog_not_listed(requested, used),
+          ),
+        ),
+      );
   }
 
   static void _sayHistoryNotKept(ScaffoldMessengerState messenger, AppErrorCode code) {

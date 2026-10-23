@@ -26,6 +26,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
     required this._providerMeta,
     required this._activeCatalog,
     required this.connectionId,
+    required this._onRequestedNotListed,
   }) : super(const EditorCatalogChecking()) {
     on<EditorCatalogRequested>(_onRequested, transformer: EventTransformers.dropConcurrent());
     on<EditorCatalogOpenRequested>(_onOpenRequested);
@@ -39,6 +40,10 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
 
   /// The connection, the active one the editor was built for.
   final String connectionId;
+
+  /// Told the database an open request named that the server does not list, and the one used instead, null when
+  /// none is.
+  final void Function(String requested, String? used) _onRequestedNotListed;
 
   /// The database an open request named, which the default gives way to while the server lists it.
   String? _requested;
@@ -75,6 +80,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
             : defaultCatalog(listed: listed, wanted: wanted);
         if (chosen != null) _activeCatalog.choose(connectionId, chosen);
         emit(EditorCatalogListed(label: label, catalogs: listed));
+        if (requested != null && !listed.contains(requested)) _onRequestedNotListed(requested, chosen);
     }
   }
 
@@ -84,7 +90,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
         if (catalogs.contains(event.catalog)) {
           _activeCatalog.choose(connectionId, event.catalog);
         } else {
-          _log.info('the requested database is not listed, the active one stays');
+          _onRequestedNotListed(event.catalog, _activeCatalog.catalogOf(connectionId));
         }
       case EditorCatalogNotUsed():
         break;
