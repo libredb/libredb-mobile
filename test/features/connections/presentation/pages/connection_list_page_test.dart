@@ -44,6 +44,7 @@ import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
@@ -75,12 +76,17 @@ void main() {
   late StreamController<ConnectivityState> connectivityChanges;
   late int outagesReported;
   late int recoveriesReported;
+
+  /// Whether the shell covers the page with the refusal page.
+  late ValueNotifier<bool> refused;
   late MockIActiveConnectionStore activeStore;
   late ActiveConnectionCubit active;
 
   setUp(() {
     outagesReported = 0;
     recoveriesReported = 0;
+    refused = ValueNotifier(false);
+    addTearDown(refused.dispose);
     activeStore = MockIActiveConnectionStore();
     when(() => activeStore.read(any())).thenAnswer((_) async => null);
     when(() => activeStore.write(any(), any())).thenAnswer((_) async {});
@@ -153,11 +159,15 @@ void main() {
                         create: (_) => CollapsedSectionsCubit(repository: CollapsedSectionsRepository())..restore(),
                       ),
                     ],
-                    child: GovernanceStatus(
-                      reportOutage: () => outagesReported++,
-                      reportRecovered: () => recoveriesReported++,
-                      noticeBuilder: (_) => const Text(_outageNotice),
-                      child: const ConnectionListPage(),
+                    child: ValueListenableBuilder(
+                      valueListenable: refused,
+                      builder: (context, isRefused, child) => AccountRefusalStatus(isRefused: isRefused, child: child!),
+                      child: GovernanceStatus(
+                        reportOutage: () => outagesReported++,
+                        reportRecovered: () => recoveriesReported++,
+                        noticeBuilder: (_) => const Text(_outageNotice),
+                        child: const ConnectionListPage(),
+                      ),
                     ),
                   ),
                 ),
@@ -439,6 +449,43 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     verify(() => repository.listManaged()).called(2);
+  });
+
+  group('once Studio accepts the account again after the refusal page covered the list', () {
+    final accountHasNoRole = Failure<ManagedConnections>(
+      AuthError('No role', code: AppErrorCode.studioAccountHasNoRole.key),
+    );
+
+    testWidgets('a list that failed asks Studio again, once', (tester) async {
+      refused.value = true;
+      when(() => repository.listManaged()).thenAnswer((_) async => accountHasNoRole);
+      await pumpPage(tester);
+      verify(() => repository.listManaged()).called(1);
+      answer(_mockAnswer());
+
+      refused.value = false;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      verify(() => repository.listManaged()).called(1);
+      expect(row('seed:sales-postgres'), findsOneWidget);
+    });
+
+    testWidgets('a loaded list asks nothing and keeps its rows', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester);
+      verify(() => repository.listManaged()).called(1);
+      refused.value = true;
+      await tester.pump();
+
+      refused.value = false;
+      await tester.pump();
+      await tester.pump();
+
+      verifyNever(() => repository.listManaged());
+      expect(row('seed:sales-postgres'), findsOneWidget);
+    });
   });
 
   testWidgets('a failed refresh keeps the list and says why in the banner', (tester) async {

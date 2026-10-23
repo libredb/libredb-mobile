@@ -18,6 +18,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
@@ -133,6 +134,13 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
     await done;
   }
 
+  /// Asks Studio again once it accepts the account, when the list failed meanwhile, as under the refusal page; a loaded
+  /// list keeps its rows and its live refresh, and an unavailable one keeps retrying by itself.
+  void _reloadFailed() {
+    final bloc = context.read<ConnectionListBloc>();
+    if (bloc.state is ConnectionListFailure) bloc.add(const ConnectionListRefreshed());
+  }
+
   /// Reports where a governance outage starts and ends, for the wording the notice shows.
   void _followOutage(BuildContext context, ConnectionListState state) {
     final status = GovernanceStatus.of(context);
@@ -162,28 +170,31 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
     return ActiveConnectionFeed(
       child: OnReconnect(
         onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRefreshed()),
-        child: MultiBlocListener(
-          listeners: [
-            BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
-            BlocListener<ConnectionListBloc, ConnectionListState>(
-              listenWhen: (previous, current) =>
-                  current is ConnectionListLoaded &&
-                  (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
-              listener: (context, state) {
-                final policy = context.read<ConnectionPolicyCubit>();
-                final first = !_listShown;
-                _listShown = true;
-                if (first && policy.state is ConnectionPolicyLoaded) return;
-                if (first && policy.state is ConnectionPolicyLoading) return;
-                policy.refresh();
-              },
-            ),
-          ],
-          child: Column(
-            children: [
-              const _StatementCaptureNote(),
-              Expanded(child: _buildState(context)),
+        child: OnAccountAccepted(
+          onAccepted: _reloadFailed,
+          child: MultiBlocListener(
+            listeners: [
+              BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
+              BlocListener<ConnectionListBloc, ConnectionListState>(
+                listenWhen: (previous, current) =>
+                    current is ConnectionListLoaded &&
+                    (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
+                listener: (context, state) {
+                  final policy = context.read<ConnectionPolicyCubit>();
+                  final first = !_listShown;
+                  _listShown = true;
+                  if (first && policy.state is ConnectionPolicyLoaded) return;
+                  if (first && policy.state is ConnectionPolicyLoading) return;
+                  policy.refresh();
+                },
+              ),
             ],
+            child: Column(
+              children: [
+                const _StatementCaptureNote(),
+                Expanded(child: _buildState(context)),
+              ],
+            ),
           ),
         ),
       ),

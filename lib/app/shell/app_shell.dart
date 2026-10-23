@@ -19,6 +19,7 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
+import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.state, required this.child});
@@ -44,7 +45,8 @@ class _AppShellState extends State<AppShell> {
 
   /// [screen], covered by the refusal page while Studio refuses the signed-in account, decided here only and never by
   /// a screen. The screen stays mounted under the page, hidden and with its tickers off, because it holds the shell's
-  /// navigator; Studio accepting `/api/auth/me` again on Retry uncovers it.
+  /// navigator; Studio accepting `/api/auth/me` again on Retry uncovers it, and [AccountRefusalStatus] tells the screen,
+  /// so one that failed while hidden loads again.
   Widget _accountRefusalOr(Widget screen) {
     return BlocListener<StudioIdentityCubit, StudioIdentityState>(
       listenWhen: (previous, current) => current is StudioIdentityLoaded,
@@ -56,7 +58,10 @@ class _AppShellState extends State<AppShell> {
             children: [
               Offstage(
                 offstage: refused,
-                child: TickerMode(enabled: !refused, child: screen),
+                child: TickerMode(
+                  enabled: !refused,
+                  child: AccountRefusalStatus(isRefused: refused, child: screen),
+                ),
               ),
               switch (refusal) {
                 StudioAccountAccepted() => const SizedBox.shrink(),
