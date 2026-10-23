@@ -52,8 +52,14 @@ final class ManagedConnectionsModel {
       managed: item['managed'] == true,
       seedId: _string(item['seedId']),
       access: _access(item['access']),
+      queryTimeout: _queryTimeout(item['queryTimeout']),
     );
   }
+
+  /// Milliseconds, from the connection's own setting or governance's `query.timeoutMs`; anything but a positive finite
+  /// number is left out, so the statement routes keep Studio's default.
+  static Duration? _queryTimeout(Object? value) =>
+      value is num && value.isFinite && value > 0 ? Duration(milliseconds: value.round()) : null;
 
   /// A governed Studio from libredb-studio#1922 on sends `read` or `write`; anything else is left out, unlogged, since
   /// the list is read again every 10 seconds under governance.

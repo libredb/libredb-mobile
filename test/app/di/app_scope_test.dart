@@ -24,6 +24,7 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
@@ -38,6 +39,7 @@ import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_in
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
@@ -138,6 +140,28 @@ class _SessionRepositoryDependencies extends LocalSignInDependencies {
 
   @override
   IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) => sessionRepository;
+}
+
+/// The test config, recording the query timeouts each statement route's repository was given.
+class _QueryTimeoutsDependencies extends LocalSignInDependencies {
+  _QueryTimeoutsDependencies() : super(appConfig: const AppConfig.test());
+
+  final given = <String, ConnectionQueryTimeouts>{};
+
+  @override
+  IConnectionRepository createConnectionRepository(ApiClient apiClient, ConnectionQueryTimeouts queryTimeouts) =>
+      super.createConnectionRepository(apiClient, given['connections'] = queryTimeouts);
+
+  @override
+  IStatementRepository createStatementRepository(ApiClient apiClient, ConnectionQueryTimeouts queryTimeouts) =>
+      super.createStatementRepository(apiClient, given['statements'] = queryTimeouts);
+
+  @override
+  ISqlEditorRepository createSqlEditorRepository(
+    ApiClient apiClient,
+    IStatementRepository statements,
+    ConnectionQueryTimeouts queryTimeouts,
+  ) => super.createSqlEditorRepository(apiClient, statements, given['sqlEditor'] = queryTimeouts);
 }
 
 /// A token refresh at the identity provider that answers [result], a refusal by default, counted in [rotations].
@@ -922,6 +946,20 @@ void main() {
 
       expect(scope.read<IStatementRepository>(), isA<IStatementRepository>());
       expect(scope.read<ISqlEditorRepository>(), isA<ISqlEditorRepository>());
+    });
+
+    testWidgets('the managed list fills the one set of query timeouts the statement routes read', (tester) async {
+      final dependencies = _QueryTimeoutsDependencies();
+      final scope = await _pumpScope(tester, dependencies);
+
+      scope.read<IConnectionRepository>();
+      scope.read<ISqlEditorRepository>();
+
+      final provided = scope.read<ConnectionQueryTimeouts>();
+      expect(dependencies.given.keys, unorderedEquals(['connections', 'statements', 'sqlEditor']));
+      for (final MapEntry(key: name, value: given) in dependencies.given.entries) {
+        expect(given, same(provided), reason: name);
+      }
     });
 
     testWidgets('provides the result view mode, restored from the device', (tester) async {

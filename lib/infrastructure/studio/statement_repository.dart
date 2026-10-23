@@ -9,15 +9,16 @@ import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 
 /// `POST /db/query` with the connection named in the body, relative to `PROD_API_URL`, which ends in Studio's `/api`.
-/// It waits [studioStatementReceiveTimeout] for the answer. Only the error code is logged, never the statement or the
+/// It waits the connection's query timeout plus a margin for the answer ([ConnectionQueryTimeouts]). Only the error code is logged, never the statement or the
 /// database's words, and `ApiClient` never sends a POST twice.
 ///
 /// It tells no `SchemaChangeNotifier`: a preview, a count and a key read change no schema, and the SQL editor's run,
 /// which runs what the user typed, does that itself.
 class StatementRepository implements IStatementRepository {
-  StatementRepository(this._apiClient);
+  StatementRepository(this._apiClient, this._queryTimeouts);
 
   final ApiClient _apiClient;
+  final ConnectionQueryTimeouts _queryTimeouts;
 
   static final _log = AppLogger.getLogger('StatementRepository');
 
@@ -43,7 +44,7 @@ class StatementRepository implements IStatementRepository {
         'params': ?params,
         'catalog': ?catalog,
         'database': ?database,
-      }, receiveTimeout: studioStatementReceiveTimeout);
+      }, receiveTimeout: _queryTimeouts.statementReceiveTimeout(connectionId));
       return Success(QueryResultJson.read(ApiClient.decodeUTF8(response.data!)));
     } catch (e) {
       final error = studioError(e);

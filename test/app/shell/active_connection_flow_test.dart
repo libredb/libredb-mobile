@@ -18,6 +18,7 @@ import 'package:libredb_mobile/features/connections/presentation/pages/connectio
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_switcher_sheet.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 
 import '../../support/test_env.dart';
@@ -141,8 +142,8 @@ class _Dependencies extends LocalSignInDependencies {
   final _RevocableConnections _connections;
 
   @override
-  IConnectionRepository createConnectionRepository(ApiClient apiClient) =>
-      _connections..inner = ConnectionRepository(apiClient);
+  IConnectionRepository createConnectionRepository(ApiClient apiClient, ConnectionQueryTimeouts queryTimeouts) =>
+      _connections..inner = ConnectionRepository(apiClient, queryTimeouts);
 }
 
 /// The mocked API's connections, less the ones [revoke] took out.

@@ -24,7 +24,7 @@ void main() {
   late ConnectionRepository repository;
 
   setUp(() {
-    repository = ConnectionRepository(TestEnv.apiClient());
+    repository = ConnectionRepository(TestEnv.apiClient(), ConnectionQueryTimeouts());
   });
 
   group('ConnectionRepository.listManaged', () {
@@ -201,13 +201,64 @@ void main() {
     client.instance.httpClientAdapter = adapter;
 
     late Result<ManagedConnections> result;
-    final lines = await printedLines(() async => result = await ConnectionRepository(client).listManaged());
+    final lines = await printedLines(
+      () async => result = await ConnectionRepository(client, ConnectionQueryTimeouts()).listManaged(),
+    );
 
     expect(result, isA<Success<ManagedConnections>>());
     expect(lines, isNotEmpty, reason: 'the test reads no log line');
     for (final secret in ['reader-user', 'pw-value-1', 'postgres://', 'api-key-value-2', 'connectionString']) {
       expect(lines.where((line) => line.contains(secret)), isEmpty, reason: secret);
     }
+  });
+
+  group("ConnectionRepository keeps each connection's query timeout for the statement routes", () {
+    late _RecordingAdapter adapter;
+    late ConnectionQueryTimeouts queryTimeouts;
+    late ConnectionRepository repository;
+
+    String list(List<Map<String, Object?>> connections) => jsonEncode({'connections': connections, 'cacheHint': 10000});
+
+    setUp(() {
+      adapter = _RecordingAdapter();
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
+      client.instance.httpClientAdapter = adapter;
+      queryTimeouts = ConnectionQueryTimeouts();
+      repository = ConnectionRepository(client, queryTimeouts);
+    });
+
+    test('from every list it reads', () async {
+      adapter.answer = list([
+        {'id': 'seed:slow', 'name': 'Slow', 'type': 'postgres', 'queryTimeout': 120000},
+        {'id': 'seed:plain', 'name': 'Plain', 'type': 'postgres'},
+      ]);
+
+      await repository.listManaged();
+
+      expect(queryTimeouts.statementReceiveTimeout('seed:slow'), const Duration(seconds: 135));
+      expect(queryTimeouts.statementReceiveTimeout('seed:plain'), studioStatementReceiveTimeout);
+
+      adapter.answer = list([
+        {'id': 'seed:slow', 'name': 'Slow', 'type': 'postgres'},
+      ]);
+
+      await repository.listManaged();
+
+      expect(queryTimeouts.statementReceiveTimeout('seed:slow'), studioStatementReceiveTimeout);
+    });
+
+    test('and a list it cannot read leaves them as they were', () async {
+      adapter.answer = list([
+        {'id': 'seed:slow', 'name': 'Slow', 'type': 'postgres', 'queryTimeout': 120000},
+      ]);
+      await repository.listManaged();
+
+      adapter.answer = '{"connections":[{"id":"seed:slow"}]}';
+      final result = await repository.listManaged();
+
+      expect(result, isA<Failure<ManagedConnections>>());
+      expect(queryTimeouts.statementReceiveTimeout('seed:slow'), const Duration(seconds: 135));
+    });
   });
 
   group('ConnectionRepository waits for the answer', () {
@@ -218,7 +269,7 @@ void main() {
       adapter = _RecordingAdapter();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
-      repository = ConnectionRepository(client);
+      repository = ConnectionRepository(client, ConnectionQueryTimeouts());
     });
 
     test('as long as Studio lets a statement run, for test, which may reach a slow database host', () async {

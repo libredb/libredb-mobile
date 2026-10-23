@@ -59,6 +59,19 @@ void main() {
       });
     });
 
+    group('queryTimeout', () {
+      test('keeps a positive number of milliseconds', () {
+        expect(only({'queryTimeout': 120000}).queryTimeout, const Duration(minutes: 2));
+        expect(only({'queryTimeout': 1500.4}).queryTimeout, const Duration(milliseconds: 1500));
+      });
+
+      test('is left out when absent, not positive or not a number', () {
+        for (final value in [null, 0, -1, -0.5, '120000', true, <Object?>[], <String, Object?>{}]) {
+          expect(only({'queryTimeout': ?value}).queryTimeout, isNull, reason: '$value');
+        }
+      });
+    });
+
     group('access', () {
       test('reads a read grant and a write grant', () {
         expect(only({'access': 'read'}).access, StudioAccess.read);

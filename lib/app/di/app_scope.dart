@@ -34,6 +34,7 @@ import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
 import 'package:libredb_mobile/features/lifecycle/application/lifecycle_event.dart';
 import 'package:libredb_mobile/features/lifecycle/application/usecases/fetch_app_config_usecase.dart';
@@ -157,8 +158,13 @@ class AppScope extends StatelessWidget {
             );
           },
         ),
+        // One set for the app: the managed list fills it, and the statement routes wait for what it holds.
+        RepositoryProvider<ConnectionQueryTimeouts>(create: (_) => ConnectionQueryTimeouts()),
         RepositoryProvider<IConnectionRepository>(
-          create: (context) => dependencies.createConnectionRepository(context.read<ApiClient>()),
+          create: (context) => dependencies.createConnectionRepository(
+            context.read<ApiClient>(),
+            context.read<ConnectionQueryTimeouts>(),
+          ),
         ),
         RepositoryProvider<ICollapsedSectionsRepository>(
           create: (_) => dependencies.createCollapsedSectionsRepository(),
@@ -189,11 +195,17 @@ class AppScope extends StatelessWidget {
           dispose: (notifier) => notifier.dispose(),
         ),
         RepositoryProvider<IStatementRepository>(
-          create: (context) => dependencies.createStatementRepository(context.read<ApiClient>()),
+          create: (context) => dependencies.createStatementRepository(
+            context.read<ApiClient>(),
+            context.read<ConnectionQueryTimeouts>(),
+          ),
         ),
         RepositoryProvider<ISqlEditorRepository>(
-          create: (context) =>
-              dependencies.createSqlEditorRepository(context.read<ApiClient>(), context.read<IStatementRepository>()),
+          create: (context) => dependencies.createSqlEditorRepository(
+            context.read<ApiClient>(),
+            context.read<IStatementRepository>(),
+            context.read<ConnectionQueryTimeouts>(),
+          ),
         ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(

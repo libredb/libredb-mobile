@@ -12,10 +12,13 @@ import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 
 /// Studio's connection API. The paths are relative to `PROD_API_URL`, which ends in Studio's `/api`.
+///
+/// Every list it reads replaces [ConnectionQueryTimeouts], which the statement routes wait for.
 class ConnectionRepository implements IConnectionRepository {
-  ConnectionRepository(this._apiClient);
+  ConnectionRepository(this._apiClient, this._queryTimeouts);
 
   final ApiClient _apiClient;
+  final ConnectionQueryTimeouts _queryTimeouts;
 
   static final _log = AppLogger.getLogger('ConnectionRepository');
 
@@ -24,6 +27,7 @@ class ConnectionRepository implements IConnectionRepository {
     try {
       final response = await _apiClient.get('/connections/managed');
       final managed = ManagedConnectionsModel.read(ApiClient.decodeUTF8(response.data!));
+      _queryTimeouts.replaceAll(managed.connections);
       _log.debug('listManaged: {} connections', [managed.connections.length]);
       return Success(managed);
     } catch (e) {

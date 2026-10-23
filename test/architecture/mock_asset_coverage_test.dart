@@ -12,6 +12,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_env.dart';
@@ -31,9 +32,12 @@ import '../support/test_env.dart';
 void main() {
   // Keyed by test name; the part before the first space is the repository method.
   final requests = <String, Future<Result<Object?>> Function(ApiClient client)>{
-    'IConnectionRepository.listManaged': (client) => ConnectionRepository(client).listManaged(),
-    'IConnectionRepository.fetchPolicy': (client) => ConnectionRepository(client).fetchPolicy(),
-    'IConnectionRepository.test': (client) => ConnectionRepository(client).test('seed:sales-db'),
+    'IConnectionRepository.listManaged': (client) =>
+        ConnectionRepository(client, ConnectionQueryTimeouts()).listManaged(),
+    'IConnectionRepository.fetchPolicy': (client) =>
+        ConnectionRepository(client, ConnectionQueryTimeouts()).fetchPolicy(),
+    'IConnectionRepository.test': (client) =>
+        ConnectionRepository(client, ConnectionQueryTimeouts()).test('seed:sales-db'),
     'IProviderMetaRepository.providerMeta': (client) => ProviderMetaRepository(client).providerMeta('seed:sales-db'),
     'IStudioIdentityRepository.fetch': (client) => StudioIdentityRepository(client).fetch(),
     'IStudioIdentityRepository.recordSignOut': (client) => StudioIdentityRepository(client).recordSignOut(),
@@ -49,7 +53,8 @@ void main() {
     'IObjectBrowserRepository.search': (client) =>
         ObjectBrowserRepository(client).search('seed:sales-db', term: 'order'),
     'IObjectBrowserRepository.scanKeys': (client) => ObjectBrowserRepository(client).scanKeys('seed:cache'),
-    'IStatementRepository.run': (client) => StatementRepository(client).run('seed:sales-db', 'select 1'),
+    'IStatementRepository.run': (client) =>
+        StatementRepository(client, ConnectionQueryTimeouts()).run('seed:sales-db', 'select 1'),
     'ISqlEditorRepository.run': (client) => _sqlEditor(client).run('seed:sales-db', 'select 1'),
     'ISqlEditorRepository.runScript': (client) => _sqlEditor(client).runScript('seed:sales-db', 'select 1; select 2'),
     'ISqlEditorRepository.cancel': (client) => _sqlEditor(client).cancel('seed:sales-db', 'q-1'),
@@ -114,7 +119,10 @@ void main() {
   });
 }
 
-SqlEditorRepository _sqlEditor(ApiClient client) => SqlEditorRepository(client, StatementRepository(client));
+SqlEditorRepository _sqlEditor(ApiClient client) {
+  final queryTimeouts = ConnectionQueryTimeouts();
+  return SqlEditorRepository(client, StatementRepository(client, queryTimeouts), queryTimeouts);
+}
 
 /// `Interface.method` for every method of a repository interface that a class importing [ApiClient] implements.
 Set<String> _apiClientRepositoryMethods() {

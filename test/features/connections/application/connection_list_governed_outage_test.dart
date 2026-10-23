@@ -9,6 +9,7 @@ import 'package:libredb_mobile/features/connections/application/usecases/list_ma
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 
@@ -27,7 +28,9 @@ void main() {
     final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
     bloc = ConnectionListBloc(
-      listManagedConnectionsUseCase: ListManagedConnectionsUseCase(ConnectionRepository(client)),
+      listManagedConnectionsUseCase: ListManagedConnectionsUseCase(
+        ConnectionRepository(client, ConnectionQueryTimeouts()),
+      ),
     );
   });
 

@@ -154,8 +154,9 @@ Every request follows these rules:
 - Every `POST` sends `Content-Type: application/json` and no `Origin` header, which is how Studio's CSRF check lets a native client through.
 - A managed connection is named in the body as `{"connectionId": "seed:<id>"}`, never inline; the app never sends or stores database credentials.
 - Nothing that runs a statement is retried on its own: a statement may have changed data.
-- The app waits 30 seconds for an answer, and 75 seconds (`studioStatementReceiveTimeout`) for the routes that run a statement or reach a database host: `/db/query`, `/db/multi-query`, `/db/transaction`, `/db/profile`, `/db/monitoring`, `/db/maintenance` and `/db/test-connection`.
-  That is Studio's default statement timeout of 60 seconds plus a margin, because Studio cancels a run whose request the phone gives up on.
+- The app waits 30 seconds for an answer, and longer for the routes that run a statement or reach a database host, because Studio cancels a run whose request the phone gives up on.
+  `/db/query` and `/db/transaction` wait the connection's query timeout plus 15 seconds, `/db/multi-query` waits without a limit, and `/db/profile`, `/db/monitoring`, `/db/maintenance` and `/db/test-connection` wait 75 seconds (`studioStatementReceiveTimeout`), Studio's default statement timeout of 60 seconds plus the margin.
+  [Statements](#statements) records why.
 - Most `/api/db/*` requests spend a slot of the user's `query` request budget, 120 per minute by default, shared with the same user's Studio sessions in the browser: the object browser caches metadata per connection.
   See [Rate limit](#rate-limit) for which requests do.
 - Requests stay well under 10 MiB, above which Studio truncates the body and reads it as malformed.
@@ -180,7 +181,7 @@ Every request follows these rules:
 | `POST /api/db/query` | `IStatementRepository.run`, which `ISqlEditorRepository.run` calls | `QueryResult` |
 | `POST /api/db/multi-query` | `ISqlEditorRepository.runScript` | `ScriptResult` |
 | `POST /api/db/cancel` | `ISqlEditorRepository.cancel` | whether the engine stopped the run |
-| `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction |
+| `POST /api/db/transaction` | `beginTransaction`, `runInTransaction`, `commit`, `rollback`, `transactionStatus` | the state of the transaction; `TransactionEnd` for `commit` and `rollback` |
 
 ### Rate limit
 
@@ -236,6 +237,23 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
 - A transaction's statements cannot be cancelled.
   Without governance Studio keeps one transaction per connection for every user of it, owned by the account that began it, and refuses others with `studio.transaction_not_owned` for up to five idle minutes.
   On a server-level connection it keeps one per database, so `commit`, `rollback` and `transactionStatus` name the `catalog` the transaction began in; without it Studio finds no open transaction.
+- Studio answers a commit `{"status": "committed"}` and a rollback `{"status": "rolled_back"}`, both 2xx and only after the engine ended the transaction; a commit or rollback the engine refused is an error answer (`src/app/api/db/transaction/route.ts`).
+  So a 2xx is a `Success` whatever its body: `TransactionEnd.confirmed` when the body names that end, `TransactionEnd.unreadableAnswer` when it does not, and the transaction is over either way, so the UI never offers Commit again.
+  Only a `Failure` leaves the transaction open.
+
+#### Statement timeouts
+
+Studio cancels a statement whose request is aborted (`src/lib/api/abort-cancel.ts`), so a phone that gives up sooner than Studio would both fail and cancel a statement Studio was still allowed to finish.
+Decided in [#88](https://github.com/libredb/libredb-mobile/issues/88):
+- `/db/query` and `/db/transaction` wait the connection's query timeout plus 15 seconds.
+  The managed list carries `queryTimeout` in milliseconds when the connection sets its own or governance sends its runtime setting `query.timeoutMs` (`src/lib/governance/visible.ts:105-106`), and the reader keeps it only when it is a positive number.
+  `ConnectionQueryTimeouts` holds the timeouts of the last list read; `IConnectionRepository.listManaged` replaces it and the statement repositories read it, so no caller passes a timeout.
+  A connection without one, or one the last list did not name, waits 75 seconds, Studio's default of 60 (`DEFAULT_QUERY_TIMEOUT`, `src/lib/db/types.ts:55`) plus the margin.
+- `/db/multi-query` sets no receive timeout (option (b) of #88): Studio gives each statement of a script the connection's query timeout (`src/app/api/db/multi-query/route.ts:335-353`), so a script may run for its statement count times that, which the phone cannot count before Studio's statement analysis (S-06).
+  Any finite limit would cut a script Studio may still finish and cancel it through the abort bridge (`:296-297`), leaving its first statements committed and the rest not run; Studio's web sets none either (`appFetch`, `src/lib/config/base-path.ts:144-150`).
+  `runScript` sends `receiveTimeout: Duration.zero`, which Dio 5 reads as none, since null would keep the client's 30 seconds.
+  Cancel ([#116](https://github.com/libredb/libredb-mobile/issues/116)) and the backgrounding rule ([#118](https://github.com/libredb/libredb-mobile/issues/118)) end a script the user gives up on, and the editor shows the elapsed time while one runs ([#117](https://github.com/libredb/libredb-mobile/issues/117)).
+- None of these requests is ever sent twice, and no statement text is logged.
 
 ### Errors
 
@@ -311,7 +329,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
 - Under governance, Studio still refuses a session as 401 when a route cannot read its account registry (`getSession`, `src/lib/auth.ts:81-86` at libredb-studio c9989a6b5), which the app reads as a refused token.
 - Studio refuses an access token that carries `nonce`; Keycloak 26.8.1 does not put it there, which the walkthrough in [studio.md](studio.md) confirmed.
 - Studio cancels a run when its request is aborted (`src/lib/api/abort-cancel.ts`, used by `src/lib/api/editor-query.ts:135` and `src/app/api/db/multi-query/route.ts:297`).
-  So a client receive timeout shorter than Studio's query timeout kills the statement on the server ([#15](https://github.com/libredb/libredb-mobile/issues/15)), and so may the app going to the background during a run (M5-09, in [#33](https://github.com/libredb/libredb-mobile/issues/33)).
+  So a client receive timeout shorter than Studio's query timeout kills the statement on the server ([#15](https://github.com/libredb/libredb-mobile/issues/15); [Statement timeouts](#statement-timeouts) says how the app avoids it), and so may the app going to the background during a run (M5-09, in [#33](https://github.com/libredb/libredb-mobile/issues/33)).
   Whether a dropped mobile connection behind a proxy aborts the request is not verified until M5-03 (in [#33](https://github.com/libredb/libredb-mobile/issues/33)) does; the editor cancels explicitly.
 - Granting a connection needs an API in Platform that does not exist yet (milestone M9).
 - Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
