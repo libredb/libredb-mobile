@@ -447,5 +447,132 @@
   "connection_switcher_title": "Bağlantı değiştir",
   "@connection_switcher_title": {},
   "connection_active": "Etkin bağlantı",
-  "@connection_active": {}
+  "@connection_active": {},
+  "keys_browse": "Anahtarlara göz at",
+  "@keys_browse": {},
+  "keys_title": "Anahtarlar",
+  "@keys_title": {},
+  "keys_pattern_glob": "Desen",
+  "@keys_pattern_glob": {},
+  "keys_pattern_prefix": "Şununla başlar",
+  "@keys_pattern_prefix": {},
+  "keys_scanned": "{count, plural, =1{1 anahtar tarandı} other{{count} anahtar tarandı}}",
+  "@keys_scanned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_more": "{count, plural, =1{1 anahtar tarandı; devamı var} other{{count} anahtar tarandı; devamı var}}",
+  "@keys_scanned_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_database": "Bu veritabanının tuttuğu {total} anahtardan {count} tanesi tarandı",
+  "@keys_scanned_of_database": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_database_more": "Bu veritabanının tuttuğu {total} anahtardan {count} tanesi tarandı; devamı var",
+  "@keys_scanned_of_database_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_walk": "Bu taramanın kapsadığı {total} anahtardan {count} tanesi tarandı",
+  "@keys_scanned_of_walk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_walk_more": "Bu taramanın kapsadığı {total} anahtardan {count} tanesi tarandı; devamı var",
+  "@keys_scanned_of_walk_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_listed": "{count, plural, =1{1 öğe listelendi} other{{count} öğe listelendi}}",
+  "@keys_listed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_listed_more": "{count, plural, =1{1 öğe listelendi; devamı var} other{{count} öğe listelendi; devamı var}}",
+  "@keys_listed_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_clustered": "Kümelenmiş sunucu: SCAN ve DBSIZE her seferinde tek bir düğüm için yanıt verir, bu yüzden bu sayılar bu düğümündür.",
+  "@keys_clustered": {},
+  "keys_skipped": "{count, plural, =1{Bu taramada 1 anahtar dışarıda kaldı: {reason}} other{Bu taramada {count} anahtar dışarıda kaldı: {reason}}}",
+  "@keys_skipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_read_incomplete": "Bu liste eksik ve motor nedenini gösterebiliyor: {reason}",
+  "@keys_read_incomplete": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_read_unknown": "Bu liste okumanın gördüğüdür. Bu motorda her şeyin bu olup olmadığı belirlenemez: {reason}",
+  "@keys_read_unknown": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_load_more": "Daha fazla yükle",
+  "@keys_load_more": {},
+  "keys_load_all": "Tümünü yükle",
+  "@keys_load_all": {},
+  "keys_stop": "Durdur",
+  "@keys_stop": {},
+  "keys_stopping": "Bu sayfadan sonra duruluyor",
+  "@keys_stopping": {},
+  "keys_cap": "Bu ekran en fazla 10.000 anahtar tutar: diğerlerini görmek için deseni daraltın.",
+  "@keys_cap": {},
+  "keys_empty": "Studio burada anahtar bulamadı.",
+  "@keys_empty": {},
+  "keys_unavailable": "Studio bu bağlantı için anahtar tarayıcısı sunmuyor.",
+  "@keys_unavailable": {}
 }

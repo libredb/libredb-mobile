@@ -1,0 +1,19 @@
+{
+  "keys": [],
+  "prefixes": [
+    "audit_log/",
+    "carts/",
+    "coupons/"
+  ],
+  "cursor": "fsk1.eyJ2IjoxLCJwIjoiIiwiYSI6ImNvdXBvbnMvIn0",
+  "types": {},
+  "total": 0,
+  "skipped": {
+    "count": 1,
+    "reason": "Ids that break Firestore's id rules cannot be shown or opened, so they are counted here and not listed."
+  },
+  "readOutcome": {
+    "scope": "incomplete",
+    "endReason": "Studio stops after 10 id listing requests at one level, so ids past the ones those requests returned are not listed."
+  }
+}

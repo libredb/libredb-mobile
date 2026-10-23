@@ -8,6 +8,7 @@ class BrowseRouteNames {
   static const kinds = 'browseKinds';
   static const objects = 'browseObjects';
   static const source = 'browseSource';
+  static const keys = 'browseKeys';
 }
 
 /// The query key that carries a container path, once per segment and in order.
@@ -18,6 +19,9 @@ const browsePathKey = 'path';
 
 /// The path parameter that names an object's kind.
 const browseKindKey = 'kind';
+
+/// The query key that carries the level folder a key browser page lists.
+const browsePrefixKey = 'prefix';
 
 /// The path parameter that names the connection.
 const browseConnectionIdKey = 'connectionId';
@@ -35,6 +39,9 @@ List<String> browsePathOf(GoRouterState state) =>
 
 /// The kind named by the route of [state].
 String browseKindOf(GoRouterState state) => state.pathParameters[browseKindKey]!;
+
+/// The level folder carried by the route of [state], null when the route names none.
+String? browsePrefixOf(GoRouterState state) => state.uri.queryParameters[browsePrefixKey];
 
 /// Opens the level of [connectionId]'s containers under [parent].
 void openBrowseContainers(BuildContext context, String connectionId, List<String> parent) => context.pushNamed(
@@ -63,6 +70,14 @@ void openBrowseObjects(BuildContext context, String connectionId, List<String> c
       BrowseRouteNames.objects,
       pathParameters: {browseConnectionIdKey: connectionId, browseKindKey: kind},
       queryParameters: _containerQuery(container),
+    );
+
+/// Opens the key browser of [container] of [connectionId], or of its level folder [prefix].
+void openBrowseKeys(BuildContext context, String connectionId, List<String> container, {String? prefix}) =>
+    context.pushNamed(
+      BrowseRouteNames.keys,
+      pathParameters: {browseConnectionIdKey: connectionId},
+      queryParameters: {..._containerQuery(container), browsePrefixKey: ?prefix},
     );
 
 /// A container path as repeated query values, which `Uri` encodes one by one, so a name holding `/`, `&` or a space

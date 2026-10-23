@@ -85,11 +85,12 @@ class CachedObjectBrowserRepository implements IObjectBrowserRepository {
   @override
   Future<Result<KeyScanPage>> scanKeys(
     String connectionId, {
-    String cursor = '0',
+    String? cursor,
     String? pattern,
     int? count,
     int? database,
-  }) => _inner.scanKeys(connectionId, cursor: cursor, pattern: pattern, count: count, database: database);
+    bool level = false,
+  }) => _inner.scanKeys(connectionId, cursor: cursor, pattern: pattern, count: count, database: database, level: level);
 
   /// Drops every answer of [connectionId], as after a statement that changed its schema or when the connection
   /// vanished.

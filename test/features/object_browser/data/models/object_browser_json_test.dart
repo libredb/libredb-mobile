@@ -1,4 +1,5 @@
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -213,5 +214,95 @@ void main() {
 
     expect(page.isLast, isTrue);
     expect(page.types, isEmpty);
+  });
+
+  group('keyScanPage', () {
+    test('reads clustered, skipped, readOutcome and prefixes', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":["a/k"],"cursor":"opaque-1","types":{},"total":0,"clustered":true,'
+        '"skipped":{"count":2,"reason":"not text"},'
+        '"readOutcome":{"scope":"incomplete","endReason":"the server closed","provenLoss":["one message"]},'
+        '"prefixes":["a/b/","a/c/"]}',
+      );
+
+      expect(page.clustered, isTrue);
+      expect(page.skipped, const KeyScanSkipped(count: 2, reason: 'not text'));
+      expect(
+        page.readOutcome,
+        const KeyReadOutcome(scope: 'incomplete', endReason: 'the server closed', provenLoss: ['one message']),
+      );
+      expect(page.readOutcome!.isIncomplete, isTrue);
+      expect(page.prefixes, ['a/b/', 'a/c/']);
+      expect(page.isLast, isFalse);
+    });
+
+    test('leaves the four optional fields out when absent', () {
+      final page = ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"0","types":{},"total":0}');
+
+      expect(page.clustered, isNull);
+      expect(page.skipped, isNull);
+      expect(page.readOutcome, isNull);
+      expect(page.prefixes, isNull);
+    });
+
+    test('leaves out clustered and prefixes of an unexpected type', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":[],"cursor":"0","types":{},"total":0,"clustered":"yes","prefixes":["a/",3]}',
+      );
+
+      expect(page.clustered, isNull);
+      expect(page.prefixes, isNull);
+    });
+
+    // A loss notice is never dropped: present but malformed or blank, it fails the page (decisions.md, #59).
+    for (final (what, field) in [
+      ('a skipped count that is not a whole number', '"skipped":{"count":"2","reason":"x"}'),
+      ('a skipped without a reason', '"skipped":{"count":2}'),
+      ('a skipped with a blank reason', '"skipped":{"count":2,"reason":"  "}'),
+      ('a skipped that is not an object', '"skipped":2'),
+      ('a readOutcome without an endReason', '"readOutcome":{"scope":"unknown"}'),
+      ('a readOutcome with a blank endReason', '"readOutcome":{"scope":"unknown","endReason":""}'),
+      ('a readOutcome without a scope', '"readOutcome":{"endReason":"x"}'),
+      (
+        'a readOutcome whose provenLoss is not a list of text',
+        '"readOutcome":{"scope":"incomplete","endReason":"x","provenLoss":[1]}',
+      ),
+      ('a readOutcome that is not an object', '"readOutcome":"short"'),
+    ]) {
+      test('refuses $what', () {
+        expect(
+          () => ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"0","types":{},"total":0,$field}'),
+          throwsFormatException,
+        );
+      });
+    }
+
+    test('refuses an empty cursor, which Studio would refuse on the next page', () {
+      expect(
+        () => ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"","types":{},"total":0}'),
+        throwsFormatException,
+      );
+    });
+
+    test('refuses a page whose types is missing or not an object', () {
+      expect(() => ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"0","total":0}'), throwsFormatException);
+      expect(
+        () => ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"0","types":[],"total":0}'),
+        throwsFormatException,
+      );
+    });
+
+    test('reads a readOutcome without provenLoss as an empty list', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":[],"cursor":"0","types":{},"total":0,"readOutcome":{"scope":"unknown","endReason":"no end"}}',
+      );
+
+      expect(page.readOutcome, const KeyReadOutcome(scope: 'unknown', endReason: 'no end'));
+      expect(page.readOutcome!.isIncomplete, isFalse);
+    });
+
+    test('refuses a page without a cursor', () {
+      expect(() => ObjectBrowserJson.keyScanPage('{"keys":[],"types":{},"total":0}'), throwsFormatException);
+    });
   });
 }

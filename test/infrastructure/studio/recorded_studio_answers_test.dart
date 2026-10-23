@@ -629,6 +629,17 @@ void main() {
       expect(types['user:2:profile'], 'string');
     });
 
+    test('POST /api/db/keys/scan of a plain Redis says it is not clustered and carries no level or loss fields', () {
+      for (final name in ['keyscan_first', 'keyscan_next', 'keyscan_last']) {
+        final scanned = page(name);
+
+        expect(scanned.clustered, isFalse, reason: '$name: INFO cluster answered cluster_enabled:0');
+        expect(scanned.skipped, isNull, reason: '$name: Redis pages never carry skipped');
+        expect(scanned.readOutcome, isNull, reason: name);
+        expect(scanned.prefixes, isNull, reason: '$name was not asked for a level');
+      }
+    });
+
     // One read per key type, each the statement Studio's key browser generates for it, run in database 1.
     test('POST /api/db/query reads a string', () {
       expect(SqlEditorJson.queryResult(fixture('query_redis_string')).rows, [
