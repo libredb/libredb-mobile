@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
@@ -139,6 +140,61 @@ void main() {
     });
   });
 
+  group('what scanKeys sends', () {
+    late _RecordingAdapter adapter;
+
+    setUp(() {
+      adapter = _RecordingAdapter()..answer = (200, '{"keys":[],"cursor":"0","types":{},"total":0}');
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
+      client.instance.httpClientAdapter = adapter;
+      repository = ObjectBrowserRepository(client);
+    });
+
+    test('the first page names no cursor, no level and nothing it was not given, as JSON', () async {
+      await repository.scanKeys(connection);
+
+      expect(adapter.lastPath, '/db/keys/scan');
+      expect(adapter.lastContentType, startsWith('application/json'));
+      expect(adapter.lastBody, {'connectionId': connection});
+    });
+
+    test('a later page sends the cursor exactly as the page before answered it', () async {
+      const opaque = 'k:L2FwaXNpeC9yb3V0ZXMvMTI:4711:1207:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
+      await repository.scanKeys(connection, cursor: opaque, pattern: '/apisix/');
+
+      expect(adapter.lastBody, {'connectionId': connection, 'cursor': opaque, 'pattern': '/apisix/'});
+    });
+
+    test('a numbered database and a count travel as numbers', () async {
+      await repository.scanKeys(connection, pattern: 'user:*', count: 500, database: 1);
+
+      expect(adapter.lastBody, {'connectionId': connection, 'pattern': 'user:*', 'count': 500, 'database': 1});
+    });
+
+    test('a level page sends level true, and a walk of keys leaves the key out', () async {
+      await repository.scanKeys(connection, pattern: 'users/', level: true);
+      expect(adapter.lastBody, {'connectionId': connection, 'pattern': 'users/', 'level': true});
+
+      await repository.scanKeys(connection, pattern: 'users/');
+      expect(adapter.lastBody, {'connectionId': connection, 'pattern': 'users/'});
+    });
+
+    test('a prefix pattern travels as given, spaces and no star added', () async {
+      await repository.scanKeys(connection, pattern: ' a/');
+
+      expect((adapter.lastBody! as Map)['pattern'], ' a/');
+    });
+
+    test('a page refused by the audit log under governance maps to studio.governance_unavailable', () async {
+      adapter.answer = (503, '{"error":"The audit log is unavailable","code":"AUDIT_UNAVAILABLE"}');
+
+      final result = await repository.scanKeys(connection);
+
+      expect((result as Failure).error.code, AppErrorCode.studioGovernanceUnavailable.key);
+    });
+  });
+
   test('a request without a session fails with an AuthError', () async {
     final result = await repository.containers(connection);
 
@@ -153,8 +209,9 @@ const _prodConfig = AppConfig(
   idleTimeout: null,
 );
 
-/// Answers every request with an empty list and records the last one.
+/// Answers every request with [answer] and records the last one.
 class _RecordingAdapter implements HttpClientAdapter {
+  (int, String) answer = (200, '[]');
   String? lastPath;
   String? lastContentType;
   Object? lastBody;
@@ -169,9 +226,10 @@ class _RecordingAdapter implements HttpClientAdapter {
     lastContentType = options.contentType ?? '${options.headers[Headers.contentTypeHeader]}';
     final data = options.data;
     lastBody = data is String ? jsonDecode(data) : data;
+    final (status, body) = answer;
     return ResponseBody.fromString(
-      '[]',
-      200,
+      body,
+      status,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },

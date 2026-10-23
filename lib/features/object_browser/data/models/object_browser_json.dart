@@ -95,8 +95,30 @@ final class ObjectBrowserJson {
             if (key is String && value is String) key: value,
       },
       total: _int(json['total'], 'total'),
+      clustered: json['clustered'] is bool ? json['clustered'] as bool : null,
+      skipped: _skipped(json['skipped']),
+      readOutcome: _readOutcome(json['readOutcome']),
+      prefixes: _optionalStrings(json['prefixes']),
     );
   }
+
+  static KeyScanSkipped? _skipped(Object? value) {
+    if (value is! Map || value['count'] is! int || value['reason'] is! String) return null;
+    return KeyScanSkipped(count: value['count'] as int, reason: value['reason'] as String);
+  }
+
+  static KeyReadOutcome? _readOutcome(Object? value) {
+    if (value is! Map || value['scope'] is! String || value['endReason'] is! String) return null;
+    return KeyReadOutcome(
+      scope: value['scope'] as String,
+      endReason: value['endReason'] as String,
+      provenLoss: _optionalStrings(value['provenLoss']) ?? const [],
+    );
+  }
+
+  /// A list of strings, or null when [value] is anything else.
+  static List<String>? _optionalStrings(Object? value) =>
+      value is List && value.every((item) => item is String) ? List<String>.unmodifiable(value) : null;
 
   static KindCount _kindCount(Object? value) {
     final count = _map(value, 'kind count');

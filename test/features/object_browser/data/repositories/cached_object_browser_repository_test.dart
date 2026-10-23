@@ -87,11 +87,15 @@ class _CountingBrowser implements IObjectBrowserRepository {
   @override
   Future<Result<KeyScanPage>> scanKeys(
     String connectionId, {
-    String cursor = '0',
+    String? cursor,
     String? pattern,
     int? count,
     int? database,
-  }) => _send('scanKeys $connectionId $cursor', const KeyScanPage(keys: [], cursor: '0', types: {}, total: 0));
+    bool level = false,
+  }) => _send(
+    'scanKeys $connectionId $cursor $pattern $count $database $level',
+    const KeyScanPage(keys: [], cursor: '0', types: {}, total: 0),
+  );
 }
 
 T _data<T>(Result<T> result) => (result as Success<T>).data;
@@ -163,6 +167,13 @@ void main() {
       }
 
       expect(inner.calls, hasLength(6));
+    });
+
+    test('a key page reaches Studio with its cursor, pattern, count, database and level as asked', () async {
+      await cache.scanKeys(_sales, cursor: 'c1', pattern: 'users/', count: 10, database: 2, level: true);
+      await cache.scanKeys(_sales);
+
+      expect(inner.calls, ['scanKeys $_sales c1 users/ 10 2 true', 'scanKeys $_sales null null null null false']);
     });
   });
 

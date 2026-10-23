@@ -1,4 +1,5 @@
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/key_scan_page.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -213,5 +214,60 @@ void main() {
 
     expect(page.isLast, isTrue);
     expect(page.types, isEmpty);
+  });
+
+  group('keyScanPage', () {
+    test('reads clustered, skipped, readOutcome and prefixes', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":["a/k"],"cursor":"opaque-1","types":{},"total":0,"clustered":true,'
+        '"skipped":{"count":2,"reason":"not text"},'
+        '"readOutcome":{"scope":"incomplete","endReason":"the server closed","provenLoss":["one message"]},'
+        '"prefixes":["a/b/","a/c/"]}',
+      );
+
+      expect(page.clustered, isTrue);
+      expect(page.skipped, const KeyScanSkipped(count: 2, reason: 'not text'));
+      expect(
+        page.readOutcome,
+        const KeyReadOutcome(scope: 'incomplete', endReason: 'the server closed', provenLoss: ['one message']),
+      );
+      expect(page.readOutcome!.isIncomplete, isTrue);
+      expect(page.prefixes, ['a/b/', 'a/c/']);
+      expect(page.isLast, isFalse);
+    });
+
+    test('leaves the four optional fields out when absent', () {
+      final page = ObjectBrowserJson.keyScanPage('{"keys":[],"cursor":"0","types":{},"total":0}');
+
+      expect(page.clustered, isNull);
+      expect(page.skipped, isNull);
+      expect(page.readOutcome, isNull);
+      expect(page.prefixes, isNull);
+    });
+
+    test('leaves out an optional field of an unexpected type', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":[],"cursor":"0","types":{},"total":0,"clustered":"yes",'
+        '"skipped":{"count":"2","reason":"x"},"readOutcome":{"scope":"unknown"},"prefixes":["a/",3]}',
+      );
+
+      expect(page.clustered, isNull);
+      expect(page.skipped, isNull);
+      expect(page.readOutcome, isNull);
+      expect(page.prefixes, isNull);
+    });
+
+    test('reads a readOutcome without provenLoss as an empty list', () {
+      final page = ObjectBrowserJson.keyScanPage(
+        '{"keys":[],"cursor":"0","types":{},"total":0,"readOutcome":{"scope":"unknown","endReason":"no end"}}',
+      );
+
+      expect(page.readOutcome, const KeyReadOutcome(scope: 'unknown', endReason: 'no end'));
+      expect(page.readOutcome!.isIncomplete, isFalse);
+    });
+
+    test('refuses a page without a cursor', () {
+      expect(() => ObjectBrowserJson.keyScanPage('{"keys":[],"types":{},"total":0}'), throwsFormatException);
+    });
   });
 }

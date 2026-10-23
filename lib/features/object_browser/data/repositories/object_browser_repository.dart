@@ -80,16 +80,18 @@ class ObjectBrowserRepository implements IObjectBrowserRepository {
   @override
   Future<Result<KeyScanPage>> scanKeys(
     String connectionId, {
-    String cursor = '0',
+    String? cursor,
     String? pattern,
     int? count,
     int? database,
+    bool level = false,
   }) => _post('scanKeys', '/db/keys/scan', {
     'connectionId': connectionId,
-    'cursor': cursor,
+    'cursor': ?cursor,
     'pattern': ?pattern,
     'count': ?count,
     'database': ?database,
+    if (level) 'level': true,
   }, ObjectBrowserJson.keyScanPage);
 
   Future<Result<T>> _post<T>(

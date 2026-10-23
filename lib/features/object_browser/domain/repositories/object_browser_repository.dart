@@ -46,12 +46,15 @@ abstract class IObjectBrowserRepository {
   /// The objects whose name contains [term], ignoring case, optionally only of [kinds].
   Future<Result<List<DatabaseObject>>> search(String connectionId, {required String term, List<String>? kinds});
 
-  /// A page of keys of a key-value engine, from [cursor] (`0` for the first page).
+  /// A page of keys of a key-value engine. The first page names no [cursor]; each later page sends the cursor of the
+  /// page before exactly as it came. [database] names a numbered database, [level] asks an engine that declares
+  /// `keyScan.levels` for one level of folders and keys, and is sent only when true. Pages are never kept.
   Future<Result<KeyScanPage>> scanKeys(
     String connectionId, {
-    String cursor = '0',
+    String? cursor,
     String? pattern,
     int? count,
     int? database,
+    bool level = false,
   });
 }
