@@ -218,6 +218,7 @@ docker compose -f tool/studio-dev/docker-compose.yml --profile governed stop gov
 
 The governed Studio reloads every 5 seconds and serves its last snapshot for at most 15 seconds, so within about 15 seconds `GET /api/connections/managed` answers 503 `GOVERNANCE_UNAVAILABLE`.
 `docker compose ... --profile governed start governance-source` brings it back, and the next reload answers again.
+The app's connection list shows the outage over its greyed rows, or full screen on a cold start, and comes back by itself within 10 seconds of the next answer; walked through on the Android emulator, API 30 Google APIs image, with Studio main `c9989a6` as `user`.
 
 ### Regenerating the seed
 

@@ -206,8 +206,11 @@
   "login_sso_subtitle": "Sign in with your organization account.",
   "@login_sso_subtitle": {},
   "connections": "Connections",
-  "connection_list_empty": "Studio offers you no connection yet",
+  "connection_list_empty": "No connections are available to you",
+  "connection_list_empty_governed": "No databases have been granted to you yet. Ask an administrator for access.",
   "connection_list_load_failed": "Could not load the connections",
+  "connection_list_unavailable": "Connections are unavailable",
+  "connection_statement_capture_full": "Statements you run are recorded in full in this server's query log.",
   "connection_type": "Engine",
   "connection_environment": "Environment",
   "connection_host": "Host",
@@ -331,7 +334,7 @@
       }
     }
   },
-  "studio_governance_temporarily_unavailable": "Connections are temporarily unavailable. Try again in a moment.",
+  "studio_governance_temporarily_unavailable": "Connection access is temporarily unavailable. The list updates by itself once it is back.",
   "@studio_governance_temporarily_unavailable": {},
   "studio_governance_cannot_serve": "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
   "@studio_governance_cannot_serve": {},

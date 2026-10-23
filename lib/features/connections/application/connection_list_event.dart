@@ -41,3 +41,21 @@ final class ConnectionListEnvironmentFilterChanged extends ConnectionListEvent {
   @override
   List<Object?> get props => [environment];
 }
+
+/// Asks Studio again on the live refresh timer, without showing that a refresh runs.
+final class ConnectionListPolled extends ConnectionListLoadEvent {
+  const ConnectionListPolled();
+}
+
+/// Whether the list is on screen with the app in the foreground and the device online: the live refresh runs only then.
+final class ConnectionListAutoRefreshChanged extends ConnectionListEvent {
+  const ConnectionListAutoRefreshChanged({required this.active, this.askNow = false});
+
+  final bool active;
+
+  /// Whether to ask Studio at once instead of after the usual wait, as when the app comes back to the foreground.
+  final bool askNow;
+
+  @override
+  List<Object?> get props => [active, askNow];
+}

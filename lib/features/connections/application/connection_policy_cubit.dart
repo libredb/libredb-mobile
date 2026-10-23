@@ -19,6 +19,9 @@ class ConnectionPolicyCubit extends Cubit<ConnectionPolicyState> {
   /// Counts the sign-outs, so an answer for a user who has signed out since it was asked for is dropped.
   int _generation = 0;
 
+  /// Whether a [refresh] awaits its answer.
+  bool _refreshing = false;
+
   /// Asks Studio again; a call while an answer is awaited sends no second request.
   Future<void> load() async {
     if (state is ConnectionPolicyLoading) return;
@@ -32,6 +35,28 @@ class ConnectionPolicyCubit extends Cubit<ConnectionPolicyState> {
       case Failure(:final error):
         _log.warn('load failed: {}', [error.code ?? error.runtimeType]);
         emit(ConnectionPolicyFailure(AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic));
+    }
+  }
+
+  /// Asks Studio again with the connection list, keeping a loaded policy on screen while it waits and when the answer
+  /// fails, which is logged; without a loaded policy it is [load].
+  Future<void> refresh() async {
+    final current = state;
+    if (current is! ConnectionPolicyLoaded) return load();
+    if (_refreshing) return;
+    _refreshing = true;
+    final generation = _generation;
+    try {
+      final result = await _repository.fetchPolicy();
+      if (isClosed || generation != _generation) return;
+      switch (result) {
+        case Success(:final data):
+          emit(ConnectionPolicyLoaded(data));
+        case Failure(:final error):
+          _log.warn('refresh failed, keeping the policy loaded before: {}', [error.code ?? error.runtimeType]);
+      }
+    } finally {
+      _refreshing = false;
     }
   }
 

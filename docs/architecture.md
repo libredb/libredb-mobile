@@ -91,7 +91,7 @@ Studio has no `/api/app/config` today, so against a real Studio the check fails 
   A governance outage shown before Studio stopped answering shows again, until a connection route answers again.
   The app is not held back while the check runs.
 - Both endpoints need no session and spend no rate-limit slot, so the app sends them without a token (`publicEndpoints`).
-- `GET /api/ready` only chooses the wording of a governance outage, whose trigger is a connection route's own 503 `GOVERNANCE_UNAVAILABLE` (`StudioGovernanceOutageReported`).
+- `GET /api/ready` only chooses the wording of a governance outage, whose trigger is a connection route's own 503 `GOVERNANCE_UNAVAILABLE` (`StudioGovernanceOutageReported`, sent by the connection list through `GovernanceStatus`).
   200 `degraded` and 503 `loading` read as "temporarily unavailable", and 503 `misconfigured` or `incompatible` as "Studio cannot serve connections right now", with Studio's `detail` shown to admins only (`StudioGovernanceNotice`).
   200 `degraded` never reads as healthy: a stale snapshot answers it while every connection route answers 503.
   A readiness that cannot be read still shows the outage, worded as temporary, and is logged.
@@ -258,6 +258,20 @@ When Platform governs Studio, `fetchPolicy` answers `governance: true`, and:
 - a connection that is not granted answers `studio.connection_not_available`;
 - Studio answers `studio.governance_unavailable` while it cannot serve its copy of the grants, which the app shows as such, never as an empty list;
 - every statement is recorded for Platform's audit log, which the app tells the user through the policy's `statementCapture`;
+- an empty list says that no database has been granted yet and that an administrator gives access, as Studio's web client does.
+
+The connection list follows grant changes while it is open (`ConnectionListBloc`, [#24](https://github.com/libredb/libredb-mobile/issues/24)):
+
+- It asks for `GET /api/connections/managed` again every `cacheHint`, clamped to 5 to 60 seconds as Studio's web client does, and at once when the app comes back to the foreground, but only while the list is on screen, the app is in the foreground and the device is online.
+  Each new list asks for the policy again (`ConnectionPolicyCubit.refresh`), which keeps the policy it had when that fails.
+  Neither request spends a rate-limit slot.
+- A 503 `GOVERNANCE_UNAVAILABLE` is `ConnectionListUnavailable`: the rows loaded before stay greyed under the outage notice, or the notice covers the page with a Retry on a cold start, and the list asks again every 10 seconds until Studio answers.
+  The page reports the outage and its end through the shared `GovernanceStatus`, which `AppShell` backs with `StudioStatusBloc`, so readiness words the notice.
+  A retry that fails before it reaches governance, such as a 429, a 503 `IDENTITY_PROVIDER_UNAVAILABLE` or a 500, keeps the rows greyed and the outage, and a 429 makes the next retry wait as long as Studio asked.
+  Each page's first list reports governance as answering, so an outage left by a page closed during it ends there.
+- Another failure of a refresh, such as a 429 or a 503 `IDENTITY_PROVIDER_UNAVAILABLE`, keeps the rows with `StudioErrorBanner` and the timer running; on a cold start it is the failure page with a Retry.
+- An `AuthError`, such as the 403 `BEARER_NO_ROLE`, drops the rows and stops the timer until the user retries, because Studio would refuse and audit every tick the same way.
+- While `statementCapture` is `full`, a line under the app bar says that statements are recorded in full in the server's query log.
 - each user has their own transactions.
 
 Grants refer to the Keycloak subject, so the app must sign in to the same realm as Studio's web sign-in.

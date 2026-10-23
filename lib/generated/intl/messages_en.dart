@@ -86,14 +86,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_group": MessageLookupByLibrary.simpleMessage("Group"),
     "connection_group_other": MessageLookupByLibrary.simpleMessage("Other"),
     "connection_host": MessageLookupByLibrary.simpleMessage("Host"),
-    "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio offers you no connection yet"),
+    "connection_list_empty": MessageLookupByLibrary.simpleMessage("No connections are available to you"),
+    "connection_list_empty_governed": MessageLookupByLibrary.simpleMessage(
+      "No databases have been granted to you yet. Ask an administrator for access.",
+    ),
     "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Could not load the connections"),
+    "connection_list_unavailable": MessageLookupByLibrary.simpleMessage("Connections are unavailable"),
     "connection_read_only": MessageLookupByLibrary.simpleMessage("Read only"),
     "connection_recent": MessageLookupByLibrary.simpleMessage("Recent"),
     "connection_search_clear": MessageLookupByLibrary.simpleMessage("Clear search"),
     "connection_search_hint": MessageLookupByLibrary.simpleMessage("Search connections"),
     "connection_search_no_match": MessageLookupByLibrary.simpleMessage("No connections match"),
     "connection_star": MessageLookupByLibrary.simpleMessage("Add to favorites"),
+    "connection_statement_capture_full": MessageLookupByLibrary.simpleMessage(
+      "Statements you run are recorded in full in this server\'s query log.",
+    ),
     "connection_status": MessageLookupByLibrary.simpleMessage("Status"),
     "connection_status_semantics": m2,
     "connection_type": MessageLookupByLibrary.simpleMessage("Engine"),
@@ -277,7 +284,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "studio_governance_detail": m9,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
-      "Connections are temporarily unavailable. Try again in a moment.",
+      "Connection access is temporarily unavailable. The list updates by itself once it is back.",
     ),
     "studio_unreachable_host": m10,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(

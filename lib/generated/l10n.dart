@@ -720,14 +720,39 @@ class S {
     return Intl.message('Connections', name: 'connections', desc: '', args: []);
   }
 
-  /// `Studio offers you no connection yet`
+  /// `No connections are available to you`
   String get connection_list_empty {
-    return Intl.message('Studio offers you no connection yet', name: 'connection_list_empty', desc: '', args: []);
+    return Intl.message('No connections are available to you', name: 'connection_list_empty', desc: '', args: []);
+  }
+
+  /// `No databases have been granted to you yet. Ask an administrator for access.`
+  String get connection_list_empty_governed {
+    return Intl.message(
+      'No databases have been granted to you yet. Ask an administrator for access.',
+      name: 'connection_list_empty_governed',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `Could not load the connections`
   String get connection_list_load_failed {
     return Intl.message('Could not load the connections', name: 'connection_list_load_failed', desc: '', args: []);
+  }
+
+  /// `Connections are unavailable`
+  String get connection_list_unavailable {
+    return Intl.message('Connections are unavailable', name: 'connection_list_unavailable', desc: '', args: []);
+  }
+
+  /// `Statements you run are recorded in full in this server's query log.`
+  String get connection_statement_capture_full {
+    return Intl.message(
+      'Statements you run are recorded in full in this server\'s query log.',
+      name: 'connection_statement_capture_full',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `Engine`
@@ -1105,10 +1130,10 @@ class S {
     return Intl.message('Studio address: $host', name: 'studio_unreachable_host', desc: '', args: [host]);
   }
 
-  /// `Connections are temporarily unavailable. Try again in a moment.`
+  /// `Connection access is temporarily unavailable. The list updates by itself once it is back.`
   String get studio_governance_temporarily_unavailable {
     return Intl.message(
-      'Connections are temporarily unavailable. Try again in a moment.',
+      'Connection access is temporarily unavailable. The list updates by itself once it is back.',
       name: 'studio_governance_temporarily_unavailable',
       desc: '',
       args: [],

@@ -86,14 +86,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "connection_group": MessageLookupByLibrary.simpleMessage("Grup"),
     "connection_group_other": MessageLookupByLibrary.simpleMessage("Diğer"),
     "connection_host": MessageLookupByLibrary.simpleMessage("Sunucu"),
-    "connection_list_empty": MessageLookupByLibrary.simpleMessage("Studio size henüz bir bağlantı sunmuyor"),
+    "connection_list_empty": MessageLookupByLibrary.simpleMessage("Kullanabileceğiniz bir bağlantı yok"),
+    "connection_list_empty_governed": MessageLookupByLibrary.simpleMessage(
+      "Size henüz hiçbir veritabanı erişimi verilmedi. Erişim için bir yöneticiye başvurun.",
+    ),
     "connection_list_load_failed": MessageLookupByLibrary.simpleMessage("Bağlantılar yüklenemedi"),
+    "connection_list_unavailable": MessageLookupByLibrary.simpleMessage("Bağlantılar kullanılamıyor"),
     "connection_read_only": MessageLookupByLibrary.simpleMessage("Salt okunur"),
     "connection_recent": MessageLookupByLibrary.simpleMessage("Son açılanlar"),
     "connection_search_clear": MessageLookupByLibrary.simpleMessage("Aramayı temizle"),
     "connection_search_hint": MessageLookupByLibrary.simpleMessage("Bağlantılarda ara"),
     "connection_search_no_match": MessageLookupByLibrary.simpleMessage("Eşleşen bağlantı yok"),
     "connection_star": MessageLookupByLibrary.simpleMessage("Favorilere ekle"),
+    "connection_statement_capture_full": MessageLookupByLibrary.simpleMessage(
+      "Çalıştırdığınız ifadeler bu sunucunun sorgu günlüğüne eksiksiz kaydedilir.",
+    ),
     "connection_status": MessageLookupByLibrary.simpleMessage("Durum"),
     "connection_status_semantics": m2,
     "connection_type": MessageLookupByLibrary.simpleMessage("Motor"),
@@ -277,7 +284,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "studio_governance_detail": m9,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
-      "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
+      "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
     ),
     "studio_unreachable_host": m10,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(

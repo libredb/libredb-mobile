@@ -206,8 +206,11 @@
   "login_sso_subtitle": "Kurumsal hesabınızla giriş yapın.",
   "@login_sso_subtitle": {},
   "connections": "Bağlantılar",
-  "connection_list_empty": "Studio size henüz bir bağlantı sunmuyor",
+  "connection_list_empty": "Kullanabileceğiniz bir bağlantı yok",
+  "connection_list_empty_governed": "Size henüz hiçbir veritabanı erişimi verilmedi. Erişim için bir yöneticiye başvurun.",
   "connection_list_load_failed": "Bağlantılar yüklenemedi",
+  "connection_list_unavailable": "Bağlantılar kullanılamıyor",
+  "connection_statement_capture_full": "Çalıştırdığınız ifadeler bu sunucunun sorgu günlüğüne eksiksiz kaydedilir.",
   "connection_type": "Motor",
   "connection_environment": "Ortam",
   "connection_host": "Sunucu",
@@ -331,7 +334,7 @@
       }
     }
   },
-  "studio_governance_temporarily_unavailable": "Bağlantılar geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
+  "studio_governance_temporarily_unavailable": "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
   "@studio_governance_temporarily_unavailable": {},
   "studio_governance_cannot_serve": "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
   "@studio_governance_cannot_serve": {},
