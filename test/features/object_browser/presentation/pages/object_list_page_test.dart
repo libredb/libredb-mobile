@@ -75,6 +75,22 @@ void main() {
     verify(() => harness.repository.list(_postgres.id, container: ['public'], kind: 'table', refresh: false)).called(1);
   });
 
+  testWidgets('a link to a page of the active connection opens that page, not the session default container', (
+    tester,
+  ) async {
+    answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+    harness.active.select(_postgres);
+    await harness.pump(tester, location: _tables);
+
+    expect(harness.location, _tables);
+    expect(find.text('orders'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(harness.router.state.uri.path, '/browse', reason: 'the root the link built under it stays put');
+    expect(find.text('public'), findsOneWidget);
+  });
+
   testWidgets('a list that failed offline loads again by itself once the device is back online', (tester) async {
     var answers = 0;
     when(

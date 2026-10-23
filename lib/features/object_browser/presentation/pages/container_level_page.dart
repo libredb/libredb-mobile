@@ -21,7 +21,7 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 ///
 /// A container opens the level under it, or its kind screen at the last level; an engine with no container level shows
 /// its kind screen here instead. On the first entry of a connection the level opens its session-default container by
-/// itself.
+/// itself, unless a page above it is on screen, as under a link to a deeper page.
 class ContainerLevelPage extends StatelessWidget {
   const ContainerLevelPage({super.key, required this.connectionId, this.parent = const [], this.headingAction});
 
@@ -82,6 +82,9 @@ class _ContainerLevelView extends StatelessWidget {
     return BlocConsumer<ContainerBrowserBloc, ContainerBrowserState>(
       listenWhen: (previous, current) => current is ContainerBrowserLoaded && current.openOnEntry != null,
       listener: (context, state) {
+        // A link to a page under this level builds the level beneath it; the link's page stays on top, so the session
+        // default opens only from the level the user is on.
+        if (ModalRoute.of(context)?.isCurrent == false) return;
         final level = state as ContainerBrowserLoaded;
         _open(context, level, level.openOnEntry!);
       },
