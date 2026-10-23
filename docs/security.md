@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -149,6 +149,76 @@ A screen reader's Copy on a value copies the whole value through `SensitiveClipb
 - A failed copy is shown to the user with its error code and logged with its error type, never with the value.
 
 The source viewer, the copy of an object's name and the copy of a failed statement keep the plain clipboard: they hold no row value.
+
+## Write confirmation
+
+The SQL editor asks the user to confirm a statement before it is sent unless `InterimWriteCheck` (`lib/features/sql_editor/domain/interim_write_check.dart`) can clear it.
+The check is pure and fail closed: it reads exactly the text that will be sent, logs nothing, and answers `RunsWithoutAsking` or `AsksBeforeRunning` with every reason that applies.
+It replaces Studio's own reading, about 4,500 lines of grammar code in `src/lib/sql`, which the phone does not port, until Studio offers an analysis endpoint (S-06, #122 and #123); it then stays as that analysis's fallback.
+
+A SQL text runs without asking only when all three of these hold:
+
+- The raw text holds no deny word, comments and quotes included, in any ASCII case, where a deny word counts when its left neighbour is not an ASCII letter or `_` and its right neighbour is not an ASCII letter, digit or `_`; so `deleted` is not `DELETE`, while `x$delete`, `çdelete` and `1DELETE` hold it, since T-SQL reads `SELECT 1DELETE FROM orders` as a SELECT and a DELETE.
+  Inside a run of ASCII letters, digits and `_` that starts with a digit every deny word counts wherever it sits, because T-SQL ends a number at the first character that cannot continue it: `SELECT 0xKILL 52` and `SELECT 1eKILL 52` ask, while `SELECT 0x1F` and `SELECT 1e5` run.
+  The first deny word by position is named, the longest when several start there.
+  A text that holds `U&` directly followed by a double quote, in any ASCII case and anywhere, asks too, naming `U&"`: a PostgreSQL Unicode-escaped identifier spells a name the scan cannot read, and review#111 ran `dblink_exec` as `U&"dblink_exe\0063"(...)` on PostgreSQL 17.6.
+- No `;` is followed by anything but white space, and no line holds only `GO` or only `/` (trimmed, in any case).
+- Its first keyword, read after leading comments only, is `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, `VALUES`, `TABLE` or `WITH`.
+  A leading comment counts only when every engine reads it the same way; otherwise the text has no first keyword and asks.
+  So a text asks when a leading comment never closes, when a leading `--` comment holds a bare carriage return (one no line feed follows), a vertical tab, a form feed, U+0085, U+2028 or U+2029, or is not followed by white space, when a leading `/* */` comment holds another `/*`, and when a leading comment starts with `/*!` or `/*M!`.
+  A first keyword `EXPLAIN` asks, naming `PLAN` or `ALL`, when its next word, read the same way, is `PLAN` or `ALL`, or when a comment the engines read differently stands before that word: Oracle and DB2 write the plan of `EXPLAIN PLAN` into a table, and DB2's `EXPLAIN ALL` writes its explain tables.
+  ClickHouse's `EXPLAIN PLAN`, a read, asks too, which is accepted, while `EXPLAIN (FORMAT JSON) SELECT 1` and SQLite's `EXPLAIN QUERY PLAN` run.
+
+The deny words are `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, `GRANT`, `REVOKE`, `DENY`, `CALL`, `EXEC`, `EXECUTE`, `DO`, `COPY`, `LOCK`, `SET`, `RESET`, `COMMIT`, `ROLLBACK`, `BEGIN`, `VACUUM`, `REINDEX`, `CLUSTER`, `REFRESH`, `INTO`, `ANALYZE` and `ANALYSE`, and the T-SQL statements that need no separator and change data, rights, sessions or the server: `KILL`, `SHUTDOWN`, `BACKUP`, `RESTORE`, `DBCC`, `RECONFIGURE`, `DISABLE`, `ENABLE`, `SEND`, `RECEIVE`, `WRITETEXT`, `UPDATETEXT` and `SETUSER`.
+The built-ins whose call has an effect the check cannot see in the text are deny words too, since they are rare as names; the list is closed at 94, and a deny word may hold `$` (Snowflake's `SYSTEM$` functions), which matches only itself:
+
+- They run statement text: `DBLINK`, `DBLINK_EXEC`, `DBLINK_SEND_QUERY`, `DBLINK_OPEN`, `QUERY_TO_XML`, `QUERY_TO_XML_AND_XMLSCHEMA`, `QUERY_TO_XMLSCHEMA`.
+- They keep or end remote dblink state: `DBLINK_FETCH`, `DBLINK_CLOSE`, `DBLINK_CONNECT`, `DBLINK_CONNECT_U`, `DBLINK_DISCONNECT`, `DBLINK_CANCEL_QUERY` (`dblink_fetch` advances a remote cursor, `dblink_close` can issue the COMMIT that `dblink_open` left open, and a named connection stays on Studio's shared provider).
+- They write, move or remove large objects: `LO_CREAT`, `LO_CREATE`, `LO_FROM_BYTEA`, `LO_PUT`, `LOWRITE`, `LO_TRUNCATE`, `LO_TRUNCATE64`, `LO_UNLINK`, `LO_IMPORT`, `LO_EXPORT`.
+- They take or release advisory locks, at session or transaction level: `PG_ADVISORY_LOCK`, `PG_ADVISORY_LOCK_SHARED`, `PG_ADVISORY_UNLOCK`, `PG_ADVISORY_UNLOCK_SHARED`, `PG_ADVISORY_UNLOCK_ALL`, `PG_ADVISORY_XACT_LOCK`, `PG_ADVISORY_XACT_LOCK_SHARED`, `PG_TRY_ADVISORY_LOCK`, `PG_TRY_ADVISORY_LOCK_SHARED`, `PG_TRY_ADVISORY_XACT_LOCK`, `PG_TRY_ADVISORY_XACT_LOCK_SHARED` (a session-level lock or an unlock can outlive the request on Studio's provider, which every user of the connection shares).
+- They end or cancel another session's work (`PG_TERMINATE_BACKEND`, `PG_CANCEL_BACKEND`), change a setting or a sequence (`SET_CONFIG`, `SETVAL`, `NEXTVAL`), or load code (`LOAD_EXTENSION`).
+- They send a notification (`PG_NOTIFY`), or signal the server or a session (`PG_RELOAD_CONF`, `PG_ROTATE_LOGFILE`, `PG_LOG_BACKEND_MEMORY_CONTEXTS`).
+- They control backup, recovery and the WAL: `PG_BACKUP_START`, `PG_BACKUP_STOP`, `PG_START_BACKUP` and `PG_STOP_BACKUP` (the names before PostgreSQL 15), `PG_CREATE_RESTORE_POINT`, `PG_SWITCH_WAL`, `PG_PROMOTE`, `PG_WAL_REPLAY_PAUSE`, `PG_WAL_REPLAY_RESUME`, `PG_LOG_STANDBY_SNAPSHOT`.
+- They create, copy, drop, advance or consume replication slots and origins, or write to the WAL stream those read: `PG_CREATE_PHYSICAL_REPLICATION_SLOT`, `PG_CREATE_LOGICAL_REPLICATION_SLOT`, `PG_COPY_PHYSICAL_REPLICATION_SLOT`, `PG_COPY_LOGICAL_REPLICATION_SLOT`, `PG_DROP_REPLICATION_SLOT`, `PG_REPLICATION_SLOT_ADVANCE`, `PG_LOGICAL_SLOT_GET_CHANGES`, `PG_LOGICAL_SLOT_GET_BINARY_CHANGES`, `PG_SYNC_REPLICATION_SLOTS`, `PG_REPLICATION_ORIGIN_CREATE`, `PG_REPLICATION_ORIGIN_DROP`, `PG_REPLICATION_ORIGIN_ADVANCE`, `PG_REPLICATION_ORIGIN_SESSION_SETUP`, `PG_REPLICATION_ORIGIN_SESSION_RESET`, `PG_REPLICATION_ORIGIN_XACT_SETUP`, `PG_REPLICATION_ORIGIN_XACT_RESET`, `PG_LOGICAL_EMIT_MESSAGE`.
+- They maintain indexes: `BRIN_SUMMARIZE_NEW_VALUES`, `BRIN_SUMMARIZE_RANGE`, `BRIN_DESUMMARIZE_RANGE`, `GIN_CLEAN_PENDING_LIST`.
+- They reset statistics: `PG_STAT_RESET`, `PG_STAT_RESET_SHARED`, `PG_STAT_RESET_SINGLE_TABLE_COUNTERS`, `PG_STAT_RESET_SINGLE_FUNCTION_COUNTERS`, `PG_STAT_RESET_SLRU`, `PG_STAT_RESET_REPLICATION_SLOT`, `PG_STAT_RESET_SUBSCRIPTION_STATS`.
+- They write the catalog or server files: `PG_IMPORT_SYSTEM_COLLATIONS`, and adminpack's `PG_FILE_WRITE`, `PG_FILE_RENAME`, `PG_FILE_UNLINK`, `PG_FILE_SYNC` (PostgreSQL 16 and earlier).
+- They hold or release a MySQL or MariaDB named lock, which a commit or rollback does not release, so it outlives the request on Studio's shared connection: `GET_LOCK`, `RELEASE_LOCK`, `RELEASE_ALL_LOCKS`.
+- They end or cancel Snowflake sessions, transactions or queries, as `PG_TERMINATE_BACKEND` and `PG_CANCEL_BACKEND` do on PostgreSQL: `SYSTEM$ABORT_SESSION`, `SYSTEM$ABORT_TRANSACTION`, `SYSTEM$CANCEL_QUERY`, `SYSTEM$CANCEL_ALL_QUERIES`.
+
+The read-only dblink helpers (`dblink_get_connections`, `dblink_error_message`, `dblink_is_busy`, `dblink_get_result`, `dblink_get_notify`, `dblink_get_pkey` and the `dblink_build_sql_*` builders) are not deny words.
+The administration functions come from PostgreSQL 17's 'System Administration Functions' and statistics resets: every one there that changes state is a deny word, because a Studio connection can run as a superuser or an owner role; the reads there, such as `current_setting`, `pg_current_wal_lsn` and `pg_logical_slot_peek_changes`, and MySQL's `IS_FREE_LOCK`, are not.
+So `SELECT nextval('s')` and `SELECT dblink_exec('dbname=app', chr(68) || 'ELETE FROM orders')` ask, while a column such as `my_nextval_col` does not.
+`ANALYZE` and `ANALYSE` cover `EXPLAIN ANALYZE` in every spelling, `EXPLAIN (FORMAT JSON, ANALYZE)` included, so a data-modifying CTE and `EXPLAIN ANALYZE` of a write, which Studio's own check still misses (libredb/libredb-studio#1862 and #1863), ask.
+`REPLACE` is not a deny word: it is a string function in every dialect, and its statement forms are caught by `INTO`, `CREATE`, the separator rule and the first-keyword rule.
+
+Comments are not removed before the scan, because the engines disagree about them, as Studio's own readers record from measurements (`src/lib/sql/update-target.ts:187-226`, `src/lib/sql/optimizer-hints.ts:1-44`): PostgreSQL and SQL Server end a `--` comment at a bare carriage return while SQLite, MySQL, MariaDB and DuckDB end it at the line feed, PostgreSQL and SQL Server nest `/* */` comments while the others end one at the first `*/`, MySQL and MariaDB run the body of `/*!` and `/*M!`, and MySQL needs white space after `--`.
+Each of these could hide the real first keyword behind a leading comment: on PostgreSQL 17.6 `/* /* */ SELECT 1 */ COMMENT ON TABLE orders IS 'x'` ran, and on SQLite `-- x`, a bare carriage return, `SELECT 1`, a line feed and `PRAGMA user_version = 5` ran, which is why such a comment leaves no first keyword.
+So `SELECT 1 -- x`, a bare carriage return and `; DELETE FROM t`, two statements to PostgreSQL, asks, and so do `SELECT * FROM t /*!50000 INTO OUTFILE '/tmp/x' */` and `SELECT 1 --1 INTO OUTFILE '/tmp/f'`.
+T-SQL needs no separator between statements, so `SELECT 1 KILL 52` asks on its deny word.
+With the deny scan and the separator rule on the raw text no quote or comment can hide a word or a separator, so a backslash, a `$`, a `#` or an unclosed quote does not ask by itself.
+
+Everything else asks, with every reason that applies:
+
+- May write: a deny word anywhere, or a first keyword off the allow list or none; the sheet names the first deny word, else that first keyword, and its line.
+- Several statements: a `;` followed by more text, or a `GO` or `/` line.
+- Not SQL: every text on an engine that does not speak SQL (MongoDB, Redis and the others), read as one statement and never split.
+
+This asks for more than Studio on purpose: `INSERT`, `CREATE`, a write word inside a comment or a string (`select 1 -- delete`, `SELECT * FROM audit WHERE op = 'DELETE'`), `SELECT 'a;b'` and every Redis or MongoDB command ask.
+A false prompt costs one tap, or the typed name on production; a missed write costs data.
+
+The known limits, which Studio's check shares and #123 fixes:
+
+- The check reads words, not what a user-defined function or procedure, or a built-in off the deny list, does when an allowed statement calls it, and such a function can run any statement or write a server file.
+  `dblink_exec` ran a statement built at run time and deleted every row of a table before it joined the deny list, and `lo_export` writes a server file; both ask now, but `SELECT my_func(1)` runs without asking whatever `my_func` does.
+- A T-SQL statement whose keyword is not on the deny list is not seen.
+
+`WriteConfirmationSheet` (`lib/features/sql_editor/presentation/widgets/`) shows the connection's name and environment, every reason in words, and every line of the text in a lazily built list, never an excerpt, so a write far down a script can be found.
+Lines are split at a line feed, a carriage return and a CRLF pair, as the check counts them, so a statement after a bare carriage return shows on a line of its own.
+On a connection Studio refuses writes on (`StudioConnection.readOnlyForUser`) it says so, and words the two causes apart: a read grant is one an administrator can raise, and the connection's own read-only flag is the operator's setting.
+On a production connection the header is in the error colour and Run stays disabled until the user types the connection's name; that step is the phone's own and applies to every confirmation on such a connection.
+The typed name follows Studio's typed confirmation (`src/components/typed-confirm.tsx`): the comparison is exact, an empty field never matches, a connection without a name shows a sentence in place of the field and keeps Run disabled, the field turns autocorrect, suggestions, capitalisation and smart punctuation off, and it is empty each time the sheet opens.
+The sheet answers confirmed or cancelled and keeps no statement after it closes; neither the check nor the sheet logs, and no translated string carries the statement.
 
 ## Inactivity sign-out
 

@@ -2176,6 +2176,131 @@ class S {
       args: [],
     );
   }
+
+  /// `Confirm before running`
+  String get write_confirm_title {
+    return Intl.message(
+      'Confirm before running',
+      name: 'write_confirm_title',
+      desc: 'The title of the sheet that asks before a statement that may write runs.',
+      args: [],
+    );
+  }
+
+  /// `May change data: {word} on line {line}`
+  String write_confirm_reason_may_write_at(String word, int line) {
+    return Intl.message(
+      'May change data: $word on line $line',
+      name: 'write_confirm_reason_may_write_at',
+      desc: 'A reason the statement asks: the word that may write and the line it is on.',
+      args: [word, line],
+    );
+  }
+
+  /// `May change data: the app cannot tell how the statement starts`
+  String get write_confirm_reason_may_write {
+    return Intl.message(
+      'May change data: the app cannot tell how the statement starts',
+      name: 'write_confirm_reason_may_write',
+      desc: 'A reason the statement asks, when no first word could be read, such as after a comment that never closes.',
+      args: [],
+    );
+  }
+
+  /// `Runs more than one statement`
+  String get write_confirm_reason_several {
+    return Intl.message(
+      'Runs more than one statement',
+      name: 'write_confirm_reason_several',
+      desc: 'A reason the statement asks: the text holds a separator followed by more text, or a GO or / line.',
+      args: [],
+    );
+  }
+
+  /// `The app cannot read what a command of this engine does`
+  String get write_confirm_reason_not_sql {
+    return Intl.message(
+      'The app cannot read what a command of this engine does',
+      name: 'write_confirm_reason_not_sql',
+      desc: 'A reason the statement asks: the connection\'s engine does not use SQL, so every command asks.',
+      args: [],
+    );
+  }
+
+  /// `Your access to this connection is read only, so Studio will refuse a write here. An administrator can raise it.`
+  String get write_confirm_read_grant {
+    return Intl.message(
+      'Your access to this connection is read only, so Studio will refuse a write here. An administrator can raise it.',
+      name: 'write_confirm_read_grant',
+      desc: 'On the confirmation sheet, when the user\'s grant on the connection is read only.',
+      args: [],
+    );
+  }
+
+  /// `This connection is set read only by its operator, so Studio or the database will refuse a write here.`
+  String get write_confirm_read_only_connection {
+    return Intl.message(
+      'This connection is set read only by its operator, so Studio or the database will refuse a write here.',
+      name: 'write_confirm_read_only_connection',
+      desc: 'On the confirmation sheet, when the connection itself is marked read only in Studio\'s configuration.',
+      args: [],
+    );
+  }
+
+  /// `This is a production connection. Type its name to run the statement.`
+  String get write_confirm_production_prompt {
+    return Intl.message(
+      'This is a production connection. Type its name to run the statement.',
+      name: 'write_confirm_production_prompt',
+      desc: 'On the confirmation sheet of a production connection, above the field for the connection\'s name.',
+      args: [],
+    );
+  }
+
+  /// `Type "{name}" to confirm`
+  String write_confirm_name_label(String name) {
+    return Intl.message(
+      'Type "$name" to confirm',
+      name: 'write_confirm_name_label',
+      desc: 'The label of the field the user types the production connection\'s name in; the quotes show a leading or trailing space of the name.',
+      args: [name],
+    );
+  }
+
+  /// `This production connection has no name to type, so the statement cannot be confirmed here.`
+  String get write_confirm_no_name {
+    return Intl.message(
+      'This production connection has no name to type, so the statement cannot be confirmed here.',
+      name: 'write_confirm_no_name',
+      desc: 'On the confirmation sheet of a production connection that has no name, in place of the name field.',
+      args: [],
+    );
+  }
+
+  /// `What will run`
+  String get write_confirm_text_heading {
+    return Intl.message(
+      'What will run',
+      name: 'write_confirm_text_heading',
+      desc: 'Above the lines of the statement the sheet confirms.',
+      args: [],
+    );
+  }
+
+  /// `Run`
+  String get write_confirm_run {
+    return Intl.message('Run', name: 'write_confirm_run', desc: 'Runs the confirmed statement.', args: []);
+  }
+
+  /// `Cancel`
+  String get write_confirm_cancel {
+    return Intl.message(
+      'Cancel',
+      name: 'write_confirm_cancel',
+      desc: 'Closes the confirmation sheet without running the statement.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
