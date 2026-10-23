@@ -99,7 +99,10 @@ void main() {
         () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":{"limit":10}}')),
         throwsFormatException,
       );
-      expect(() => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":true}')), throwsFormatException);
+      expect(
+        () => ObjectBrowserJson.source(answer('{$text,"origin":"stored","truncated":true}')),
+        throwsFormatException,
+      );
     });
 
     test('ignores the edit affordance', () {

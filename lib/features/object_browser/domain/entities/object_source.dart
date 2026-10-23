@@ -75,6 +75,12 @@ final class SourceText extends SourcePart {
 
   @override
   List<Object?> get props => [id, label, text, language, origin, complete, truncated];
+
+  /// Leaves the text out, which is the user's definition and never goes into a log.
+  @override
+  String toString() =>
+      'SourceText($id, $label, $language, $origin, complete: $complete, truncated: $truncated, '
+      '${text.length} characters)';
 }
 
 /// A part the engine could not read, with its own sentence why.

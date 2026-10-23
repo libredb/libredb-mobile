@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/kind_count.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_container.dart';
+import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 
@@ -16,3 +17,5 @@ ProviderMeta metaAnswer(String name) => ProviderMetaJson.read(_answer(name));
 List<ObjectContainer> containersAnswer(String name) => ObjectBrowserJson.containers(_answer(name));
 
 Map<String, KindCount> countsAnswer(String name) => ObjectBrowserJson.counts(_answer(name));
+
+ObjectSource sourceAnswer(String name) => ObjectBrowserJson.source(_answer(name));
