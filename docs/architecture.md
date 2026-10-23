@@ -56,7 +56,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/shared/models/statement_repository.dart` | `IStatementRepository`, the one way a feature runs a statement and reads its `QueryResult` |
 | `lib/shared/security/result_masking/` | The port of Studio's default result masking: the patterns, the mask functions, the role rules, `MaskingPolicy` and `maskResult` ([security.md](security.md#result-masking)) |
 | `lib/shared/widgets/studio_role_scope.dart` | `StudioRoleScope`, the role Studio named for the user, or null before it has, which `AppShell` provides from `StudioIdentityCubit` so a feature builds its `MaskingPolicy` without importing the auth feature |
-| `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser |
+| `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser: `ResultViewBloc` holds a result its caller masked and the policy it was masked with, and `ResultView` draws a card per row under a stats strip, or an empty state |
 | `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, `ProviderMetaRepository` with its reader, and `StatementRepository` with its reader `query_result_json.dart` |
 | `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
 
