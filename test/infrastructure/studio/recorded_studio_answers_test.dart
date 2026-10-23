@@ -461,6 +461,17 @@ void main() {
       expect(detail.exclusionConstraints, isEmpty);
     });
 
+    test('POST /api/db/objects/describe of sales.room_bookings reads its exclusion constraint', () {
+      final detail = ObjectBrowserJson.detail(fixture('describe_postgres_room_bookings'));
+
+      expect(detail.path, ['sales', 'room_bookings']);
+      expect(detail.columns.map((c) => c.name), ['id', 'room', 'during']);
+      expect(detail.indexes!.map((i) => i.name), containsAll(['room_bookings_pkey', 'room_bookings_during_excl']));
+      expect(detail.exclusionConstraints.single.name, 'room_bookings_during_excl');
+      expect(detail.exclusionConstraints.single.definition, 'EXCLUDE USING gist (during WITH &&)');
+      expect(detail.foreignKeys, isEmpty);
+    });
+
     // Studio reads the keys from information_schema views, which show foreign keys only to the owner, and primary keys
     // only to the owner or a role with a non-SELECT privilege.
     test('POST /api/db/objects/describe of public.orders as a role that may only read has no keys', () {
