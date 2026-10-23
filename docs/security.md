@@ -159,12 +159,33 @@ It replaces Studio's own reading, about 4,500 lines of grammar code in `src/lib/
 A SQL text runs without asking only when all three of these hold:
 
 - The raw text holds no deny word, comments and quotes included, in any ASCII case, where a deny word counts when its left neighbour is not an ASCII letter or `_` and its right neighbour is not an ASCII letter, digit or `_`; so `deleted` is not `DELETE`, while `x$delete`, `çdelete` and `1DELETE` hold it, since T-SQL reads `SELECT 1DELETE FROM orders` as a SELECT and a DELETE.
+  Inside a run of ASCII letters, digits and `_` that starts with a digit every deny word counts wherever it sits, because T-SQL ends a number at the first character that cannot continue it: `SELECT 0xKILL 52` and `SELECT 1eKILL 52` ask, while `SELECT 0x1F` and `SELECT 1e5` run.
+  The first deny word by position is named, the longest when several start there.
 - No `;` is followed by anything but white space, and no line holds only `GO` or only `/` (trimmed, in any case).
 - Its first keyword, read after leading comments only, is `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, `VALUES`, `TABLE` or `WITH`.
   A leading comment counts only when every engine reads it the same way; otherwise the text has no first keyword and asks.
-  So a text asks when a leading comment never closes, when a leading `--` comment holds a bare carriage return or is not followed by white space, when a leading `/* */` comment holds another `/*`, and when a leading comment starts with `/*!` or `/*M!`.
+  So a text asks when a leading comment never closes, when a leading `--` comment holds a bare carriage return (one no line feed follows), a vertical tab, a form feed, U+0085, U+2028 or U+2029, or is not followed by white space, when a leading `/* */` comment holds another `/*`, and when a leading comment starts with `/*!` or `/*M!`.
 
 The deny words are `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `TRUNCATE`, `DROP`, `ALTER`, `CREATE`, `GRANT`, `REVOKE`, `DENY`, `CALL`, `EXEC`, `EXECUTE`, `DO`, `COPY`, `LOCK`, `SET`, `RESET`, `COMMIT`, `ROLLBACK`, `BEGIN`, `VACUUM`, `REINDEX`, `CLUSTER`, `REFRESH`, `INTO`, `ANALYZE` and `ANALYSE`, and the T-SQL statements that need no separator and change data, rights, sessions or the server: `KILL`, `SHUTDOWN`, `BACKUP`, `RESTORE`, `DBCC`, `RECONFIGURE`, `DISABLE`, `ENABLE`, `SEND`, `RECEIVE`, `WRITETEXT`, `UPDATETEXT` and `SETUSER`.
+The built-ins whose call has an effect the check cannot see in the text are deny words too, since they are rare as names; the list is closed at 94, and a deny word may hold `$` (Snowflake's `SYSTEM$` functions), which matches only itself:
+
+- They run statement text: `DBLINK`, `DBLINK_EXEC`, `DBLINK_SEND_QUERY`, `DBLINK_OPEN`, `QUERY_TO_XML`, `QUERY_TO_XML_AND_XMLSCHEMA`, `QUERY_TO_XMLSCHEMA`.
+- They keep or end remote dblink state: `DBLINK_FETCH`, `DBLINK_CLOSE`, `DBLINK_CONNECT`, `DBLINK_CONNECT_U`, `DBLINK_DISCONNECT`, `DBLINK_CANCEL_QUERY` (`dblink_fetch` advances a remote cursor, `dblink_close` can issue the COMMIT that `dblink_open` left open, and a named connection stays on Studio's shared provider).
+- They write, move or remove large objects: `LO_CREAT`, `LO_CREATE`, `LO_FROM_BYTEA`, `LO_PUT`, `LOWRITE`, `LO_TRUNCATE`, `LO_TRUNCATE64`, `LO_UNLINK`, `LO_IMPORT`, `LO_EXPORT`.
+- They take or release advisory locks, at session or transaction level: `PG_ADVISORY_LOCK`, `PG_ADVISORY_LOCK_SHARED`, `PG_ADVISORY_UNLOCK`, `PG_ADVISORY_UNLOCK_SHARED`, `PG_ADVISORY_UNLOCK_ALL`, `PG_ADVISORY_XACT_LOCK`, `PG_ADVISORY_XACT_LOCK_SHARED`, `PG_TRY_ADVISORY_LOCK`, `PG_TRY_ADVISORY_LOCK_SHARED`, `PG_TRY_ADVISORY_XACT_LOCK`, `PG_TRY_ADVISORY_XACT_LOCK_SHARED` (a session-level lock or an unlock can outlive the request on Studio's provider, which every user of the connection shares).
+- They end or cancel another session's work (`PG_TERMINATE_BACKEND`, `PG_CANCEL_BACKEND`), change a setting or a sequence (`SET_CONFIG`, `SETVAL`, `NEXTVAL`), or load code (`LOAD_EXTENSION`).
+- They send a notification (`PG_NOTIFY`), or signal the server or a session (`PG_RELOAD_CONF`, `PG_ROTATE_LOGFILE`, `PG_LOG_BACKEND_MEMORY_CONTEXTS`).
+- They control backup, recovery and the WAL: `PG_BACKUP_START`, `PG_BACKUP_STOP`, `PG_START_BACKUP` and `PG_STOP_BACKUP` (the names before PostgreSQL 15), `PG_CREATE_RESTORE_POINT`, `PG_SWITCH_WAL`, `PG_PROMOTE`, `PG_WAL_REPLAY_PAUSE`, `PG_WAL_REPLAY_RESUME`, `PG_LOG_STANDBY_SNAPSHOT`.
+- They create, copy, drop, advance or consume replication slots and origins, or write to the WAL stream those read: `PG_CREATE_PHYSICAL_REPLICATION_SLOT`, `PG_CREATE_LOGICAL_REPLICATION_SLOT`, `PG_COPY_PHYSICAL_REPLICATION_SLOT`, `PG_COPY_LOGICAL_REPLICATION_SLOT`, `PG_DROP_REPLICATION_SLOT`, `PG_REPLICATION_SLOT_ADVANCE`, `PG_LOGICAL_SLOT_GET_CHANGES`, `PG_LOGICAL_SLOT_GET_BINARY_CHANGES`, `PG_SYNC_REPLICATION_SLOTS`, `PG_REPLICATION_ORIGIN_CREATE`, `PG_REPLICATION_ORIGIN_DROP`, `PG_REPLICATION_ORIGIN_ADVANCE`, `PG_REPLICATION_ORIGIN_SESSION_SETUP`, `PG_REPLICATION_ORIGIN_SESSION_RESET`, `PG_REPLICATION_ORIGIN_XACT_SETUP`, `PG_REPLICATION_ORIGIN_XACT_RESET`, `PG_LOGICAL_EMIT_MESSAGE`.
+- They maintain indexes: `BRIN_SUMMARIZE_NEW_VALUES`, `BRIN_SUMMARIZE_RANGE`, `BRIN_DESUMMARIZE_RANGE`, `GIN_CLEAN_PENDING_LIST`.
+- They reset statistics: `PG_STAT_RESET`, `PG_STAT_RESET_SHARED`, `PG_STAT_RESET_SINGLE_TABLE_COUNTERS`, `PG_STAT_RESET_SINGLE_FUNCTION_COUNTERS`, `PG_STAT_RESET_SLRU`, `PG_STAT_RESET_REPLICATION_SLOT`, `PG_STAT_RESET_SUBSCRIPTION_STATS`.
+- They write the catalog or server files: `PG_IMPORT_SYSTEM_COLLATIONS`, and adminpack's `PG_FILE_WRITE`, `PG_FILE_RENAME`, `PG_FILE_UNLINK`, `PG_FILE_SYNC` (PostgreSQL 16 and earlier).
+- They hold or release a MySQL or MariaDB named lock, which a commit or rollback does not release, so it outlives the request on Studio's shared connection: `GET_LOCK`, `RELEASE_LOCK`, `RELEASE_ALL_LOCKS`.
+- They end or cancel Snowflake sessions, transactions or queries, as `PG_TERMINATE_BACKEND` and `PG_CANCEL_BACKEND` do on PostgreSQL: `SYSTEM$ABORT_SESSION`, `SYSTEM$ABORT_TRANSACTION`, `SYSTEM$CANCEL_QUERY`, `SYSTEM$CANCEL_ALL_QUERIES`.
+
+The read-only dblink helpers (`dblink_get_connections`, `dblink_error_message`, `dblink_is_busy`, `dblink_get_result`, `dblink_get_notify`, `dblink_get_pkey` and the `dblink_build_sql_*` builders) are not deny words.
+The administration functions come from PostgreSQL 17's 'System Administration Functions' and statistics resets: every one there that changes state is a deny word, because a Studio connection can run as a superuser or an owner role; the reads there, such as `current_setting`, `pg_current_wal_lsn` and `pg_logical_slot_peek_changes`, and MySQL's `IS_FREE_LOCK`, are not.
+So `SELECT nextval('s')` and `SELECT dblink_exec('dbname=app', chr(68) || 'ELETE FROM orders')` ask, while a column such as `my_nextval_col` does not.
 `ANALYZE` and `ANALYSE` cover `EXPLAIN ANALYZE` in every spelling, `EXPLAIN (FORMAT JSON, ANALYZE)` included, so a data-modifying CTE and `EXPLAIN ANALYZE` of a write, which Studio's own check still misses (libredb/libredb-studio#1862 and #1863), ask.
 `REPLACE` is not a deny word: it is a string function in every dialect, and its statement forms are caught by `INTO`, `CREATE`, the separator rule and the first-keyword rule.
 
@@ -185,8 +206,8 @@ A false prompt costs one tap, or the typed name on production; a missed write co
 
 The known limits, which Studio's check shares and #123 fixes:
 
-- The check reads keywords, not what a function or procedure called inside an allowed statement does, and a function can run any statement.
-  `dblink_exec` runs whatever statement it is given, and one built from pieces, such as `SELECT dblink_exec('c', 'DR' || 'OP TABLE t')`, holds no deny word; `SELECT lo_export(42, '/tmp/f')` writes a server file, and `SELECT pg_terminate_backend(42)` and `SELECT nextval('s')` change state; all of them run without asking.
+- The check reads words, not what a user-defined function or procedure, or a built-in off the deny list, does when an allowed statement calls it, and such a function can run any statement or write a server file.
+  `dblink_exec` ran a statement built at run time and deleted every row of a table before it joined the deny list, and `lo_export` writes a server file; both ask now, but `SELECT my_func(1)` runs without asking whatever `my_func` does.
 - A T-SQL statement whose keyword is not on the deny list is not seen.
 
 `WriteConfirmationSheet` (`lib/features/sql_editor/presentation/widgets/`) shows the connection's name and environment, every reason in words, and every line of the text in a lazily built list, never an excerpt, so a write far down a script can be found.

@@ -126,6 +126,116 @@ class InterimWriteCheck {
     'WRITETEXT',
     'UPDATETEXT',
     'SETUSER',
+    // Built-ins whose call has an effect the check cannot see in the text, so an allowed SELECT that calls one may
+    // write; the list of 94 is closed (#111). They are rare as names, and a user-defined function stays unseen
+    // (`docs/security.md`).
+    // They run statement text.
+    'DBLINK',
+    'DBLINK_EXEC',
+    'DBLINK_SEND_QUERY',
+    'DBLINK_OPEN',
+    'QUERY_TO_XML',
+    'QUERY_TO_XML_AND_XMLSCHEMA',
+    'QUERY_TO_XMLSCHEMA',
+    // They keep or end remote dblink state, which stays on Studio's shared provider.
+    'DBLINK_FETCH',
+    'DBLINK_CLOSE',
+    'DBLINK_CONNECT',
+    'DBLINK_CONNECT_U',
+    'DBLINK_DISCONNECT',
+    'DBLINK_CANCEL_QUERY',
+    // They write, move or remove large objects, a server file included.
+    'LO_CREAT',
+    'LO_CREATE',
+    'LO_FROM_BYTEA',
+    'LO_PUT',
+    'LOWRITE',
+    'LO_TRUNCATE',
+    'LO_TRUNCATE64',
+    'LO_UNLINK',
+    'LO_IMPORT',
+    'LO_EXPORT',
+    // They take or release advisory locks, which can outlive the request on the shared provider.
+    'PG_ADVISORY_LOCK',
+    'PG_ADVISORY_LOCK_SHARED',
+    'PG_ADVISORY_UNLOCK',
+    'PG_ADVISORY_UNLOCK_SHARED',
+    'PG_ADVISORY_UNLOCK_ALL',
+    'PG_ADVISORY_XACT_LOCK',
+    'PG_ADVISORY_XACT_LOCK_SHARED',
+    'PG_TRY_ADVISORY_LOCK',
+    'PG_TRY_ADVISORY_LOCK_SHARED',
+    'PG_TRY_ADVISORY_XACT_LOCK',
+    'PG_TRY_ADVISORY_XACT_LOCK_SHARED',
+    // They end or cancel another session's work, change a setting or a sequence, or load code.
+    'PG_TERMINATE_BACKEND',
+    'PG_CANCEL_BACKEND',
+    'SET_CONFIG',
+    'SETVAL',
+    'NEXTVAL',
+    'LOAD_EXTENSION',
+    // They send a notification, or signal the server or a session.
+    'PG_NOTIFY',
+    'PG_RELOAD_CONF',
+    'PG_ROTATE_LOGFILE',
+    'PG_LOG_BACKEND_MEMORY_CONTEXTS',
+    // They control backup, recovery and the WAL.
+    'PG_BACKUP_START',
+    'PG_BACKUP_STOP',
+    'PG_START_BACKUP',
+    'PG_STOP_BACKUP',
+    'PG_CREATE_RESTORE_POINT',
+    'PG_SWITCH_WAL',
+    'PG_PROMOTE',
+    'PG_WAL_REPLAY_PAUSE',
+    'PG_WAL_REPLAY_RESUME',
+    'PG_LOG_STANDBY_SNAPSHOT',
+    // They create, copy, drop, advance or consume replication slots and origins, or write to the WAL stream.
+    'PG_CREATE_PHYSICAL_REPLICATION_SLOT',
+    'PG_CREATE_LOGICAL_REPLICATION_SLOT',
+    'PG_COPY_PHYSICAL_REPLICATION_SLOT',
+    'PG_COPY_LOGICAL_REPLICATION_SLOT',
+    'PG_DROP_REPLICATION_SLOT',
+    'PG_REPLICATION_SLOT_ADVANCE',
+    'PG_LOGICAL_SLOT_GET_CHANGES',
+    'PG_LOGICAL_SLOT_GET_BINARY_CHANGES',
+    'PG_SYNC_REPLICATION_SLOTS',
+    'PG_REPLICATION_ORIGIN_CREATE',
+    'PG_REPLICATION_ORIGIN_DROP',
+    'PG_REPLICATION_ORIGIN_ADVANCE',
+    'PG_REPLICATION_ORIGIN_SESSION_SETUP',
+    'PG_REPLICATION_ORIGIN_SESSION_RESET',
+    'PG_REPLICATION_ORIGIN_XACT_SETUP',
+    'PG_REPLICATION_ORIGIN_XACT_RESET',
+    'PG_LOGICAL_EMIT_MESSAGE',
+    // They maintain indexes.
+    'BRIN_SUMMARIZE_NEW_VALUES',
+    'BRIN_SUMMARIZE_RANGE',
+    'BRIN_DESUMMARIZE_RANGE',
+    'GIN_CLEAN_PENDING_LIST',
+    // They reset statistics.
+    'PG_STAT_RESET',
+    'PG_STAT_RESET_SHARED',
+    'PG_STAT_RESET_SINGLE_TABLE_COUNTERS',
+    'PG_STAT_RESET_SINGLE_FUNCTION_COUNTERS',
+    'PG_STAT_RESET_SLRU',
+    'PG_STAT_RESET_REPLICATION_SLOT',
+    'PG_STAT_RESET_SUBSCRIPTION_STATS',
+    // They write the catalog or server files.
+    'PG_IMPORT_SYSTEM_COLLATIONS',
+    'PG_FILE_WRITE',
+    'PG_FILE_RENAME',
+    'PG_FILE_UNLINK',
+    'PG_FILE_SYNC',
+    // They hold or release a MySQL or MariaDB named lock, which a commit or rollback does not release.
+    'GET_LOCK',
+    'RELEASE_LOCK',
+    'RELEASE_ALL_LOCKS',
+    // They end or cancel Snowflake sessions, transactions or queries; the `$` matches only itself.
+    r'SYSTEM$ABORT_SESSION',
+    r'SYSTEM$ABORT_TRANSACTION',
+    r'SYSTEM$CANCEL_QUERY',
+    r'SYSTEM$CANCEL_ALL_QUERIES',
   };
 
   /// The first keywords a text may start with and run without asking.
@@ -134,7 +244,7 @@ class InterimWriteCheck {
   /// A word: a run of ASCII letters, digits and `_`; any other character, a non-ASCII letter included, ends it.
   static final _word = RegExp('[A-Za-z0-9_]+');
 
-  /// A deny word in any ASCII case whose left neighbour is not an ASCII letter or `_` and whose right neighbour is not
+  /// A deny word in any ASCII case (a `$` in one matches only itself) whose left neighbour is not an ASCII letter or `_` and whose right neighbour is not
   /// an ASCII letter, digit or `_`. A digit on the left does not hide it, since T-SQL reads `1DELETE` as the number 1
   /// and a DELETE. Each letter is spelled as its two ASCII cases, so no other script's case folding can match.
   static final _denyWord = RegExp(
@@ -142,6 +252,17 @@ class InterimWriteCheck {
       for (final word in denyWords) [for (final c in word.split('')) '[$c${c.toLowerCase()}]'].join(),
     ].join('|')})(?![A-Za-z0-9_])',
   );
+
+  /// A maximal run of ASCII letters, digits and `_` that starts with a digit; T-SQL ends a number at the first
+  /// character that cannot continue it, so every deny word inside such a run counts (`0xKILL` is `0x` and KILL).
+  static final _numberLedRun = RegExp('(?<![A-Za-z0-9_])[0-9][A-Za-z0-9_]*');
+
+  /// The deny words longest first, so the longest of several that start at one place is the one named.
+  static final _denyWordsLongestFirst = denyWords.toList()..sort((a, b) => b.length.compareTo(a.length));
+
+  /// The characters that end a `--` comment on some engines but not on others: a carriage return (when no line feed
+  /// follows it), a vertical tab, a form feed, NEL, the line separator and the paragraph separator.
+  static final _otherLineTerminator = RegExp('\r(?!\n)|[\x0B\x0C\u0085\u2028\u2029]');
 
   /// The white space MySQL needs after `--` to read a comment.
   static const _dashCommentSpace = {' ', '\t', '\n', '\r'};
@@ -167,16 +288,32 @@ class InterimWriteCheck {
   }
 
   static FlaggedWord? _firstDenyWord(String text) {
-    final match = _denyWord.firstMatch(text);
-    if (match == null) return null;
-    return FlaggedWord(word: match[0]!.toUpperCase(), line: _lineOf(text, match.start));
+    final bounded = _denyWord.firstMatch(text);
+    var start = bounded?.start;
+    var word = bounded?[0]!.toUpperCase();
+    for (final run in _numberLedRun.allMatches(text)) {
+      if (start != null && run.start > start) break;
+      final upper = run[0]!.toUpperCase();
+      for (final deny in _denyWordsLongestFirst) {
+        final at = upper.indexOf(deny);
+        if (at < 0) continue;
+        final position = run.start + at;
+        if (start == null || position < start || (position == start && deny.length > word!.length)) {
+          start = position;
+          word = deny;
+        }
+      }
+    }
+    if (start == null) return null;
+    return FlaggedWord(word: word!, line: _lineOf(text, start));
   }
 
   /// The first word after leading white space and comments, or null when no word follows them.
   ///
   /// A leading comment counts only when every engine reads it the same way, so the text has no first keyword when a
-  /// leading comment never closes, when a `--` comment holds a bare carriage return (PostgreSQL and SQL Server end it
-  /// there, SQLite, MySQL, MariaDB and DuckDB at the line feed) or is not followed by white space (MySQL reads no
+  /// leading comment never closes, when a `--` comment holds a bare carriage return or another line terminator but
+  /// the line feed (PostgreSQL and SQL Server end it at a bare carriage return, SQLite, MySQL, MariaDB and DuckDB at the
+  /// line feed) or is not followed by white space (MySQL reads no
   /// comment then), when a `/* */` comment holds another `/*` (PostgreSQL and SQL Server nest them, the others end it
   /// at the first `*/`), and when it starts with `/*!` or `/*M!` (MySQL and MariaDB run its body).
   static FlaggedWord? _firstKeyword(String text) {
@@ -189,8 +326,7 @@ class InterimWriteCheck {
         if (i + 2 >= text.length || !_dashCommentSpace.contains(text[i + 2])) return null;
         final end = text.indexOf('\n', i + 2);
         if (end < 0) return null;
-        final body = text.substring(i + 2, end);
-        if ((body.endsWith('\r') ? body.substring(0, body.length - 1) : body).contains('\r')) return null;
+        if (_otherLineTerminator.hasMatch(text.substring(i + 2, end + 1))) return null;
         i = end + 1;
       } else if (text.startsWith('/*', i)) {
         if (text.startsWith('/*!', i) || text.startsWith('/*M!', i) || text.startsWith('/*m!', i)) return null;
