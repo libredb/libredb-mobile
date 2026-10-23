@@ -58,78 +58,74 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m18(url) => "Could not open ${url}";
 
-  static String m19(currentVersion, minimumVersion) => "Current: ${currentVersion}  •  Required: ${minimumVersion}";
+  static String m19(count) => "${Intl.plural(count, one: 'Listed 1 entry', other: 'Listed ${count} entries')}";
 
-  static String m20(count) => "${Intl.plural(count, one: 'Listed 1 entry', other: 'Listed ${count} entries')}";
-
-  static String m21(count) =>
+  static String m20(count) =>
       "${Intl.plural(count, one: 'Listed 1 entry; more remain', other: 'Listed ${count} entries; more remain')}";
 
-  static String m22(reason) => "This list is incomplete, and the engine can show why: ${reason}";
+  static String m21(reason) => "This list is incomplete, and the engine can show why: ${reason}";
 
-  static String m23(reason) =>
+  static String m22(reason) =>
       "This list is what the read saw. Whether it is everything cannot be established on this engine: ${reason}";
 
-  static String m24(count) => "${Intl.plural(count, one: 'Scanned 1 key', other: 'Scanned ${count} keys')}";
+  static String m23(count) => "${Intl.plural(count, one: 'Scanned 1 key', other: 'Scanned ${count} keys')}";
 
-  static String m25(count) =>
+  static String m24(count) =>
       "${Intl.plural(count, one: 'Scanned 1 key; more remain', other: 'Scanned ${count} keys; more remain')}";
 
-  static String m26(count, total) => "Scanned ${count} of the ${total} keys this database holds";
+  static String m25(count, total) => "Scanned ${count} of the ${total} keys this database holds";
 
-  static String m27(count, total) => "Scanned ${count} of the ${total} keys this database holds; more remain";
+  static String m26(count, total) => "Scanned ${count} of the ${total} keys this database holds; more remain";
 
-  static String m28(count, total) => "Scanned ${count} of the ${total} keys this walk covers";
+  static String m27(count, total) => "Scanned ${count} of the ${total} keys this walk covers";
 
-  static String m29(count, total) => "Scanned ${count} of the ${total} keys this walk covers; more remain";
+  static String m28(count, total) => "Scanned ${count} of the ${total} keys this walk covers; more remain";
 
-  static String m30(count, reason) =>
+  static String m29(count, reason) =>
       "${Intl.plural(count, one: '1 key left out of this walk: ${reason}', other: '${count} keys left out of this walk: ${reason}')}";
 
-  static String m31(type) => "Studio says this key\'s type is ${type}.";
+  static String m30(type) => "Studio says this key\'s type is ${type}.";
 
-  static String m32(time) => "Estimated end: ${time}";
+  static String m31(time) => "Offline: showing what was loaded at ${time}";
 
-  static String m33(time) => "Offline: showing what was loaded at ${time}";
+  static String m32(count, rows) => "${Intl.plural(count, one: '1 row affected', other: '${rows} rows affected')}";
 
-  static String m34(count, rows) => "${Intl.plural(count, one: '1 row affected', other: '${rows} rows affected')}";
+  static String m33(id) => "#${id}";
 
-  static String m35(id) => "#${id}";
+  static String m34(code) => "Could not copy (${code})";
 
-  static String m36(code) => "Could not copy (${code})";
+  static String m35(count, rows) => "${Intl.plural(count, one: 'Load 1 more', other: 'Load ${rows} more')}";
 
-  static String m37(count, rows) => "${Intl.plural(count, one: 'Load 1 more', other: 'Load ${rows} more')}";
+  static String m36(count, rows) => "${Intl.plural(count, one: 'Loading 1 more…', other: 'Loading ${rows} more…')}";
 
-  static String m38(count, rows) => "${Intl.plural(count, one: 'Loading 1 more…', other: 'Loading ${rows} more…')}";
+  static String m37(count) => "${Intl.plural(count, one: '+1 more field', other: '+${count} more fields')}";
 
-  static String m39(count) => "${Intl.plural(count, one: '+1 more field', other: '+${count} more fields')}";
+  static String m38(index, count) => "Row ${index} of ${count}";
 
-  static String m40(index, count) => "Row ${index} of ${count}";
+  static String m39(index) => "Row ${index}";
 
-  static String m41(index) => "Row ${index}";
-
-  static String m42(count, rows, time) =>
+  static String m40(count, rows, time) =>
       "${Intl.plural(count, one: '1 row, ${time} ms', other: '${rows} rows, ${time} ms')}";
 
-  static String m43(code) => "Code ${code}";
+  static String m41(code) => "Code ${code}";
 
-  static String m44(severity, message) => "${severity}: ${message}";
+  static String m42(severity, message) => "${severity}: ${message}";
 
-  static String m45(count) => "${Intl.plural(count, one: '1 warning', other: '${count} warnings')}";
+  static String m43(count) => "${Intl.plural(count, one: '1 warning', other: '${count} warnings')}";
 
-  static String m46(seconds) => "You can try again in ${seconds} s.";
+  static String m44(seconds) => "You can try again in ${seconds} s.";
 
-  static String m47(message) => "Error: ${message}";
+  static String m45(message) => "Error: ${message}";
 
-  static String m48(detail) => "Details: ${detail}";
+  static String m46(detail) => "Details: ${detail}";
 
-  static String m49(host) => "Studio address: ${host}";
+  static String m47(host) => "Studio address: ${host}";
 
-  static String m50(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m48(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
-  static String m51(name) => "Type \"${name}\" to confirm";
+  static String m49(name) => "Type \"${name}\" to confirm";
 
-  static String m52(word, line) => "May change data: ${word} on line ${line}";
+  static String m50(word, line) => "May change data: ${word} on line ${line}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -341,18 +337,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Admin user cannot be deleted"),
     "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("No authorities found"),
     "failed": MessageLookupByLibrary.simpleMessage("Failed"),
-    "force_update_button": MessageLookupByLibrary.simpleMessage("Update Now"),
-    "force_update_message": MessageLookupByLibrary.simpleMessage(
-      "A new version is available. Please update to continue using the app.",
-    ),
-    "force_update_no_store_link": MessageLookupByLibrary.simpleMessage(
-      "Open your app store to install the latest version.",
-    ),
-    "force_update_store_link_invalid": MessageLookupByLibrary.simpleMessage(
-      "The update link is not valid. Open your app store to install the latest version.",
-    ),
-    "force_update_title": MessageLookupByLibrary.simpleMessage("Update Required"),
-    "force_update_versions": m19,
     "help_resources": MessageLookupByLibrary.simpleMessage("Help & Resources"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("Read the documentation and guides on GitHub"),
     "home": MessageLookupByLibrary.simpleMessage("Home"),
@@ -366,21 +350,21 @@ class MessageLookup extends MessageLookupByLibrary {
       "Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node\'s.",
     ),
     "keys_empty": MessageLookupByLibrary.simpleMessage("Studio found no keys here."),
-    "keys_listed": m20,
-    "keys_listed_more": m21,
+    "keys_listed": m19,
+    "keys_listed_more": m20,
     "keys_load_all": MessageLookupByLibrary.simpleMessage("Load all"),
     "keys_load_more": MessageLookupByLibrary.simpleMessage("Load more"),
     "keys_pattern_glob": MessageLookupByLibrary.simpleMessage("Pattern"),
     "keys_pattern_prefix": MessageLookupByLibrary.simpleMessage("Starts with"),
-    "keys_read_incomplete": m22,
-    "keys_read_unknown": m23,
-    "keys_scanned": m24,
-    "keys_scanned_more": m25,
-    "keys_scanned_of_database": m26,
-    "keys_scanned_of_database_more": m27,
-    "keys_scanned_of_walk": m28,
-    "keys_scanned_of_walk_more": m29,
-    "keys_skipped": m30,
+    "keys_read_incomplete": m21,
+    "keys_read_unknown": m22,
+    "keys_scanned": m23,
+    "keys_scanned_more": m24,
+    "keys_scanned_of_database": m25,
+    "keys_scanned_of_database_more": m26,
+    "keys_scanned_of_walk": m27,
+    "keys_scanned_of_walk_more": m28,
+    "keys_skipped": m29,
     "keys_stop": MessageLookupByLibrary.simpleMessage("Stop"),
     "keys_stopping": MessageLookupByLibrary.simpleMessage("Stopping after this page"),
     "keys_title": MessageLookupByLibrary.simpleMessage("Keys"),
@@ -388,7 +372,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "keys_value_no_read": MessageLookupByLibrary.simpleMessage("The app has no read for this type."),
     "keys_value_overline": MessageLookupByLibrary.simpleMessage("Key"),
     "keys_value_read": MessageLookupByLibrary.simpleMessage("Read value"),
-    "keys_value_type": m31,
+    "keys_value_type": m30,
     "keys_value_unavailable": MessageLookupByLibrary.simpleMessage(
       "Reading a key\'s value is not available for this engine.",
     ),
@@ -427,12 +411,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "You were signed out, but some stored data could not be removed from this device.",
     ),
     "logout_sure": MessageLookupByLibrary.simpleMessage("Are you sure you want to logout?"),
-    "maintenance_estimated_end": m32,
-    "maintenance_message": MessageLookupByLibrary.simpleMessage(
-      "We are performing scheduled maintenance. Please check back soon.",
-    ),
-    "maintenance_retry": MessageLookupByLibrary.simpleMessage("Try Again"),
-    "maintenance_title": MessageLookupByLibrary.simpleMessage("Under Maintenance"),
     "name": MessageLookupByLibrary.simpleMessage("Name"),
     "new_item": MessageLookupByLibrary.simpleMessage("New"),
     "next": MessageLookupByLibrary.simpleMessage("Next"),
@@ -441,7 +419,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_message": MessageLookupByLibrary.simpleMessage("The page you requested could not be found."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Page Not Found"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("Needs an internet connection"),
-    "offline_stale_data": m33,
+    "offline_stale_data": m31,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Pick a connection first"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",
@@ -454,10 +432,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Unknown user"),
     "refresh": MessageLookupByLibrary.simpleMessage("Refresh"),
     "required_field": MessageLookupByLibrary.simpleMessage("Required Field"),
-    "result_affected_rows": m34,
-    "result_card_id": m35,
+    "result_affected_rows": m32,
+    "result_card_id": m33,
     "result_copied": MessageLookupByLibrary.simpleMessage("Copied"),
-    "result_copy_failed": m36,
+    "result_copy_failed": m34,
     "result_copy_row": MessageLookupByLibrary.simpleMessage("Copy row as JSON"),
     "result_copy_value": MessageLookupByLibrary.simpleMessage("Copy value"),
     "result_empty": MessageLookupByLibrary.simpleMessage("Query returned no data"),
@@ -469,25 +447,25 @@ class MessageLookup extends MessageLookupByLibrary {
     "result_limited_notice": MessageLookupByLibrary.simpleMessage(
       "Studio bounded this result. Anything beyond the bound is not in it.",
     ),
-    "result_load_more": m37,
-    "result_loading_more": m38,
+    "result_load_more": m35,
+    "result_loading_more": m36,
     "result_masked_semantics": MessageLookupByLibrary.simpleMessage("Masked value"),
-    "result_more_fields": m39,
+    "result_more_fields": m37,
     "result_order_notice": MessageLookupByLibrary.simpleMessage(
       "Without an ORDER BY the engine may return rows that repeat or are skipped between pages.",
     ),
     "result_rolled_back": MessageLookupByLibrary.simpleMessage(
       "This statement left a transaction open, and Studio rolled it back, so its changes were discarded.",
     ),
-    "result_row_position": m40,
-    "result_row_title": m41,
-    "result_stats": m42,
+    "result_row_position": m38,
+    "result_row_title": m39,
+    "result_stats": m40,
     "result_view_cards": MessageLookupByLibrary.simpleMessage("Cards"),
     "result_view_table": MessageLookupByLibrary.simpleMessage("Table"),
-    "result_warning_code": m43,
+    "result_warning_code": m41,
     "result_warning_fallback": MessageLookupByLibrary.simpleMessage("Warning"),
-    "result_warning_line": m44,
-    "result_warnings": m45,
+    "result_warning_line": m42,
+    "result_warnings": m43,
     "retry": MessageLookupByLibrary.simpleMessage("Retry"),
     "role": MessageLookupByLibrary.simpleMessage("Role"),
     "save": MessageLookupByLibrary.simpleMessage("Save"),
@@ -503,17 +481,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m46,
-    "studio_error_semantics": m47,
+    "studio_error_retry_in": m44,
+    "studio_error_semantics": m45,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m48,
+    "studio_governance_detail": m46,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connection access is temporarily unavailable. The list updates by itself once it is back.",
     ),
-    "studio_unreachable_host": m49,
+    "studio_unreachable_host": m47,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -522,7 +500,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m50,
+    "table_rows_listed": m48,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),
@@ -539,7 +517,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "users": MessageLookupByLibrary.simpleMessage("Users"),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
-    "write_confirm_name_label": m51,
+    "write_confirm_name_label": m49,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "This production connection has no name to type, so the statement cannot be confirmed here.",
     ),
@@ -555,7 +533,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "May change data: the app cannot tell how the statement starts",
     ),
-    "write_confirm_reason_may_write_at": m52,
+    "write_confirm_reason_may_write_at": m50,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "The app cannot read what a command of this engine does",
     ),

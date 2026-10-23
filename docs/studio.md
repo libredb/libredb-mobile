@@ -163,7 +163,7 @@ The view's row in the search reads "View · 0 B", the size Studio sends for a vi
 
 Found during the walkthrough and logged for the backlog, none of which fails a step:
 
-- At start the app asks `GET /api/app/config`, a route Studio does not have, without a token, and Studio answers 401.
+- At start the app asked Studio for an app config, a route Studio does not have, without a token, and Studio answered 401; [#102](https://github.com/libredb/libredb-mobile/issues/102) removed that check.
 - Under a pattern, the key browser's "Scanned n of the t keys this database holds" counts the matching keys, so a finished walk of `user:*` reads "Scanned 1203 of the 1207 keys this database holds".
 - A Browse level that failed offline loads again only on Retry after airplane mode ends, while the connection list recovers by itself.
 - The Postgres seed has no exclusion constraint, which is why the table above was added by hand.

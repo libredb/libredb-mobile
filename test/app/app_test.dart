@@ -13,12 +13,6 @@ import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:libredb_mobile/features/lifecycle/application/lifecycle_bloc.dart';
-import 'package:libredb_mobile/features/lifecycle/application/lifecycle_state.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/entities/app_config_entity.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/presentation/pages/force_update_screen.dart';
-import 'package:libredb_mobile/features/lifecycle/presentation/pages/maintenance_screen.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
@@ -31,13 +25,10 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_button.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logger/logger.dart' show Level, Logger, OutputEvent;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mocks/mock_classes.dart';
-import '../support/answering_studio_status_repository.dart';
-import '../support/url_launcher_stub.dart';
 
 /// Device preferences whose stored language arrives only when [language] completes, like a slow device.
 class _HeldLanguageStorage implements AppLocalStorage {
@@ -213,196 +204,22 @@ void main() {
         expect(tester.widget<Title>(find.byType(Title)).title, title);
       });
     }
-  });
 
-  // The gate sits in the MaterialApp builder, around the session restore and the router. These tests replace the
-  // lifecycle repository; the last one reads the config the mock serves.
-  group('App lifecycle gate', () {
-    const maintenance = AppConfigEntity(maintenanceMode: true);
-    const ready = AppConfigEntity(minimumVersion: '0.1.0');
-    late MockILifecycleRepository repository;
-    late MockISecureStorage secureStorage;
-
-    setUp(() {
-      repository = MockILifecycleRepository();
-      secureStorage = MockISecureStorage();
+    // No maintenance or update gate stands in front of the app: Studio offers neither yet.
+    testWidgets('reaches the sign-in page at start with no gate in front of it', (tester) async {
+      final secureStorage = MockISecureStorage();
       when(() => secureStorage.read(any())).thenAnswer((_) async => null);
-    });
-
-    Future<void> pumpApp(WidgetTester tester, {String language = 'en'}) async {
-      await tester.pumpWidget(
-        App(language: language, secureStorage: secureStorage, dependencies: _LifecycleDependencies(repository)),
-      );
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('shows the maintenance screen in place of the app when the app config turns maintenance on', (
-      tester,
-    ) async {
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-
-      await pumpApp(tester);
-
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-    });
-
-    testWidgets('shows the maintenance screen in place of the restore view while the stored session is read', (
-      tester,
-    ) async {
-      final storedToken = Completer<String?>();
-      when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-
-      await tester.pumpWidget(
-        App(language: 'en', secureStorage: secureStorage, dependencies: _LifecycleDependencies(repository)),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-      expect(find.bySemanticsLabel('Loading...'), findsNothing);
-
-      storedToken.complete(null);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-    });
-
-    testWidgets('keeps the maintenance screen while the user retries, and opens the app once maintenance has ended', (
-      tester,
-    ) async {
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-      await pumpApp(tester);
-      final answer = Completer<Result<AppConfigEntity>>();
-      when(() => repository.fetchAppConfig()).thenAnswer((_) => answer.future);
-
-      await tester.tap(find.byType(AppButton));
-      await tester.pump();
-
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-      expect(tester.widget<AppButton>(find.byType(AppButton)).isLoading, isTrue);
-
-      answer.complete(const Success(ready));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MaintenanceScreen), findsNothing);
-      expect(find.byType(LoginScreen), findsOneWidget);
-    });
-
-    testWidgets('shows the update screen in place of the app when the app is older than the app config allows', (
-      tester,
-    ) async {
-      when(() => repository.fetchAppConfig()).thenAnswer(
-        (_) async => const Success(AppConfigEntity(minimumVersion: '999.0.0', storeUrl: 'https://store.example/app')),
-      );
-
-      await pumpApp(tester);
-
-      expect(find.byType(ForceUpdateScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-    });
-
-    // The gate screens sit above the router's Navigator, so the update button must work without one.
-    testWidgets('tells the user when the store link on the update screen does not open', (tester) async {
-      final calls = stubFailingUrlLauncher(UrlLauncherFailure.values.first);
-      when(() => repository.fetchAppConfig()).thenAnswer(
-        (_) async => const Success(AppConfigEntity(minimumVersion: '999.0.0', storeUrl: 'https://store.example/app')),
-      );
-      await pumpApp(tester);
-
-      await expectTapShowsMessage(tester, find.byType(AppButton));
-      expect(calls.requestedUrls, contains('https://store.example/app'));
-    });
-
-    testWidgets('opens the app and logs an error when the app config cannot be read', (tester) async {
-      final errors = <String>[];
-      void record(OutputEvent event) {
-        if (event.level == Level.error) errors.addAll(event.lines);
-      }
-
-      Logger.addOutputListener(record);
-      addTearDown(() => Logger.removeOutputListener(record));
-      when(() => repository.fetchAppConfig())
-          .thenAnswer((_) async => const Failure(NetworkError('Not found: no /app/config on this server')));
-
-      await pumpApp(tester);
-
-      expect(find.byType(LoginScreen), findsOneWidget);
-      expect(errors, contains(allOf(contains('LifecycleBloc : '), contains('no /app/config on this server'))));
-    });
-
-    testWidgets('checks the app config again when the app resumes after the recheck interval, and not before', (
-      tester,
-    ) async {
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(ready));
-      await pumpApp(tester);
-      verify(() => repository.fetchAppConfig()).called(1);
-
-      await _sendToBackgroundAndBack(tester);
-
-      verifyNever(() => repository.fetchAppConfig());
-      expect(find.byType(LoginScreen), findsOneWidget);
-
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-      await tester.pump(LifecycleBloc.defaultRecheckInterval);
-      await _sendToBackgroundAndBack(tester);
-
-      verify(() => repository.fetchAppConfig()).called(1);
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-    });
-
-    // The gate replaces the router while the maintenance screen shows, so the router is mounted again afterwards.
-    testWidgets('returns to the page the user was on when maintenance ends', (tester) async {
-      tester.platformDispatcher.defaultRouteNameTestValue = ApplicationRoutesConstants.settings;
-      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
-      when(() => secureStorage.read(SecureStorageKeys.jwtToken.key)).thenAnswer((_) async => 'MOCK_TOKEN');
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(ready));
-      await pumpApp(tester);
-      expect(find.byType(SettingsScreen), findsOneWidget);
-
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-      await tester.pump(LifecycleBloc.defaultRecheckInterval);
-      await _sendToBackgroundAndBack(tester);
-      expect(find.byType(MaintenanceScreen), findsOneWidget);
-
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(ready));
-      await tester.tap(find.byType(AppButton));
-      await tester.pumpAndSettle();
-
-      GoRouter router() => tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
-      expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(router().state.uri.toString(), ApplicationRoutesConstants.settings);
-    });
-
-    // The language change stores the user's language, which wins over App.language, so the test sets both.
-    testWidgets('shows the maintenance screen in the app language', (tester) async {
-      await AppLocalStorage().save(StorageKeys.language.key, 'tr');
-      when(() => repository.fetchAppConfig()).thenAnswer((_) async => const Success(maintenance));
-
-      await pumpApp(tester, language: 'tr');
-
-      expect(find.text('Bakım Yapılıyor'), findsOneWidget);
-      expect(find.text('Tekrar Dene'), findsOneWidget);
-    });
-
-    // GET /app/config is a public endpoint, so the mock answers it before sign-in.
-    testWidgets('reads the app config from the mock before sign-in', (tester) async {
       await tester.pumpWidget(
         App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
-      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
-      final lifecycle = tester.element(find.byType(LoginScreen)).read<LifecycleBloc>();
-      expect(lifecycle.state, isA<LifecycleReady>().having((s) => s.config?.minimumVersion, 'minimumVersion', '0.1.0'));
+      expect(find.byType(LoginScreen), findsOneWidget);
     });
   });
-  // The gate sits beside the lifecycle gate in the MaterialApp builder. These tests replace the Studio status
-  // repository; the last one reads the answer the mock serves.
+
+  // The gate sits in the MaterialApp builder. These tests replace the Studio status repository; the last one reads
+  // the answer the mock serves.
   group('App Studio status gate', () {
     const offline = NetworkError('No Internet connection');
     late MockIStudioStatusRepository repository;
@@ -515,22 +332,7 @@ void main() {
   });
 }
 
-/// The app's dependencies with [repository] in place of the lifecycle repository that AppDependencies creates.
-/// Studio answers its liveness check at once, so the check sends no request through the mock.
-class _LifecycleDependencies extends LocalSignInDependencies {
-  _LifecycleDependencies(this.repository);
-
-  final ILifecycleRepository repository;
-
-  @override
-  ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => repository;
-
-  @override
-  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
-}
-
 /// The app's dependencies with [repository] in place of the Studio status repository that AppDependencies creates.
-/// The app config opens the app at once, so the lifecycle check sends no request through the mock.
 class _StudioStatusDependencies extends LocalSignInDependencies {
   _StudioStatusDependencies(this.repository, {super.appConfig});
 
@@ -538,17 +340,6 @@ class _StudioStatusDependencies extends LocalSignInDependencies {
 
   @override
   IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => repository;
-
-  @override
-  ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => const _OpenLifecycleRepository();
-}
-
-/// The app config lets the app open.
-class _OpenLifecycleRepository implements ILifecycleRepository {
-  const _OpenLifecycleRepository();
-
-  @override
-  Future<Result<AppConfigEntity>> fetchAppConfig() async => const Success(AppConfigEntity());
 }
 
 /// Sends the app to the background for [away] and back, through every state Flutter reports on the way.

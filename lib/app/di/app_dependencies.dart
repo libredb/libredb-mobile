@@ -18,8 +18,6 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/data/repositories/lifecycle_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
@@ -173,10 +171,6 @@ class AppDependencies {
   /// account in [secureStorage].
   IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) =>
       StatementTextStore(EncryptedTextFileStore(secureStorage: secureStorage));
-
-  /// Reads the remote app config that decides whether the app opens, shows the maintenance screen or asks for an
-  /// update.
-  ILifecycleRepository createLifecycleRepository(ApiClient apiClient) => LifecycleRepository(apiClient);
 
   /// Studio's liveness and readiness, which tell an unreachable Studio apart from a session failure.
   IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => StudioStatusRepository(apiClient);

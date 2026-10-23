@@ -8,10 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// HTTP request depends on:
 /// 1. JWT present → `Authorization: Bearer <token>` is attached.
 /// 2. JWT absent or empty → no `Authorization` header is written.
-/// 3. Public endpoint (sign-in, OTP, registration, password reset, token
-///    refresh, app config) → no `Authorization` header, whatever is
-///    stored. Any other method on the same path, and any path that is not
-///    a public API endpoint, gets the token.
+/// 3. Public endpoint (Studio's `GET /health` and `GET /ready`) → no
+///    `Authorization` header, whatever is stored. Any other method on the
+///    same path, and any path that is not a public API endpoint, gets the
+///    token.
 /// 4. Secure read throws → request proceeds anonymously (does NOT
 ///    crash the interceptor chain).
 /// 5. Any other request records the session generation it goes out
@@ -66,8 +66,6 @@ void main() {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('stale-jwt'));
 
       for (final (method, path) in [
-        // The lifecycle checks read the app config before sign-in.
-        ('GET', '/app/config'),
         // Studio's liveness and readiness, which the app checks before sign-in.
         ('GET', '/health'),
         ('GET', '/ready'),
@@ -87,8 +85,8 @@ void main() {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value'));
 
       for (final (method, path) in [
-        // Another method on the path of the public app config.
-        ('POST', '/app/config'),
+        // Another method on the path of Studio's public liveness.
+        ('POST', '/health'),
         // A server-side logout has to know which session to end.
         ('POST', '/auth/logout'),
         // A route of the app, not an endpoint of the API.

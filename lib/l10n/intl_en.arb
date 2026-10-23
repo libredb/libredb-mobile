@@ -60,41 +60,6 @@
       }
     }
   },
-  "force_update_title": "Update Required",
-  "@force_update_title": {},
-  "force_update_message": "A new version is available. Please update to continue using the app.",
-  "@force_update_message": {},
-  "force_update_versions": "Current: {currentVersion}  •  Required: {minimumVersion}",
-  "@force_update_versions": {
-    "placeholders": {
-      "currentVersion": {
-        "type": "String"
-      },
-      "minimumVersion": {
-        "type": "String"
-      }
-    }
-  },
-  "force_update_button": "Update Now",
-  "@force_update_button": {},
-  "force_update_no_store_link": "Open your app store to install the latest version.",
-  "@force_update_no_store_link": {},
-  "force_update_store_link_invalid": "The update link is not valid. Open your app store to install the latest version.",
-  "@force_update_store_link_invalid": {},
-  "maintenance_title": "Under Maintenance",
-  "@maintenance_title": {},
-  "maintenance_message": "We are performing scheduled maintenance. Please check back soon.",
-  "@maintenance_message": {},
-  "maintenance_estimated_end": "Estimated end: {time}",
-  "@maintenance_estimated_end": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "maintenance_retry": "Try Again",
-  "@maintenance_retry": {},
   "logout_stored_data_left": "You were signed out, but some stored data could not be removed from this device.",
   "@logout_stored_data_left": {},
   "home": "Home",

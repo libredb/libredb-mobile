@@ -62,9 +62,8 @@ RequestOptions _sentRequest(String path, {String? method, Map<String, dynamic>? 
   extra: {AuthInterceptor.sessionGenerationKey: SessionGeneration.current},
 );
 
-/// The public endpoints the app calls before sign-in: the app config the lifecycle checks read, and Studio's liveness
-/// and readiness.
-const _publicEndpoints = [('GET', '/app/config'), ('GET', '/health'), ('GET', '/ready')];
+/// The public endpoints the app calls before sign-in: Studio's liveness and readiness.
+const _publicEndpoints = [('GET', '/health'), ('GET', '/ready')];
 
 void main() {
   late Dio dio;

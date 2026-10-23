@@ -6,7 +6,6 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
-import 'package:libredb_mobile/features/lifecycle/domain/repositories/lifecycle_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -272,10 +271,6 @@ void main() {
 
     expect(rotation.sent, isEmpty);
     expect(sessionExpiredCalls, 0);
-  });
-
-  test('app dependencies expose lifecycle repository contract', () {
-    expect(dependencies.createLifecycleRepository(TestEnv.apiClient()), isA<ILifecycleRepository>());
   });
 
   test('app dependencies expose provider meta repository contract', () {
