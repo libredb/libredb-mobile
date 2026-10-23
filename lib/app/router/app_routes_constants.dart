@@ -17,6 +17,15 @@ class ApplicationRoutesConstants {
   // The root of the Browse tab
   static const browse = '/browse';
 
+  // The pages under the Browse root, relative to it. Each names its connection in the path and a container path as
+  // repeated `container` query parameters, in order and never joined, leaving the key out for an empty path.
+
+  /// The containers of the level under a parent container (`container`).
+  static const browseContainers = ':connectionId/containers';
+
+  /// The kind screen of a container (`container`).
+  static const browseKinds = ':connectionId/kinds';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

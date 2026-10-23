@@ -58,7 +58,9 @@ void main() {
 
     await openBilling(tester);
 
-    expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.browse);
+    // Browse opens the connection's first level, which goes on to the session-default schema of the mocked answer.
+    expect(routerOf(tester).state.uri.path, '/browse/seed%3Abilling-mysql/kinds');
+    expect(routerOf(tester).state.uri.queryParametersAll['container'], ['public']);
     expect(inTopBar(find.text(billingName)), findsOneWidget);
     expect(inTopBar(find.text('PROD')), findsOneWidget);
     expect(inTopBar(find.byIcon(Icons.lock_outline)), findsOneWidget);
@@ -88,7 +90,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ConnectionSwitcherSheet), findsNothing);
-    expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.browse);
+    // The switch returns Browse to its root, which opens the new connection as a first entry.
+    expect(routerOf(tester).state.uri.path, '/browse/seed%3Acatalog-mongo/kinds');
     expect(inTopBar(find.text('Product Catalog (MongoDB)')), findsOneWidget);
   });
 

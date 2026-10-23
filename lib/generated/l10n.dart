@@ -1205,14 +1205,24 @@ class S {
     );
   }
 
-  /// `Browsing the objects of a connection is not available yet.`
-  String get browse_not_available_yet {
+  /// `Objects`
+  String get browse_objects {
     return Intl.message(
-      'Browsing the objects of a connection is not available yet.',
-      name: 'browse_not_available_yet',
-      desc: '',
+      'Objects',
+      name: 'browse_objects',
+      desc: 'The heading of the kind screen of a connection whose engine has no container level, such as SQLite.',
       args: [],
     );
+  }
+
+  /// `Studio lists nothing at this level.`
+  String get browse_level_empty {
+    return Intl.message('Studio lists nothing at this level.', name: 'browse_level_empty', desc: '', args: []);
+  }
+
+  /// `Studio counts no objects here.`
+  String get browse_kinds_empty {
+    return Intl.message('Studio counts no objects here.', name: 'browse_kinds_empty', desc: '', args: []);
   }
 
   /// `Your account has no access to Studio`

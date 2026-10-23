@@ -1,15 +1,40 @@
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/container_level_page.dart';
+import 'package:libredb_mobile/features/object_browser/presentation/pages/kind_counts_page.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 
+/// The Browse tab: its root, which follows the active connection, and the pages under it, which take their connection
+/// and container from the route.
 class ObjectBrowserFeatureRoutes {
   static final List<GoRoute> routes = <GoRoute>[
     GoRoute(
-      name: 'browse',
+      name: BrowseRouteNames.browse,
       path: ApplicationRoutesConstants.browse,
       pageBuilder: (context, state) =>
           appTransitionPage(state: state, type: AppPageTransitionType.fade, child: const BrowsePage()),
+      routes: [
+        GoRoute(
+          name: BrowseRouteNames.containers,
+          path: ApplicationRoutesConstants.browseContainers,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: ContainerLevelPage(connectionId: browseConnectionIdOf(state), parent: browseContainerOf(state)),
+          ),
+        ),
+        GoRoute(
+          name: BrowseRouteNames.kinds,
+          path: ApplicationRoutesConstants.browseKinds,
+          pageBuilder: (context, state) => appTransitionPage(
+            state: state,
+            type: AppPageTransitionType.slideRight,
+            child: KindCountsPage(connectionId: browseConnectionIdOf(state), container: browseContainerOf(state)),
+          ),
+        ),
+      ],
     ),
   ];
 }

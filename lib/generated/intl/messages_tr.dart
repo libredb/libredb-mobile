@@ -56,9 +56,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "apply": MessageLookupByLibrary.simpleMessage("Uygula"),
     "authorities": MessageLookupByLibrary.simpleMessage("Roller"),
     "back": MessageLookupByLibrary.simpleMessage("Geri"),
-    "browse_not_available_yet": MessageLookupByLibrary.simpleMessage(
-      "Bir bağlantının nesnelerine göz atmak henüz kullanılamıyor.",
-    ),
+    "browse_kinds_empty": MessageLookupByLibrary.simpleMessage("Studio burada hiç nesne saymıyor."),
+    "browse_level_empty": MessageLookupByLibrary.simpleMessage("Studio bu düzeyde bir şey listelemiyor."),
+    "browse_objects": MessageLookupByLibrary.simpleMessage("Nesneler"),
     "cancel": MessageLookupByLibrary.simpleMessage("İptal"),
     "community_contribute": MessageLookupByLibrary.simpleMessage("Katkıda Bulun"),
     "community_docs": MessageLookupByLibrary.simpleMessage("Dokümantasyon"),

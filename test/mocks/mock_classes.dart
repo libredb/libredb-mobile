@@ -33,6 +33,7 @@ import 'package:libredb_mobile/features/connections/domain/repositories/connecti
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
@@ -57,6 +58,8 @@ class MockILifecycleRepository extends Mock implements ILifecycleRepository {}
 class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
 
 class MockIProviderMetaRepository extends Mock implements IProviderMetaRepository {}
+
+class MockIObjectBrowserRepository extends Mock implements IObjectBrowserRepository {}
 
 class MockIActiveConnectionStore extends Mock implements IActiveConnectionStore {}
 
