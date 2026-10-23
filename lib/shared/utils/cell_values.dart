@@ -17,15 +17,19 @@ sealed class CellValue {
   String get copyText => detailText;
 }
 
-/// No value: `NULL` in a cell and `null` in the detail and the copy, as Studio's sheet writes it.
+/// No value: `NULL` in a cell. The detail and the copy write `null` for a JSON null and `NULL` for a field the row
+/// lacks, as Studio's sheet splits null from undefined (`renderers/null.ts`).
 final class NullCell extends CellValue {
-  const NullCell();
+  const NullCell({this.isAbsent = false});
+
+  /// The row carries no such field, as a document without it.
+  final bool isAbsent;
 
   @override
   String get compactText => 'NULL';
 
   @override
-  String get detailText => 'null';
+  String get detailText => isAbsent ? 'NULL' : 'null';
 }
 
 /// A string, number or boolean, as Studio's scalar renderer prints it: a string exactly as it came, a number as
@@ -47,6 +51,12 @@ final class ScalarCell extends CellValue {
 /// In a cell, a string keeps its raw text and an object is compact JSON. In the detail, an object is pretty-printed
 /// with two spaces; a string is pretty-printed only when its round trip is lossless, otherwise its stored text is kept
 /// as it came (`renderers/json.ts`).
+///
+/// The round trip is Dart's own `jsonEncode` of its `jsonDecode`, which differs from JavaScript's in both directions,
+/// though no digit is lost either way. Dart writes `1.0` and `-0.0` where JavaScript writes `1` and `0`, so a stored
+/// `{"a":1.0}` or `[-0.0]` is pretty-printed here while Studio keeps its stored text. Dart keeps an integer past 2^53
+/// exact where JavaScript rounds it, and a number past the double range reads as an infinity that JavaScript writes as
+/// `null`; both count as lossy here, so the stored text is kept, as in Studio.
 final class JsonCell extends CellValue {
   JsonCell._(this._value);
 
@@ -68,7 +78,8 @@ final class JsonCell extends CellValue {
     // The classifier parsed the trimmed text, which JSON's own grammar may refuse untrimmed; the stored text then
     // keeps its padding and so never compares equal below.
     final parsed = jsonDecode(text.trim());
-    if (_stripJsonWhitespace(text) == jsonEncode(parsed) && !_holdsUnsafeInteger(parsed)) {
+    // The number test comes first: `jsonEncode` throws on an infinity.
+    if (!_holdsLossyNumber(parsed) && _stripJsonWhitespace(text) == jsonEncode(parsed)) {
       return const JsonEncoder.withIndent('  ').convert(parsed);
     }
     return text;
@@ -218,7 +229,14 @@ final class VectorCell extends CellValue {
 /// [value] classified as Studio's `classifyValue` does (`renderers/classify.ts`), in its order: no value, then a vector
 /// (only where [vector] declares the column and the value has its shape), then binary, then any object or array, then
 /// a string that parses to a JSON object or array, else a scalar. A string is never turned into a number.
-CellValue classifyCell(Object? value, {VectorColumn? vector}) {
+///
+/// [isAbsent] says the row carries no such field (`!row.containsKey(field)`), which Studio shows apart from a JSON
+/// null; a field that holds a value cannot be absent, so that throws an [ArgumentError].
+CellValue classifyCell(Object? value, {VectorColumn? vector, bool isAbsent = false}) {
+  if (isAbsent) {
+    if (value != null) throw ArgumentError.value(value, 'value', 'is a value of a field said to be absent');
+    return const NullCell(isAbsent: true);
+  }
   if (value == null) return const NullCell();
   if (vector != null) {
     final shape = _readVectorCell(value, vector);
@@ -300,12 +318,14 @@ String _stripJsonWhitespace(String text) {
   return out.toString();
 }
 
-/// Whether [value] holds an integer past 2^53. Dart's reader keeps it exact, but Studio's would round it, so such a
-/// text counts as lossy and keeps its stored form, as it does in Studio.
-bool _holdsUnsafeInteger(Object? value) => switch (value) {
+/// Whether [value] holds an integer past 2^53, which Dart's reader keeps exact but Studio's rounds, or a number past
+/// the double range, which both read as an infinity and JavaScript writes as `null`; either makes a text lossy, so it
+/// keeps its stored form, as it does in Studio.
+bool _holdsLossyNumber(Object? value) => switch (value) {
   final int number => number.abs() > _maxSafeInteger,
-  final Map<String, dynamic> map => map.values.any(_holdsUnsafeInteger),
-  final List<dynamic> list => list.any(_holdsUnsafeInteger),
+  final double number => !number.isFinite,
+  final Map<String, dynamic> map => map.values.any(_holdsLossyNumber),
+  final List<dynamic> list => list.any(_holdsLossyNumber),
   _ => false,
 };
 
@@ -327,7 +347,8 @@ abstract final class _JsJson {
       case final bool flag:
         out.write(flag);
       case final num number:
-        out.write(jsNumberText(number));
+        // JSON.stringify writes an infinity as null.
+        out.write(number.isFinite ? jsNumberText(number) : 'null');
       case final String text:
         out.write(jsonEncode(text));
       case final List<dynamic> list:

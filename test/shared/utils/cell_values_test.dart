@@ -130,6 +130,18 @@ void main() {
       expect(cell.detailText, 'null');
       expect(cell.copyText, 'null');
     });
+
+    test('a field the row lacks is NULL in the cell, the detail and the copy, as Studio shows undefined', () {
+      final cell = classifyCell(null, isAbsent: true);
+      expect(cell, isA<NullCell>());
+      expect(cell.compactText, 'NULL');
+      expect(cell.detailText, 'NULL');
+      expect(cell.copyText, 'NULL');
+    });
+
+    test('a field cannot be both absent and hold a value', () {
+      expect(() => classifyCell('x', isAbsent: true), throwsArgumentError);
+    });
   });
 
   group('scalar', () {
@@ -221,6 +233,23 @@ void main() {
       final cell = classifyCell(padded);
       expect(cell, isA<JsonCell>());
       expect(cell.detailText, padded);
+    });
+
+    test('a JSON string holding a number past the double range keeps its stored text', () {
+      for (final stored in ['[1e400]', '{"a":1e400}', '[-1e400]']) {
+        final cell = classifyCell(stored);
+        expect(cell, isA<JsonCell>(), reason: stored);
+        expect(cell.detailText, stored);
+        expect(cell.copyText, stored);
+      }
+    });
+
+    test('an infinity inside an object or array is written as null, as JSON.stringify writes it', () {
+      final cell = classifyCell({
+        'a': [double.infinity, double.negativeInfinity],
+      });
+      expect(cell.compactText, '{"a":[null,null]}');
+      expect(cell.detailText, '{\n  "a": [\n    null,\n    null\n  ]\n}');
     });
 
     test('a graph value has no kind of its own and renders as JSON', () {
@@ -554,8 +583,11 @@ void main() {
       expect(classifyCell(ada['address']).compactText, '{"city":"London","geo":{"lat":51.5072,"lng":-0.1276}}');
       expect(classifyCell(ada['tags']), isA<JsonCell>());
       expect(classifyCell(ada['created']), isA<ScalarCell>());
-      // A document field the document does not carry reads as no value.
-      expect(classifyCell(ada['payload']), isA<NullCell>());
+      // A field the document does not carry is absent, which Studio shows as NULL where a JSON null shows null.
+      final absent = classifyCell(ada['payload'], isAbsent: !ada.containsKey('payload'));
+      expect(absent, isA<NullCell>());
+      expect(absent.detailText, 'NULL');
+      expect(absent.copyText, 'NULL');
 
       final payload = classifyCell(grace['payload']);
       expect(payload, isA<JsonCell>());

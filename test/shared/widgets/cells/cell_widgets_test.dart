@@ -96,6 +96,16 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('a field the row lacks shows NULL in muted italic, and is read as null', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_app(DetailCell(cell: classifyCell(null, isAbsent: true))));
+
+      expect(find.text('NULL'), findsOneWidget);
+      expect(styleOf(tester)?.fontStyle, FontStyle.italic);
+      expect(find.bySemanticsLabel('Null value'), findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('a scalar is selectable text in the body font', (tester) async {
       await tester.pumpWidget(_app(DetailCell(cell: classifyCell('9007199254740993'))));
 
