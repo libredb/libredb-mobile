@@ -46,19 +46,45 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m12(currentVersion, minimumVersion) => "Mevcut: ${currentVersion}  •  Gerekli: ${minimumVersion}";
 
-  static String m13(time) => "Tahmini bitiş: ${time}";
+  static String m13(count) => "${Intl.plural(count, one: '1 öğe listelendi', other: '${count} öğe listelendi')}";
 
-  static String m14(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
+  static String m14(count) =>
+      "${Intl.plural(count, one: '1 öğe listelendi; devamı var', other: '${count} öğe listelendi; devamı var')}";
 
-  static String m15(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m15(reason) => "Bu liste eksik ve motor nedenini gösterebiliyor: ${reason}";
 
-  static String m16(message) => "Hata: ${message}";
+  static String m16(reason) =>
+      "Bu liste okumanın gördüğüdür. Bu motorda her şeyin bu olup olmadığı belirlenemez: ${reason}";
 
-  static String m17(detail) => "Ayrıntı: ${detail}";
+  static String m17(count) => "${Intl.plural(count, one: '1 anahtar tarandı', other: '${count} anahtar tarandı')}";
 
-  static String m18(host) => "Studio adresi: ${host}";
+  static String m18(count) =>
+      "${Intl.plural(count, one: '1 anahtar tarandı; devamı var', other: '${count} anahtar tarandı; devamı var')}";
 
-  static String m19(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m19(count, total) => "Bu veritabanının tuttuğu ${total} anahtardan ${count} tanesi tarandı";
+
+  static String m20(count, total) => "Bu veritabanının tuttuğu ${total} anahtardan ${count} tanesi tarandı; devamı var";
+
+  static String m21(count, total) => "Bu taramanın kapsadığı ${total} anahtardan ${count} tanesi tarandı";
+
+  static String m22(count, total) => "Bu taramanın kapsadığı ${total} anahtardan ${count} tanesi tarandı; devamı var";
+
+  static String m23(count, reason) =>
+      "${Intl.plural(count, one: 'Bu taramada 1 anahtar dışarıda kaldı: ${reason}', other: 'Bu taramada ${count} anahtar dışarıda kaldı: ${reason}')}";
+
+  static String m24(time) => "Tahmini bitiş: ${time}";
+
+  static String m25(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
+
+  static String m26(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+
+  static String m27(message) => "Hata: ${message}";
+
+  static String m28(detail) => "Ayrıntı: ${detail}";
+
+  static String m29(host) => "Studio adresi: ${host}";
+
+  static String m30(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -247,6 +273,33 @@ class MessageLookup extends MessageLookupByLibrary {
     "home": MessageLookupByLibrary.simpleMessage("Ana Sayfa"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("Hareketsizlik nedeniyle oturumunuz kapatıldı."),
     "inactive": MessageLookupByLibrary.simpleMessage("Pasif"),
+    "keys_browse": MessageLookupByLibrary.simpleMessage("Anahtarlara göz at"),
+    "keys_cap": MessageLookupByLibrary.simpleMessage(
+      "Bu ekran en fazla 10.000 anahtar tutar: diğerlerini görmek için deseni daraltın.",
+    ),
+    "keys_clustered": MessageLookupByLibrary.simpleMessage(
+      "Kümelenmiş sunucu: SCAN ve DBSIZE her seferinde tek bir düğüm için yanıt verir, bu yüzden bu sayılar bu düğümündür.",
+    ),
+    "keys_empty": MessageLookupByLibrary.simpleMessage("Studio burada anahtar bulamadı."),
+    "keys_listed": m13,
+    "keys_listed_more": m14,
+    "keys_load_all": MessageLookupByLibrary.simpleMessage("Tümünü yükle"),
+    "keys_load_more": MessageLookupByLibrary.simpleMessage("Daha fazla yükle"),
+    "keys_pattern_glob": MessageLookupByLibrary.simpleMessage("Desen"),
+    "keys_pattern_prefix": MessageLookupByLibrary.simpleMessage("Şununla başlar"),
+    "keys_read_incomplete": m15,
+    "keys_read_unknown": m16,
+    "keys_scanned": m17,
+    "keys_scanned_more": m18,
+    "keys_scanned_of_database": m19,
+    "keys_scanned_of_database_more": m20,
+    "keys_scanned_of_walk": m21,
+    "keys_scanned_of_walk_more": m22,
+    "keys_skipped": m23,
+    "keys_stop": MessageLookupByLibrary.simpleMessage("Durdur"),
+    "keys_stopping": MessageLookupByLibrary.simpleMessage("Bu sayfadan sonra duruluyor"),
+    "keys_title": MessageLookupByLibrary.simpleMessage("Anahtarlar"),
+    "keys_unavailable": MessageLookupByLibrary.simpleMessage("Studio bu bağlantı için anahtar tarayıcısı sunmuyor."),
     "language": MessageLookupByLibrary.simpleMessage("Dil"),
     "language_select": MessageLookupByLibrary.simpleMessage("Dil Seçimi"),
     "list": MessageLookupByLibrary.simpleMessage("Listele"),
@@ -281,7 +334,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Oturumunuz kapatıldı, ancak kayıtlı verilerin bir kısmı bu cihazdan silinemedi.",
     ),
     "logout_sure": MessageLookupByLibrary.simpleMessage("Çıkış yapmak istediğinize emin misiniz?"),
-    "maintenance_estimated_end": m13,
+    "maintenance_estimated_end": m24,
     "maintenance_message": MessageLookupByLibrary.simpleMessage(
       "Planlı bir bakım çalışması yapıyoruz. Lütfen kısa bir süre sonra tekrar deneyin.",
     ),
@@ -295,7 +348,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_message": MessageLookupByLibrary.simpleMessage("İstediğiniz sayfa bulunamadı."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Sayfa Bulunamadı"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı gerekiyor"),
-    "offline_stale_data": m14,
+    "offline_stale_data": m25,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Önce bir bağlantı seçin"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
@@ -323,17 +376,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m15,
-    "studio_error_semantics": m16,
+    "studio_error_retry_in": m26,
+    "studio_error_semantics": m27,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m17,
+    "studio_governance_detail": m28,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
     ),
-    "studio_unreachable_host": m18,
+    "studio_unreachable_host": m29,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
@@ -342,7 +395,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m19,
+    "table_rows_listed": m30,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),

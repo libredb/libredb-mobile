@@ -1404,6 +1404,216 @@ class S {
   String get connection_active {
     return Intl.message('Active connection', name: 'connection_active', desc: '', args: []);
   }
+
+  /// `Browse keys`
+  String get keys_browse {
+    return Intl.message(
+      'Browse keys',
+      name: 'keys_browse',
+      desc: 'The row of a kind screen that opens the key browser.',
+      args: [],
+    );
+  }
+
+  /// `Keys`
+  String get keys_title {
+    return Intl.message('Keys', name: 'keys_title', desc: '', args: []);
+  }
+
+  /// `Pattern`
+  String get keys_pattern_glob {
+    return Intl.message(
+      'Pattern',
+      name: 'keys_pattern_glob',
+      desc: 'The label of the key browser\'s pattern field when the engine takes a glob, such as user:*.',
+      args: [],
+    );
+  }
+
+  /// `Starts with`
+  String get keys_pattern_prefix {
+    return Intl.message(
+      'Starts with',
+      name: 'keys_pattern_prefix',
+      desc: 'The label of the key browser\'s pattern field when the engine takes a literal prefix.',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{Scanned 1 key} other{Scanned {count} keys}}`
+  String keys_scanned(int count) {
+    return Intl.plural(
+      count,
+      one: 'Scanned 1 key',
+      other: 'Scanned $count keys',
+      name: 'keys_scanned',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{Scanned 1 key; more remain} other{Scanned {count} keys; more remain}}`
+  String keys_scanned_more(int count) {
+    return Intl.plural(
+      count,
+      one: 'Scanned 1 key; more remain',
+      other: 'Scanned $count keys; more remain',
+      name: 'keys_scanned_more',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Scanned {count} of the {total} keys this database holds`
+  String keys_scanned_of_database(int count, int total) {
+    return Intl.message(
+      'Scanned $count of the $total keys this database holds',
+      name: 'keys_scanned_of_database',
+      desc: '',
+      args: [count, total],
+    );
+  }
+
+  /// `Scanned {count} of the {total} keys this database holds; more remain`
+  String keys_scanned_of_database_more(int count, int total) {
+    return Intl.message(
+      'Scanned $count of the $total keys this database holds; more remain',
+      name: 'keys_scanned_of_database_more',
+      desc: '',
+      args: [count, total],
+    );
+  }
+
+  /// `Scanned {count} of the {total} keys this walk covers`
+  String keys_scanned_of_walk(int count, int total) {
+    return Intl.message(
+      'Scanned $count of the $total keys this walk covers',
+      name: 'keys_scanned_of_walk',
+      desc: '',
+      args: [count, total],
+    );
+  }
+
+  /// `Scanned {count} of the {total} keys this walk covers; more remain`
+  String keys_scanned_of_walk_more(int count, int total) {
+    return Intl.message(
+      'Scanned $count of the $total keys this walk covers; more remain',
+      name: 'keys_scanned_of_walk_more',
+      desc: '',
+      args: [count, total],
+    );
+  }
+
+  /// `{count, plural, =1{Listed 1 entry} other{Listed {count} entries}}`
+  String keys_listed(int count) {
+    return Intl.plural(
+      count,
+      one: 'Listed 1 entry',
+      other: 'Listed $count entries',
+      name: 'keys_listed',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{Listed 1 entry; more remain} other{Listed {count} entries; more remain}}`
+  String keys_listed_more(int count) {
+    return Intl.plural(
+      count,
+      one: 'Listed 1 entry; more remain',
+      other: 'Listed $count entries; more remain',
+      name: 'keys_listed_more',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node's.`
+  String get keys_clustered {
+    return Intl.message(
+      'Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node\'s.',
+      name: 'keys_clustered',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 key left out of this walk: {reason}} other{{count} keys left out of this walk: {reason}}}`
+  String keys_skipped(int count, String reason) {
+    return Intl.plural(
+      count,
+      one: '1 key left out of this walk: $reason',
+      other: '$count keys left out of this walk: $reason',
+      name: 'keys_skipped',
+      desc: '',
+      args: [count, reason],
+    );
+  }
+
+  /// `This list is incomplete, and the engine can show why: {reason}`
+  String keys_read_incomplete(String reason) {
+    return Intl.message(
+      'This list is incomplete, and the engine can show why: $reason',
+      name: 'keys_read_incomplete',
+      desc: '',
+      args: [reason],
+    );
+  }
+
+  /// `This list is what the read saw. Whether it is everything cannot be established on this engine: {reason}`
+  String keys_read_unknown(String reason) {
+    return Intl.message(
+      'This list is what the read saw. Whether it is everything cannot be established on this engine: $reason',
+      name: 'keys_read_unknown',
+      desc: '',
+      args: [reason],
+    );
+  }
+
+  /// `Load more`
+  String get keys_load_more {
+    return Intl.message('Load more', name: 'keys_load_more', desc: '', args: []);
+  }
+
+  /// `Load all`
+  String get keys_load_all {
+    return Intl.message('Load all', name: 'keys_load_all', desc: '', args: []);
+  }
+
+  /// `Stop`
+  String get keys_stop {
+    return Intl.message('Stop', name: 'keys_stop', desc: '', args: []);
+  }
+
+  /// `Stopping after this page`
+  String get keys_stopping {
+    return Intl.message('Stopping after this page', name: 'keys_stopping', desc: '', args: []);
+  }
+
+  /// `This screen holds at most 10,000 keys: narrow the pattern to see the others.`
+  String get keys_cap {
+    return Intl.message(
+      'This screen holds at most 10,000 keys: narrow the pattern to see the others.',
+      name: 'keys_cap',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio found no keys here.`
+  String get keys_empty {
+    return Intl.message('Studio found no keys here.', name: 'keys_empty', desc: '', args: []);
+  }
+
+  /// `Studio declares no key browser for this connection.`
+  String get keys_unavailable {
+    return Intl.message(
+      'Studio declares no key browser for this connection.',
+      name: 'keys_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

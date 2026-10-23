@@ -106,6 +106,13 @@ class _KindCountsView extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 BrowseHeading(title: kinds.container?.name ?? S.of(context).browse_objects, overline: kinds.levelLabel),
+                if (kinds.browsesKeys)
+                  ListTile(
+                    leading: const Icon(Icons.key_outlined),
+                    title: Text(S.of(context).keys_browse),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => openBrowseKeys(context, connectionId, container),
+                  ),
                 if (kinds.sections.isEmpty)
                   Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(S.of(context).browse_kinds_empty)),
                 for (final section in kinds.sections) ...[

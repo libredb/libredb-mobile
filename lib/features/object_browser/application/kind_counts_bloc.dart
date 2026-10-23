@@ -102,6 +102,7 @@ class KindCountsBloc extends Bloc<KindCountsEvent, KindCountsState> {
                 levelLabel: levelLabel,
                 sections: kindSectionsOf(providerMeta, data, containerKinds: named?.kinds),
                 loadedAt: clock.now(),
+                browsesKeys: providerMeta.keyScan != null,
               ),
             );
         }
@@ -134,6 +135,7 @@ class KindCountsBloc extends Bloc<KindCountsEvent, KindCountsState> {
     sections: loaded.sections,
     loadedAt: loaded.loadedAt,
     isRefreshing: isRefreshing,
+    browsesKeys: loaded.browsesKeys,
   );
 
   @override

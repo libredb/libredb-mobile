@@ -32,6 +32,9 @@ class ApplicationRoutesConstants {
   /// The source of an object of a kind, its path as repeated `path` query parameters.
   static const browseSource = ':connectionId/source/:kind';
 
+  /// The key browser of a container (`container`), or of one level folder of it (`prefix`).
+  static const browseKeys = ':connectionId/keys';
+
   // The root of the SQL tab
   static const sql = '/sql';
 

@@ -447,5 +447,138 @@
   "connection_switcher_title": "Switch connection",
   "@connection_switcher_title": {},
   "connection_active": "Active connection",
-  "@connection_active": {}
+  "@connection_active": {},
+  "keys_browse": "Browse keys",
+  "@keys_browse": {
+    "description": "The row of a kind screen that opens the key browser."
+  },
+  "keys_title": "Keys",
+  "@keys_title": {},
+  "keys_pattern_glob": "Pattern",
+  "@keys_pattern_glob": {
+    "description": "The label of the key browser's pattern field when the engine takes a glob, such as user:*."
+  },
+  "keys_pattern_prefix": "Starts with",
+  "@keys_pattern_prefix": {
+    "description": "The label of the key browser's pattern field when the engine takes a literal prefix."
+  },
+  "keys_scanned": "{count, plural, =1{Scanned 1 key} other{Scanned {count} keys}}",
+  "@keys_scanned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_more": "{count, plural, =1{Scanned 1 key; more remain} other{Scanned {count} keys; more remain}}",
+  "@keys_scanned_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_database": "Scanned {count} of the {total} keys this database holds",
+  "@keys_scanned_of_database": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_database_more": "Scanned {count} of the {total} keys this database holds; more remain",
+  "@keys_scanned_of_database_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_walk": "Scanned {count} of the {total} keys this walk covers",
+  "@keys_scanned_of_walk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_scanned_of_walk_more": "Scanned {count} of the {total} keys this walk covers; more remain",
+  "@keys_scanned_of_walk_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_listed": "{count, plural, =1{Listed 1 entry} other{Listed {count} entries}}",
+  "@keys_listed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_listed_more": "{count, plural, =1{Listed 1 entry; more remain} other{Listed {count} entries; more remain}}",
+  "@keys_listed_more": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keys_clustered": "Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node's.",
+  "@keys_clustered": {},
+  "keys_skipped": "{count, plural, =1{1 key left out of this walk: {reason}} other{{count} keys left out of this walk: {reason}}}",
+  "@keys_skipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_read_incomplete": "This list is incomplete, and the engine can show why: {reason}",
+  "@keys_read_incomplete": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_read_unknown": "This list is what the read saw. Whether it is everything cannot be established on this engine: {reason}",
+  "@keys_read_unknown": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "keys_load_more": "Load more",
+  "@keys_load_more": {},
+  "keys_load_all": "Load all",
+  "@keys_load_all": {},
+  "keys_stop": "Stop",
+  "@keys_stop": {},
+  "keys_stopping": "Stopping after this page",
+  "@keys_stopping": {},
+  "keys_cap": "This screen holds at most 10,000 keys: narrow the pattern to see the others.",
+  "@keys_cap": {},
+  "keys_empty": "Studio found no keys here.",
+  "@keys_empty": {},
+  "keys_unavailable": "Studio declares no key browser for this connection.",
+  "@keys_unavailable": {}
 }

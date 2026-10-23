@@ -46,19 +46,45 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m12(currentVersion, minimumVersion) => "Current: ${currentVersion}  •  Required: ${minimumVersion}";
 
-  static String m13(time) => "Estimated end: ${time}";
+  static String m13(count) => "${Intl.plural(count, one: 'Listed 1 entry', other: 'Listed ${count} entries')}";
 
-  static String m14(time) => "Offline: showing what was loaded at ${time}";
+  static String m14(count) =>
+      "${Intl.plural(count, one: 'Listed 1 entry; more remain', other: 'Listed ${count} entries; more remain')}";
 
-  static String m15(seconds) => "You can try again in ${seconds} s.";
+  static String m15(reason) => "This list is incomplete, and the engine can show why: ${reason}";
 
-  static String m16(message) => "Error: ${message}";
+  static String m16(reason) =>
+      "This list is what the read saw. Whether it is everything cannot be established on this engine: ${reason}";
 
-  static String m17(detail) => "Details: ${detail}";
+  static String m17(count) => "${Intl.plural(count, one: 'Scanned 1 key', other: 'Scanned ${count} keys')}";
 
-  static String m18(host) => "Studio address: ${host}";
+  static String m18(count) =>
+      "${Intl.plural(count, one: 'Scanned 1 key; more remain', other: 'Scanned ${count} keys; more remain')}";
 
-  static String m19(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m19(count, total) => "Scanned ${count} of the ${total} keys this database holds";
+
+  static String m20(count, total) => "Scanned ${count} of the ${total} keys this database holds; more remain";
+
+  static String m21(count, total) => "Scanned ${count} of the ${total} keys this walk covers";
+
+  static String m22(count, total) => "Scanned ${count} of the ${total} keys this walk covers; more remain";
+
+  static String m23(count, reason) =>
+      "${Intl.plural(count, one: '1 key left out of this walk: ${reason}', other: '${count} keys left out of this walk: ${reason}')}";
+
+  static String m24(time) => "Estimated end: ${time}";
+
+  static String m25(time) => "Offline: showing what was loaded at ${time}";
+
+  static String m26(seconds) => "You can try again in ${seconds} s.";
+
+  static String m27(message) => "Error: ${message}";
+
+  static String m28(detail) => "Details: ${detail}";
+
+  static String m29(host) => "Studio address: ${host}";
+
+  static String m30(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -245,6 +271,33 @@ class MessageLookup extends MessageLookupByLibrary {
     "home": MessageLookupByLibrary.simpleMessage("Home"),
     "idle_timeout_signed_out": MessageLookupByLibrary.simpleMessage("You were signed out due to inactivity."),
     "inactive": MessageLookupByLibrary.simpleMessage("Inactive"),
+    "keys_browse": MessageLookupByLibrary.simpleMessage("Browse keys"),
+    "keys_cap": MessageLookupByLibrary.simpleMessage(
+      "This screen holds at most 10,000 keys: narrow the pattern to see the others.",
+    ),
+    "keys_clustered": MessageLookupByLibrary.simpleMessage(
+      "Clustered server: SCAN and DBSIZE answer for one node at a time, so these counts are this node\'s.",
+    ),
+    "keys_empty": MessageLookupByLibrary.simpleMessage("Studio found no keys here."),
+    "keys_listed": m13,
+    "keys_listed_more": m14,
+    "keys_load_all": MessageLookupByLibrary.simpleMessage("Load all"),
+    "keys_load_more": MessageLookupByLibrary.simpleMessage("Load more"),
+    "keys_pattern_glob": MessageLookupByLibrary.simpleMessage("Pattern"),
+    "keys_pattern_prefix": MessageLookupByLibrary.simpleMessage("Starts with"),
+    "keys_read_incomplete": m15,
+    "keys_read_unknown": m16,
+    "keys_scanned": m17,
+    "keys_scanned_more": m18,
+    "keys_scanned_of_database": m19,
+    "keys_scanned_of_database_more": m20,
+    "keys_scanned_of_walk": m21,
+    "keys_scanned_of_walk_more": m22,
+    "keys_skipped": m23,
+    "keys_stop": MessageLookupByLibrary.simpleMessage("Stop"),
+    "keys_stopping": MessageLookupByLibrary.simpleMessage("Stopping after this page"),
+    "keys_title": MessageLookupByLibrary.simpleMessage("Keys"),
+    "keys_unavailable": MessageLookupByLibrary.simpleMessage("Studio declares no key browser for this connection."),
     "language": MessageLookupByLibrary.simpleMessage("Language"),
     "language_select": MessageLookupByLibrary.simpleMessage("Select Language"),
     "list": MessageLookupByLibrary.simpleMessage("List"),
@@ -279,7 +332,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "You were signed out, but some stored data could not be removed from this device.",
     ),
     "logout_sure": MessageLookupByLibrary.simpleMessage("Are you sure you want to logout?"),
-    "maintenance_estimated_end": m13,
+    "maintenance_estimated_end": m24,
     "maintenance_message": MessageLookupByLibrary.simpleMessage(
       "We are performing scheduled maintenance. Please check back soon.",
     ),
@@ -293,7 +346,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_message": MessageLookupByLibrary.simpleMessage("The page you requested could not be found."),
     "not_found_title": MessageLookupByLibrary.simpleMessage("Page Not Found"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("Needs an internet connection"),
-    "offline_stale_data": m14,
+    "offline_stale_data": m25,
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Pick a connection first"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",
@@ -321,17 +374,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m15,
-    "studio_error_semantics": m16,
+    "studio_error_retry_in": m26,
+    "studio_error_semantics": m27,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m17,
+    "studio_governance_detail": m28,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connection access is temporarily unavailable. The list updates by itself once it is back.",
     ),
-    "studio_unreachable_host": m18,
+    "studio_unreachable_host": m29,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -340,7 +393,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m19,
+    "table_rows_listed": m30,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),

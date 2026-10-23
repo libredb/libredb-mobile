@@ -19,6 +19,7 @@ final class KindCountsLoaded extends KindCountsState {
     required this.sections,
     required this.loadedAt,
     this.isRefreshing = false,
+    this.browsesKeys = false,
   });
 
   /// The container, as its level lists it; null on an engine with no container level, whose kinds are the
@@ -35,8 +36,11 @@ final class KindCountsLoaded extends KindCountsState {
 
   final bool isRefreshing;
 
+  /// Whether the engine declares a key walk (`keyScan`), so the screen offers the key browser.
+  final bool browsesKeys;
+
   @override
-  List<Object?> get props => [container, levelLabel, sections, loadedAt, isRefreshing];
+  List<Object?> get props => [container, levelLabel, sections, loadedAt, isRefreshing, browsesKeys];
 }
 
 /// The counts could not be read.
