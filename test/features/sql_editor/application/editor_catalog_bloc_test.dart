@@ -52,8 +52,10 @@ void main() {
     connectionId: connectionId,
   );
 
-  test('starts checking the engine', () {
+  test('starts checking the engine, and Run waits meanwhile', () {
     expect(build(server).state, const EditorCatalogChecking());
+    expect(const EditorCatalogChecking().withholdsRun(null), isTrue);
+    expect(const EditorCatalogChecking().catalogToSend('app'), isNull);
   });
 
   blocTest<EditorCatalogBloc, EditorCatalogState>(
@@ -137,11 +139,22 @@ void main() {
   );
 
   blocTest<EditorCatalogBloc, EditorCatalogState>(
-    'a provider-meta failure keeps Run back with a retry',
-    setUp: () => when(() => providerMeta.providerMeta(server)).thenAnswer((_) async => const Failure(down)),
-    build: () => build(server),
-    act: (bloc) => bloc.add(const EditorCatalogRequested()),
-    expect: () => const [EditorCatalogFailure(error: down)],
+    'a provider-meta failure is told apart from a failed list, keeps Run back, and a retry reads the engine again',
+    setUp: () {
+      var calls = 0;
+      when(() => providerMeta.providerMeta(postgres)).thenAnswer((_) async {
+        if (++calls == 1) return const Failure(down);
+        return Success(ProviderMetaJson.read(_fixture('meta_postgres')));
+      });
+    },
+    build: () => build(postgres),
+    act: (bloc) async {
+      bloc.add(const EditorCatalogRequested());
+      await bloc.stream.firstWhere((s) => s is EditorCatalogMetaFailure);
+      expect(bloc.state.withholdsRun(null), isTrue);
+      bloc.add(const EditorCatalogRequested());
+    },
+    expect: () => const [EditorCatalogMetaFailure(error: down), EditorCatalogNotUsed()],
   );
 
   blocTest<EditorCatalogBloc, EditorCatalogState>(

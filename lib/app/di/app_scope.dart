@@ -286,8 +286,9 @@ class AppScope extends StatelessWidget {
           BlocProvider<ActiveConnectionCubit>(
             create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
           ),
-          // Beside the active connection, which it follows: Browse and the SQL editor share the database a server-level
-          // connection runs statements in; AppSessionListeners tells it who signed in and clears it at the session's end.
+          // Beside the active connection, which it follows: Browse and the SQL editor share the database a
+          // server-level connection runs statements in; AppSessionListeners tells it who signed in and clears it at the
+          // session's end.
           BlocProvider<ActiveCatalogCubit>(
             create: (context) => ActiveCatalogCubit(
               store: dependencies.createActiveCatalogStore(),

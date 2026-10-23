@@ -7,7 +7,7 @@ import 'package:libredb_mobile/shared/models/object_container.dart';
 ///
 /// The app provides the object browser's cached repository as this interface too, so a reader here shares its kept
 /// answers and spends no more of the user's Studio request budget than Browse does.
-abstract class IContainersRepository {
+abstract interface class IContainersRepository {
   /// The containers at the top level. [refresh] skips an answer kept from before and replaces it.
   Future<Result<Answered<List<ObjectContainer>>>> containers(String connectionId, {bool refresh = false});
 }

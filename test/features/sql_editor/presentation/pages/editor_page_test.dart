@@ -26,6 +26,7 @@ import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.
 import 'package:libredb_mobile/shared/models/answered.dart';
 import 'package:libredb_mobile/shared/models/cancel_signal.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
+import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -570,6 +571,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      expect(runEnabled(tester), isTrue);
+    });
+
+    testWidgets('Run waits while the engine is still read, so nothing is sent without a database', (tester) async {
+      final meta = Completer<Result<ProviderMeta>>();
+      when(() => providerMeta.providerMeta(_server.id)).thenAnswer((_) => meta.future);
+      answerDatabases();
+      await pump(tester, connection: _server);
+      await type(tester, sql);
+
+      expect(runEnabled(tester), isFalse);
+      expect(chip(), findsNothing);
+
+      meta.complete(Success(ProviderMetaJson.read(_fixture('meta_postgres_server'))));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: chip(), matching: find.text('Database: app')), findsOneWidget);
+      expect(runEnabled(tester), isTrue);
+    });
+
+    testWidgets('a provider-meta failure on an ordinary connection shows Studio\'s error with a retry, no databases', (
+      tester,
+    ) async {
+      var calls = 0;
+      when(() => providerMeta.providerMeta(_postgres.id)).thenAnswer((_) async {
+        if (++calls == 1) return const Failure(ServerError('down', code: 'studio.internal_error'));
+        return Success(ProviderMetaJson.read(_fixture('meta_postgres')));
+      });
+      await pump(tester);
+      await tester.pumpAndSettle();
+      await type(tester, 'SELECT 1');
+
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expect(find.text('The databases to run statements in could not be listed.'), findsNothing);
+      expect(runEnabled(tester), isFalse);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(chip(), findsNothing);
       expect(runEnabled(tester), isTrue);
     });
 

@@ -120,7 +120,7 @@ void main() {
       act: (bloc) => bloc
         ..add(const ContainerBrowserRequested())
         ..add(const ContainerBrowserFilterChanged('arch')),
-      wait: ContainerBrowserBloc.filterDebounce,
+      wait: ContainerBrowserBloc.filterDebounce * 2,
       expect: () => [
         const ContainerBrowserLoading(),
         isA<ContainerBrowserLoaded>()

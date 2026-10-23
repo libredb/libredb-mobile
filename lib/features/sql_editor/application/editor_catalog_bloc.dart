@@ -18,7 +18,8 @@ part 'editor_catalog_state.dart';
 ///
 /// Once listed, it makes the default the active database of [ActiveCatalogCubit], as Studio's web does on opening: the
 /// one chosen in this session, else the one remembered on the device, while the server still lists it, else the first
-/// listed. Studio refuses a statement on a server-level connection that names no database, so Run waits for one.
+/// listed. Studio refuses a statement on a server-level connection that names no database, so Run waits for one, and
+/// waits until the engine is read.
 class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
   EditorCatalogBloc({
     required this._containers,
@@ -43,7 +44,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
     switch (await _providerMeta.providerMeta(connectionId)) {
       case Failure(:final error):
         _log.warn('provider meta not read: {}', [error.code ?? error.runtimeType]);
-        emit(EditorCatalogFailure(error: error));
+        emit(EditorCatalogMetaFailure(error: error));
         return;
       case Success(:final data):
         meta = data;

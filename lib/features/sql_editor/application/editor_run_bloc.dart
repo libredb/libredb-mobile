@@ -236,9 +236,9 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
   }
 
   /// Runs [statement], the text of the result on screen, again for [page] with a fresh run id and in its database, for
-  /// the result view's Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks [confirm] first,
-  /// and nothing is sent unless it answers true; the answer is then null. The state does not change, and a failure is
-  /// answered, never sent again by itself.
+  /// the result view's Load more. Each page runs the whole statement again on Studio, so a text the check flagged asks
+  /// [confirm] first, and nothing is sent unless it answers true; the answer is then null. The state does not change,
+  /// and a failure is answered, never sent again by itself.
   Future<Result<QueryResult>?> loadPage(
     EditorStatement statement,
     QueryPage page, {

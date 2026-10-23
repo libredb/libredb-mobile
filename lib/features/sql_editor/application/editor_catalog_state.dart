@@ -9,14 +9,19 @@ sealed class EditorCatalogState extends Equatable {
   /// listed, null on a connection that names none.
   String? catalogToSend(String? active) => switch (this) {
     EditorCatalogListed() => active,
-    EditorCatalogChecking() || EditorCatalogNotUsed() || EditorCatalogLoading() || EditorCatalogFailure() => null,
+    EditorCatalogChecking() ||
+    EditorCatalogMetaFailure() ||
+    EditorCatalogNotUsed() ||
+    EditorCatalogLoading() ||
+    EditorCatalogFailure() => null,
   };
 
-  /// Whether Run waits: while the databases are read or could not be, and while none is active once they are listed.
+  /// Whether Run waits: until the engine is read, since a server-level connection refuses a statement that names no
+  /// database, while the databases are read or could not be, and while none is active once they are listed.
   bool withholdsRun(String? active) => switch (this) {
     EditorCatalogListed() => active == null,
-    EditorCatalogLoading() || EditorCatalogFailure() => true,
-    EditorCatalogChecking() || EditorCatalogNotUsed() => false,
+    EditorCatalogChecking() || EditorCatalogMetaFailure() || EditorCatalogLoading() || EditorCatalogFailure() => true,
+    EditorCatalogNotUsed() => false,
   };
 
   @override
@@ -26,6 +31,20 @@ sealed class EditorCatalogState extends Equatable {
 /// The engine is not read yet.
 final class EditorCatalogChecking extends EditorCatalogState {
   const EditorCatalogChecking();
+}
+
+/// The engine could not be read, so whether it runs statements in a picked database is unknown; [error] is shown by
+/// `StudioErrorBanner` with a retry.
+final class EditorCatalogMetaFailure extends EditorCatalogState {
+  const EditorCatalogMetaFailure({required this.error});
+
+  final AppError error;
+
+  @override
+  List<Object?> get props => [error];
+
+  @override
+  String toString() => 'EditorCatalogMetaFailure(${error.code})';
 }
 
 /// The engine declares no `catalogSessions`: every statement runs in the connection's own database and names none.
@@ -42,7 +61,7 @@ final class EditorCatalogLoading extends EditorCatalogState {
   List<Object?> get props => [label];
 }
 
-/// The engine or the server's databases could not be read; [error] is shown by `StudioErrorBanner` with a retry.
+/// The server's databases could not be read; [error] is shown by `StudioErrorBanner` with a retry.
 final class EditorCatalogFailure extends EditorCatalogState {
   const EditorCatalogFailure({required this.error, this.label});
 

@@ -8,7 +8,8 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
 /// The database a server-level connection runs statements in, above the editor's text: a chip that opens the picker of
 /// the databases the server lists, named with the level's own label. Nothing shows on any other connection. A list
-/// that could not be read shows Studio's error with a retry, and while it does Run waits.
+/// that could not be read shows Studio's error with a retry, as does an engine that could not be read, and while either
+/// does Run waits.
 class EditorCatalogChip extends StatelessWidget {
   const EditorCatalogChip({super.key, required this.connectionId});
 
@@ -27,6 +28,10 @@ class EditorCatalogChip extends StatelessWidget {
         key: chipKey,
         avatar: const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
         label: Text(label ?? s.sql_editor_catalog_label),
+      ),
+      EditorCatalogMetaFailure(:final error) => StudioErrorBanner(
+        error: error,
+        onRetry: () => context.read<EditorCatalogBloc>().add(const EditorCatalogRequested()),
       ),
       EditorCatalogFailure(:final error) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
