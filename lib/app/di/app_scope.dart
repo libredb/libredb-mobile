@@ -120,7 +120,6 @@ class AppScope extends StatelessWidget {
             final session = SessionCubit(
               secureStorage: context.read<ISecureStorage>(),
               sessionRepository: context.read<IAuthSessionRepository>(),
-              appConfig: context.read<AppConfig>(),
               ssoStartup: switch (dependencies.authMode) {
                 OidcAuthMode() => SsoSessionStartup(
                   rotation: context.read<TokenRotation>(),

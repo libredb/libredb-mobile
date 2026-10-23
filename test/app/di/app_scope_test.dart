@@ -21,10 +21,13 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
@@ -483,6 +486,21 @@ Future<BuildContext> _pumpScope(WidgetTester tester, AppDependencies dependencie
   return scope;
 }
 
+/// A session cubit that restores the session from secure storage as a relaunch does, with the startup step that AppScope
+/// gives an `oidc` build.
+SessionCubit _relaunchedSession() {
+  final storage = FlutterSecureStorageAdapter();
+  return SessionCubit(
+    secureStorage: storage,
+    ssoStartup: SsoSessionStartup(
+      rotation: _FakeRotation(),
+      secureStorage: storage,
+      sessionRepository: AuthSessionRepository(secureStorage: storage),
+      gate: SsoAutoRedirectGate(),
+    ),
+  );
+}
+
 void main() {
   group('AppScope', () {
     testWidgets('ends the session and clears the stored session when a 401 cannot be refreshed', (tester) async {
@@ -507,7 +525,7 @@ void main() {
       expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
       expect(rotation.rotations, 1);
       // A relaunch restores the session from secure storage, as AppScope does on launch.
-      final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
+      final relaunched = _relaunchedSession();
       addTearDown(relaunched.close);
       await relaunched.restore();
       expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.noToken));
@@ -656,7 +674,7 @@ void main() {
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
         // A relaunch restores the session from secure storage, as AppScope does on launch.
-        final relaunched = SessionCubit(secureStorage: FlutterSecureStorageAdapter(), appConfig: _prodConfig);
+        final relaunched = _relaunchedSession();
         addTearDown(relaunched.close);
         await relaunched.restore();
         expect(relaunched.state, const SessionUnauthenticated(reason: SessionExpiredReason.noToken));
