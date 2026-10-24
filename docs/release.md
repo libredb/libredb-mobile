@@ -115,6 +115,7 @@ After the build, [sentry_dart_plugin](https://pub.dev/packages/sentry_dart_plugi
 The plugin does not upload an R8 mapping, so the same step runs `sentry-cli upload-proguard` with the sentry-cli binary the plugin downloaded and checked against its pinned checksum.
 The workflow gives the mapping a new UUID before each build: Gradle writes it into `BuildConfig.SENTRY_PROGUARD_UUID` from `-PsentryProguardUuid`, `NativeSentry.kt` sets it as the native SDK's `proguardUuid`, and `upload-proguard --uuid` uploads the mapping under it, so Sentry matches each event to its mapping.
 The release in Sentry is the `version` of `pubspec.yaml`, such as `1.0.0+1`, the release the app reports on both SDKs.
+The bundle also carries the native debug symbols that the Android Gradle plugin puts into its `BUNDLE-METADATA` for Play's own crash reports; Play never delivers them to a device, and the installed `libapp.so` holds no debug information.
 
 The plugin's settings come only from the workflow's environment: the organization `libredb-org`, the project `libredb-mobile`, and the token from the `SENTRY_AUTH_TOKEN` secret of the `release-signing` environment.
 The repository holds no `sentry.properties` and no `sentry` section in `pubspec.yaml`; `sentry.properties` is git-ignored, and `test/architecture/sentry_release_symbols_test.dart` fails when one is tracked or when a tracked file holds what looks like a Sentry auth token.
