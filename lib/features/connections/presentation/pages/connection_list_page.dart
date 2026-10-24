@@ -189,11 +189,18 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
                 },
               ),
             ],
-            child: Column(
-              children: [
-                const _StatementCaptureNote(),
-                Expanded(child: _buildState(context)),
-              ],
+            // The keyboard of a phone held sideways can leave less height than the note and the search need: the
+            // note stays on top, scrolling inside the height there is rather than overflow, and the list gives way.
+            child: LayoutBuilder(
+              builder: (context, box) => Column(
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: box.maxHeight),
+                    child: const SingleChildScrollView(primary: false, child: _StatementCaptureNote()),
+                  ),
+                  Expanded(child: _buildState(context)),
+                ],
+              ),
             ),
           ),
         ),
