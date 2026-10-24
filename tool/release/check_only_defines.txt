@@ -1,0 +1,6 @@
+# Defines meant for checks only, which a store build must never carry (docs/release.md).
+# tool/release/check_defines.sh stops the release when one of them is in the build's defines or set as a variable.
+# One name per line.
+
+# Crashes the app on purpose to prove the Sentry scrubber on a device (#191).
+SENTRY_DEVICE_CHECK
