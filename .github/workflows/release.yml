@@ -20,8 +20,9 @@ on:
 permissions:
   contents: read
 
+# A hand-pushed tag and the release-please release of the same tag share one group.
 concurrency:
-  group: "release-${{ inputs.tag || github.ref }}"
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -33,11 +34,28 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.RELEASE_REF }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The build job builds exactly this commit. A release must be a commit on main, so a tag on another branch's
+      # commit never reaches the signing key.
+      - name: Resolve the commit
+        id: commit
+        run: |
+          sha=$(git rev-parse HEAD)
+          if [ -n "$RELEASE_TAG" ] && ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "The tag $RELEASE_TAG points at $sha, which is not on main."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Check the tag against pubspec.yaml
         run: |
@@ -54,7 +72,6 @@ jobs:
         with:
           flutter-version: '3.47.7'
           channel: stable
-          cache: true
 
       - name: Setup Java
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -98,19 +115,23 @@ jobs:
   build:
     name: Build signed App Bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: verify
+    # The upload key's secrets live in release-signing, which only main and v*.*.* tags may use; a dry run signs with
+    # the throwaway key of release-dry-run (docs/release.md).
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'release-dry-run' || 'release-signing' }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ env.RELEASE_REF }}
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: '3.47.7'
           channel: stable
-          cache: true
 
       - name: Setup Java
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -178,19 +199,29 @@ jobs:
           flutter build appbundle --release --target lib/main/main_prod.dart
           --dart-define-from-file="$RUNNER_TEMP/dart-defines.json" -PrequireReleaseSigning=true
 
+      # Compares the signing certificate with the fingerprint of the environment's key; the log names neither the
+      # certificate's owner nor its fingerprint.
       - name: Check the bundle's signature
+        env:
+          EXPECTED_SHA256: ${{ vars.ANDROID_UPLOAD_CERT_SHA256 }}
         run: |
           bundle=build/app/outputs/bundle/release/app-release.aab
+          if [ -z "$EXPECTED_SHA256" ]; then
+            echo "The variable ANDROID_UPLOAD_CERT_SHA256 is not set (docs/release.md)."
+            exit 1
+          fi
           if ! jarsigner -verify "$bundle" | grep -q '^jar verified'; then
             echo "The bundle has no valid signature."
             exit 1
           fi
-          signer=$(keytool -printcert -jarfile "$bundle" | grep -m1 'Owner:')
-          echo "Signed by $signer"
-          if echo "$signer" | grep -q 'CN=Android Debug'; then
-            echo "The bundle is signed with the debug key."
+          normalize() { tr -d ': \n' | tr '[:lower:]' '[:upper:]'; }
+          actual=$(keytool -printcert -jarfile "$bundle" | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -n 1 |
+            normalize)
+          if [ -z "$actual" ] || [ "$actual" != "$(printf '%s' "$EXPECTED_SHA256" | normalize)" ]; then
+            echo "The bundle is not signed with the key that ANDROID_UPLOAD_CERT_SHA256 names."
             exit 1
           fi
+          echo "The bundle is signed with the expected upload key."
 
       - name: Keep the bundle and the R8 mapping
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -200,6 +231,8 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/mapping/release/mapping.txt
           if-no-files-found: error
+          # The bundle carries the deployment's URLs and the Sentry DSN compiled in.
+          retention-days: 7
 
       - name: Delete the keystore and the defines
         if: always()
@@ -208,6 +241,7 @@ jobs:
   upload:
     name: Upload to Play internal testing
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     # Never on a dry run; the play-internal environment's required reviewer approves each upload.
     if: github.event_name != 'workflow_dispatch' && (inputs.tag || github.ref_type == 'tag')

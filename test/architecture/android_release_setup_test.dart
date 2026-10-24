@@ -56,6 +56,12 @@ void main() {
       );
     });
 
+    test('a required release signing refuses the check-only defines too', () {
+      expect(gradle, contains('tool/release/check_only_defines.txt'), reason: '$_gradlePath never reads the list');
+      final guard = RegExp(r'if \(requireReleaseSigning\)\s*\{[^}]*checkOnlyDefines', multiLine: true);
+      expect(guard.hasMatch(gradle), isTrue, reason: 'a signed build in $_gradlePath must refuse check-only defines');
+    });
+
     test('key.properties and keystores are git-ignored and none is tracked', () async {
       for (final path in [
         'android/key.properties',
@@ -114,6 +120,57 @@ void main() {
       final inputs = step['with'] as YamlMap;
       expect(inputs['packageName'], 'org.libredb.mobile');
       expect(inputs['track'], 'internal');
+    });
+
+    test('signs only from the release-signing environment, or the dry run environment on a manual run', () {
+      final environment = '${(jobs['build'] as YamlMap)['environment']}';
+      expect(environment, contains("github.event_name == 'workflow_dispatch'"));
+      expect(environment, contains("'release-dry-run'"));
+      expect(environment, contains("'release-signing'"));
+    });
+
+    test('releases only a commit on main, and builds the commit that verify checked', () {
+      final verify = jobs['verify'] as YamlMap;
+      expect('${(verify['outputs'] as YamlMap?)?['sha']}', contains('steps.'), reason: 'verify must output its sha');
+      final ancestor = _steps(jobs, 'verify').where((step) => '${step['run']}'.contains('merge-base --is-ancestor'));
+      expect(ancestor, hasLength(1), reason: 'verify must check that the tag is on main');
+
+      final checkout = _steps(jobs, 'build').firstWhere((step) => '${step['uses']}'.startsWith('actions/checkout@'));
+      expect((checkout['with'] as YamlMap)['ref'], r'${{ needs.verify.outputs.sha }}');
+    });
+
+    test('one concurrency group for a hand-pushed tag and a release-please release of it', () {
+      expect((workflow['concurrency'] as YamlMap)['group'], r'release-${{ inputs.tag || github.ref_name }}');
+    });
+
+    test('checkouts keep no credentials, nothing is cached, and every job has a timeout', () {
+      for (final path in [_releasePath, _releasePleasePath]) {
+        final all = _loadYaml(path)['jobs'] as YamlMap;
+        for (final entry in all.entries) {
+          final job = entry.value as YamlMap;
+          if (job['uses'] != null) continue;
+          expect(job['timeout-minutes'], isA<int>(), reason: 'job ${entry.key} in $path has no timeout-minutes');
+          for (final step in _steps(all, entry.key as String)) {
+            final inputs = step['with'] as YamlMap?;
+            if ('${step['uses']}'.startsWith('actions/checkout@')) {
+              expect(inputs?['persist-credentials'], isFalse, reason: 'a checkout in ${entry.key} keeps credentials');
+            }
+            expect(inputs?['cache'], isNot(isTrue), reason: 'a step in ${entry.key} of $path restores a cache');
+          }
+        }
+      }
+    });
+
+    test('keeps the bundle briefly and logs no certificate owner', () {
+      final steps = _steps(jobs, 'build');
+      final artifact = steps.singleWhere((step) => '${step['uses']}'.startsWith('actions/upload-artifact@'));
+      final days = (artifact['with'] as YamlMap)['retention-days'];
+      expect(days, isA<int>());
+      expect(days as int, lessThanOrEqualTo(7));
+
+      final signature = steps.singleWhere((step) => '${step['run']}'.contains('keytool -printcert'));
+      expect('${signature['run']}', isNot(contains('Owner')), reason: 'the certificate owner must not reach the log');
+      expect('${signature['env']}', contains('vars.ANDROID_UPLOAD_CERT_SHA256'));
     });
 
     test('no run script expands a secret', () {
@@ -207,6 +264,21 @@ void main() {
         }, vars: '{"SENTRY_DEVICE_CHECK":"true"}');
         expect(result.exitCode, isNot(0));
         expect(result.stdout, contains('SENTRY_DEVICE_CHECK'));
+      });
+
+      test('fails when the variables are not a JSON object', () async {
+        for (final vars in ['not json', '["SENTRY_DEVICE_CHECK"]']) {
+          final result = await check({'PROD_API_URL': 'https://studio.example/api'}, vars: vars);
+          expect(result.exitCode, isNot(anyOf(0, 1)), reason: 'RELEASE_VARS=$vars was not an error');
+        }
+      });
+
+      test('fails on a defines file that is not a JSON object, or is missing', () async {
+        final file = File('${dir.path}/dart-defines.json')..writeAsStringSync('PROD_API_URL=https://studio.example');
+        for (final path in [file.path, '${dir.path}/missing.json']) {
+          final result = await Process.run('bash', [_checkScriptPath, path], environment: {'RELEASE_VARS': '{}'});
+          expect(result.exitCode, isNot(anyOf(0, 1)), reason: '$path was not an error');
+        }
       });
 
       test('fails without the variables, so a broken step cannot pass in silence', () async {

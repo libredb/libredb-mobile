@@ -55,6 +55,19 @@ if (!hasUploadSigning && (requireReleaseSigning || missingUploadSigning.size < u
             "android/key.properties (docs/release.md).",
     )
 }
+// A signed build is a store build, so it refuses the defines meant for checks only, as the release workflow does.
+if (requireReleaseSigning) {
+    val checkOnlyDefines = rootProject.file("../tool/release/check_only_defines.txt").readLines()
+        .map { it.substringBefore("#").trim() }
+        .filter { it.isNotEmpty() }
+    val carried = checkOnlyDefines.filter { it in dartDefines }
+    if (carried.isNotEmpty()) {
+        throw GradleException(
+            "A signed release build must not carry a define meant for checks only: ${carried.joinToString()} " +
+                "(tool/release/check_only_defines.txt).",
+        )
+    }
+}
 val uploadStoreFile = uploadSigning["ANDROID_UPLOAD_STORE_FILE"]?.let { rootProject.file(it) }
 if (uploadStoreFile != null && !uploadStoreFile.isFile) {
     throw GradleException("The upload keystore that ANDROID_UPLOAD_STORE_FILE or storeFile names does not exist.")
