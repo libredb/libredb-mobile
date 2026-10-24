@@ -87,8 +87,11 @@ Both hosts' requests go through a pinned client when their define is set:
 
 - Studio: `ApiClient` installs the pinned Dio adapter for every request, retries included (`ResilienceInterceptor` sends them through the same adapter).
 - Keycloak: `OidcClient` sends discovery, the key set, the token exchange, the token refresh and the logout discovery through a pinned `package:http` client (`AppDependencies.createOidcClient`).
-- The Keycloak sign-in page itself opens in the system browser (a Custom Tab on Android, `ASWebAuthenticationSession` on iOS), which the app cannot pin: the page trusts the device's store as any browser does.
-  The authorization code it returns is worthless without the PKCE verifier, which only the pinned token exchange sends.
+- Two Keycloak pages open in the system browser (a Custom Tab on Android, `ASWebAuthenticationSession` on iOS), which the app cannot pin, so they trust the device's store as any browser does:
+  - The sign-in page.
+    The authorization code it returns is worthless without the PKCE verifier, which only the pinned token exchange sends.
+  - The provider logout page (`OidcClient._endProviderSession`), whose URL carries the ID token as `id_token_hint` when `OIDC_LOGOUT_HINT` is on.
+    An interceptor that reads that URL gets the ID token, not the access token: Studio refuses an ID token as bearer, because its bearer channel accepts only a token whose audience is `OIDC_BEARER_AUDIENCE`, which Keycloak puts into the access token only ([studio.md](studio.md)).
 
 ### A mismatch
 
@@ -129,7 +132,7 @@ openssl pkey -in backup.key -pubout -outform der | openssl dgst -sha256 -binary 
 ### Keys that outlive renewals
 
 Pin only a key that outlives certificate renewals.
-A Caddy edge, such as tool/studio-dev or a LibreDB Platform installer environment, makes a new key at each renewal unless its site is set to reuse it, so a pin of a default Caddy leaf breaks at the next renewal: about every 60 days with a public CA, and every 12 hours with `tls internal`.
+A Caddy edge, such as tool/studio-dev or a LibreDB Platform installer environment, makes a new key at each renewal unless its site is set to reuse it, so a pin of a default Caddy leaf breaks at the next renewal: about every 60 days with a public CA, and about every 8 hours with `tls internal`, whose 12-hour certificate is renewed when a third of its life is left.
 Set `reuse_private_keys` in the site's `tls` block before pinning a Caddy edge:
 
 ```caddyfile
@@ -148,6 +151,7 @@ Rotate a key in three steps, so that no installed version is left without a pin 
 
 1. Ship a release whose define holds the current pin and the pin of the next key, the backup, and wait until the installed base has updated.
 2. Move the server to a certificate over the next key.
+   On a Caddy edge, either put the backup key in place of the site's key in Caddy's storage and have Caddy renew the certificate, which with `reuse_private_keys` set keeps that key, or serve a certificate issued for the backup key with `tls <cert> <key>`.
 3. Ship a release whose define drops the old pin and adds a new backup pin.
 
 The tool/studio-dev stack runs unpinned: its CA and keys are made anew with each fresh volume, so `tool/studio-dev/studio-dev.env` lists the two defines as comments only.
