@@ -518,4 +518,66 @@ void main() {
     expect(restored?.uri.toString(), ApplicationRoutesConstants.sql);
     expect('${restored?.state}', isNot(contains('customers')));
   });
+
+  group('a database list that answers late (#174)', () {
+    /// Holds dev-postgres-server's database list until the test lets it answer.
+    late Completer<void> gate;
+
+    void holdList() {
+      // Made inside the test body: a completer made in setUp completes outside the test's fake clock and never resumes.
+      gate = Completer<void>();
+      when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer((_) async {
+        await gate.future;
+        return Success(
+          Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026)),
+        );
+      });
+    }
+
+    /// Opens dev-postgres-server's editor from dev-postgres, its database list held.
+    Future<void> openServer(WidgetTester tester) async {
+      holdList();
+      await pumpShell(tester);
+      active.select(_server);
+      // A few frames build the editor and ask for the list; the chip's spinner never settles while it is held.
+      for (var i = 0; i < 3; i++) {
+        await tester.pump();
+      }
+      verify(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).called(1);
+    }
+
+    testWidgets('answering while the connection is active chooses the default', (tester) async {
+      await openServer(tester);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(
+        catalogOf(tester).state,
+        const ActiveCatalogChosen(connectionId: 'seed:dev-postgres-server', catalog: 'app'),
+      );
+    });
+
+    testWidgets('answering after a switch away, before the left editor is gone, chooses nothing', (tester) async {
+      await openServer(tester);
+
+      active.select(_postgres);
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(active.state.connection, _postgres);
+      expect(catalogOf(tester).state, const ActiveCatalogNone());
+    });
+
+    testWidgets('answering after the session ended chooses nothing', (tester) async {
+      await openServer(tester);
+
+      active.clear();
+      catalogOf(tester).clear();
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(catalogOf(tester).state, const ActiveCatalogNone());
+    });
+  });
 }

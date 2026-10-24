@@ -8,7 +8,9 @@ import 'package:libredb_mobile/features/object_browser/data/models/object_browse
 import 'package:libredb_mobile/features/sql_editor/application/editor_catalog_bloc.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/models/answered.dart';
+import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
@@ -26,6 +28,10 @@ void main() {
   late MockIActiveCatalogStore store;
   late ActiveCatalogCubit catalog;
   late List<(String, String?)> notListed;
+  late MockActiveConnectionCubit connection;
+
+  /// The id of the active connection, the one the bloc was built for until a test closes or switches it.
+  String? openId;
 
   setUp(() {
     notListed = [];
@@ -43,17 +49,28 @@ void main() {
     when(() => store.read(any(), any())).thenAnswer((_) async => null);
     when(() => store.write(any(), any(), any())).thenAnswer((_) async {});
     catalog = ActiveCatalogCubit(store: store, connectionIds: const Stream.empty());
+    connection = MockActiveConnectionCubit();
+    when(() => connection.state).thenAnswer(
+      (_) => switch (openId) {
+        final id? => ActiveConnectionSelected(StudioConnection(id: id, name: id, type: 'postgres')),
+        null => const ActiveConnectionNone(),
+      },
+    );
   });
 
   tearDown(() => catalog.close());
 
-  EditorCatalogBloc build(String connectionId) => EditorCatalogBloc(
-    containers: containers,
-    providerMeta: providerMeta,
-    activeCatalog: catalog,
-    connectionId: connectionId,
-    onRequestedNotListed: (requested, used) => notListed.add((requested, used)),
-  );
+  EditorCatalogBloc build(String connectionId) {
+    openId = connectionId;
+    return EditorCatalogBloc(
+      containers: containers,
+      providerMeta: providerMeta,
+      activeCatalog: catalog,
+      activeConnection: connection,
+      connectionId: connectionId,
+      onRequestedNotListed: (requested, used) => notListed.add((requested, used)),
+    );
+  }
 
   test('starts checking the engine, and Run waits meanwhile', () {
     expect(build(server).state, const EditorCatalogChecking());
@@ -174,6 +191,67 @@ void main() {
       expect(bloc.state.withholdsRun(null), isTrue);
     },
   );
+
+  group('a list that answers once the connection is no longer active (#174)', () {
+    /// Lets the server's list answer after [close] ran, as when the user leaves the connection meanwhile.
+    void answerAfter(void Function() close) =>
+        when(() => containers.containers(server, refresh: any(named: 'refresh'))).thenAnswer((_) async {
+          close();
+          return Success(
+            Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026)),
+          );
+        });
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'after a switch to another connection, lists the databases and chooses none',
+      setUp: () => answerAfter(() => openId = postgres),
+      build: () => build(server),
+      act: (bloc) => bloc.add(const EditorCatalogRequested()),
+      expect: () => const [
+        EditorCatalogLoading(label: 'Database'),
+        EditorCatalogListed(label: 'Database', catalogs: ['app', 'archive', 'postgres']),
+      ],
+      verify: (_) {
+        expect(catalog.state, const ActiveCatalogNone());
+        verifyNever(() => store.write(any(), any(), any()));
+      },
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'after the session ended, chooses none and stores nothing for the next sign-in',
+      setUp: () {
+        catalog.signedIn(subject);
+        answerAfter(() => openId = null);
+      },
+      build: () => build(server),
+      act: (bloc) => bloc.add(const EditorCatalogRequested()),
+      skip: 1,
+      expect: () => const [
+        EditorCatalogListed(label: 'Database', catalogs: ['app', 'archive', 'postgres']),
+      ],
+      verify: (_) {
+        expect(catalog.state, const ActiveCatalogNone());
+        verifyNever(() => store.write(any(), any(), any()));
+      },
+    );
+
+    blocTest<EditorCatalogBloc, EditorCatalogState>(
+      'an open request that waited for the list is dropped without naming its database',
+      setUp: () => answerAfter(() => openId = postgres),
+      build: () => build(server),
+      act: (bloc) => bloc
+        ..add(const EditorCatalogRequested())
+        ..add(const EditorCatalogOpenRequested('gone')),
+      skip: 1,
+      expect: () => const [
+        EditorCatalogListed(label: 'Database', catalogs: ['app', 'archive', 'postgres']),
+      ],
+      verify: (_) {
+        expect(catalog.state, const ActiveCatalogNone());
+        expect(notListed, isEmpty);
+      },
+    );
+  });
 
   group('an open request', () {
     blocTest<EditorCatalogBloc, EditorCatalogState>(
