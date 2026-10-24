@@ -35,6 +35,20 @@ void main() {
   );
 
   group('AnalyticsRouteObserver', () {
+    testWidgets('sends no screen class, since a route type name is renamed in an obfuscated build', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(navigatorObservers: [AnalyticsRouteObserver(analytics)], home: const Text('home')),
+      );
+
+      verify(() => analytics.logScreenView(screenName: '/')).called(1);
+      verifyNever(
+        () => analytics.logScreenView(
+          screenName: any(named: 'screenName'),
+          screenClass: any(named: 'screenClass', that: isNotNull),
+        ),
+      );
+    });
+
     testWidgets('does not log a screen view when a popup menu closes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
