@@ -44,4 +44,7 @@ void runSentryDeviceCheck(IAnalyticsService analytics, {void Function(Object err
   throwUncaught(studioError(answer));
 }
 
-void _throwUncaught(Object error) => Timer.run(() => throw error);
+/// Throws [error] from a microtask, which the engine reports to `PlatformDispatcher.onError`, where the Sentry SDK and
+/// `CrashReporter` see it. An error thrown from a timer callback reached neither on an Android release build (Flutter
+/// 3.47.7), so the check does not use one.
+void _throwUncaught(Object error) => scheduleMicrotask(() => throw error);

@@ -12,15 +12,28 @@ import org.junit.Test
 class SentryDeviceCheckTest {
     @Test
     fun crashesOnlyWhenTheBuildCarriesTheDefineAndTheIntentAsks() {
-        assertNull(SentryDeviceCheck.nativeCrash(defined = false, asked = true))
-        assertNull(SentryDeviceCheck.nativeCrash(defined = true, asked = false))
-        assertTrue(SentryDeviceCheck.nativeCrash(defined = true, asked = true) is RuntimeException)
+        assertNull(SentryDeviceCheck.nativeCrash(defined = false) { true })
+        assertNull(SentryDeviceCheck.nativeCrash(defined = true) { false })
+        assertTrue(SentryDeviceCheck.nativeCrash(defined = true) { true } is RuntimeException)
+    }
+
+    // A build without the define never reads the intent's extra, so its code holds no read of it.
+    @Test
+    fun readsNoExtraWithoutTheDefine() {
+        var read = false
+
+        SentryDeviceCheck.nativeCrash(defined = false) {
+            read = true
+            true
+        }
+
+        assertFalse(read)
     }
 
     // The crash carries an email and a token for the check in Sentry; the native scrubber masks both.
     @Test
     fun crashesWithAnEmailAndATokenThatTheNativeScrubberMasks() {
-        val crash = SentryDeviceCheck.nativeCrash(defined = true, asked = true)!!
+        val crash = SentryDeviceCheck.nativeCrash(defined = true) { true }!!
         assertTrue(crash.message!!.contains("device.check@example.com"))
         val event = SentryEvent().apply { exceptions = listOf(SentryException().apply { value = crash.message }) }
 

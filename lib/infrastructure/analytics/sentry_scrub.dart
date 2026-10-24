@@ -127,8 +127,65 @@ Breadcrumb? sentryBeforeBreadcrumb(Breadcrumb? breadcrumb) {
 @visibleForTesting
 const Set<String> sentryNavigationTypes = {'didPush', 'didPop', 'didReplace'};
 
+/// The second layer for a transaction, which leaves the device without
+/// passing `beforeSend` when spans are sent together
+/// (`SentryTraceLifecycle.static`): the event fields as [sentryBeforeSend]
+/// masks them, and the description and the data of every span as a
+/// breadcrumb's message and data are masked. Mutates [transaction] in place
+/// and returns it.
+SentryTransaction sentryBeforeSendTransaction(SentryTransaction transaction) {
+  sentryBeforeSend(transaction);
+  for (final span in transaction.spans) {
+    final description = span.context.description;
+    if (description != null) span.context.description = _maskText(description);
+    // A finished span ignores setData, so its data map is edited in place.
+    final masked = _maskMap(scrubBodyKeys(Map<String, dynamic>.of(span.data)) as Map<String, dynamic>);
+    span.data
+      ..clear()
+      ..addAll(masked);
+  }
+  return transaction;
+}
+
+/// The second layer for a span sent on its own (`SentryTraceLifecycle.stream`,
+/// the SDK default): masks its name and its attributes as [_maskAttributes]
+/// does, in place.
+void sentryBeforeSendSpan(SentrySpanV2 span) {
+  span.name = _maskText(span.name);
+  span.setAttributes(_maskAttributes(span.attributes));
+}
+
+/// The second layer for a Sentry log, which only an explicit call of the
+/// SDK's logger writes and the app makes none: masks its body as text and its
+/// attributes as [_maskAttributes] does, in place, and returns it.
+SentryLog sentryBeforeSendLog(SentryLog log) {
+  log
+    ..body = _maskText(log.body)
+    ..attributes = _maskAttributes(log.attributes);
+  return log;
+}
+
+/// [attributes] with every string value of a credential key replaced by
+/// [secretMask] and every other string, alone or in a list, masked as
+/// [_maskText] masks text. Numbers and bools are kept.
+Map<String, SentryAttribute> _maskAttributes(Map<String, SentryAttribute> attributes) => {
+  for (final MapEntry(:key, value: attribute) in attributes.entries)
+    key: switch (attribute.value) {
+      final String _ when _isCredentialKey(key) => SentryAttribute.string(secretMask),
+      final String text => SentryAttribute.string(_maskText(text)),
+      final List<String> texts => SentryAttribute.stringArray([for (final text in texts) _maskText(text)]),
+      _ => attribute,
+    },
+};
+
+/// Whether [key] names a credential under the shared policy, as [scrubBodyKeys] decides.
+bool _isCredentialKey(String key) => (scrubBodyKeys({key: ''}) as Map)[key] == secretMask;
+
 /// Installs [sentryBeforeSend] as the `beforeSend` hook and
-/// [sentryBeforeBreadcrumb] as the `beforeBreadcrumb` hook of [options].
+/// [sentryBeforeBreadcrumb] as the `beforeBreadcrumb` hook of [options], and
+/// [sentryBeforeSendTransaction], [sentryBeforeSendSpan] and
+/// [sentryBeforeSendLog] as the second layer for what does not pass
+/// `beforeSend`.
 /// `configureSentryOptions` calls it when Sentry starts. Both are needed: an
 /// error event takes its breadcrumbs from the scope, and only
 /// `beforeBreadcrumb` scrubs them there.
@@ -140,6 +197,9 @@ const Set<String> sentryNavigationTypes = {'didPush', 'didPop', 'didReplace'};
 void installSentryScrubbers(SentryOptions options) {
   options.beforeSend = (event, hint) => sentryBeforeSend(event);
   options.beforeBreadcrumb = (breadcrumb, hint) => sentryBeforeBreadcrumb(breadcrumb);
+  options.beforeSendTransaction = (transaction, hint) => sentryBeforeSendTransaction(transaction);
+  options.beforeSendSpan = (span, hint) => sentryBeforeSendSpan(span);
+  options.beforeSendLog = (log, hint) => sentryBeforeSendLog(log);
   options.enablePrintBreadcrumbs = false;
 }
 

@@ -18,15 +18,20 @@ object SentryDeviceCheck {
     /** A JWT-shaped token for the check. It signs nothing. */
     const val TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkZXZpY2UtY2hlY2sifQ.devicecheckonly"
 
-    /** The crash to throw: one only when the build carries the define ([defined]) and the intent asks ([asked]). */
-    fun nativeCrash(defined: Boolean, asked: Boolean): RuntimeException? = if (defined && asked) {
-        RuntimeException("LibreDB Sentry device check: native crash for device.check@example.com with Bearer $TOKEN")
-    } else {
-        null
-    }
+    /**
+     * The crash to throw: one only when the build carries the define ([defined]) and the intent asks ([asked]).
+     * [asked] runs only when [defined] is true, so in a build without the define, where [defined] is the constant
+     * false, the compiler drops the read of the extra.
+     */
+    inline fun nativeCrash(defined: Boolean, asked: () -> Boolean): RuntimeException? =
+        if (defined && asked()) crash() else null
 
-    /** Throws [nativeCrash] for [intent] in a build with the define. */
+    /** The crash of the check, with an email address and a token for the scrubber to mask. */
+    fun crash() =
+        RuntimeException("LibreDB Sentry device check: native crash for device.check@example.com with Bearer $TOKEN")
+
+    /** Throws the crash when the build carries the define and [intent] asks; the extra is read only with the define. */
     fun crashIfAsked(intent: Intent?) {
-        nativeCrash(BuildConfig.SENTRY_DEVICE_CHECK, intent?.getBooleanExtra(EXTRA, false) == true)?.let { throw it }
+        nativeCrash(BuildConfig.SENTRY_DEVICE_CHECK) { intent?.getBooleanExtra(EXTRA, false) == true }?.let { throw it }
     }
 }

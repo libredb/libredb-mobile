@@ -64,6 +64,7 @@ So the types the Studio layer builds keep that text out of their `toString`:
 `sentryBeforeBreadcrumb` masks the email addresses, JWTs and secrets in the message and the data of every breadcrumb when it is recorded, and the value of every credential key of the data.
 That covers the breadcrumbs of `SentryAnalyticsService`, the navigation breadcrumbs, and the http and ui breadcrumbs that `sentry_dio` or `SentryUserInteractionWidget` would add.
 `installSentryScrubbers` installs both hooks, and `configureSentryOptions` calls it.
+It also installs a second layer for what leaves the device without passing `beforeSend`, with the same policy: `sentryBeforeSendSpan` masks the name and the string attributes of each span sent on its own (the SDK's default trace lifecycle), `sentryBeforeSendTransaction` masks a transaction's event fields and the description and data of its spans, and `sentryBeforeSendLog` masks the body and the string attributes of a Sentry log.
 It also turns print breadcrumbs off, so no printed line and no `AppLogger` line becomes a breadcrumb: a scrubber cannot find a password or a code in free text.
 
 The policy itself, which names and shapes count as sensitive, is in `lib/core/security/sensitive_data_scrubber.dart`, shared with the log, so the two exits cannot drift apart.
@@ -101,6 +102,7 @@ A native option set in `configureSentryOptions` does not reach the Android SDK, 
 
 A release build with a DSN can send one test event and one native crash, so the check needs no code change.
 Both exist only in a build with `--dart-define=SENTRY_DEVICE_CHECK=true`: the Dart check sits behind a `const` the compiler drops without the define, and Gradle writes `BuildConfig.SENTRY_DEVICE_CHECK` as true only for a `lib/main/main_prod.dart` build with it.
+A build without the define never reads the intent extra: `SentryDeviceCheck.crashIfAsked` tests the constant first, so the compiler drops the read.
 Never ship a build with that define.
 
 1. Build and install a release APK with the DSN of a test project:
@@ -113,7 +115,8 @@ Never ship a build with that define.
    ```
 
 2. Start the app.
-   Right after it starts, it records a user action breadcrumb with the email `device.check@example.com` and a JWT-shaped token, then throws an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` (`lib/app/bootstrap/sentry_device_check.dart`).
+   Right after it starts, it records a user action breadcrumb with the email `device.check@example.com` and a JWT-shaped token, then throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` (`lib/app/bootstrap/sentry_device_check.dart`).
+   It does not throw from a timer: on an Android release build an error thrown in a root-zone timer callback reached neither `PlatformDispatcher.onError` nor the log.
 3. Crash the native side:
 
    ```shell
