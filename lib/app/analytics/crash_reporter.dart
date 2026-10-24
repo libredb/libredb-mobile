@@ -18,6 +18,11 @@ class CrashReporter {
   /// installed here. Forwarding to the Sentry-backed analytics in that case
   /// reports every crash twice. With forwarding off, this reporter keeps doing
   /// local logging and Sentry remains the single uncaught-error sink.
+  ///
+  /// With the Sentry SDK active, an error thrown in a `Timer` callback reaches
+  /// neither hook installed here: the SDK's isolate error listener takes it
+  /// and sends it, so it is reported but not logged locally
+  /// (docs/crash-reporting.md, "Where an uncaught error goes").
   static void install(IAnalyticsService analytics, {bool forwardToAnalytics = true}) {
     // Flutter framework errors (widget build, layout, paint)
     FlutterError.onError = (details) {

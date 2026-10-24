@@ -46,6 +46,28 @@ So the types the Studio layer builds keep that text out of their `toString`:
 
 `test/app/analytics/crash_reporter_studio_error_test.dart` sends both, built from a Studio answer that carries a database error, a statement, an email and a token, through `CrashReporter` and the scrubber, and finds none of them in the event or in the log.
 
+## Where an uncaught error goes
+
+An uncaught error takes one of two paths, never both, so it is reported once.
+
+- An error from a microtask, a `Future` or the framework reaches `PlatformDispatcher.onError` or `FlutterError.onError`, where `CrashReporter` logs it.
+  With a DSN, sentry_flutter's `OnErrorIntegration` calls `CrashReporter`'s handler first and then sends the error with the mechanism `PlatformDispatcher.onError`.
+- An error thrown in a `Timer` callback (a debounce, a countdown, a timeout) reaches `PlatformDispatcher.onError` only while the isolate has no error listener.
+  The Sentry Dart SDK adds one when it starts (`IsolateErrorIntegration`), and the Dart VM then hands the timer's error to that listener instead of the engine's handler.
+  Sentry sends it as an unhandled event with the mechanism `isolateError`, carrying the error's `toString` and stack trace through the same `sentryBeforeSend`, and neither `CrashReporter` nor logcat sees it.
+  Without a DSN there is no listener, and `CrashReporter` logs a timer's error like any other.
+
+So a release build with a DSN reports a timer's error to Sentry, but writes no line for it to the device log.
+Measured for #206 with release APKs on the `libredb-dev-api30` emulator (Flutter 3.47.7, sentry_flutter 10.1.0), each throwing in the root zone from a microtask, `Future.error`, `Timer.run`, a 100 ms `Timer` and a `Timer.periodic`:
+
+| Thrown from | No DSN | DSN |
+| --- | --- | --- |
+| A microtask or `Future.error` | `CrashReporter` and logcat | `CrashReporter`, logcat and Sentry |
+| `Timer.run`, `Timer` or `Timer.periodic` | `CrashReporter` and logcat | Sentry only |
+
+A build without a DSN that added its own isolate error listener showed the same split: the three timer errors reached only the listener, and the microtask and `Future.error` errors only `CrashReporter`.
+That Sentry receives the timer's error comes from the #191 device check on the test phone, where `Bad state: devcheck timer` arrived as an unhandled issue.
+
 ## What the Dart hooks mask
 
 `sentryBeforeSend` (`lib/infrastructure/analytics/sentry_scrub.dart`) changes every event before it leaves the device:
@@ -117,7 +139,7 @@ Never ship a build with that define.
 
 2. Start the app.
    Right after it starts, it records a user action breadcrumb with the email `device.check@example.com` and a JWT-shaped token, then throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` (`lib/app/bootstrap/sentry_device_check.dart`).
-   It does not throw from a timer: on an Android release build an error thrown in a root-zone timer callback reached neither `PlatformDispatcher.onError` nor the log.
+   It throws from a microtask so that the error reaches Sentry as the `AuthError` object through `PlatformDispatcher.onError`; a timer's error would reach it only as text through the isolate error listener (see "Where an uncaught error goes").
 3. Crash the native side:
 
    ```shell
