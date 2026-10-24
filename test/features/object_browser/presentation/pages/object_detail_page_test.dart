@@ -517,6 +517,23 @@ void main() {
       verify(() => harness.repository.source(_postgres.id, path: view, kind: 'view')).called(1);
     });
 
+    // The tab view keeps the Source tab alive off screen, so the tab turns its tickers off while it is away and its
+    // lease goes with them; the Columns tab can then be captured.
+    testWidgets('the Source tab holds a capture lease only while it is the tab on screen', (tester) async {
+      await harness.pump(tester, location: viewLocation);
+      expect(harness.screenCapture.leases, 0, reason: 'the columns stay capturable');
+
+      await openTab(tester, 'Source');
+      expect(harness.screenCapture.leases, 1);
+
+      await openTab(tester, 'Columns');
+      expect(find.byType(ObjectSourceView, skipOffstage: false), findsOneWidget, reason: 'kept alive');
+      expect(harness.screenCapture.leases, 0);
+
+      await openTab(tester, 'Source');
+      expect(harness.screenCapture.leases, 1);
+    });
+
     testWidgets('its Source page opens its detail, and back returns to the source', (tester) async {
       final sourceLocation = Uri(
         path: '/browse/${Uri.encodeComponent(_postgres.id)}/source/view',

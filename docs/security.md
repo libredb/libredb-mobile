@@ -180,6 +180,7 @@ How it works:
 - On screen means mounted with its tickers on (`ScreenCaptureProtected` in `lib/core/security/screen_capture_protected.dart`).
   A route covered by an opaque page, or the shell hidden under the refusal page or the "Can't reach Studio" page, has its tickers off and holds no lease, so the screen shown above it can be captured; a sheet over a result leaves the result's tickers on.
   The shell's tabs are routes of one `ShellRoute`, so a tab change disposes the editor and its result: nothing of it stays mounted offstage.
+  The detail page's tab view keeps the Source tab alive off screen, so that tab turns its tickers off while none of it is in view, and the Columns tab shown in its place can be captured.
 - The plugin calls sit behind `IScreenCapturePlatform` (`lib/core/security/screen_capture_platform.dart`), so a widget test counts leases on its own instance without a platform channel (`test/support/screen_capture.dart`).
 - A guard without a `ScreenCaptureProtection` above it fails with `ProviderNotFoundException` rather than show the data unprotected.
 
