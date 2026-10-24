@@ -533,6 +533,28 @@ void main() {
       expect(lines.where((line) => line.contains('SELECT draft')), isEmpty);
     });
 
+    final closings = <String, void Function(WidgetTester tester)>{
+      'the session ends': (tester) {
+        active.clear();
+        catalogOf(tester).clear();
+      },
+      'a feature reports the connection unavailable': (_) => active.reportUnavailable(_server.id),
+      'the connection list no longer holds the connection': (_) => active.connectionsListed(const [_postgres]),
+    };
+    for (final MapEntry(key: closing, value: close) in closings.entries) {
+      testWidgets('the draft keeps its database when $closing (#171)', (tester) async {
+        active.select(_server);
+        await pumpShell(tester);
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+
+        close(tester);
+        await tester.pumpAndSettle();
+
+        expect(active.state.connection, isNull);
+        expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'postgres'));
+      });
+    }
+
     testWidgets('a database the user picks on the connection is saved with the draft when leaving it (#171)', (
       tester,
     ) async {
