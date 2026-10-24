@@ -8,6 +8,7 @@ import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.d
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 
 /// Persistence-layer implementation of [IAuthSessionRepository].
 ///
@@ -19,23 +20,28 @@ import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 /// none) before the failure is reported. Callers therefore never observe a
 /// half-written session.
 ///
-/// [clear] removes what belongs to the session: both tokens, every [StorageKeys] value of [StorageScope.session]
-/// and the HTTP responses cached in [ICacheStorage]. Device preferences such as the language and theme stay.
+/// [clear] removes what belongs to the session: both tokens, every [StorageKeys] value of [StorageScope.session],
+/// the HTTP responses cached in [ICacheStorage] and the files the share sheet got ([TemporaryShareFiles]). Device
+/// preferences such as the language and theme stay.
 ///
 /// The session also owns [SecureStorageKeys.oidcIdToken] and [SecureStorageKeys.accessTokenExpiresAt]: [persist] writes
 /// them after the refresh token, and the rollback and [clear] cover them.
 class AuthSessionRepository implements IAuthSessionRepository {
-  AuthSessionRepository({required ISecureStorage secureStorage, AppLocalStorage? storage, ICacheStorage? cacheStorage})
-    // ignore: prefer_initializing_formals
-    : _secureStorage = secureStorage,
-      _storage = storage ?? AppLocalStorage(),
-      _cacheStorage = cacheStorage ?? SharedPrefsCacheStorage();
+  AuthSessionRepository({
+    required this._secureStorage,
+    AppLocalStorage? storage,
+    ICacheStorage? cacheStorage,
+    TemporaryShareFiles? shareFiles,
+  }) : _storage = storage ?? AppLocalStorage(),
+       _cacheStorage = cacheStorage ?? SharedPrefsCacheStorage(),
+       _shareFiles = shareFiles ?? TemporaryShareFiles();
 
   static final _log = AppLogger.getLogger('AuthSessionRepository');
 
   final ISecureStorage _secureStorage;
   final AppLocalStorage _storage;
   final ICacheStorage _cacheStorage;
+  final TemporaryShareFiles _shareFiles;
 
   @override
   Future<Result<void>> persist(AuthSession session) async {
@@ -145,12 +151,19 @@ class AuthSessionRepository implements IAuthSessionRepository {
     } catch (e) {
       errors.add('cache: $e');
     }
+    // A source shared as a file is this user's data too. The error's type only: its message holds the file's path,
+    // which names the object.
+    try {
+      await _shareFiles.clear();
+    } catch (e) {
+      errors.add('share files: ${e.runtimeType}');
+    }
     if (errors.isNotEmpty) {
       final msg = errors.join('; ');
       _log.error('clear: partial failures: {}', [msg]);
       return Failure(UnknownError('Session clear failed: $msg'));
     }
-    _log.info('clear: tokens, {} session keys and cached responses removed', [sessionKeys.length]);
+    _log.info('clear: tokens, {} session keys, cached responses and share files removed', [sessionKeys.length]);
     return const Success(null);
   }
 

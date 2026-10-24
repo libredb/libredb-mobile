@@ -23,6 +23,7 @@ enum AppErrorCode {
   authOidcNoClaims('auth.oidc_no_claims'),
   authOidcFailed('auth.oidc_failed'),
   authOidcLogoutIncomplete('auth.oidc_logout_incomplete'),
+  authShareFilesNotRemoved('auth.share_files_not_removed'),
 
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),

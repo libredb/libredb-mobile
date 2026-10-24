@@ -156,6 +156,7 @@
   "error_auth_oidc_failed": "Sign-in failed. Please try again.",
   "@error_auth_oidc_failed": {},
   "error_auth_oidc_logout_incomplete": "You are signed out of this app, but your session at the identity provider may still be active.",
+  "error_auth_share_files_not_removed": "Files shared on this phone earlier could not be removed, so you are not signed in. Try again.",
   "@error_auth_oidc_logout_incomplete": {},
   "login_sso_button": "Sign in with SSO",
   "@login_sso_button": {},
@@ -358,6 +359,15 @@
   "@browse_source_share": {},
   "browse_source_share_failed": "Could not share ({code})",
   "@browse_source_share_failed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "browse_source_share_file_left": "The shared file stays on this phone until you sign out ({code})",
+  "@browse_source_share_file_left": {
+    "description": "The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.",
     "placeholders": {
       "code": {
         "type": "String"

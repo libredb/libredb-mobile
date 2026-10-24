@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
@@ -8,6 +10,7 @@ import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart' show Logger, OutputEvent;
 
@@ -63,12 +66,22 @@ Map<String, Object?> _claims({Map<String, Object?> extra = const {}}) => {
 void main() {
   late _FakeOidcClient client;
   late _FakeAuthSessionRepository sessions;
+  late Directory temporary;
   late SsoAuthRepository repository;
 
   setUp(() {
     client = _FakeOidcClient();
     sessions = _FakeAuthSessionRepository();
-    repository = SsoAuthRepository(client: client, sessionRepository: sessions);
+    temporary = Directory.systemTemp.createTempSync('sso_share_files');
+    repository = SsoAuthRepository(
+      client: client,
+      sessionRepository: sessions,
+      shareFiles: TemporaryShareFiles(temporaryDirectory: () async => temporary),
+    );
+  });
+
+  tearDown(() {
+    if (temporary.existsSync()) temporary.deleteSync(recursive: true);
   });
 
   Future<SsoProviderSignIn> signInWith(Map<String, Object?> claims) {
@@ -87,6 +100,32 @@ void main() {
       expect(session.refreshToken, 'refresh-token');
       expect(session.oidcIdToken, 'id-token');
       expect(session.accessTokenExpiresAt, _expiresAt);
+    });
+
+    // A share the app was killed in, before a session that ended without the wipe (a restore that timed out, lost
+    // tokens), left its file for the next account (#202).
+    test('removes the files a share left before the new session is stored', () async {
+      final left = await TemporaryShareFiles(temporaryDirectory: () async => temporary).write('a.sql', [1]);
+      final copy = File('${temporary.path}/share_plus/a.sql')..createSync(recursive: true);
+
+      final result = await signInWith(_claims());
+
+      expect(result, isA<SsoProviderSignedIn>());
+      expect(left.existsSync(), isFalse);
+      expect(copy.existsSync(), isFalse);
+    });
+
+    test('refuses the sign-in and stores no session when the phone refuses to remove the share files', () async {
+      repository = SsoAuthRepository(
+        client: client,
+        sessionRepository: sessions,
+        shareFiles: TemporaryShareFiles(temporaryDirectory: () async => throw const FileSystemException('refused')),
+      );
+
+      final result = await signInWith(_claims());
+
+      expect(result, const SsoProviderRejected(AppErrorCode.authShareFilesNotRemoved));
+      expect(sessions.persisted, isEmpty);
     });
 
     // The role comes only from Studio's GET /api/auth/me, so a token's role claim is never read.

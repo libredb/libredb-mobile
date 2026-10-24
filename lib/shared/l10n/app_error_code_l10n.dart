@@ -17,6 +17,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.authOidcDiscovery => s.error_auth_oidc_discovery,
       AppErrorCode.authOidcNoClaims || AppErrorCode.authOidcFailed => s.error_auth_oidc_failed,
       AppErrorCode.authOidcLogoutIncomplete => s.error_auth_oidc_logout_incomplete,
+      AppErrorCode.authShareFilesNotRemoved => s.error_auth_share_files_not_removed,
       AppErrorCode.settingsChangeLanguageFailed => s.error_settings_change_language_failed,
       AppErrorCode.settingsUserDataNotRemoved => s.error_settings_user_data_not_removed,
       AppErrorCode.settingsAppLockNotSaved => s.error_settings_app_lock_not_saved,
