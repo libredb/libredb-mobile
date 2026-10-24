@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -370,6 +371,32 @@ void main() {
       expect(prod(studio: 'HTTPS://studio.example.test/api').apiBaseUrl, 'HTTPS://studio.example.test/api');
     });
 
+    test('a host with an underscore, a port or an IPv6 literal passes, as everywhere the rule runs', () {
+      for (final value in ['https://my_studio.example.test/api', 'https://studio:9443/api', 'https://[::1]:9443/api']) {
+        expect(prod(studio: value, sentryDsn: 'https://key@my_sentry.example.test/1').apiBaseUrl, value);
+      }
+    });
+
+    test('surrounding whitespace in PROD_API_URL or SENTRY_DSN stops the start and says so', () {
+      for (final name in ['PROD_API_URL', 'SENTRY_DSN']) {
+        for (final value in [' $_studioUrl', '$_studioUrl ', '$_studioUrl\n']) {
+          expect(
+            () => name == 'PROD_API_URL' ? prod(studio: value) : prod(sentryDsn: value),
+            throwsA(
+              isA<ProdHttpsConfigError>()
+                  .having((error) => error.define, 'define', name)
+                  .having((error) => '$error', 'message', contains('whitespace')),
+            ),
+            reason: '$name=${jsonEncode(value)}',
+          );
+        }
+      }
+    });
+
+    test('an OIDC_ISSUER is trimmed first, as the sign-in reads it', () {
+      expect(prod(oidcIssuer: '  $issuer\n').isProduction, isTrue);
+    });
+
     test('an unset OIDC_ISSUER or SENTRY_DSN starts: the login page fails closed, and Sentry stays off', () {
       final config = prod(oidcIssuer: '', sentryDsn: '');
       expect(config.sentryDsn, isNull);
@@ -403,9 +430,9 @@ void main() {
       const studio = String.fromEnvironment('PROD_API_URL');
       const oidcIssuer = String.fromEnvironment('OIDC_ISSUER');
       const sentryDsn = String.fromEnvironment('SENTRY_DSN');
-      bool insecure(String value) => value.isNotEmpty && !value.toLowerCase().startsWith('https://');
+      bool insecure(String value) => value.isNotEmpty && (value.trim() != value || !AppConfig.isHttpsUrl(value));
       AppConfig start() => AppConfig.fromEnvironment(Environment.prod, prodApiUrlDefine: _studioUrl);
-      if (insecure(oidcIssuer) || insecure(sentryDsn)) {
+      if (insecure(oidcIssuer.trim()) || insecure(sentryDsn)) {
         expect(start, throwsA(isA<ProdHttpsConfigError>()));
       } else {
         expect(start().isProduction, isTrue);

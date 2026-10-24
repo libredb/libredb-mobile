@@ -134,9 +134,26 @@ class NativeSentryTest {
         }
     }
 
+    // The rule of AppConfig.isHttpsUrl, so the two sides never disagree on a DSN.
     @Test
-    fun acceptsAnHttpsDsnInAnyCase() {
-        NativeSentry.requireHttpsDsn("https://publickey@example.invalid/1")
-        NativeSentry.requireHttpsDsn("HTTPS://publickey@example.invalid/1")
+    fun acceptsAnHttpsDsnInAnyCaseWithTheHostsDartAccepts() {
+        for (dsn in listOf(
+            "https://publickey@example.invalid/1",
+            "HTTPS://publickey@example.invalid/1",
+            "https://publickey@my_sentry.example.invalid/1",
+            "https://publickey@sentry.example.invalid:8443/1",
+            "https://publickey@[::1]:8443/1",
+        )) {
+            NativeSentry.requireHttpsDsn(dsn)
+        }
+    }
+
+    @Test
+    fun refusesSurroundingWhitespaceSayingSo() {
+        for (dsn in listOf(" https://publickey@example.invalid/1", "https://publickey@example.invalid/1\n")) {
+            val error = assertThrows(IllegalStateException::class.java) { NativeSentry.requireHttpsDsn(dsn) }
+            assertTrue(error.message, error.message!!.contains("SENTRY_DSN has leading or trailing whitespace"))
+            assertFalse(error.message, error.message!!.contains("publickey"))
+        }
     }
 }

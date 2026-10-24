@@ -75,17 +75,17 @@ final class AppConfig {
     @visibleForTesting String screenCaptureProtectionDefine = screenCaptureProtectionSwitch,
     @visibleForTesting String appLockRequiredDefine = appLockRequiredSwitch,
   }) {
+    if (environment == Environment.prod) {
+      if (prodApiUrlDefine.isEmpty) throw ProdApiUrlConfigError();
+      _requireHttps('PROD_API_URL', prodApiUrlDefine);
+      // Trimmed first, as OidcSettings reads it; an unset issuer fails closed on the login page instead.
+      if (oidcIssuerDefine.trim().isNotEmpty) _requireHttps('OIDC_ISSUER', oidcIssuerDefine.trim());
+      if (sentryDsnDefine.isNotEmpty) _requireHttps('SENTRY_DSN', sentryDsnDefine);
+    }
     final protection = _screenCaptureProtectionOf(screenCaptureProtectionDefine);
     final lockRequired = _appLockRequiredOf(appLockRequiredDefine);
     return switch (environment) {
       Environment.dev => AppConfig.dev(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
-      Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
-      Environment.prod when !_isHttpsUrl(prodApiUrlDefine) => throw ProdHttpsConfigError('PROD_API_URL'),
-      Environment.prod when oidcIssuerDefine.trim().isNotEmpty && !_isHttpsUrl(oidcIssuerDefine.trim()) =>
-        throw ProdHttpsConfigError('OIDC_ISSUER'),
-      Environment.prod when sentryDsnDefine.isNotEmpty && !_isHttpsUrl(sentryDsnDefine) => throw ProdHttpsConfigError(
-        'SENTRY_DSN',
-      ),
       Environment.prod => AppConfig.prod(
         apiBaseUrl: prodApiUrlDefine,
         sentryDsnDefine: sentryDsnDefine,
@@ -113,10 +113,25 @@ final class AppConfig {
   /// in transit").
   static const Set<String> httpsOnlyDefines = {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN'};
 
-  /// Whether [value] is an absolute https URL with a host; `Uri` lower-cases the scheme.
-  static bool _isHttpsUrl(String value) {
-    final uri = Uri.tryParse(value);
-    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+  /// Whether [value] is an absolute https URL with a host: the scheme in any case, optional user info, a host name
+  /// or an IPv6 literal, an optional port, then the end or a path, query or fragment. A space or an ASCII control
+  /// character never belongs to the user info or the host.
+  /// The same pattern runs in `NativeSentry.requireHttpsDsn` and `tool/release/check_defines.sh`, so the three never
+  /// disagree; it is written without a case flag because the regex engines read one differently.
+  static bool isHttpsUrl(String value) => _httpsUrl.hasMatch(value);
+
+  /// The pattern of [isHttpsUrl], which `test/architecture/android_release_setup_test.dart` finds verbatim in the
+  /// other two.
+  static const String httpsUrlPattern =
+      r'^[Hh][Tt][Tt][Pp][Ss]://([^/?#@\x00-\x20\x7F]*@)?'
+      r'(\[[0-9A-Fa-f:.]+\]|[^/?#@:\[\]\x00-\x20\x7F]+)(:[0-9]*)?([/?#]|$)';
+
+  static final _httpsUrl = RegExp(httpsUrlPattern);
+
+  /// Throws [ProdHttpsConfigError] unless [value], the define [name], is an https URL without surrounding whitespace.
+  static void _requireHttps(String name, String value) {
+    if (value.trim() != value) throw ProdHttpsConfigError(name, whitespace: true);
+    if (!isHttpsUrl(value)) throw ProdHttpsConfigError(name);
   }
 
   /// The pins of the host of [prodApiUrl], given at build time with `--dart-define=STUDIO_CERT_PINS=<pin>,<pin>`
@@ -246,13 +261,19 @@ final class ProdApiUrlConfigError extends Error {
 /// A prod build whose `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, which stops the
 /// app at start instead of sending a bearer, a sign-in or a crash report over plain http.
 final class ProdHttpsConfigError extends Error {
-  ProdHttpsConfigError(this.define);
+  ProdHttpsConfigError(this.define, {this.whitespace = false});
 
   /// The define that is not https. Its value is never printed, because the DSN carries the project's key.
   final String define;
 
+  /// Whether the value has leading or trailing whitespace, which a prod build refuses rather than trims.
+  final bool whitespace;
+
   @override
-  String toString() => '$define must be an https URL in a prod build (docs/security.md, "Encryption in transit")';
+  String toString() => whitespace
+      ? '$define has leading or trailing whitespace; a prod build needs an https URL (docs/security.md, '
+            '"Encryption in transit")'
+      : '$define must be an https URL in a prod build (docs/security.md, "Encryption in transit")';
 }
 
 /// A prod build whose `STUDIO_CERT_PINS` or `OIDC_CERT_PINS` breaks a pin rule, which stops the app at start instead

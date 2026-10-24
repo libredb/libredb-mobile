@@ -55,21 +55,35 @@ for name in $names; do
   fi
 done
 
-# An absolute https URL with a host, the scheme in any case, as Dart's Uri reads it.
-https_url='^https://([^/?#]*@)?[^/?#@:]+'
+# An absolute https URL with a host, verbatim the pattern of AppConfig.isHttpsUrl and NativeSentry.requireHttpsDsn.
+# OIDC_ISSUER is trimmed first, as the sign-in reads it; PROD_API_URL and SENTRY_DSN are refused with surrounding
+# whitespace, as a prod start refuses them.
+https_url='^[Hh][Tt][Tt][Pp][Ss]://([^/?#@\x00-\x20\x7F]*@)?(\[[0-9A-Fa-f:.]+\]|[^/?#@:\[\]\x00-\x20\x7F]+)(:[0-9]*)?([/?#]|$)'
 for name in PROD_API_URL OIDC_ISSUER SENTRY_DSN; do
   status=0
-  jq -e --arg name "$name" --arg pattern "$https_url" \
-    '(has($name) | not) or (.[$name] | type == "string" and test($pattern; "i"))' "$1" > /dev/null 2>&1 || status=$?
-  case "$status" in
-    0) ;;
-    1)
-      echo "$name must be an https URL in the store build (docs/security.md, \"Encryption in transit\")."
+  verdict=$(jq -r --arg name "$name" --arg pattern "$https_url" '
+    if has($name) | not then "ok"
+    elif (.[$name] | type) != "string" then "not-https"
+    else .[$name] as $raw
+      | ($raw | sub("^\\s+"; "") | sub("\\s+$"; "")) as $trimmed
+      | if $name == "OIDC_ISSUER" then (if ($trimmed | test($pattern)) then "ok" else "not-https" end)
+        elif $raw != $trimmed then "whitespace"
+        elif ($raw | test($pattern)) then "ok"
+        else "not-https" end
+    end' "$1" 2> /dev/null) || status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "Could not read $name from the defines file $1 (jq exit $status)."
+    exit 2
+  fi
+  case "$verdict" in
+    ok) ;;
+    whitespace)
+      echo "$name has leading or trailing whitespace; the store build needs an https URL (docs/security.md, \"Encryption in transit\")."
       found=1
       ;;
     *)
-      echo "Could not read $name from the defines file $1 (jq exit $status)."
-      exit 2
+      echo "$name must be an https URL in the store build (docs/security.md, \"Encryption in transit\")."
+      found=1
       ;;
   esac
 done

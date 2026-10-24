@@ -8,8 +8,6 @@ import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.flutter.SentryFlutterPlugin
 import io.sentry.protocol.SdkVersion
-import java.net.URI
-import java.net.URISyntaxException
 
 /**
  * Starts sentry-android from the host app, before the Flutter engine, with the scrubbing hooks of
@@ -38,6 +36,9 @@ object NativeSentry {
     /** SentryFlutterOptions.connectionTimeout and readTimeout; sentry-java defaults to 30 seconds. */
     private const val DART_TIMEOUT_MILLIS = 5000
 
+    /** Verbatim the pattern of AppConfig.isHttpsUrl (lib/infrastructure/config/environment.dart), so the two agree. */
+    private val HTTPS_URL = Regex("""^[Hh][Tt][Tt][Pp][Ss]://([^/?#@\x00-\x20\x7F]*@)?(\[[0-9A-Fa-f:.]+\]|[^/?#@:\[\]\x00-\x20\x7F]+)(:[0-9]*)?([/?#]|$)""")
+
     fun start(context: Context) {
         val dsn = BuildConfig.SENTRY_DSN
         if (dsn.isEmpty()) return
@@ -58,16 +59,16 @@ object NativeSentry {
 
     /**
      * Throws when [dsn] is not an https URL, so a prod build stops at start instead of sending crash reports over plain
-     * http (docs/security.md, "Encryption in transit"). The message names only the define: the DSN carries the
-     * project's key. The Dart side checks the same define in AppConfig.fromEnvironment, after this SDK has started.
+     * http (docs/security.md, "Encryption in transit"), with the rule of AppConfig.isHttpsUrl, and refuses surrounding
+     * whitespace as the Dart side does. The message names only the define: the DSN carries the project's key.
+     * The Dart side checks the same define in AppConfig.fromEnvironment, after this SDK has started.
      */
     fun requireHttpsDsn(dsn: String) {
-        val uri = try {
-            URI(dsn)
-        } catch (_: URISyntaxException) {
-            null
+        check(dsn.trim() == dsn) {
+            "SENTRY_DSN has leading or trailing whitespace; a prod build needs an https URL (docs/security.md, " +
+                "\"Encryption in transit\")"
         }
-        check(uri != null && uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrEmpty()) {
+        check(HTTPS_URL.containsMatchIn(dsn)) {
             "SENTRY_DSN must be an https URL in a prod build (docs/security.md, \"Encryption in transit\")"
         }
     }
