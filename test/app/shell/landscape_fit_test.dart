@@ -126,6 +126,36 @@ void main() {
     });
   });
 
+  testWidgets(
+    'with the keyboard up, the connection list keeps the whole capture note and the top of the search above it',
+    (tester) async {
+      _serveAssets(tester);
+      sideways(tester);
+      TestEnv.authenticate();
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+      (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(
+        ApplicationRoutesConstants.connectionList,
+      );
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      await tester.showKeyboard(find.byType(TextField));
+      // As on the device: the keyboard covers the gesture bar, so the bottom padding goes.
+      tester.view.padding = const FakeViewPadding(top: 24);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 255);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      const aboveKeyboard = 393.0 - 255;
+      final note = tester.getRect(find.byType(StatementCaptureNote));
+      expect(note.bottom, lessThanOrEqualTo(aboveKeyboard));
+      final field = tester.getRect(find.byType(TextField));
+      expect(field.top, greaterThanOrEqualTo(note.bottom));
+      expect(field.top, lessThan(aboveKeyboard), reason: 'the top edge of the search stays above the keyboard');
+    },
+  );
+
   group('Browse', () {
     late BrowseHarness harness;
 

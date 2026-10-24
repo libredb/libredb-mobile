@@ -11,6 +11,7 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 
 import '../../support/test_env.dart';
 
@@ -170,6 +171,23 @@ void main() {
 
       final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
       expect(router.state.uri.path, ApplicationRoutesConstants.browse);
+    });
+
+    testWidgets('the connection list keeps the statement capture note with the keyboard up, and overflows nothing', (
+      tester,
+    ) async {
+      await pumpOn(tester, ApplicationRoutesConstants.connectionList);
+      expect(find.byType(StatementCaptureNote), findsOneWidget, reason: 'the mock policy records statements in full');
+
+      await tester.showKeyboard(find.byType(TextField));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 255);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final note = tester.getRect(find.byType(StatementCaptureNote));
+      expect(note.top, greaterThanOrEqualTo(tester.getRect(find.byType(TopBarWidget)).bottom));
+      expect(note.bottom, lessThanOrEqualTo(393 - 255));
+      expect(tester.testTextInput.isVisible, isTrue);
     });
 
     testWidgets('a page that is no tab shows no rail', (tester) async {

@@ -118,12 +118,26 @@ class ConnectionListView extends StatelessWidget {
         );
       },
     );
-    final refresh = onRefresh;
     // On a compact height, such as a phone held sideways, the search and the chips share a row so the list keeps the
     // height. A Flex that only turns keeps the field in its place in the tree, so a rotation keeps its focus.
     final compact = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
     // Without chips the search keeps the whole row.
     final chipsBeside = compact && state.environments.isNotEmpty;
+    // Shorter than the search row and a connection, as above the keyboard of a phone held sideways, the view keeps
+    // that height and scrolls, so the focused search scrolls into view instead of overflowing.
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        primary: false,
+        child: SizedBox(
+          height: box.maxHeight < _minHeight ? _minHeight : box.maxHeight,
+          child: _content(compact: compact, chipsBeside: chipsBeside, list: list),
+        ),
+      ),
+    );
+  }
+
+  Widget _content({required bool compact, required bool chipsBeside, required Widget list}) {
+    final refresh = onRefresh;
     return Column(
       children: [
         Flex(
@@ -156,6 +170,9 @@ class ConnectionListView extends StatelessWidget {
     );
   }
 }
+
+/// The height the view keeps at least: the search row and about one connection.
+const _minHeight = 120.0;
 
 /// Names the Favorites section in the stored collapsed state; a group key always starts with `group:`.
 const _favoritesKey = 'favorites';
