@@ -595,6 +595,16 @@ class S {
     );
   }
 
+  /// `Files shared on this phone earlier could not be removed, so you are not signed in. Try again.`
+  String get error_auth_share_files_not_removed {
+    return Intl.message(
+      'Files shared on this phone earlier could not be removed, so you are not signed in. Try again.',
+      name: 'error_auth_share_files_not_removed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Sign in with SSO`
   String get login_sso_button {
     return Intl.message('Sign in with SSO', name: 'login_sso_button', desc: '', args: []);
@@ -1168,6 +1178,16 @@ class S {
   /// `Could not share ({code})`
   String browse_source_share_failed(String code) {
     return Intl.message('Could not share ($code)', name: 'browse_source_share_failed', desc: '', args: [code]);
+  }
+
+  /// `The shared file stays on this phone until you sign out ({code})`
+  String browse_source_share_file_left(String code) {
+    return Intl.message(
+      'The shared file stays on this phone until you sign out ($code)',
+      name: 'browse_source_share_file_left',
+      desc: 'The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.',
+      args: [code],
+    );
   }
 
   /// `{count, plural, =1{1 object} other{{formatted} objects}}`

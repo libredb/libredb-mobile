@@ -6,6 +6,7 @@ import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 
 /// [ISsoAuthRepository] over [IOidcClient].
 ///
@@ -13,13 +14,19 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 /// persisted through [IAuthSessionRepository]: the access token is the bearer, and the OIDC ID token and the access
 /// token's expiry go with it. No role and no username is read from a token: who the user is and what Studio lets them
 /// do come only from Studio's `GET /api/auth/me`, which the sign-in asks next.
+///
+/// Before the session is stored, the files a share left ([TemporaryShareFiles]) are removed: a share the app was
+/// killed in, followed by a session that ended without the wipe (a restore that timed out, lost tokens), would leave
+/// them to the account that signs in next. A removal the phone refuses refuses the sign-in.
 class SsoAuthRepository implements ISsoAuthRepository {
-  SsoAuthRepository({required this._client, required this._sessionRepository});
+  SsoAuthRepository({required this._client, required this._sessionRepository, TemporaryShareFiles? shareFiles})
+    : _shareFiles = shareFiles ?? TemporaryShareFiles();
 
   static final _log = AppLogger.getLogger('SsoAuthRepository');
 
   final IOidcClient _client;
   final IAuthSessionRepository _sessionRepository;
+  final TemporaryShareFiles _shareFiles;
 
   @override
   Future<SsoProviderSignIn> signIn() async => _toResult(await _client.signIn());
@@ -38,6 +45,13 @@ class SsoAuthRepository implements ISsoAuthRepository {
     if (_nonEmptyString(claims['sub']) == null || _nonEmptyString(claims['iss']) == null) {
       _log.warn('The ID token has no string sub or iss, so the sign-in is refused');
       return const SsoProviderRejected(AppErrorCode.authOidcNoClaims);
+    }
+    try {
+      await _shareFiles.clear();
+    } catch (e) {
+      // The type only: the message of a file system error holds the path, which names an object.
+      _log.error('The files a share left could not be removed, so the sign-in is refused: {}', [e.runtimeType]);
+      return const SsoProviderRejected(AppErrorCode.authShareFilesNotRemoved);
     }
     final persisted = await _sessionRepository.persist(
       AuthSession(

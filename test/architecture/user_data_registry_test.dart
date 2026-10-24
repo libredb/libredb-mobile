@@ -8,6 +8,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 import 'package:mocktail/mocktail.dart';
@@ -53,7 +54,10 @@ const _sessionTokens = {
 
 /// The files under `lib/` that reach the device's directories through path_provider, with the registry entry that
 /// clears what each keeps there. A new directory fails the guard until it is listed here and cleared.
-const _directoryUsers = {'lib/infrastructure/storage/encrypted_text_file_store.dart': 'statement_text'};
+const _directoryUsers = {
+  'lib/infrastructure/storage/encrypted_text_file_store.dart': 'statement_text',
+  'lib/infrastructure/storage/temporary_share_files.dart': 'share_files',
+};
 
 /// Whom what a file keeps through the device stores belongs to.
 sealed class _Keeps {
@@ -121,6 +125,7 @@ void main() {
   late MockIActiveConnectionStore activeConnection;
   late MockIActiveCatalogStore activeCatalog;
   late MockICollapsedSectionsRepository collapsedSections;
+  late MockTemporaryShareFiles shareFiles;
   late UserDataRegistry registry;
 
   setUp(() {
@@ -129,17 +134,20 @@ void main() {
     activeConnection = MockIActiveConnectionStore();
     activeCatalog = MockIActiveCatalogStore();
     collapsedSections = MockICollapsedSectionsRepository();
+    shareFiles = MockTemporaryShareFiles();
     when(() => statementText.clearSubject(any())).thenAnswer((_) async => const Success(null));
     when(() => favorites.clear(any())).thenAnswer((_) async {});
     when(() => activeConnection.write(any(), any())).thenAnswer((_) async {});
     when(() => activeCatalog.clear(any())).thenAnswer((_) async {});
     when(() => collapsedSections.clear()).thenAnswer((_) async {});
+    when(() => shareFiles.clear()).thenAnswer((_) async {});
     registry = _dependencies.createUserDataRegistry(
       statementText: statementText,
       favorites: favorites,
       activeConnection: activeConnection,
       activeCatalog: activeCatalog,
       collapsedSections: collapsedSections,
+      shareFiles: shareFiles,
     );
   });
 
@@ -168,6 +176,7 @@ void main() {
     expect(registry.stores.map((store) => store.name), [
       ..._knownImplementations.values,
       StorageKeys.connectionSectionsCollapsed.key,
+      'share_files',
     ]);
   });
 
@@ -188,6 +197,7 @@ void main() {
       record('active_catalog', 'clear ${invocation.positionalArguments.single}');
     });
     when(() => collapsedSections.clear()).thenAnswer((_) async => record('connection_sections_collapsed', 'clear'));
+    when(() => shareFiles.clear()).thenAnswer((_) async => record('share_files', 'clear'));
 
     for (final store in registry.stores) {
       cleared.clear();
@@ -199,6 +209,7 @@ void main() {
         'active_connection' => 'write $_subject null',
         'active_catalog' => 'clear $_subject',
         'connection_sections_collapsed' => 'clear',
+        'share_files' => 'clear',
         _ => fail('no expectation for ${store.name}'),
       };
       expect(cleared, {
@@ -213,6 +224,25 @@ void main() {
     final entry = registry.stores.singleWhere((store) => store.name == 'statement_text');
 
     await expectLater(entry.clear(_subject), throwsA(isA<UnknownError>()));
+  });
+
+  test('the share files entry throws when the device refuses the removal', () async {
+    when(() => shareFiles.clear()).thenAnswer((_) async => throw const FileSystemException('refused'));
+
+    final entry = registry.stores.singleWhere((store) => store.name == 'share_files');
+
+    await expectLater(entry.clear(_subject), throwsA(isA<FileSystemException>()));
+  });
+
+  // The share files hold an account's data only for one share, so the session wipe of every sign-out removes them too,
+  // not only 'Remove my data'.
+  test('the session wipe of every sign-out removes the share files', () async {
+    final shared = await TemporaryShareFiles().write('order_totals-definition.sql', [1]);
+
+    final result = await _dependencies.createAuthSessionRepository(_MemorySecureStorage()).clear();
+
+    expect(result, isA<Success<void>>());
+    expect(shared.existsSync(), isFalse);
   });
 
   test('every device preference key is either cleared by an entry or named a device preference', () {

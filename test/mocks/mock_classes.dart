@@ -11,6 +11,7 @@ import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 // Infrastructure imports
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 
 // BLoC imports
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
@@ -94,6 +95,8 @@ class MockIAppLockSettingsRepository extends Mock implements IAppLockSettingsRep
 class MockIDeviceAuthenticator extends Mock implements IDeviceAuthenticator {}
 
 class MockIRecentsPreview extends Mock implements IRecentsPreview {}
+
+class MockTemporaryShareFiles extends Mock implements TemporaryShareFiles {}
 
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}

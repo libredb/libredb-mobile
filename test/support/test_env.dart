@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
@@ -36,6 +38,12 @@ class TestEnv {
 
   static const _secureChannel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
+  static const _pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
+
+  /// The temporary directory path_provider answers, made on the first call of a test and removed by [reset]. Every
+  /// sign-out clears the share files in it (`TemporaryShareFiles`), so a test that signs out needs one.
+  static Directory? _temporaryDirectory;
+
   /// Mock-backed client for tests: test AppConfig → MockInterceptor serves
   /// assets/mock/*.json; shared secure adapter → same MethodChannel mock the
   /// repo layer reads; the token refresh of `main_local.dart`'s local sign-in.
@@ -52,12 +60,13 @@ class TestEnv {
     );
   }
 
-  /// Resets the per-test environment: re-installs the secure-storage mock
-  /// and clears all storage.
+  /// Resets the per-test environment: re-installs the secure-storage and
+  /// temporary directory mocks and clears all storage.
   /// No language is stored, so an `App` starts in the language passed to it,
   /// as on a first launch. Idempotent and cheap (in-memory).
   static Future<void> reset() async {
     _installSecureStorageMock();
+    _installTemporaryDirectoryMock();
     await _clearStorage();
   }
 
@@ -99,7 +108,21 @@ class TestEnv {
     });
   }
 
+  /// Answers path_provider's temporary directory with [_temporaryDirectory]; any other directory stays unanswered, as
+  /// without a mock. A test that needs another answer installs its own handler, which this replaces at the next reset.
+  static void _installTemporaryDirectoryMock() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_pathProviderChannel, (
+      call,
+    ) async {
+      if (call.method != 'getTemporaryDirectory') throw MissingPluginException();
+      return (_temporaryDirectory ??= Directory.systemTemp.createTempSync('libredb_test_temporary')).path;
+    });
+  }
+
   static Future<void> _clearStorage() async {
+    final temporary = _temporaryDirectory;
+    _temporaryDirectory = null;
+    if (temporary != null && temporary.existsSync()) temporary.deleteSync(recursive: true);
     SharedPreferences.setMockInitialValues({});
     SharedPreferencesAsyncPlatform.instance = InMemorySharedPreferencesAsync.empty();
     _secureStore.clear();

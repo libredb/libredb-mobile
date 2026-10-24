@@ -57,6 +57,7 @@ import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.d
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
@@ -236,6 +237,7 @@ class AppScope extends StatelessWidget {
         // One instance each, shared by the cubits below and the registry, so 'Remove my data' clears what they store.
         RepositoryProvider<IActiveConnectionStore>(create: (_) => dependencies.createActiveConnectionStore()),
         RepositoryProvider<IActiveCatalogStore>(create: (_) => dependencies.createActiveCatalogStore()),
+        RepositoryProvider<TemporaryShareFiles>(create: (_) => dependencies.createTemporaryShareFiles()),
         RepositoryProvider<UserDataRegistry>(
           create: (context) => dependencies.createUserDataRegistry(
             statementText: context.read<IStatementTextStore>(),
@@ -243,6 +245,7 @@ class AppScope extends StatelessWidget {
             activeConnection: context.read<IActiveConnectionStore>(),
             activeCatalog: context.read<IActiveCatalogStore>(),
             collapsedSections: context.read<ICollapsedSectionsRepository>(),
+            shareFiles: context.read<TemporaryShareFiles>(),
           ),
         ),
         if (oidcSettings == null)
