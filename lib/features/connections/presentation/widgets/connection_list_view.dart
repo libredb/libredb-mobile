@@ -132,14 +132,16 @@ class ConnectionListView extends StatelessWidget {
               flex: compact ? 1 : 0,
               fit: compact ? FlexFit.tight : FlexFit.loose,
               child: Padding(
-                padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, compact ? 0 : AppSpacing.lg, 0),
+                padding: compact
+                    ? const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xs, 0, 0)
+                    : const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
                 child: ConnectionSearchField(controller: search),
               ),
             ),
             Flexible(
               flex: compact ? 1 : 0,
               fit: compact ? FlexFit.tight : FlexFit.loose,
-              child: EnvironmentChips(environments: state.environments, selected: state.environment),
+              child: EnvironmentChips(environments: state.environments, selected: state.environment, compact: compact),
             ),
           ],
         ),
@@ -188,10 +190,13 @@ class ConnectionSearchField extends StatelessWidget {
 }
 
 class EnvironmentChips extends StatelessWidget {
-  const EnvironmentChips({super.key, required this.environments, required this.selected});
+  const EnvironmentChips({super.key, required this.environments, required this.selected, this.compact = false});
 
   final List<String> environments;
   final String? selected;
+
+  /// Whether the chips share the search's row on a compact height, with less padding above and below them.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +207,7 @@ class EnvironmentChips extends StatelessWidget {
       label: l10n.connection_environment_filter,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: compact ? AppSpacing.xs : AppSpacing.sm),
         child: Row(
           spacing: AppSpacing.sm,
           children: [

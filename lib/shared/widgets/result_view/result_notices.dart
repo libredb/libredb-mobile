@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -146,8 +147,10 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
     final count = result.rows.length;
     final warnings = result.warnings;
     final chipStyle = theme.textTheme.labelSmall;
+    // On a compact height, such as a phone held sideways, a tighter padding leaves the rows more of the height.
+    final vertical = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height) ? AppSpacing.xs : AppSpacing.sm;
     final strip = Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, vertical, AppSpacing.lg, vertical),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpacing.sm,

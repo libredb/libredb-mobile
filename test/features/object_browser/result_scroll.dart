@@ -76,12 +76,12 @@ Future<void> pullAndExpectSpringBack(WidgetTester tester, Finder scrollable) asy
 }
 
 /// Turns the test view into the Android 13 emulator held sideways: 829 by 393 logical pixels with its 24 px status bar
-/// on top, as #177 measured it.
+/// on top and its 24 px gesture bar at the bottom, as #177 measured it.
 void sideways(WidgetTester tester) {
   tester.view.physicalSize = const Size(829, 393);
   tester.view.devicePixelRatio = 1;
-  tester.view.padding = const FakeViewPadding(top: 24);
-  tester.view.viewPadding = const FakeViewPadding(top: 24);
+  tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+  tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 24);
   addTearDown(tester.view.reset);
 }
 

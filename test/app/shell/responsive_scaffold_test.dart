@@ -108,9 +108,9 @@ void main() {
   });
 
   group('ResponsiveScaffold - a compact height', () {
-    // The Android 13 emulator held sideways, as #177 measured it: 829 by 393 with a 24 px status bar.
+    // The Android 13 emulator held sideways, as #177 measured it: 829 by 393 with a 24 px status bar and gesture bar.
     const sideways = Size(829, 393);
-    const statusBar = FakeViewPadding(top: 24);
+    const statusBar = FakeViewPadding(top: 24, bottom: 24);
 
     Future<void> pumpOn(WidgetTester tester, String location, {Size size = sideways}) async {
       await pumpSignedIn(tester, size: size, insets: statusBar);
@@ -153,6 +153,23 @@ void main() {
 
       expect(tester.getRect(find.byType(NavigationRail)).left, greaterThanOrEqualTo(48));
       expect(tester.getRect(find.byType(TopBarWidget)).right, lessThanOrEqualTo(sideways.width - 48));
+    });
+
+    testWidgets('the rail scrolls rather than overflow with the keyboard up, and its tabs still open', (tester) async {
+      // The SQL editor, where a phone held sideways types with the keyboard up (#176).
+      await pumpOn(tester, ApplicationRoutesConstants.sql);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 255);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final browse = find.descendant(of: find.byType(NavigationRail), matching: find.text('Browse'));
+      await tester.dragUntilVisible(browse, find.byType(NavigationRail), const Offset(0, 50));
+      await tester.tap(browse);
+      await tester.pumpAndSettle();
+
+      final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
+      expect(router.state.uri.path, ApplicationRoutesConstants.browse);
     });
 
     testWidgets('a page that is no tab shows no rail', (tester) async {

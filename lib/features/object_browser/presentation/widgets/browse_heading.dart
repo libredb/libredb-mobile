@@ -5,7 +5,8 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 /// The first row of a Browse page's body, since Browse pages build no app bar: Studio's label for what the page shows,
 /// such as a level or a kind, or the name of the container it opens, with [overline] above it when set, the page's
 /// [actions] at its end, and its [wrappedActions] on a line of their own under the title; on a compact height, such as
-/// a phone held sideways, the wrapped actions share the title's row, so the page's content keeps the height.
+/// a phone held sideways, the wrapped actions share the title's row and the padding is tighter, so the page's content
+/// keeps the height.
 class BrowseHeading extends StatelessWidget {
   const BrowseHeading({
     super.key,
@@ -29,21 +30,24 @@ class BrowseHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final overline = this.overline;
-    final beside = wrappedActions.isNotEmpty && AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
+    final compact = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
+    final beside = wrappedActions.isNotEmpty && compact;
     final wrapped = Wrap(
       alignment: beside ? WrapAlignment.end : WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: wrappedActions,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
+      padding: compact
+          ? const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0)
+          : const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Expanded(child: _titles(theme, overline)),
-              if (beside) Flexible(child: wrapped),
+              if (beside) Flexible(fit: FlexFit.tight, child: wrapped),
               ...actions,
             ],
           ),

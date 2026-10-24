@@ -32,14 +32,25 @@ class SideNavWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationRail(
-      selectedIndex: ApplicationRoutesConstants.tabs.indexOf(activeTab),
-      onDestinationSelected: (index) => _open(context, index),
-      labelType: NavigationRailLabelType.all,
-      groupAlignment: 0,
-      destinations: [
-        for (final tab in _tabs(S.of(context))) NavigationRailDestination(icon: Icon(tab.icon), label: Text(tab.label)),
-      ],
+    // The keyboard leaves the rail less height than its tabs need, so it then scrolls rather than overflow.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: NavigationRail(
+              selectedIndex: ApplicationRoutesConstants.tabs.indexOf(activeTab),
+              onDestinationSelected: (index) => _open(context, index),
+              labelType: NavigationRailLabelType.all,
+              groupAlignment: 0,
+              destinations: [
+                for (final tab in _tabs(S.of(context)))
+                  NavigationRailDestination(icon: Icon(tab.icon), label: Text(tab.label)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
