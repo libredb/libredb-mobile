@@ -83,6 +83,7 @@ cd android && ./gradlew :app:testDebugUnitTest -Ptarget=lib/main/main_prod.dart
 
 Gradle needs JDK 17 there, and the Gradle wrapper is not committed: any Flutter Android build writes it, for example `fvm flutter build apk --config-only --target lib/main/main_prod.dart`.
 The lifecycle breadcrumbs of sentry-android keep their `state` (such as `resumed` or `foreground`); a copy that Sentry merges into a Dart event still shows it masked.
+That `state: [REDACTED]` is a harmless over-match: the Dart scrubber masks every `state` key as an OpenID Connect value, and a lifecycle state holds nothing personal.
 
 | Platform | Dart events and breadcrumbs | Native breadcrumbs | Native events and crash reports |
 | --- | --- | --- | --- |
@@ -133,5 +134,8 @@ These steps need the Sentry account, so they are the user's and not the reposito
 
 - Create the Sentry project for the app.
 - Turn on its server-side data scrubbing (Data Scrubber, and Advanced Data Scrubbing rules for anything the app must never store), as a second layer behind the hooks.
+- Turn on 'Prevent Storing of IP Addresses' in the project's Security & Privacy settings.
+  The app sends no IP address, since `sendDefaultPii` is off, but Sentry reads the client IP of the request at ingestion and derives the user's geography from it: the device check showed a city and a country on the user.
+  With that setting on, Sentry stores neither the IP address nor the place derived from it.
 - Put the DSN into the CI secrets, from which the release build passes it as `SENTRY_DSN` (#194); never commit it, and never write it into an issue, a pull request or a log.
 
