@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -65,8 +67,23 @@ class WriteConfirmationSheet extends StatefulWidget {
 }
 
 class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
+  /// The least height the sheet lays out at; a shorter sheet scrolls, so the text keeps a few lines. A wide sheet puts
+  /// the name field and the buttons in one row and needs less, so a phone held sideways shows the whole sheet while
+  /// the keyboard is down.
+  static const _minHeight = 400.0;
+  static const _minWideHeight = 300.0;
+
+  /// The width from which the name field and the buttons share one row, as on a phone held sideways.
+  static const _wideFrom = 600.0;
+
+  /// The height of the button row below the name field, scrolled into view with the field on a narrow sheet.
+  static const _buttonRowHeight = 56.0;
+
   final _typedName = TextEditingController();
   late final List<String> _lines = statementLines(widget.text);
+
+  /// Keeps the name field, its focus and the open keyboard when a rotation moves it into or out of the button row.
+  final _nameFieldSlot = GlobalKey();
 
   bool get _isProduction => widget.connection.environment == StudioEnvironment.production;
 
@@ -92,103 +109,143 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: AppSpacing.sm,
-          children: [
-            Row(
-              spacing: AppSpacing.sm,
-              children: [
-                Icon(Icons.warning_amber_rounded, color: headerColor),
-                Expanded(
-                  child: Text(s.write_confirm_title, style: theme.textTheme.titleLarge?.copyWith(color: headerColor)),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (_hasName) Text(connection.name, style: theme.textTheme.titleSmall),
-                if (EnvironmentBadge.showsFor(environment))
-                  EnvironmentBadge(environment: environment!, color: connection.color),
-              ],
-            ),
-            for (final reason in WriteCheckReason.values)
-              if (widget.answer.reasons.contains(reason))
-                _Line(icon: Icons.error_outline, text: _reasonText(s, reason)),
-            if (connection.readOnlyForUser) ...[
-              if (connection.access == StudioAccess.read)
-                _Line(icon: Icons.lock_outline, text: s.write_confirm_read_grant),
-              if (connection.readOnly) _Line(icon: Icons.lock_outline, text: s.write_confirm_read_only_connection),
-            ],
-            Text(s.write_confirm_text_heading, style: theme.textTheme.labelLarge),
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Scrollbar(
-                  child: ListView.builder(
-                    key: WriteConfirmationSheet.linesKey,
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    itemCount: _lines.length,
-                    itemBuilder: (context, index) => _StatementLine(
-                      number: index + 1,
-                      digits: '${_lines.length}'.length,
-                      text: _lines[index],
-                      flagged: widget.answer.flaggedWord?.line == index + 1,
+      // A phone held sideways, above all with the keyboard up, leaves the sheet less height than its content needs: the
+      // sheet then scrolls at [_minHeight] ([_minWideHeight] when wide), keeping room for the text, and on a wide
+      // sheet the name field and the buttons share one row, so the field and Run show together above the keyboard.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= _wideFrom;
+          return SingleChildScrollView(
+            child: SizedBox(
+              height: math.max(constraints.maxHeight, wide ? _minWideHeight : _minHeight),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: AppSpacing.sm,
+                  children: [
+                    Row(
+                      spacing: AppSpacing.sm,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: headerColor),
+                        Expanded(
+                          child: Text(
+                            s.write_confirm_title,
+                            style: theme.textTheme.titleLarge?.copyWith(color: headerColor),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (_hasName) Text(connection.name, style: theme.textTheme.titleSmall),
+                        if (EnvironmentBadge.showsFor(environment))
+                          EnvironmentBadge(environment: environment!, color: connection.color),
+                      ],
+                    ),
+                    for (final reason in WriteCheckReason.values)
+                      if (widget.answer.reasons.contains(reason))
+                        _Line(icon: Icons.error_outline, text: _reasonText(s, reason)),
+                    if (connection.readOnlyForUser) ...[
+                      if (connection.access == StudioAccess.read)
+                        _Line(icon: Icons.lock_outline, text: s.write_confirm_read_grant),
+                      if (connection.readOnly)
+                        _Line(icon: Icons.lock_outline, text: s.write_confirm_read_only_connection),
+                    ],
+                    Text(s.write_confirm_text_heading, style: theme.textTheme.labelLarge),
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Scrollbar(
+                          child: ListView.builder(
+                            key: WriteConfirmationSheet.linesKey,
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            itemCount: _lines.length,
+                            itemBuilder: (context, index) => _StatementLine(
+                              number: index + 1,
+                              digits: '${_lines.length}'.length,
+                              text: _lines[index],
+                              flagged: widget.answer.flaggedWord?.line == index + 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_isProduction) ...[
+                      Text(
+                        s.write_confirm_production_prompt,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: scheme.error),
+                      ),
+                      if (!_hasName) Text(s.write_confirm_no_name, style: theme.textTheme.bodyMedium),
+                    ],
+                    if (wide && _isProduction && _hasName)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        spacing: AppSpacing.sm,
+                        children: [
+                          Expanded(child: _nameField(s, wide: true)),
+                          _buttons(s, scheme),
+                        ],
+                      )
+                    else ...[
+                      if (_isProduction && _hasName) _nameField(s, wide: false),
+                      Align(alignment: AlignmentDirectional.centerEnd, child: _buttons(s, scheme)),
+                    ],
+                  ],
                 ),
               ),
             ),
-            if (_isProduction) ...[
-              Text(s.write_confirm_production_prompt, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.error)),
-              if (!_hasName)
-                Text(s.write_confirm_no_name, style: theme.textTheme.bodyMedium)
-              else
-                TextField(
-                  key: WriteConfirmationSheet.nameFieldKey,
-                  controller: _typedName,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  enableIMEPersonalizedLearning: false,
-                  textCapitalization: TextCapitalization.none,
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-                  style: const TextStyle(fontFamily: 'monospace'),
-                  decoration: InputDecoration(labelText: s.write_confirm_name_label(connection.name)),
-                  onChanged: (_) => setState(() {}),
-                ),
-            ],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              spacing: AppSpacing.sm,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(WriteConfirmation.cancelled),
-                  child: Text(s.write_confirm_cancel),
-                ),
-                FilledButton(
-                  style: _isProduction
-                      ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError)
-                      : null,
-                  onPressed: _canRun ? () => Navigator.of(context).pop(WriteConfirmation.confirmed) : null,
-                  child: Text(s.write_confirm_run),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+
+  /// The field the connection's name is typed in; on a narrow sheet a focus also scrolls the buttons below it into
+  /// view.
+  Widget _nameField(S s, {required bool wide}) => KeyedSubtree(
+    key: _nameFieldSlot,
+    child: TextField(
+      key: WriteConfirmationSheet.nameFieldKey,
+      controller: _typedName,
+      autocorrect: false,
+      enableSuggestions: false,
+      enableIMEPersonalizedLearning: false,
+      textCapitalization: TextCapitalization.none,
+      smartDashesType: SmartDashesType.disabled,
+      smartQuotesType: SmartQuotesType.disabled,
+      spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
+      scrollPadding: EdgeInsets.fromLTRB(20, 20, 20, wide ? 20 : 20 + _buttonRowHeight),
+      style: const TextStyle(fontFamily: 'monospace'),
+      decoration: InputDecoration(labelText: s.write_confirm_name_label(widget.connection.name)),
+      onChanged: (_) => setState(() {}),
+    ),
+  );
+
+  Widget _buttons(S s, ColorScheme scheme) => Row(
+    mainAxisAlignment: MainAxisAlignment.end,
+    mainAxisSize: MainAxisSize.min,
+    spacing: AppSpacing.sm,
+    children: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(WriteConfirmation.cancelled),
+        child: Text(s.write_confirm_cancel),
+      ),
+      FilledButton(
+        style: _isProduction
+            ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError)
+            : null,
+        onPressed: _canRun ? () => Navigator.of(context).pop(WriteConfirmation.confirmed) : null,
+        child: Text(s.write_confirm_run),
+      ),
+    ],
+  );
 
   String _reasonText(S s, WriteCheckReason reason) => switch (reason) {
     WriteCheckReason.mayWrite => switch (widget.answer.flaggedWord) {

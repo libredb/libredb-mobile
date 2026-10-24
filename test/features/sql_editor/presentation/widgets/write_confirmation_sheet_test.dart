@@ -333,6 +333,63 @@ void main() {
     });
   });
 
+  // A phone held in landscape with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing
+  // overflows, the name field stays on screen while the user types, and Run works with the keyboard still up.
+  testWidgets('fits a landscape phone with the keyboard up on a production connection', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(829, 393);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+
+    await tester.showKeyboard(_nameField);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 255);
+    await tester.pumpAndSettle();
+    await tester.enterText(_nameField, 'Sales Prod');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(_nameField.hitTestable(), findsOneWidget);
+    expect(_run.hitTestable(), findsOneWidget);
+    expect(_runEnabled(tester), isTrue);
+    await tester.tap(_run);
+    await tester.pumpAndSettle();
+    expect(_answers, [WriteConfirmation.confirmed]);
+  });
+
+  testWidgets('a rotation while the name is typed keeps the field, its text and its focus', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(393, 829);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+    await tester.showKeyboard(_nameField);
+    tester.testTextInput.enterText('Sales');
+    await tester.pump();
+
+    tester.view.physicalSize = const Size(829, 393);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.widget<TextField>(_nameField).controller!.text, 'Sales');
+    expect(tester.testTextInput.isVisible, isTrue);
+    tester.testTextInput.enterText('Sales Prod');
+    await tester.pump();
+    expect(_runEnabled(tester), isTrue);
+  });
+
+  testWidgets('shows at least three lines of the text in landscape without the keyboard', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(829, 393);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+
+    expect(tester.takeException(), isNull);
+    final lines = tester.getRect(find.byKey(WriteConfirmationSheet.linesKey));
+    expect(lines.height, greaterThanOrEqualTo(3 * 16));
+  });
+
   testWidgets('shows its texts in Turkish', (tester) async {
     await _open(tester, connection: _production.copyWithAccess(StudioAccess.read), locale: const Locale('tr'));
 

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
@@ -184,6 +186,11 @@ class _EditorView extends StatefulWidget {
 }
 
 class _EditorViewState extends State<_EditorView> {
+  /// The least height the page lays out at. A phone held sideways with the keyboard up leaves the page about 70
+  /// logical pixels (#176); the page then scrolls at this height, the field the user types in is kept in view, and
+  /// Run is a scroll away with the keyboard still up.
+  static const _minHeight = 240.0;
+
   final _text = HighlightingTextController();
   final _focus = FocusNode();
   final _undo = UndoHistoryController();
@@ -535,53 +542,65 @@ class _EditorViewState extends State<_EditorView> {
           },
         ),
       ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (StatementCaptureScope.recordsInFullOf(context)) const StatementCaptureNote(),
-          EditorCatalogChip(connectionId: widget.connectionId),
-          const EditorLanguageLabel(),
-          Flexible(
-            flex: 2,
-            child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
-              // Read only while the account's draft is read; a text typed before Studio named the account is asked
-              // about.
-              selector: (state) => state is EditorDraftLoading,
-              builder: (context, loading) => EditorInput(
-                controller: _text,
-                focusNode: _focus,
-                undoController: _undo,
-                scrollController: _scroll,
-                readOnly: loading,
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: SizedBox(
+            height: math.max(constraints.maxHeight, _minHeight),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (StatementCaptureScope.recordsInFullOf(context)) const StatementCaptureNote(),
+                EditorCatalogChip(connectionId: widget.connectionId),
+                const EditorLanguageLabel(),
+                Flexible(
+                  flex: 2,
+                  child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
+                    // Read only while the account's draft is read; a text typed before Studio named the account is
+                    // asked about.
+                    selector: (state) => state is EditorDraftLoading,
+                    builder: (context, loading) => EditorInput(
+                      controller: _text,
+                      focusNode: _focus,
+                      undoController: _undo,
+                      scrollController: _scroll,
+                      readOnly: loading,
+                    ),
+                  ),
+                ),
+                const EditorDraftNotice(),
+                EditorActions(
+                  text: _text,
+                  onRun: _run,
+                  onCancel: () => context.read<EditorRunBloc>().add(const EditorCancelRequested()),
+                  onStopWaiting: () =>
+                      context.read<EditorRunBloc>().add(const EditorCancelRequested(stopWaiting: true)),
+                  withheld: context.watch<EditorCatalogBloc>().state.withholdsRun(
+                    context.select<ActiveCatalogCubit, String?>((cubit) => cubit.catalogOf(widget.connectionId)),
+                  ),
+                  onHistory: switch (StudioSubjectScope.of(context)) {
+                    final subject? => () => _openHistory(subject),
+                    null => null,
+                  },
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  flex: 3,
+                  child: EditorResultArea(
+                    confirm: _confirm,
+                    onRunAgain: _run,
+                    onConnectionUnavailable: _reportVanished,
+                  ),
+                ),
+                ListenableBuilder(
+                  listenable: _focus,
+                  builder: (context, _) => _focus.hasFocus
+                      ? EditorAccessoryRow(controller: _text, undoController: _undo)
+                      : const SizedBox.shrink(),
+                ),
+              ],
             ),
           ),
-          const EditorDraftNotice(),
-          EditorActions(
-            text: _text,
-            onRun: _run,
-            onCancel: () => context.read<EditorRunBloc>().add(const EditorCancelRequested()),
-            onStopWaiting: () => context.read<EditorRunBloc>().add(const EditorCancelRequested(stopWaiting: true)),
-            withheld: context.watch<EditorCatalogBloc>().state.withholdsRun(
-              context.select<ActiveCatalogCubit, String?>((cubit) => cubit.catalogOf(widget.connectionId)),
-            ),
-            onHistory: switch (StudioSubjectScope.of(context)) {
-              final subject? => () => _openHistory(subject),
-              null => null,
-            },
-          ),
-          const Divider(height: 1),
-          Expanded(
-            flex: 3,
-            child: EditorResultArea(confirm: _confirm, onRunAgain: _run, onConnectionUnavailable: _reportVanished),
-          ),
-          ListenableBuilder(
-            listenable: _focus,
-            builder: (context, _) => _focus.hasFocus
-                ? EditorAccessoryRow(controller: _text, undoController: _undo)
-                : const SizedBox.shrink(),
-          ),
-        ],
+        ),
       ),
     );
   }
