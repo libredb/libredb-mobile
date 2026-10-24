@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
 import 'package:libredb_mobile/app/bootstrap/app_licenses.dart';
+import 'package:libredb_mobile/app/bootstrap/sentry_device_check.dart';
 import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/analytics/crash_reporter.dart';
@@ -87,14 +88,18 @@ class AppBootstrap {
     await sentry.run(
       appConfig.sentryDsn,
       release: '${AppConstants.appVersion}+${AppConstants.appBuildNumber}',
-      appRunner: () => runApp(
-        App(
-          language: config.defaultLanguage,
-          dependencies: appDependencies,
-          secureStorage: secureStorage,
-          analytics: analytics,
-        ),
-      ),
+      appRunner: () {
+        runApp(
+          App(
+            language: config.defaultLanguage,
+            dependencies: appDependencies,
+            secureStorage: secureStorage,
+            analytics: analytics,
+          ),
+        );
+        // The device check of docs/crash-reporting.md, absent from every build without its define.
+        if (sentryDeviceCheckDefined) runSentryDeviceCheck(analytics);
+      },
     );
   }
 
