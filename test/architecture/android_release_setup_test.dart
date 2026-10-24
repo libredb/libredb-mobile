@@ -14,6 +14,8 @@ import 'package:yaml/yaml.dart';
 ///   uploads only from a job bound to the `play-internal` environment, and never on a dry run.
 /// - Every action of the release workflows is pinned to a commit SHA.
 /// - The release-please manifest and `pubspec.yaml` name the same version.
+/// - A `release-as` in the release-please config is a plain version, and docs/release.md names the Actions setting
+///   release-please needs and the removal of `release-as` after the first release (#211).
 /// - A store build never carries a define meant for checks only (`tool/release/check_only_defines.txt`), such as
 ///   `SENTRY_DEVICE_CHECK`: `tool/release/check_defines.sh` stops the release before the build, and every define the
 ///   app reads is either one the release passes or one of those.
@@ -324,9 +326,36 @@ void main() {
     expect(manifest['.'], versionName, reason: '.release-please-manifest.json and pubspec.yaml name other versions');
     expect('${pubspec['version']}', matches(RegExp(r'^\d+\.\d+\.\d+\+\d+$')), reason: 'Play needs a build number');
   });
+
+  group('release-please first release', () {
+    late final package = (_loadJson('release-please-config.json')['packages'] as Map<String, Object?>)['.'];
+    late final releaseDocs = File(_releaseDocsPath).readAsStringSync();
+
+    test('release-as, when set, is a plain version', () {
+      expect(package, isA<Map<String, Object?>>(), reason: 'release-please-config.json has no package "."');
+      final releaseAs = (package! as Map<String, Object?>)['release-as'];
+      if (releaseAs == null) return;
+      expect(
+        releaseAs,
+        matches(RegExp(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')),
+        reason: 'release-as: $releaseAs',
+      );
+    });
+
+    test('the docs name the Actions setting release-please needs to open its pull request', () {
+      expect(releaseDocs, contains('Allow GitHub Actions to create and approve pull requests'));
+      expect(releaseDocs, contains('Workflow permissions'));
+    });
+
+    test('the docs say to remove release-as after the first release', () {
+      expect(releaseDocs, contains('`release-as`'));
+      expect(releaseDocs, matches(RegExp(r'remove `release-as`', caseSensitive: false)));
+    });
+  });
 }
 
 const _gradlePath = 'android/app/build.gradle.kts';
+const _releaseDocsPath = 'docs/release.md';
 const _releasePath = '.github/workflows/release.yml';
 const _releasePleasePath = '.github/workflows/release-please.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
@@ -358,6 +387,8 @@ const _signingEnvironment = [
   'ANDROID_UPLOAD_KEY_ALIAS',
   'ANDROID_UPLOAD_KEY_PASSWORD',
 ];
+
+Map<String, Object?> _loadJson(String path) => jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
 
 YamlMap _loadYaml(String path) => loadYaml(File(path).readAsStringSync()) as YamlMap;
 
