@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -310,6 +313,133 @@ void main() {
         ).withoutSentry().appLockRequired,
         isTrue,
       );
+    });
+  });
+
+  // The store build declares encryption in transit (#197, #218), so a prod start refuses each of these unless https.
+  group('https only in a prod build', () {
+    const issuer = 'https://keycloak.example.test/realms/libredb';
+    const dsn = 'https://publickey@o1.ingest.sentry.example.test/1';
+
+    AppConfig prod({String studio = _studioUrl, String oidcIssuer = issuer, String sentryDsn = ''}) =>
+        AppConfig.fromEnvironment(
+          Environment.prod,
+          prodApiUrlDefine: studio,
+          oidcIssuerDefine: oidcIssuer,
+          sentryDsnDefine: sentryDsn,
+        );
+
+    Matcher refuses(String define, String value) => throwsA(
+      isA<ProdHttpsConfigError>()
+          .having((error) => error.define, 'define', define)
+          .having((error) => '$error', 'message', allOf(contains(define), contains('https'), isNot(contains(value)))),
+    );
+
+    test('checks PROD_API_URL, OIDC_ISSUER and SENTRY_DSN', () {
+      expect(AppConfig.httpsOnlyDefines, {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN'});
+    });
+
+    test('a PROD_API_URL that is not https stops the start with an error that names only the define', () {
+      for (final value in [
+        'http://studio.example.test/api',
+        'studio.example.test/api',
+        'https:///api',
+        'ftp://s/api',
+      ]) {
+        expect(() => prod(studio: value), refuses('PROD_API_URL', value), reason: value);
+      }
+    });
+
+    test('an OIDC_ISSUER that is not https stops the start, a loopback http issuer included', () {
+      for (final value in ['http://keycloak.example.test/realms/libredb', 'http://localhost:8080/realms/libredb']) {
+        expect(() => prod(oidcIssuer: value), refuses('OIDC_ISSUER', value), reason: value);
+      }
+    });
+
+    test('a SENTRY_DSN that is not https stops the start without printing the DSN', () {
+      const value = 'http://publickey@o1.ingest.sentry.example.test/1';
+      expect(() => prod(sentryDsn: value), refuses('SENTRY_DSN', value));
+    });
+
+    test('https values start, with the DSN', () {
+      final config = prod(sentryDsn: dsn);
+      expect(config.apiBaseUrl, _studioUrl);
+      expect(config.sentryDsn, dsn);
+    });
+
+    test('the scheme is read without regard to case', () {
+      expect(prod(studio: 'HTTPS://studio.example.test/api').apiBaseUrl, 'HTTPS://studio.example.test/api');
+    });
+
+    test('a host with an underscore, a port or an IPv6 literal passes, as everywhere the rule runs', () {
+      for (final value in ['https://my_studio.example.test/api', 'https://studio:9443/api', 'https://[::1]:9443/api']) {
+        expect(prod(studio: value, sentryDsn: 'https://key@my_sentry.example.test/1').apiBaseUrl, value);
+      }
+    });
+
+    test('surrounding whitespace in PROD_API_URL or SENTRY_DSN stops the start and says so', () {
+      for (final name in ['PROD_API_URL', 'SENTRY_DSN']) {
+        for (final value in [' $_studioUrl', '$_studioUrl ', '$_studioUrl\n']) {
+          expect(
+            () => name == 'PROD_API_URL' ? prod(studio: value) : prod(sentryDsn: value),
+            throwsA(
+              isA<ProdHttpsConfigError>()
+                  .having((error) => error.define, 'define', name)
+                  .having((error) => '$error', 'message', contains('whitespace')),
+            ),
+            reason: '$name=${jsonEncode(value)}',
+          );
+        }
+      }
+    });
+
+    test('an OIDC_ISSUER is trimmed first, as the sign-in reads it', () {
+      expect(prod(oidcIssuer: '  $issuer\n').isProduction, isTrue);
+    });
+
+    test('an unset OIDC_ISSUER or SENTRY_DSN starts: the login page fails closed, and Sentry stays off', () {
+      final config = prod(oidcIssuer: '', sentryDsn: '');
+      expect(config.sentryDsn, isNull);
+    });
+
+    test('the tool/studio-dev values pass', () {
+      final defines = {
+        for (final line in File('tool/studio-dev/studio-dev.env').readAsLinesSync())
+          if (!line.startsWith('#') && line.contains('=')) line.split('=').first: line.substring(line.indexOf('=') + 1),
+      };
+      expect(
+        prod(studio: defines['PROD_API_URL']!, oidcIssuer: defines['OIDC_ISSUER']!).apiBaseUrl,
+        defines['PROD_API_URL'],
+      );
+    });
+
+    test('dev and test check none of them, so main_local.dart keeps working', () {
+      for (final environment in [Environment.dev, Environment.test]) {
+        final config = AppConfig.fromEnvironment(
+          environment,
+          prodApiUrlDefine: 'http://studio.example.test/api',
+          oidcIssuerDefine: 'http://keycloak.example.test/realms/libredb',
+          sentryDsnDefine: 'http://publickey@o1.ingest.sentry.example.test/1',
+        );
+        expect(config.environment, environment);
+        expect(config.sentryDsn, isNull);
+      }
+    });
+
+    test('a prod start reads the defines of the build', () {
+      const studio = String.fromEnvironment('PROD_API_URL');
+      const oidcIssuer = String.fromEnvironment('OIDC_ISSUER');
+      const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+      bool insecure(String value) => value.isNotEmpty && (value.trim() != value || !AppConfig.isHttpsUrl(value));
+      AppConfig start() => AppConfig.fromEnvironment(Environment.prod, prodApiUrlDefine: _studioUrl);
+      if (insecure(oidcIssuer.trim()) || insecure(sentryDsn)) {
+        expect(start, throwsA(isA<ProdHttpsConfigError>()));
+      } else {
+        expect(start().isProduction, isTrue);
+      }
+      if (insecure(studio)) {
+        expect(() => AppConfig.fromEnvironment(Environment.prod), throwsA(isA<ProdHttpsConfigError>()));
+      }
     });
   });
 }

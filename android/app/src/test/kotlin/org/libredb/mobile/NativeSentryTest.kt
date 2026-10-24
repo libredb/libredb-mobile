@@ -10,6 +10,7 @@ import io.sentry.protocol.SentryException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -120,5 +121,39 @@ class NativeSentryTest {
 
         assertTrue(options.logs.isEnabled)
         assertNull(options.logs.beforeSend)
+    }
+
+    // The store build declares encryption in transit (#218): the native SDK starts before the Flutter engine, so it
+    // refuses a DSN that is not https itself, before the Dart check in AppConfig.fromEnvironment could.
+    @Test
+    fun refusesADsnThatIsNotHttpsWithoutPrintingIt() {
+        for (dsn in listOf("http://publickey@example.invalid/1", "publickey@example.invalid/1", "https:///1", "a b")) {
+            val error = assertThrows(IllegalStateException::class.java) { NativeSentry.requireHttpsDsn(dsn) }
+            assertTrue(error.message, error.message!!.contains("SENTRY_DSN must be an https URL"))
+            assertFalse(error.message, error.message!!.contains("publickey"))
+        }
+    }
+
+    // The rule of AppConfig.isHttpsUrl, so the two sides never disagree on a DSN.
+    @Test
+    fun acceptsAnHttpsDsnInAnyCaseWithTheHostsDartAccepts() {
+        for (dsn in listOf(
+            "https://publickey@example.invalid/1",
+            "HTTPS://publickey@example.invalid/1",
+            "https://publickey@my_sentry.example.invalid/1",
+            "https://publickey@sentry.example.invalid:8443/1",
+            "https://publickey@[::1]:8443/1",
+        )) {
+            NativeSentry.requireHttpsDsn(dsn)
+        }
+    }
+
+    @Test
+    fun refusesSurroundingWhitespaceSayingSo() {
+        for (dsn in listOf(" https://publickey@example.invalid/1", "https://publickey@example.invalid/1\n")) {
+            val error = assertThrows(IllegalStateException::class.java) { NativeSentry.requireHttpsDsn(dsn) }
+            assertTrue(error.message, error.message!!.contains("SENTRY_DSN has leading or trailing whitespace"))
+            assertFalse(error.message, error.message!!.contains("publickey"))
+        }
     }
 }

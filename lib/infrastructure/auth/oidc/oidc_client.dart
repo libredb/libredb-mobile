@@ -62,6 +62,22 @@ enum OidcFailure {
   /// The provider's certificate matched none of the `OIDC_CERT_PINS`: the connection may be intercepted, and the
   /// handshake failed before any request was written.
   untrustedCertificate,
+
+  /// Discovery named an endpoint the app uses that is not https, so nothing was sent to it: the provider is
+  /// misconfigured, or the discovery answer was tampered with.
+  insecureEndpoint,
+}
+
+/// Thrown when discovery names an endpoint the client uses that is not an https URL with a host ([endpoint] is the
+/// discovery key, such as `token_endpoint`). It never carries the URL.
+final class OidcInsecureEndpointException implements Exception {
+  const OidcInsecureEndpointException(this.endpoint);
+
+  /// The discovery key of the endpoint.
+  final String endpoint;
+
+  @override
+  String toString() => 'OidcInsecureEndpointException: $endpoint is not an https URL';
 }
 
 /// How a sign-in ended.
@@ -185,6 +201,9 @@ final class OidcClient implements IOidcClient {
     final AppOidcUserManager manager;
     try {
       manager = await _initializedManager();
+    } on OidcInsecureEndpointException catch (error) {
+      _log.error('The discovery document names a {} that is not https, so the sign-in is refused', [error.endpoint]);
+      return const OidcSignInFailed(OidcFailure.insecureEndpoint);
     } on Object catch (error) {
       if (_isPinMismatch(error)) return _signInFailed(error);
       _log.warn('The identity provider could not be reached to sign in: {}', [() => _describe(error)]);
@@ -347,13 +366,44 @@ final class OidcClient implements IOidcClient {
   /// Runs [manager]'s `init()` and makes it the run's manager, or disposes and drops it when `init()` fails: the
   /// package cannot retry `init()` on the same instance.
   Future<AppOidcUserManager> _initialize(AppOidcUserManager manager) async {
-    final ready = _ready = manager.init().then((_) => manager);
+    final ready = _ready = manager.init().then((_) {
+      _requireSecureEndpoints(manager.discoveryDocument);
+      return manager;
+    });
     try {
       return await ready;
     } on Object {
       if (identical(_ready, ready)) _ready = null;
       await manager.dispose();
       rethrow;
+    }
+  }
+
+  /// The discovery keys of the endpoints the client sends to or opens: the sign-in page, the pushed authorization
+  /// request the package sends first when the provider supports it, the code exchange and the refresh, the keys that
+  /// check an ID token, and the provider logout.
+  static const _usedEndpoints = [
+    'authorization_endpoint',
+    'pushed_authorization_request_endpoint',
+    'token_endpoint',
+    'jwks_uri',
+    'end_session_endpoint',
+  ];
+
+  /// Throws [OidcInsecureEndpointException] for the first of [_usedEndpoints] that [discovered] names but that is not
+  /// an https URL with a host. Only an http issuer, which [OidcSettings] allows on a loopback host and a prod build
+  /// never starts with, may name http endpoints, and only on its own host.
+  void _requireSecureEndpoints(OidcProviderMetadata discovered) {
+    final issuer = _settings.issuer;
+    for (final key in _usedEndpoints) {
+      final value = discovered.src[key];
+      if (value == null) continue;
+      final uri = value is String ? Uri.tryParse(value) : null;
+      final secure =
+          uri != null &&
+          uri.host.isNotEmpty &&
+          (uri.scheme == 'https' || (issuer.scheme == 'http' && uri.scheme == 'http' && uri.host == issuer.host));
+      if (!secure) throw OidcInsecureEndpointException(key);
     }
   }
 
@@ -489,9 +539,11 @@ final class OidcClient implements IOidcClient {
     };
   }
 
-  /// The type of [error] and, for an [OidcException], the provider's error code and status. Never its message, its
-  /// request or its response, which can carry a token, the code, the verifier or a URL with `state`.
+  /// The type of [error]; for an [OidcException], the provider's error code and status; for an
+  /// [OidcInsecureEndpointException], the endpoint's discovery key. Never its message, its request, its response or a
+  /// URL, which can carry a token, the code, the verifier or `state`.
   static String _describe(Object error) => switch (error) {
+    OidcInsecureEndpointException(:final endpoint) => 'OidcInsecureEndpointException(endpoint: $endpoint)',
     OidcException(:final errorResponse, :final rawResponse, :final internalException) =>
       'OidcException(error: ${errorResponse?.error}, status: ${rawResponse?.statusCode}, '
           'cause: ${internalException?.runtimeType})',
@@ -504,18 +556,50 @@ final class OidcClient implements IOidcClient {
 /// Passes the requests to the provider on, and notes a GET the provider answers with an error status. Discovery runs
 /// inside the manager's `init()`, so during a sign-in or a refresh the only GET is the JWKS, whose failure the
 /// package does not report as such: jose_plus parses the error page as a key set.
+///
+/// It follows no redirect: oidc_core takes any status under 400 as success, so a followed 302 from the https issuer to
+/// plain http would fetch discovery or the keys over http (#218, docs/security.md "Encryption in transit"). A 3xx
+/// throws [OidcRedirectRefusedException] and counts as a failed GET; the log names the request's role, never a URL.
 final class _ProviderHttpClient extends http.BaseClient {
   _ProviderHttpClient(this._inner);
 
+  static final _log = AppLogger.getLogger('OidcClient');
+
   final http.Client _inner;
 
-  /// Whether a GET answered with a status of 400 or more since the flag was last cleared.
+  /// Whether a GET answered with a status of 400 or more, or with a redirect, since the flag was last cleared.
   bool getFailed = false;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    request.followRedirects = false;
     final response = await _inner.send(request);
+    if (response.statusCode >= 300 && response.statusCode < 400) {
+      if (request.method == 'GET') getFailed = true;
+      await response.stream.drain<void>();
+      final role = _roleOf(request);
+      _log.warn('The identity provider answered the {} request with a redirect, which is not followed', [role]);
+      throw OidcRedirectRefusedException(role);
+    }
     if (request.method == 'GET' && response.statusCode >= 400) getFailed = true;
     return response;
   }
+
+  /// What [request] is for: `discovery`, `jwks` (the other GET the client sends) or `token`.
+  static String _roleOf(http.BaseRequest request) => request.method != 'GET'
+      ? 'token'
+      : request.url.path.endsWith('/.well-known/openid-configuration')
+      ? 'discovery'
+      : 'jwks';
+}
+
+/// Thrown when the identity provider answers a request with a redirect, which the client never follows; [role] is
+/// `discovery`, `jwks` or `token`, and no URL is kept.
+final class OidcRedirectRefusedException implements Exception {
+  const OidcRedirectRefusedException(this.role);
+
+  final String role;
+
+  @override
+  String toString() => 'OidcRedirectRefusedException: the $role request was answered with a redirect';
 }
