@@ -16,6 +16,7 @@ import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/connection_switcher_sheet.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -232,18 +233,21 @@ void main() {
     verifyNothingSent();
   });
 
-  // On the SQL tab the top bar shows the tab title and the profile button; the connection switcher is Browse's title.
-  testWidgets('the confirmation covers the top bar, so the profile sheet with its sign-out does not open', (
+  // On the SQL tab the top bar shows the active connection, which opens the switcher, and the profile button.
+  testWidgets('the confirmation covers the top bar, so neither the switcher nor the profile sheet opens', (
     tester,
   ) async {
     final router = await pumpShell(tester);
-    expect(find.byType(ActiveConnectionTitle), findsNothing);
+    expect(find.byType(ActiveConnectionTitle), findsOneWidget);
     await openConfirmation(tester);
 
+    await tester.tap(find.byType(ActiveConnectionTitle), warnIfMissed: false);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(profileButtonKey), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(router.state.uri.path, '/sql');
+    expect(find.byType(ConnectionSwitcherSheet), findsNothing);
     expect(find.byType(ProfileSheet), findsNothing);
     expect(find.byKey(EditorInput.fieldKey), findsOneWidget);
     expect(active.state.connection, postgres);
