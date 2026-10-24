@@ -1,7 +1,17 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens and statement text, how the user removes what it keeps, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
+This page describes the protections inside the app: how it keeps a prod build on https, how it stores tokens and statement text, how the user removes what it keeps, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
+
+## Encryption in transit
+
+A prod build (`lib/main/main_prod.dart`) talks to Studio, Keycloak and Sentry over https only, which the privacy policy and the Play Data safety answer "data is encrypted in transit" rely on.
+`AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`) stops the start with a `ProdHttpsConfigError` when `PROD_API_URL`, `OIDC_ISSUER` or a set `SENTRY_DSN` is not an absolute https URL with a host, a loopback http issuer included; there is no fallback and no downgrade.
+The error names the define and never its value, because the DSN carries the project's key.
+On Android the host app starts the native Sentry SDK before the Flutter engine, so `NativeSentry.requireHttpsDsn` (`android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt`) refuses such a DSN there first, with the same message.
+An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
+`AppConfig.httpsOnlyDefines` lists the three, and `test/architecture/android_release_setup_test.dart` fails when the release passes a URL define that is not in it.
+Dev and test builds, `main_local.dart` among them, check none of them; tool/studio-dev serves Studio and Keycloak over https through Caddy, so its `studio-dev.env` passes.
 
 ## Token storage
 

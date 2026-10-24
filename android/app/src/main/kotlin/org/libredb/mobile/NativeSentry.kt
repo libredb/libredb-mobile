@@ -8,6 +8,8 @@ import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.flutter.SentryFlutterPlugin
 import io.sentry.protocol.SdkVersion
+import java.net.URI
+import java.net.URISyntaxException
 
 /**
  * Starts sentry-android from the host app, before the Flutter engine, with the scrubbing hooks of
@@ -39,6 +41,7 @@ object NativeSentry {
     fun start(context: Context) {
         val dsn = BuildConfig.SENTRY_DSN
         if (dsn.isEmpty()) return
+        requireHttpsDsn(dsn)
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val buildNumber = buildNumber(packageInfo)
         SentryAndroid.init(context) { options ->
@@ -50,6 +53,22 @@ object NativeSentry {
                 dist = BuildConfig.SENTRY_DIST.ifEmpty { buildNumber.toString() },
                 environment = BuildConfig.SENTRY_ENVIRONMENT.ifEmpty { environmentFor(BuildConfig.BUILD_TYPE) },
             )
+        }
+    }
+
+    /**
+     * Throws when [dsn] is not an https URL, so a prod build stops at start instead of sending crash reports over plain
+     * http (docs/security.md, "Encryption in transit"). The message names only the define: the DSN carries the
+     * project's key. The Dart side checks the same define in AppConfig.fromEnvironment, after this SDK has started.
+     */
+    fun requireHttpsDsn(dsn: String) {
+        val uri = try {
+            URI(dsn)
+        } catch (_: URISyntaxException) {
+            null
+        }
+        check(uri != null && uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrEmpty()) {
+            "SENTRY_DSN must be an https URL in a prod build (docs/security.md, \"Encryption in transit\")"
         }
     }
 

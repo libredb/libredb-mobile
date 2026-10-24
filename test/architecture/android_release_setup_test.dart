@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:yaml/yaml.dart';
 
 /// Guards the Android release signing and the release workflows (docs/release.md, issue #194).
@@ -19,6 +20,7 @@ import 'package:yaml/yaml.dart';
 /// - A store build never carries a define meant for checks only (`tool/release/check_only_defines.txt`), such as
 ///   `SENTRY_DEVICE_CHECK`: `tool/release/check_defines.sh` stops the release before the build, and every define the
 ///   app reads is either one the release passes or one of those.
+/// - Every URL the release passes is one a prod start refuses unless it is https (#218).
 void main() {
   group('Android release signing', () {
     late final gradle = _stripLineComments(File(_gradlePath).readAsStringSync());
@@ -235,6 +237,26 @@ void main() {
       expect(check, lessThan(build), reason: '$_checkScriptPath must run before the build');
       expect('${(steps[check]['env'] as YamlMap?)?['RELEASE_VARS']}', contains('toJSON(vars)'));
       expect('${steps[build]['run']}', isNot(contains('--dart-define=')), reason: 'pass defines only from the file');
+    });
+
+    // The store build declares encryption in transit (#218): AppConfig.fromEnvironment stops a prod start when one of
+    // these is not https, which test/infrastructure/config/environment_test.dart covers for each.
+    test('every URL the release passes is checked for https at a prod start', () {
+      final urls = {
+        for (final name in releaseDefines)
+          if (name.endsWith('_URL') || name.endsWith('_ISSUER') || name.endsWith('_DSN')) name,
+      };
+      expect(urls, containsAll(['PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN']), reason: 'the guard finds no URL');
+      expect(
+        urls.difference(AppConfig.httpsOnlyDefines),
+        isEmpty,
+        reason: 'add each URL define to AppConfig.httpsOnlyDefines and check it in AppConfig.fromEnvironment',
+      );
+      final build = _steps(
+        _loadYaml(_releasePath)['jobs'] as YamlMap,
+        'build',
+      ).firstWhere((step) => '${step['run']}'.contains('flutter build appbundle'));
+      expect('${build['run']}', contains('--target lib/main/main_prod.dart'), reason: 'the store build must be prod');
     });
 
     group('check_defines.sh', () {
