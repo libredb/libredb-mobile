@@ -161,7 +161,10 @@ final class OidcClient implements IOidcClient {
     Future<void> Function()? cancelAndroidFlow,
     @visibleForTesting this._onManagerCreated,
   }) : _store = store ?? OidcTransactionStore(),
-       _http = _ProviderHttpClient(httpClient ?? http.Client()),
+       _http = _ProviderHttpClient(
+         httpClient ?? http.Client(),
+         discoveryUri: OidcUtils.getOpenIdConfigWellKnownUri(_settings.issuer),
+       ),
        _platform = platform ?? OidcPlatformKind.current(),
        _cancelAndroidFlow = cancelAndroidFlow ?? (() => OidcAndroidHostApi().cancel());
 
@@ -368,6 +371,7 @@ final class OidcClient implements IOidcClient {
   Future<AppOidcUserManager> _initialize(AppOidcUserManager manager) async {
     final ready = _ready = manager.init().then((_) {
       _requireSecureEndpoints(manager.discoveryDocument);
+      _http.discovered = manager.discoveryDocument.src;
       return manager;
     });
     try {
@@ -561,11 +565,16 @@ final class OidcClient implements IOidcClient {
 /// plain http would fetch discovery or the keys over http (#218, docs/security.md "Encryption in transit"). A 3xx
 /// throws [OidcRedirectRefusedException] and counts as a failed GET; the log names the request's role, never a URL.
 final class _ProviderHttpClient extends http.BaseClient {
-  _ProviderHttpClient(this._inner);
+  _ProviderHttpClient(this._inner, {required this._discoveryUri});
 
   static final _log = AppLogger.getLogger('OidcClient');
 
   final http.Client _inner;
+
+  final Uri _discoveryUri;
+
+  /// The discovery document of the last manager that passed the endpoint check, which names the request roles.
+  Map<String, dynamic>? discovered;
 
   /// Whether a GET answered with a status of 400 or more, or with a redirect, since the flag was last cleared.
   bool getFailed = false;
@@ -577,24 +586,47 @@ final class _ProviderHttpClient extends http.BaseClient {
     if (response.statusCode >= 300 && response.statusCode < 400) {
       if (request.method == 'GET') getFailed = true;
       await response.stream.drain<void>();
-      final role = _roleOf(request);
+      final role = oidcRequestRole(request.url, discoveryUri: _discoveryUri, discovered: discovered);
       _log.warn('The identity provider answered the {} request with a redirect, which is not followed', [role]);
       throw OidcRedirectRefusedException(role);
     }
     if (request.method == 'GET' && response.statusCode >= 400) getFailed = true;
     return response;
   }
+}
 
-  /// What [request] is for: `discovery`, `jwks` (the other GET the client sends) or `token`.
-  static String _roleOf(http.BaseRequest request) => request.method != 'GET'
-      ? 'token'
-      : request.url.path.endsWith('/.well-known/openid-configuration')
-      ? 'discovery'
-      : 'jwks';
+/// The roles of the discovery endpoints the client can send a request to, by discovery key, in the order they are
+/// matched.
+const _requestRoles = {
+  'token_endpoint': 'token',
+  'jwks_uri': 'jwks',
+  'userinfo_endpoint': 'userinfo',
+  'pushed_authorization_request_endpoint': 'pushed_authorization_request',
+  'revocation_endpoint': 'revocation',
+};
+
+/// What a request to [url] is for, from the endpoint it targets: `discovery` for [discoveryUri], the role in
+/// [_requestRoles] of the endpoint of [discovered] whose scheme, host, port and path match, or `unknown` for a URL
+/// that none names or before discovery is known. The method plays no part, so a GET to UserInfo is not taken for the
+/// JWKS. The role is safe to log; the URL is not.
+@visibleForTesting
+String oidcRequestRole(Uri url, {required Uri discoveryUri, required Map<String, dynamic>? discovered}) {
+  bool sameEndpoint(Uri endpoint) =>
+      url.scheme == endpoint.scheme &&
+      url.host == endpoint.host &&
+      url.port == endpoint.port &&
+      url.path == endpoint.path;
+  if (sameEndpoint(discoveryUri)) return 'discovery';
+  for (final MapEntry(:key, value: role) in _requestRoles.entries) {
+    final value = discovered?[key];
+    final endpoint = value is String ? Uri.tryParse(value) : null;
+    if (endpoint != null && sameEndpoint(endpoint)) return role;
+  }
+  return 'unknown';
 }
 
 /// Thrown when the identity provider answers a request with a redirect, which the client never follows; [role] is
-/// `discovery`, `jwks` or `token`, and no URL is kept.
+/// one of [oidcRequestRole]'s, and no URL is kept.
 final class OidcRedirectRefusedException implements Exception {
   const OidcRedirectRefusedException(this.role);
 
