@@ -131,7 +131,7 @@ class AppDependencies {
   /// The app's one screen capture protection, which every `ScreenCaptureGuard` holds a lease of, switched by
   /// [AppConfig.screenCaptureProtection]: switched off, a guard takes no lease and every screen can be captured.
   ScreenCaptureProtection createScreenCaptureProtection() =>
-      ScreenCaptureProtection(platform: const ScreenProtectorPlatform(), enabled: appConfig.screenCaptureProtection);
+      ScreenCaptureProtection(platform: const ScreenCapturePlatform(), enabled: appConfig.screenCaptureProtection);
 
   /// The app lock settings, kept in the device preferences.
   IAppLockSettingsRepository createAppLockSettingsRepository() => AppLockSettingsPreferences();

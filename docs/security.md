@@ -201,8 +201,11 @@ How it works:
   A route covered by an opaque page, or the shell hidden under the refusal page or the "Can't reach Studio" page, has its tickers off and holds no lease, so the screen shown above it can be captured; a sheet over a result leaves the result's tickers on.
   The shell's tabs are routes of one `ShellRoute`, so a tab change disposes the editor and its result: nothing of it stays mounted offstage.
   The detail page's tab view keeps the Source tab alive off screen, so that tab turns its tickers off while none of it is in view, and the Columns tab shown in its place can be captured.
-- The plugin calls sit behind `IScreenCapturePlatform` (`lib/core/security/screen_capture_platform.dart`), so a widget test counts leases on its own instance without a platform channel (`test/support/screen_capture.dart`).
-  A failed plugin call is logged at error level and keeps the lease count, so the leases stay balanced.
+- The platform calls sit behind `IScreenCapturePlatform` (`lib/core/security/screen_capture_platform.dart`), so a widget test counts leases on its own instance without a platform channel (`test/support/screen_capture.dart`).
+  A failed platform call is logged at error level and keeps the lease count, so the leases stay balanced.
+- On Android, `ScreenCapturePlatform` sets and clears `FLAG_SECURE` through the `org.libredb.mobile/screen_capture` channel of `MainActivity` (`SecureWindow.kt`), which answers whether the flag is set on the window afterwards, read back from the window.
+  An answer other than the one asked for throws a `ScreenCaptureFlagException`, and no window or a window that throws answers an error, so a protection that did not take is logged at error level and never assumed.
+  The app does not use `screen_protector` on Android, because its 1.5.3 plugin answers success with no activity attached and the Dart side drops its answer (#205).
 - A guard without a `ScreenCaptureProtection` above it fails with `ProviderNotFoundException` when it mounts, on screen or offstage, rather than show the data unprotected.
 
 ### The switch
@@ -227,7 +230,7 @@ fvm flutter build apk --release --target lib/main/main_prod.dart --dart-define=S
 | Platform | What happens |
 | --- | --- |
 | Android | `FLAG_SECURE`: a screenshot and a screen recording are black, and the recent-apps preview is black. |
-| iOS | iOS offers no API to block a screenshot. The task-switcher snapshot is blurred, so the app preview shows no value; a screenshot taken in the foreground still succeeds (#199 checks this on a device). |
+| iOS | iOS offers no API to block a screenshot. `screen_protector` blurs the task-switcher snapshot, so the app preview shows no value; a screenshot taken in the foreground still succeeds (#199 checks this on a device). |
 
 ## Result masking
 
