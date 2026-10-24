@@ -556,18 +556,50 @@ final class OidcClient implements IOidcClient {
 /// Passes the requests to the provider on, and notes a GET the provider answers with an error status. Discovery runs
 /// inside the manager's `init()`, so during a sign-in or a refresh the only GET is the JWKS, whose failure the
 /// package does not report as such: jose_plus parses the error page as a key set.
+///
+/// It follows no redirect: oidc_core takes any status under 400 as success, so a followed 302 from the https issuer to
+/// plain http would fetch discovery or the keys over http (#218, docs/security.md "Encryption in transit"). A 3xx
+/// throws [OidcRedirectRefusedException] and counts as a failed GET; the log names the request's role, never a URL.
 final class _ProviderHttpClient extends http.BaseClient {
   _ProviderHttpClient(this._inner);
 
+  static final _log = AppLogger.getLogger('OidcClient');
+
   final http.Client _inner;
 
-  /// Whether a GET answered with a status of 400 or more since the flag was last cleared.
+  /// Whether a GET answered with a status of 400 or more, or with a redirect, since the flag was last cleared.
   bool getFailed = false;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    request.followRedirects = false;
     final response = await _inner.send(request);
+    if (response.statusCode >= 300 && response.statusCode < 400) {
+      if (request.method == 'GET') getFailed = true;
+      await response.stream.drain<void>();
+      final role = _roleOf(request);
+      _log.warn('The identity provider answered the {} request with a redirect, which is not followed', [role]);
+      throw OidcRedirectRefusedException(role);
+    }
     if (request.method == 'GET' && response.statusCode >= 400) getFailed = true;
     return response;
   }
+
+  /// What [request] is for: `discovery`, `jwks` (the other GET the client sends) or `token`.
+  static String _roleOf(http.BaseRequest request) => request.method != 'GET'
+      ? 'token'
+      : request.url.path.endsWith('/.well-known/openid-configuration')
+      ? 'discovery'
+      : 'jwks';
+}
+
+/// Thrown when the identity provider answers a request with a redirect, which the client never follows; [role] is
+/// `discovery`, `jwks` or `token`, and no URL is kept.
+final class OidcRedirectRefusedException implements Exception {
+  const OidcRedirectRefusedException(this.role);
+
+  final String role;
+
+  @override
+  String toString() => 'OidcRedirectRefusedException: the $role request was answered with a redirect';
 }

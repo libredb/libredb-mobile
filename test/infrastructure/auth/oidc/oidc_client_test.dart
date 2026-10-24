@@ -14,6 +14,7 @@ import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.d
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:oidc/oidc.dart';
 
 import '../../../support/loopback_tls_server.dart';
@@ -932,6 +933,100 @@ void main() {
       local.discoveryAnswer = () =>
           http.Response(jsonEncode({...local.discovery, 'token_endpoint': 'http://idp.example.test/token'}), 200);
       expect(await signIn(newClient(at: local)), _failed(OidcFailure.insecureEndpoint));
+    });
+  });
+
+  // oidc_core takes any status under 400 as success, and package:http follows redirects by default, so a 302 from the
+  // https issuer to plain http would fetch discovery or the JWKS over http, where a hop could name its own https
+  // endpoints that pass the endpoint check (#218). Real sockets, so the redirect is the one dart:io would follow.
+  group('a redirect from the identity provider', () {
+    late int plainRequests;
+    late HttpServer plain;
+    late HttpServer issuerServer;
+    late FakeProvider tlsProvider;
+    late FakeOidcPlatform tlsPlatform;
+
+    /// Starts the plain http server a redirect points to and the https issuer, which answers as [tlsProvider] does
+    /// except for a request whose path ends with [redirected], which it sends to the plain server with a 302.
+    Future<void> start({required String redirected}) async {
+      plainRequests = 0;
+      plain = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => plain.close(force: true));
+      issuerServer = await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, loopbackServerContext());
+      addTearDown(() => issuerServer.close(force: true));
+      tlsProvider = FakeProvider(issuer: 'https://127.0.0.1:${issuerServer.port}/realms/demo');
+      tlsPlatform = installFakePlatform(tlsProvider);
+      Future<void> forward(HttpRequest request) async {
+        final forwarded =
+            http.Request(request.method, Uri.parse('${tlsProvider.issuer.split('/realms').first}${request.uri}'))
+              ..headers.addAll({
+                for (final name in ['content-type', 'authorization']) name: ?request.headers.value(name),
+              })
+              ..bodyBytes = await request.fold<List<int>>([], (bytes, chunk) => bytes..addAll(chunk));
+        final answer = await http.Response.fromStream(await tlsProvider.client.send(forwarded));
+        request.response
+          ..statusCode = answer.statusCode
+          ..headers.contentType = ContentType.json
+          ..add(answer.bodyBytes);
+        await request.response.close();
+      }
+
+      plain.listen((request) async {
+        plainRequests++;
+        await forward(request);
+      });
+      issuerServer.listen((request) async {
+        if (request.uri.path.endsWith(redirected)) {
+          await request.drain<void>();
+          request.response
+            ..statusCode = HttpStatus.found
+            ..headers.set('location', 'http://127.0.0.1:${plain.port}${request.uri}');
+          await request.response.close();
+          return;
+        }
+        await forward(request);
+      });
+    }
+
+    OidcClient trustingClient() => OidcClient(
+      settings: settingsFor(tlsProvider),
+      store: store,
+      httpClient: IOClient(
+        HttpClient(
+          context: SecurityContext(withTrustedRoots: false)
+            ..setTrustedCertificatesBytes(utf8.encode(loopbackCertificatePem)),
+        ),
+      ),
+      platform: OidcPlatformKind.ios,
+    );
+
+    test('at discovery is not followed, so nothing goes over http and the sign-in fails as discovery', () async {
+      await start(redirected: '/.well-known/openid-configuration');
+      late OidcSignInOutcome outcome;
+      final lines = await printedLines(() async => outcome = await withRealSockets(() => trustingClient().signIn()));
+
+      expect(outcome, _failed(OidcFailure.discovery));
+      expect(plainRequests, 0, reason: 'discovery was fetched over http');
+      expect(tlsPlatform.authorizeRequests, isEmpty);
+      expect(lines.where((line) => line.contains('discovery') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+    });
+
+    test('at the JWKS is not followed, so the keys never come over http and the sign-in fails', () async {
+      await start(redirected: '/certs');
+      late OidcSignInOutcome outcome;
+      final lines = await printedLines(() async => outcome = await withRealSockets(() => trustingClient().signIn()));
+
+      expect(outcome, _failed(OidcFailure.discovery));
+      expect(plainRequests, 0, reason: 'the JWKS was fetched over http');
+      expect(lines.where((line) => line.contains('jwks') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+    });
+
+    test('without a redirect the same setup signs in, so the two failures above are the redirect', () async {
+      await start(redirected: '/nothing-is-redirected');
+      expect(await withRealSockets(() => trustingClient().signIn()), isA<OidcSignedIn>());
+      expect(plainRequests, 0);
     });
   });
 }

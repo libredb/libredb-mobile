@@ -1160,9 +1160,6 @@ void main() {
     });
   });
 
-  // A connection closed or reset before the whole response arrived reaches the client in a shape that depends on
-  // where it ends: a connection error, or an unknown error whose error is a dart:io HttpException, OSError or
-  // SocketException. Only real sockets give these shapes, so a loopback server cuts the connections here.
   // The store build declares encryption in transit (#218): Studio never redirects its API, so a redirect,
   // to http above all, is refused instead of followed.
   group('ApiClient when Studio answers with a redirect', () {
@@ -1265,6 +1262,9 @@ void main() {
     });
   });
 
+  // A connection closed or reset before the whole response arrived reaches the client in a shape that depends on
+  // where it ends: a connection error, or an unknown error whose error is a dart:io HttpException, OSError or
+  // SocketException. Only real sockets give these shapes, so a loopback server cuts the connections here.
   group('ApiClient when the server cuts the connection off', () {
     const cached = '[{"login":"admin"}]';
 
