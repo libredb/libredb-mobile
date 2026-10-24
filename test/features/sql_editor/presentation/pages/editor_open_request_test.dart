@@ -16,6 +16,7 @@ import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -499,6 +500,101 @@ void main() {
       expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
     });
 
+    group('a history entry of it tapped on another connection with text typed (#167)', () {
+      final entry = StatementHistoryEntry(
+        id: '1',
+        connectionId: _server.id,
+        connectionName: _server.name,
+        text: 'SELECT * FROM archive_orders',
+        status: StatementRunStatus.success,
+        duration: const Duration(milliseconds: 3),
+        executedAt: DateTime.utc(2026, 10, 23),
+      );
+
+      /// The phone's store reads a draft in an isolate, so the draft of the connection that opens arrives later.
+      const readTime = Duration(milliseconds: 300);
+
+      /// From the SQL tab of dev-postgres with 'SELECT 2' typed, opens the dev-postgres-server entry from History and
+      /// waits for the replace prompt, checking that it waits for that connection's draft.
+      Future<void> tapEntry(WidgetTester tester) async {
+        when(() => history.read(subjectHash('kc-ada'))).thenAnswer((_) async => Success([entry]));
+        await pumpShell(tester);
+        await type(tester, 'SELECT 2');
+        when(() => textStore.readDraft(any(), any())).thenAnswer((invocation) async {
+          await Future<void>.delayed(readTime);
+          return Success(drafts[invocation.positionalArguments[1] as String]);
+        });
+        await tester.tap(find.byKey(EditorActions.historyKey));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(StatementHistorySheet.allConnectionsKey));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(StatementHistorySheet.entryKey('1')));
+        await tester.pump();
+        await tester.pump(readTime ~/ 2);
+
+        // Switched, and nothing asked while the draft is still being read.
+        expect(active.state.connection, _server);
+        expect(find.text("Replace the editor's text?"), findsNothing);
+        expect(editorText(tester), isNot('SELECT 2'));
+
+        await tester.pump(readTime);
+        await tester.pumpAndSettle();
+        expect(find.text("Replace the editor's text?"), findsOneWidget);
+        // The prompt is asked against the text it would replace: dev-postgres-server's draft, on screen.
+        expect(editorText(tester), 'SELECT draft');
+      }
+
+      testWidgets('asks over that connection\'s draft, Replace puts the entry in, and nothing runs or is logged', (
+        tester,
+      ) async {
+        final records = <logging.LogRecord>[];
+        final subscription = logging.Logger('GoRouter').onRecord.listen(records.add);
+        addTearDown(subscription.cancel);
+        // The shell, the editors and their blocs are all built inside the zone, so it sees every line they print.
+        final lines = await printedLines(() async {
+          await tapEntry(tester);
+          await tester.tap(find.widgetWithText(FilledButton, 'Replace'));
+          await tester.pumpAndSettle();
+          // The control that the zone captures the app's lines.
+          AppLogger.getLogger('Control').info('control line');
+        });
+
+        expect(editorText(tester), 'SELECT * FROM archive_orders');
+        expect(active.state.connection, _server);
+        verifyNothingSent();
+        // The text typed on dev-postgres is kept as its draft.
+        expect(drafts[_postgres.id]?.text, 'SELECT 2');
+        expect(lines, contains(contains('control line')));
+        expect(records.map((record) => record.message), contains('going to /sql'));
+        bool holdsText(String line) =>
+            line.contains('archive_orders') || line.contains('SELECT draft') || line.contains('SELECT 2');
+        expect(lines.where(holdsText), isEmpty);
+        expect(records.map((record) => record.message).where(holdsText), isEmpty);
+      });
+
+      testWidgets('a cancel keeps that connection\'s draft, and the typed text stays the draft of its own', (
+        tester,
+      ) async {
+        await tapEntry(tester);
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+
+        expect(active.state.connection, _server);
+        expect(editorText(tester), 'SELECT draft');
+        expect(drafts[_server.id]?.text, 'SELECT draft');
+        expect(drafts[_postgres.id]?.text, 'SELECT 2');
+        verifyNothingSent();
+
+        active.select(_postgres);
+        // The page of dev-postgres reads its draft once it is built, which takes a few frames here.
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(readTime);
+        }
+        await tester.pumpAndSettle();
+        expect(editorText(tester), 'SELECT 2');
+      });
+    });
+
     testWidgets('the same text as the draft asks nothing', (tester) async {
       await pumpShell(tester, location: '/browse');
 
@@ -506,6 +602,69 @@ void main() {
 
       expect(find.text("Replace the editor's text?"), findsNothing);
       expect(editorText(tester), 'SELECT draft');
+    });
+
+    testWidgets('leaving the connection keeps the draft\'s database, and nothing logs its text (#171)', (tester) async {
+      active.select(_server);
+      // The shell, the editors and their blocs are all built inside the zone, so it sees every line they print.
+      final lines = await printedLines(() async {
+        await pumpShell(tester);
+        expect(editorText(tester), 'SELECT draft');
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+
+        active.select(_postgres);
+        await tester.pumpAndSettle();
+        expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'postgres'));
+
+        active.select(_server);
+        await tester.pumpAndSettle();
+        expect(editorText(tester), 'SELECT draft');
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+        // The control that the zone captures the app's lines.
+        AppLogger.getLogger('Control').info('control line');
+      });
+
+      expect(lines, contains(contains('control line')));
+      expect(lines.where((line) => line.contains('SELECT draft')), isEmpty);
+    });
+
+    final closings = <String, void Function(WidgetTester tester)>{
+      'the session ends': (tester) {
+        active.clear();
+        catalogOf(tester).clear();
+      },
+      'a feature reports the connection unavailable': (_) => active.reportUnavailable(_server.id),
+      'the connection list no longer holds the connection': (_) => active.connectionsListed(const [_postgres]),
+    };
+    for (final MapEntry(key: closing, value: close) in closings.entries) {
+      testWidgets('the draft keeps its database when $closing (#171)', (tester) async {
+        active.select(_server);
+        await pumpShell(tester);
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+
+        close(tester);
+        await tester.pumpAndSettle();
+
+        expect(active.state.connection, isNull);
+        expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'postgres'));
+      });
+    }
+
+    testWidgets('a database the user picks on the connection is saved with the draft when leaving it (#171)', (
+      tester,
+    ) async {
+      active.select(_server);
+      await pumpShell(tester);
+      await tester.tap(chip());
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'archive'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+
+      active.select(_postgres);
+      await tester.pumpAndSettle();
+
+      expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'archive'));
     });
   });
 
@@ -517,5 +676,67 @@ void main() {
     final restored = router.routeInformationParser.restoreRouteInformation(router.routerDelegate.currentConfiguration);
     expect(restored?.uri.toString(), ApplicationRoutesConstants.sql);
     expect('${restored?.state}', isNot(contains('customers')));
+  });
+
+  group('a database list that answers late (#174)', () {
+    /// Holds dev-postgres-server's database list until the test lets it answer.
+    late Completer<void> gate;
+
+    void holdList() {
+      // Made inside the test body: a completer made in setUp completes outside the test's fake clock and never resumes.
+      gate = Completer<void>();
+      when(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).thenAnswer((_) async {
+        await gate.future;
+        return Success(
+          Answered(ObjectBrowserJson.containers(_fixture('containers_postgres_server')), at: DateTime(2026)),
+        );
+      });
+    }
+
+    /// Opens dev-postgres-server's editor from dev-postgres, its database list held.
+    Future<void> openServer(WidgetTester tester) async {
+      holdList();
+      await pumpShell(tester);
+      active.select(_server);
+      // A few frames build the editor and ask for the list; the chip's spinner never settles while it is held.
+      for (var i = 0; i < 3; i++) {
+        await tester.pump();
+      }
+      verify(() => containers.containers(_server.id, refresh: any(named: 'refresh'))).called(1);
+    }
+
+    testWidgets('answering while the connection is active chooses the default', (tester) async {
+      await openServer(tester);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(
+        catalogOf(tester).state,
+        const ActiveCatalogChosen(connectionId: 'seed:dev-postgres-server', catalog: 'app'),
+      );
+    });
+
+    testWidgets('answering after a switch away, before the left editor is gone, chooses nothing', (tester) async {
+      await openServer(tester);
+
+      active.select(_postgres);
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(active.state.connection, _postgres);
+      expect(catalogOf(tester).state, const ActiveCatalogNone());
+    });
+
+    testWidgets('answering after the session ended chooses nothing', (tester) async {
+      await openServer(tester);
+
+      active.clear();
+      catalogOf(tester).clear();
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(catalogOf(tester).state, const ActiveCatalogNone());
+    });
   });
 }

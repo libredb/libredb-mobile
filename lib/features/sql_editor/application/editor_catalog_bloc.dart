@@ -4,6 +4,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/default_catalog.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
@@ -20,11 +21,15 @@ part 'editor_catalog_state.dart';
 /// one chosen in this session, else the one remembered on the device, while the server still lists it, else the first
 /// listed. Studio refuses a statement on a server-level connection that names no database, so Run waits for one, and
 /// waits until the engine is read.
+///
+/// A list that answers after [connectionId] stopped being the active connection, or after the session ended, chooses
+/// nothing: the editor of the connection being left stays mounted until the next frame.
 class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
   EditorCatalogBloc({
     required this._containers,
     required this._providerMeta,
     required this._activeCatalog,
+    required this._activeConnection,
     required this.connectionId,
     required this._onRequestedNotListed,
   }) : super(const EditorCatalogChecking()) {
@@ -37,6 +42,7 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
   final IContainersRepository _containers;
   final IProviderMetaRepository _providerMeta;
   final ActiveCatalogCubit _activeCatalog;
+  final ActiveConnectionCubit _activeConnection;
 
   /// The connection, the active one the editor was built for.
   final String connectionId;
@@ -72,6 +78,15 @@ class EditorCatalogBloc extends Bloc<EditorCatalogEvent, EditorCatalogState> {
         final listed = [for (final container in data.value) container.name];
         final wanted = _activeCatalog.catalogOf(connectionId) ?? await _activeCatalog.remembered(connectionId);
         if (isClosed) return;
+        if (_activeConnection.state.connection?.id != connectionId) {
+          // The list answered after the user left this connection or the session ended, while this editor is still
+          // mounted: a choice now would make a database of a connection that is not open active, and store it for the
+          // next sign-in. The databases are still listed, so the chip shows them if the connection opens again here.
+          _requested = null;
+          _log.info('the databases were listed after the connection closed, so none is chosen');
+          emit(EditorCatalogListed(label: label, catalogs: listed));
+          return;
+        }
         // An open request that arrived while the databases were read wins over the default.
         final requested = _requested;
         _requested = null;
