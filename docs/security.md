@@ -16,6 +16,7 @@ An https issuer is not enough on its own: its discovery document names the endpo
 A sign-in then fails with `OidcFailure.insecureEndpoint`, shown as `auth.oidc_config`, a refresh keeps the session without sending the refresh token, and a provider logout is not opened; every log line names only the endpoint's key.
 Only an http issuer, which a prod build never starts with, may name http endpoints, and only on its own host.
 The OpenID Connect client follows no redirect either, since oidc_core takes any status under 400 as success: a 3xx to discovery or the JWKS fails the sign-in as `auth.oidc_discovery`, and the log names only the request's role.
+A 3xx from the token endpoint is refused the same way, so no code, PKCE verifier or refresh token goes to its `Location`: the sign-in fails as `auth.oidc_failed`, and a refresh is `RotationUnavailable`, which keeps the session, since a redirect says nothing about the refresh token.
 `ApiClient` (`lib/infrastructure/http/api_client.dart`) follows no redirect: Studio's API answers JSON and never redirects, so a 3xx, to an http `Location` above all, is an error answer that `studioError` maps, and no request goes to the `Location`, a retry's included.
 An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
 The release stops before the build on the same rule (`tool/release/check_defines.sh`, [release.md](release.md)).
