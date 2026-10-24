@@ -15,8 +15,11 @@ sealed class AppError {
   @override
   int get hashCode => Object.hash(runtimeType, message, code);
 
+  /// The type and the [code], without the [message]: for a failure LibreDB Studio answered, the message is the server's
+  /// own words, such as a database's error quoting the statement, and this text reaches the log and, for an uncaught
+  /// error, Sentry. A screen reads [message] itself.
   @override
-  String toString() => '$runtimeType($message${code != null ? ', code: $code' : ''})';
+  String toString() => code == null ? '$runtimeType' : '$runtimeType(code: $code)';
 }
 
 /// Network connectivity error (no internet, DNS failure).
