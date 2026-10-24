@@ -364,6 +364,15 @@
       }
     }
   },
+  "browse_source_share_file_left": "Paylaşılan dosya oturumu kapatana kadar bu telefonda kalır ({code})",
+  "@browse_source_share_file_left": {
+    "description": "The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "browse_objects_count": "{count, plural, =1{1 nesne} other{{formatted} nesne}}",
   "@browse_objects_count": {"description": "How many objects of a kind a container holds.", "placeholders": {"count": {"type": "int"}, "formatted": {"type": "String", "example": "20,000"}}},
   "browse_objects_match": "{total} nesneden {matched} tanesi eşleşiyor",

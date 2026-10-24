@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -12,6 +13,7 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -283,6 +285,42 @@ void main() {
 
       expect(result, isA<Failure<void>>());
       expect((result as Failure<void>).error.message, contains('Cache clear left 1 of 2 entries'));
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
+      expect(await secure.read(SecureStorageKeys.refreshToken.key), isNull);
+    });
+
+    // Regression (#202): a source shared as a file stayed in the temporary directory for the next account.
+    test('clear removes the files the share sheet got', () async {
+      final temporary = Directory.systemTemp.createTempSync('session_share_files');
+      addTearDown(() => temporary.deleteSync(recursive: true));
+      final shareFiles = TemporaryShareFiles(temporaryDirectory: () async => temporary);
+      final shared = await shareFiles.write('order_totals-definition.sql', [1]);
+      final copy = File('${temporary.path}/share_plus/order_totals-definition.sql')..createSync(recursive: true);
+      final repo = AuthSessionRepository(secureStorage: secure, storage: storage, shareFiles: shareFiles);
+
+      final result = await repo.clear();
+
+      expect(result, isA<Success<void>>());
+      expect(shared.existsSync(), isFalse);
+      expect(copy.existsSync(), isFalse);
+    });
+
+    test('clear reports share files that stay behind, without their path, and still removes the session', () async {
+      final repo = AuthSessionRepository(
+        secureStorage: secure,
+        storage: storage,
+        shareFiles: TemporaryShareFiles(
+          temporaryDirectory: () async => throw const FileSystemException('refused', '/cache/share_files/a.sql'),
+        ),
+      );
+      await repo.persist(const AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH'));
+
+      final result = await repo.clear();
+
+      expect(result, isA<Failure<void>>());
+      final message = (result as Failure<void>).error.message;
+      expect(message, contains('share files: FileSystemException'));
+      expect(message, isNot(contains('a.sql')));
       expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
       expect(await secure.read(SecureStorageKeys.refreshToken.key), isNull);
     });

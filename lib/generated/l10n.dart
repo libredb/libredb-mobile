@@ -1170,6 +1170,16 @@ class S {
     return Intl.message('Could not share ($code)', name: 'browse_source_share_failed', desc: '', args: [code]);
   }
 
+  /// `The shared file stays on this phone until you sign out ({code})`
+  String browse_source_share_file_left(String code) {
+    return Intl.message(
+      'The shared file stays on this phone until you sign out ($code)',
+      name: 'browse_source_share_file_left',
+      desc: 'The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.',
+      args: [code],
+    );
+  }
+
   /// `{count, plural, =1{1 object} other{{formatted} objects}}`
   String browse_objects_count(int count, String formatted) {
     return Intl.plural(

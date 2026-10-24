@@ -56,6 +56,7 @@ import 'package:libredb_mobile/infrastructure/storage/encrypted_text_file_store.
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferences.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
@@ -145,9 +146,17 @@ class AppDependencies {
   IAuthRepository createAuthRepository(IAuthSessionRepository sessionRepository) =>
       LoginRepository(sessionRepository: sessionRepository);
 
-  /// Ending a session also clears the cache of GET responses that [ApiClient] keeps in SharedPreferences.
-  IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) =>
-      AuthSessionRepository(secureStorage: secureStorage, cacheStorage: SharedPrefsCacheStorage());
+  /// Ending a session also clears the cache of GET responses that [ApiClient] keeps in SharedPreferences, and the files
+  /// the share sheet got.
+  IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) => AuthSessionRepository(
+    secureStorage: secureStorage,
+    cacheStorage: SharedPrefsCacheStorage(),
+    shareFiles: createTemporaryShareFiles(),
+  );
+
+  /// The files the share sheet gets, such as an object source too long to share as text, in the temporary directory.
+  /// It keeps no state, so every instance works on the same files.
+  TemporaryShareFiles createTemporaryShareFiles() => TemporaryShareFiles();
 
   /// The OpenID Connect client, which talks to the identity provider. With `OIDC_CERT_PINS` set, discovery, the key
   /// set, the token exchange and the refresh go through a client pinned to them; the sign-in page itself opens in the
@@ -215,8 +224,9 @@ class AppDependencies {
 
   /// Every store that keeps data of a signed-in account on this device, which the user's 'Remove my data' clears: the
   /// drafts and the history, the starred and recent connections, the last open connection, the database of each
-  /// server-level connection, and the collapsed sections of the connection list, whose keys are Studio's environment
-  /// and group names. The language, the theme and the result view mode are device preferences and stay.
+  /// server-level connection, the collapsed sections of the connection list, whose keys are Studio's environment and
+  /// group names, and the files the share sheet got, which every sign-out also removes. The language, the theme and
+  /// the result view mode are device preferences and stay.
   ///
   /// Each store is the instance the app works with, so a clear joins the queue of the statement text store.
   UserDataRegistry createUserDataRegistry({
@@ -225,6 +235,7 @@ class AppDependencies {
     required IActiveConnectionStore activeConnection,
     required IActiveCatalogStore activeCatalog,
     required ICollapsedSectionsRepository collapsedSections,
+    required TemporaryShareFiles shareFiles,
   }) => UserDataRegistry([
     UserDataStore(
       name: 'statement_text',
@@ -236,6 +247,7 @@ class AppDependencies {
     UserDataStore(name: StorageKeys.activeConnection.key, clear: (subject) => activeConnection.write(subject, null)),
     UserDataStore(name: StorageKeys.activeCatalog.key, clear: activeCatalog.clear),
     UserDataStore(name: StorageKeys.connectionSectionsCollapsed.key, clear: (_) => collapsedSections.clear()),
+    UserDataStore(name: 'share_files', clear: (_) => shareFiles.clear()),
   ]);
 
   /// The statement history each account keeps on the device, in the history of [store].

@@ -5,36 +5,43 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/object_source_view.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
+import 'package:mocktail/mocktail.dart';
 
+import '../../../../mocks/mock_classes.dart';
 import '../../../../support/screen_capture.dart';
 import '../../browse_answers.dart';
 
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
-const _pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
 
 /// The sentence Studio's route bound sets (`sourceBoundTruncationReason`, libredb-studio
 /// `src/lib/db/object-kinds.ts:643-645`).
 const _routeBound = 'the source read was bounded at 1,000,000 characters by its caller';
 
-Widget _app(ObjectSource source, {ScreenCaptureProtection? protection}) => withScreenCaptureProtection(
-  protection: protection,
-  MaterialApp(
-    localizationsDelegates: const [
-      S.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: S.delegate.supportedLocales,
-    home: Scaffold(body: ObjectSourceView(source: source)),
-  ),
-);
+Widget _app(ObjectSource source, {ScreenCaptureProtection? protection, TemporaryShareFiles? shareFiles}) =>
+    RepositoryProvider<TemporaryShareFiles>.value(
+      value: shareFiles ?? TemporaryShareFiles(),
+      child: withScreenCaptureProtection(
+        protection: protection,
+        MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          home: Scaffold(body: ObjectSourceView(source: source)),
+        ),
+      ),
+    );
 
 ObjectSource _one(SourcePart part) => ObjectSource(path: const ['sales', 'order_totals'], kind: 'view', parts: [part]);
 
@@ -87,7 +94,6 @@ void main() {
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(SystemChannels.platform, null);
     messenger.setMockMethodCallHandler(_shareChannel, null);
-    messenger.setMockMethodCallHandler(_pathProviderChannel, null);
   });
 
   group('recorded Postgres answers (#49)', () {
@@ -237,9 +243,40 @@ void main() {
   });
 
   group('Share', () {
-    testWidgets('sends a part of up to 100,000 characters as text', (tester) async {
+    late Directory temporary;
+    late TemporaryShareFiles shareFiles;
+
+    /// The paths of the files left under the temporary directory.
+    List<String> left() => [
+      for (final file in temporary.listSync(recursive: true).whereType<File>())
+        file.path.substring(temporary.path.length + 1),
+    ];
+
+    /// Taps Share and waits, for up to five seconds, until the share sheet has been asked and [ended] holds; by default
+    /// until no file is left under the temporary directory.
+    Future<void> share(WidgetTester tester, {bool Function()? ended}) async {
+      final done = ended ?? () => left().isEmpty;
+      await tester.runAsync(() async {
+        await tester.tap(find.byTooltip('Share'));
+        final deadline = DateTime.now().add(const Duration(seconds: 5));
+        while ((shareCalls.isEmpty || !done()) && DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      });
+      await tester.pump();
+    }
+
+    setUp(() {
+      temporary = Directory.systemTemp.createTempSync('source_share');
+      shareFiles = TemporaryShareFiles(temporaryDirectory: () async => temporary);
+    });
+
+    tearDown(() => temporary.deleteSync(recursive: true));
+
+    testWidgets('sends a part of up to 100,000 characters as text, and writes no file', (tester) async {
+      final files = MockTemporaryShareFiles();
       final text = 'x' * 100000;
-      await tester.pumpWidget(_app(_one(_text(text))));
+      await tester.pumpWidget(_app(_one(_text(text)), shareFiles: files));
 
       await tester.tap(find.byTooltip('Share'));
       await tester.pump();
@@ -248,39 +285,79 @@ void main() {
       expect(share.method, 'share');
       expect((share.arguments as Map)['text'], text);
       expect((share.arguments as Map).containsKey('paths'), isFalse);
+      verifyZeroInteractions(files);
     });
 
     testWidgets('sends a longer part as a UTF-8 file named after the object and the part', (tester) async {
-      final temp = Directory.systemTemp.createTempSync('source_share');
-      addTearDown(() => temp.deleteSync(recursive: true));
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        _pathProviderChannel,
-        (call) async => temp.path,
-      );
+      String? shared;
+      answerShare = (call) {
+        shared = File(((call.arguments as Map)['paths'] as List).single as String).readAsStringSync();
+        return 'dev.fluttercommunity.plus/share/success';
+      };
       final text = 'İ${'x' * 100000}';
-      await tester.pumpWidget(_app(_one(_text(text))));
+      await tester.pumpWidget(_app(_one(_text(text)), shareFiles: shareFiles));
 
-      await tester.runAsync(() async {
-        await tester.tap(find.byTooltip('Share'));
-        while (shareCalls.isEmpty) {
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
+      await share(tester);
 
       final arguments = shareCalls.single.arguments as Map;
       expect(arguments.containsKey('text'), isFalse);
       final path = (arguments['paths'] as List).single as String;
+      expect(path, startsWith('${temporary.path}/share_files/'));
       expect(path, endsWith('/order_totals-definition.sql'));
-      expect(File(path).readAsStringSync(), text);
+      expect(arguments['mimeTypes'], ['application/sql']);
+      expect(shared, text);
+    });
+
+    // Regression (#202): the file stayed in the temporary directory for whoever used the phone next.
+    testWidgets('removes the file once the share sheet closes', (tester) async {
+      late File shared;
+      answerShare = (call) {
+        shared = File(((call.arguments as Map)['paths'] as List).single as String);
+        expect(shared.existsSync(), isTrue, reason: 'the file is there while the share sheet is open');
+        return 'dev.fluttercommunity.plus/share/success';
+      };
+      await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: shareFiles));
+
+      await share(tester);
+
+      expect(shared.existsSync(), isFalse);
+      expect(left(), isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('removes the file of a share that fails, and shows the failure', (tester) async {
+      late File shared;
+      answerShare = (call) {
+        shared = File(((call.arguments as Map)['paths'] as List).single as String);
+        expect(shared.existsSync(), isTrue, reason: 'the file is there while the share sheet is open');
+        throw PlatformException(code: 'share_busy');
+      };
+      await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: shareFiles));
+
+      await share(tester);
+
+      expect(shared.existsSync(), isFalse);
+      expect(left(), isEmpty);
+      expect(find.text('Could not share (share_busy)'), findsOneWidget);
+    });
+
+    testWidgets('says that the file stays until the sign-out when the phone refuses to remove it', (tester) async {
+      final files = MockTemporaryShareFiles();
+      final written = File('${temporary.path}/share_files/1/order_totals-definition.sql')..createSync(recursive: true);
+      when(() => files.write(any(), any())).thenAnswer((_) async => written);
+      var refused = false;
+      when(() => files.delete(written)).thenAnswer((_) async {
+        refused = true;
+        throw const FileSystemException('refused');
+      });
+      await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: files));
+
+      await share(tester, ended: () => refused);
+
+      expect(find.text('The shared file stays on this phone until you sign out (FileSystemException)'), findsOne);
     });
 
     testWidgets('names a file of text that is not SQL .txt', (tester) async {
-      final temp = Directory.systemTemp.createTempSync('source_share');
-      addTearDown(() => temp.deleteSync(recursive: true));
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        _pathProviderChannel,
-        (call) async => temp.path,
-      );
       await tester.pumpWidget(
         _app(
           ObjectSource(
@@ -296,18 +373,15 @@ void main() {
               ),
             ],
           ),
+          shareFiles: shareFiles,
         ),
       );
 
-      await tester.runAsync(() async {
-        await tester.tap(find.byTooltip('Share'));
-        while (shareCalls.isEmpty) {
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
+      await share(tester);
 
-      final path = ((shareCalls.single.arguments as Map)['paths'] as List).single as String;
-      expect(path, endsWith('/customers_alice-data.txt'));
+      final arguments = shareCalls.single.arguments as Map;
+      expect(((arguments['paths'] as List).single as String), endsWith('/customers_alice-data.txt'));
+      expect(arguments['mimeTypes'], ['text/plain']);
     });
 
     testWidgets('shows a share that fails, with its error code', (tester) async {

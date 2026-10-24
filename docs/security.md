@@ -45,11 +45,14 @@ The editor's drafts (one per connection, with its catalog) and the statement his
 
 ## Removing the app's data
 
-A sign-out forgets the session: the tokens, the HTTP cache and what the app holds in memory.
+A sign-out forgets the session: the tokens, the HTTP cache, the files the share sheet got and what the app holds in memory.
 What the app keeps per account outlives it on purpose, so the same account finds it again and another account never reads it.
 'Remove my data', in the Privacy section of Settings while signed in, removes that too, for the signed-in account only, and then signs out through the usual sign-out (Studio's logout record, the wipe, the identity provider's end-session).
 
-- `UserDataRegistry` (`lib/shared/user_data/user_data_registry.dart`) lists every store that keeps data of an account, and `AppDependencies.createUserDataRegistry` fills it: the drafts and the history (`clearSubject`), the starred and recent connections, the last open connection, the database of each server-level connection, and the collapsed sections of the connection list, whose keys are Studio's environment and group names.
+- `UserDataRegistry` (`lib/shared/user_data/user_data_registry.dart`) lists every store that keeps data of an account, and `AppDependencies.createUserDataRegistry` fills it: the drafts and the history (`clearSubject`), the starred and recent connections, the last open connection, the database of each server-level connection, the collapsed sections of the connection list, whose keys are Studio's environment and group names, and the share files.
+- The share files (`TemporaryShareFiles`, `lib/infrastructure/storage/temporary_share_files.dart`): an object source longer than 100,000 characters is shared as a file in `<temporary directory>/share_files/`, removed once the share sheet answers.
+  On Android share_plus copies a shared file into `<cache>/share_plus/` and keeps it until the next share, since the receiving app reads that copy after the sheet has closed.
+  Both folders go with every sign-out (`AuthSessionRepository.clear`) and with 'Remove my data'; a removal the phone refuses is shown, and the sign-out then says that data stayed behind.
 - The language, the theme and the result view mode are device preferences and stay.
 - `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, when a `StorageKeys` value is neither cleared nor named a device preference, when a `SecureStorageKeys` value is not a session token that a sign-out deletes, or when a file outside its list reaches a device directory through path_provider.
 - Every store is tried even when one fails; then the user stays signed in and sees the failure with Retry, which names no stored value, and the log names only the store and the error type.

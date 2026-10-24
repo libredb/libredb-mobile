@@ -3,9 +3,12 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'test_env.dart';
 
@@ -29,5 +32,22 @@ void main() {
         expect(jsonDecode(response!.data!), containsPair('authenticated', true));
       });
     }
+  });
+
+  // Every sign-out clears the share files in the temporary directory, so a test that signs out needs one.
+  group('TestEnv temporary directory', () {
+    test('answers a temporary directory, which the reset removes', () async {
+      final temporary = await getTemporaryDirectory();
+      File('${temporary.path}/left.txt').writeAsStringSync('x');
+
+      await TestEnv.reset();
+
+      expect(temporary.existsSync(), isFalse);
+      expect((await getTemporaryDirectory()).path, isNot(temporary.path));
+    });
+
+    test('leaves the other directories unanswered, as without a mock', () async {
+      await expectLater(getApplicationSupportDirectory(), throwsA(isA<MissingPluginException>()));
+    });
   });
 }

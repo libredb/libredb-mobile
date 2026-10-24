@@ -364,6 +364,15 @@
       }
     }
   },
+  "browse_source_share_file_left": "The shared file stays on this phone until you sign out ({code})",
+  "@browse_source_share_file_left": {
+    "description": "The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "browse_objects_count": "{count, plural, =1{1 object} other{{formatted} objects}}",
   "@browse_objects_count": {"description": "How many objects of a kind a container holds.", "placeholders": {"count": {"type": "int"}, "formatted": {"type": "String", "example": "20,000"}}},
   "browse_objects_match": "{matched} of {total} match",
