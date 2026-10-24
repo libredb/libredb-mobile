@@ -936,6 +936,55 @@ void main() {
     });
   });
 
+  group('oidcRequestRole', () {
+    const issuer = 'https://idp.example/realms/demo';
+    final discoveryUri = Uri.parse('$issuer/.well-known/openid-configuration');
+    final discovered = {
+      'issuer': issuer,
+      'authorization_endpoint': '$issuer/protocol/openid-connect/auth',
+      'pushed_authorization_request_endpoint': '$issuer/protocol/openid-connect/ext/par/request',
+      'token_endpoint': '$issuer/protocol/openid-connect/token',
+      'jwks_uri': '$issuer/protocol/openid-connect/certs',
+      'userinfo_endpoint': '$issuer/protocol/openid-connect/userinfo',
+      'revocation_endpoint': '$issuer/protocol/openid-connect/revoke',
+      'end_session_endpoint': '$issuer/protocol/openid-connect/logout',
+    };
+
+    String roleOf(String url, {Map<String, dynamic>? metadata}) =>
+        oidcRequestRole(Uri.parse(url), discoveryUri: discoveryUri, discovered: metadata ?? discovered);
+
+    test('names each endpoint the request targets, a GET to UserInfo included', () {
+      expect(roleOf('$issuer/.well-known/openid-configuration'), 'discovery');
+      expect(roleOf('$issuer/protocol/openid-connect/token'), 'token');
+      expect(roleOf('$issuer/protocol/openid-connect/certs'), 'jwks');
+      expect(roleOf('$issuer/protocol/openid-connect/userinfo'), 'userinfo');
+      expect(roleOf('$issuer/protocol/openid-connect/ext/par/request'), 'pushed_authorization_request');
+      expect(roleOf('$issuer/protocol/openid-connect/revoke'), 'revocation');
+    });
+
+    test('ignores the query and the fragment of the request', () {
+      expect(roleOf('$issuer/protocol/openid-connect/certs?kid=1#keys'), 'jwks');
+    });
+
+    test('names discovery before the discovery document is known', () {
+      expect(oidcRequestRole(discoveryUri, discoveryUri: discoveryUri, discovered: null), 'discovery');
+    });
+
+    test('is unknown for a URL that no endpoint names, or before discovery, never a guess', () {
+      expect(roleOf('$issuer/protocol/openid-connect/other'), 'unknown');
+      expect(roleOf('https://other.example/realms/demo/protocol/openid-connect/token'), 'unknown');
+      expect(roleOf('http://idp.example/realms/demo/protocol/openid-connect/token'), 'unknown');
+      expect(
+        oidcRequestRole(
+          Uri.parse('$issuer/protocol/openid-connect/token'),
+          discoveryUri: discoveryUri,
+          discovered: null,
+        ),
+        'unknown',
+      );
+    });
+  });
+
   // oidc_core takes any status under 400 as success, and package:http follows redirects by default, so a 302 from the
   // https issuer to plain http would fetch discovery or the JWKS over http, where a hop could name its own https
   // endpoints that pass the endpoint check (#218). Real sockets, so the redirect is the one dart:io would follow.
@@ -1023,9 +1072,50 @@ void main() {
       expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
     });
 
-    test('without a redirect the same setup signs in, so the two failures above are the redirect', () async {
+    test('at the token endpoint is not followed, so no code goes over http and the sign-in fails', () async {
+      await start(redirected: '/token');
+      late OidcSignInOutcome outcome;
+      final lines = await printedLines(() async => outcome = await withRealSockets(() => trustingClient().signIn()));
+
+      expect(outcome, _failed(OidcFailure.failed));
+      expect(plainRequests, 0, reason: 'the code was sent over http');
+      expect(lines.where((line) => line.contains('token request') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+      await expectStoreEmpty();
+    });
+
+    test('at the token endpoint during a refresh is not followed and keeps the session', () async {
+      await start(redirected: '/token');
+      late TokenRotationResult result;
+      final lines = await printedLines(
+        () async => result = await withRealSockets(
+          () => trustingClient().refresh(
+            refreshToken: 'refresh-old-value',
+            idToken: tlsProvider.signIdToken(),
+            accessToken: 'access-old-value',
+            accessTokenExpiresAt: clock.now().toUtc().subtract(const Duration(seconds: 5)),
+          ),
+        ),
+      );
+
+      expect(result, isA<RotationUnavailable>());
+      expect(plainRequests, 0, reason: 'the refresh token was sent over http');
+      expect(lines.where((line) => line.contains('token request') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+    });
+
+    test('without a redirect the same setup signs in and refreshes, so the failures above are the redirect', () async {
       await start(redirected: '/nothing-is-redirected');
       expect(await withRealSockets(() => trustingClient().signIn()), isA<OidcSignedIn>());
+      final refreshed = await withRealSockets(
+        () => trustingClient().refresh(
+          refreshToken: 'refresh-old-value',
+          idToken: tlsProvider.signIdToken(),
+          accessToken: 'access-old-value',
+          accessTokenExpiresAt: clock.now().toUtc().subtract(const Duration(seconds: 5)),
+        ),
+      );
+      expect(refreshed, isA<TokensRotated>());
       expect(plainRequests, 0);
     });
   });
