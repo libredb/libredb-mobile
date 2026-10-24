@@ -181,6 +181,7 @@ void main() {
     WidgetTester tester, {
     StudioConnection? connection = _postgres,
     bool offline = false,
+    ValueNotifier<bool>? connectivity,
     bool recordsInFull = false,
     String? subject = _account,
     Size? size,
@@ -198,6 +199,8 @@ void main() {
       initialState: connection == null ? const ActiveConnectionNone() : ActiveConnectionSelected(connection),
     );
     when(() => active.listed(any())).thenReturn(connection);
+    final offlineStatus = connectivity ?? ValueNotifier(offline);
+    if (connectivity == null) addTearDown(offlineStatus.dispose);
     // The SQL tab's own route, as the History tap opens its entry through the router (openEditor).
     final router = GoRouter(
       initialLocation: '/sql',
@@ -210,7 +213,11 @@ void main() {
                 subjectHash: subject,
                 child: StatementCaptureScope(
                   recordsInFull: recordsInFull,
-                  child: OfflineStatus(isOffline: offline, child: child),
+                  // [connectivity], when given, turns the device on and off line while the page is open.
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: offlineStatus,
+                    builder: (context, isOffline, _) => OfflineStatus(isOffline: isOffline, child: child),
+                  ),
                 ),
               ),
             ),
@@ -890,9 +897,14 @@ void main() {
     String buttonLabel(WidgetTester tester) =>
         tester.widget<Text>(find.descendant(of: runButton(), matching: find.byType(Text))).data!;
 
-    Future<void> startRun(WidgetTester tester, {StudioConnection connection = _postgres, Locale? locale}) async {
+    Future<void> startRun(
+      WidgetTester tester, {
+      StudioConnection connection = _postgres,
+      Locale? locale,
+      ValueNotifier<bool>? connectivity,
+    }) async {
       holdRun('SELECT pg_sleep(30)');
-      await pump(tester, connection: connection, locale: locale);
+      await pump(tester, connection: connection, locale: locale, connectivity: connectivity);
       await type(tester, 'SELECT pg_sleep(30)');
       await tester.tap(runButton());
       await tester.pump();
@@ -1025,6 +1037,86 @@ void main() {
       expect(find.byKey(EditorActions.stopWaitingKey), findsNothing);
       await tester.pump(const Duration(seconds: 2));
       await tester.pump();
+    });
+
+    group('offline', () {
+      late ValueNotifier<bool> offline;
+
+      setUp(() => offline = ValueNotifier(false));
+      tearDown(() => offline.dispose());
+
+      Future<void> goOffline(WidgetTester tester, bool value) async {
+        offline.value = value;
+        await tester.pump();
+      }
+
+      Finder reason() => find.text('Needs an internet connection');
+
+      testWidgets('Cancel is disabled with the reason and posts no cancel', (tester) async {
+        when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+        await startRun(tester, connectivity: offline);
+        await goOffline(tester, true);
+
+        expect(buttonLabel(tester), 'Cancel');
+        expect(runEnabled(tester), isFalse);
+        expect(reason(), findsOneWidget);
+        await tester.tap(runButton(), warnIfMissed: false);
+        await tester.pump();
+
+        expect(buttonLabel(tester), 'Cancel');
+        verifyNever(() => repository.cancel(any(), any()));
+      });
+
+      testWidgets('back online during the same run, Cancel is enabled again and cancels', (tester) async {
+        when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+        await startRun(tester, connectivity: offline);
+        await goOffline(tester, true);
+        await goOffline(tester, false);
+
+        expect(runEnabled(tester), isTrue);
+        expect(reason(), findsNothing);
+        await tester.tap(runButton());
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Cancelled'), findsOneWidget);
+        verify(() => repository.cancel(_postgres.id, any())).called(1);
+      });
+
+      // Stop waiting only drops the request on the phone and posts nothing, so it needs no network.
+      testWidgets('the Stop waiting of an engine without cancel stays enabled and stops waiting', (tester) async {
+        await startRun(tester, connection: _redis, connectivity: offline);
+        await goOffline(tester, true);
+
+        expect(buttonLabel(tester), 'Stop waiting');
+        expect(runEnabled(tester), isTrue);
+        expect(reason(), findsNothing);
+        await tester.tap(runButton());
+        await tester.pump();
+
+        expect(find.textContaining('Stopped waiting.'), findsOneWidget);
+        verifyNever(() => repository.cancel(any(), any()));
+      });
+
+      testWidgets('after a failed cancel, Stop waiting stays enabled beside the disabled Cancel', (tester) async {
+        when(() => repository.cancel(any(), any()))
+            .thenAnswer((_) async => const Failure(NetworkError('No Internet connection')));
+        await startRun(tester, connectivity: offline);
+        await tester.tap(runButton());
+        await tester.pump();
+        await tester.pump();
+        await goOffline(tester, true);
+
+        expect(runEnabled(tester), isFalse);
+        expect(reason(), findsOneWidget);
+        final stopWaiting = find.byKey(EditorActions.stopWaitingKey);
+        expect(tester.widget<ButtonStyleButton>(stopWaiting).enabled, isTrue);
+        await tester.tap(stopWaiting);
+        await tester.pump();
+
+        expect(find.textContaining('Stopped waiting.'), findsOneWidget);
+        verify(() => repository.cancel(any(), any())).called(1);
+      });
     });
 
     testWidgets('the labels are in Turkish', (tester) async {
