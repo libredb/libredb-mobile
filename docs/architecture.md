@@ -347,7 +347,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
 - Studio sends the credentials of an unmanaged seed connection in the connection list; the app's reader does not read them.
 - The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
   The repositories never log statement text or database error text.
-- Certificate pinning is built in and off; milestone M6 configures it and Sentry for the release build.
+- Certificate pinning by public key is built in and off by default; `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` turn it on per host for a release build ([security.md](security.md#certificate-pinning)).
   Screen capture protection is built in, and no screen uses it yet.
   [security.md](security.md) describes them, the token storage and the inactivity sign-out, and [crash-reporting.md](crash-reporting.md) what a crash report may carry.
 

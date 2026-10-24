@@ -29,6 +29,9 @@ class SsoAuthRepository implements ISsoAuthRepository {
     OidcSignInCancelled() => const SsoProviderCancelled(),
     OidcSignInFailed(failure: OidcFailure.discovery) => const SsoProviderRejected(AppErrorCode.authOidcDiscovery),
     OidcSignInFailed(failure: OidcFailure.failed) => const SsoProviderRejected(AppErrorCode.authOidcFailed),
+    OidcSignInFailed(failure: OidcFailure.untrustedCertificate) => const SsoProviderRejected(
+      AppErrorCode.networkCertInvalid,
+    ),
   };
 
   Future<SsoProviderSignIn> _persist(OidcTokens tokens, Map<String, Object?> claims) async {

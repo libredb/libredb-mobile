@@ -161,6 +161,18 @@ void main() {
       expect(sessions.persisted, isEmpty);
     });
 
+    test('a provider certificate that matches no pin is rejected with the certificate code', () async {
+      client.signInOutcome = const OidcSignInFailed(OidcFailure.untrustedCertificate);
+
+      final result = await repository.signIn();
+
+      expect(
+        result,
+        isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.networkCertInvalid),
+      );
+      expect(sessions.persisted, isEmpty);
+    });
+
     test('a cancel passes through', () async {
       client.signInOutcome = const OidcSignInCancelled();
 

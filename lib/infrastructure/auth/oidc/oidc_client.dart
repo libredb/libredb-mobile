@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/logging/log_sanitizer.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
@@ -57,6 +58,10 @@ enum OidcFailure {
 
   /// The provider answered with an error, or its answer did not pass a check.
   failed,
+
+  /// The provider's certificate matched none of the `OIDC_CERT_PINS`: the connection may be intercepted, and the
+  /// handshake failed before any request was written.
+  untrustedCertificate,
 }
 
 /// How a sign-in ended.
@@ -181,6 +186,7 @@ final class OidcClient implements IOidcClient {
     try {
       manager = await _initializedManager();
     } on Object catch (error) {
+      if (_isPinMismatch(error)) return _signInFailed(error);
       _log.warn('The identity provider could not be reached to sign in: {}', [() => _describe(error)]);
       return const OidcSignInFailed(OidcFailure.discovery);
     }
@@ -424,10 +430,15 @@ final class OidcClient implements IOidcClient {
   /// needs none of them.
   static const _protocolClaims = {'nonce', 'at_hash', 'c_hash'};
 
-  /// A transport failure, or a discovery or JWKS failure, is [OidcFailure.discovery]; an error answer or a failed
-  /// check, such as a bad signature or a nonce mismatch, is [OidcFailure.failed].
+  /// A certificate that matches no pin is [OidcFailure.untrustedCertificate]; a transport failure, or a discovery or
+  /// JWKS failure, is [OidcFailure.discovery]; an error answer or a failed check, such as a bad signature or a nonce
+  /// mismatch, is [OidcFailure.failed].
   OidcSignInOutcome _signInFailed(Object error) {
-    final failure = _http.getFailed || _isTransportError(error) ? OidcFailure.discovery : OidcFailure.failed;
+    final failure = _isPinMismatch(error)
+        ? OidcFailure.untrustedCertificate
+        : _http.getFailed || _isTransportError(error)
+        ? OidcFailure.discovery
+        : OidcFailure.failed;
     _log.warn('The sign-in failed ({}): {}', [failure.name, () => _describe(error)]);
     return OidcSignInFailed(failure);
   }
@@ -460,9 +471,16 @@ final class OidcClient implements IOidcClient {
     return result;
   }
 
-  /// Whether [error], or the error an [OidcException] wraps, is a transport failure: no network, a timeout or TLS.
+  /// Whether [error], or the error an [OidcException] wraps, is a certificate that matched no pin.
+  static bool _isPinMismatch(Object error) => _cause(error) is CertificatePinningException;
+
+  static Object _cause(Object error) => error is OidcException ? error.internalException ?? error : error;
+
+  /// Whether [error], or the error an [OidcException] wraps, is a transport failure: no network, a timeout or TLS,
+  /// a certificate that matched no pin included, since its handshake failed before any request was written.
   static bool _isTransportError(Object error) {
-    final cause = error is OidcException ? error.internalException ?? error : error;
+    final cause = _cause(error);
+    if (cause is CertificatePinningException) return true;
     return switch (OidcOfflineAuthErrorHandler.categorizeError(cause)) {
       OfflineAuthErrorType.networkUnavailable ||
       OfflineAuthErrorType.networkTimeout ||

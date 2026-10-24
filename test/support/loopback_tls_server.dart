@@ -42,15 +42,16 @@ SecurityContext loopbackServerContext() => SecurityContext()
   ..usePrivateKeyBytes(utf8.encode(_loopbackPrivateKeyPem));
 
 /// Starts an HTTPS server on 127.0.0.1 that presents [loopbackCertificatePem] and answers every request with
-/// [body], and closes it when the test ends.
-Future<HttpServer> startLoopbackTlsServer({String body = 'ok'}) async {
+/// [body], telling [onRequest] of each, and closes it when the test ends.
+Future<HttpServer> startLoopbackTlsServer({String body = 'ok', void Function(HttpRequest request)? onRequest}) async {
   final server = await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, loopbackServerContext());
   addTearDown(() => server.close(force: true));
-  server.listen(
-    (request) => request.response
+  server.listen((request) {
+    onRequest?.call(request);
+    request.response
       ..write(body)
-      ..close(),
-  );
+      ..close();
+  });
   return server;
 }
 
@@ -67,3 +68,19 @@ Future<T> withRealSockets<T>(Future<T> Function() body) =>
     HttpOverrides.runWithHttpOverrides(body, _RealHttpOverrides());
 
 class _RealHttpOverrides extends HttpOverrides {}
+
+/// Starts an HTTPS server on 127.0.0.1 that sends [chainPem], the leaf first, with the leaf's private key [keyPem],
+/// answers every request with `ok`, and closes it when the test ends.
+Future<HttpServer> startChainTlsServer({required String chainPem, required String keyPem}) async {
+  final context = SecurityContext()
+    ..useCertificateChainBytes(utf8.encode(chainPem))
+    ..usePrivateKeyBytes(utf8.encode(keyPem));
+  final server = await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, context);
+  addTearDown(() => server.close(force: true));
+  server.listen(
+    (request) => request.response
+      ..write('ok')
+      ..close(),
+  );
+  return server;
+}
