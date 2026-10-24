@@ -18,7 +18,7 @@ The app talks to three kinds of servers, and to no others on its own:
   The access token carries what Keycloak puts into it, such as your username, your e-mail address and your name.
   The app also sends Studio what you ask it to do: the connection you open, the objects you look at and the statements you run.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
-  See [Crash reports](#crash-reports) below.
+  See the Crash reports section below.
 
 The organisation that runs the deployment operates Keycloak and Studio, and decides what they record.
 For example, Studio can keep an audit log of sign-ins and sign-outs and, depending on its settings, a record of the statements you run.
@@ -29,7 +29,7 @@ The app reaches Keycloak, Studio and Sentry over HTTPS, which encrypts the traff
 ## What the app does not do
 
 - The app holds no database password or other database credential: Studio keeps them and opens every database connection.
-- The app shows no advertising, contains no analytics or tracking service, and sends nothing about how you use it beyond the crash reports, session records and timing information described under [Crash reports](#crash-reports).
+- The app shows no advertising, contains no advertising, third-party analytics or tracking SDK, and sends nothing about how you use it beyond the crash reports, session records and timing information described in the Crash reports section below.
 - The app does not read your contacts, location, photos, files or other apps' data.
 - The app does not sell your data or share it with anyone for advertising.
 
@@ -43,7 +43,7 @@ The app reaches Keycloak, Studio and Sentry over HTTPS, which encrypts the traff
 - **Device preferences**: the language, the theme and whether results show as cards or as a table.
 
 The app keeps no rows of query results after it closes.
-While it runs, it keeps the lists of a connection's objects in memory for up to 10 minutes, so going back does not ask Studio again.
+While it runs, it keeps the lists, counts and descriptions of a connection's objects in memory for up to 10 minutes, so going back does not ask Studio again.
 What you type into the object search goes only to Studio, and the app keeps no search history.
 Android's cloud backup is turned off for the app, and its preferences, drafts and history are left out of device-to-device transfers.
 
@@ -61,7 +61,7 @@ A report holds the error and where in the app it happened, the app's version, te
 A build with a Sentry project key also sends a session record each time you use the app: when the session started and ended, how long it lasted, whether it ended in a crash, and the installation identifier.
 It also sends timing information for about one in five app starts and screen changes, to show where the app is slow.
 Before a report leaves the device, the app removes e-mail addresses, tokens, passwords and other credentials from it.
-A report carries no screenshot, no layout of the screen, no request body and no recording of the session.
+A report carries no screenshot, no layout of the screen, no request body and no screen recording of the session.
 Sentry receives your device's IP address with each report, as with any connection to a server.
 Sentry derives an approximate location, such as a city and a country, from that address, unless the Sentry project is set not to store IP addresses.
 A build made without a Sentry project key sends no reports.

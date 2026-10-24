@@ -18,7 +18,7 @@ Uygulama üç tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla k
   Erişim belirteci, Keycloak'un içine koyduklarını taşır: örneğin kullanıcı adınızı, e-posta adresinizi ve adınızı.
   Uygulama Studio'ya ondan istediklerinizi de gönderir: açtığınız bağlantıyı, baktığınız nesneleri ve çalıştırdığınız deyimleri.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
-  Ayrıntılar aşağıda, [Çökme raporları](#çökme-raporları) bölümünde.
+  Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 
 Keycloak ile Studio'yu kurulumu işleten kuruluş çalıştırır ve bu sunucuların neyi kaydedeceğine o kuruluş karar verir.
 Örneğin Studio, oturum açma ve kapatmaların bir denetim kaydını ve ayarlarına göre çalıştırdığınız deyimlerin bir kaydını tutabilir.
@@ -29,7 +29,7 @@ Uygulama Keycloak'a, Studio'ya ve Sentry'ye trafiği şifreleyen HTTPS üzerinde
 ## Uygulamanın yapmadıkları
 
 - Uygulama hiçbir veritabanı parolası ya da başka bir veritabanı kimlik bilgisi tutmaz: bunları Studio saklar ve her veritabanı bağlantısını Studio açar.
-- Uygulama reklam göstermez, hiçbir analiz ya da izleme hizmeti içermez ve uygulamayı nasıl kullandığınıza dair [Çökme raporları](#çökme-raporları) bölümünde anlatılan çökme raporları, oturum kayıtları ve süre bilgisinin ötesinde hiçbir şey göndermez.
+- Uygulama reklam göstermez, hiçbir reklam, üçüncü taraf analiz ya da izleme SDK'sı içermez ve uygulamayı nasıl kullandığınıza dair aşağıdaki Çökme raporları bölümünde anlatılan çökme raporları, oturum kayıtları ve süre bilgisinin ötesinde hiçbir şey göndermez.
 - Uygulama kişilerinizi, konumunuzu, fotoğraflarınızı, dosyalarınızı ya da başka uygulamaların verilerini okumaz.
 - Uygulama verilerinizi satmaz ve reklam amacıyla kimseyle paylaşmaz.
 
@@ -43,7 +43,7 @@ Uygulama Keycloak'a, Studio'ya ve Sentry'ye trafiği şifreleyen HTTPS üzerinde
 - **Cihaz tercihleri**: dil, tema ve sonuçların kart mı tablo mu gösterileceği.
 
 Uygulama kapandıktan sonra sorgu sonuçlarının hiçbir satırını tutmaz.
-Uygulama çalışırken bir bağlantının nesne listelerini, geri dönüldüğünde Studio'ya yeniden sorulmasın diye en çok 10 dakika bellekte tutar.
+Uygulama çalışırken bir bağlantının nesnelerinin listelerini, sayılarını ve tanımlarını, geri dönüldüğünde Studio'ya yeniden sorulmasın diye en çok 10 dakika bellekte tutar.
 Nesne aramasına yazdıklarınız yalnızca Studio'ya gider ve uygulama arama geçmişi tutmaz.
 Uygulamanın Android bulut yedeklemesi kapalıdır; tercihleri, taslakları ve geçmişi cihazdan cihaza aktarımların dışında bırakılır.
 
@@ -61,7 +61,7 @@ Bir rapor şunları içerir: hatayı ve uygulamanın neresinde olduğunu, uygula
 Bir Sentry proje anahtarıyla derlenmiş uygulama ayrıca uygulamayı her kullanışınızda bir oturum kaydı gönderir: oturumun ne zaman başlayıp bittiği, ne kadar sürdüğü, bir çökmeyle bitip bitmediği ve kurulum tanımlayıcısı.
 Ayrıca, uygulamanın nerede yavaş olduğunu göstermek için uygulama açılışlarının ve ekran değişikliklerinin yaklaşık beşte biri için süre bilgisi gönderir.
 Bir rapor cihazdan çıkmadan önce uygulama içinden e-posta adreslerini, belirteçleri, parolaları ve diğer kimlik bilgilerini çıkarır.
-Bir rapor ekran görüntüsü, ekran düzeni, istek gövdesi ya da oturum kaydı taşımaz.
+Bir rapor ekran görüntüsü, ekran düzeni, istek gövdesi ya da oturumun ekran kaydını (görüntü kaydı) taşımaz.
 Sentry, her sunucu bağlantısında olduğu gibi, her raporla birlikte cihazınızın IP adresini alır.
 Sentry projesi IP adreslerini saklamayacak şekilde ayarlanmadıkça Sentry bu adresten şehir ve ülke gibi yaklaşık bir konum çıkarır.
 Sentry proje anahtarı olmadan derlenmiş bir uygulama rapor göndermez.
