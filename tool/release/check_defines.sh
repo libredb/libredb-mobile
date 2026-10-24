@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Stops a store build that would carry a define meant for checks only (tool/release/check_only_defines.txt): one in
 # the dart-defines file the build reads, or one set as a variable of the repository or of the job's GitHub environment.
+# It also stops one whose PROD_API_URL, OIDC_ISSUER or SENTRY_DSN is set but is not an https URL, the rule a prod start
+# applies (AppConfig.httpsOnlyDefines, docs/security.md "Encryption in transit"); it names the define, never its value.
 # Usage: RELEASE_VARS='<the variables as a JSON object>' tool/release/check_defines.sh <dart-defines.json>
 set -euo pipefail
 
@@ -52,7 +54,27 @@ for name in $names; do
     found=1
   fi
 done
+
+# An absolute https URL with a host, the scheme in any case, as Dart's Uri reads it.
+https_url='^https://([^/?#]*@)?[^/?#@:]+'
+for name in PROD_API_URL OIDC_ISSUER SENTRY_DSN; do
+  status=0
+  jq -e --arg name "$name" --arg pattern "$https_url" \
+    '(has($name) | not) or (.[$name] | type == "string" and test($pattern; "i"))' "$1" > /dev/null 2>&1 || status=$?
+  case "$status" in
+    0) ;;
+    1)
+      echo "$name must be an https URL in the store build (docs/security.md, \"Encryption in transit\")."
+      found=1
+      ;;
+    *)
+      echo "Could not read $name from the defines file $1 (jq exit $status)."
+      exit 2
+      ;;
+  esac
+done
+
 if [ "$found" -ne 0 ]; then
   exit 1
 fi
-echo "No check-only define in the store build."
+echo "No check-only define and no non-https URL in the store build."

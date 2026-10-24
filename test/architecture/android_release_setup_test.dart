@@ -305,6 +305,45 @@ void main() {
         }
       });
 
+      // The same rule as a prod start (AppConfig.fromEnvironment, #218), so an http value stops the release before
+      // anything is signed or uploaded.
+      test('fails on each https-only define that is not https, naming it and not its value', () async {
+        const store = {
+          'PROD_API_URL': 'https://studio.example/api',
+          'OIDC_ISSUER': 'https://keycloak.example/realms/libredb',
+          'SENTRY_DSN': 'https://publickey@o1.ingest.sentry.example/1',
+        };
+        expect(store.keys.toSet(), AppConfig.httpsOnlyDefines);
+        for (final name in AppConfig.httpsOnlyDefines) {
+          for (final value in [
+            'http://secretvalue.example/x',
+            'secretvalue.example/x',
+            'https:///secretvalue',
+            'ftp://secretvalue.example/x',
+          ]) {
+            final result = await check({...store, name: value});
+            expect(result.exitCode, 1, reason: '$name=$value passed: ${result.stdout}${result.stderr}');
+            expect(result.stdout, contains('$name must be an https URL'), reason: '$name=$value');
+            expect('${result.stdout}${result.stderr}', isNot(contains('secretvalue')), reason: '$name=$value');
+          }
+        }
+      });
+
+      test('passes https values in any case, and an unset SENTRY_DSN', () async {
+        final result = await check({
+          'PROD_API_URL': 'HTTPS://studio.example/api',
+          'OIDC_ISSUER': 'https://localhost:8443/realms/libredb',
+        });
+        expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      });
+
+      test('fails on an https-only define that is not a string, without printing it', () async {
+        final file = File('${dir.path}/dart-defines.json')..writeAsStringSync('{"PROD_API_URL":["secretvalue"]}');
+        final result = await Process.run('bash', [_checkScriptPath, file.path], environment: {'RELEASE_VARS': '{}'});
+        expect(result.exitCode, isNot(0));
+        expect('${result.stdout}${result.stderr}', isNot(contains('secretvalue')));
+      });
+
       test('fails without the variables, so a broken step cannot pass in silence', () async {
         final file = File('${dir.path}/dart-defines.json')..writeAsStringSync('{}');
         final result = await Process.run('bash', [_checkScriptPath, file.path], environment: {'RELEASE_VARS': ''});

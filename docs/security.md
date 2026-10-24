@@ -10,6 +10,7 @@ A prod build (`lib/main/main_prod.dart`) talks to Studio, Keycloak and Sentry ov
 The error names the define and never its value, because the DSN carries the project's key.
 On Android the host app starts the native Sentry SDK before the Flutter engine, so `NativeSentry.requireHttpsDsn` (`android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt`) refuses such a DSN there first, with the same message.
 An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
+The release stops before the build on the same rule (`tool/release/check_defines.sh`, [release.md](release.md)).
 `AppConfig.httpsOnlyDefines` lists the three, and `test/architecture/android_release_setup_test.dart` fails when the release passes a URL define that is not in it.
 Dev and test builds, `main_local.dart` among them, check none of them; tool/studio-dev serves Studio and Keycloak over https through Caddy, so its `studio-dev.env` passes.
 

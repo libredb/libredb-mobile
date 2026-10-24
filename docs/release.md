@@ -93,6 +93,7 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 
 An empty variable is left out of the build, and the build stops when a required one is missing.
 The app stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
+Before the build, `tool/release/check_defines.sh` stops the release on the same rule, naming the variable and never its value, so nothing is signed or uploaded with an http value.
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
 `APP_LOCK_REQUIRED` is not read, so the store build leaves the app lock to the user ([security.md](security.md), "App lock").
