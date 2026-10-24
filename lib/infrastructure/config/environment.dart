@@ -13,10 +13,11 @@ final class AppConfig {
     required this.idleTimeout,
     this.oidcCertificatePins = const <String>[],
     this.screenCaptureProtection = false,
+    this.appLockRequired = false,
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
   });
 
-  const AppConfig.dev({this.screenCaptureProtection = false})
+  const AppConfig.dev({this.screenCaptureProtection = false, this.appLockRequired = false})
     : environment = Environment.dev,
       apiBaseUrl = null,
       certificatePins = const <String>[],
@@ -24,7 +25,7 @@ final class AppConfig {
       idleTimeout = null,
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
-  const AppConfig.test({this.screenCaptureProtection = false})
+  const AppConfig.test({this.screenCaptureProtection = false, this.appLockRequired = false})
     : environment = Environment.test,
       apiBaseUrl = null,
       certificatePins = const <String>[],
@@ -37,6 +38,7 @@ final class AppConfig {
     this.certificatePins = const <String>[],
     this.oidcCertificatePins = const <String>[],
     this.screenCaptureProtection = true,
+    this.appLockRequired = false,
   }) : environment = Environment.prod,
        idleTimeout = const Duration(minutes: 15),
        sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
@@ -54,24 +56,30 @@ final class AppConfig {
   /// [screenCaptureProtection]: `true` or `false`, or empty for the environment's default, on in prod and off in dev
   /// and test. Any other value throws [ScreenCaptureProtectionConfigError] in every environment, so a typo never
   /// decides it.
+  ///
+  /// [appLockRequiredDefine], the `APP_LOCK_REQUIRED` define unless a test passes its own, sets [appLockRequired]:
+  /// `true` or `false`, or empty for false, in every environment. Any other value throws [AppLockRequiredConfigError].
   factory AppConfig.fromEnvironment(
     Environment environment, {
     @visibleForTesting String prodApiUrlDefine = prodApiUrl,
     @visibleForTesting String studioCertPinsDefine = studioCertPins,
     @visibleForTesting String oidcCertPinsDefine = oidcCertPins,
     @visibleForTesting String screenCaptureProtectionDefine = screenCaptureProtectionSwitch,
+    @visibleForTesting String appLockRequiredDefine = appLockRequiredSwitch,
   }) {
     final protection = _screenCaptureProtectionOf(screenCaptureProtectionDefine);
+    final lockRequired = _appLockRequiredOf(appLockRequiredDefine);
     return switch (environment) {
-      Environment.dev => AppConfig.dev(screenCaptureProtection: protection ?? false),
+      Environment.dev => AppConfig.dev(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
       Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
       Environment.prod => AppConfig.prod(
         apiBaseUrl: prodApiUrlDefine,
         certificatePins: _pins('STUDIO_CERT_PINS', studioCertPinsDefine),
         oidcCertificatePins: _pins('OIDC_CERT_PINS', oidcCertPinsDefine),
         screenCaptureProtection: protection ?? true,
+        appLockRequired: lockRequired,
       ),
-      Environment.test => AppConfig.test(screenCaptureProtection: protection ?? false),
+      Environment.test => AppConfig.test(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
     };
   }
 
@@ -134,6 +142,16 @@ final class AppConfig {
     _ => throw ScreenCaptureProtectionConfigError(value),
   };
 
+  /// The `--dart-define=APP_LOCK_REQUIRED=true|false` value, empty when it is absent (docs/security.md, "App lock").
+  static const String appLockRequiredSwitch = String.fromEnvironment('APP_LOCK_REQUIRED');
+
+  /// Whether [value] requires the app lock: `true`, or `false` and empty for no.
+  static bool _appLockRequiredOf(String value) => switch (value) {
+    '' || 'false' => false,
+    'true' => true,
+    _ => throw AppLockRequiredConfigError(value),
+  };
+
   final Environment environment;
   final String? apiBaseUrl;
 
@@ -151,6 +169,10 @@ final class AppConfig {
   /// screenshots, screen recordings and the recent-apps preview while they are on screen: on in prod, off in dev and
   /// test, and set by `SCREEN_CAPTURE_PROTECTION` ([AppConfig.fromEnvironment]).
   final bool screenCaptureProtection;
+
+  /// Whether the build forces the app lock on, from `APP_LOCK_REQUIRED` ([AppConfig.fromEnvironment]): the settings
+  /// show the switch on and disabled, and a device without a screen lock offers only Sign out while signed in.
+  final bool appLockRequired;
 
   /// The `--dart-define=SENTRY_DSN=...` value, empty when it is absent.
   /// [sentryDsn] reads it in the prod environment only.
@@ -178,6 +200,7 @@ final class AppConfig {
     oidcCertificatePins: oidcCertificatePins,
     idleTimeout: idleTimeout,
     screenCaptureProtection: screenCaptureProtection,
+    appLockRequired: appLockRequired,
     sentryDsnDefine: '',
   );
 }
@@ -213,4 +236,16 @@ final class ScreenCaptureProtectionConfigError extends Error {
 
   @override
   String toString() => 'SCREEN_CAPTURE_PROTECTION must be true or false, but it is "$value" (docs/security.md)';
+}
+
+/// A build whose `APP_LOCK_REQUIRED` is neither `true` nor `false`, which stops the app at start instead of guessing
+/// whether the app lock is required.
+final class AppLockRequiredConfigError extends Error {
+  AppLockRequiredConfigError(this.value);
+
+  /// The define's value, which is no secret.
+  final String value;
+
+  @override
+  String toString() => 'APP_LOCK_REQUIRED must be true or false, but it is "$value" (docs/security.md)';
 }

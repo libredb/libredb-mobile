@@ -26,6 +26,10 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
+import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
+import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
+import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -85,11 +89,19 @@ class MockISqlEditorRepository extends Mock implements ISqlEditorRepository {}
 
 class MockIStatementHistoryRepository extends Mock implements IStatementHistoryRepository {}
 
+class MockIAppLockSettingsRepository extends Mock implements IAppLockSettingsRepository {}
+
+class MockIDeviceAuthenticator extends Mock implements IDeviceAuthenticator {}
+
+class MockIRecentsPreview extends Mock implements IRecentsPreview {}
+
 // Use case mocks (for BLoC tests)
 class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}
 
 // BLoC mocks (using MockBloc from bloc_test)
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
+
+class MockAppLockBloc extends MockBloc<AppLockEvent, AppLockState> implements AppLockBloc {}
 
 class MockStudioIdentityCubit extends MockCubit<StudioIdentityState> implements StudioIdentityCubit {}
 

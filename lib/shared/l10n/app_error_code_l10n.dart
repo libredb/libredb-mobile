@@ -19,6 +19,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.authOidcLogoutIncomplete => s.error_auth_oidc_logout_incomplete,
       AppErrorCode.settingsChangeLanguageFailed => s.error_settings_change_language_failed,
       AppErrorCode.settingsUserDataNotRemoved => s.error_settings_user_data_not_removed,
+      AppErrorCode.settingsAppLockNotSaved => s.error_settings_app_lock_not_saved,
       AppErrorCode.networkCertInvalid => s.error_network_cert_invalid,
       AppErrorCode.networkOffline => s.error_network_offline,
       AppErrorCode.studioDatabaseAuth => s.error_studio_database_auth,

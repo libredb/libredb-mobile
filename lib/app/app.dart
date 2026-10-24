@@ -6,6 +6,7 @@ import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/localization/locale_cubit.dart';
+import 'package:libredb_mobile/app/lock/app_lock_gate.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -142,18 +143,23 @@ class _AppViewState extends State<_AppView> {
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
             // StudioStatusGate shows the unreachable page over it while Studio does not answer and keeps it mounted
             // underneath, so the open pages and the session are as they were once Studio answers.
-            builder: (context, router) => RepositoryProvider<UnsavedChangesRegistry>.value(
-              value: _unsavedChanges!,
-              child: StudioStatusGate(
-                child: BlocBuilder<SessionCubit, SessionState>(
-                  buildWhen: (previous, current) => previous is SessionUnknown,
-                  builder: (context, session) => switch (session) {
-                    SessionUnknown() => const _RestoreView(),
-                    SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
-                      LocaleRestoring() => const _RestoreView(),
-                      LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+            // AppLockGate covers all of it, the unreachable page included, with the lock screen while the app is
+            // locked.
+            builder: (context, router) => AppLockGate(
+              router: _router!,
+              child: RepositoryProvider<UnsavedChangesRegistry>.value(
+                value: _unsavedChanges!,
+                child: StudioStatusGate(
+                  child: BlocBuilder<SessionCubit, SessionState>(
+                    buildWhen: (previous, current) => previous is SessionUnknown,
+                    builder: (context, session) => switch (session) {
+                      SessionUnknown() => const _RestoreView(),
+                      SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
+                        LocaleRestoring() => const _RestoreView(),
+                        LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                      },
                     },
-                  },
+                  ),
                 ),
               ),
             ),

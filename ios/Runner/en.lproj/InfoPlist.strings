@@ -1,0 +1,2 @@
+/* The texts iOS shows for the keys of Info.plist, in English. */
+"NSFaceIDUsageDescription" = "LibreDB uses Face ID to unlock the app when the app lock is on.";

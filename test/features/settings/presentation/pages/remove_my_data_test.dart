@@ -113,7 +113,7 @@ void main() {
       'The last open connection and database',
       'Collapsed sections of the connection list',
       'Kept on this phone',
-      'Language, theme and result view',
+      'Language, theme, result view and app lock',
       'You are signed out once your data is removed.',
     ]) {
       expect(find.text(text), findsOneWidget, reason: text);
@@ -215,7 +215,7 @@ void main() {
     await openConfirmation(tester);
 
     expect(find.text('Verileriniz silinsin mi?'), findsOneWidget);
-    expect(find.text('Dil, tema ve sonuç görünümü'), findsOneWidget);
+    expect(find.text('Dil, tema, sonuç görünümü ve uygulama kilidi'), findsOneWidget);
     expect(find.text('Sil ve oturumu kapat'), findsOneWidget);
   });
 }
