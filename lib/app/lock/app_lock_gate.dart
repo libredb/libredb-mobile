@@ -71,9 +71,10 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     final signedIn = context.select<SessionCubit, bool>((session) => session.state is SessionAuthenticated);
     final signingOut = context.select<SignOutBloc, bool>((signOut) => signOut.state is SignOutInProgress);
     final covered = lock.coversApp;
-    // Nothing signed in shows while the lock reads its settings after a restore, while the idle sign-out ends the
-    // session, or while the lock screen's sign-out has not reached the login page yet.
-    final waiting = !covered && (_leaving || (signedIn && (lock is AppLockStarting || lock is AppLockIdleSigningOut)));
+    // Nothing signed in shows while the lock reads its settings after a restore, while a required lock checks the
+    // device, while the idle sign-out ends the session, or while the lock screen's sign-out has not reached the login
+    // page yet.
+    final waiting = !covered && (_leaving || (signedIn && (lock is AppLockStarting || lock.hidesApp)));
     final hidden = _hidden = covered || waiting;
     return Stack(
       fit: StackFit.expand,

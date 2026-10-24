@@ -388,6 +388,7 @@ The settings:
 
 `APP_LOCK_REQUIRED` is read at build time in `AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`): `true` forces the lock on in every environment, `false` or absent leaves it to the user, and any other value stops the app at start (`AppLockRequiredConfigError`).
 A required lock shows the switch on and disabled ("Required by your organization"), and on a device without a screen lock a signed-in user sees only the lock screen with Sign out, after a sign-in too.
+After a sign-in, a required lock keeps the pages hidden behind a spinner until the device has answered whether it can lock.
 
 ### The recent-apps preview
 

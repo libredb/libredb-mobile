@@ -207,6 +207,14 @@ void main() {
     expect(await tester.binding.handlePopRoute(), isTrue);
   });
 
+  testWidgets('while a required lock checks the device after a sign-in the pages stay hidden', (tester) async {
+    await pump(tester, const AppLockChecking(settings: _on5));
+
+    expect(find.byKey(appLockRestoreKey), findsOneWidget);
+    expect(find.byKey(appLockScreenKey), findsNothing);
+    expect(find.byKey(const Key('editor')), findsNothing);
+  });
+
   testWidgets('Sign out keeps the pages hidden until the login page shows', (tester) async {
     final signOutStates = StreamController<SignOutState>.broadcast();
     addTearDown(signOutStates.close);

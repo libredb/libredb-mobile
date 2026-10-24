@@ -42,6 +42,7 @@ class AppLockScreen extends StatelessWidget {
           AppLockStarting() ||
           AppLockOff() ||
           AppLockUnlocked() ||
+          AppLockChecking() ||
           AppLockIdleSigningOut() => (l10n.app_lock_locked_message, false, false, false),
         };
         return Scaffold(

@@ -136,6 +136,7 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
     _signedIn = true;
     _backgroundedAt = null;
     if (!_lockRequired) return emit(_open);
+    emit(AppLockChecking(settings: _settings));
     // A required lock cannot let anyone in on a device that cannot lock, nor on one it could not check.
     emit(switch (await _canAuthenticate()) {
       true => _open,

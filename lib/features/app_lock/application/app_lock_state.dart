@@ -26,12 +26,12 @@ sealed class AppLockState extends Equatable {
   /// Whether the lock screen covers the app now.
   bool get coversApp => switch (this) {
     AppLockLocked() || AppLockAuthenticating() || AppLockUnavailable() => true,
-    AppLockStarting() || AppLockOff() || AppLockUnlocked() || AppLockIdleSigningOut() => false,
+    AppLockStarting() || AppLockOff() || AppLockUnlocked() || AppLockChecking() || AppLockIdleSigningOut() => false,
   };
 
-  /// Whether the signed-in pages must stay hidden now: under the lock screen, or while the idle sign-out ends the
-  /// session.
-  bool get hidesApp => coversApp || this is AppLockIdleSigningOut;
+  /// Whether the signed-in pages must stay hidden now: under the lock screen, while a required lock checks the device,
+  /// or while the idle sign-out ends the session.
+  bool get hidesApp => coversApp || this is AppLockChecking || this is AppLockIdleSigningOut;
 
   @override
   List<Object?> get props => const [];
@@ -70,6 +70,12 @@ final class AppLockLocked extends AppLockSettled {
 
   @override
   List<Object?> get props => [settings, failure];
+}
+
+/// A required lock checks whether the device can lock after a sign-in; the pages stay hidden, without the lock
+/// screen, until it answers.
+final class AppLockChecking extends AppLockSettled {
+  const AppLockChecking({required super.settings});
 }
 
 /// A resume past the idle period: the idle sign-out ends the session, so the pages stay hidden, without the lock

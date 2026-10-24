@@ -615,6 +615,26 @@ void main() {
       });
     });
 
+    test('a required lock keeps the pages hidden while the check of a sign-in is pending', () {
+      fakeAsync((async) {
+        final check = Completer<bool>();
+        when(() => authenticator.canAuthenticate()).thenAnswer((_) => check.future);
+        final states = <AppLockState>[];
+        final bloc = start(async, states, lockRequired: true);
+        states.clear();
+        bloc.add(const AppLockSignedIn());
+        async.flushMicrotasks();
+
+        expect(bloc.state, const AppLockChecking(settings: _on5));
+        expect(bloc.state.hidesApp, isTrue);
+        expect(states.where((state) => !state.hidesApp), isEmpty);
+
+        check.complete(true);
+        async.flushMicrotasks();
+        expect(bloc.state, const AppLockUnlocked(settings: _on5));
+      });
+    });
+
     test('a required lock whose check fails does not let a sign-in through', () {
       fakeAsync((async) {
         when(() => authenticator.canAuthenticate()).thenThrow(StateError('no activity'));
