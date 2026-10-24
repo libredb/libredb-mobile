@@ -983,5 +983,21 @@
   "editor_catalog_not_listed": "The server does not list the database {catalog}, so the editor uses {used}.",
   "@editor_catalog_not_listed": {"description": "Shown when a statement opened in the editor names a database the server does not list; the editor runs in the default it names instead.", "placeholders": {"catalog": {"type": "String"}, "used": {"type": "String"}}},
   "editor_catalog_not_listed_none": "The server does not list the database {catalog}.",
-  "@editor_catalog_not_listed_none": {"description": "Shown when a statement opened in the editor names a database the server does not list, and the server lists none to use instead.", "placeholders": {"catalog": {"type": "String"}}}
+  "@editor_catalog_not_listed_none": {"description": "Shown when a statement opened in the editor names a database the server does not list, and the server lists none to use instead.", "placeholders": {"catalog": {"type": "String"}}},
+  "settings_privacy": "Privacy",
+  "remove_my_data": "Remove my data",
+  "remove_my_data_subtitle": "Remove what this app keeps about you on this phone, then sign out",
+  "remove_my_data_title": "Remove my data?",
+  "remove_my_data_removed": "Removed from this phone",
+  "remove_my_data_drafts": "SQL editor drafts",
+  "remove_my_data_history": "Statement history",
+  "remove_my_data_favorites": "Starred connections",
+  "remove_my_data_recents": "Recent connections",
+  "remove_my_data_last_connection": "The last open connection and database",
+  "remove_my_data_collapsed_sections": "Collapsed sections of the connection list",
+  "remove_my_data_kept": "Kept on this phone",
+  "remove_my_data_kept_preferences": "Language, theme and result view",
+  "remove_my_data_signs_out": "You are signed out once your data is removed.",
+  "remove_my_data_confirm": "Remove and sign out",
+  "error_settings_user_data_not_removed": "Some of your data could not be removed from this phone, so you are still signed in."
 }

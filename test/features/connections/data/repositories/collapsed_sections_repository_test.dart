@@ -31,11 +31,29 @@ void main() {
 
     expect(() => refusing.write({'other'}), throwsStateError);
   });
+
+  test('clear removes the collapsed sections from the device', () async {
+    await repository.write({'group:Sales'});
+
+    await repository.clear();
+
+    expect(await AppLocalStorage().read(StorageKeys.connectionSectionsCollapsed.key), isNull);
+    expect(await repository.read(), isEmpty);
+  });
+
+  test('clear throws when the device refuses to remove them', () async {
+    final refusing = CollapsedSectionsRepository(storage: _RefusingStorage());
+
+    expect(refusing.clear, throwsStateError);
+  });
 }
 
 class _RefusingStorage implements AppLocalStorage {
   @override
   Future<bool> save(String key, dynamic value) async => false;
+
+  @override
+  Future<bool> remove(String key) async => false;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

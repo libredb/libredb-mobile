@@ -4,11 +4,28 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/features/connections/data/repositories/favorite_connections_repository.dart';
+import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
+import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/infrastructure/storage/active_catalog_preferences.dart';
+import 'package:libredb_mobile/infrastructure/storage/active_connection_preferences.dart';
+import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferences.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/utils/subject_hash.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
@@ -19,6 +36,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../support/test_env.dart';
 import '../../../../support/url_launcher_stub.dart';
+import '../../../../mocks/mock_classes.dart';
 import '../../../../support/user_menu.dart';
 
 const _docs = 'https://docs.acme.example';
@@ -40,6 +58,16 @@ class _LanguageRefusingStorage implements AppLocalStorage {
   void setPreferencesInstance(SharedPreferences prefs) => AppLocalStorage().setPreferencesInstance(prefs);
 }
 
+/// The local app with [statementText] as its statement text store, which in a widget test cannot reach the files.
+class _StatementTextDependencies extends LocalSignInDependencies {
+  _StatementTextDependencies(this.statementText);
+
+  final IStatementTextStore statementText;
+
+  @override
+  IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) => statementText;
+}
+
 class _LocalStorageDependencies extends LocalSignInDependencies {
   _LocalStorageDependencies(this.localStorage, {super.projectLinks});
 
@@ -57,7 +85,13 @@ void main() {
       routes: [
         GoRoute(
           path: ApplicationRoutesConstants.settings,
-          builder: (context, state) => const Scaffold(body: SettingsScreen()),
+          // Studio has named no account, so the Privacy section is left out.
+          builder: (context, state) => SignedInAccountScope(
+            subject: null,
+            signOut: () async {},
+            reloadStoredData: () {},
+            child: const Scaffold(body: SettingsScreen()),
+          ),
         ),
       ],
     );
@@ -81,7 +115,12 @@ void main() {
   // The real app, signed in, on settings. The shell shows the account name in the top bar once the mock API answers
   // after its 500 ms delay, so let that land before the screen is compared. The app links to the documentation [docs]
   // and, when given, the device preferences [localStorage].
-  Future<void> pumpAppOnSettings(WidgetTester tester, {String docs = _docs, AppLocalStorage? localStorage}) async {
+  Future<void> pumpAppOnSettings(
+    WidgetTester tester, {
+    String docs = _docs,
+    AppLocalStorage? localStorage,
+    AppDependencies? dependencies,
+  }) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(1600, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -91,9 +130,11 @@ void main() {
     await tester.pumpWidget(
       App(
         language: 'en',
-        dependencies: localStorage == null
-            ? LocalSignInDependencies(projectLinks: projectLinks)
-            : _LocalStorageDependencies(localStorage, projectLinks: projectLinks),
+        dependencies:
+            dependencies ??
+            (localStorage == null
+                ? LocalSignInDependencies(projectLinks: projectLinks)
+                : _LocalStorageDependencies(localStorage, projectLinks: projectLinks)),
       ),
     );
     await tester.pump();
@@ -248,6 +289,85 @@ void main() {
       // Let the snack bar time out.
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
+    });
+  });
+
+  group('SettingsScreen - Remove my data', () {
+    // The account the mock GET /api/auth/me names (assets/mock/GET_auth_me.json), and another one on the same phone.
+    const subject = '6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10';
+    const other = 'b0d7c4e1-1111-4222-8333-944455556666';
+    const favorites = ConnectionFavorites(starred: {'seed:dev-postgres'}, recent: ['seed:dev-postgres']);
+
+    testWidgets('removes what the phone keeps for the account, keeps the device preferences, and signs out', (
+      tester,
+    ) async {
+      final statementText = MockIStatementTextStore();
+      when(() => statementText.clearSubject(any())).thenAnswer((_) async => const Success(null));
+      await FavoriteConnectionsRepository().write(subject, favorites);
+      await FavoriteConnectionsRepository().write(other, favorites);
+      await ActiveConnectionPreferences().write(subject, 'seed:dev-postgres-server');
+      await ActiveConnectionPreferences().write(other, 'seed:dev-postgres-server');
+      await ActiveCatalogPreferences().write(subject, 'seed:dev-postgres-server', 'archive');
+      await ActiveCatalogPreferences().write(other, 'seed:dev-postgres-server', 'postgres');
+      await CollapsedSectionsRepository().write({'group:Sales'});
+      await ResultViewModePreferences().write(ResultViewMode.table);
+      await AppLocalStorage().save(StorageKeys.brightness.key, 'dark');
+
+      await pumpAppOnSettings(tester, dependencies: _StatementTextDependencies(statementText));
+      await tester.ensureVisible(find.byKey(settingsRemoveMyDataKey));
+      await tester.tap(find.byKey(settingsRemoveMyDataKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(removeMyDataConfirmKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget, reason: 'the user is signed out');
+      verify(() => statementText.clearSubject(subjectHash(subject))).called(1);
+      verifyNever(() => statementText.clearSubject(subjectHash(other)));
+      expect(await FavoriteConnectionsRepository().read(subject), ConnectionFavorites.empty);
+      expect(await FavoriteConnectionsRepository().read(other), favorites);
+      expect(await ActiveConnectionPreferences().read(subject), isNull);
+      expect(await ActiveConnectionPreferences().read(other), 'seed:dev-postgres-server');
+      expect(await ActiveCatalogPreferences().read(subject, 'seed:dev-postgres-server'), isNull);
+      expect(await ActiveCatalogPreferences().read(other, 'seed:dev-postgres-server'), 'postgres');
+      expect(await CollapsedSectionsRepository().read(), isEmpty);
+      expect(await ResultViewModePreferences().read(), ResultViewMode.table);
+      expect(await AppLocalStorage().read(StorageKeys.brightness.key), 'dark');
+    });
+
+    testWidgets('a store that fails keeps the user signed in on settings with Retry', (tester) async {
+      final statementText = MockIStatementTextStore();
+      when(() => statementText.clearSubject(any()))
+          .thenAnswer((_) async => const Failure(UnknownError('Could not clear an account: refused')));
+      await FavoriteConnectionsRepository().write(subject, favorites);
+      await ActiveConnectionPreferences().write(subject, 'seed:sales-postgres');
+
+      await pumpAppOnSettings(tester, dependencies: _StatementTextDependencies(statementText));
+      final settings = tester.element(find.byType(SettingsScreen));
+      expect(settings.read<FavoriteConnectionsBloc>().state, const FavoriteConnectionsReady(favorites));
+      expect(settings.read<ActiveConnectionCubit>().state.connection?.id, 'seed:sales-postgres');
+      await tester.ensureVisible(find.byKey(settingsRemoveMyDataKey));
+      await tester.tap(find.byKey(settingsRemoveMyDataKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(removeMyDataConfirmKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(loginButtonSsoKey), findsNothing);
+      // The app reads again what is left, so a later star or open never writes the removed favorites back.
+      expect(settings.read<FavoriteConnectionsBloc>().state, const FavoriteConnectionsReady(ConnectionFavorites.empty));
+      expect(settings.read<ActiveConnectionCubit>().state.connection, isNull);
+      expect(find.byKey(removeMyDataRetryKey), findsOneWidget);
+      expect(
+        await FavoriteConnectionsRepository().read(subject),
+        ConnectionFavorites.empty,
+        reason: 'every store is tried',
+      );
+
+      when(() => statementText.clearSubject(any())).thenAnswer((_) async => const Success(null));
+      await tester.ensureVisible(find.byKey(removeMyDataRetryKey));
+      await tester.tap(find.byKey(removeMyDataRetryKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
     });
   });
 

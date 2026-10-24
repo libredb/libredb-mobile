@@ -2971,6 +2971,111 @@ class S {
       args: [catalog],
     );
   }
+
+  /// `Privacy`
+  String get settings_privacy {
+    return Intl.message('Privacy', name: 'settings_privacy', desc: '', args: []);
+  }
+
+  /// `Remove my data`
+  String get remove_my_data {
+    return Intl.message('Remove my data', name: 'remove_my_data', desc: '', args: []);
+  }
+
+  /// `Remove what this app keeps about you on this phone, then sign out`
+  String get remove_my_data_subtitle {
+    return Intl.message(
+      'Remove what this app keeps about you on this phone, then sign out',
+      name: 'remove_my_data_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Remove my data?`
+  String get remove_my_data_title {
+    return Intl.message('Remove my data?', name: 'remove_my_data_title', desc: '', args: []);
+  }
+
+  /// `Removed from this phone`
+  String get remove_my_data_removed {
+    return Intl.message('Removed from this phone', name: 'remove_my_data_removed', desc: '', args: []);
+  }
+
+  /// `SQL editor drafts`
+  String get remove_my_data_drafts {
+    return Intl.message('SQL editor drafts', name: 'remove_my_data_drafts', desc: '', args: []);
+  }
+
+  /// `Statement history`
+  String get remove_my_data_history {
+    return Intl.message('Statement history', name: 'remove_my_data_history', desc: '', args: []);
+  }
+
+  /// `Starred connections`
+  String get remove_my_data_favorites {
+    return Intl.message('Starred connections', name: 'remove_my_data_favorites', desc: '', args: []);
+  }
+
+  /// `Recent connections`
+  String get remove_my_data_recents {
+    return Intl.message('Recent connections', name: 'remove_my_data_recents', desc: '', args: []);
+  }
+
+  /// `The last open connection and database`
+  String get remove_my_data_last_connection {
+    return Intl.message(
+      'The last open connection and database',
+      name: 'remove_my_data_last_connection',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Collapsed sections of the connection list`
+  String get remove_my_data_collapsed_sections {
+    return Intl.message(
+      'Collapsed sections of the connection list',
+      name: 'remove_my_data_collapsed_sections',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Kept on this phone`
+  String get remove_my_data_kept {
+    return Intl.message('Kept on this phone', name: 'remove_my_data_kept', desc: '', args: []);
+  }
+
+  /// `Language, theme and result view`
+  String get remove_my_data_kept_preferences {
+    return Intl.message('Language, theme and result view', name: 'remove_my_data_kept_preferences', desc: '', args: []);
+  }
+
+  /// `You are signed out once your data is removed.`
+  String get remove_my_data_signs_out {
+    return Intl.message(
+      'You are signed out once your data is removed.',
+      name: 'remove_my_data_signs_out',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Remove and sign out`
+  String get remove_my_data_confirm {
+    return Intl.message('Remove and sign out', name: 'remove_my_data_confirm', desc: '', args: []);
+  }
+
+  /// `Some of your data could not be removed from this phone, so you are still signed in.`
+  String get error_settings_user_data_not_removed {
+    return Intl.message(
+      'Some of your data could not be removed from this phone, so you are still signed in.',
+      name: 'error_settings_user_data_not_removed',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

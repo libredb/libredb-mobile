@@ -5,4 +5,8 @@ abstract interface class ICollapsedSectionsRepository {
 
   /// Replaces the stored keys; throws when the device refuses the write.
   Future<void> write(Set<String> keys);
+
+  /// Removes the stored keys, which are Studio's environment and group names, for 'Remove my data'; throws when the
+  /// device refuses.
+  Future<void> clear();
 }

@@ -9,4 +9,8 @@ abstract interface class IActiveCatalogStore {
 
   /// Stores [catalog] for [subject] on [connectionId]; throws when the device refuses the write.
   Future<void> write(String subject, String connectionId, String catalog);
+
+  /// Forgets every database stored for [subject] and keeps those of every other subject, for 'Remove my data'; throws
+  /// when the device refuses the change.
+  Future<void> clear(String subject);
 }

@@ -76,6 +76,29 @@ void main() {
     }
   });
 
+  group('clear removes a stored value it cannot read, so Remove my data completes', () {
+    for (final (name, stored) in [
+      ('a value of another type', ['seed:a']),
+      ('text that is not json', 'not json'),
+      ('JSON that is no object', '["seed:a"]'),
+    ]) {
+      test(name, () async {
+        storage.values[StorageKeys.connectionFavorites.key] = stored;
+
+        await repository.clear(alice);
+
+        expect(storage.values, isEmpty);
+      });
+    }
+
+    test('and throws when the device refuses to remove it', () async {
+      storage.values[StorageKeys.connectionFavorites.key] = 'not json';
+      storage.refuses = true;
+
+      await expectLater(() => repository.clear(alice), throwsStateError);
+    });
+  });
+
   test('a write over a stored value it cannot read throws and leaves the value as it was', () async {
     storage.values[StorageKeys.connectionFavorites.key] = '["seed:a"]';
 

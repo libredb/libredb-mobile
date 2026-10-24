@@ -18,6 +18,12 @@ final class FavoriteConnectionsSubjectChanged extends FavoriteConnectionsEvent {
   List<Object?> get props => [subject];
 }
 
+/// Reads the favorites of the signed-in subject again, as the device stores them now, such as after 'Remove my data'
+/// cleared them while the user stays signed in.
+final class FavoriteConnectionsReloaded extends FavoriteConnectionsEvent {
+  const FavoriteConnectionsReloaded();
+}
+
 /// Stars the connection, or removes its star.
 final class FavoriteConnectionStarToggled extends FavoriteConnectionsEvent {
   const FavoriteConnectionStarToggled(this.connectionId);
