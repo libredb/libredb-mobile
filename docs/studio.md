@@ -5,8 +5,7 @@ It signs in to Keycloak itself, as the public client `libredb-mobile` with the a
 Studio accepts that token through its bearer channel for native clients, which `OIDC_BEARER_AUDIENCE` turns on (Studio's `docs/OIDC.md`, "Bearer access tokens for native clients").
 The sign-in itself, the app's only one, is described in [oidc.md](oidc.md).
 
-The bearer channel came with libredb/libredb-studio#1914, which is on Studio's main branch; Studio 1.0.0 does not have it.
-Until a Studio release contains it, build the Studio image from main, as shown below.
+The bearer channel came with libredb/libredb-studio#1914, which Studio 1.1.0 is the first release to carry; Studio 1.0.0 does not have it.
 
 ## What Studio and Keycloak need
 
@@ -54,17 +53,12 @@ The realm has the users `admin` / `admin` (realm role `admin`) and `user` / `use
 `norole` / `norole` holds no realm role, so Studio refuses it: the sign-in stays on the login page with the refusal, and nothing is stored.
 The stack is unfit for production on purpose: `start-dev` with the embedded H2 store, a self-signed CA, and committed passwords and client secret.
 
-Build the Studio image from main, until a release contains the bearer channel:
-
-```shell
-git clone https://github.com/libredb/libredb-studio.git
-docker build -t libredb-studio:bearer libredb-studio
-```
-
+Studio runs the 1.1.0 release image, `ghcr.io/libredb/libredb-studio:1.1.0`, pinned by its digest in the compose file, so no local build is needed.
+To try a local build of Studio instead, such as one of its main branch, set `STUDIO_IMAGE` to that image on the `up` command.
 Start the stack and build the app against it:
 
 ```shell
-STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
 fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev.env
 docker compose -f tool/studio-dev/docker-compose.yml down -v
 ```
@@ -156,12 +150,12 @@ Steps 1 to 6 and 8 were walked through as `admin` / `admin` on the plain Studio,
 
 Also walked through:
 
-- The read-only seed: Dev Postgres (read-only role) shows `public.orders` with its columns and indexes, no key mark on `id`, and "Studio lists no foreign keys." on the Foreign keys tab, because Studio hides the keys from a role that does not own the table (see [Postgres seeds](#postgres-seeds)).
-  The read grant of Sales (production) shows `public.orders` without a key mark on `id` for the same reason.
+- The read-only seed: Dev Postgres (read-only role) shows `public.orders` with its columns and indexes, no key mark on `id`, and "Studio lists no foreign keys." on the Foreign keys tab, because Studio before 1.1.0 hid the keys from a role that does not own the table (see [Postgres seeds](#postgres-seeds)); Studio 1.1.0 shows them, as the check below records.
+  Before 1.1.0, the read grant of Sales (production) showed `public.orders` without a key mark on `id` for the same reason.
 - Exclusion constraints: the seed then held none, so the table `sales.room_bookings`, with `EXCLUDE USING gist (during WITH &&)`, was created in `app` as `app_owner` during the walkthrough; its Indexes tab lists `room_bookings_during_excl` and, under "Exclusion constraints", its definition.
 
 The local Studio answers a key-scan page in a few milliseconds, so Load all ended before Stop could be tapped; for the Stop check the `redis` container was given a 1.5 second network delay (`tc qdisc add dev eth0 root netem delay 1500ms`, from a container sharing its network namespace with `NET_ADMIN`), removed again afterwards.
-The view's row in the search reads "View · 0 B", the size Studio sends for a view.
+The view's row in the search read "View · 0 B", the size Studio before 1.1.0 sent for a view; the check on Studio 1.1.0 below reads "View".
 
 Found during the walkthrough and logged for the backlog, none of which fails a step:
 
@@ -171,6 +165,16 @@ Found during the walkthrough and logged for the backlog, none of which fails a s
 - The Postgres seed has no exclusion constraint, which is why the table above was added by hand.
 
 The iOS simulator was not run, since this Linux host has none and CI builds Android only, so no step is verified on iOS, #57's share sheet included; #91 tracks the iOS walkthrough.
+
+### Studio 1.1.0 check
+
+The paths of the M3 walkthrough that Studio 1.1.0 changed were checked again on 2026-10-24 (#222), with a debug APK of `main_prod.dart` and `studio-dev.env` from the branch of #222, against the stack on the pinned 1.1.0 image from a fresh volume, on the AVD `libredb-dev-api33` (API 33 Google APIs image) after `tool/studio-dev/trust-android-emulator.sh`, signed in as `admin` / `admin`:
+
+| Path | Result |
+| --- | --- |
+| Read-only seed, `public.orders` | Passed: Dev Postgres (read-only role) marks `id` as the primary key, and the Foreign keys tab lists `customer_id`, "References customers.id", as the owner's seed does |
+| Search `ord` on Dev Postgres | Passed: the view `order_totals` reads "View" with no size, while `orders` reads "Table · 48 KB" |
+| Search over too many places | Passed: with 150 empty schemas added to `app`, the search `order` shows "Too many places to search. Pick object kinds to narrow the search." with a chip per kind (Tables, Views, Materialized Views, Sequences, Functions, Procedures, Triggers) and no Retry; Tables sends the term again with `kinds: ["table"]` and lists `order_items` and `orders`, with the Tables chip picked |
 
 ## M4 walkthrough
 
@@ -270,7 +274,8 @@ The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/p
 
 `archive` holds one table, so the server-level seed lists more than one database.
 The first two seeds sign in as `app_owner`, which owns every object, and the third as `studio_reader`, which may only read and owns nothing.
-Studio reads a table's keys from `information_schema` views, which show foreign keys only to the owner, and primary keys only to the owner or a role with a non-SELECT privilege on the table, so its describe of `public.orders` names them through the first seed and not through the third.
+Studio 1.1.0 reads a table's keys from `pg_catalog`, which every role that can see the table reads, so its describe of `public.orders` names the same keys through the third seed as through the first.
+Studio before 1.1.0 read them from `information_schema` views, which show foreign keys only to the owner, and named none through the third seed.
 Both passwords are only in the compose file, and every seed is managed, so `GET /api/connections/managed` sends neither.
 A server-level seed exists only without governance: a governed Studio refuses it at admission with `SERVER_LEVEL_NOT_ALLOWED`.
 
@@ -321,7 +326,7 @@ Sign in as `admin` / `admin` or `user` / `user`, as on the first Studio.
 Start the stack with the profile and build the app against the governed Studio:
 
 ```shell
-STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
 fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev-governed.env
 docker compose -f tool/studio-dev/docker-compose.yml --profile governed down -v
 ```
@@ -383,10 +388,10 @@ DOCKER_CONFIG=/tmp/empty-docker-config docker compose -f tool/studio-dev/docker-
 
 ### Recorded answers
 
-`test/fixtures/studio/managed_governed.json`, `policy_governed.json` and `governance_unavailable.json` were recorded as `user` with a `libredb-mobile` access token, and `admin_governance.json` as `admin`, from Studio main at `dbfea263`.
-The seed in `tool/studio-dev/governed/` was generated from Studio `02dc26057`, which has the same governance contract as `dbfea263`.
-`managed_governed.json` was recorded again as `user` from Studio main at `c9989a6b5` (`libredb-studio:main-c9989a6`, with the same seed), which adds each connection's grant level as `access` (libredb-studio#1922): `write` on `sales-dev` and `read` on `sales-prod`.
-`ready_governed.json` is the governed Studio's `GET /api/ready`, and `ready_degraded.json` the same about 15 seconds after `governance-source` was stopped; both were recorded without a token, as were `health.json` and `ready.json` from the first Studio.
+`test/fixtures/studio/managed_governed.json`, `policy_governed.json` and `governance_unavailable.json` are recorded as `user` with a `libredb-mobile` access token, and `admin_governance.json` as `admin`, from Studio 1.1.0 (see [Recording Studio answers](#recording-studio-answers)).
+The seed in `tool/studio-dev/governed/` was generated from Studio `02dc26057`, and Studio 1.1.0 admits it unchanged.
+`managed_governed.json` carries each connection's grant level as `access` (libredb-studio#1922): `write` on `sales-dev` and `read` on `sales-prod`.
+`ready_governed.json` is the governed Studio's `GET /api/ready`, and `ready_degraded.json` the same about 20 seconds after `governance-source` was stopped; both are recorded without a token, as are `health.json` and `ready.json` from the first Studio.
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads them.
 The app was also walked through on the Android emulator (API 30 Google APIs image) against the governed Studio: the SSO sign-in as `user` and the connection list with both granted connections.
 
@@ -405,7 +410,39 @@ record() { # record <fixture> <route> [json body], a POST when a body is given
 }
 ```
 
-The Postgres answers were recorded as `admin` from Studio main at `c9989a6b5` (`libredb-studio:main-c9989a6`):
+Every answer was recorded again on 2026-10-24 from Studio 1.1.0, the image the compose file pins, in one run from a fresh volume with the `governed` profile, in the order of this section, as `admin` unless a step names another user.
+Compared with the earlier recordings from Studio main (`dbfea263` and `c9989a6b5`), only these answers changed beyond timestamps, execution times, latencies, token ids and the subject of `admin`, which the realm import now fixes:
+
+- `describe_postgres_orders_readonly.json` carries the primary key and the foreign key, the same answer the owner gets, because Studio 1.1.0 reads keys from `pg_catalog`.
+- `search_postgres.json` sends no `sizeBytes` for the view `sales.order_totals`, which Studio before 1.1.0 sent as 0.
+- `managed.json` is recorded as `user`, because the stack now holds the Postgres and Redis seeds beside the samples; it lists them and the LibreDB sample, without the SQLite sample only `admin` may open.
+- The key-scan pages split the keys differently, as every Redis start does.
+
+The answers of the SQLite sample, `health.json` and `ready.json`, the first ones recorded:
+
+```shell
+health() { curl -sk -o "test/fixtures/studio/$1.json" -w "$1 %{http_code}\n" "https://localhost:9443/api$2"; }
+health health /health
+health ready /ready
+record me /auth/me
+record policy /connections/policy
+record test /db/test-connection '{"connectionId":"seed:sqlite-embedded-sample"}'
+record meta /db/provider-meta '{"connectionId":"seed:sqlite-embedded-sample"}'
+record containers /db/objects/containers '{"connectionId":"seed:sqlite-embedded-sample"}'
+record counts /db/objects/counts '{"connectionId":"seed:sqlite-embedded-sample","container":[]}'
+record list /db/objects/list '{"connectionId":"seed:sqlite-embedded-sample","container":[],"kind":"table"}'
+record search /db/objects/search '{"connectionId":"seed:sqlite-embedded-sample","term":"emp"}'
+record describe /db/objects/describe '{"connectionId":"seed:sqlite-embedded-sample","path":["department"],"kind":"table"}'
+record query /db/query '{"connectionId":"seed:sqlite-embedded-sample","sql":"SELECT * FROM employee","options":{"limit":2,"offset":0}}'
+record queryparams /db/query '{"connectionId":"seed:sqlite-embedded-sample","sql":"SELECT ? AS answer","params":[42],"options":{"offset":0}}'
+record queryerror /db/query '{"connectionId":"seed:sqlite-embedded-sample","sql":"SELECT * FORM employee","options":{"offset":0}}'
+record multi /db/multi-query '{"connectionId":"seed:sqlite-embedded-sample","sql":"SELECT 1 AS a; SELECT * FORM x; SELECT 3 AS c","options":{"offset":0}}'
+record cancel /db/cancel '{"connectionId":"seed:sqlite-embedded-sample","queryId":"7d1c2a52-0000-4000-8000-000000000001"}'
+record txstatus /db/transaction '{"connectionId":"seed:sqlite-embedded-sample","action":"status"}'
+token=$(tool/studio-dev/access-token.sh user) && record managed /connections/managed
+```
+
+The Postgres answers:
 
 ```shell
 record managed_postgres /connections/managed
@@ -448,7 +485,7 @@ record query_update_postgres /db/query '{"connectionId":"seed:dev-postgres","sql
 ```
 
 `queryerror_postgres.json` carries `details.position` as the string `"1"`, as node-postgres reports it, and `query_begin_postgres.json` answers `openTransaction: "rolled-back"`.
-Studio at `c9989a6b5` refuses `readOnly: true` on a Postgres seed (`READ_ONLY_ENFORCED.postgres` is false in `src/lib/db/compatibility.ts`, and the seed file then fails to load), so `seed:dev-postgres-readonly` is not marked read only; a confirmed `DELETE FROM orders WHERE false` there answers 403 `PERMISSION_DENIED` from the role's grants.
+Studio (at `c9989a6b5` and at 1.1.0) refuses `readOnly: true` on a Postgres seed (`READ_ONLY_ENFORCED.postgres` is false in `src/lib/db/compatibility.ts`, and the seed file then fails to load), so `seed:dev-postgres-readonly` is not marked read only; a confirmed `DELETE FROM orders WHERE false` there answers 403 `PERMISSION_DENIED` from the role's grants.
 
 The cancel answers of #116 were recorded against a running `SELECT pg_sleep(30)`, with the cancel posted two seconds after the run while its request was still open; the run's request writes its 499 when the cancel lands:
 
@@ -516,7 +553,7 @@ read_key query_redis_zset 'ZRANGE cache:leaderboard 0 -1 WITHSCORES'
 read_key query_redis_stream 'XRANGE session:2:log - + COUNT 100'
 ```
 
-The transaction answers come from one database of the server-level seed, recorded last because the `UPDATE` changes a row:
+The transaction answers come from one database of the server-level seed, recorded after every other Postgres answer because the `UPDATE` changes a row:
 
 ```shell
 record txbegin /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"begin","catalog":"app"}'
@@ -524,10 +561,36 @@ record txquery /db/transaction '{"connectionId":"seed:dev-postgres-server","acti
 record txcommit /db/transaction '{"connectionId":"seed:dev-postgres-server","action":"commit","catalog":"app"}'
 ```
 
-The refusals of `GET /api/auth/me` come from the same Studio, which has libredb/libredb-studio#1922:
+The pair limit of the object search needs more container and kind pairs than the seed holds, so 150 empty schemas are added to `app` for these two answers and dropped after them; 152 schemas of 7 kinds are 1,064 pairs, over Studio's 1,000:
+
+```shell
+pg() { docker compose -f tool/studio-dev/docker-compose.yml exec -T postgres psql -q -U postgres -d app -v ON_ERROR_STOP=1 -c "$1"; }
+pg "DO \$\$ BEGIN FOR i IN 1..150 LOOP EXECUTE format('CREATE SCHEMA pair_limit_%s AUTHORIZATION app_owner', lpad(i::text, 3, '0')); END LOOP; END \$\$;"
+record search_postgres_pair_limit /db/objects/search '{"connectionId":"seed:dev-postgres","term":"ord"}'       # 400 INVENTORY_PAIR_LIMIT
+record search_postgres_kinds /db/objects/search '{"connectionId":"seed:dev-postgres","term":"ord","kinds":["table","view"]}'
+pg "DO \$\$ BEGIN FOR i IN 1..150 LOOP EXECUTE format('DROP SCHEMA pair_limit_%s', lpad(i::text, 3, '0')); END LOOP; END \$\$;"
+```
+
+`search_postgres_pair_limit.json` carries the code `INVENTORY_PAIR_LIMIT` with `limit` 1000 and `pairs` 1064, from Studio 1.1.0 on; Studio before it answered the same 400 without a code.
+
+The governed answers come from the governed Studio at `https://localhost:9444/api`, with `record` pointed there:
+
+```shell
+health ready_governed /ready                                    # with health() pointed at port 9444 as well
+token=$(tool/studio-dev/access-token.sh user) && record managed_governed /connections/managed
+token=$(tool/studio-dev/access-token.sh user) && record policy_governed /connections/policy
+token=$(tool/studio-dev/access-token.sh admin) && record admin_governance /admin/governance
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed stop governance-source
+sleep 20
+health ready_degraded /ready
+token=$(tool/studio-dev/access-token.sh user) && record governance_unavailable /connections/managed  # 503 GOVERNANCE_UNAVAILABLE
+```
+
+The refusals of `GET /api/auth/me` and the sign-out, last, from the first Studio:
 
 ```shell
 token=$(tool/studio-dev/access-token.sh norole) && record me_norole /auth/me     # 403 BEARER_NO_ROLE
+token=$(tool/studio-dev/access-token.sh admin) && record logout /auth/logout '{}'
 token=$(tool/studio-dev/access-token.sh user) && sleep 100 && record me_expired /auth/me
 docker compose -f tool/studio-dev/docker-compose.yml stop keycloak
 docker compose -f tool/studio-dev/docker-compose.yml restart libredb-studio

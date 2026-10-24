@@ -53,6 +53,9 @@ AppError studioError(Object error) {
       return ValidationError(message, code: AppErrorCode.studioTransactionNotOwned.key);
     case 'TRANSACTION_CREDENTIAL_CHANGED':
       return ServerError(message, code: AppErrorCode.studioTransactionCredentialChanged.key);
+    // An object search over more container and kind pairs than one search may list, coded from Studio 1.1.0.
+    case 'INVENTORY_PAIR_LIMIT':
+      return ValidationError(message, code: AppErrorCode.studioSearchPairLimit.key);
   }
 
   if (error.errorCode == 'RATE_LIMITED' || status == 429) {

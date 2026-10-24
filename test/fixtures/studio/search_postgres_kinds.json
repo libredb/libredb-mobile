@@ -1,0 +1,1 @@
+[{"path":["public","order_items"],"name":"order_items","kind":"table","sizeBytes":32768},{"path":["public","orders"],"name":"orders","kind":"table","sizeBytes":49152},{"path":["sales","order_totals"],"name":"order_totals","kind":"view"}]

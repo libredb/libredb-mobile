@@ -63,6 +63,10 @@ enum AppErrorCode {
   /// The statement is longer than the engine's text bound (a 413 from Studio) or the phone's own cap.
   studioStatementTooLarge('studio.statement_too_large'),
 
+  /// An object search would walk more container and kind pairs than Studio lets one search walk
+  /// (`INVENTORY_PAIR_LIMIT`, from Studio 1.1.0); naming fewer kinds narrows it.
+  studioSearchPairLimit('studio.search_pair_limit'),
+
   // --- SQL editor: the statement text kept on the device ---
   /// A saved draft or history cannot be read: its key is gone, the file was changed, or it is of an unknown version.
   editorSavedTextUnreadable('editor.saved_text_unreadable'),

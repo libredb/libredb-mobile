@@ -334,7 +334,7 @@ void main() {
           kind: 'view',
           refresh: any(named: 'refresh'),
         ),
-      ).thenAnswer((_) async => answered(detailAnswer('describe_postgres_orders_readonly')));
+      ).thenAnswer((_) async => answered(detailAnswer('describe_postgres_room_bookings')));
       await harness.pump(tester, location: '/browse/seed%3Adev-postgres/objects/view?container=public');
 
       await tester.tap(find.text('v_orders'));

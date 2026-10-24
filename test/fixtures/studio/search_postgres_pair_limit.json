@@ -1,0 +1,1 @@
+{"limit":1000,"pairs":1064,"error":"this search would list 1064 container and kind pairs, more than the 1000 one search may list; name fewer kinds in \"kinds\"","code":"INVENTORY_PAIR_LIMIT"}

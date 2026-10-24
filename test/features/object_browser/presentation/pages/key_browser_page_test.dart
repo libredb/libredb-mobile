@@ -69,7 +69,7 @@ void main() {
   void answerRedisWalk() => answerPages(
     (request) => Success(switch (request['cursor']) {
       null => _page('keyscan_first'),
-      '406' => _page('keyscan_next'),
+      '1622' => _page('keyscan_next'),
       _ => _page('keyscan_last'),
     }),
   );
@@ -163,7 +163,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'user:*');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
-      expect(progress(tester), 'Found 497 matching keys; the database holds 1,207; more remain');
+      expect(progress(tester), 'Found 499 matching keys; the database holds 1,207; more remain');
 
       await tester.tap(find.text(S.current.keys_load_more));
       await tester.pumpAndSettle();
@@ -172,8 +172,8 @@ void main() {
 
       expect(requests.skip(1), [
         {'pattern': 'user:*', 'database': 1},
-        {'cursor': '406', 'pattern': 'user:*', 'database': 1},
-        {'cursor': '907', 'pattern': 'user:*', 'database': 1},
+        {'cursor': '1622', 'pattern': 'user:*', 'database': 1},
+        {'cursor': '1483', 'pattern': 'user:*', 'database': 1},
       ]);
       expect(progress(tester), 'Found 1,203 matching keys; the database holds 1,207');
       expect(find.text(S.current.keys_load_more), findsNothing, reason: 'the cursor returned to 0');

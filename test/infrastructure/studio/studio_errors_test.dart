@@ -58,6 +58,8 @@ void main() {
       (403, 'BEARER_NO_IDENTITY', AuthError, AppErrorCode.studioAccountHasNoIdentity),
       (409, 'TRANSACTION_NOT_OWNED', ValidationError, AppErrorCode.studioTransactionNotOwned),
       (409, 'TRANSACTION_CREDENTIAL_CHANGED', ServerError, AppErrorCode.studioTransactionCredentialChanged),
+      // From Studio 1.1.0: an object search over more container and kind pairs than one search may list.
+      (400, 'INVENTORY_PAIR_LIMIT', ValidationError, AppErrorCode.studioSearchPairLimit),
     ];
 
     for (final (status, code, type, appCode) in cases) {

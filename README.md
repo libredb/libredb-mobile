@@ -37,7 +37,7 @@ The plan, milestone by milestone, is in [docs/roadmap.md](docs/roadmap.md).
  3. Token expired   ── refresh ────▶ new tokens
 ```
 
-Studio accepts the token through its bearer channel for native clients (`OIDC_BEARER_AUDIENCE`), which is on Studio's main branch and in no release yet: Studio 1.0.0 does not have it.
+Studio accepts the token through its bearer channel for native clients (`OIDC_BEARER_AUDIENCE`), which Studio 1.1.0 is the first release to carry: Studio 1.0.0 does not have it.
 [docs/architecture.md](docs/architecture.md) describes the layers of the app and the Studio contract they follow.
 
 ## Quick start

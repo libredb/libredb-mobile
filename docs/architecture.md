@@ -305,6 +305,7 @@ Studio's error body is `{error, code?, ...}`.
 | `RATE_LIMITED`, any 429 | `studio.rate_limited`, as a `RateLimitedError` with the delay |
 | `TRANSACTION_NOT_OWNED` | `studio.transaction_not_owned` |
 | `TRANSACTION_CREDENTIAL_CHANGED` | `studio.transaction_credential_changed` |
+| `INVENTORY_PAIR_LIMIT` (400, from Studio 1.1.0 on) | `studio.search_pair_limit`, which the object search answers with kind chips that narrow it |
 | any 413, which only a console engine's text bound answers | `studio.statement_too_large` |
 | an answer the app cannot read | `studio.unreadable_answer` |
 

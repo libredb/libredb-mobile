@@ -860,6 +860,8 @@
   "@write_confirm_cancel": {"description": "Closes the confirmation sheet without running the statement."},
   "error_studio_statement_too_large": "Bu deyim çalıştırılamayacak kadar büyük. Kısaltıp tekrar deneyin.",
   "@error_studio_statement_too_large": {"description": "The statement is longer than the engine or the phone accepts."},
+  "error_studio_search_pair_limit": "Aranacak yer çok fazla. Aramayı daraltmak için nesne türlerini seçin.",
+  "@error_studio_search_pair_limit": {"description": "Studio refused an object search that would walk too many container and kind pairs; picking kinds narrows it."},
   "sql_editor_hint": "Bir veya daha fazla deyim yazın",
   "@sql_editor_hint": {"description": "The hint of the empty SQL editor, which runs one statement or a script."},
   "sql_editor_field_label": "Deyim",
