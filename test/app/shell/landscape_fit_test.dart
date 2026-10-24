@@ -127,7 +127,7 @@ void main() {
   });
 
   testWidgets(
-    'with the keyboard up, the connection list keeps the whole statement capture note and the top of the search above it',
+    'with the keyboard up, the connection list keeps the whole capture note and the top of the search above it',
     (tester) async {
       _serveAssets(tester);
       sideways(tester);
