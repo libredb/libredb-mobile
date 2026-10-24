@@ -130,6 +130,58 @@ void main() {
       expect(options.tracesSampleRate, 0.2);
     });
 
+    // Each privacy option is set, not left to the SDK default, so an upgrade that changes a default changes nothing.
+    // Every case starts from options whose value is the unsafe one, as a changed default would leave it.
+    final privacyOptions =
+        <
+          String,
+          ({void Function(SentryFlutterOptions) unsafe, Object? Function(SentryFlutterOptions) read, Object? safe})
+        >{
+          'sendDefaultPii': (unsafe: (o) => o.sendDefaultPii = true, read: (o) => o.sendDefaultPii, safe: false),
+          'attachScreenshot': (unsafe: (o) => o.attachScreenshot = true, read: (o) => o.attachScreenshot, safe: false),
+          'attachViewHierarchy': (
+            unsafe: (o) => o.attachViewHierarchy = true,
+            read: (o) => o.attachViewHierarchy,
+            safe: false,
+          ),
+          'maxRequestBodySize': (
+            unsafe: (o) => o.maxRequestBodySize = MaxRequestBodySize.always,
+            read: (o) => o.maxRequestBodySize,
+            safe: MaxRequestBodySize.never,
+          ),
+          'replay.sessionSampleRate': (
+            unsafe: (o) => o.replay.sessionSampleRate = 1,
+            read: (o) => o.replay.sessionSampleRate,
+            safe: 0.0,
+          ),
+          'replay.onErrorSampleRate': (
+            unsafe: (o) => o.replay.onErrorSampleRate = 1,
+            read: (o) => o.replay.onErrorSampleRate,
+            safe: 0.0,
+          ),
+          'replay.networkCaptureBodies': (
+            unsafe: (o) => o.replay.networkCaptureBodies = true,
+            read: (o) => o.replay.networkCaptureBodies,
+            safe: false,
+          ),
+          'enablePrintBreadcrumbs': (
+            unsafe: (o) => o.enablePrintBreadcrumbs = true,
+            read: (o) => o.enablePrintBreadcrumbs,
+            safe: false,
+          ),
+        };
+
+    for (final MapEntry(key: name, value: option) in privacyOptions.entries) {
+      test('sets $name explicitly, whatever the SDK default is', () {
+        final options = SentryFlutterOptions(platform: const _AndroidPlatform());
+        option.unsafe(options);
+
+        configureSentryOptions(options, dsn: _dsn, release: '1.0.0+1');
+
+        expect(option.read(options), option.safe);
+      });
+    }
+
     test('installs a beforeSend that masks an email and a beforeBreadcrumb that masks one', () async {
       final options = SentryFlutterOptions(platform: const _AndroidPlatform());
 

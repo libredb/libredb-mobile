@@ -1585,6 +1585,33 @@ void main() {
       expect(text, allOf(startsWith('Invalid Request: Password '), endsWith(' is too weak')));
     });
 
+    // A Studio error body carries the database's words in `error` and `details` and a statement in `fixStatement`; the
+    // exception text reaches the log and, for an uncaught error, Sentry, so it leaves them out, while the fields that a
+    // screen reads keep them.
+    test('leaves the database text and the statement of a Studio error out of the exception text', () async {
+      adapter.reply(
+        401,
+        jsonEncode({
+          'error': 'password authentication failed for user "payroll_reader"',
+          'code': 'AUTH_ERROR',
+          'statusCode': 401,
+          'details': {'detail': 'role payroll_reader is locked'},
+          'fixStatement': 'ALTER ROLE payroll_reader LOGIN',
+        }),
+      );
+      AppException? failure;
+      try {
+        await client.post('/db/query', {'connectionId': 'seed:pg', 'sql': 'SELECT 1'});
+      } on AppException catch (e) {
+        failure = e;
+      }
+
+      expect(failure.toString(), 'Unauthorized: {"code":"[REDACTED]","statusCode":401}');
+      expect(failure!.serverMessage, 'password authentication failed for user "payroll_reader"');
+      expect(failure.fixStatement, 'ALTER ROLE payroll_reader LOGIN');
+      expect(failure.errorCode, 'AUTH_ERROR');
+    });
+
     // Guards against the scrub losing the body: an error without a credential reaches the log as the server sent it.
     test('keeps an error body without a credential as the server sent it', () async {
       const body = '{"status": 400, "title": "Bad Request", "detail": "login already used", "path": "/api/register"}';

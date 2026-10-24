@@ -50,7 +50,17 @@ final _log = AppLogger.getLogger('SentryStart');
 
 /// The options `AppBootstrap.run` starts the Dart SDK with: the DSN, the
 /// scrubbing hooks of [installSentryScrubbers], the native start of
-/// [configureNativeSdkStart], the trace sample rate and the release.
+/// [configureNativeSdkStart], the trace sample rate, the release and the
+/// privacy options.
+///
+/// Each privacy option is set even where it equals today's SDK default, so an
+/// upgrade that changes a default cannot start sending more: no default
+/// personal data, no screenshot and no view hierarchy attached to an event, no
+/// request body, and Session Replay off, with no network body in a replay.
+/// Sentry Logs come only from an explicit call of the SDK's logger, which the
+/// app makes nowhere: the Dart SDK collects none by itself, and print
+/// breadcrumbs are off, so no `AppLogger` line becomes a log or a breadcrumb
+/// (`test/architecture/sentry_native_scrub_patterns_test.dart` keeps it so).
 ///
 /// On Android the host app starts the native SDK, so a native option set
 /// here must also be set in `NativeSentry.kt` of the Android host app (under
@@ -61,4 +71,13 @@ void configureSentryOptions(SentryFlutterOptions options, {required String dsn, 
   configureNativeSdkStart(options);
   options.tracesSampleRate = 0.2;
   options.release = release;
+  options
+    ..sendDefaultPii = false
+    ..attachScreenshot = false
+    ..attachViewHierarchy = false
+    ..maxRequestBodySize = MaxRequestBodySize.never;
+  options.replay
+    ..sessionSampleRate = 0
+    ..onErrorSampleRate = 0
+    ..networkCaptureBodies = false;
 }

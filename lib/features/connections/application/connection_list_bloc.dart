@@ -148,7 +148,8 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
         } else {
           emit(onScreen._with(refreshError: error));
         }
-        _log.error('END: onLoad error: {}', [error.message]);
+        // The error's type and code; its message is Studio's own words.
+        _log.error('END: onLoad error: {}', [error]);
     }
   }
 
