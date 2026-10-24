@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -53,6 +54,24 @@ SourceText _text(String text, {String language = 'sql', SourceTruncation? trunca
   origin: SourceOrigin.stored,
   truncated: truncated,
 );
+
+/// Share files that also say when a share has ended: a file share ends once its own file is removed, after the share
+/// sheet has answered. A test waits on that event, never on a clock, since writing the file can take seconds on a busy
+/// disk.
+class _ShareFiles extends TemporaryShareFiles {
+  _ShareFiles({super.temporaryDirectory});
+
+  final ended = Completer<void>();
+
+  @override
+  Future<void> delete(File file) async {
+    try {
+      await super.delete(file);
+    } finally {
+      ended.complete();
+    }
+  }
+}
 
 /// The span of [text] in the source lines on screen.
 TextSpan? _span(WidgetTester tester, String text) {
@@ -244,7 +263,7 @@ void main() {
 
   group('Share', () {
     late Directory temporary;
-    late TemporaryShareFiles shareFiles;
+    late _ShareFiles shareFiles;
 
     /// The paths of the files left under the temporary directory.
     List<String> left() => [
@@ -252,23 +271,18 @@ void main() {
         file.path.substring(temporary.path.length + 1),
     ];
 
-    /// Taps Share and waits, for up to five seconds, until the share sheet has been asked and [ended] holds; by default
-    /// until no file is left under the temporary directory.
-    Future<void> share(WidgetTester tester, {bool Function()? ended}) async {
-      final done = ended ?? () => left().isEmpty;
+    /// Taps Share and waits until [ended] completes; by default until the share has ended and removed its file.
+    Future<void> share(WidgetTester tester, {Future<void>? ended}) async {
       await tester.runAsync(() async {
         await tester.tap(find.byTooltip('Share'));
-        final deadline = DateTime.now().add(const Duration(seconds: 5));
-        while ((shareCalls.isEmpty || !done()) && DateTime.now().isBefore(deadline)) {
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
+        await (ended ?? shareFiles.ended.future);
       });
       await tester.pump();
     }
 
     setUp(() {
       temporary = Directory.systemTemp.createTempSync('source_share');
-      shareFiles = TemporaryShareFiles(temporaryDirectory: () async => temporary);
+      shareFiles = _ShareFiles(temporaryDirectory: () async => temporary);
     });
 
     tearDown(() => temporary.deleteSync(recursive: true));
@@ -359,14 +373,15 @@ void main() {
       final files = MockTemporaryShareFiles();
       final written = File('${temporary.path}/share_files/1/order_totals-definition.sql')..createSync(recursive: true);
       when(() => files.write(any(), any())).thenAnswer((_) async => written);
-      var refused = false;
+      // Made outside the fake clock's zone, which runs what the completion schedules only when the test pumps.
+      final refused = (await tester.runAsync(() async => Completer<void>()))!;
       when(() => files.delete(written)).thenAnswer((_) async {
-        refused = true;
+        refused.complete();
         throw const FileSystemException('refused');
       });
       await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: files));
 
-      await share(tester, ended: () => refused);
+      await share(tester, ended: refused.future);
 
       expect(find.text('The shared file stays on this phone until you sign out: Something went wrong'), findsOne);
       expect(find.textContaining('FileSystemException'), findsNothing);

@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/obje
 import 'package:libredb_mobile/features/settings/application/remove_my_data_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 
 import '../../support/test_env.dart';
@@ -41,14 +43,42 @@ final _longSource = ObjectSource(
   ],
 );
 
+/// The share files of the app, which also say when a share has ended: a file share ends once its own file is removed,
+/// after the share sheet has answered. A test waits on that event, never on a clock, since writing the file can take
+/// seconds on a busy disk.
+class _ShareFiles extends TemporaryShareFiles {
+  final ended = Completer<void>();
+
+  @override
+  Future<void> delete(File file) async {
+    try {
+      await super.delete(file);
+    } finally {
+      ended.complete();
+    }
+  }
+}
+
+/// The local sign-in's dependencies, with [shareFiles] wherever the app uses its share files.
+class _Dependencies extends LocalSignInDependencies {
+  _Dependencies(this.shareFiles) : super(appConfig: const AppConfig.test());
+
+  final _ShareFiles shareFiles;
+
+  @override
+  TemporaryShareFiles createTemporaryShareFiles() => shareFiles;
+}
+
 // Regression (#202): a source shared as a file stayed in the temporary directory after the share sheet closed, after
 // the sign-out and after 'Remove my data', so the next account on the phone could read it.
 void main() {
   late Directory temporary;
   late Directory support;
   late List<MethodCall> shareCalls;
+  late _ShareFiles shareFiles;
 
   setUp(() {
+    shareFiles = _ShareFiles();
     temporary = Directory.systemTemp.createTempSync('share_cleanup_temporary');
     support = Directory.systemTemp.createTempSync('share_cleanup_support');
     shareCalls = [];
@@ -93,7 +123,7 @@ void main() {
     late BuildContext scope;
     await tester.pumpWidget(
       AppScope(
-        dependencies: LocalSignInDependencies(appConfig: const AppConfig.test()),
+        dependencies: _Dependencies(shareFiles),
         defaultLocale: const Locale('en'),
         child: Builder(
           builder: (context) {
@@ -121,12 +151,7 @@ void main() {
   Future<void> shareLongSource(WidgetTester tester) async {
     await tester.runAsync(() async {
       await tester.tap(find.byTooltip('Share'));
-      // The share's own file is removed after the share sheet answers; up to five seconds, so a file left fails below.
-      final deadline = DateTime.now().add(const Duration(seconds: 5));
-      while ((shareCalls.isEmpty || temporaryFiles().any((path) => !path.startsWith('share_plus/'))) &&
-          DateTime.now().isBefore(deadline)) {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
+      await shareFiles.ended.future;
     });
     await tester.pump();
     expect(shareCalls, hasLength(1));
