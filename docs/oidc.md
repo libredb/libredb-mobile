@@ -483,7 +483,7 @@ Each code is an `AppErrorCode` in the `auth.` namespace, with one sentence in ea
 
 | Code | When | Sentence (English) |
 | --- | --- | --- |
-| `auth.oidc_config` | Invalid configuration, checked at bootstrap; such a build starts signed out, whatever session is stored | Single sign-on is not configured correctly in this app. Contact your administrator. |
+| `auth.oidc_config` | Invalid configuration, checked at bootstrap; such a build starts signed out, whatever session is stored. Also a discovery document that names an endpoint the app uses that is not https ([security.md](security.md), "Encryption in transit") | Single sign-on is not configured correctly in this app. Contact your administrator. |
 | `auth.oidc_discovery` | Discovery, the JWKS or the token endpoint unreachable, a TLS failure, a response that is not JSON, or a discovery document naming another issuer | The identity provider could not be reached. Try again later, or contact your administrator if this continues. |
 | `auth.oidc_no_claims` | The ID token has no string `sub` or `iss` | Sign-in failed. Please try again. |
 | `auth.oidc_failed` | Any other failure after the provider answered: a `state` mismatch, a failed code exchange, an invalid ID token, an answer without `expires_in`, or an error from the provider | Sign-in failed. Please try again. |

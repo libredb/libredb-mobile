@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
@@ -16,6 +17,7 @@ import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
 
 import '../../../support/loopback_tls_server.dart';
+import '../../../support/printed_lines.dart';
 import '../../../support/pin_test_certificates.dart';
 import 'support/fake_provider.dart';
 
@@ -835,6 +837,77 @@ void main() {
       provider.discoveryAnswer = () => throw http.ClientException('connection refused');
 
       expect(await newClient().endProviderSession(), isA<ProviderLogoutFailed>());
+    });
+  });
+
+  // An https issuer whose discovery names an http endpoint would send the code, the PKCE verifier, the refresh token
+  // or the ID token hint over plain http (#218); neither the client nor oidc_core checked it.
+  group('discovery endpoints', () {
+    const endpoints = ['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'end_session_endpoint'];
+
+    void discoveryWith(String key, Object value) {
+      provider.discoveryAnswer = () => http.Response(jsonEncode({...provider.discovery, key: value}), 200);
+    }
+
+    String httpVersion(String key) => '${provider.discovery[key]}'.replaceFirst('https://', 'http://');
+
+    test('a sign-in refuses an endpoint that is not https before it opens the browser, logging only its key', () async {
+      for (final key in endpoints) {
+        for (final value in [httpVersion(key), '/relative/path', 'https:///no-host']) {
+          discoveryWith(key, value);
+          late OidcSignInOutcome outcome;
+          // A fresh store each time, since the store keeps a discovery document for five minutes.
+          final client = newClient(transactionStore: OidcTransactionStore());
+          final lines = await printedLines(() async => outcome = await signIn(client));
+
+          expect(outcome, _failed(OidcFailure.insecureEndpoint), reason: '$key=$value');
+          expect(platform.authorizeRequests, isEmpty, reason: '$key=$value');
+          expect(provider.tokenRequests, isEmpty, reason: '$key=$value');
+          expect(lines.where((line) => line.contains(key)), isNotEmpty, reason: 'no line names $key');
+          expect(lines.where((line) => line.contains(value)), isEmpty, reason: 'a line printed $value');
+        }
+      }
+    });
+
+    test('a refresh sends no refresh token to an http token endpoint and keeps the session', () async {
+      discoveryWith('token_endpoint', httpVersion('token_endpoint'));
+
+      final result = await newClient().refresh(
+        refreshToken: 'refresh-old-value',
+        idToken: provider.signIdToken(),
+        accessToken: 'access-old-value',
+        accessTokenExpiresAt: clock.now().toUtc(),
+      );
+
+      expect(result, isA<RotationUnavailable>());
+      expect(provider.requests.where((request) => request.method == 'POST'), isEmpty);
+    });
+
+    test('a provider logout never opens an http end_session_endpoint', () async {
+      discoveryWith('end_session_endpoint', httpVersion('end_session_endpoint'));
+
+      expect(await newClient().endProviderSession(idTokenHint: 'id-token-value'), isA<ProviderLogoutFailed>());
+      expect(platform.endSessionOptions, isEmpty);
+    });
+
+    test('an https discovery without an end_session_endpoint signs in', () async {
+      final noLogout = FakeProvider(endSessionEndpoint: false);
+      installFakePlatform(noLogout);
+      expect(await signIn(newClient(at: noLogout)), isA<OidcSignedIn>());
+    });
+
+    test('a loopback http issuer, never in a prod build, may name http endpoints on its own host', () async {
+      final local = FakeProvider(issuer: 'http://localhost:8080/realms/demo');
+      installFakePlatform(local);
+      expect(await signIn(newClient(at: local)), isA<OidcSignedIn>());
+    });
+
+    test('a loopback http issuer may not name an http endpoint on another host', () async {
+      final local = FakeProvider(issuer: 'http://localhost:8080/realms/demo');
+      installFakePlatform(local);
+      local.discoveryAnswer = () =>
+          http.Response(jsonEncode({...local.discovery, 'token_endpoint': 'http://idp.example.test/token'}), 200);
+      expect(await signIn(newClient(at: local)), _failed(OidcFailure.insecureEndpoint));
     });
   });
 }

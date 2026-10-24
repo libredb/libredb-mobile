@@ -62,6 +62,22 @@ enum OidcFailure {
   /// The provider's certificate matched none of the `OIDC_CERT_PINS`: the connection may be intercepted, and the
   /// handshake failed before any request was written.
   untrustedCertificate,
+
+  /// Discovery named an endpoint the app uses that is not https, so nothing was sent to it: the provider is
+  /// misconfigured, or the discovery answer was tampered with.
+  insecureEndpoint,
+}
+
+/// Thrown when discovery names an endpoint the client uses that is not an https URL with a host ([endpoint] is the
+/// discovery key, such as `token_endpoint`). It never carries the URL.
+final class OidcInsecureEndpointException implements Exception {
+  const OidcInsecureEndpointException(this.endpoint);
+
+  /// The discovery key of the endpoint.
+  final String endpoint;
+
+  @override
+  String toString() => 'OidcInsecureEndpointException: $endpoint is not an https URL';
 }
 
 /// How a sign-in ended.
@@ -185,6 +201,9 @@ final class OidcClient implements IOidcClient {
     final AppOidcUserManager manager;
     try {
       manager = await _initializedManager();
+    } on OidcInsecureEndpointException catch (error) {
+      _log.error('The discovery document names a {} that is not https, so the sign-in is refused', [error.endpoint]);
+      return const OidcSignInFailed(OidcFailure.insecureEndpoint);
     } on Object catch (error) {
       if (_isPinMismatch(error)) return _signInFailed(error);
       _log.warn('The identity provider could not be reached to sign in: {}', [() => _describe(error)]);
@@ -347,13 +366,37 @@ final class OidcClient implements IOidcClient {
   /// Runs [manager]'s `init()` and makes it the run's manager, or disposes and drops it when `init()` fails: the
   /// package cannot retry `init()` on the same instance.
   Future<AppOidcUserManager> _initialize(AppOidcUserManager manager) async {
-    final ready = _ready = manager.init().then((_) => manager);
+    final ready = _ready = manager.init().then((_) {
+      _requireSecureEndpoints(manager.discoveryDocument);
+      return manager;
+    });
     try {
       return await ready;
     } on Object {
       if (identical(_ready, ready)) _ready = null;
       await manager.dispose();
       rethrow;
+    }
+  }
+
+  /// The discovery keys of the endpoints the client sends to or opens: the sign-in page, the code exchange and the
+  /// refresh, the keys that check an ID token, and the provider logout.
+  static const _usedEndpoints = ['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'end_session_endpoint'];
+
+  /// Throws [OidcInsecureEndpointException] for the first of [_usedEndpoints] that [discovered] names but that is not
+  /// an https URL with a host. Only an http issuer, which [OidcSettings] allows on a loopback host and a prod build
+  /// never starts with, may name http endpoints, and only on its own host.
+  void _requireSecureEndpoints(OidcProviderMetadata discovered) {
+    final issuer = _settings.issuer;
+    for (final key in _usedEndpoints) {
+      final value = discovered.src[key];
+      if (value == null) continue;
+      final uri = value is String ? Uri.tryParse(value) : null;
+      final secure =
+          uri != null &&
+          uri.host.isNotEmpty &&
+          (uri.scheme == 'https' || (issuer.scheme == 'http' && uri.scheme == 'http' && uri.host == issuer.host));
+      if (!secure) throw OidcInsecureEndpointException(key);
     }
   }
 
