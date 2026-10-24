@@ -362,6 +362,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "You are signed out of this app, but your session at the identity provider may still be active.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
+    "error_auth_share_files_not_removed": MessageLookupByLibrary.simpleMessage(
+      "Files shared on this phone earlier could not be removed, so you are not signed in. Try again.",
+    ),
     "error_browse_rows_interrupted": MessageLookupByLibrary.simpleMessage(
       "Reading the rows was interrupted when the app went to the background; Studio cancelled it.",
     ),

@@ -53,6 +53,7 @@ What the app keeps per account outlives it on purpose, so the same account finds
 - The share files (`TemporaryShareFiles`, `lib/infrastructure/storage/temporary_share_files.dart`): an object source longer than 100,000 characters is shared as a file in `<temporary directory>/share_files/`, removed once the share sheet answers.
   On Android share_plus copies a shared file into `<cache>/share_plus/` and keeps it until the next share, since the receiving app reads that copy after the sheet has closed.
   Both folders go with every sign-out (`AuthSessionRepository.clear`) and with 'Remove my data'; a removal the phone refuses is shown, and the sign-out then says that data stayed behind.
+  A sign-in removes them too before it stores the new session (`SsoAuthRepository`), for a share the app was killed in before a session that ended without the wipe, and a removal the phone refuses refuses the sign-in.
 - The language, the theme and the result view mode are device preferences and stay.
 - `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, when a `StorageKeys` value is neither cleared nor named a device preference, when a `SecureStorageKeys` value is not a session token that a sign-out deletes, or when a file outside its list reaches a device directory through path_provider.
 - Every store is tried even when one fails; then the user stays signed in and sees the failure with Retry, which names no stored value, and the log names only the store and the error type.

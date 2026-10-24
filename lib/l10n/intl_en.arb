@@ -156,6 +156,7 @@
   "error_auth_oidc_failed": "Sign-in failed. Please try again.",
   "@error_auth_oidc_failed": {},
   "error_auth_oidc_logout_incomplete": "You are signed out of this app, but your session at the identity provider may still be active.",
+  "error_auth_share_files_not_removed": "Files shared on this phone earlier could not be removed, so you are not signed in. Try again.",
   "@error_auth_oidc_logout_incomplete": {},
   "login_sso_button": "Sign in with SSO",
   "@login_sso_button": {},

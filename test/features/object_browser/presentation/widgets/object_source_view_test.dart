@@ -325,6 +325,20 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
     });
 
+    testWidgets('says nothing when a sign-out removed the file while the share sheet was open', (tester) async {
+      answerShare = (call) async {
+        await shareFiles.clear();
+        return 'dev.fluttercommunity.plus/share/success';
+      };
+      await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: shareFiles));
+
+      await share(tester);
+
+      expect(shareCalls, hasLength(1));
+      expect(left(), isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
     testWidgets('removes the file of a share that fails, and shows the failure', (tester) async {
       late File shared;
       answerShare = (call) {

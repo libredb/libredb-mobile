@@ -42,7 +42,8 @@ class TemporaryShareFiles {
     }
   }
 
-  /// Removes [file], written by [write], with its folder; throws when the device refuses.
+  /// Removes [file], written by [write], with its folder; throws when the device refuses. A folder already gone, which
+  /// a sign-out while the share sheet was open removes, is the state this asks for, so it answers without an error.
   ///
   /// The removals here use the synchronous file calls: each folder holds a file or a few, and the session wipe of a
   /// sign-out then never waits for the I/O event loop, which a widget test's fake clock does not run.
@@ -52,7 +53,7 @@ class TemporaryShareFiles {
     if (directory.parent.path != '${root.path}/$folder') {
       throw ArgumentError.value('(a file of another folder)', 'file', 'was not written by TemporaryShareFiles');
     }
-    directory.deleteSync(recursive: true);
+    if (directory.existsSync()) directory.deleteSync(recursive: true);
   }
 
   /// Removes every file [write] wrote and the copies share_plus keeps; throws when the device refuses.

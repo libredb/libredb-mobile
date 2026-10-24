@@ -595,6 +595,16 @@ class S {
     );
   }
 
+  /// `Files shared on this phone earlier could not be removed, so you are not signed in. Try again.`
+  String get error_auth_share_files_not_removed {
+    return Intl.message(
+      'Files shared on this phone earlier could not be removed, so you are not signed in. Try again.',
+      name: 'error_auth_share_files_not_removed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Sign in with SSO`
   String get login_sso_button {
     return Intl.message('Sign in with SSO', name: 'login_sso_button', desc: '', args: []);

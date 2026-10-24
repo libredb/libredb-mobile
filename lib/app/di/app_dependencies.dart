@@ -166,9 +166,9 @@ class AppDependencies {
     return OidcClient(settings: settings, httpClient: pins.isEmpty ? null : pinnedHttpClient(pins));
   }
 
-  /// The single sign-on, which stores the session through [sessionRepository].
+  /// The single sign-on, which removes the files a share left and then stores the session through [sessionRepository].
   ISsoAuthRepository createSsoAuthRepository(IOidcClient client, IAuthSessionRepository sessionRepository) =>
-      SsoAuthRepository(client: client, sessionRepository: sessionRepository);
+      SsoAuthRepository(client: client, sessionRepository: sessionRepository, shareFiles: createTemporaryShareFiles());
 
   /// The token refresh, through [client] at the provider's token endpoint.
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>

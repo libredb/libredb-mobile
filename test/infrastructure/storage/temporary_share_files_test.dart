@@ -55,6 +55,27 @@ void main() {
     expect(second.existsSync(), isTrue);
   });
 
+  // A sign-out while the share sheet was open cleared the folder already, so the removal has nothing left to do.
+  test('delete of a file a clear already removed succeeds', () async {
+    final file = await files.write('a.sql', [1]);
+    await files.clear();
+
+    await files.delete(file);
+
+    expect(left(), isEmpty);
+  });
+
+  test('delete throws when the device refuses the removal', () async {
+    final file = await files.write('a.sql', [1]);
+    // A folder the app cannot write to keeps the share's folder in it.
+    final shareFolder = file.parent.parent.path;
+    Process.runSync('chmod', ['555', shareFolder]);
+    addTearDown(() => Process.runSync('chmod', ['755', shareFolder]));
+
+    await expectLater(files.delete(file), throwsA(isA<FileSystemException>()));
+    expect(file.parent.existsSync(), isTrue);
+  });
+
   test('delete refuses a file that is not one of its own', () async {
     final other = File('${temporary.path}/other.txt')..writeAsStringSync('x');
 
