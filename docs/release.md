@@ -93,7 +93,7 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 | `OIDC_SCOPE`, `OIDC_AUDIENCE`, `OIDC_PROMPT`, `OIDC_AUTO_REDIRECT`, `OIDC_LOGOUT_HINT` | No |
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
-| `PLAY_RELEASE_STATUS` | No; `completed` by default, `draft` while Play still treats the app as a draft |
+| `PLAY_RELEASE_STATUS` | No; `completed` by default; set it to `draft` until the app's first publication on Play, then remove it |
 
 An empty variable is left out of the build, and the build stops when a required one is missing.
 The app stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
@@ -145,12 +145,15 @@ Only the maintainer does these, and no value from them is ever written into an i
 1. Create the upload key on your own machine, for example with `keytool -genkeypair -v -keystore <path>/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`, and keep a backup of the keystore and its passwords outside the repository.
 2. In the Play Console, create the app with the package name `org.libredb.mobile` and enroll it in Play App Signing, so Google holds the app signing key and the upload key can be reset if it is lost.
 3. In the repository settings, create the environment `release-signing`, add yourself as its required reviewer, limit its deployment branches and tags to `main` and `v*.*.*`, and add the four signing secrets and `ANDROID_UPLOAD_CERT_SHA256` of the upload key.
-   The reviewer matters because the tag ruleset below lets the GitHub Actions app create `v*` tags, so a workflow on another branch with `contents: write` could create a tag that passes the branch and tag limit; with the reviewer, every build that reaches the upload key waits for your approval.
+   The reviewer is the control on the upload key: the tag ruleset below does not restrict creating `v*` tags, so a workflow on another branch with `contents: write` could create a tag that passes the branch and tag limit; with the reviewer, every build that reaches the upload key waits for your approval.
    `base64 -w0 <path>/upload-keystore.jks` prints the keystore on one line, and `keytool -list -v -keystore <path>/upload-keystore.jks -alias upload` shows the SHA-256 fingerprint.
 4. Create the environment `release-dry-run` with the same names for a throwaway keystore made only for dry runs; never put the upload key there.
 5. Create the environment `play-internal`, add yourself as its required reviewer, and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
 6. Add the deployment's variables to the repository.
-7. Add a tag ruleset for `refs/tags/v*` that restricts creating, updating and deleting matching tags to yourself and the GitHub Actions app in its bypass list, so release-please can still tag its releases and no one else can start a signed build with a tag.
+   Set `PLAY_RELEASE_STATUS` to `draft` until the app's first publication on Play, and remove it after.
+7. Add a tag ruleset for `refs/tags/v*` that blocks updating and deleting matching tags, with the organization's admins in its bypass list, so only an admin can move or remove a released tag.
+   It does not restrict creating tags: release-please creates `v*` tags with `GITHUB_TOKEN`, and GitHub does not accept the GitHub Actions app as a bypass actor of this ruleset, so a creation rule would block every release.
+   The required reviewer of `release-signing` from step 3 is therefore the control on who can start a signed build, together with that environment's limit to `main` and `v*.*.*` and write access to the repository only for the organization's admins.
 8. In Sentry, open the organization `libredb-org`, go to Settings > Developer Settings > Organization Tokens, and create a token named for this workflow, such as `libredb-mobile release`.
    An organization token can create releases and upload debug files and mappings for the organization's projects, and nothing else.
    Copy it once into the secret `SENTRY_AUTH_TOKEN` of the `release-signing` environment, and never into `release-dry-run`, a file, an issue or a log.
