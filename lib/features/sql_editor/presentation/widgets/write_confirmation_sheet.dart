@@ -72,7 +72,8 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
   /// The width from which the name field and the buttons share one row, as on a phone held sideways.
   static const _wideFrom = 600.0;
 
-  /// The height of the button row below the name field, scrolled into view with the field on a narrow sheet.
+  /// The height of one line of buttons below the name field at a text scale of 1; a focus on a narrow sheet scrolls
+  /// two such lines into view with the field, since the buttons wrap when they do not fit side by side.
   static const _buttonRowHeight = 56.0;
 
   final _typedName = TextEditingController();
@@ -226,17 +227,25 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
       smartDashesType: SmartDashesType.disabled,
       smartQuotesType: SmartQuotesType.disabled,
       spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-      scrollPadding: EdgeInsets.fromLTRB(20, 20, 20, wide ? 20 : 20 + _buttonRowHeight),
+      scrollPadding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        wide ? 20 : 20 + MediaQuery.textScalerOf(context).scale(2 * _buttonRowHeight),
+      ),
       style: const TextStyle(fontFamily: 'monospace'),
       decoration: InputDecoration(labelText: s.write_confirm_name_label(widget.connection.name)),
       onChanged: (_) => setState(() {}),
     ),
   );
 
-  Widget _buttons(S s, ColorScheme scheme) => Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    mainAxisSize: MainAxisSize.min,
+  /// Cancel and Run side by side, or Run on a second line when a narrow sheet has no room for both, as with long labels
+  /// at a large text scale (#182).
+  Widget _buttons(S s, ColorScheme scheme) => Wrap(
+    alignment: WrapAlignment.end,
+    crossAxisAlignment: WrapCrossAlignment.center,
     spacing: AppSpacing.sm,
+    runSpacing: AppSpacing.xs,
     children: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(WriteConfirmation.cancelled),

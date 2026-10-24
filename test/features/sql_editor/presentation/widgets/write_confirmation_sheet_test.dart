@@ -345,6 +345,7 @@ void main() {
       readOnly: true,
       access: StudioAccess.read,
     );
+    const tr = Locale('tr');
     const cases = [
       (name: 'landscape', size: Size(829, 393), inset: 0.0, scale: 1.0, locale: Locale('en')),
       (name: 'landscape, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('en')),
@@ -352,6 +353,15 @@ void main() {
       (name: 'landscape, Turkish, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('tr')),
       (name: 'landscape, text scale 1.3', size: Size(829, 393), inset: 0.0, scale: 1.3, locale: Locale('en')),
       (name: 'small portrait phone, keyboard up', size: Size(320, 568), inset: 260.0, scale: 1.0, locale: Locale('en')),
+      // #182: the Turkish labels at text scale 1.3 do not fit side by side on a 320 pixel wide sheet.
+      (name: 'small portrait phone, Turkish, text scale 1.3', size: Size(320, 568), inset: 0.0, scale: 1.3, locale: tr),
+      (
+        name: 'small portrait phone, Turkish, text scale 1.3, keyboard up',
+        size: Size(320, 568),
+        inset: 260.0,
+        scale: 1.3,
+        locale: tr,
+      ),
     ];
     for (final c in cases) {
       testWidgets('fits with every line shown: ${c.name}', (tester) async {
@@ -383,6 +393,11 @@ void main() {
         }
         expect(_nameField.hitTestable(), findsOneWidget);
         expect(_run.hitTestable(), findsOneWidget);
+        final screen = Offset.zero & c.size;
+        for (final button in [_run, find.widgetWithText(TextButton, _s.write_confirm_cancel)]) {
+          final rect = tester.getRect(button);
+          expect(screen.contains(rect.topLeft) && screen.contains(rect.bottomRight - const Offset(1, 1)), isTrue);
+        }
         expect(_runEnabled(tester), isTrue);
         await tester.tap(_run);
         await tester.pumpAndSettle();
