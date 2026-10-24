@@ -185,8 +185,16 @@ void main() {
     ),
   );
 
-  Future<void> pump(WidgetTester tester, {StudioConnection connection = _postgres, Locale? locale}) async {
+  /// [offline], when given, turns the device on and off line while the page is open; the page opens online otherwise.
+  Future<void> pump(
+    WidgetTester tester, {
+    StudioConnection connection = _postgres,
+    Locale? locale,
+    ValueNotifier<bool>? offline,
+  }) async {
     whenListen(active, const Stream<ActiveConnectionState>.empty(), initialState: ActiveConnectionSelected(connection));
+    final offlineStatus = offline ?? ValueNotifier(false);
+    if (offline == null) addTearDown(offlineStatus.dispose);
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
@@ -224,7 +232,10 @@ void main() {
                   subjectHash: 'account-hash',
                   child: StatementCaptureScope(
                     recordsInFull: false,
-                    child: OfflineStatus(isOffline: false, child: const SqlPage()),
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: offlineStatus,
+                      builder: (context, isOffline, _) => OfflineStatus(isOffline: isOffline, child: const SqlPage()),
+                    ),
                   ),
                 ),
               ),
@@ -527,8 +538,8 @@ void main() {
       return answer;
     }
 
-    Future<void> start(WidgetTester tester, {Locale? locale}) async {
-      await pump(tester, locale: locale);
+    Future<void> start(WidgetTester tester, {Locale? locale, ValueNotifier<bool>? offline}) async {
+      await pump(tester, locale: locale, offline: offline);
       await type(tester, text);
       await tester.tap(runButton());
       await tester.pumpAndSettle();
@@ -569,6 +580,33 @@ void main() {
       expect(find.byKey(ScriptElapsedTime.textKey), findsNothing);
       verify(() => repository.cancel(_postgres.id, any())).called(1);
       expect(scriptsOf(text), 1);
+    });
+
+    testWidgets('offline, Cancel is disabled with the reason and posts no cancel until the device is back', (
+      tester,
+    ) async {
+      holdScript();
+      when(() => repository.cancel(any(), any())).thenAnswer((_) async => const Success(true));
+      final offline = ValueNotifier(false);
+      addTearDown(offline.dispose);
+      await start(tester, offline: offline);
+      offline.value = true;
+      await tester.pump();
+
+      expect(tester.widget<ButtonStyleButton>(runButton()).enabled, isFalse);
+      expect(find.text('Needs an internet connection'), findsOneWidget);
+      await tester.tap(runButton(), warnIfMissed: false);
+      await tester.pump();
+      verifyNever(() => repository.cancel(any(), any()));
+
+      offline.value = false;
+      await tester.pump();
+      expect(find.text('Needs an internet connection'), findsNothing);
+      await tester.tap(runButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cancelled'), findsOneWidget);
+      verify(() => repository.cancel(_postgres.id, any())).called(1);
     });
 
     testWidgets('the elapsed time is in Turkish', (tester) async {

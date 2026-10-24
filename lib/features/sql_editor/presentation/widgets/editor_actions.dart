@@ -15,8 +15,9 @@ import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 /// selection, since only the selection is sent.
 ///
 /// While a statement runs, Run becomes Cancel, or Stop waiting on an engine that cannot cancel; it reads Cancelling
-/// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down. After a
-/// cancel that failed otherwise, Stop waiting stands beside Cancel and drops the request without posting again.
+/// and is disabled while Studio is asked, and stays disabled while a rate limit on the cancel counts down. Cancel needs
+/// Studio, so it is disabled offline with the reason. After a cancel that failed otherwise, Stop waiting stands beside
+/// Cancel and drops the request without posting again; Stop waiting posts nothing, so it works offline.
 class EditorActions extends StatelessWidget {
   const EditorActions({
     super.key,
@@ -68,12 +69,17 @@ class EditorActions extends StatelessWidget {
                 // stop, so the request can also be dropped without posting another cancel.
                 if (cancelFailure != null && cancelFailure is! RateLimitedError)
                   OutlinedButton(key: stopWaitingKey, onPressed: onStopWaiting, child: Text(s.sql_editor_stop_waiting)),
-                FilledButton.tonalIcon(
-                  key: runKey,
-                  onPressed: waitingForRetry ? null : onCancel,
-                  icon: const Icon(Icons.stop),
-                  label: Text(supportsCancel ? s.sql_editor_cancel : s.sql_editor_stop_waiting),
-                ),
+                // Cancel posts to Studio, so it is disabled offline with the reason; the Stop waiting of an engine that
+                // cannot cancel only drops the request on the phone, so it needs no network.
+                if (supportsCancel)
+                  OnlineOnlyAction(
+                    builder: (context, online) => _cancel(
+                      onPressed: online && !waitingForRetry ? onCancel : null,
+                      label: S.of(context).sql_editor_cancel,
+                    ),
+                  )
+                else
+                  _cancel(onPressed: waitingForRetry ? null : onCancel, label: s.sql_editor_stop_waiting),
               ],
             ),
             EditorCancelling() => FilledButton.tonalIcon(
@@ -104,6 +110,10 @@ class EditorActions extends StatelessWidget {
     final selection = value.selection;
     if (!selection.isValid || selection.isCollapsed || selection.end > value.text.length) return '';
     return selection.textInside(value.text);
+  }
+
+  Widget _cancel({required VoidCallback? onPressed, required String label}) {
+    return FilledButton.tonalIcon(key: runKey, onPressed: onPressed, icon: const Icon(Icons.stop), label: Text(label));
   }
 
   Widget _run({required bool busy}) {
