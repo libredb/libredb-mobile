@@ -26,14 +26,37 @@ class ActiveCatalogPreferences implements IActiveCatalogStore {
 
   @override
   Future<void> write(String subject, String connectionId, String catalog) async {
-    Map<String, Map<String, String>> all;
+    final all = await _readOrReplace();
+    (all[subjectHash(subject)] ??= {})[connectionId] = catalog;
+    await _save(all);
+  }
+
+  /// A stored value that cannot be read is removed, as [write] replaces it: it is a convenience only, and leaving it
+  /// would keep the subject's databases on the device.
+  @override
+  Future<void> clear(String subject) async {
+    final stored = await _storage.read(_key);
+    if (stored == null) return;
+    final all = await _readOrReplace();
+    final forgotten = all.remove(subjectHash(subject)) != null;
+    if (all.isNotEmpty) {
+      if (forgotten) await _save(all);
+      return;
+    }
+    final removed = await _storage.remove(_key);
+    if (!removed) throw StateError('the device refused to remove $_key');
+  }
+
+  Future<Map<String, Map<String, String>>> _readOrReplace() async {
     try {
-      all = await _readAll();
+      return await _readAll();
     } on FormatException catch (e) {
       _log.warn('{} cannot be read and is replaced: {}', [_key, e.message]);
-      all = {};
+      return {};
     }
-    (all[subjectHash(subject)] ??= {})[connectionId] = catalog;
+  }
+
+  Future<void> _save(Map<String, Map<String, String>> all) async {
     final saved = await _storage.save(_key, jsonEncode(all));
     if (!saved) throw StateError('the device refused to store $_key');
   }

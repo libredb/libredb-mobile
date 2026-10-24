@@ -359,6 +359,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
+    "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(
+      "Verilerinizin bir kısmı bu telefondan silinemedi, bu yüzden oturumunuz açık.",
+    ),
     "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
       "Studio bu hesabın kim olduğunu belirleyemiyor. Bir yöneticiden hesabın e-posta adresini ve kullanıcı adını kontrol etmesini isteyin.",
     ),
@@ -511,6 +514,24 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_role_user": MessageLookupByLibrary.simpleMessage("Kullanıcı"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Bilinmeyen kullanıcı"),
     "refresh": MessageLookupByLibrary.simpleMessage("Yenile"),
+    "remove_my_data": MessageLookupByLibrary.simpleMessage("Verilerimi sil"),
+    "remove_my_data_collapsed_sections": MessageLookupByLibrary.simpleMessage(
+      "Bağlantı listesinde daraltılan bölümler",
+    ),
+    "remove_my_data_confirm": MessageLookupByLibrary.simpleMessage("Sil ve oturumu kapat"),
+    "remove_my_data_drafts": MessageLookupByLibrary.simpleMessage("SQL düzenleyici taslakları"),
+    "remove_my_data_favorites": MessageLookupByLibrary.simpleMessage("Yıldızlı bağlantılar"),
+    "remove_my_data_history": MessageLookupByLibrary.simpleMessage("Sorgu geçmişi"),
+    "remove_my_data_kept": MessageLookupByLibrary.simpleMessage("Bu telefonda kalanlar"),
+    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage("Dil, tema ve sonuç görünümü"),
+    "remove_my_data_last_connection": MessageLookupByLibrary.simpleMessage("Son açık bağlantı ve veritabanı"),
+    "remove_my_data_recents": MessageLookupByLibrary.simpleMessage("Son kullanılan bağlantılar"),
+    "remove_my_data_removed": MessageLookupByLibrary.simpleMessage("Bu telefondan silinenler"),
+    "remove_my_data_signs_out": MessageLookupByLibrary.simpleMessage("Verileriniz silinince oturumunuz kapatılır."),
+    "remove_my_data_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Bu uygulamanın bu telefonda sizinle ilgili tuttuklarını silin ve oturumu kapatın",
+    ),
+    "remove_my_data_title": MessageLookupByLibrary.simpleMessage("Verileriniz silinsin mi?"),
     "required_field": MessageLookupByLibrary.simpleMessage("Zorunlu Alan"),
     "result_affected_rows": m40,
     "result_card_id": m41,
@@ -556,6 +577,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
       "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
     ),
+    "settings_privacy": MessageLookupByLibrary.simpleMessage("Gizlilik"),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("İptal et"),

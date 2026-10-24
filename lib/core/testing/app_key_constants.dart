@@ -19,6 +19,10 @@ const Key accountRefusalSignOutKey = Key("accountRefusalSignOutKey");
 const Key settingsChangeLanguageButtonKey = Key("settingsChangeLanguageButtonKey");
 // Logout is intentionally not exposed from settings — it lives in the
 // profile sheet of the shell (see SettingsScreen for the rationale).
+const Key settingsRemoveMyDataKey = Key("settingsRemoveMyDataKey");
+const Key removeMyDataConfirmKey = Key("removeMyDataConfirmKey");
+const Key removeMyDataRetryKey = Key("removeMyDataRetryKey");
+const Key removeMyDataProgressKey = Key("removeMyDataProgressKey");
 
 // community section
 const Key communityStarKey = Key("communityStarKey");

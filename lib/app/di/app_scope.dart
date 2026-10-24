@@ -54,7 +54,10 @@ import 'package:libredb_mobile/features/connections/application/connection_polic
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
+import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 import 'package:libredb_mobile/shared/models/containers_repository.dart';
 
 class AppScope extends StatelessWidget {
@@ -222,6 +225,18 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<IStatementHistoryRepository>(
           create: (context) => dependencies.createStatementHistoryRepository(context.read<IStatementTextStore>()),
         ),
+        // One instance each, shared by the cubits below and the registry, so 'Remove my data' clears what they store.
+        RepositoryProvider<IActiveConnectionStore>(create: (_) => dependencies.createActiveConnectionStore()),
+        RepositoryProvider<IActiveCatalogStore>(create: (_) => dependencies.createActiveCatalogStore()),
+        RepositoryProvider<UserDataRegistry>(
+          create: (context) => dependencies.createUserDataRegistry(
+            statementText: context.read<IStatementTextStore>(),
+            favorites: context.read<IFavoriteConnectionsRepository>(),
+            activeConnection: context.read<IActiveConnectionStore>(),
+            activeCatalog: context.read<IActiveCatalogStore>(),
+            collapsedSections: context.read<ICollapsedSectionsRepository>(),
+          ),
+        ),
         if (oidcSettings == null)
           RepositoryProvider<IAuthRepository>(
             create: (context) => dependencies.createAuthRepository(context.read<IAuthSessionRepository>()),
@@ -295,14 +310,14 @@ class AppScope extends StatelessWidget {
           // Above the router, so the shell, the connection list and every page that works on a connection share one;
           // AppSessionListeners tells it who signed in and closes it at the session's end.
           BlocProvider<ActiveConnectionCubit>(
-            create: (_) => ActiveConnectionCubit(store: dependencies.createActiveConnectionStore()),
+            create: (context) => ActiveConnectionCubit(store: context.read<IActiveConnectionStore>()),
           ),
           // Beside the active connection, which it follows: Browse and the SQL editor share the database a
           // server-level connection runs statements in; AppSessionListeners tells it who signed in and clears it at the
           // session's end.
           BlocProvider<ActiveCatalogCubit>(
             create: (context) => ActiveCatalogCubit(
-              store: dependencies.createActiveCatalogStore(),
+              store: context.read<IActiveCatalogStore>(),
               connectionIds: context.read<ActiveConnectionCubit>().connectionIds,
             ),
           ),

@@ -92,6 +92,46 @@ void main() {
     verify: (_) => verify(() => repository.read(alice)).called(1),
   );
 
+  group('reload', () {
+    var stored = const ConnectionFavorites(starred: {'seed:a'}, recent: ['seed:a']);
+
+    blocTest<FavoriteConnectionsBloc, FavoriteConnectionsState>(
+      'reads the subject\'s favorites again, so a later star never writes the removed ones back',
+      setUp: () {
+        stored = const ConnectionFavorites(starred: {'seed:a'}, recent: ['seed:a']);
+        when(() => repository.read(alice)).thenAnswer((_) async => stored);
+      },
+      build: build,
+      act: (bloc) async {
+        bloc.add(const FavoriteConnectionsSubjectChanged(alice));
+        await bloc.stream.firstWhere((state) => state is FavoriteConnectionsReady);
+        stored = ConnectionFavorites.empty;
+        bloc
+          ..add(const FavoriteConnectionsReloaded())
+          ..add(const FavoriteConnectionStarToggled('seed:b'));
+      },
+      expect: () => const [
+        FavoriteConnectionsLoading(),
+        FavoriteConnectionsReady(ConnectionFavorites(starred: {'seed:a'}, recent: ['seed:a'])),
+        FavoriteConnectionsLoading(),
+        FavoriteConnectionsReady(ConnectionFavorites.empty),
+        FavoriteConnectionsReady(ConnectionFavorites(starred: {'seed:b'}, recent: [])),
+      ],
+      verify: (_) {
+        verify(() => repository.write(alice, const ConnectionFavorites(starred: {'seed:b'}, recent: []))).called(1);
+        verify(() => repository.read(alice)).called(2);
+      },
+    );
+
+    blocTest<FavoriteConnectionsBloc, FavoriteConnectionsState>(
+      'reads nothing while nobody is signed in',
+      build: build,
+      act: (bloc) => bloc.add(const FavoriteConnectionsReloaded()),
+      expect: () => const <FavoriteConnectionsState>[],
+      verify: (_) => verifyNever(() => repository.read(any())),
+    );
+  });
+
   group('star toggling', () {
     blocTest<FavoriteConnectionsBloc, FavoriteConnectionsState>(
       'stars a connection, then unstars it, storing each change for the subject',

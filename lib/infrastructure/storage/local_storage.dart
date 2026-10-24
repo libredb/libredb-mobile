@@ -63,6 +63,7 @@ enum StorageKeys {
     StorageKeys.language => StorageScope.device,
     StorageKeys.theme => StorageScope.device,
     StorageKeys.brightness => StorageScope.device,
+    // Studio's environment and group names, so the user's 'Remove my data' clears them too.
     StorageKeys.connectionSectionsCollapsed => StorageScope.device,
     // Kept per subject, so a sign-out keeps them for the next sign-in of the same account and another account never
     // reads them; the user's 'Remove my data' clears them.

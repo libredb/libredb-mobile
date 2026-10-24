@@ -21,6 +21,7 @@ class FavoriteConnectionsBloc extends Bloc<FavoriteConnectionsEvent, FavoriteCon
     on<FavoriteConnectionsEvent>(
       (event, emit) => switch (event) {
         FavoriteConnectionsSubjectChanged() => _onSubjectChanged(event, emit),
+        FavoriteConnectionsReloaded() => _read(emit),
         FavoriteConnectionStarToggled() => _onStarToggled(event, emit),
         FavoriteConnectionOpened() => _onOpened(event, emit),
       },
@@ -50,6 +51,13 @@ class FavoriteConnectionsBloc extends Bloc<FavoriteConnectionsEvent, FavoriteCon
       if (state is! FavoriteConnectionsNone) emit(const FavoriteConnectionsNone());
       return;
     }
+    await _read(emit);
+  }
+
+  /// Reads the favorites of [_subject]; nothing while nobody is signed in.
+  Future<void> _read(Emitter<FavoriteConnectionsState> emit) async {
+    final subject = _subject;
+    if (subject == null) return;
     emit(const FavoriteConnectionsLoading());
     try {
       emit(FavoriteConnectionsReady(await _repository.read(subject)));
