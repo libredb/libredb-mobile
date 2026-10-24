@@ -1,5 +1,6 @@
 import java.io.File
 import java.util.Base64
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -23,6 +24,41 @@ val dartDefines: Map<String, String> =
 // means changing it here too (test/architecture/sentry_native_scrub_patterns_test.dart checks it, and nativeSdkReady
 // fails at start when the gates disagree).
 val isProdTarget = File(project.findProperty("target") as String? ?: "").name == "main_prod.dart"
+
+// The upload key that signs a release build (docs/release.md): each value comes from its environment variable, else
+// from the git-ignored android/key.properties, and a relative store file resolves against android/. With all four
+// values the release build signs with the upload key. With none it signs with the debug key, so a pull request build
+// needs no secret, unless -PrequireReleaseSigning=true asks for the upload key. A partial set always fails the build.
+val keyProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+
+fun signingValue(environmentName: String, propertyName: String): String? =
+    System.getenv(environmentName)?.takeIf { it.isNotBlank() }
+        ?: keyProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+
+val uploadSigning: Map<String, String?> = mapOf(
+    "ANDROID_UPLOAD_STORE_FILE" to signingValue("ANDROID_UPLOAD_STORE_FILE", "storeFile"),
+    "ANDROID_UPLOAD_STORE_PASSWORD" to signingValue("ANDROID_UPLOAD_STORE_PASSWORD", "storePassword"),
+    "ANDROID_UPLOAD_KEY_ALIAS" to signingValue("ANDROID_UPLOAD_KEY_ALIAS", "keyAlias"),
+    "ANDROID_UPLOAD_KEY_PASSWORD" to signingValue("ANDROID_UPLOAD_KEY_PASSWORD", "keyPassword"),
+)
+val missingUploadSigning = uploadSigning.filterValues { it == null }.keys
+val hasUploadSigning = missingUploadSigning.isEmpty()
+val requireReleaseSigning = (project.findProperty("requireReleaseSigning") as String?) == "true"
+
+if (!hasUploadSigning && (requireReleaseSigning || missingUploadSigning.size < uploadSigning.size)) {
+    throw GradleException(
+        "Release signing needs the upload key, but these values are missing: ${missingUploadSigning.joinToString()}. " +
+            "Set each as an environment variable, or set storeFile, storePassword, keyAlias and keyPassword in " +
+            "android/key.properties (docs/release.md).",
+    )
+}
+val uploadStoreFile = uploadSigning["ANDROID_UPLOAD_STORE_FILE"]?.let { rootProject.file(it) }
+if (uploadStoreFile != null && !uploadStoreFile.isFile) {
+    throw GradleException("The upload keystore that ANDROID_UPLOAD_STORE_FILE or storeFile names does not exist.")
+}
 
 fun buildConfigString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -56,12 +92,29 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        if (hasUploadSigning) {
+            create("release") {
+                storeFile = uploadStoreFile
+                storePassword = uploadSigning["ANDROID_UPLOAD_STORE_PASSWORD"]
+                keyAlias = uploadSigning["ANDROID_UPLOAD_KEY_ALIAS"]
+                keyPassword = uploadSigning["ANDROID_UPLOAD_KEY_PASSWORD"]
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (hasUploadSigning) "release" else "debug")
         }
+    }
+}
+
+// Says in the build log which key signs a release build: the upload keystore's file name, never a value of the key.
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.project == project && it.name.contains("Release") }) {
+        val key = uploadStoreFile?.let { "the upload key in ${it.name}" } ?: "the debug key"
+        logger.quiet("Release build signed with $key.")
     }
 }
 
