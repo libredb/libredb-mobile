@@ -343,6 +343,31 @@ void main() {
       );
     });
 
+    testWidgets('a portrait phone keeps a short chip row centered under the search', (tester) async {
+      answer(
+        const ManagedConnections(
+          connections: [StudioConnection(id: 'seed:x', name: 'X', type: 'postgres', environment: 'production')],
+        ),
+      );
+
+      await pumpPage(tester, size: const Size(393, 829));
+
+      expect(tester.getRect(find.byType(FilterChip)).center.dx, moreOrLessEquals(393 / 2, epsilon: 1));
+    });
+
+    testWidgets('gives the search the whole row when there are no environment chips', (tester) async {
+      answer(
+        const ManagedConnections(
+          connections: [StudioConnection(id: 'seed:x', name: 'X', type: 'postgres')],
+        ),
+      );
+
+      await pumpPage(tester, size: sideways);
+
+      expect(find.byType(FilterChip), findsNothing);
+      expect(tester.getRect(find.byType(TextField)).right, moreOrLessEquals(829 - 16, epsilon: 1));
+    });
+
     testWidgets('a rotation while typing a search keeps its text and focus', (tester) async {
       answer(_mockAnswer());
       await pumpPage(tester, size: const Size(393, 829));

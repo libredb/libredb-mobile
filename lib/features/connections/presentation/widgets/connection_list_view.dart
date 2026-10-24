@@ -122,25 +122,29 @@ class ConnectionListView extends StatelessWidget {
     // On a compact height, such as a phone held sideways, the search and the chips share a row so the list keeps the
     // height. A Flex that only turns keeps the field in its place in the tree, so a rotation keeps its focus.
     final compact = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
+    // Without chips the search keeps the whole row.
+    final chipsBeside = compact && state.environments.isNotEmpty;
     return Column(
       children: [
         Flex(
           direction: compact ? Axis.horizontal : Axis.vertical,
-          crossAxisAlignment: compact ? CrossAxisAlignment.center : CrossAxisAlignment.stretch,
           children: [
             Flexible(
               flex: compact ? 1 : 0,
               fit: compact ? FlexFit.tight : FlexFit.loose,
               child: Padding(
-                padding: compact
-                    ? const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xs, 0, 0)
-                    : const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  compact ? AppSpacing.xs : AppSpacing.sm,
+                  chipsBeside ? 0 : AppSpacing.lg,
+                  0,
+                ),
                 child: ConnectionSearchField(controller: search),
               ),
             ),
             Flexible(
-              flex: compact ? 1 : 0,
-              fit: compact ? FlexFit.tight : FlexFit.loose,
+              flex: chipsBeside ? 1 : 0,
+              fit: chipsBeside ? FlexFit.tight : FlexFit.loose,
               child: EnvironmentChips(environments: state.environments, selected: state.environment, compact: compact),
             ),
           ],
