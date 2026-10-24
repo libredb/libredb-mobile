@@ -47,6 +47,10 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Sentry CLI settings, which can hold an auth token; sentry_dart_plugin reads its settings from release.yml's
+# environment (docs/release.md)
+sentry.properties
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile

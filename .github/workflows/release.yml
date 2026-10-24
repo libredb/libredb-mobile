@@ -179,6 +179,20 @@ jobs:
           RELEASE_VARS: ${{ toJSON(vars) }}
         run: tool/release/check_defines.sh "$RUNNER_TEMP/dart-defines.json"
 
+      # A release uploads its Dart symbols and R8 mapping to Sentry and stops here without the token; a dry run never
+      # uploads (docs/release.md, "Crash symbols").
+      - name: Check the Sentry upload
+        id: sentry
+        env:
+          RELEASE_KIND: ${{ github.event_name == 'workflow_dispatch' && 'dry-run' || 'release' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: tool/release/check_sentry_upload.sh
+
+      # The id the native SDK reports with each event, and the id the R8 mapping is uploaded under, so Sentry can match
+      # the two.
+      - name: Name the R8 mapping
+        run: echo "SENTRY_PROGUARD_UUID=$(cat /proc/sys/kernel/random/uuid)" >> "$GITHUB_ENV"
+
       - name: Decode the upload keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
@@ -195,9 +209,13 @@ jobs:
           ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        # Obfuscated, with the Dart symbols and the obfuscation map in build/debug-info, outside the bundle.
         run: >-
           flutter build appbundle --release --target lib/main/main_prod.dart
           --dart-define-from-file="$RUNNER_TEMP/dart-defines.json" -PrequireReleaseSigning=true
+          --obfuscate --split-debug-info=build/debug-info
+          --extra-gen-snapshot-options=--save-obfuscation-map=build/debug-info/obfuscation.map.json
+          -PsentryProguardUuid="$SENTRY_PROGUARD_UUID"
 
       # Compares the signing certificate with the fingerprint of the environment's key; the log names neither the
       # certificate's owner nor its fingerprint.
@@ -222,6 +240,26 @@ jobs:
             exit 1
           fi
           echo "The bundle is signed with the expected upload key."
+
+      # sentry_dart_plugin uploads the Dart symbols and the obfuscation map, then the sentry-cli it downloaded and
+      # checked uploads the R8 mapping, which the plugin does not. The settings come from this environment only: the
+      # repository holds no sentry.properties and no sentry section in pubspec.yaml. A failed upload stops the release
+      # before the bundle is kept.
+      - name: Upload the symbols to Sentry
+        if: steps.sentry.outputs.upload == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: libredb-org
+          SENTRY_PROJECT: libredb-mobile
+        run: |
+          # The release the app reports: version name and build number of pubspec.yaml (AppBootstrap, NativeSentry).
+          SENTRY_RELEASE=$(sed -n 's/^version: *\([^ ]*\).*$/\1/p' pubspec.yaml)
+          export SENTRY_RELEASE
+          echo "Uploading the symbols of release $SENTRY_RELEASE to Sentry."
+          dart run sentry_dart_plugin --sentry-define=symbols_path=build/debug-info \
+            --sentry-define=dart_symbol_map_path=build/debug-info/obfuscation.map.json --sentry-define=commits=false
+          .dart_tool/pub/bin/sentry_dart_plugin/sentry-cli upload-proguard --require-one \
+            --uuid "$SENTRY_PROGUARD_UUID" build/app/outputs/mapping/release/mapping.txt
 
       - name: Keep the bundle and the R8 mapping
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

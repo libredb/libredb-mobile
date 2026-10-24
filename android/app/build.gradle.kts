@@ -73,6 +73,15 @@ if (uploadStoreFile != null && !uploadStoreFile.isFile) {
     throw GradleException("The upload keystore that ANDROID_UPLOAD_STORE_FILE or storeFile names does not exist.")
 }
 
+// The id release.yml gives the R8 mapping it uploads to Sentry (docs/release.md, "Crash symbols"). The native SDK reports
+// it with each event, so Sentry can match the mapping; a build without -PsentryProguardUuid reports none.
+val sentryProguardUuid = (project.findProperty("sentryProguardUuid") as String?).orEmpty()
+if (sentryProguardUuid.isNotEmpty() &&
+    !Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").matches(sentryProguardUuid)
+) {
+    throw GradleException("-PsentryProguardUuid must be a lowercase UUID, such as the output of uuidgen.")
+}
+
 fun buildConfigString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 android {
@@ -99,6 +108,9 @@ android {
         buildConfigField("String", "SENTRY_DSN", buildConfigString(nativeSentryDsn))
         buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString(dartDefines["SENTRY_ENVIRONMENT"].orEmpty()))
         buildConfigField("String", "SENTRY_DIST", buildConfigString(dartDefines["SENTRY_DIST"].orEmpty()))
+        // Only a prod build starts the native SDK.
+        val nativeProguardUuid = if (isProdTarget) sentryProguardUuid else ""
+        buildConfigField("String", "SENTRY_PROGUARD_UUID", buildConfigString(nativeProguardUuid))
         // The native crash of the Sentry device check (SentryDeviceCheck.kt, docs/crash-reporting.md), only in a build
         // that also starts the native SDK.
         val sentryDeviceCheck = isProdTarget && dartDefines["SENTRY_DEVICE_CHECK"] == "true"
