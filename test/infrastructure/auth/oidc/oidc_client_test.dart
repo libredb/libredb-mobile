@@ -1023,9 +1023,50 @@ void main() {
       expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
     });
 
-    test('without a redirect the same setup signs in, so the two failures above are the redirect', () async {
+    test('at the token endpoint is not followed, so no code goes over http and the sign-in fails', () async {
+      await start(redirected: '/token');
+      late OidcSignInOutcome outcome;
+      final lines = await printedLines(() async => outcome = await withRealSockets(() => trustingClient().signIn()));
+
+      expect(outcome, _failed(OidcFailure.failed));
+      expect(plainRequests, 0, reason: 'the code was sent over http');
+      expect(lines.where((line) => line.contains('token request') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+      await expectStoreEmpty();
+    });
+
+    test('at the token endpoint during a refresh is not followed and is RotationRefused', () async {
+      await start(redirected: '/token');
+      late TokenRotationResult result;
+      final lines = await printedLines(
+        () async => result = await withRealSockets(
+          () => trustingClient().refresh(
+            refreshToken: 'refresh-old-value',
+            idToken: tlsProvider.signIdToken(),
+            accessToken: 'access-old-value',
+            accessTokenExpiresAt: clock.now().toUtc().subtract(const Duration(seconds: 5)),
+          ),
+        ),
+      );
+
+      expect(result, isA<RotationRefused>());
+      expect(plainRequests, 0, reason: 'the refresh token was sent over http');
+      expect(lines.where((line) => line.contains('token request') && line.contains('redirect')), isNotEmpty);
+      expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
+    });
+
+    test('without a redirect the same setup signs in and refreshes, so the failures above are the redirect', () async {
       await start(redirected: '/nothing-is-redirected');
       expect(await withRealSockets(() => trustingClient().signIn()), isA<OidcSignedIn>());
+      final refreshed = await withRealSockets(
+        () => trustingClient().refresh(
+          refreshToken: 'refresh-old-value',
+          idToken: tlsProvider.signIdToken(),
+          accessToken: 'access-old-value',
+          accessTokenExpiresAt: clock.now().toUtc().subtract(const Duration(seconds: 5)),
+        ),
+      );
+      expect(refreshed, isA<TokensRotated>());
       expect(plainRequests, 0);
     });
   });
