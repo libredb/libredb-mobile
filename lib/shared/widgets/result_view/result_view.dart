@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
@@ -31,6 +32,9 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 ///
 /// [onConnectionUnavailable] is called once for each page Studio refuses with `studio.connection_not_available`, so the
 /// caller hands its connection to the active connection's vanish flow.
+///
+/// While on screen it keeps out of screenshots, screen recordings and the recent-apps preview ([ScreenCaptureGuard]),
+/// an empty result too, which can still name what the statement did.
 class ResultView extends StatelessWidget {
   const ResultView({super.key, this.rolledBackNotice, this.onConnectionUnavailable});
 
@@ -47,7 +51,7 @@ class ResultView extends StatelessWidget {
         current != previous &&
         current.error.code == AppErrorCode.studioConnectionNotAvailable.key,
     listener: (context, state) => onConnectionUnavailable?.call(),
-    child: _view(),
+    child: ScreenCaptureGuard(child: _view()),
   );
 
   Widget _view() => BlocBuilder<ResultViewBloc, ResultViewState>(

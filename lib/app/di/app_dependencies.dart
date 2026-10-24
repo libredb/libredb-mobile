@@ -25,6 +25,8 @@ import 'package:libredb_mobile/features/studio_status/domain/repositories/studio
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_platform.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart';
@@ -118,6 +120,11 @@ class AppDependencies {
     onAccountRefused: onAccountRefused,
     accountRefusal: accountRefusal,
   );
+
+  /// The app's one screen capture protection, which every `ScreenCaptureGuard` holds a lease of, switched by
+  /// [AppConfig.screenCaptureProtection]: switched off, a guard takes no lease and every screen can be captured.
+  ScreenCaptureProtection createScreenCaptureProtection() =>
+      ScreenCaptureProtection(platform: const ScreenProtectorPlatform(), enabled: appConfig.screenCaptureProtection);
 
   /// The logout clears the session through [sessionRepository], as the idle timeout and an unrefreshable 401 do.
   IAuthRepository createAuthRepository(IAuthSessionRepository sessionRepository) =>

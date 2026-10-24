@@ -172,31 +172,54 @@ The tool/studio-dev stack runs unpinned: its CA and keys are made anew with each
 
 ## Screen capture protection
 
-The app can keep a sensitive screen out of screenshots and the task switcher.
-No screen uses it yet.
+The screens that show data keep out of screenshots, screen recordings and the recent-apps preview while they are on screen.
+Display masking is no reason to skip this: it hides only the columns whose names match a pattern, so an unmasked column of customer data is on screen in clear.
 
-- `ScreenCaptureProtection.enable()` and `.disable()` in `lib/core/security/screen_capture_protection.dart` turn it on and off, counting leases, so popping an inner protected screen leaves it on while an outer one is still mounted.
-- The `ScreenCaptureProtected<T>` mixin in `lib/core/security/screen_capture_protected.dart` takes a lease in `initState` and releases it in `dispose`.
+Protected while on screen:
 
-The two platforms behave differently:
+| Area | Where |
+| --- | --- |
+| A result, empty or not: the editor's single run and each statement of a script, Browse rows, and a key value shown as a result | `ResultView` (`lib/shared/widgets/result_view/result_view.dart`) |
+| A row's detail | `RowDetailSheet` (`lib/shared/widgets/result_view/row_detail_sheet.dart`) |
+| A key's text value, a string or a JSON document | `KeyValuePage` (`lib/features/object_browser/presentation/pages/key_value_page.dart`) |
+| An object's source, on the source page and the detail page's Source tab | `ObjectSourceView` (`lib/features/object_browser/presentation/widgets/object_source_view.dart`) |
+
+Everything else stays capturable: the connection list, the Browse lists, the editor with no result on screen, a key's name and Studio's `TYPE` answer, and the settings.
+
+How it works:
+
+- `ScreenCaptureGuard` (`lib/core/security/screen_capture_guard.dart`) wraps a value area, not a whole page, and holds a lease of the app's one `ScreenCaptureProtection` while it is on screen; `AppScope` provides that protection.
+- `ScreenCaptureProtection` (`lib/core/security/screen_capture_protection.dart`) counts leases: the first turns protection on and the last release turns it off, so closing a row's detail over a result leaves the result protected.
+  A release without a lease throws a `StateError`, since the count would no longer say what is on screen.
+- On screen means mounted with its tickers on (`ScreenCaptureProtected` in `lib/core/security/screen_capture_protected.dart`).
+  A route covered by an opaque page, or the shell hidden under the refusal page or the "Can't reach Studio" page, has its tickers off and holds no lease, so the screen shown above it can be captured; a sheet over a result leaves the result's tickers on.
+  The shell's tabs are routes of one `ShellRoute`, so a tab change disposes the editor and its result: nothing of it stays mounted offstage.
+- The plugin calls sit behind `IScreenCapturePlatform` (`lib/core/security/screen_capture_platform.dart`), so a widget test counts leases on its own instance without a platform channel (`test/support/screen_capture.dart`).
+- A guard without a `ScreenCaptureProtection` above it fails with `ProviderNotFoundException` rather than show the data unprotected.
+
+### The switch
+
+`SCREEN_CAPTURE_PROTECTION` is read at build time in `AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`):
+
+| Value | Prod build | Dev and test builds |
+| --- | --- | --- |
+| absent or empty | On | Off, so a developer can capture the emulator |
+| `true` | On | On |
+| `false` | Off | Off |
+
+Any other value stops the app at start with `ScreenCaptureProtectionConfigError`, so a typo never decides it.
+Switched off, a guard takes no lease and every screen can be captured; a deployment that wants screenshots builds with:
+
+```shell
+fvm flutter build apk --release --target lib/main/main_prod.dart --dart-define=SCREEN_CAPTURE_PROTECTION=false
+```
+
+### The platforms
 
 | Platform | What happens |
 | --- | --- |
-| Android | `FLAG_SECURE`: screenshots and screen recording are blocked, and the recent-apps preview is black. |
-| iOS | iOS offers no API to block a screenshot. The task-switcher snapshot is blurred, so the app preview shows no secret; a screenshot taken in the foreground still succeeds. |
-
-To protect a screen, add the mixin to its state:
-
-```dart
-import 'package:libredb_mobile/core/security/screen_capture_protected.dart';
-
-class _QueryResultPageState extends State<QueryResultPage> with ScreenCaptureProtected<QueryResultPage> {
-  // ...
-}
-```
-
-Protect a screen that shows a credential, a token or data the user should not share by accident.
-Leave it off where the user is expected to capture the screen.
+| Android | `FLAG_SECURE`: a screenshot and a screen recording are black, and the recent-apps preview is black. |
+| iOS | iOS offers no API to block a screenshot. The task-switcher snapshot is blurred, so the app preview shows no value; a screenshot taken in the foreground still succeeds (#199 checks this on a device). |
 
 ## Result masking
 

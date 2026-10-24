@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_history_entry.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
@@ -55,6 +56,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
 import '../../../../support/printed_lines.dart';
+import '../../../../support/screen_capture.dart';
 
 String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -100,8 +102,10 @@ void main() {
   late MockIContainersRepository containers;
   late MockIActiveCatalogStore catalogStore;
   late ActiveCatalogCubit catalog;
+  late ScreenCaptureProtection screenCapture;
 
   setUp(() {
+    screenCapture = recordingScreenCaptureProtection();
     repository = MockISqlEditorRepository();
     providerMeta = MockIProviderMetaRepository();
     for (final connection in [_postgres, _production]) {
@@ -244,6 +248,7 @@ void main() {
             dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
           ),
           RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
+          RepositoryProvider<ScreenCaptureProtection>.value(value: screenCapture),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -329,6 +334,50 @@ void main() {
     expect(find.textContaining('Ada Lovelace'), findsWidgets);
     expect(find.textContaining('ada@example.com'), findsNothing);
     expect(runsOf('SELECT * FROM customers'), 1);
+  });
+
+  group('screen capture', () {
+    testWidgets('the editor before a run holds no lease, and the rows of a run take one', (tester) async {
+      answerRun('SELECT * FROM customers', () => Success(_recorded('query_preview_postgres_customers')));
+      await pump(tester);
+      await type(tester, 'SELECT * FROM customers');
+      expect(screenCapture.leases, 0, reason: 'the editor with no result stays capturable');
+
+      await run(tester);
+      expect(find.byType(ResultView), findsOneWidget);
+      expect(screenCapture.leases, 1);
+    });
+
+    testWidgets('a new run that clears the result releases its lease', (tester) async {
+      answerRun('SELECT * FROM customers', () => Success(_recorded('query_preview_postgres_customers')));
+      answerRun('SELECT * FROM missing', () => const Failure(NetworkError('socket closed')));
+      await pump(tester);
+      await type(tester, 'SELECT * FROM customers');
+      await run(tester);
+      expect(screenCapture.leases, 1);
+
+      await type(tester, 'SELECT * FROM missing');
+      await run(tester);
+      expect(find.byType(ResultView), findsNothing);
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expect(screenCapture.leases, 0);
+    });
+
+    // The shell's tabs are routes of one ShellRoute, so a tab change disposes the editor and its result; nothing of
+    // it stays mounted offstage to hold a lease (an offstage guard holds none either, screen_capture_guard_test).
+    testWidgets('a tab change releases the lease of the result on screen', (tester) async {
+      answerRun('SELECT * FROM customers', () => Success(_recorded('query_preview_postgres_customers')));
+      await pump(tester);
+      await type(tester, 'SELECT * FROM customers');
+      await run(tester);
+      expect(screenCapture.leases, 1);
+
+      GoRouter.of(tester.element(find.byType(ResultView))).go('/connections');
+      await tester.pumpAndSettle();
+      expect(find.text('connections page'), findsOneWidget);
+      expect(find.byType(ResultView, skipOffstage: false), findsNothing);
+      expect(screenCapture.leases, 0);
+    });
   });
 
   // A phone held in landscape with the keyboard up leaves the page about 70 logical pixels (#176): nothing overflows,

@@ -274,6 +274,42 @@ void main() {
     });
   });
 
+  group('screen capture', () {
+    setUp(() => answerPreview(Success(_recorded('query_preview_postgres_customers'))));
+
+    testWidgets('the rows on screen hold one lease, and the back arrow to the Browse list releases it', (tester) async {
+      await harness.pump(tester, location: customersLocation);
+      expect(harness.screenCapture.leases, 1);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(ObjectRowsPage), findsNothing);
+      expect(harness.screenCapture.leases, 0, reason: 'the Browse list stays capturable');
+    });
+
+    testWidgets('a tab change releases the lease', (tester) async {
+      await harness.pump(tester, location: customersLocation);
+      expect(harness.screenCapture.leases, 1);
+
+      harness.router.go(ApplicationRoutesConstants.sql);
+      await tester.pumpAndSettle();
+      expect(find.text('sql page'), findsOneWidget);
+      expect(harness.screenCapture.leases, 0);
+    });
+
+    testWidgets('the rows hidden under the refusal page hold no lease, and take it again once uncovered', (
+      tester,
+    ) async {
+      await harness.pump(tester, location: customersLocation);
+      await harness.refuseAccount(tester, AppErrorCode.studioAccountHasNoRole);
+      expect(find.byType(ObjectRowsPage, skipOffstage: false), findsOneWidget, reason: 'mounted, offstage');
+      expect(harness.screenCapture.leases, 0);
+
+      await harness.retryAccepted(tester);
+      expect(harness.screenCapture.leases, 1);
+    });
+  });
+
   group('scrolling a loaded result', () {
     final platforms = TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS});
 

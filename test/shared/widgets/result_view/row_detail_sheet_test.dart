@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -25,6 +27,8 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart'
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
+
+import '../../../support/screen_capture.dart';
 
 final _policy = MaskingPolicy.forRole(const StudioUserRole());
 
@@ -76,6 +80,7 @@ Future<ResultViewBloc> _pump(
   QueryResult result, {
   Locale locale = const Locale('en'),
   ResultViewMode mode = ResultViewMode.cards,
+  ScreenCaptureProtection? protection,
 }) async {
   final bloc = ResultViewBloc(masked: maskResult(result, _policy), policy: _policy);
   // Closed without waiting: Load more is droppable, and that close finishes only on a microtask the finished test's
@@ -85,24 +90,27 @@ Future<ResultViewBloc> _pump(
   await modes.restore();
   addTearDown(modes.close);
   await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        S.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: S.delegate.supportedLocales,
-      home: Scaffold(
-        body: OfflineStatus(
-          isOffline: false,
-          child: MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: modes),
-              BlocProvider.value(value: bloc),
-            ],
-            child: const ResultView(),
+    withScreenCaptureProtection(
+      protection: protection,
+      MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.delegate.supportedLocales,
+        home: Scaffold(
+          body: OfflineStatus(
+            isOffline: false,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: modes),
+                BlocProvider.value(value: bloc),
+              ],
+              child: const ResultView(),
+            ),
           ),
         ),
       ),
@@ -159,6 +167,24 @@ void main() {
   });
 
   group('the sheet', () {
+    testWidgets('holds a capture lease of its own while open and releases it when it closes', (tester) async {
+      final protection = recordingScreenCaptureProtection();
+      await _pump(tester, _result(), protection: protection);
+      expect(protection.leases, 1);
+
+      await _openRow(tester, 0);
+      expect(
+        find.descendant(of: find.byType(RowDetailSheet), matching: find.byType(ScreenCaptureGuard)),
+        findsOneWidget,
+      );
+      expect(protection.leases, 2);
+
+      Navigator.of(tester.element(find.byType(RowDetailSheet))).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(RowDetailSheet), findsNothing);
+      expect(protection.leases, 1, reason: 'the result under it stays protected');
+    });
+
     testWidgets('a tap on a card opens its row: every field with its declared type and detail form', (tester) async {
       await _pump(tester, _result());
       await _openRow(tester, 1);
@@ -347,11 +373,13 @@ void main() {
 
     testWidgets('shows as its text with a lock', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: const [S.delegate, GlobalMaterialLocalizations.delegate],
-          supportedLocales: S.delegate.supportedLocales,
-          home: Scaffold(
-            body: RowDetailSheet(result: result, maskedColumns: const {'secret'}, initialIndex: 0),
+        withScreenCaptureProtection(
+          MaterialApp(
+            localizationsDelegates: const [S.delegate, GlobalMaterialLocalizations.delegate],
+            supportedLocales: S.delegate.supportedLocales,
+            home: Scaffold(
+              body: RowDetailSheet(result: result, maskedColumns: const {'secret'}, initialIndex: 0),
+            ),
           ),
         ),
       );

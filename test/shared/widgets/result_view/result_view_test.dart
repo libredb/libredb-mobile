@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/query_result_json.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
@@ -21,6 +22,8 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
+
+import '../../../support/screen_capture.dart';
 
 final _policy = MaskingPolicy.forRole(const StudioUserRole());
 
@@ -63,6 +66,7 @@ Future<ResultViewBloc> _pump(
   double textScale = 1,
   Size? screen,
   String? rolledBackNotice,
+  ScreenCaptureProtection? protection,
 }) async {
   if (screen != null) {
     tester.view.physicalSize = screen;
@@ -74,28 +78,31 @@ Future<ResultViewBloc> _pump(
   // fake clock never runs.
   addTearDown(() => unawaited(bloc.close()));
   await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        S.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: S.delegate.supportedLocales,
-      home: Builder(
-        builder: (context) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
-          child: Scaffold(
-            appBar: screen == null ? null : AppBar(title: const Text('rows')),
-            body: OfflineStatus(
-              isOffline: false,
-              child: MultiBlocProvider(
-                providers: [
-                  BlocProvider(create: (_) => ResultViewModeCubit(store: _CardsStore())),
-                  BlocProvider.value(value: bloc),
-                ],
-                child: ResultView(rolledBackNotice: rolledBackNotice),
+    withScreenCaptureProtection(
+      protection: protection,
+      MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.delegate.supportedLocales,
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              appBar: screen == null ? null : AppBar(title: const Text('rows')),
+              body: OfflineStatus(
+                isOffline: false,
+                child: MultiBlocProvider(
+                  providers: [
+                    BlocProvider(create: (_) => ResultViewModeCubit(store: _CardsStore())),
+                    BlocProvider.value(value: bloc),
+                  ],
+                  child: ResultView(rolledBackNotice: rolledBackNotice),
+                ),
               ),
             ),
           ),
@@ -111,6 +118,38 @@ Finder _inCard(int index, Finder finder) =>
     find.descendant(of: find.byKey(ValueKey('result-card-$index')), matching: finder);
 
 void main() {
+  group('screen capture', () {
+    testWidgets('rows on screen hold one capture lease, released when the result leaves', (tester) async {
+      final protection = recordingScreenCaptureProtection();
+      await _pump(tester, _result(), protection: protection);
+      expect(protection.leases, 1);
+
+      await tester.pumpWidget(withScreenCaptureProtection(protection: protection, const SizedBox()));
+      expect(protection.leases, 0);
+    });
+
+    testWidgets('an empty result is guarded too, since it can name what the statement did', (tester) async {
+      final protection = recordingScreenCaptureProtection();
+      await _pump(tester, _result(rows: const []), protection: protection);
+      expect(protection.leases, 1);
+    });
+
+    testWidgets('a row detail opened over the result and closed leaves the result protected', (tester) async {
+      final protection = recordingScreenCaptureProtection();
+      await _pump(tester, _result(), protection: protection);
+
+      await tester.tap(find.byKey(const ValueKey('result-card-0')));
+      await tester.pumpAndSettle();
+      expect(protection.leases, 2, reason: 'the result under the sheet and the sheet');
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(protection.leases, 1);
+      expect(protection.isEngaged, isTrue);
+    });
+  });
+
   group('card list', () {
     testWidgets('500 rows build only the cards on screen, and the last one scrolls into view', (tester) async {
       final rows = [

@@ -296,6 +296,22 @@ void main() {
     );
   });
 
+  test('the screen capture protection follows the build switch: on in prod, off in dev and test', () {
+    AppDependencies withConfig(AppConfig appConfig) => AppDependencies(appConfig: appConfig, authMode: _oidcMode);
+    expect(
+      withConfig(const AppConfig.prod(apiBaseUrl: 'https://x.test/api')).createScreenCaptureProtection().isEnabled,
+      isTrue,
+    );
+    expect(withConfig(const AppConfig.dev()).createScreenCaptureProtection().isEnabled, isFalse);
+    expect(withConfig(const AppConfig.test()).createScreenCaptureProtection().isEnabled, isFalse);
+    expect(
+      withConfig(const AppConfig.prod(apiBaseUrl: 'https://x.test/api', screenCaptureProtection: false))
+          .createScreenCaptureProtection()
+          .isEnabled,
+      isFalse,
+    );
+  });
+
   test('app dependencies expose the encrypted statement text store, keyed through the secure storage', () {
     expect(dependencies.createStatementTextStore(dependencies.createSecureStorage()), isA<IStatementTextStore>());
   });

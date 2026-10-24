@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/object_browser/data/models/object_browser_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/editor_language.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
@@ -50,6 +51,7 @@ import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/screen_capture.dart';
 
 String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -64,6 +66,7 @@ Failure<T> _failure<T>(AppErrorCode code) => Failure<T>(UnknownError('store', co
 /// The editor's input aids and its drafts: highlighting with the language label, the accessory row, and the draft of
 /// each connection kept through `IStatementTextStore` for the signed-in account.
 void main() {
+  late ScreenCaptureProtection screenCapture;
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late MockIStatementTextStore store;
@@ -75,6 +78,7 @@ void main() {
   late ActiveCatalogCubit catalog;
 
   setUp(() {
+    screenCapture = recordingScreenCaptureProtection();
     repository = MockISqlEditorRepository();
     providerMeta = MockIProviderMetaRepository();
     when(() => providerMeta.providerMeta(_postgres.id))
@@ -133,6 +137,7 @@ void main() {
             dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
           ),
           RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
+          RepositoryProvider<ScreenCaptureProtection>.value(value: screenCapture),
           RepositoryProvider<SchemaChangeNotifier>.value(value: schemaChanges),
           RepositoryProvider<IStatementHistoryRepository>.value(value: history),
           RepositoryProvider<IContainersRepository>.value(value: containers),
