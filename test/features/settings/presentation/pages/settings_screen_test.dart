@@ -7,7 +7,9 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
@@ -87,6 +89,7 @@ void main() {
           builder: (context, state) => SignedInAccountScope(
             subject: null,
             signOut: () async {},
+            reloadStoredData: () {},
             child: const Scaffold(body: SettingsScreen()),
           ),
         ),
@@ -336,8 +339,12 @@ void main() {
       when(() => statementText.clearSubject(any()))
           .thenAnswer((_) async => const Failure(UnknownError('Could not clear an account: refused')));
       await FavoriteConnectionsRepository().write(subject, favorites);
+      await ActiveConnectionPreferences().write(subject, 'seed:sales-postgres');
 
       await pumpAppOnSettings(tester, dependencies: _StatementTextDependencies(statementText));
+      final settings = tester.element(find.byType(SettingsScreen));
+      expect(settings.read<FavoriteConnectionsBloc>().state, const FavoriteConnectionsReady(favorites));
+      expect(settings.read<ActiveConnectionCubit>().state.connection?.id, 'seed:sales-postgres');
       await tester.ensureVisible(find.byKey(settingsRemoveMyDataKey));
       await tester.tap(find.byKey(settingsRemoveMyDataKey));
       await tester.pumpAndSettle();
@@ -345,6 +352,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(loginButtonSsoKey), findsNothing);
+      // The app reads again what is left, so a later star or open never writes the removed favorites back.
+      expect(settings.read<FavoriteConnectionsBloc>().state, const FavoriteConnectionsReady(ConnectionFavorites.empty));
+      expect(settings.read<ActiveConnectionCubit>().state.connection, isNull);
       expect(find.byKey(removeMyDataRetryKey), findsOneWidget);
       expect(
         await FavoriteConnectionsRepository().read(subject),

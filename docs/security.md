@@ -51,9 +51,11 @@ What the app keeps per account outlives it on purpose, so the same account finds
 
 - `UserDataRegistry` (`lib/shared/user_data/user_data_registry.dart`) lists every store that keeps data of an account, and `AppDependencies.createUserDataRegistry` fills it: the drafts and the history (`clearSubject`), the starred and recent connections, the last open connection, the database of each server-level connection, and the collapsed sections of the connection list, whose keys are Studio's environment and group names.
 - The language, the theme and the result view mode are device preferences and stay.
-- `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, or when a `StorageKeys` value is neither cleared nor named a device preference.
+- `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, when a `StorageKeys` value is neither cleared nor named a device preference, when a `SecureStorageKeys` value is not a session token that a sign-out deletes, or when a file outside its list reaches a device directory through path_provider.
 - Every store is tried even when one fails; then the user stays signed in and sees the failure with Retry, which names no stored value, and the log names only the store and the error type.
-- Uninstalling the app removes its files and preferences, but on iOS a Keychain item can outlive a reinstall, so the key of an account's statement text may be left; `clearAll` of the statement text store deletes every key of the store it finds by name prefix, also one whose files are gone.
+  The favorites, the open connection and its database are then read again from what is left, so a later change never writes back what was cleared.
+- Uninstalling the app removes its files and preferences, but on iOS a Keychain item can outlive a reinstall, so the key of an account's statement text may be left.
+  'Remove my data' runs `clearSubject`, which deletes the signed-in account's key even when its files are gone; the keys of other accounts stay, and only `clearAll`, which nothing calls yet, would delete them.
 
 ## Certificate pinning
 

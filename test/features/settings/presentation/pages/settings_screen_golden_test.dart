@@ -26,6 +26,7 @@ void main() {
           builder: (context, state) => SignedInAccountScope(
             subject: null,
             signOut: () async {},
+            reloadStoredData: () {},
             child: const Scaffold(body: SettingsScreen()),
           ),
         ),

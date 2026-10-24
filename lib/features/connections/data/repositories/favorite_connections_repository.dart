@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
@@ -8,6 +9,8 @@ import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 /// JSON object: `{"<subject>": {"starred": ["seed:a"], "recent": ["seed:b"]}}`.
 class FavoriteConnectionsRepository implements IFavoriteConnectionsRepository {
   FavoriteConnectionsRepository({AppLocalStorage? storage}) : _storage = storage ?? AppLocalStorage();
+
+  static final _log = AppLogger.getLogger('FavoriteConnectionsRepository');
 
   final AppLocalStorage _storage;
 
@@ -33,9 +36,17 @@ class FavoriteConnectionsRepository implements IFavoriteConnectionsRepository {
     await _save(all);
   }
 
+  /// A stored value that cannot be read is removed: it may hold the subject's favorites, and keeping it would leave
+  /// 'Remove my data' failing on every retry.
   @override
   Future<void> clear(String subject) async {
-    final all = await _readAll();
+    final Map<String, Object?> all;
+    try {
+      all = await _readAll();
+    } on FormatException catch (e) {
+      _log.warn('{} cannot be read and is removed: {}', [_key, e.message]);
+      return clearAll();
+    }
     if (all.remove(subject) == null) return;
     if (all.isEmpty) return clearAll();
     await _save(all);

@@ -120,8 +120,14 @@ class _PrivacySection extends StatelessWidget {
     return BlocProvider<RemoveMyDataBloc>(
       create: (context) => RemoveMyDataBloc(registry: context.read<UserDataRegistry>()),
       child: BlocConsumer<RemoveMyDataBloc, RemoveMyDataState>(
-        listenWhen: (previous, current) => current is RemoveMyDataDone,
-        listener: (context, state) => SignedInAccountScope.of(context).signOut(),
+        listenWhen: (previous, current) => current is RemoveMyDataDone || current is RemoveMyDataFailure,
+        listener: (context, state) => switch (state) {
+          RemoveMyDataDone() => SignedInAccountScope.read(context).signOut(),
+          // The user stays signed in: what the app holds in memory follows what is left, so it never writes back what
+          // was cleared.
+          RemoveMyDataFailure() => SignedInAccountScope.read(context).reloadStoredData(),
+          RemoveMyDataIdle() || RemoveMyDataInProgress() => null,
+        },
         builder: (context, state) {
           // Once done, the shell's sign-out barrier covers the page until the login page opens.
           final (clearing, enabled) = switch (state) {
@@ -165,7 +171,7 @@ class _PrivacySection extends StatelessWidget {
 
   /// Clears the data of the account Studio names now, so a retry follows the account that is signed in.
   void _remove(BuildContext context) {
-    final subject = SignedInAccountScope.of(context).subject;
+    final subject = SignedInAccountScope.read(context).subject;
     if (subject == null) return;
     context.read<RemoveMyDataBloc>().add(RemoveMyDataRequested(subject: subject));
   }

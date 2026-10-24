@@ -41,11 +41,13 @@ void main() {
   late _FakeStore drafts;
   late _FakeStore favorites;
   late int signOuts;
+  late int reloads;
 
   setUp(() {
     drafts = _FakeStore('statement_text');
     favorites = _FakeStore('connection_favorites');
     signOuts = 0;
+    reloads = 0;
   });
 
   Widget buildScreen({String? subject = _subject, Locale locale = const Locale('en')}) {
@@ -66,6 +68,7 @@ void main() {
         home: SignedInAccountScope(
           subject: subject,
           signOut: () async => signOuts++,
+          reloadStoredData: () => reloads++,
           child: const Scaffold(body: SettingsScreen()),
         ),
       ),
@@ -143,6 +146,7 @@ void main() {
     expect(drafts.cleared, [_subject]);
     expect(favorites.cleared, [_subject]);
     expect(signOuts, 1);
+    expect(reloads, 0, reason: 'the sign-out forgets what the app holds');
   });
 
   testWidgets('shows the progress and takes no second tap while the stores clear', (tester) async {
@@ -189,6 +193,7 @@ void main() {
     expect(find.textContaining('refused'), findsNothing, reason: 'the failure names no store or stored value');
     expect(find.byKey(removeMyDataRetryKey), findsOneWidget);
     expect(signOuts, 0);
+    expect(reloads, 1, reason: 'what the app holds in memory is read again from what is left');
 
     favorites.failing = false;
     await tester.ensureVisible(find.byKey(removeMyDataRetryKey));

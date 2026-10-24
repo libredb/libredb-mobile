@@ -5,7 +5,9 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 import 'package:mocktail/mocktail.dart';
@@ -37,6 +39,19 @@ const _devicePreferences = {
   StorageKeys.brightness,
   StorageKeys.resultViewMode,
 };
+
+/// The values of [SecureStorageKeys], each a token of the session, which every sign-out deletes. A secure value kept
+/// per account past the session is named by its store instead, as the statement text keys are.
+const _sessionTokens = {
+  SecureStorageKeys.jwtToken,
+  SecureStorageKeys.refreshToken,
+  SecureStorageKeys.oidcIdToken,
+  SecureStorageKeys.accessTokenExpiresAt,
+};
+
+/// The files under `lib/` that reach the device's directories through path_provider, with the registry entry that
+/// clears what each keeps there. A new directory fails the guard until it is listed here and cleared.
+const _directoryUsers = {'lib/infrastructure/storage/encrypted_text_file_store.dart': 'statement_text'};
 
 const _subject = '6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10';
 
@@ -153,6 +168,43 @@ void main() {
       );
     }
   });
+
+  // With the StorageKeys test above, these two close the other ways a store can keep data on the phone, so a new
+  // per-account store behind an interface of its own fails one of them.
+  test('every secure storage key is a session token, which a sign-out deletes', () async {
+    expect(
+      SecureStorageKeys.values.toSet(),
+      _sessionTokens,
+      reason:
+          'A new SecureStorageKeys value must be a session token deleted by AuthSessionRepository.clear, or be kept '
+          'by a store that "Remove my data" clears',
+    );
+    final secure = _MemorySecureStorage();
+    for (final key in SecureStorageKeys.values) {
+      await secure.write(key.key, 'value');
+    }
+
+    await AuthSessionRepository(secureStorage: secure).clear();
+
+    expect(secure.values, isEmpty);
+  });
+
+  test('only the listed files reach the device directories, and an entry clears each', () {
+    final importer = RegExp(r'''^import\s+['"]package:path_provider/''', multiLine: true);
+    final found = {
+      for (final file in Directory('lib').listSync(recursive: true).whereType<File>())
+        if (file.path.endsWith('.dart') && importer.hasMatch(file.readAsStringSync())) file.path.replaceAll(r'\', '/'),
+    };
+
+    expect(
+      found,
+      _directoryUsers.keys.toSet(),
+      reason:
+          'A file that keeps data in a device directory must be cleared by "Remove my data": add an entry to '
+          'AppDependencies.createUserDataRegistry and list the file in _directoryUsers',
+    );
+    expect(registry.stores.map((store) => store.name), containsAll(_directoryUsers.values));
+  });
 }
 
 final _dependencies = AppDependencies(
@@ -171,4 +223,23 @@ Set<String> _implementationsOf(List<String> interfaces) {
     }
   }
   return found;
+}
+
+class _MemorySecureStorage implements ISecureStorage {
+  final values = <String, String>{};
+
+  @override
+  Future<String?> read(String key) async => values[key];
+
+  @override
+  Future<void> write(String key, String value) async => values[key] = value;
+
+  @override
+  Future<void> delete(String key) async => values.remove(key);
+
+  @override
+  Future<void> deleteAll() async => values.clear();
+
+  @override
+  Future<Set<String>> keys() async => values.keys.toSet();
 }

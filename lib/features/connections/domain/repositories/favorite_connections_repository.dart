@@ -12,7 +12,8 @@ abstract interface class IFavoriteConnectionsRepository {
   /// be read, which it then leaves as it is, or when the device refuses the write.
   Future<void> write(String subject, ConnectionFavorites favorites);
 
-  /// Removes the favorites of [subject]; throws like [write].
+  /// Removes the favorites of [subject], or the whole stored value when it cannot be read; throws when the device
+  /// refuses.
   Future<void> clear(String subject);
 
   /// Removes the favorites of every subject; throws when the device refuses.

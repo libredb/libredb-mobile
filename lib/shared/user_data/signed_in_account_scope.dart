@@ -11,21 +11,37 @@ typedef SignOutAction = Future<void> Function();
 /// `AppShell` in `lib/app/shell/` provides it, so a feature reads it without importing the app layer or the auth
 /// feature.
 class SignedInAccountScope extends InheritedWidget {
-  const SignedInAccountScope({super.key, required this.subject, required this.signOut, required super.child});
+  const SignedInAccountScope({
+    super.key,
+    required this.subject,
+    required this.signOut,
+    required this.reloadStoredData,
+    required super.child,
+  });
 
   /// The subject, null while Studio has named none.
   final String? subject;
 
   final SignOutAction signOut;
 
+  /// Makes what the app holds in memory about the account, such as the favorites and the open connection, follow what
+  /// the device stores now, so a later change never writes back what 'Remove my data' cleared before a store failed.
+  final VoidCallback reloadStoredData;
+
   /// The [SignedInAccountScope] above [context], which rebuilds when it changes.
   ///
   /// Throws a [FlutterError] when there is none.
-  static SignedInAccountScope of(BuildContext context) {
-    final scope = context.dependOnInheritedWidgetOfExactType<SignedInAccountScope>();
+  static SignedInAccountScope of(BuildContext context) =>
+      _orThrow(context.dependOnInheritedWidgetOfExactType<SignedInAccountScope>());
+
+  /// [of] without making [context] depend on the scope, for a listener or a tap handler.
+  static SignedInAccountScope read(BuildContext context) =>
+      _orThrow(context.getInheritedWidgetOfExactType<SignedInAccountScope>());
+
+  static SignedInAccountScope _orThrow(SignedInAccountScope? scope) {
     if (scope == null) {
       throw FlutterError(
-        'SignedInAccountScope.of() was called with a context that has no SignedInAccountScope above it.\n'
+        'SignedInAccountScope was looked up with a context that has no SignedInAccountScope above it.\n'
         'AppShell provides one above every signed-in screen; a test wraps the widget in a SignedInAccountScope.',
       );
     }
