@@ -6,6 +6,16 @@ sealed class ObjectSearchState extends Equatable {
   /// The connection's provider-meta once read, null before and when it could not be read.
   ProviderMeta? get meta => null;
 
+  /// The ids of the kinds the search is narrowed to, in the order the engine declares them; empty for every kind.
+  List<String> get kinds => const [];
+
+  /// The kinds a search can be narrowed to: every kind the engine declares but those only its key browser lists,
+  /// which Studio refuses in a search.
+  List<ObjectKind> get searchKinds => [
+    for (final kind in meta?.objectKinds ?? const <ObjectKind>[])
+      if (!kind.keyBrowserOnly) kind,
+  ];
+
   @override
   List<Object?> get props => const [];
 }
@@ -22,18 +32,21 @@ final class ObjectSearchNotAvailable extends ObjectSearchState {
 
 /// Waiting for a term long enough to search.
 final class ObjectSearchIdle extends ObjectSearchState {
-  const ObjectSearchIdle({required this.meta});
+  const ObjectSearchIdle({required this.meta, this.kinds = const []});
 
   @override
   final ProviderMeta meta;
 
   @override
-  List<Object?> get props => [meta];
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [meta, kinds];
 }
 
 /// A search for [term] was sent.
 final class ObjectSearchSearching extends ObjectSearchState {
-  const ObjectSearchSearching({required this.meta, required this.term});
+  const ObjectSearchSearching({required this.meta, required this.term, this.kinds = const []});
 
   @override
   final ProviderMeta meta;
@@ -42,12 +55,15 @@ final class ObjectSearchSearching extends ObjectSearchState {
   final String term;
 
   @override
-  List<Object?> get props => [meta, term];
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [meta, term, kinds];
 }
 
 /// What Studio found for [term], grouped by container path; empty when nothing matched.
 final class ObjectSearchResults extends ObjectSearchState {
-  const ObjectSearchResults({required this.meta, required this.term, required this.groups});
+  const ObjectSearchResults({required this.meta, required this.term, required this.groups, this.kinds = const []});
 
   @override
   final ProviderMeta meta;
@@ -55,17 +71,37 @@ final class ObjectSearchResults extends ObjectSearchState {
   final List<ObjectSearchGroup> groups;
 
   @override
-  List<Object?> get props => [meta, term, groups];
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [meta, term, groups, kinds];
+}
+
+/// Studio refused the search for [term] because it would walk more container and kind pairs than one search may
+/// (`INVENTORY_PAIR_LIMIT`, from Studio 1.1.0): the screen asks the user to pick kinds from [searchKinds], which
+/// narrows it.
+final class ObjectSearchTooBroad extends ObjectSearchState {
+  const ObjectSearchTooBroad({required this.meta, required this.term, this.kinds = const []});
+
+  @override
+  final ProviderMeta meta;
+  final String term;
+
+  @override
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [meta, term, kinds];
 }
 
 /// Provider-meta or the search could not be read.
 ///
-/// [error] is shown by `StudioErrorBanner`, which shows the generic message for a 400 without a code: Studio refuses a
-/// search over too many places with one, as it does a blank term or an undeclared kind, so the screen cannot tell
-/// them apart and never reads Studio's English message to guess. [meta] is null when provider-meta failed, so a retry
-/// starts again; else [term] is the search to send again.
+/// [error] is shown by `StudioErrorBanner`, which shows the generic message for a 400 without a code, such as a blank
+/// term or an undeclared kind; the screen never reads Studio's English message to guess. A search over too many places
+/// is [ObjectSearchTooBroad] instead. [meta] is null when provider-meta failed, so a retry starts again; else [term] is
+/// the search to send again.
 final class ObjectSearchFailure extends ObjectSearchState {
-  const ObjectSearchFailure({required this.error, this.meta, this.term});
+  const ObjectSearchFailure({required this.error, this.meta, this.term, this.kinds = const []});
 
   final AppError error;
 
@@ -74,7 +110,10 @@ final class ObjectSearchFailure extends ObjectSearchState {
   final String? term;
 
   @override
-  List<Object?> get props => [error, meta, term];
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [error, meta, term, kinds];
 }
 
 /// The matches in one container, such as a schema; [container] is empty on an engine with no container level.

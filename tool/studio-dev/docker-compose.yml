@@ -19,8 +19,9 @@
 # Studio lists the Postgres and Redis seeds of seed-connections.yaml beside its built-in samples.
 # The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
 #
-# The Studio image needs the bearer channel of libredb/libredb-studio#1914, which no release has yet (1.0.0 does not).
-# Until one does, build the image from Studio's main branch and point STUDIO_IMAGE at it (see docs/studio.md).
+# Studio runs the 1.1.0 release, pinned by digest: the first release with the bearer channel of
+# libredb/libredb-studio#1914 (1.0.0 does not have it). STUDIO_IMAGE overrides it, for a local build of Studio
+# (see docs/studio.md).
 #
 # Unfit for production on purpose: start-dev with the embedded H2 store (all state is lost when the containers are
 # removed), a short-lived self-signed CA, and the client secret, the user passwords, the Keycloak admin account and the
@@ -101,7 +102,7 @@ services:
       start_period: 20s
 
   libredb-studio:
-    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:latest}
+    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:1.1.0@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c}
     # Studio's localhost is Caddy's, so https://localhost:8443 reaches Keycloak through the same proxy and
     # certificate as the app does, and Caddy reaches Studio on localhost:3000.
     network_mode: service:proxy
@@ -245,7 +246,7 @@ services:
       start_period: 120s
 
   libredb-studio-governed:
-    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:latest}
+    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:1.1.0@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c}
     profiles: [governed]
     # Beside the first Studio in Caddy's network namespace, on port 3001, which Caddy serves as localhost:9444.
     network_mode: service:proxy

@@ -433,6 +433,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_rate_limited": MessageLookupByLibrary.simpleMessage(
       "Too many requests in a short time. Wait a moment and try again.",
     ),
+    "error_studio_search_pair_limit": MessageLookupByLibrary.simpleMessage(
+      "Too many places to search. Pick object kinds to narrow the search.",
+    ),
     "error_studio_statement_too_large": MessageLookupByLibrary.simpleMessage(
       "This statement is too large to run. Shorten it and try again.",
     ),

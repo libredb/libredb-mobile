@@ -8,12 +8,12 @@
     "connectionId": "seed:dev-redis",
     "pattern": "user:*",
     "database": 1,
-    "cursor": "406"
+    "cursor": "1622"
   },
   "keyscan_last": {
     "connectionId": "seed:dev-redis",
     "pattern": "user:*",
     "database": 1,
-    "cursor": "907"
+    "cursor": "1483"
   }
 }

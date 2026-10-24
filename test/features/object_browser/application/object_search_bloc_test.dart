@@ -693,4 +693,150 @@ void main() {
       ],
     );
   });
+
+  group('pair limit', () {
+    final pairLimit = Failure<List<DatabaseObject>>(
+      ValidationError('too many pairs', code: AppErrorCode.studioSearchPairLimit.key),
+    );
+
+    List<List<String>?> kindsSent() => [
+      for (final call in verify(
+        () => repository.search(
+          any(),
+          term: any(named: 'term'),
+          kinds: captureAny(named: 'kinds'),
+        ),
+      ).captured)
+        call as List<String>?,
+    ];
+
+    blocTest<ObjectSearchBloc, ObjectSearchState>(
+      "Studio's pair limit asks for kinds instead of failing, and offers the kinds a search lists",
+      setUp: () {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, pairLimit);
+      },
+      build: () => build(_postgres),
+      act: (bloc) async {
+        bloc.add(const ObjectSearchStarted());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ObjectSearchSubmitted('ord'));
+      },
+      skip: 2,
+      expect: () => [
+        isA<ObjectSearchTooBroad>()
+            .having((s) => s.term, 'term', 'ord')
+            .having((s) => s.kinds, 'kinds', isEmpty)
+            .having((s) => [for (final k in s.searchKinds) k.id], 'searchKinds', [
+              'table',
+              'view',
+              'materialized_view',
+              'sequence',
+              'function',
+              'procedure',
+              'trigger',
+            ]),
+      ],
+    );
+
+    test('picking kinds sends the term again at once with those kinds, in the order the engine declares them', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, pairLimit);
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        expect(bloc.state, isA<ObjectSearchTooBroad>());
+
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        bloc.add(const ObjectSearchKindsChanged(['view', 'table']));
+        async.flushMicrotasks();
+
+        expect(kindsSent(), [
+          null,
+          ['table', 'view'],
+        ]);
+        expect(
+          bloc.state,
+          isA<ObjectSearchResults>().having((s) => s.term, 'term', 'ord').having((s) => s.kinds, 'kinds', [
+            'table',
+            'view',
+          ]),
+        );
+        bloc.close();
+      });
+    });
+
+    test('the picked kinds narrow every later term, and clearing them searches every kind again', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchKindsChanged(['table']));
+        async.flushMicrotasks();
+        expect(bloc.state, isA<ObjectSearchIdle>().having((s) => s.kinds, 'kinds', ['table']));
+        verifyNever(
+          () => repository.search(
+            any(),
+            term: any(named: 'term'),
+            kinds: any(named: 'kinds'),
+          ),
+        );
+
+        bloc.add(const ObjectSearchTermChanged('cust'));
+        async.elapse(ObjectSearchBloc.debounce);
+        bloc.add(const ObjectSearchKindsChanged([]));
+        async.flushMicrotasks();
+
+        expect(kindsSent(), [
+          ['table'],
+          null,
+        ]);
+        expect(bloc.state, isA<ObjectSearchResults>().having((s) => s.kinds, 'kinds', isEmpty));
+        bloc.close();
+      });
+    });
+
+    test('a kind the search does not list is never sent', () {
+      fakeAsync((async) {
+        answerMeta('seed:firestore', metaAnswer('handwritten/firestore/meta'));
+        answerSearch('seed:firestore', const Success([]));
+        final bloc = build('seed:firestore')..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+
+        bloc.add(const ObjectSearchKindsChanged(['document', 'collection', 'nope']));
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+
+        expect(kindsSent(), [
+          ['collection'],
+        ]);
+        bloc.close();
+      });
+    });
+
+    test('the same term with other kinds is a new search, and a submit with the same kinds sends nothing new', () {
+      fakeAsync((async) {
+        answerMeta(_postgres, metaAnswer('meta_postgres'));
+        answerSearch(_postgres, Success(objectsAnswer('search_postgres')));
+        final bloc = build(_postgres)..add(const ObjectSearchStarted());
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchKindsChanged(['view']));
+        async.flushMicrotasks();
+        bloc.add(const ObjectSearchSubmitted('ord'));
+        bloc.add(const ObjectSearchKindsChanged(['view']));
+        async.flushMicrotasks();
+
+        expect(kindsSent(), [
+          null,
+          ['view'],
+        ]);
+        bloc.close();
+      });
+    });
+  });
 }

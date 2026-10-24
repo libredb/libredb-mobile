@@ -287,7 +287,7 @@ void main() {
       expect(find.descendant(of: second, matching: find.text('Statement 2')), findsOneWidget);
       expect(find.descendant(of: second, matching: find.text('Failed')), findsOneWidget);
       expect(find.descendant(of: second, matching: find.text('SELECT * FROM nope')), findsOneWidget);
-      expect(find.descendant(of: second, matching: find.text('1 ms')), findsOneWidget);
+      expect(find.descendant(of: second, matching: find.text('0 ms')), findsOneWidget);
       expect(find.descendant(of: second, matching: find.text('relation "nope" does not exist')), findsOneWidget);
       // Under the cards, which scroll above the open rows.
       expect(

@@ -32,21 +32,33 @@ final class ObjectSearchSubmitted extends ObjectSearchTermEvent {
   const ObjectSearchSubmitted(super.term);
 }
 
+/// The user picked the object kinds to search, empty for every kind; the term is searched again at once with them.
+final class ObjectSearchKindsChanged extends ObjectSearchEvent {
+  const ObjectSearchKindsChanged(this.kinds);
+
+  /// The ids of the picked kinds, in any order.
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [kinds];
+}
+
 /// A request of the search: the one event stream that sends a search or clears the screen, each one replacing the
 /// request before it.
 sealed class _ObjectSearchRequest extends ObjectSearchEvent {
   const _ObjectSearchRequest();
 }
 
-/// Sends a search for [term], the [generation]th request.
+/// Sends a search for [term] narrowed to [kinds] (every kind when empty), the [generation]th request.
 final class _ObjectSearchSent extends _ObjectSearchRequest {
-  const _ObjectSearchSent(this.term, this.generation);
+  const _ObjectSearchSent(this.term, this.kinds, this.generation);
 
   final String term;
+  final List<String> kinds;
   final int generation;
 
   @override
-  List<Object?> get props => [term, generation];
+  List<Object?> get props => [term, kinds, generation];
 }
 
 /// The term became too short to search: the screen waits for a term again.

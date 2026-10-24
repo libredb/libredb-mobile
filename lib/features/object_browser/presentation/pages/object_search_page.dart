@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_search_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
@@ -8,6 +9,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/object_tile.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 
@@ -81,6 +83,7 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
         ObjectSearchIdle(:final meta) => _buildSearch(
           context,
           heading,
+          state,
           meta,
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -90,20 +93,33 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
         ObjectSearchSearching(:final meta) => _buildSearch(
           context,
           heading,
+          state,
           meta,
           const Center(child: CircularProgressIndicator()),
         ),
         ObjectSearchResults(:final meta, :final term, :final groups) => _buildSearch(
           context,
           heading,
+          state,
           meta,
           groups.isEmpty
               ? Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: Text(s.browse_search_no_results(term)))
               : _Results(connectionId: widget.connectionId, meta: meta, groups: groups),
         ),
+        ObjectSearchTooBroad(:final meta) => _buildSearch(
+          context,
+          heading,
+          state,
+          meta,
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(AppErrorCode.studioSearchPairLimit.resolve(context)),
+          ),
+        ),
         ObjectSearchFailure(:final error, :final meta?, :final term) => _buildSearch(
           context,
           heading,
+          state,
           meta,
           ListView(
             children: [
@@ -120,7 +136,8 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
     );
   }
 
-  Widget _buildSearch(BuildContext context, Widget heading, ProviderMeta meta, Widget body) {
+  /// The search field above [body], and the kind chips once Studio asked for kinds or while some are picked.
+  Widget _buildSearch(BuildContext context, Widget heading, ObjectSearchState state, ProviderMeta meta, Widget body) {
     final s = S.of(context);
     final bloc = context.read<ObjectSearchBloc>();
     return Column(
@@ -152,8 +169,46 @@ class _ObjectSearchViewState extends State<_ObjectSearchView> {
             ),
           ),
         ),
+        if (state is ObjectSearchTooBroad || state.kinds.isNotEmpty)
+          _KindChips(
+            kinds: state.searchKinds,
+            picked: state.kinds,
+            onChanged: (kinds) => bloc.add(ObjectSearchKindsChanged(kinds)),
+          ),
         Expanded(child: body),
       ],
+    );
+  }
+}
+
+/// A chip per kind a search can be narrowed to, labelled as the object list labels the kind; a tap picks or drops it.
+class _KindChips extends StatelessWidget {
+  const _KindChips({required this.kinds, required this.picked, required this.onChanged});
+
+  final List<ObjectKind> kinds;
+  final List<String> picked;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        children: [
+          for (final kind in kinds)
+            FilterChip(
+              label: Text(kind.labelPlural),
+              selected: picked.contains(kind.id),
+              onSelected: (selected) => onChanged([
+                for (final id in picked)
+                  if (id != kind.id) id,
+                if (selected) kind.id,
+              ]),
+            ),
+        ],
+      ),
     );
   }
 }

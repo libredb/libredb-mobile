@@ -192,13 +192,13 @@ void main() {
 
   blocTest<ObjectDetailBloc, ObjectDetailState>(
     'an object without foreign keys lists nothing',
-    setUp: () => answerDescribe(orders, () => Success(detailAnswer('describe_postgres_orders_readonly'))),
+    setUp: () => answerDescribe(orders, () => Success(detailAnswer('describe_postgres_room_bookings'))),
     build: build,
     act: (bloc) => bloc.add(const ObjectDetailRequested()),
     expect: () => [
       ObjectDetailLoaded(
         meta: postgresMeta,
-        detail: detailAnswer('describe_postgres_orders_readonly'),
+        detail: detailAnswer('describe_postgres_room_bookings'),
         kind: table,
         foreignKeyTargets: const {},
         loadedAt: at,

@@ -114,14 +114,22 @@ void main() {
     expect(() => StudioIdentityModel.readSignOutAccepted(fixture('logout')), returnsNormally);
   });
 
-  test('GET /api/connections/managed', () {
+  test('GET /api/connections/managed as user leaves out the sample only admin may open', () {
     final managed = ManagedConnectionsModel.read(fixture('managed'));
     final connections = managed.connections;
 
-    expect(connections.map((c) => c.id), ['seed:sqlite-embedded-sample', 'seed:libredb-embedded-sample']);
-    expect(connections.map((c) => c.seedId), ['sqlite-embedded-sample', 'libredb-embedded-sample']);
-    expect(connections.first.database, 'data/sample-employees.db');
-    expect(connections.every((c) => !c.managed && !c.readOnly && c.color == null), isTrue);
+    expect(connections.map((c) => c.id), [
+      'seed:dev-postgres',
+      'seed:dev-postgres-server',
+      'seed:dev-postgres-readonly',
+      'seed:dev-postgres-prod',
+      'seed:dev-redis',
+      'seed:libredb-embedded-sample',
+    ]);
+    final sample = connections.last;
+    expect(sample.seedId, 'libredb-embedded-sample');
+    expect(sample.database, 'data/sample.libredb');
+    expect(!sample.managed && !sample.readOnly && sample.color == null, isTrue);
     expect(managed.cacheHint, const Duration(minutes: 1));
   });
 
@@ -568,15 +576,17 @@ void main() {
       expect(detail.foreignKeys, isEmpty);
     });
 
-    // Studio reads the keys from information_schema views, which show foreign keys only to the owner, and primary keys
-    // only to the owner or a role with a non-SELECT privilege.
-    test('POST /api/db/objects/describe of public.orders as a role that may only read has no keys', () {
+    // Studio 1.1.0 reads the keys from pg_catalog, which every role that can see the table reads; before it, the
+    // information_schema views it read showed them only to the owner.
+    test('POST /api/db/objects/describe of public.orders as a role that may only read has the owner\'s keys', () {
       final detail = ObjectBrowserJson.detail(fixture('describe_postgres_orders_readonly'));
+      final owner = ObjectBrowserJson.detail(fixture('describe_postgres_orders'));
 
-      expect(detail.columns.map((c) => c.name), contains('customer_id'));
-      expect(detail.columns.where((c) => c.isPrimary), isEmpty);
-      expect(detail.foreignKeys, isEmpty);
+      expect(detail.columns.where((c) => c.isPrimary).map((c) => c.name), ['id']);
+      expect(detail.foreignKeys.single.columnName, 'customer_id');
+      expect(detail.foreignKeys.single.referencedTable, 'customers');
       expect(detail.indexes!.map((i) => i.name), containsAll(['orders_pkey', 'orders_customer_id_idx']));
+      expect(detail, owner);
     });
 
     test('POST /api/db/objects/source of a view', () {
@@ -609,6 +619,29 @@ void main() {
       final objects = ObjectBrowserJson.searchResults(fixture('search_postgres'));
 
       expect(objects.map((o) => o.name), containsAll(['orders', 'order_items']));
+      expect(objects.firstWhere((o) => o.name == 'orders').sizeBytes, 49152);
+      // Studio 1.1.0 sends no size for a view, which has no storage of its own; before it, it sent 0.
+      expect(objects.firstWhere((o) => o.name == 'order_totals').sizeBytes, isNull);
+    });
+
+    test('POST /api/db/objects/search over more container and kind pairs than one search may list', () {
+      // Recorded with 150 empty schemas added to app for the recording, so 152 schemas of 7 kinds are 1,064 pairs.
+      final body = fixture('search_postgres_pair_limit');
+      final error = studioError(BadRequestException(body, statusCode: 400, errorCode: ApiClient.errorCodeOf(body)));
+
+      expect(error, isA<ValidationError>().having((e) => e.code, 'code', AppErrorCode.studioSearchPairLimit.key));
+      expect(jsonDecode(body), containsPair('limit', 1000));
+      expect(jsonDecode(body), containsPair('pairs', 1064));
+    });
+
+    test('POST /api/db/objects/search narrowed to tables and views', () {
+      final objects = ObjectBrowserJson.searchResults(fixture('search_postgres_kinds'));
+
+      expect(objects.map((o) => (o.name, o.kind)), [
+        ('order_items', 'table'),
+        ('orders', 'table'),
+        ('order_totals', 'view'),
+      ]);
     });
 
     test('POST /api/db/query of one row of every column type', () {
@@ -655,7 +688,7 @@ void main() {
       expect(result.pagination?.hasMore, isFalse);
     });
 
-    test('the preview and the count run the same on the read-only seed, whose describe carries no keys', () {
+    test('the preview and the count run the same on the read-only seed as on the owner\'s seed', () {
       expect(
         QueryResultJson.read(fixture('query_preview_postgres_readonly_customers')).rows,
         QueryResultJson.read(fixture('query_preview_postgres_customers')).rows,

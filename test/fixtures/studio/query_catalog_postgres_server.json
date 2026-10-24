@@ -1,1 +1,1 @@
-{"rows":[{"current_database":"archive"}],"fields":["current_database"],"columnTypes":{"current_database":"name"},"rowCount":1,"executionTime":1,"pagination":{"limit":50,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}
+{"rows":[{"current_database":"archive"}],"fields":["current_database"],"columnTypes":{"current_database":"name"},"rowCount":1,"executionTime":0,"pagination":{"limit":50,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}
