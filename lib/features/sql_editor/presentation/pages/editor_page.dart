@@ -223,12 +223,28 @@ class _EditorViewState extends State<_EditorView> {
     }
   }
 
+  /// The active database of this page's connection, as set by the last state that named the connection.
+  String? _ownCatalog;
+
+  /// Notes the database [state] makes active on this page's connection. A state that names no database of it, as when
+  /// the connection switched or the session ended, leaves the one it last had, since the user never clears the
+  /// database of the connection they are on: the page being left keeps its draft's database.
+  void _noteActiveCatalog(ActiveCatalogState state) {
+    if (state case ActiveCatalogChosen(:final connectionId, :final catalog) when connectionId == widget.connectionId) {
+      _ownCatalog = catalog;
+    }
+  }
+
+  /// The active database of this page's connection, as the current state leaves it.
+  String? _activeCatalog() {
+    _noteActiveCatalog(context.read<ActiveCatalogCubit>().state);
+    return _ownCatalog;
+  }
+
   /// The database the draft keeps with its text: the one a Run would send once the databases are listed, and the
   /// restored draft's own until then, so a list that fails or a page left early never saves the draft without it.
   String? get _catalog => switch (context.read<EditorCatalogBloc>().state) {
-    final EditorCatalogListed listed => listed.catalogToSend(
-      context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
-    ),
+    final EditorCatalogListed listed => listed.catalogToSend(_activeCatalog()),
     EditorCatalogNotUsed() => null,
     EditorCatalogChecking() ||
     EditorCatalogMetaFailure() ||
@@ -510,7 +526,13 @@ class _EditorViewState extends State<_EditorView> {
             _tellDraft();
           },
         ),
-        BlocListener<ActiveCatalogCubit, ActiveCatalogState>(listener: (context, state) => _tellDraft()),
+        BlocListener<ActiveCatalogCubit, ActiveCatalogState>(
+          // The state delivered, not the cubit's latest, so each of two states emitted in one batch is noted.
+          listener: (context, state) {
+            _noteActiveCatalog(state);
+            _tellDraft();
+          },
+        ),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
