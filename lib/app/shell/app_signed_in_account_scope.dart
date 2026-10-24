@@ -32,7 +32,8 @@ class AppSignedInAccountScope extends StatelessWidget {
   }
 
   /// Reads again what the device keeps for [subject]: the favorites, and the open connection and its database, which
-  /// close and open again only when their stored values are still there.
+  /// close. A connection whose store failed to clear is still stored, so it opens again, but only once the connection
+  /// list loads again; until then it stays closed.
   static void _reloadStoredData(BuildContext context, String? subject) {
     context.read<FavoriteConnectionsBloc>().add(const FavoriteConnectionsReloaded());
     final connection = context.read<ActiveConnectionCubit>()..clear();

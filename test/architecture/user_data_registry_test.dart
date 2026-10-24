@@ -53,6 +53,63 @@ const _sessionTokens = {
 /// clears what each keeps there. A new directory fails the guard until it is listed here and cleared.
 const _directoryUsers = {'lib/infrastructure/storage/encrypted_text_file_store.dart': 'statement_text'};
 
+/// Whom what a file keeps through the device stores belongs to.
+sealed class _Keeps {
+  const _Keeps();
+}
+
+/// Data of an account past the session, cleared by the registry entry [name].
+final class _Entry extends _Keeps {
+  const _Entry(this.name);
+  final String name;
+}
+
+/// Session storage, which every sign-out deletes: the tokens and the cache of GET responses.
+final class _Session extends _Keeps {
+  const _Session();
+}
+
+/// Device storage that holds no data of an account: the language, the theme, the result view mode.
+final class _Device extends _Keeps {
+  const _Device();
+}
+
+/// Passes a store on, or shows what the stores hold, and keeps nothing of its own.
+final class _NoneOfItsOwn extends _Keeps {
+  const _NoneOfItsOwn();
+}
+
+/// Every file under `lib/` that imports the secure store, the device preferences or shared_preferences, with what it
+/// keeps there. A new file fails the guard until it is named here, so a store that writes under a key of its own, such
+/// as `'notes_$subject'`, cannot pass unseen.
+const _storageUsers = <String, _Keeps>{
+  'lib/infrastructure/storage/encrypted_text_file_store.dart': _Entry('statement_text'),
+  'lib/features/connections/data/repositories/favorite_connections_repository.dart': _Entry('connection_favorites'),
+  'lib/infrastructure/storage/active_connection_preferences.dart': _Entry('active_connection'),
+  'lib/infrastructure/storage/active_catalog_preferences.dart': _Entry('active_catalog'),
+  'lib/features/connections/data/repositories/collapsed_sections_repository.dart': _Entry(
+    'connection_sections_collapsed',
+  ),
+  'lib/features/auth/data/repositories/auth_session_repository_impl.dart': _Session(),
+  'lib/features/auth/data/repositories/sso_sign_out_auth_repository.dart': _Session(),
+  'lib/features/auth/data/services/sso_session_startup_impl.dart': _Session(),
+  'lib/app/session/session_cubit.dart': _Session(),
+  'lib/infrastructure/auth/oidc/oidc_token_rotation.dart': _Session(),
+  'lib/infrastructure/cache/shared_prefs_cache_storage.dart': _Session(),
+  'lib/infrastructure/http/api_client.dart': _Session(),
+  'lib/infrastructure/http/interceptors/auth_interceptor.dart': _Session(),
+  'lib/infrastructure/http/interceptors/token_refresh_interceptor.dart': _Session(),
+  'lib/app/localization/locale_cubit.dart': _Device(),
+  'lib/app/theme/theme_bloc.dart': _Device(),
+  'lib/app/bootstrap/app_bootstrap.dart': _Device(),
+  'lib/infrastructure/storage/result_view_mode_preferences.dart': _Device(),
+  'lib/infrastructure/storage/local_storage.dart': _Device(),
+  'lib/app/app.dart': _NoneOfItsOwn(),
+  'lib/app/di/app_dependencies.dart': _NoneOfItsOwn(),
+  'lib/app/di/app_scope.dart': _NoneOfItsOwn(),
+  'lib/app/dev_console/tabs/storage_tab.dart': _NoneOfItsOwn(),
+};
+
 const _subject = '6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10';
 
 void main() {
@@ -204,6 +261,32 @@ void main() {
           'AppDependencies.createUserDataRegistry and list the file in _directoryUsers',
     );
     expect(registry.stores.map((store) => store.name), containsAll(_directoryUsers.values));
+  });
+
+  test('every file that reaches the secure store or the device preferences is named with what it keeps', () {
+    final importer = RegExp(
+      r'''^import\s+['"](?:package:shared_preferences/|[^'"]*(?:/|^)(?:secure_storage|local_storage)\.dart['"])''',
+      multiLine: true,
+    );
+    final found = {
+      for (final file in Directory('lib').listSync(recursive: true).whereType<File>())
+        if (file.path.endsWith('.dart') &&
+            !file.path.contains('/generated/') &&
+            importer.hasMatch(file.readAsStringSync()))
+          file.path.replaceAll(r'\', '/'),
+    };
+
+    expect(
+      found,
+      _storageUsers.keys.toSet(),
+      reason:
+          'A file that keeps data through ISecureStorage, AppLocalStorage or shared_preferences must be named in '
+          '_storageUsers: with the registry entry that clears it, or as session or device storage',
+    );
+    final names = registry.stores.map((store) => store.name).toSet();
+    for (final MapEntry(:key, :value) in _storageUsers.entries) {
+      if (value case _Entry(:final name)) expect(names, contains(name), reason: key);
+    }
   });
 }
 
