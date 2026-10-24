@@ -218,6 +218,27 @@ void main() {
     expect(tester.widget<ListTile>(row).onTap, isNull);
   });
 
+  testWidgets('a lookup list that fails without a code says the links were not checked with the generic message, not '
+      'its type', (tester) async {
+    answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders')));
+    when(
+      () => harness.repository.list(
+        _postgres.id,
+        container: ['app', 'public'],
+        kind: 'table',
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async => const Failure(ServerError('busy')));
+    for (final kind in ['view', 'materialized_view', 'sequence']) {
+      answerList(kind, const []);
+    }
+    await harness.pump(tester, location: ordersLocation);
+    await openTab(tester, 'Foreign keys');
+
+    expect(find.text('Could not check which tables these keys open: Something went wrong'), findsOneWidget);
+    expect(find.textContaining('ServerError'), findsNothing);
+  });
+
   testWidgets('foreign keys whose lookup Studio answered show no unchecked line', (tester) async {
     answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders')));
     answerList('table', _tables());
@@ -420,6 +441,26 @@ void main() {
 
       expect(find.text('Could not count the rows (studio.database_unreachable)'), findsOneWidget);
       expect(find.text('customer_id'), findsOneWidget);
+    });
+
+    testWidgets('a count that fails without a code shows the generic message, not its type', (tester) async {
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          count,
+          queryId: any(named: 'queryId'),
+          page: any(named: 'page'),
+          catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((_) async => const Failure(UnknownError('socket closed')));
+      await harness.pump(tester, location: ordersLocation);
+
+      await tester.tap(countRows());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not count the rows: Something went wrong'), findsOneWidget);
+      expect(find.textContaining('UnknownError'), findsNothing);
     });
 
     testWidgets('offline, both are disabled with the reason', (tester) async {

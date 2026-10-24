@@ -217,6 +217,18 @@ void main() {
       expect(find.byType(BrowseFailureView), findsNothing);
     });
 
+    testWidgets('a count that fails without a code shows the generic message, not its type', (tester) async {
+      answerRun(_postgres.id, _count, () async => const Failure(UnknownError('socket closed')));
+      await harness.pump(tester, location: customersLocation);
+
+      await tester.tap(countButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not count the rows: Something went wrong'), findsOneWidget);
+      expect(find.textContaining('UnknownError'), findsNothing);
+      expect(find.textContaining('socket closed'), findsNothing);
+    });
+
     testWidgets('offline, the rows stay marked stale, Count rows is disabled with the reason, and a pull sends '
         'nothing', (tester) async {
       await harness.pump(tester, location: customersLocation);

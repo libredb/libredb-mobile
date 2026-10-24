@@ -4,9 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:share_plus/share_plus.dart';
@@ -29,10 +31,13 @@ const sourceShareTextLimit = 100000;
 
 /// Opens the system share sheet for [part] from the button of [context]: its text up to [sourceShareTextLimit]
 /// characters, otherwise a [sourceShareFile] written through [TemporaryShareFiles], removed once the share has ended. A
-/// share that fails is shown with its code, and so is a file the phone refuses to remove, which the sign-out removes.
+/// share that fails is shown with its platform code, or with the generic message for a failure without one, and a file
+/// the phone refuses to remove is said with the generic message, since the sign-out removes it.
 Future<void> shareSourcePart(BuildContext context, {required ObjectSource source, required SourceText part}) async {
   final messenger = ScaffoldMessenger.of(context);
   final s = S.of(context);
+  // A failure without a code shows this; its type goes only to the log, since an obfuscated build renames it.
+  final generic = AppErrorCode.generic.resolve(context);
   final shareFiles = context.read<TemporaryShareFiles>();
   final box = context.findRenderObject() as RenderBox?;
   final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
@@ -54,9 +59,13 @@ Future<void> shareSourcePart(BuildContext context, {required ObjectSource source
       );
     }
   } on Exception catch (error) {
-    final code = error is PlatformException ? error.code : '${error.runtimeType}';
-    _log.warn('source not shared: {}', [code]);
-    show(s.browse_source_share_failed(code));
+    if (error is PlatformException) {
+      _log.warn('source not shared: {}', [error.code]);
+      show(s.browse_source_share_failed(error.code));
+    } else {
+      _log.warn('source not shared: {}', [error.runtimeType]);
+      show(s.browse_source_share_failed_reason(generic));
+    }
   }
   if (file == null) return;
   try {
@@ -64,7 +73,7 @@ Future<void> shareSourcePart(BuildContext context, {required ObjectSource source
   } on Exception catch (error) {
     // The type only: the message of a file system error holds the path, which names the object.
     _log.error('shared source file not removed: {}', [error.runtimeType]);
-    show(s.browse_source_share_file_left('${error.runtimeType}'));
+    show(s.browse_source_share_file_left(generic));
   }
 }
 

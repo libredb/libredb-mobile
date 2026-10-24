@@ -365,11 +365,13 @@
       }
     }
   },
-  "browse_source_share_file_left": "The shared file stays on this phone until you sign out ({code})",
+  "browse_source_share_failed_reason": "Could not share: {reason}",
+  "@browse_source_share_failed_reason": {"description": "A share of a source failed without an error code; reason is the localized generic error message.", "placeholders": {"reason": {"type": "String"}}},
+  "browse_source_share_file_left": "The shared file stays on this phone until you sign out: {reason}",
   "@browse_source_share_file_left": {
-    "description": "The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.",
+    "description": "The file of a source shared as a file could not be removed once the share ended; the sign-out removes it. reason is the localized generic error message.",
     "placeholders": {
-      "code": {
+      "reason": {
         "type": "String"
       }
     }
@@ -473,6 +475,8 @@
       }
     }
   },
+  "browse_detail_links_unchecked_reason": "Could not check which tables these keys open: {reason}",
+  "@browse_detail_links_unchecked_reason": {"description": "Over foreign keys whose tables could not be looked up, when the list failed without an error code; reason is the localized generic error message.", "placeholders": {"reason": {"type": "String"}}},
   "browse_detail_exclusion_constraints": "Exclusion constraints",
   "@browse_detail_exclusion_constraints": {},
   "browse_detail_references": "References {table}.{column}",
@@ -802,6 +806,8 @@
   "@browse_preview_unavailable": {"description": "Why View rows is disabled for an object whose engine's preview the app does not write yet."},
   "browse_count_failed": "Could not count the rows ({code})",
   "@browse_count_failed": {"description": "In a heading, when the row count was refused or could not be read, with its error code.", "placeholders": {"code": {"type": "String"}}},
+  "browse_count_failed_reason": "Could not count the rows: {reason}",
+  "@browse_count_failed_reason": {"description": "In a heading, when the row count failed without an error code; reason is the localized generic error message.", "placeholders": {"reason": {"type": "String"}}},
   "browse_rows_database_says": "The database says",
   "@browse_rows_database_says": {"description": "Over the database's own words for a failed preview."},
   "result_view_cards": "Cards",

@@ -1180,13 +1180,23 @@ class S {
     return Intl.message('Could not share ($code)', name: 'browse_source_share_failed', desc: '', args: [code]);
   }
 
-  /// `The shared file stays on this phone until you sign out ({code})`
-  String browse_source_share_file_left(String code) {
+  /// `Could not share: {reason}`
+  String browse_source_share_failed_reason(String reason) {
     return Intl.message(
-      'The shared file stays on this phone until you sign out ($code)',
+      'Could not share: $reason',
+      name: 'browse_source_share_failed_reason',
+      desc: 'A share of a source failed without an error code; reason is the localized generic error message.',
+      args: [reason],
+    );
+  }
+
+  /// `The shared file stays on this phone until you sign out: {reason}`
+  String browse_source_share_file_left(String reason) {
+    return Intl.message(
+      'The shared file stays on this phone until you sign out: $reason',
       name: 'browse_source_share_file_left',
-      desc: 'The file of a source shared as a file could not be removed once the share ended; the sign-out removes it.',
-      args: [code],
+      desc: 'The file of a source shared as a file could not be removed once the share ended; the sign-out removes it. reason is the localized generic error message.',
+      args: [reason],
     );
   }
 
@@ -1422,6 +1432,16 @@ class S {
       name: 'browse_detail_links_unchecked',
       desc: 'Over foreign keys whose tables could not be looked up, with the error code of the refused list.',
       args: [code],
+    );
+  }
+
+  /// `Could not check which tables these keys open: {reason}`
+  String browse_detail_links_unchecked_reason(String reason) {
+    return Intl.message(
+      'Could not check which tables these keys open: $reason',
+      name: 'browse_detail_links_unchecked_reason',
+      desc: 'Over foreign keys whose tables could not be looked up, when the list failed without an error code; reason is the localized generic error message.',
+      args: [reason],
     );
   }
 
@@ -2034,6 +2054,16 @@ class S {
       name: 'browse_count_failed',
       desc: 'In a heading, when the row count was refused or could not be read, with its error code.',
       args: [code],
+    );
+  }
+
+  /// `Could not count the rows: {reason}`
+  String browse_count_failed_reason(String reason) {
+    return Intl.message(
+      'Could not count the rows: $reason',
+      name: 'browse_count_failed_reason',
+      desc: 'In a heading, when the row count failed without an error code; reason is the localized generic error message.',
+      args: [reason],
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_detail_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/object_source_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/application/row_count_bloc.dart';
@@ -15,6 +16,7 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/obje
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/row_count.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
@@ -215,7 +217,11 @@ class _DetailTabs extends StatelessWidget {
     return [
       if (detail.foreignKeys.isEmpty) _Note(s.browse_detail_no_foreign_keys),
       if (loaded.foreignKeyLookupError case final error? when detail.foreignKeys.isNotEmpty)
-        _Caption(s.browse_detail_links_unchecked(error.code ?? error.runtimeType.toString())),
+        _Caption(switch (error.code) {
+          final code? => s.browse_detail_links_unchecked(code),
+          // The type goes only to the log: in an obfuscated build it is a renamed one.
+          null => s.browse_detail_links_unchecked_reason(AppErrorCode.generic.resolve(context)),
+        }),
       for (final key in detail.foreignKeys)
         if (loaded.foreignKeyTargets[key.referencedTable] case final target?)
           ListTile(
