@@ -16,6 +16,7 @@ import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -506,6 +507,47 @@ void main() {
 
       expect(find.text("Replace the editor's text?"), findsNothing);
       expect(editorText(tester), 'SELECT draft');
+    });
+
+    testWidgets('leaving the connection keeps the draft\'s database, and nothing logs its text (#171)', (tester) async {
+      active.select(_server);
+      // The shell, the editors and their blocs are all built inside the zone, so it sees every line they print.
+      final lines = await printedLines(() async {
+        await pumpShell(tester);
+        expect(editorText(tester), 'SELECT draft');
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+
+        active.select(_postgres);
+        await tester.pumpAndSettle();
+        expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'postgres'));
+
+        active.select(_server);
+        await tester.pumpAndSettle();
+        expect(editorText(tester), 'SELECT draft');
+        expect(find.descendant(of: chip(), matching: find.text('Database: postgres')), findsOneWidget);
+        // The control that the zone captures the app's lines.
+        AppLogger.getLogger('Control').info('control line');
+      });
+
+      expect(lines, contains(contains('control line')));
+      expect(lines.where((line) => line.contains('SELECT draft')), isEmpty);
+    });
+
+    testWidgets('a database the user picks on the connection is saved with the draft when leaving it (#171)', (
+      tester,
+    ) async {
+      active.select(_server);
+      await pumpShell(tester);
+      await tester.tap(chip());
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'archive'));
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: chip(), matching: find.text('Database: archive')), findsOneWidget);
+
+      active.select(_postgres);
+      await tester.pumpAndSettle();
+
+      expect(drafts[_server.id], const StatementDraft(text: 'SELECT draft', catalog: 'archive'));
     });
   });
 

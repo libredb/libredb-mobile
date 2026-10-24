@@ -223,12 +223,25 @@ class _EditorViewState extends State<_EditorView> {
     }
   }
 
+  /// The active database of this page's connection, as the last active database state that named the connection set
+  /// it.
+  String? _ownCatalog;
+
+  /// The active database of this page's connection. A state that names no database of it, as when the connection
+  /// switched or the session ended, leaves the one it last had, since the user never clears the database of the
+  /// connection they are on: the page being left keeps its draft's database.
+  String? _activeCatalog() {
+    if (context.read<ActiveCatalogCubit>().state case ActiveCatalogChosen(:final connectionId, :final catalog)
+        when connectionId == widget.connectionId) {
+      _ownCatalog = catalog;
+    }
+    return _ownCatalog;
+  }
+
   /// The database the draft keeps with its text: the one a Run would send once the databases are listed, and the
   /// restored draft's own until then, so a list that fails or a page left early never saves the draft without it.
   String? get _catalog => switch (context.read<EditorCatalogBloc>().state) {
-    final EditorCatalogListed listed => listed.catalogToSend(
-      context.read<ActiveCatalogCubit>().catalogOf(widget.connectionId),
-    ),
+    final EditorCatalogListed listed => listed.catalogToSend(_activeCatalog()),
     EditorCatalogNotUsed() => null,
     EditorCatalogChecking() ||
     EditorCatalogMetaFailure() ||
