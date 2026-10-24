@@ -11,7 +11,7 @@ How the app talks to Studio is in [architecture.md](architecture.md).
 ## Status
 
 Each milestone from M2 on is a GitHub milestone with an epic issue that lists its children.
-The children of a milestone are filed as issues when it starts: M2 to M5 in full, M6 in part, M7 to M9 not yet.
+The children of a milestone are filed as issues when it starts: M2 to M6 in full, M7 to M9 not yet, except the two M5 children that moved to M7 ([#122][i122], [#123][i123]).
 
 | Milestone | Status | Epic |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ The children of a milestone are filed as issues when it starts: M2 to M5 in full
 | M2 Connection list | Done | [#8][e8] |
 | M3 Object browser | Done | [#31][e31] |
 | M4 Result grid and data preview | Done | [#32][e32] |
-| M5 SQL editor | In progress | [#33][e33] |
+| M5 SQL editor | Done | [#33][e33] |
 | M6 Release | In progress | [#34][e34] |
 | M7 Editor power tools | Planned | [#35][e35] |
 | M8 Admin on the go | Planned | [#36][e36] |
@@ -29,7 +29,8 @@ The children of a milestone are filed as issues when it starts: M2 to M5 in full
 The first store release (M6) comes before the admin and Platform work, so a Studio or Platform change that has not shipped does not hold it back.
 No Studio prerequisite blocks M2 to M6.
 Where a child needs a Studio change, the milestone ships an interim version built on the phone, and the child that uses the Studio change follows when Studio ships it.
-The Studio and Platform changes are drafted and not filed yet; each epic names the ones it needs.
+The app needs Studio 1.1.0 or later, the first release with the bearer channel; `tool/studio-dev` runs it ([#222][i222], [PR #225][p225]).
+The other Studio and Platform changes are drafted and not filed yet; each epic names the ones it needs.
 
 ## M0 Foundation
 
@@ -52,8 +53,9 @@ A typed Dart client for the Studio endpoints the next milestones need, with no n
 - Repositories for the session (`/api/auth/me`), connections, the object browser and the SQL editor, each with mock answers and tests.
 
 Done when every repository has tests against recorded Studio answers and one smoke run against the local Studio passes.
-The answers in `test/fixtures/studio/` were recorded from Studio main in `tool/studio-dev`, first on the SQLite sample, which has no transactions.
+The answers in `test/fixtures/studio/` were first recorded from Studio main in `tool/studio-dev`, on the SQLite sample, which has no transactions.
 The transaction answers `txbegin.json`, `txquery.json` and `txcommit.json` were recorded later from the Postgres seeds of `tool/studio-dev` ([#49][i49], [PR #65][p65]).
+Every answer was recorded again from Studio 1.1.0 in [#222][i222].
 
 ## M2 Connection list
 
@@ -93,30 +95,45 @@ Done: every child is merged, and the walkthrough was recorded on Android 13 in [
 
 Type and run statements on a phone, on the SQL tab.
 Epic [#33][e33], end-to-end walkthrough [#124][i124].
-In progress: the editor, the write confirmation, cancel, the catalog picker, script and selection runs, the background rule, drafts, history and opening a statement were merged between [PR #133][p133] and [PR #153][p153].
-The walkthrough and two defects ([#140][i140], [#150][i150]) are open.
+Done: every child is merged, and the walkthrough was recorded on Android 13 in [PR #165][p165].
+The defects it found are fixed ([#163][i163], [#164][i164], [#167][i167]), and [#168][i168] was closed as matching Studio, which shows a row count only when it is positive.
 
 - Run a statement with a fail-closed write confirmation, and cancel it.
 - An editor input sized for a phone, a catalog picker for server-level connections, and an honest answer when the app goes to the background during a run.
 - Statement history on the device, and open a statement from history or from the object browser.
 - Script runs and a selection run on the phone ([#117][i117], [PR #146][p146]).
-- Routing and a write confirmation driven by Studio's statement analysis ([#122][i122], [#123][i123]) follow when Studio ships that endpoint.
+- The first release ships the fail-closed keyword check of [#111][i111]; routing and a write confirmation driven by Studio's statement analysis ([#122][i122], [#123][i123]) moved to M7 and follow when Studio ships that endpoint.
 
 ## M6 Release
 
 Ship the first store release of M2 to M5.
-Epic [#34][e34]; its end-to-end check is the full walkthrough on a physical Android phone and on iOS (M6-04).
+Epic [#34][e34]; its end-to-end check is the full walkthrough on a physical Android phone ([#196][i196]) and on iOS ([#199][i199]).
+In progress: Android comes first, iOS follows on macOS, and the app is not in a store yet.
 
-- Remove the start-up check that read an app config from Studio, a route Studio does not have (done in [#102](https://github.com/libredb/libredb-mobile/issues/102), [PR #137][p137]).
-- Certificate pinning and Sentry for the release build, with the native scrubber on iOS, since sentry-cocoa records events and breadcrumbs unmasked ([crash-reporting.md](crash-reporting.md)).
-- Screen capture protection on data screens, an app lock, and a way to remove the app's data.
-- Store listings, signing and a release pipeline.
+Merged:
+
+- Remove the start-up check that read an app config from Studio, a route Studio does not have ([#102][i102], [PR #137][p137]).
+- Certificate pinning by public key for Studio and Keycloak, off by default ([#190][i190], [PR #200][p200]).
+- The Android release check of Sentry, with no statement or database text in crash reports ([#191][i191], [PR #203][p203]).
+- Screen capture protection on data screens, on by default ([#192][i192], [PR #204][p204]).
+- 'Remove my data' in Settings ([#193][i193], [PR #201][p201]).
+- An app lock with biometrics or the device screen lock ([#195][i195], [PR #214][p214]).
+- A prod build that stops at start when Studio, Keycloak or Sentry is not https ([#218][i218], [PR #223][p223]).
+- Release signing and a tag-driven pipeline to Play internal testing ([#194][i194], [PR #207][p207]), with obfuscated release builds whose symbols go to Sentry ([#208][i208], [PR #228][p228]); see [release.md](release.md).
+
+Open:
+
+- The Play store listing, privacy policy, Data safety answers and review access ([#197][i197]).
+- The Android walkthrough on a physical phone ([#196][i196]).
+- The iOS build and walkthroughs on macOS ([#91][i91]), the native Sentry scrubber on iOS, since sentry-cocoa records events and breadcrumbs unmasked ([#198][i198], [crash-reporting.md](crash-reporting.md)), and iOS signing and TestFlight ([#199][i199]).
+- The first release, 1.0.0, which follows the signing setup in [release.md](release.md).
 
 ## M7 Editor power tools
 
 The later features from the surveys, each shippable on its own after the first release.
 Epic [#35][e35]; each child is checked on its own.
 
+- Studio's statement analysis for routing and the write confirmation ([#122][i122], [#123][i123]), when Studio offers it.
 - Interactive transactions, a sandbox mode, EXPLAIN with a plan tree, bound parameters and several drafts.
 - Sort, columns, filter, export and charts in the result view, and a per-table relationship view.
 - Saved queries and favorites synced from Studio's user storage, and a maintenance and minimum-version gate from Studio, when Studio offers them.
@@ -166,21 +183,47 @@ These stay out of the app; Studio's web UI serves them.
 [i30]: https://github.com/libredb/libredb-mobile/issues/30
 [i49]: https://github.com/libredb/libredb-mobile/issues/49
 [i60]: https://github.com/libredb/libredb-mobile/issues/60
+[i91]: https://github.com/libredb/libredb-mobile/issues/91
 [i100]: https://github.com/libredb/libredb-mobile/issues/100
+[i102]: https://github.com/libredb/libredb-mobile/issues/102
+[i111]: https://github.com/libredb/libredb-mobile/issues/111
 [i117]: https://github.com/libredb/libredb-mobile/issues/117
 [i122]: https://github.com/libredb/libredb-mobile/issues/122
 [i123]: https://github.com/libredb/libredb-mobile/issues/123
 [i124]: https://github.com/libredb/libredb-mobile/issues/124
-[i140]: https://github.com/libredb/libredb-mobile/issues/140
-[i150]: https://github.com/libredb/libredb-mobile/issues/150
+[i163]: https://github.com/libredb/libredb-mobile/issues/163
+[i164]: https://github.com/libredb/libredb-mobile/issues/164
+[i167]: https://github.com/libredb/libredb-mobile/issues/167
+[i168]: https://github.com/libredb/libredb-mobile/issues/168
+[i190]: https://github.com/libredb/libredb-mobile/issues/190
+[i191]: https://github.com/libredb/libredb-mobile/issues/191
+[i192]: https://github.com/libredb/libredb-mobile/issues/192
+[i193]: https://github.com/libredb/libredb-mobile/issues/193
+[i194]: https://github.com/libredb/libredb-mobile/issues/194
+[i195]: https://github.com/libredb/libredb-mobile/issues/195
+[i196]: https://github.com/libredb/libredb-mobile/issues/196
+[i197]: https://github.com/libredb/libredb-mobile/issues/197
+[i198]: https://github.com/libredb/libredb-mobile/issues/198
+[i199]: https://github.com/libredb/libredb-mobile/issues/199
+[i208]: https://github.com/libredb/libredb-mobile/issues/208
+[i218]: https://github.com/libredb/libredb-mobile/issues/218
+[i222]: https://github.com/libredb/libredb-mobile/issues/222
 [p65]: https://github.com/libredb/libredb-mobile/pull/65
 [p78]: https://github.com/libredb/libredb-mobile/pull/78
 [p101]: https://github.com/libredb/libredb-mobile/pull/101
 [p128]: https://github.com/libredb/libredb-mobile/pull/128
-[p133]: https://github.com/libredb/libredb-mobile/pull/133
 [p137]: https://github.com/libredb/libredb-mobile/pull/137
 [p146]: https://github.com/libredb/libredb-mobile/pull/146
-[p153]: https://github.com/libredb/libredb-mobile/pull/153
+[p165]: https://github.com/libredb/libredb-mobile/pull/165
+[p200]: https://github.com/libredb/libredb-mobile/pull/200
+[p201]: https://github.com/libredb/libredb-mobile/pull/201
+[p203]: https://github.com/libredb/libredb-mobile/pull/203
+[p204]: https://github.com/libredb/libredb-mobile/pull/204
+[p207]: https://github.com/libredb/libredb-mobile/pull/207
+[p214]: https://github.com/libredb/libredb-mobile/pull/214
+[p223]: https://github.com/libredb/libredb-mobile/pull/223
+[p225]: https://github.com/libredb/libredb-mobile/pull/225
+[p228]: https://github.com/libredb/libredb-mobile/pull/228
 [e31]: https://github.com/libredb/libredb-mobile/issues/31
 [e32]: https://github.com/libredb/libredb-mobile/issues/32
 [e33]: https://github.com/libredb/libredb-mobile/issues/33

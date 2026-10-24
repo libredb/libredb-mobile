@@ -12,15 +12,24 @@ The phone holds a Keycloak session and sends Keycloak's access token to Studio; 
 
 ## Status
 
-The project is at its start.
+Milestones M2 to M5 are done, each checked end to end on the Android emulator against `tool/studio-dev`.
+`tool/studio-dev` now runs Studio 1.1.0, the first release with the bearer channel the app needs.
+M6, the first store release, is in progress: the app is not in a store yet.
+The iOS build is still to be checked on macOS ([#91](https://github.com/libredb/libredb-mobile/issues/91), [#199](https://github.com/libredb/libredb-mobile/issues/199)).
 
 | Feature | Status |
 | --- | --- |
 | Sign-in through Keycloak (PKCE, refresh, logout) | Done |
-| Connection list | First version |
 | Studio API layer | Done |
-| Object browser | Planned |
-| SQL editor | Planned |
+| Connection list, with favorites, recent connections and a connection check | Done (M2) |
+| Object browser, with search and a Redis key browser | Done (M3) |
+| Result grid and data preview, with Studio's masking rules | Done (M4) |
+| SQL editor, with a write confirmation, cancel, script runs, drafts and history | Done (M5) |
+| App lock, screen capture protection, Remove my data and https only for a prod build | Done (M6) |
+| Certificate pinning, off by default | Done (M6) |
+| Release signing, obfuscation and a tag-driven pipeline to Play internal testing | Done (M6) |
+| Store listing and a walkthrough on a physical phone | In progress (M6) |
+| Editor power tools and admin on the go | Planned (M7, M8) |
 | Grant a connection as an admin | Planned, needs Platform v1 |
 
 The plan, milestone by milestone, is in [docs/roadmap.md](docs/roadmap.md).
