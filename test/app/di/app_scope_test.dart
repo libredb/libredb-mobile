@@ -18,6 +18,7 @@ import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -1025,6 +1026,22 @@ void main() {
       await tester.pump();
 
       expect(catalog.state, const ActiveCatalogNone());
+    });
+
+    testWidgets('provides one screen capture protection, off as the test build is', (tester) async {
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<ScreenCaptureProtection>().isEnabled, isFalse);
+      expect(scope.read<ScreenCaptureProtection>(), same(scope.read<ScreenCaptureProtection>()));
+    });
+
+    testWidgets('provides a switched-on screen capture protection when the build turns it on', (tester) async {
+      final scope = await _pumpScope(
+        tester,
+        LocalSignInDependencies(appConfig: const AppConfig.test(screenCaptureProtection: true)),
+      );
+
+      expect(scope.read<ScreenCaptureProtection>().isEnabled, isTrue);
     });
 
     testWidgets('provides the statement history over the one statement text store', (tester) async {

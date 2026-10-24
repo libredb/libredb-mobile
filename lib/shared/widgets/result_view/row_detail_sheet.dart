@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
@@ -119,6 +120,9 @@ Future<void> showRowCopyMenu(
 /// [QueryResult.columnTypes] and its detail form, selectable, with a copy per field and a Copy row of the whole row.
 ///
 /// The sheet holds its own messenger, so a copy's notice shows above the sheet rather than under it.
+///
+/// While open it keeps out of screenshots, screen recordings and the recent-apps preview ([ScreenCaptureGuard]) with a
+/// lease of its own, so the result under it stays protected when it closes.
 class RowDetailSheet extends StatefulWidget {
   const RowDetailSheet({super.key, required this.result, required this.maskedColumns, required this.initialIndex});
 
@@ -144,45 +148,47 @@ class _RowDetailSheetState extends State<RowDetailSheet> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final result = widget.result;
-    return ScaffoldMessenger(
-      child: Builder(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.sm, AppSpacing.sm),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        s.result_row_position(_index + 1, result.rows.length),
-                        style: Theme.of(context).textTheme.titleMedium,
+    return ScreenCaptureGuard(
+      child: ScaffoldMessenger(
+        child: Builder(
+          builder: (context) => Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.sm, AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.result_row_position(_index + 1, result.rows.length),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                    ),
-                    TextButton.icon(
-                      key: const ValueKey('row-copy-json'),
-                      icon: const Icon(Icons.data_object),
-                      label: Text(s.result_copy_row),
-                      onPressed: () =>
-                          copyResultText(ScaffoldMessenger.of(context), s, rowJsonText(result.rows[_index])),
-                    ),
-                  ],
+                      TextButton.icon(
+                        key: const ValueKey('row-copy-json'),
+                        icon: const Icon(Icons.data_object),
+                        label: Text(s.result_copy_row),
+                        onPressed: () =>
+                            copyResultText(ScaffoldMessenger.of(context), s, rowJsonText(result.rows[_index])),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: PageView.builder(
-                  key: const ValueKey('row-pages'),
-                  controller: _pages,
-                  itemCount: result.rows.length,
-                  onPageChanged: (index) => setState(() => _index = index),
-                  itemBuilder: (context, index) =>
-                      _RowFields(result: result, maskedColumns: widget.maskedColumns, index: index),
+                const Divider(height: 1),
+                Expanded(
+                  child: PageView.builder(
+                    key: const ValueKey('row-pages'),
+                    controller: _pages,
+                    itemCount: result.rows.length,
+                    onPageChanged: (index) => setState(() => _index = index),
+                    itemBuilder: (context, index) =>
+                        _RowFields(result: result, maskedColumns: widget.maskedColumns, index: index),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

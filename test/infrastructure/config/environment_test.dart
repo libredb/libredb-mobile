@@ -159,4 +159,78 @@ void main() {
       expect(withoutSentry.oidcCertificatePins, config.oidcCertificatePins);
     });
   });
+
+  // Run with and without `--dart-define=SCREEN_CAPTURE_PROTECTION=...` to cover both branches of the define.
+  group('SCREEN_CAPTURE_PROTECTION', () {
+    test('a prod build protects the data screens unless the define turns it off', () {
+      expect(const AppConfig.prod().screenCaptureProtection, isTrue);
+      expect(
+        AppConfig.fromEnvironment(
+          Environment.prod,
+          prodApiUrlDefine: 'https://studio.example.test/api',
+          screenCaptureProtectionDefine: '',
+        ).screenCaptureProtection,
+        isTrue,
+      );
+    });
+
+    test('dev and test builds leave every screen capturable by default', () {
+      expect(const AppConfig.dev().screenCaptureProtection, isFalse);
+      expect(const AppConfig.test().screenCaptureProtection, isFalse);
+      expect(
+        AppConfig.fromEnvironment(Environment.dev, screenCaptureProtectionDefine: '').screenCaptureProtection,
+        isFalse,
+      );
+      expect(
+        AppConfig.fromEnvironment(Environment.test, screenCaptureProtectionDefine: '').screenCaptureProtection,
+        isFalse,
+      );
+    });
+
+    test('false turns it off in a prod build', () {
+      final config = AppConfig.fromEnvironment(
+        Environment.prod,
+        prodApiUrlDefine: 'https://studio.example.test/api',
+        screenCaptureProtectionDefine: 'false',
+      );
+      expect(config.screenCaptureProtection, isFalse);
+    });
+
+    test('true turns it on in a dev build', () {
+      expect(
+        AppConfig.fromEnvironment(Environment.dev, screenCaptureProtectionDefine: 'true').screenCaptureProtection,
+        isTrue,
+      );
+    });
+
+    test('any other value stops the start with an error that names the define', () {
+      for (final environment in Environment.values) {
+        expect(
+          () => AppConfig.fromEnvironment(
+            environment,
+            prodApiUrlDefine: 'https://studio.example.test/api',
+            screenCaptureProtectionDefine: 'off',
+          ),
+          throwsA(
+            isA<ScreenCaptureProtectionConfigError>().having(
+              (error) => '$error',
+              'message',
+              allOf(contains('SCREEN_CAPTURE_PROTECTION'), contains('"off"')),
+            ),
+          ),
+        );
+      }
+    });
+
+    test('a start reads the define of the build', () {
+      const define = String.fromEnvironment('SCREEN_CAPTURE_PROTECTION');
+      final config = AppConfig.fromEnvironment(Environment.prod, prodApiUrlDefine: 'https://studio.example.test/api');
+      expect(config.screenCaptureProtection, define != 'false');
+    });
+
+    test('a config without Sentry keeps the switch', () {
+      expect(const AppConfig.prod().withoutSentry().screenCaptureProtection, isTrue);
+      expect(const AppConfig.dev().withoutSentry().screenCaptureProtection, isFalse);
+    });
+  });
 }

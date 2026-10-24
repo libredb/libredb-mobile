@@ -12,10 +12,11 @@ final class AppConfig {
     required this.certificatePins,
     required this.idleTimeout,
     this.oidcCertificatePins = const <String>[],
+    this.screenCaptureProtection = false,
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
   });
 
-  const AppConfig.dev()
+  const AppConfig.dev({this.screenCaptureProtection = false})
     : environment = Environment.dev,
       apiBaseUrl = null,
       certificatePins = const <String>[],
@@ -23,7 +24,7 @@ final class AppConfig {
       idleTimeout = null,
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
-  const AppConfig.test()
+  const AppConfig.test({this.screenCaptureProtection = false})
     : environment = Environment.test,
       apiBaseUrl = null,
       certificatePins = const <String>[],
@@ -35,6 +36,7 @@ final class AppConfig {
     String this.apiBaseUrl = prodApiUrl,
     this.certificatePins = const <String>[],
     this.oidcCertificatePins = const <String>[],
+    this.screenCaptureProtection = true,
   }) : environment = Environment.prod,
        idleTimeout = const Duration(minutes: 15),
        sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
@@ -47,21 +49,31 @@ final class AppConfig {
   /// Throws [CertificatePinsConfigError] in the prod environment when [studioCertPinsDefine] or [oidcCertPinsDefine],
   /// the `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` defines unless a test passes its own, is set but breaks a pin rule:
   /// such a build never falls back to an unpinned connection. Dev and test read neither define.
+  ///
+  /// [screenCaptureProtectionDefine], the `SCREEN_CAPTURE_PROTECTION` define unless a test passes its own, sets
+  /// [screenCaptureProtection]: `true` or `false`, or empty for the environment's default, on in prod and off in dev
+  /// and test. Any other value throws [ScreenCaptureProtectionConfigError] in every environment, so a typo never
+  /// decides it.
   factory AppConfig.fromEnvironment(
     Environment environment, {
     @visibleForTesting String prodApiUrlDefine = prodApiUrl,
     @visibleForTesting String studioCertPinsDefine = studioCertPins,
     @visibleForTesting String oidcCertPinsDefine = oidcCertPins,
-  }) => switch (environment) {
-    Environment.dev => const AppConfig.dev(),
-    Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
-    Environment.prod => AppConfig.prod(
-      apiBaseUrl: prodApiUrlDefine,
-      certificatePins: _pins('STUDIO_CERT_PINS', studioCertPinsDefine),
-      oidcCertificatePins: _pins('OIDC_CERT_PINS', oidcCertPinsDefine),
-    ),
-    Environment.test => const AppConfig.test(),
-  };
+    @visibleForTesting String screenCaptureProtectionDefine = screenCaptureProtectionSwitch,
+  }) {
+    final protection = _screenCaptureProtectionOf(screenCaptureProtectionDefine);
+    return switch (environment) {
+      Environment.dev => AppConfig.dev(screenCaptureProtection: protection ?? false),
+      Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
+      Environment.prod => AppConfig.prod(
+        apiBaseUrl: prodApiUrlDefine,
+        certificatePins: _pins('STUDIO_CERT_PINS', studioCertPinsDefine),
+        oidcCertificatePins: _pins('OIDC_CERT_PINS', oidcCertPinsDefine),
+        screenCaptureProtection: protection ?? true,
+      ),
+      Environment.test => AppConfig.test(screenCaptureProtection: protection ?? false),
+    };
+  }
 
   /// LibreDB Studio's API, its origin plus `/api`, given at build time with
   /// `--dart-define=PROD_API_URL=https://studio.example.com/api` (docs/studio.md).
@@ -110,6 +122,18 @@ final class AppConfig {
     }
   }
 
+  /// The `--dart-define=SCREEN_CAPTURE_PROTECTION=true|false` value, empty when it is absent (docs/security.md,
+  /// "Screen capture protection").
+  static const String screenCaptureProtectionSwitch = String.fromEnvironment('SCREEN_CAPTURE_PROTECTION');
+
+  /// The switch [value] sets, or null for the environment's default.
+  static bool? _screenCaptureProtectionOf(String value) => switch (value) {
+    '' => null,
+    'true' => true,
+    'false' => false,
+    _ => throw ScreenCaptureProtectionConfigError(value),
+  };
+
   final Environment environment;
   final String? apiBaseUrl;
 
@@ -122,6 +146,11 @@ final class AppConfig {
   /// through them; the sign-in page in the system browser is never pinned.
   final List<String> oidcCertificatePins;
   final Duration? idleTimeout;
+
+  /// Whether the screens that show data (results, a row's detail, a key's value, an object's source) keep out of
+  /// screenshots, screen recordings and the recent-apps preview while they are on screen: on in prod, off in dev and
+  /// test, and set by `SCREEN_CAPTURE_PROTECTION` ([AppConfig.fromEnvironment]).
+  final bool screenCaptureProtection;
 
   /// The `--dart-define=SENTRY_DSN=...` value, empty when it is absent.
   /// [sentryDsn] reads it in the prod environment only.
@@ -148,6 +177,7 @@ final class AppConfig {
     certificatePins: certificatePins,
     oidcCertificatePins: oidcCertificatePins,
     idleTimeout: idleTimeout,
+    screenCaptureProtection: screenCaptureProtection,
     sentryDsnDefine: '',
   );
 }
@@ -171,4 +201,16 @@ final class CertificatePinsConfigError extends Error {
 
   @override
   String toString() => '$define $rule (docs/security.md, "Certificate pinning")';
+}
+
+/// A build whose `SCREEN_CAPTURE_PROTECTION` is neither `true` nor `false`, which stops the app at start instead of
+/// guessing whether the data screens may be captured.
+final class ScreenCaptureProtectionConfigError extends Error {
+  ScreenCaptureProtectionConfigError(this.value);
+
+  /// The define's value, which is no secret.
+  final String value;
+
+  @override
+  String toString() => 'SCREEN_CAPTURE_PROTECTION must be true or false, but it is "$value" (docs/security.md)';
 }
