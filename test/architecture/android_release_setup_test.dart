@@ -13,7 +13,7 @@ import 'package:yaml/yaml.dart';
 /// - `key.properties` and every keystore stay git-ignored, and none is tracked.
 /// - The release workflow builds with `-PrequireReleaseSigning=true`, deletes the decoded keystore also on failure,
 ///   uploads only from a job bound to the `play-internal` environment, and never on a dry run.
-/// - Every action of the release workflows is pinned to a commit SHA.
+/// - Every action of every workflow is pinned to a full commit SHA and names its version in a comment (#209).
 /// - The release-please manifest and `pubspec.yaml` name the same version.
 /// - A `release-as` in the release-please config is a plain version, and docs/release.md names the Actions setting
 ///   release-please needs and the removal of `release-as` after the first release (#211).
@@ -380,28 +380,59 @@ void main() {
     });
   });
 
-  test('every action of the release workflows is pinned to a commit SHA', () {
-    final offenders = <String>[];
-    var actions = 0;
-    for (final path in [_releasePath, _releasePleasePath]) {
-      final jobs = _loadYaml(path)['jobs'] as YamlMap;
-      for (final job in jobs.entries) {
-        final body = job.value as YamlMap;
-        final uses = <String>[
-          if (body['uses'] != null) '${body['uses']}',
-          for (final step in _steps(jobs, job.key as String))
-            if (step['uses'] != null) '${step['uses']}',
-        ];
-        for (final action in uses) {
+  group('workflow actions', () {
+    late final workflows = _workflowPaths();
+
+    test('every action of every workflow is pinned to a commit SHA', () {
+      final offenders = <String>[];
+      var actions = 0;
+      for (final path in workflows) {
+        for (final action in _workflowActions(path)) {
           if (action.startsWith('./')) continue;
           actions++;
-          if (!RegExp(r'^[\w.-]+/[\w./-]+@[0-9a-f]{40}$').hasMatch(action)) offenders.add('$path: $action');
+          if (!_pinnedAction.hasMatch(action)) offenders.add('$path: $action');
         }
       }
-    }
 
-    expect(actions, greaterThan(0), reason: 'the guard found no action; it looks in vain');
-    expect(offenders, isEmpty, reason: 'pin each action to a full commit SHA:\n${offenders.join('\n')}');
+      expect(workflows, containsAll([_releasePath, _releasePleasePath, _buildAndTestPath, _sonarPath]));
+      expect(actions, greaterThan(0), reason: 'the guard found no action; it looks in vain');
+      expect(offenders, isEmpty, reason: 'pin each action to a full commit SHA:\n${offenders.join('\n')}');
+    });
+
+    test('every pinned action names its version in a comment on the same line', () {
+      final offenders = <String>[];
+      var lines = 0;
+      for (final path in workflows) {
+        final parsed = _workflowActions(path).where((action) => !action.startsWith('./')).length;
+        final found = <String>[];
+        for (final line in File(path).readAsLinesSync()) {
+          final match = _usesLine.firstMatch(line);
+          if (match == null || match.group(1)!.startsWith('./')) continue;
+          found.add(line);
+          if (!RegExp(r'@[0-9a-f]{40} # v\d+(\.\d+){0,2}$').hasMatch(line.trimRight())) {
+            offenders.add('$path: ${line.trim()}');
+          }
+        }
+        expect(found, hasLength(parsed), reason: '$path has a uses: line the guard cannot read; write one per line');
+        lines += found.length;
+      }
+
+      expect(lines, greaterThan(0), reason: 'the guard found no uses: line; it looks in vain');
+      expect(offenders, isEmpty, reason: 'end each uses: line with "# vX.Y.Z":\n${offenders.join('\n')}');
+    });
+
+    test('the pin check refuses a tag or a branch', () {
+      for (final action in [
+        'actions/checkout@v6',
+        'actions/checkout@main',
+        'actions/checkout@d23441a',
+        'actions/checkout@v6.1.0',
+        'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803a',
+      ]) {
+        expect(_pinnedAction.hasMatch(action), isFalse, reason: '$action passed the pin check');
+      }
+      expect(_pinnedAction.hasMatch('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'), isTrue);
+    });
   });
 
   test('release-please bumps pubspec.yaml from the version it names', () {
@@ -447,6 +478,8 @@ const _gradlePath = 'android/app/build.gradle.kts';
 const _releaseDocsPath = 'docs/release.md';
 const _releasePath = '.github/workflows/release.yml';
 const _releasePleasePath = '.github/workflows/release-please.yml';
+const _buildAndTestPath = '.github/workflows/build_and_test.yml';
+const _sonarPath = '.github/workflows/sonar_scanner.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
 const _checkScriptPath = 'tool/release/check_defines.sh';
 const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt';
@@ -479,6 +512,31 @@ const _signingEnvironment = [
 ];
 
 Map<String, Object?> _loadJson(String path) => jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
+
+final _pinnedAction = RegExp(r'^[\w.-]+/[\w./-]+@[0-9a-f]{40}$');
+final _usesLine = RegExp(r'^\s*(?:-\s+)?uses:\s*(\S+)');
+
+/// Every workflow file, sorted, so a new workflow is guarded without a change here.
+List<String> _workflowPaths() =>
+    Directory('.github/workflows')
+        .listSync()
+        .whereType<File>()
+        .map((file) => file.path.replaceAll(r'\', '/'))
+        .where((path) => path.endsWith('.yml') || path.endsWith('.yaml'))
+        .toList()
+      ..sort();
+
+/// The `uses:` value of each job and each step of the workflow at [path].
+List<String> _workflowActions(String path) {
+  final jobs = _loadYaml(path)['jobs'] as YamlMap;
+  return [
+    for (final job in jobs.entries) ...[
+      if ((job.value as YamlMap)['uses'] != null) '${(job.value as YamlMap)['uses']}',
+      for (final step in _steps(jobs, job.key as String))
+        if (step['uses'] != null) '${step['uses']}',
+    ],
+  ];
+}
 
 YamlMap _loadYaml(String path) => loadYaml(File(path).readAsStringSync()) as YamlMap;
 
