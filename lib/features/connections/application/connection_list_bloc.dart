@@ -162,8 +162,8 @@ class ConnectionListBloc extends Bloc<ConnectionListEvent, ConnectionListState> 
     }
     // A running load arms the timer when it ends.
     if (_loading) return;
-    // Back in the foreground, what Studio offers may have changed meanwhile, so the page asks at once. The ask waits for
-    // a zero timer, so a refresh sent at the same moment, such as the page's on a reconnect, replaces it instead of
+    // Back in the foreground, what Studio offers may have changed meanwhile, so the page asks at once. The ask waits
+    // for a zero timer, so a refresh sent at the same moment, such as the page's on a reconnect, replaces it instead of
     // asking twice.
     _scheduleRefresh(immediately: event.askNow);
   }

@@ -28,8 +28,9 @@ class _MockSessionCubit extends Mock implements SessionCubit {}
 
 class _MockGoRouterState extends Mock implements GoRouterState {}
 
-/// No page of the app holds a form with unsaved changes yet, so these tests add one to the Connections tab of the shell:
-/// a page guarded the way a form page is, behind the real [AppRouterFactory] and the registry that [App] wires to it.
+/// No page of the app holds a form with unsaved changes yet, so these tests add one to the Connections tab of the
+/// shell: a page guarded the way a form page is, behind the real [AppRouterFactory] and the registry that [App] wires
+/// to it.
 const _formPath = '${ApplicationRoutesConstants.connectionList}/unsaved-changes-test-form';
 
 const _formFieldKey = Key('unsavedChangesTestField');

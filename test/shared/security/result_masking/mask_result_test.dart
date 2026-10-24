@@ -124,9 +124,9 @@ void main() {
     expect(masked.result.pagination, input.pagination);
   });
 
-  // maskResult rebuilds the result field by field, so a field it forgot would fall back to its default. Every field here
-  // is set to a value other than its default, and every prop but the rows must come back unchanged; a field added to
-  // QueryResult later belongs in this result too.
+  // maskResult rebuilds the result field by field, so a field it forgot would fall back to its default. Every field
+  // here is set to a value other than its default, and every prop but the rows must come back unchanged; a field added
+  // to QueryResult later belongs in this result too.
   test('keeps every field but the rows, each set to a value other than its default', () {
     const input = QueryResult(
       fields: ['email', 'emb'],

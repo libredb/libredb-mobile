@@ -48,8 +48,8 @@ class RedisKeyReadGenerator {
   static final _whitespace = RegExp(r'\s');
 
   /// `renderRedisCommand`: the parts joined with spaces, a part that holds whitespace in double quotes, when no part
-  /// holds a quote, a backslash or a newline, which the provider's plain tokenizer cannot carry; otherwise the JSON form
-  /// the provider also accepts.
+  /// holds a quote, a backslash or a newline, which the provider's plain tokenizer cannot carry; otherwise the JSON
+  /// form the provider also accepts.
   static String _render(List<String> parts) {
     if (!parts.any(_plainUnsafe.hasMatch)) {
       return parts.map((part) => _whitespace.hasMatch(part) ? '"$part"' : part).join(' ');

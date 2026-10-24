@@ -12,8 +12,8 @@ import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart'
 /// pinned above the rows, each column named with its declared type under it when `columnTypes` names one, and the
 /// rows built lazily as they scroll into view. The table scrolls sideways as one, header and rows together.
 ///
-/// Every value comes from the masked rows; the header of a column in [maskedColumns] carries a lock that a screen reader
-/// reads as a masked value. Each column opens at the width its header and its first rows need
+/// Every value comes from the masked rows; the header of a column in [maskedColumns] carries a lock that a screen
+/// reader reads as a masked value. Each column opens at the width its header and its first rows need
 /// ([contentFitColumnWidth]), scaled with the system text size.
 ///
 /// As on a card, a tap on a row opens its detail sheet and a long press on a cell the copy menu of that value and its

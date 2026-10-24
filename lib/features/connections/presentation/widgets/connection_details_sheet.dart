@@ -149,8 +149,8 @@ class _CheckSection extends StatelessWidget {
   }
 }
 
-/// What the server cautioned while the connection opened, one line each as [describeWarning] writes it, in the caution's
-/// color with its icon.
+/// What the server cautioned while the connection opened, one line each as [describeWarning] writes it, in the
+/// caution's color with its icon.
 class _CheckWarnings extends StatelessWidget {
   const _CheckWarnings({required this.warnings});
 

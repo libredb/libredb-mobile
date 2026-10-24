@@ -18,7 +18,8 @@ final class ConnectionSection extends Equatable {
 }
 
 /// Splits [connections] into sections by `group`: sections and rows sorted by name, case and the Turkish i ignored and
-/// a Turkish letter next to its base letter, with the Other section, for rows without a group or with a blank one, last.
+/// a Turkish letter next to its base letter, with the Other section, for rows without a group or with a blank one,
+/// last.
 List<ConnectionSection> groupConnections(Iterable<StudioConnection> connections) {
   final byGroup = <String?, List<StudioConnection>>{};
   for (final connection in connections) {

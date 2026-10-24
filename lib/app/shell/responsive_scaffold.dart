@@ -59,7 +59,8 @@ class ResponsiveScaffold extends StatelessWidget {
   /// since iOS has no system back.
   static bool _inBrowseStack(String route) => route.startsWith('${ApplicationRoutesConstants.browse}/');
 
-  /// Returns to the Browse page under this one, or to the Browse root for a page opened by a link with nothing under it.
+  /// Returns to the Browse page under this one, or to the Browse root for a page opened by a link with nothing under
+  /// it.
   static void _backInBrowse(BuildContext context) {
     final router = GoRouter.of(context);
     if (router.canPop()) {

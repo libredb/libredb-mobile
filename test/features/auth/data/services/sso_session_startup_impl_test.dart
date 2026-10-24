@@ -266,7 +266,8 @@ void main() {
     });
   });
 
-  // A logout or the end of the session can wipe the stored session while the startup refresh is on its way. Its tokens must not bring that session back.
+  // A logout or the end of the session can wipe the stored session while the startup refresh is on its way. Its tokens
+  // must not bring that session back.
   group('the session ends during the startup refresh', () {
     final rotated = TokensRotated(
       accessToken: 'new-access',

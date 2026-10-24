@@ -193,7 +193,8 @@ void main() {
     expect(sessionExpiredCalls, 1, reason: 'the fake rotation refuses');
   });
 
-  // GET /api/auth/me also answers 401 without a code when Studio cannot reach Keycloak, which a new session would not fix.
+  // GET /api/auth/me also answers 401 without a code when Studio cannot reach Keycloak, which a new session would not
+  // fix.
   test('the predicate of a 401 after a refresh is Studio\'s', () {
     expect(dependencies.sessionRefusedPredicate, same(isStudioSessionRefused));
   });

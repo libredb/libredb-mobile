@@ -128,8 +128,8 @@ final class BinaryCell extends CellValue {
 /// A cell of a declared vector column that has the column's shape (`renderers/vector.ts`).
 ///
 /// The cell shows [preview] (the first 8 elements) and [size]; the detail is a header line over [copy], and [copy] is
-/// the whole value as compact JSON in the engine's own encoding, a float element always with a fraction. [copy] is built
-/// only when asked for, so a 1536-element cell never builds it to show a cell.
+/// the whole value as compact JSON in the engine's own encoding, a float element always with a fraction. [copy] is
+/// built only when asked for, so a 1536-element cell never builds it to show a cell.
 final class VectorCell extends CellValue {
   VectorCell._(this._cell, this._column);
 
