@@ -91,7 +91,8 @@ The code follows a feature-first clean architecture with BLoC; [CLAUDE.md](CLAUD
 | [docs/security.md](docs/security.md) | Token storage, certificate pinning, screen capture protection and the inactivity sign-out |
 | [docs/crash-reporting.md](docs/crash-reporting.md) | Sentry and what it masks before an event leaves the device |
 | [docs/development.md](docs/development.md) | Toolchain, test slices, the feature generator and CI |
-| [docs/release.md](docs/release.md) | Release signing, the changelog and the upload to Play internal testing |
+| [docs/release.md](docs/release.md) | Release signing, the changelog, the upload to Play internal testing, and the store listing answers |
+| [docs/privacy-policy.md](docs/privacy-policy.md) | The app's privacy policy, also in Turkish ([docs/privacy-policy.tr.md](docs/privacy-policy.tr.md)) |
 | [docs/testing-architecture.md](docs/testing-architecture.md) | Test layers, doubles and guard tests |
 | [docs/mock-architecture.md](docs/mock-architecture.md) | How recorded answers in `assets/mock/` are served |
 | [docs/feature-first-clean-boundaries.md](docs/feature-first-clean-boundaries.md) | Layer boundaries and dependency rules |

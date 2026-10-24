@@ -139,6 +139,90 @@ The `release-bundle` artifact of each run keeps the exact bundle and mapping for
 Play requires new apps and app updates to target Android 16 (API level 36) from August 31, 2026 ([Play Console Help, target API level requirements](https://support.google.com/googleplay/android-developer/answer/11926878)).
 The app's `targetSdk` is `flutter.targetSdkVersion`, which is 36 in Flutter 3.47.7, so it meets the requirement; check it again with each Flutter upgrade.
 
+## Store listing
+
+The texts the Play Console asks for live in the repository, in English and Turkish, so the maintainer copies them instead of writing them.
+The App Store listing reuses them (#199).
+
+### Listing texts
+
+`android/fastlane/metadata/android/en-US/` and `tr-TR/` hold `title.txt`, `short_description.txt` and `full_description.txt` in the fastlane metadata layout, so a later pipeline step can upload them.
+`test/architecture/play_listing_metadata_test.dart` fails when a text is missing, empty or longer than Play allows (30, 80 and 4000 characters), or when the two locales do not hold the same files.
+The texts say only what the app does today, and that it signs in to the deployment it was built for; change them in the same pull request as a feature they name.
+The release notes of each version come from the generated `CHANGELOG.md` and are never written by hand.
+The screenshots, the 512 px icon and the 1024 by 500 feature graphic are added during the phone walkthrough (#196), from the tool/studio-dev sample data only.
+
+### Privacy policy
+
+[privacy-policy.md](privacy-policy.md) and [privacy-policy.tr.md](privacy-policy.tr.md) are the policy; the maintainer publishes them at a URL of their choice and enters that URL in the Play Console.
+Each sentence states something the app does, with its source in [security.md](security.md), [crash-reporting.md](crash-reporting.md), [architecture.md](architecture.md), [http-client.md](http-client.md) or `android/app/src/main/AndroidManifest.xml` and its backup rules.
+Update both files and their date in the pull request that changes what the app keeps or sends, and publish them again before that version ships, for example:
+
+- when #202 removes the temporary file of a shared source, drop the sentence that says it can stay;
+- when the iOS build ships (#199), the policy has to cover iOS, whose backups and crash reports differ.
+
+### Data safety
+
+The answers below are for a store build with `SENTRY_DSN` set; without it, every row marked "Sentry" is answered No.
+The store build signs in to the deployment the maintainer runs, so what the app sends to that Keycloak and Studio counts as collected by the developer.
+Sentry processes crash reports on the developer's behalf, which Play does not count as sharing.
+
+Overview:
+
+| Question | Answer | Why |
+| --- | --- | --- |
+| Does the app collect or share any of the required user data types? | Yes | The access token, the statements sent to Studio, and the Sentry reports |
+| Is all user data encrypted in transit? | Yes | `OIDC_ISSUER` must be https (`lib/infrastructure/config/auth_config.dart`), `PROD_API_URL` is the deployment's https URL, and the Sentry DSN is https |
+| Account creation | The app does not allow users to create an account | Accounts are made in the deployment's Keycloak by the organisation; the app only signs in |
+| Can users request that their data is deleted? | Yes | Remove my data in Settings, uninstalling, and info@libredb.org for crash reports |
+
+The app does not check that `PROD_API_URL` is https, so the maintainer keeps the release variable on https; the encryption answer depends on it.
+
+Data types (none is shared, none is processed ephemerally, and none is optional):
+
+| Category | Data type | Collected | Purposes | Source |
+| --- | --- | --- | --- | --- |
+| Personal info | Name | Yes | App functionality, Account management | The access token Studio receives carries what the `profile` scope gives, `OIDC_SCOPE` defaulting to `openid profile email` |
+| Personal info | Email address | Yes | App functionality, Account management | The same token; Studio names the user by `email` or `preferred_username` ([architecture.md](architecture.md)) |
+| Personal info | User IDs | Yes | App functionality, Account management | The same token's subject and username |
+| App activity | Other user-generated content | Yes | App functionality | The statements sent to Studio, which Studio may record in its audit and query logs |
+| App activity | App interactions | Yes (Sentry) | Analytics | The navigation breadcrumbs of a crash report ([crash-reporting.md](crash-reporting.md)) |
+| App info and performance | Crash logs | Yes (Sentry) | Analytics | The crash reports |
+| App info and performance | Diagnostics | Yes (Sentry) | Analytics | The device context of a report and the traces of `tracesSampleRate = 0.2` (`lib/app/bootstrap/sentry_start.dart`) |
+| Device or other IDs | Device or other IDs | Yes (Sentry) | Analytics | sentry-android 8.61.0 sets the user id of every event to a random installation id when the app sets none (`DefaultAndroidEventProcessor.mergeUser`), and the app sets none |
+| Location | Approximate location | Yes (Sentry), until the setting below is on | Analytics | Sentry derives a place from the client IP at ingestion ([crash-reporting.md](crash-reporting.md)) |
+
+Approximate location becomes No once 'Prevent Storing of IP Addresses' is on in the Sentry project ([crash-reporting.md](crash-reporting.md), the user's steps).
+Every other data type is No: precise location, financial info, health and fitness, messages, photos and videos, audio, files and docs, calendar, contacts, web browsing, and the other app activity and performance types.
+The app keeps its drafts and history on the device, which Play does not count as collection.
+
+### Content rating
+
+The questionnaire's answers, for the category of utility and productivity apps:
+
+- No violence, fear, sexual content, crude humour, profanity, drugs, alcohol, tobacco or gambling.
+- Users cannot talk to each other or exchange content through the app, and the app shares no user's location with other users.
+- No digital purchases and no unrestricted web browsing.
+- The app shows the content of the organisation's own databases; it supplies no content of its own, and the review deployment holds sample data only.
+
+Other declarations: the app contains no ads, its target audience is 18 and over, it is not a news or government app, and it has no financial or health features.
+
+### App access
+
+Every screen needs a sign-in, so the app access entry is "All or some functionality is restricted".
+The maintainer creates the demo account in the review deployment's Keycloak, with a Studio role that reaches the sample connections only, and enters its username and password in that entry of the Play Console; neither is ever written into the repository, an issue or a pull request.
+The instructions for the entry, which name no host and no password:
+
+```text
+LibreDB Mobile is a client of LibreDB Studio, so every screen needs a sign-in.
+This build signs in to the publisher's own LibreDB deployment, which holds sample databases only; no VPN, code or other setup is needed.
+1. Open the app and tap "Sign in with SSO".
+2. On the sign-in page that opens in the browser, enter the username and password given in this entry.
+3. The Connections tab lists the sample connections; tap one to open it.
+4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
+5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
+```
+
 ## Actions
 
 Every action in `release.yml` and `release-please.yml` is pinned to a full commit SHA with its version in a comment, and `test/architecture/android_release_setup_test.dart` fails on a tag or branch reference.

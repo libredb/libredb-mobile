@@ -1,0 +1,31 @@
+LibreDB Mobile is the Android client of LibreDB Studio. It lets you work from your phone with the databases that Studio offers you.
+
+The app signs in to the LibreDB Studio and Keycloak deployment it was built for, so you need an account there from the organisation that runs it. The app never connects to a database itself and holds no database password: Studio keeps every database credential, opens every connection and decides which connections you may use.
+
+Connections
+• See the connections Studio offers you, grouped by environment, and search them.
+• Star your favourites and find the ones you opened recently.
+• Check whether a connection answers, and switch the open connection from the top bar.
+
+Browse
+• Look inside a connection without changing it: its databases and schemas, the kinds of objects with their counts, and the objects of each kind.
+• Open an object's columns, indexes, foreign keys and source, and search the objects by name.
+• Browse the keys of a Redis database and open a key's value.
+
+Rows
+• Preview the rows of a table as cards or as a compact table, load more, and open a row's detail.
+• Columns whose names look sensitive, such as email, password or card number, are masked on screen with the same default rules as Studio's web grid.
+
+SQL editor
+• Type and run a statement, a script or a selection, in the database you pick, and cancel a statement that is running.
+• Your draft and your statement history stay on the phone, and a statement from the history or from Browse opens in the editor.
+• Before a statement that may change data runs, the app shows it in full and asks you to confirm; on a production connection you type the connection's name first.
+
+Privacy and security
+• Single sign-on through your organisation's Keycloak; the tokens are kept in the device's secure storage.
+• Drafts and history are encrypted on the device, separately for each account.
+• Screens that show data are kept out of screenshots and the recent apps view.
+• The app signs you out after 15 minutes without input.
+• Remove my data, in Settings, deletes what the app keeps for your account.
+
+The app is available in English and Turkish.
