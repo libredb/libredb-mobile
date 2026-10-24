@@ -150,12 +150,12 @@ Steps 1 to 6 and 8 were walked through as `admin` / `admin` on the plain Studio,
 
 Also walked through:
 
-- The read-only seed: Dev Postgres (read-only role) shows `public.orders` with its columns and indexes, no key mark on `id`, and "Studio lists no foreign keys." on the Foreign keys tab, because Studio hides the keys from a role that does not own the table (see [Postgres seeds](#postgres-seeds)).
+- The read-only seed: Dev Postgres (read-only role) shows `public.orders` with its columns and indexes, no key mark on `id`, and "Studio lists no foreign keys." on the Foreign keys tab, because Studio before 1.1.0 hid the keys from a role that does not own the table (see [Postgres seeds](#postgres-seeds)); Studio 1.1.0 shows them, as the check below records.
   The read grant of Sales (production) shows `public.orders` without a key mark on `id` for the same reason.
 - Exclusion constraints: the seed then held none, so the table `sales.room_bookings`, with `EXCLUDE USING gist (during WITH &&)`, was created in `app` as `app_owner` during the walkthrough; its Indexes tab lists `room_bookings_during_excl` and, under "Exclusion constraints", its definition.
 
 The local Studio answers a key-scan page in a few milliseconds, so Load all ended before Stop could be tapped; for the Stop check the `redis` container was given a 1.5 second network delay (`tc qdisc add dev eth0 root netem delay 1500ms`, from a container sharing its network namespace with `NET_ADMIN`), removed again afterwards.
-The view's row in the search reads "View · 0 B", the size Studio sends for a view.
+The view's row in the search read "View · 0 B", the size Studio before 1.1.0 sent for a view; the check on Studio 1.1.0 below reads "View".
 
 Found during the walkthrough and logged for the backlog, none of which fails a step:
 
@@ -165,6 +165,16 @@ Found during the walkthrough and logged for the backlog, none of which fails a s
 - The Postgres seed has no exclusion constraint, which is why the table above was added by hand.
 
 The iOS simulator was not run, since this Linux host has none and CI builds Android only, so no step is verified on iOS, #57's share sheet included; #91 tracks the iOS walkthrough.
+
+### Studio 1.1.0 check
+
+The paths of the M3 walkthrough that Studio 1.1.0 changed were checked again on 2026-10-24 (#222), with a debug APK of `main_prod.dart` and `studio-dev.env` from the branch of #222, against the stack on the pinned 1.1.0 image from a fresh volume, on the AVD `libredb-dev-api33` (API 33 Google APIs image) after `tool/studio-dev/trust-android-emulator.sh`, signed in as `admin` / `admin`:
+
+| Path | Result |
+| --- | --- |
+| Read-only seed, `public.orders` | Passed: Dev Postgres (read-only role) marks `id` as the primary key, and the Foreign keys tab lists `customer_id`, "References customers.id", as the owner's seed does |
+| Search `ord` on Dev Postgres | Passed: the view `order_totals` reads "View" with no size, while `orders` reads "Table · 48 KB" |
+| Search over too many places | Passed: with 150 empty schemas added to `app`, the search `order` shows "Too many places to search. Pick object kinds to narrow the search." with a chip per kind (Tables, Views, Materialized Views, Sequences, Functions, Procedures, Triggers) and no Retry; Tables sends the term again with `kinds: ["table"]` and lists `order_items` and `orders`, with the Tables chip picked |
 
 ## M4 walkthrough
 
