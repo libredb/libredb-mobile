@@ -21,41 +21,6 @@ void main() {
       });
     });
 
-    group('isTokenExpired', () {
-      test('returns true for null', () {
-        expect(SecurityUtils.isTokenExpired(null), isTrue);
-      });
-
-      test('returns true for empty', () {
-        expect(SecurityUtils.isTokenExpired(''), isTrue);
-      });
-
-      test('returns true for malformed token (wrong segment count)', () {
-        expect(SecurityUtils.isTokenExpired('invalid.token'), isTrue);
-      });
-
-      test('returns true for invalid base64 payload', () {
-        expect(SecurityUtils.isTokenExpired('header.invalid_payload.signature'), isTrue);
-      });
-
-      test('returns true when exp claim is missing', () {
-        final payload = base64Url.encode('{"sub":"test"}'.codeUnits);
-        expect(SecurityUtils.isTokenExpired('header.$payload.signature'), isTrue);
-      });
-
-      test('returns true when exp is in the past', () {
-        final past = DateTime.now().subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
-        final payload = base64Url.encode('{"exp":$past}'.codeUnits);
-        expect(SecurityUtils.isTokenExpired('header.$payload.signature'), isTrue);
-      });
-
-      test('returns false when exp is in the future', () {
-        final future = DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
-        final payload = base64Url.encode('{"exp":$future}'.codeUnits);
-        expect(SecurityUtils.isTokenExpired('header.$payload.signature'), isFalse);
-      });
-    });
-
     group('getTokenExpiration', () {
       test('returns null for invalid token', () {
         expect(SecurityUtils.getTokenExpiration('invalid'), isNull);
@@ -76,9 +41,8 @@ void main() {
     });
 
     // Regression: a three-part access token that is not a JWT failed to parse with a FormatException whose text
-    // quotes the decoded middle part, or the encoded one when it is not base64url, and both methods logged that text
-    // at error level, which every build of main_prod prints. getTokenExpiration runs on every sign-in and OTP check,
-    // and isTokenExpired when a production session is restored.
+    // quotes the decoded middle part, or the encoded one when it is not base64url, and getTokenExpiration logged that
+    // text at error level, which every build of main_prod prints.
     group('log output for a token that is not a JWT', () {
       late List<String> lines;
 
@@ -100,9 +64,8 @@ void main() {
           final token = 'part1SECRET.$middle.part3SECRET';
 
           expect(SecurityUtils.getTokenExpiration(token), isNull);
-          expect(SecurityUtils.isTokenExpired(token), isTrue);
 
-          expect(lines, hasLength(2));
+          expect(lines, hasLength(1));
           expect(lines, everyElement(allOf(contains('FormatException'), isNot(contains('SECRET')))));
         });
       }

@@ -322,7 +322,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     }
     final cancelAnswered = identical(_cancelAnswered, signal);
     if (cancelAnswered) _cancelAnswered = null;
-    final interrupted = backgrounded && result is Failure<Object> && _droppedWithoutAnswer(result.error);
+    final interrupted = backgrounded && result is Failure<Object> && droppedWithoutAnswer(result.error);
     if (history != null) {
       unawaited(
         _record(
@@ -442,7 +442,7 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
     if (_pageLeases.remove(lease)) unawaited(lease.end());
     final backgrounded = startedInBackground || _backgroundChanges != backgroundChanges;
     switch (answer) {
-      case Failure(:final error) when backgrounded && _droppedWithoutAnswer(error):
+      case Failure(:final error) when backgrounded && droppedWithoutAnswer(error):
         _log.info('a page was interrupted while the app was in the background');
         final code = statement.asks == null
             ? AppErrorCode.editorPageInterrupted
@@ -517,15 +517,6 @@ class EditorRunBloc extends Bloc<EditorRunEvent, EditorRunState> {
       _onHistoryNotKept(AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic);
     }
   }
-
-  /// Whether [error] is a request that failed after it was sent without an answer from Studio: a dropped connection,
-  /// or a timeout while waiting for the answer. A refusal before the request left the device (offline, an untrusted
-  /// certificate, a timeout before it was sent) is not, and neither is any answer Studio sent.
-  static bool _droppedWithoutAnswer(AppError error) => switch (error) {
-    NetworkError(code: null) => true,
-    TimeoutError(sent: true, code: null) => true,
-    _ => false,
-  };
 
   @override
   Future<void> close() async {

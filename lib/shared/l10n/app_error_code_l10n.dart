@@ -17,8 +17,6 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.authOidcDiscovery => s.error_auth_oidc_discovery,
       AppErrorCode.authOidcNoClaims || AppErrorCode.authOidcFailed => s.error_auth_oidc_failed,
       AppErrorCode.authOidcLogoutIncomplete => s.error_auth_oidc_logout_incomplete,
-      AppErrorCode.userCannotDeleteAdmin => s.error_user_cannot_delete_admin,
-      AppErrorCode.userNoAuthorities => s.error_user_no_authorities,
       AppErrorCode.settingsChangeLanguageFailed => s.error_settings_change_language_failed,
       AppErrorCode.networkCertInvalid => s.error_network_cert_invalid,
       AppErrorCode.networkOffline => s.error_network_offline,
@@ -45,6 +43,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.editorSavedTextNotStored => s.error_editor_saved_text_not_stored,
       AppErrorCode.editorPageInterrupted => s.error_editor_page_interrupted,
       AppErrorCode.editorPageOutcomeUnknown => s.error_editor_page_outcome_unknown,
+      AppErrorCode.browseRowsInterrupted => s.error_browse_rows_interrupted,
       AppErrorCode.generic => s.error_generic,
     };
   }

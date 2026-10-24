@@ -207,6 +207,45 @@ No Studio defect was found.
 
 The iOS simulator was not run, since this Linux host has none and CI builds Android only (`.github/workflows/build_and_test.yml:83-84`), so no step is verified on iOS, the clipboard expiry and local-only flag of #97 included; #91 tracks the iOS walkthrough on macOS.
 
+## M5 walkthrough
+
+The end-to-end walkthrough of milestone M5 (#124) was run on 2026-10-23 from `main` at `50eb6e2`, built with Flutter 3.47.7 as a debug APK of `main_prod.dart` with `studio-dev.env`.
+The stack ran `libredb-studio:main-c9989a6` (Studio main `c9989a6b5`), Keycloak 26.8.1, Postgres 17.6 and Redis 8.10, started from a fresh volume.
+The device was the Android emulator 37.2.12 with the AVD `libredb-dev-api33`: API 33 Google APIs image, Android 13, `sdk_gphone64_x86_64`, KVM, started with `-gpu swiftshader_indirect`, after `tool/studio-dev/trust-android-emulator.sh`, with the app's data cleared before the first sign-in.
+Steps 1 to 8 were walked through as `user` / `user`, the second account of step 8 and steps 9 and 10 as `admin` / `admin`.
+The `postgres` container logged every statement with its database (`log_statement = 'all'`, as in the M4 walkthrough), and `adb logcat` recorded the whole session from the emulator's boot to its end.
+
+| Step | Result |
+| --- | --- |
+| 1. Rows, Load more, database words | Passed: `SELECT * FROM orders` on Dev Postgres runs without asking and shows its 4 rows; `orders` has no masked column, so `SELECT * FROM customers` was run too and shows `email` as `a**@e**********` and `card_number` as `****-****-****-1111`, each marked as masked; no seeded table holds more than a page, so Load more was checked on `SELECT n, n * 2 AS twice FROM generate_series(1, 2500) AS n`, whose first page holds Studio's 500 rows with "Studio bounded this result", and Load 500 more gives 1,000 rows; `SELEC 1` asks (its first word is not a read), then shows "The database says" and `syntax error at or near "SELEC"`; `SELECT 1 FRM orders o` shows `syntax error at or near "orders"` and a typed character lands right before `orders`, so the cursor sits at Postgres's position |
+| 2. Write confirmation | Passed: `DELETE FROM orders WHERE false` asks with "May change data: DELETE on line 1" and every line of the text; on Prod Postgres the sheet shows PROD and Run stays disabled for an empty field and for `prod postgres`, and runs once "Prod Postgres" is typed; on Dev Postgres (read-only role), `seed:dev-postgres-readonly`, the confirmed DELETE shows "The database did not allow this. You may lack a privilege on this object." (`studio.permission_denied`), Postgres logged `permission denied for table orders` for `studio_reader`, and the session stays; Load more of `SELECT n FROM generate_series(1, 2500) AS n -- note: update`, which asks with "UPDATE on line 1", shows the sheet again before the next page, and on Prod Postgres with an empty name field each time |
+| 3. Lone `BEGIN` | Passed: it asks, and after the run shows "This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add COMMIT to keep them." |
+| 4. Timeouts, cancel, script | Passed: `SELECT pg_sleep(45)` shows "1 row, 45,005 ms"; `SELECT pg_sleep(70)` shows "The database did not answer in time." (`studio.timeout`) and Postgres logged `canceling statement due to statement timeout` 60.000 s after the statement, before the phone's own 75 s; Cancel during `SELECT pg_sleep(30)` was tapped at 23:12:40.048Z, Postgres logged `canceling statement due to user request` at 23:12:40.078Z, a screenshot 2 s after the tap shows "Cancelled", and `pg_stat_activity` held no active `pg_sleep(30)`; `SELECT pg_sleep(40); SELECT pg_sleep(40)` asks with "Runs more than one statement", shows "Running for 0:23" while it runs, and ends with Statement 1 at 40,041 ms and Statement 2 at 40,022 ms, both on screen about 80 s after the confirmation |
+| 5. Scripts and selection | Passed: `SELECT 1 AS a;`, `SELECT * FROM missing_table;`, `SELECT 3 AS c` on three lines shows Statement 1 succeeded, Statement 2 failed with `relation "missing_table" does not exist` and "1 statement not run", and Postgres logged no `SELECT 3 AS c`; `SELECT 1 AS a;`, `SELECT 2 AS b;`, `DELETE FROM orders WHERE false` asks with "May change data: DELETE on line 3" and "Runs more than one statement", needs "Prod Postgres" on Prod Postgres, and ends with Statement 3 at 0 rows; with `SELECT 22 AS second_one` selected out of two statements, Run selection runs only that one, without asking, which is the only statement Postgres logged |
+| 6. Backgrounding | Passed, Android kept the socket: with `SELECT pg_sleep(20)` running, the home screen for 60 s and the return show "1 row, 20,021 ms"; with the confirmed `UPDATE orders SET note = note FROM (SELECT pg_sleep(20)) AS s WHERE orders.id = 1` the return shows "1 row affected"; neither interrupted message appeared, since no request dropped, so they are covered only by #118's widget tests and by the iOS run in #91 |
+| 7. Editing and drafts | Passed: the accessory row types `(`, `*`, `)` and `;` into the text, scrolls to Tab, Undo and Redo, and Undo and Redo remove and restore the `;`; keywords are bold and numbers muted; Dev Postgres keeps `SELECT count(*) FROM orders;` across a tab change to Browse and back, across a switch to Prod Postgres (which shows its own draft) and back, and across a force stop and relaunch |
+| 8. History and accounts | Passed: with "All connections" on and the search `Prod`, the history lists the three Prod Postgres runs; tapping the `generate_series` one while Dev Postgres was active asks "Replace the editor's text?", and Replace makes Prod Postgres the active connection with the text in the editor, and Postgres logged no statement; after a sign-out, `admin` sees "No statements yet" with "All connections" on and an empty editor on Prod Postgres; signed in again, `user` finds both the history and the Prod Postgres draft; found #167 |
+| 9. Open in editor, catalog | Passed: 'Open in editor' in the long-press menu of `public.customers` opens the SQL tab with `SELECT * FROM public.customers;`, sends nothing (no new line in the Postgres log), and the text runs without asking (3 rows); on Dev Postgres server the editor shows the chip "Database: app", its sheet "Run statements in" lists `app`, `archive` and `postgres`, and after picking `archive`, `SELECT current_database() AS db, count(*) AS n FROM orders_2025` runs in the database `archive`, as the Postgres log shows |
+| 10. Offline | Failed for Cancel, #164: with airplane mode on, Run is disabled with "Needs an internet connection", as is View rows in the Browse long-press menu, and 'Open in editor' still opens its statement; but while `SELECT pg_sleep(30)` runs, Cancel stays enabled with no reason, and a tap shows "No internet connection. Check your network and try again." and offers Stop waiting, while the statement runs on |
+| 11. Device log | Passed: the 98,656 lines of `adb logcat` hold none of the 27 statement, database error and history texts searched for (among them `FROM orders`, `generate_series`, `SELEC 1`, `pg_sleep`, `missing_table`, `orders_2025`, `syntax error`, `permission denied`, `statement timeout`); the only matches, `BEGIN` and `does not exist`, are lines of system processes, and the app's 200 lines carry only routes, error codes such as `studio.query_error` and `studio.timeout`, and request outcomes |
+
+Notes:
+
+- The SQL tab's top bar reads only "SQL" and never names the active connection, so a statement that runs without asking, or the switch that a History entry of another connection makes, happens on a connection the page does not show; filed as #163.
+- Android kept the socket of a backgrounded run, and removing the `adb reverse` rule during the background did not drop the open connection either, so the interrupted outcomes of #118 were not reached on the device.
+- `DELETE FROM orders WHERE false` changes no row and shows "Query returned no data", since the write headline counts only a positive row count; filed as #168.
+
+Defects found, each filed and linked from #124:
+
+- #163: the SQL tab's top bar does not name the active connection.
+- #164: offline, the editor's Cancel stays enabled and fails with "No internet connection".
+- #167: opening a History entry of another connection with Replace asks against the text on screen and replaces that connection's saved draft, which the user never saw.
+- #168: a write that changed no row shows "Query returned no data".
+
+No Studio defect was found.
+
+The iOS simulator was not run, since this Linux host has none and CI builds Android only (`.github/workflows/build_and_test.yml:83-84`), so no step is verified on iOS; the M5 steps were added to #91, which tracks the iOS walkthrough on macOS.
+
 ## Postgres seeds
 
 The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:

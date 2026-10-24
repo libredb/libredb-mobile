@@ -106,6 +106,15 @@ final class InterruptedError extends AppError {
   const InterruptedError(super.message, {required String super.code});
 }
 
+/// Whether [error] is a request that failed after it was sent without an answer from the server: a dropped connection,
+/// or a timeout while waiting for the answer. A refusal before the request left the device (offline, an untrusted
+/// certificate, a timeout before it was sent) is not, and neither is any answer the server sent.
+bool droppedWithoutAnswer(AppError error) => switch (error) {
+  NetworkError(code: null) => true,
+  TimeoutError(sent: true, code: null) => true,
+  _ => false,
+};
+
 /// Unknown/unexpected error.
 final class UnknownError extends AppError {
   const UnknownError(super.message, {super.code});

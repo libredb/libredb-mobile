@@ -16,30 +16,6 @@ class SecurityUtils {
     return token != null && token.isNotEmpty;
   }
 
-  /// True when [token] is missing, malformed, or past its `exp` claim.
-  static bool isTokenExpired(String? token) {
-    if (token == null || token.isEmpty) return true;
-    try {
-      final jwt = token.split(".");
-      if (jwt.length != 3) return true;
-      var normalizedPayload = jwt[1];
-      if (normalizedPayload.length % 4 != 0) {
-        normalizedPayload += '=' * (4 - normalizedPayload.length % 4);
-      }
-      final decoded = String.fromCharCodes(base64Url.decode(normalizedPayload));
-      final payloadMap = json.decode(decoded);
-      if (payloadMap == null) return true;
-      final exp = payloadMap["exp"];
-      if (exp is! num) return true;
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      return now >= exp.toInt();
-    } catch (e) {
-      // The text of a parse error quotes the part of the token it failed on, so only the type of the error is logged.
-      _log.error("isTokenExpired - error parsing token: {}", [e.runtimeType]);
-      return true;
-    }
-  }
-
   /// Decode a JWT token and return the expiration time as [DateTime].
   ///
   /// Returns null if the token is invalid or does not contain an `exp` claim.
