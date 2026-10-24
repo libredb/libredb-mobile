@@ -368,7 +368,21 @@ void main() {
 
       await share(tester, ended: () => refused);
 
-      expect(find.text('The shared file stays on this phone until you sign out (FileSystemException)'), findsOne);
+      expect(find.text('The shared file stays on this phone until you sign out: Something went wrong'), findsOne);
+      expect(find.textContaining('FileSystemException'), findsNothing);
+    });
+
+    testWidgets('shows a share that fails without a code with the generic message, not its type', (tester) async {
+      final files = MockTemporaryShareFiles();
+      when(() => files.write(any(), any())).thenAnswer((_) async => throw const FileSystemException('disk full'));
+      await tester.pumpWidget(_app(_one(_text('x' * 100001)), shareFiles: files));
+
+      await tester.tap(find.byTooltip('Share'));
+      await tester.pump();
+
+      expect(find.text('Could not share: Something went wrong'), findsOneWidget);
+      expect(find.textContaining('FileSystemException'), findsNothing);
+      expect(shareCalls, isEmpty);
     });
 
     testWidgets('names a file of text that is not SQL .txt', (tester) async {

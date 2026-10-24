@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/object_browser/application/row_count_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/preview_statement_generator.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 
 /// 'Count rows' for the [RowCountBloc] above it: runs [statement] once per tap, and is disabled while a count runs or
 /// while [enabled] is false, which the heading's `OnlineOnlyAction` passes offline.
@@ -25,7 +28,8 @@ class CountRowsButton extends StatelessWidget {
 }
 
 /// The row count of the [RowCountBloc] above it, as one line under a heading: the count grouped in the user's locale,
-/// a progress bar while it runs, or, for a refused count, that it could not be loaded, with the error code.
+/// a progress bar while it runs, or, for a refused count, that it could not be loaded, with the error code, or with the
+/// generic message for a failure without one, whose type goes only to the log.
 class RowCountLine extends StatelessWidget {
   const RowCountLine({super.key});
 
@@ -41,7 +45,8 @@ class RowCountLine extends StatelessWidget {
           RowCountIdle() || RowCountRunning(previous: null) => (null, false),
           RowCountRunning(:final previous?) => (rows(previous), false),
           RowCountLoaded(:final count) => (rows(count), false),
-          RowCountFailure(:final error) => (s.browse_count_failed(error.code ?? error.runtimeType.toString()), true),
+          RowCountFailure(error: AppError(:final code?)) => (s.browse_count_failed(code), true),
+          RowCountFailure() => (s.browse_count_failed_reason(AppErrorCode.generic.resolve(context)), true),
         };
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
