@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:yaml/yaml.dart';
 
 /// Guards the Android release signing and the release workflows (docs/release.md, issue #194).
@@ -19,6 +20,7 @@ import 'package:yaml/yaml.dart';
 /// - A store build never carries a define meant for checks only (`tool/release/check_only_defines.txt`), such as
 ///   `SENTRY_DEVICE_CHECK`: `tool/release/check_defines.sh` stops the release before the build, and every define the
 ///   app reads is either one the release passes or one of those.
+/// - Every URL the release passes is one a prod start refuses unless it is https (#218).
 void main() {
   group('Android release signing', () {
     late final gradle = _stripLineComments(File(_gradlePath).readAsStringSync());
@@ -237,6 +239,33 @@ void main() {
       expect('${steps[build]['run']}', isNot(contains('--dart-define=')), reason: 'pass defines only from the file');
     });
 
+    // The store build declares encryption in transit (#218): AppConfig.fromEnvironment stops a prod start when one of
+    // these is not https, which test/infrastructure/config/environment_test.dart covers for each.
+    test('every URL the release passes is checked for https at a prod start, with one pattern everywhere', () {
+      final urls = {
+        for (final name in releaseDefines)
+          if (name.endsWith('_URL') || name.endsWith('_ISSUER') || name.endsWith('_DSN')) name,
+      };
+      expect(urls, containsAll(['PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN']), reason: 'the guard finds no URL');
+      expect(
+        urls.difference(AppConfig.httpsOnlyDefines),
+        isEmpty,
+        reason: 'add each URL define to AppConfig.httpsOnlyDefines and check it in AppConfig.fromEnvironment',
+      );
+      for (final path in [_checkScriptPath, _nativeSentryPath]) {
+        expect(
+          File(path).readAsStringSync(),
+          contains(AppConfig.httpsUrlPattern),
+          reason: '$path must check with the pattern of AppConfig.isHttpsUrl, verbatim',
+        );
+      }
+      final build = _steps(
+        _loadYaml(_releasePath)['jobs'] as YamlMap,
+        'build',
+      ).firstWhere((step) => '${step['run']}'.contains('flutter build appbundle'));
+      expect('${build['run']}', contains('--target lib/main/main_prod.dart'), reason: 'the store build must be prod');
+    });
+
     group('check_defines.sh', () {
       late Directory dir;
       setUp(() => dir = Directory.systemTemp.createTempSync('check_defines'));
@@ -281,6 +310,66 @@ void main() {
           final result = await Process.run('bash', [_checkScriptPath, path], environment: {'RELEASE_VARS': '{}'});
           expect(result.exitCode, isNot(anyOf(0, 1)), reason: '$path was not an error');
         }
+      });
+
+      // The same rule as a prod start (AppConfig.fromEnvironment, #218), so an http value stops the release before
+      // anything is signed or uploaded.
+      test('fails on each https-only define that is not https, naming it and not its value', () async {
+        const store = {
+          'PROD_API_URL': 'https://studio.example/api',
+          'OIDC_ISSUER': 'https://keycloak.example/realms/libredb',
+          'SENTRY_DSN': 'https://publickey@o1.ingest.sentry.example/1',
+        };
+        expect(store.keys.toSet(), AppConfig.httpsOnlyDefines);
+        for (final name in AppConfig.httpsOnlyDefines) {
+          for (final value in [
+            'http://secretvalue.example/x',
+            'secretvalue.example/x',
+            'https:///secretvalue',
+            'ftp://secretvalue.example/x',
+          ]) {
+            final result = await check({...store, name: value});
+            expect(result.exitCode, 1, reason: '$name=$value passed: ${result.stdout}${result.stderr}');
+            expect(result.stdout, contains('$name must be an https URL'), reason: '$name=$value');
+            expect('${result.stdout}${result.stderr}', isNot(contains('secretvalue')), reason: '$name=$value');
+          }
+        }
+      });
+
+      test('passes https values in any case, and an unset SENTRY_DSN', () async {
+        final result = await check({
+          'PROD_API_URL': 'HTTPS://studio.example/api',
+          'OIDC_ISSUER': 'https://localhost:8443/realms/libredb',
+        });
+        expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      });
+
+      test('applies the rule of a prod start: underscores, ports and IPv6 hosts pass, the issuer is trimmed', () async {
+        final result = await check({
+          'PROD_API_URL': 'https://my_studio.example:9443/api',
+          'OIDC_ISSUER': '  https://[::1]:8443/realms/libredb\n',
+          'SENTRY_DSN': 'https://publickey@my_sentry.example/1',
+        });
+        expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      });
+
+      test('fails on surrounding whitespace in PROD_API_URL or SENTRY_DSN, saying so', () async {
+        for (final name in ['PROD_API_URL', 'SENTRY_DSN']) {
+          final result = await check({
+            'PROD_API_URL': 'https://studio.example/api',
+            name: ' https://secretvalue.example/x',
+          });
+          expect(result.exitCode, 1, reason: name);
+          expect(result.stdout, contains('$name has leading or trailing whitespace'), reason: name);
+          expect('${result.stdout}${result.stderr}', isNot(contains('secretvalue')), reason: name);
+        }
+      });
+
+      test('fails on an https-only define that is not a string, without printing it', () async {
+        final file = File('${dir.path}/dart-defines.json')..writeAsStringSync('{"PROD_API_URL":["secretvalue"]}');
+        final result = await Process.run('bash', [_checkScriptPath, file.path], environment: {'RELEASE_VARS': '{}'});
+        expect(result.exitCode, isNot(0));
+        expect('${result.stdout}${result.stderr}', isNot(contains('secretvalue')));
       });
 
       test('fails without the variables, so a broken step cannot pass in silence', () async {
@@ -360,6 +449,7 @@ const _releasePath = '.github/workflows/release.yml';
 const _releasePleasePath = '.github/workflows/release-please.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
 const _checkScriptPath = 'tool/release/check_defines.sh';
+const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt';
 
 /// Defines the app reads that the release never sets, so a store build keeps their defaults:
 /// - `OIDC_REDIRECT_SCHEME`: an Android build receives its redirect only on the scheme of the manifest placeholder.

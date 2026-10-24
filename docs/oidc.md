@@ -179,7 +179,7 @@ Strings are trimmed; flags and `OIDC_PROMPT` are also lower-cased.
 
 | Variable | Required | Default | Meaning |
 | --- | --- | --- | --- |
-| `OIDC_ISSUER` | Yes | none | Issuer URL, with discovery at `/.well-known/openid-configuration` under it. `https` in any case, or `http` on `localhost`, `127.0.0.1` or `[::1]`. No query and no fragment |
+| `OIDC_ISSUER` | Yes | none | Issuer URL, with discovery at `/.well-known/openid-configuration` under it. `https` in any case, or `http` on `localhost`, `127.0.0.1` or `[::1]` outside a prod build, which stops at start on any `http` issuer ([security.md](security.md), "Encryption in transit"). No query and no fragment |
 | `OIDC_CLIENT_ID` | Yes | none | The public client id |
 | `OIDC_SCOPE` | No | `openid profile email` | Space-separated, and must contain `openid`. Zitadel, Auth0 and Entra ID need `offline_access` for a refresh token |
 | `OIDC_AUDIENCE` | No | unset | Sent as `audience` on the authorization request (Auth0) |
@@ -452,7 +452,7 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 - **State and nonce:** always sent and checked by the package.
 - **ID token validation:** the package verifies the signature against the JWKS, never hand-written code.
   A refreshed ID token is verified against the provider's keys too, because the package re-verifies it only with the keys of the user it replaces.
-- **Issuer:** `https`, except on a loopback host.
+- **Issuer:** `https`, except on a loopback host outside a prod build.
 - **`prompt=none`** is refused at bootstrap.
 - **Tokens:** only in the app's secure storage.
   The package's store keeps no token: `state`, the PKCE verifier, the nonce, the manager's copy of the tokens and the request live in memory for one operation, and a transaction expires after 5 minutes.
@@ -485,7 +485,7 @@ Each code is an `AppErrorCode` in the `auth.` namespace, with one sentence in ea
 
 | Code | When | Sentence (English) |
 | --- | --- | --- |
-| `auth.oidc_config` | Invalid configuration, checked at bootstrap; such a build starts signed out, whatever session is stored | Single sign-on is not configured correctly in this app. Contact your administrator. |
+| `auth.oidc_config` | Invalid configuration, checked at bootstrap; such a build starts signed out, whatever session is stored. Also a discovery document that names an endpoint the app uses that is not https ([security.md](security.md), "Encryption in transit") | Single sign-on is not configured correctly in this app. Contact your administrator. |
 | `auth.oidc_discovery` | Discovery, the JWKS or the token endpoint unreachable, a TLS failure, a response that is not JSON, or a discovery document naming another issuer | The identity provider could not be reached. Try again later, or contact your administrator if this continues. |
 | `auth.oidc_no_claims` | The ID token has no string `sub` or `iss` | Sign-in failed. Please try again. |
 | `auth.oidc_failed` | Any other failure after the provider answered: a `state` mismatch, a failed code exchange, an invalid ID token, an answer without `expires_in`, or an error from the provider | Sign-in failed. Please try again. |

@@ -92,6 +92,8 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 | `PLAY_RELEASE_STATUS` | No; `completed` by default, `draft` while Play still treats the app as a draft |
 
 An empty variable is left out of the build, and the build stops when a required one is missing.
+The app stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
+Before the build, `tool/release/check_defines.sh` stops the release on the same rule, naming the variable and never its value, so nothing is signed or uploaded with an http value.
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
 `APP_LOCK_REQUIRED` is not read, so the store build leaves the app lock to the user ([security.md](security.md), "App lock").
@@ -178,11 +180,9 @@ Overview:
 | Question | Answer | Why |
 | --- | --- | --- |
 | Does the app collect or share any of the required user data types? | Yes | The access token, the statements sent to Studio, and the Sentry reports |
-| Is all user data encrypted in transit? | Yes | `OIDC_ISSUER` must be https (`lib/infrastructure/config/auth_config.dart`), `PROD_API_URL` is the deployment's https URL, and the Sentry DSN is https |
+| Is all user data encrypted in transit? | Yes | A prod build stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is not https, refuses a Keycloak discovery document that names an endpoint that is not https, and follows no redirect from Studio ([security.md](security.md), "Encryption in transit") |
 | Account creation | The app does not allow users to create an account | Accounts are made in the deployment's Keycloak by the organisation; the app only signs in |
 | Can users request that their data is deleted? | Yes | Remove my data in Settings, uninstalling, and info@libredb.org for crash reports |
-
-The app does not check that `PROD_API_URL` is https yet ([#218](https://github.com/libredb/libredb-mobile/issues/218), before 1.0.0), so the maintainer keeps the release variable on https; the encryption answer depends on it.
 
 Data types (none is shared, none is processed ephemerally, and none is optional):
 

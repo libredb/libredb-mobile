@@ -1,7 +1,26 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens and statement text, how the user removes what it keeps, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
+This page describes the protections inside the app: how it keeps a prod build on https, how it stores tokens and statement text, how the user removes what it keeps, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
+
+## Encryption in transit
+
+A prod build (`lib/main/main_prod.dart`) talks to Studio, Keycloak and Sentry over https only, which the privacy policy and the Play Data safety answer "data is encrypted in transit" rely on.
+`AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`) stops the start with a `ProdHttpsConfigError` when `PROD_API_URL`, `OIDC_ISSUER` or a set `SENTRY_DSN` is not an absolute https URL with a host, a loopback http issuer included; there is no fallback and no downgrade.
+The rule is one pattern, `AppConfig.httpsUrlPattern`: the scheme in any case, optional user info, a host name or an IPv6 literal, an optional port, then the end or a path, query or fragment.
+`OIDC_ISSUER` is trimmed first, as the sign-in reads it, while `PROD_API_URL` and `SENTRY_DSN` are refused with surrounding whitespace, since they are used as given.
+The error names the define and never its value, because the DSN carries the project's key.
+On Android the host app starts the native Sentry SDK before the Flutter engine, so `NativeSentry.requireHttpsDsn` (`android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt`) refuses such a DSN there first, with the same pattern and message.
+An https issuer is not enough on its own: its discovery document names the endpoints the app then uses.
+`OidcClient` (`lib/infrastructure/auth/oidc/oidc_client.dart`) refuses a discovery document whose `authorization_endpoint`, `pushed_authorization_request_endpoint`, `token_endpoint`, `jwks_uri` or `end_session_endpoint` is not an https URL with a host, before it opens the browser or sends a code, a PKCE verifier, a refresh token or an ID token hint.
+A sign-in then fails with `OidcFailure.insecureEndpoint`, shown as `auth.oidc_config`, a refresh keeps the session without sending the refresh token, and a provider logout is not opened; every log line names only the endpoint's key.
+Only an http issuer, which a prod build never starts with, may name http endpoints, and only on its own host.
+The OpenID Connect client follows no redirect either, since oidc_core takes any status under 400 as success: a 3xx to discovery or the JWKS fails the sign-in as `auth.oidc_discovery`, and the log names only the request's role.
+`ApiClient` (`lib/infrastructure/http/api_client.dart`) follows no redirect: Studio's API answers JSON and never redirects, so a 3xx, to an http `Location` above all, is an error answer that `studioError` maps, and no request goes to the `Location`, a retry's included.
+An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
+The release stops before the build on the same rule (`tool/release/check_defines.sh`, [release.md](release.md)).
+`AppConfig.httpsOnlyDefines` lists the three, and `test/architecture/android_release_setup_test.dart` fails when the release passes a URL define that is not in it, or when the script or `NativeSentry.kt` does not carry the pattern verbatim.
+Dev and test builds, `main_local.dart` among them, check none of them; tool/studio-dev serves Studio and Keycloak over https through Caddy, so its `studio-dev.env` passes.
 
 ## Token storage
 

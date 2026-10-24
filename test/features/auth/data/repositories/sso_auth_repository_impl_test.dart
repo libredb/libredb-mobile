@@ -200,6 +200,15 @@ void main() {
       expect(sessions.persisted, isEmpty);
     });
 
+    test('a discovery naming an endpoint that is not https is rejected with the configuration code', () async {
+      client.signInOutcome = const OidcSignInFailed(OidcFailure.insecureEndpoint);
+
+      final result = await repository.signIn();
+
+      expect(result, isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcConfig));
+      expect(sessions.persisted, isEmpty);
+    });
+
     test('a provider certificate that matches no pin is rejected with the certificate code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.untrustedCertificate);
 
