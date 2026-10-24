@@ -99,6 +99,15 @@ In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oi
 - When the device comes back online, `OnReconnect` refreshes the visible screen once and, while the unreachable page is up, `AppConnectivityScope` checks Studio's liveness again, so that page clears without a Retry.
   A Studio that was answering is not checked again on reconnect, so one failed probe cannot cover a working screen.
 
+### Orientation
+
+Phones show the app in portrait and in both landscape orientations, never upside down (#127, a product decision of 2026-10-24).
+`AppBootstrapConfig.preferredOrientations` asks for `portraitUp`, `landscapeLeft` and `landscapeRight` at start.
+On Android no activity sets `android:screenOrientation`, so that list alone decides; Flutter turns it into `SCREEN_ORIENTATION_USER`, which follows the user's auto-rotate setting.
+On iOS the iPhone key of `UISupportedInterfaceOrientations` in `Info.plist` lists the same three; the iPad key keeps all four, which iPad multitasking requires, and since iOS ignores the run-time list on an iPad with multitasking on, all four apply there.
+`test/architecture/orientation_platform_setup_test.dart` keeps the platform files in line with the list.
+On the Android emulator, a rotation kept the state of the connection list, Browse, the rows page, the row detail sheet, the key value page and the SQL editor with its result, and sent no request (the device table of PR #179).
+
 ## Sessions
 
 1. "Sign in with SSO" runs the authorization code flow with PKCE in a Custom Tab (Android) or `ASWebAuthenticationSession` (iOS).

@@ -118,6 +118,45 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), isNull);
     });
 
+    // Phones rotate (#127): portrait and both landscape sides, not the upside-down portrait, which phones do not offer
+    // by default either.
+    test('defaults to portrait up and both landscape orientations', () {
+      expect(const AppBootstrapConfig(environment: Environment.test).preferredOrientations, const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    });
+
+    testWidgets('asks the platform for portrait up and both landscape orientations', (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+        (call) async => ['none'],
+      );
+      tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+        const EventChannel('dev.fluttercommunity.plus/connectivity_status'),
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+      final orientationCalls = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'SystemChrome.setPreferredOrientations') orientationCalls.add(call.arguments);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      final flutterErrorHandler = FlutterError.onError;
+      final platformErrorHandler = PlatformDispatcher.instance.onError;
+      final observer = Bloc.observer;
+
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test)));
+      FlutterError.onError = flutterErrorHandler;
+      PlatformDispatcher.instance.onError = platformErrorHandler;
+      Bloc.observer = observer;
+
+      expect(orientationCalls, [
+        ['DeviceOrientation.portraitUp', 'DeviceOrientation.landscapeLeft', 'DeviceOrientation.landscapeRight'],
+      ]);
+    });
+
     // The app ships code of the MIT-licensed template, whose licence must travel with every copy, so the store build
     // carries the NOTICE and the licences page shows it.
     testWidgets('registers the NOTICE, with the MIT notice of the template, among the app licences', (tester) async {
