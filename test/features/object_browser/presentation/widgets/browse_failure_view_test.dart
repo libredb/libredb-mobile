@@ -72,8 +72,8 @@ void main() {
     });
   }
 
-  // The page stayed mounted under the shell's refusal page and failed there; Studio accepting the account again loads it
-  // once, as a pull to refresh would.
+  // The page stayed mounted under the shell's refusal page and failed there; Studio accepting the account again loads
+  // it once, as a pull to refresh would.
   final refusedAccount = AuthError('No role', code: AppErrorCode.studioAccountHasNoRole.key);
 
   testWidgets('a failure loads again once, when Studio accepts the account again', (tester) async {

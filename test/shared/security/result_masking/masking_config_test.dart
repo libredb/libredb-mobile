@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_config.dart';
 
-// Pins the port of Studio's DEFAULT_MASKING_CONFIG (src/lib/data-masking.ts:34-153 at libredb-studio c9989a6b5), written
-// out here a second time on purpose: a later sync with Studio changes this list, so it shows up as a visible diff.
+// Pins the port of Studio's DEFAULT_MASKING_CONFIG (src/lib/data-masking.ts:34-153 at libredb-studio c9989a6b5),
+// written out here a second time on purpose: a later sync with Studio changes this list, so it shows up as a visible
+// diff.
 void main() {
   test('the default patterns, their column patterns and mask types are those of Studio c9989a6b5', () {
     expect(

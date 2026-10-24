@@ -13,9 +13,10 @@ import '../support/dart_code.dart';
 /// the event paths, and the analytics service built the head of a stack trace before the call.
 ///
 /// This meta-test reads every AppLogger call in `lib/` and fails when an argument that is not a closure calls
-/// `toString`, `join` or `jsonEncode`, or holds a string literal with an interpolation. Pass the object itself: AppLogger prints its `toString`, and masks the
-/// credential keys of a Map or a List first. For a text that takes work to build, pass a closure that returns it:
-/// AppLogger calls it only when it prints the line, so the code inside a closure is not read.
+/// `toString`, `join` or `jsonEncode`, or holds a string literal with an interpolation. Pass the object itself:
+/// AppLogger prints its `toString`, and masks the credential keys of a Map or a List first. For a text that takes work
+/// to build, pass a closure that returns it: AppLogger calls it only when it prints the line, so the code inside a
+/// closure is not read.
 void main() {
   test('no AppLogger call in lib builds the text of an argument before the call', () {
     final calls = [

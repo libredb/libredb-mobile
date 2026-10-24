@@ -141,10 +141,11 @@ void main() {
       expect(warnings, contains(allOf(contains('/does-not-exist'), contains('no routes for location'))));
     });
 
-    // The root page outside the shell, the not-found page, enters without a transition. While a root page that replaces the shell is
-    // still entering, the root navigator keeps the exiting shell page mounted, and a shell page that comes back in that
-    // window builds the shell Navigator a second time with the same GlobalKey: "Duplicate GlobalKey detected in widget
-    // tree" (flutter/flutter#148768). Once a go_router or Flutter release fixes that, the entering transition can return.
+    // The root page outside the shell, the not-found page, enters without a transition. While a root page that replaces
+    // the shell is still entering, the root navigator keeps the exiting shell page mounted, and a shell page that comes
+    // back in that window builds the shell Navigator a second time with the same GlobalKey: "Duplicate GlobalKey
+    // detected in widget tree" (flutter/flutter#148768). Once a go_router or Flutter release fixes that, the entering
+    // transition can return.
     for (final (label, location, page) in [('the not-found page', '/does-not-exist', NotFoundPage)]) {
       testWidgets('returns to the shell 16 ms after leaving it for $label', (tester) async {
         setDesktopViewport(tester);

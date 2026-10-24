@@ -91,8 +91,8 @@ void main() {
     });
   });
 
-  // Regression: a header such as Proxy-Authorization or X-Api-Key names no password, otp, token or secret, so its opaque
-  // value reached Sentry as it was.
+  // Regression: a header such as Proxy-Authorization or X-Api-Key names no password, otp, token or secret, so its
+  // opaque value reached Sentry as it was.
   test('sentryBeforeSend masks the whole value of an authorization or api-key header', () {
     final result = sentryBeforeSend(
       _eventWithHeaders({

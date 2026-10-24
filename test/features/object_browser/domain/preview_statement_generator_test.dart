@@ -299,7 +299,9 @@ void main() {
       expect(
         _generator.preview(flat, collection, ['users']),
         const PreviewStatement(
-          statement: '{\n  "collection": "users",\n  "operation": "find",\n  "filter": {},\n  "options": {\n    "limit": 50\n  }\n}',
+          statement:
+              '{\n  "collection": "users",\n  "operation": "find",\n  "filter": {},\n  "options": {\n'
+              '    "limit": 50\n  }\n}',
         ),
       );
       expect(

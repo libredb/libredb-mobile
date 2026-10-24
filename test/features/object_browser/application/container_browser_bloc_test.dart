@@ -379,7 +379,8 @@ void main() {
 
   group('filter', () {
     blocTest<ContainerBrowserBloc, ContainerBrowserState>(
-      'narrows the level by name after 200 ms, folded as Studio\'s tree filter folds, without a request, across a refresh',
+      'narrows the level by name after 200 ms, folded as Studio\'s tree filter folds, without a request, '
+      'across a refresh',
       setUp: () {
         answerMeta('seed:dev-postgres-server', metaAnswer('meta_postgres_server'));
         answerContainers('seed:dev-postgres-server', null, const [

@@ -1746,9 +1746,9 @@ void main() {
     });
   });
   // From libredb-studio#1922 on, Studio refuses a verified token whose account it does not accept with 403
-  // BEARER_NO_ROLE or BEARER_NO_IDENTITY, and answers 503 IDENTITY_PROVIDER_UNAVAILABLE when it cannot reach the identity
-  // provider to check a token (src/proxy.ts). A new token is refused the same way and an outage is not the token's
-  // fault, so none of them starts a refresh, ends the session or touches the stored tokens.
+  // BEARER_NO_ROLE or BEARER_NO_IDENTITY, and answers 503 IDENTITY_PROVIDER_UNAVAILABLE when it cannot reach the
+  // identity provider to check a token (src/proxy.ts). A new token is refused the same way and an outage is not the
+  // token's fault, so none of them starts a refresh, ends the session or touches the stored tokens.
   group('TokenRefreshInterceptor - Studio refuses the account or cannot reach the identity provider', () {
     late int sessionExpiredCalls;
 

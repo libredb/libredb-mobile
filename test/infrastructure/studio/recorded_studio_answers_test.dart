@@ -40,9 +40,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// refusal of one. Record again after a Studio change to these routes.
 ///
 /// The governed fixtures (`*_governed.json`, `governance_unavailable.json`, `admin_governance.json`) come from the
-/// governed profile of tool/studio-dev, Studio main at dbfea263 in governance mode, recorded with a libredb-mobile access
-/// token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the governance
-/// status. docs/studio.md describes the profile and how the unavailable source was produced.
+/// governed profile of tool/studio-dev, Studio main at dbfea263 in governance mode, recorded with a libredb-mobile
+/// access token: as user, who holds a write grant on sales-dev and a read grant on sales-prod, and as admin for the
+/// governance status. docs/studio.md describes the profile and how the unavailable source was produced.
 /// `managed_governed.json` was recorded again the same way from Studio main at c9989a6b5, which sends the grant's
 /// `access` (libredb-studio#1922).
 /// The governed seed was generated from Studio 02dc26057, which has the same governance contract as dbfea263.
@@ -54,7 +54,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// The Redis fixtures (`*_redis*.json` and `keyscan_*.json`) come from seed:dev-redis of tool/studio-dev the same way;
 /// `keyscan_requests.json` holds the body each recorded key-scan page was requested with.
 /// The refusals of `GET /api/auth/me` (`me_norole.json`, `me_expired.json` and `me_idp_unavailable.json`) come from
-/// Studio main at c9989a6b5 in tool/studio-dev, which has libredb-studio#1922; docs/studio.md says how each was produced.
+/// Studio main at c9989a6b5 in tool/studio-dev, which has libredb-studio#1922; docs/studio.md says how each was
+/// produced.
 void main() {
   String fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 

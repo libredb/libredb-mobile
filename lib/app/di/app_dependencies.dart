@@ -92,7 +92,8 @@ class AppDependencies {
   SessionRefusedPredicate get sessionRefusedPredicate => isStudioSessionRefused;
 
   /// Which answer refuses the signed-in account itself: Studio's 403 `BEARER_NO_ROLE` or `BEARER_NO_IDENTITY`, on any
-  /// route, from libredb-studio#1922 on. No refresh fixes it, so the session stays and the shell shows the refusal page.
+  /// route, from libredb-studio#1922 on. No refresh fixes it, so the session stays and the shell shows the refusal
+  /// page.
   AccountRefusal get accountRefusal => studioAccountRefusal;
 
   /// The [ApiClient], which refreshes the session through [tokenRotation] at the identity provider. [onSessionExpired]

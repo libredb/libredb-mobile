@@ -28,8 +28,8 @@ class EditorDraftBloc extends Bloc<EditorDraftEvent, EditorDraftState> {
     this.onLateOutcome,
   }) : super(const EditorDraftInitial()) {
     on<EditorDraftSubjectChanged>(_onSubjectChanged, transformer: EventTransformers.queue());
-    // The pause is a timer of the bloc's own rather than a debouncing transformer: stream_transform's debounce emits its
-    // last event when the bloc closes and keeps its timer running after the editor is gone, while close() saves the
+    // The pause is a timer of the bloc's own rather than a debouncing transformer: stream_transform's debounce emits
+    // its last event when the bloc closes and keeps its timer running after the editor is gone, while close() saves the
     // waiting text itself and cancels this timer.
     on<EditorDraftTextChanged>((event, emit) {
       _pause?.cancel();

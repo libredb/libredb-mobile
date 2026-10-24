@@ -338,7 +338,8 @@ void main() {
       expect(client.hints, [null]);
     });
 
-    // An unreadable store also hides the access token expiry, so the refresh ends the session and Studio gets no record.
+    // An unreadable store also hides the access token expiry, so the refresh ends the session and Studio gets no
+    // record.
     test('sends no hint when the store cannot be read, and still wipes and ends the provider session', () async {
       storage.readError = Exception('keystore locked');
 

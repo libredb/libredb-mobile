@@ -80,7 +80,9 @@ void main() {
     const sentences = {
       AppErrorCode.authOidcConfig:
           'Single sign-on is not configured correctly in this app. Contact your administrator.',
-      AppErrorCode.authOidcDiscovery: 'The identity provider could not be reached. Try again later, or contact your administrator if this continues.',
+      AppErrorCode.authOidcDiscovery:
+          'The identity provider could not be reached. Try again later, or contact your administrator if this '
+          'continues.',
       AppErrorCode.authOidcNoClaims: 'Sign-in failed. Please try again.',
       AppErrorCode.authOidcFailed: 'Sign-in failed. Please try again.',
       AppErrorCode.authOidcLogoutIncomplete:

@@ -2,8 +2,8 @@
 ///
 /// Building one logs nothing: the code that catches it logs it once, at the level that fits how it is handled.
 ///
-/// A failed HTTP response also carries its [statusCode], the machine-readable [errorCode] and the [serverMessage] of its
-/// body, and how long `Retry-After` asks the client to wait ([retryAfter]); a transport failure has none of them.
+/// A failed HTTP response also carries its [statusCode], the machine-readable [errorCode] and the [serverMessage] of
+/// its body, and how long `Retry-After` asks the client to wait ([retryAfter]); a transport failure has none of them.
 abstract class AppException implements Exception {
   final String? _message;
   final String? _prefix;

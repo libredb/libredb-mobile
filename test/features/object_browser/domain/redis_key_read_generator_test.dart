@@ -7,7 +7,8 @@ import 'package:libredb_mobile/features/object_browser/domain/redis_key_read_gen
 // onOpenKey (src/components/Studio.tsx:1158-1169) hands it. Produced by a bun test file beside a tsconfig.json whose
 // paths map "@/*" to libredb-studio's src/*, so nothing is written into the Studio checkout:
 //   {"compilerOptions": {"baseUrl": ".", "paths": {"@/*": ["<libredb-studio>/src/*"]}}}
-//   generateTableQuery([key], {queryLanguage: "json", queryDialect: "redis"}, type === null ? [] : [{name: "type", type}])
+//   generateTableQuery([key], {queryLanguage: "json", queryDialect: "redis"},
+//     type === null ? [] : [{name: "type", type}])
 //   bun test probe.test.ts
 
 void main() {

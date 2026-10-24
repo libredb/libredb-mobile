@@ -112,7 +112,8 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
         meta = data;
     }
     if (emit.isDone) return;
-    // Only Redis is read this way; an engine with a key-browser kind opens the key's source, and any other runs nothing.
+    // Only Redis is read this way; an engine with a key-browser kind opens the key's source, and any other runs
+    // nothing.
     if (meta.queryDialect != 'redis' || meta.objectKinds.any((kind) => kind.keyBrowserOnly)) {
       _log.warn('the engine reads no key value through a typed read');
       emit(const KeyValueUnavailable());
@@ -191,7 +192,8 @@ class KeyValueBloc extends Bloc<KeyValueEvent, KeyValueState> {
 
   void _fail(Emitter<KeyValueState> emit, AppError error, {required KeyValueShown? onScreen}) {
     _log.warn('key not read: {}', [error.code ?? error.runtimeType]);
-    // A request the offline device never sent says nothing new, so the answer on screen stays, marked stale by the page.
+    // A request the offline device never sent says nothing new, so the answer on screen stays, marked stale by the
+    // page.
     if (onScreen != null && error.code == AppErrorCode.networkOffline.key) {
       emit(onScreen.copyWith(isRefreshing: false));
       return;

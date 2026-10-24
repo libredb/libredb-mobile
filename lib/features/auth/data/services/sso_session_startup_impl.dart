@@ -16,7 +16,8 @@ import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 /// Only the expiry the sign-in stored is checked, never a JWT `exp`, since a provider's access token need not be a
 /// JWT. Nothing else uses the client at startup, and the client runs its operations one at a time.
 ///
-/// An `oidc` sign-out runs [run] as well, so Studio's sign-out record goes out with an access token that has not expired.
+/// An `oidc` sign-out runs [run] as well, so Studio's sign-out record goes out with an access token that has not
+/// expired.
 ///
 /// The refresh follows the rules of `TokenRefreshInterceptor` for the session generation ([SessionGeneration]): an
 /// answer that comes after the session ended is dropped, and what it stored while the session ended is taken back.

@@ -486,8 +486,8 @@ Future<BuildContext> _pumpScope(WidgetTester tester, AppDependencies dependencie
   return scope;
 }
 
-/// A session cubit that restores the session from secure storage as a relaunch does, with the startup step that AppScope
-/// gives an `oidc` build.
+/// A session cubit that restores the session from secure storage as a relaunch does, with the startup step that
+/// AppScope gives an `oidc` build.
 SessionCubit _relaunchedSession() {
   final storage = FlutterSecureStorageAdapter();
   return SessionCubit(

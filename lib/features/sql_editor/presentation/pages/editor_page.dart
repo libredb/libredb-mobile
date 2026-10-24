@@ -544,7 +544,8 @@ class _EditorViewState extends State<_EditorView> {
           Flexible(
             flex: 2,
             child: BlocSelector<EditorDraftBloc, EditorDraftState, bool>(
-              // Read only while the account's draft is read; a text typed before Studio named the account is asked about.
+              // Read only while the account's draft is read; a text typed before Studio named the account is asked
+              // about.
               selector: (state) => state is EditorDraftLoading,
               builder: (context, loading) => EditorInput(
                 controller: _text,
