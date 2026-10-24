@@ -7,7 +7,6 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
-import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,6 +72,9 @@ class _FakeSsoStartup implements ISsoSessionStartup {
   @override
   void giveUp() => giveUps++;
 }
+
+/// A startup step that keeps the stored session, so restore reads that session as it is.
+_FakeSsoStartup _storedSessionStep() => _FakeSsoStartup(Future.value(const SsoStartupUseStoredSession()));
 
 /// JWT with `exp` claim already in the past. Built statically so tests
 /// can be const-friendly. Payload: `{"sub":"u","exp":1}` (1970-01-01).
@@ -141,21 +143,21 @@ void main() {
 
   group('SessionCubit', () {
     test('initial state is SessionUnknown — distinguishable from unauthenticated', () {
-      final cubit = SessionCubit();
+      final cubit = SessionCubit(ssoStartup: _storedSessionStep());
       expect(cubit.state, isA<SessionUnknown>());
       cubit.close();
     });
 
     blocTest<SessionCubit, SessionState>(
       'markAuthenticated emits SessionAuthenticated',
-      build: () => SessionCubit(),
+      build: () => SessionCubit(ssoStartup: _storedSessionStep()),
       act: (cubit) => cubit.markAuthenticated(),
       expect: () => [const SessionAuthenticated()],
     );
 
     blocTest<SessionCubit, SessionState>(
       'markLoggedOut emits SessionUnauthenticated with noToken reason by default',
-      build: () => SessionCubit(),
+      build: () => SessionCubit(ssoStartup: _storedSessionStep()),
       seed: () => const SessionAuthenticated(),
       act: (cubit) => cubit.markLoggedOut(),
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)],
@@ -163,7 +165,7 @@ void main() {
 
     blocTest<SessionCubit, SessionState>(
       'restore emits SessionUnauthenticated(noToken) when secure storage is empty',
-      build: () => SessionCubit(secureStorage: _MemorySecureStorage()),
+      build: () => SessionCubit(secureStorage: _MemorySecureStorage(), ssoStartup: _storedSessionStep()),
       act: (cubit) => cubit.restore(),
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)],
     );
@@ -176,40 +178,29 @@ void main() {
         // satisfy ISecureStorage. Seeding synchronously avoids the
         // unawaited-write race the linter would otherwise flag.
         secure._store[SecureStorageKeys.jwtToken.key] = 'MOCK_TOKEN';
-        return SessionCubit(secureStorage: secure);
+        return SessionCubit(secureStorage: secure, ssoStartup: _storedSessionStep());
       },
       act: (cubit) => cubit.restore(),
       expect: () => [const SessionAuthenticated()],
     );
 
     blocTest<SessionCubit, SessionState>(
-      'restore emits SessionUnauthenticated(expired) for an expired token in prod',
-      build: () {
-        final secure = _MemorySecureStorage();
-        secure._store[SecureStorageKeys.jwtToken.key] = _expiredJwt;
-        return SessionCubit(secureStorage: secure, appConfig: const AppConfig.prod());
-      },
-      act: (cubit) => cubit.restore(),
-      expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.expired)],
-    );
-
-    blocTest<SessionCubit, SessionState>(
       'restore emits SessionUnauthenticated(storageError) when secure read throws',
-      build: () => SessionCubit(secureStorage: _ReadThrowsSecureStorage()),
+      build: () => SessionCubit(secureStorage: _ReadThrowsSecureStorage(), ssoStartup: _storedSessionStep()),
       act: (cubit) => cubit.restore(),
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.storageError)],
     );
 
     blocTest<SessionCubit, SessionState>(
       'refresh delegates to restore',
-      build: () => SessionCubit(secureStorage: _MemorySecureStorage()),
+      build: () => SessionCubit(secureStorage: _MemorySecureStorage(), ssoStartup: _storedSessionStep()),
       act: (cubit) => cubit.refresh(),
       expect: () => [const SessionUnauthenticated(reason: SessionExpiredReason.noToken)],
     );
 
     blocTest<SessionCubit, SessionState>(
       'markAuthenticated then markLoggedOut transitions correctly',
-      build: () => SessionCubit(),
+      build: () => SessionCubit(ssoStartup: _storedSessionStep()),
       act: (cubit) {
         cubit.markAuthenticated();
         cubit.markLoggedOut();
@@ -225,7 +216,8 @@ void main() {
 
       Logger.addOutputListener(recordError);
       addTearDown(() => Logger.removeOutputListener(recordError));
-      final cubit = SessionCubit(secureStorage: _DeleteThrowsSecureStorage())..markAuthenticated();
+      final cubit = SessionCubit(secureStorage: _DeleteThrowsSecureStorage(), ssoStartup: _storedSessionStep())
+        ..markAuthenticated();
       addTearDown(cubit.close);
 
       await cubit.endSession(reason: SessionExpiredReason.idleTimeout);
@@ -239,7 +231,7 @@ void main() {
     blocTest<SessionCubit, SessionState>(
       'endSession leaves storage and state alone when no session is stored',
       setUp: () => AppLocalStorage().save(StorageKeys.language.key, 'tr'),
-      build: () => SessionCubit(secureStorage: _MemorySecureStorage()),
+      build: () => SessionCubit(secureStorage: _MemorySecureStorage(), ssoStartup: _storedSessionStep()),
       seed: () => const SessionUnauthenticated(reason: SessionExpiredReason.noToken),
       act: (cubit) => cubit.endSession(reason: SessionExpiredReason.expired),
       expect: () => const <SessionState>[],
@@ -252,7 +244,7 @@ void main() {
       final storage = _MemorySecureStorage();
       await storage.write(SecureStorageKeys.jwtToken.key, 'fresh-jwt');
       await storage.write(SecureStorageKeys.refreshToken.key, 'fresh-refresh');
-      final cubit = SessionCubit(secureStorage: storage)..markLoggedOut();
+      final cubit = SessionCubit(secureStorage: storage, ssoStartup: _storedSessionStep())..markLoggedOut();
       addTearDown(cubit.close);
 
       await cubit.endSession(reason: SessionExpiredReason.expired);
@@ -288,6 +280,7 @@ void main() {
         final cubit = SessionCubit(
           secureStorage: storageAnswering(Completer<String?>().future),
           restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
         );
 
         unawaited(cubit.restore());
@@ -306,7 +299,11 @@ void main() {
       final infos = _recordLogs(Level.info);
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -327,7 +324,11 @@ void main() {
     test('keeps the user signed out when secure storage answers after the time limit with no stored session', () {
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -344,35 +345,15 @@ void main() {
       });
     });
 
-    test('keeps the user signed out when secure storage answers after the time limit with an expired session', () {
-      fakeAsync((async) {
-        final storedToken = Completer<String?>();
-        final cubit = SessionCubit(
-          secureStorage: storageAnswering(storedToken.future),
-          appConfig: const AppConfig.prod(),
-          restoreTimeLimit: timeLimit,
-        );
-        final states = <SessionState>[];
-        cubit.stream.listen(states.add);
-
-        unawaited(cubit.restore());
-        async.elapse(timeLimit);
-        storedToken.complete(_expiredJwt);
-        async.flushMicrotasks();
-
-        expect(states, [
-          const SessionUnauthenticated(reason: SessionExpiredReason.storageTimeout),
-          const SessionUnauthenticated(reason: SessionExpiredReason.expired),
-        ]);
-        unawaited(cubit.close());
-      });
-    });
-
     test('ignores a session answered after the time limit, and logs it, once the user has signed in since', () {
       final warnings = _recordLogs(Level.warning);
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -394,7 +375,11 @@ void main() {
     test('does not sign back in a user who signed in and out after the time limit', () {
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -418,7 +403,11 @@ void main() {
     test('ignores a session answered after the time limit once the cubit is closed', () {
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
 
         unawaited(cubit.restore());
         async.elapse(timeLimit);
@@ -435,7 +424,11 @@ void main() {
     test('a restore settled within the time limit is not signed out when the limit passes', () {
       fakeAsync((async) {
         final storedToken = Completer<String?>();
-        final cubit = SessionCubit(secureStorage: storageAnswering(storedToken.future), restoreTimeLimit: timeLimit);
+        final cubit = SessionCubit(
+          secureStorage: storageAnswering(storedToken.future),
+          restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
+        );
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -454,9 +447,12 @@ void main() {
         final cubit = SessionCubit(
           secureStorage: storageAnswering(Completer<String?>().future),
           restoreTimeLimit: timeLimit,
+          ssoStartup: _storedSessionStep(),
         );
 
         unawaited(cubit.restore());
+        // The startup step answers, so the stored read and its time limit start.
+        async.flushMicrotasks();
         unawaited(cubit.close());
 
         // A timer left running would emit into the closed cubit and, in a widget test, fail it as still pending.
@@ -468,13 +464,8 @@ void main() {
   group('restore with the startup step', () {
     const timeLimit = Duration(seconds: 3);
 
-    SessionCubit cubitWith(
-      SsoStartupResult result, {
-      ISecureStorage? storage,
-      AppConfig appConfig = const AppConfig.dev(),
-    }) => SessionCubit(
+    SessionCubit cubitWith(SsoStartupResult result, {ISecureStorage? storage}) => SessionCubit(
       secureStorage: storage ?? _MemorySecureStorage(),
-      appConfig: appConfig,
       ssoStartup: _FakeSsoStartup(Future.value(result)),
     );
 
@@ -521,10 +512,10 @@ void main() {
 
     // The startup step owns the expiry, and a provider's access token need not be a JWT.
     blocTest<SessionCubit, SessionState>(
-      'the stored session is not checked for a JWT exp in production',
+      'the stored session is not checked for a JWT exp',
       build: () {
         final storage = _MemorySecureStorage().._store[SecureStorageKeys.jwtToken.key] = _expiredJwt;
-        return cubitWith(const SsoStartupUseStoredSession(), storage: storage, appConfig: const AppConfig.prod());
+        return cubitWith(const SsoStartupUseStoredSession(), storage: storage);
       },
       act: (cubit) => cubit.restore(),
       expect: () => [const SessionAuthenticated()],
@@ -540,7 +531,6 @@ void main() {
       final rotation = MockTokenRotation();
       final cubit = SessionCubit(
         secureStorage: storage,
-        appConfig: const AppConfig.prod(),
         ssoStartup: SsoSessionStartup(
           rotation: rotation,
           secureStorage: storage,
@@ -580,12 +570,7 @@ void main() {
       fakeAsync((async) {
         final storage = _MemorySecureStorage().._store[SecureStorageKeys.jwtToken.key] = 'opaque-access-token';
         final startup = _FakeSsoStartup(Completer<SsoStartupResult>().future);
-        final cubit = SessionCubit(
-          secureStorage: storage,
-          appConfig: const AppConfig.prod(),
-          ssoStartup: startup,
-          ssoStartupTimeLimit: timeLimit,
-        );
+        final cubit = SessionCubit(secureStorage: storage, ssoStartup: startup, ssoStartupTimeLimit: timeLimit);
         final states = <SessionState>[];
         cubit.stream.listen(states.add);
 
@@ -660,7 +645,6 @@ void main() {
       // Built after the startup step has stored its session, so the cubit only sees it through the late answer.
       SessionCubit lateCubit(_MemorySecureStorage storage, Completer<SsoStartupResult> startup) => SessionCubit(
         secureStorage: storage,
-        appConfig: const AppConfig.prod(),
         ssoStartup: _FakeSsoStartup(startup.future),
         ssoStartupTimeLimit: timeLimit,
       );
@@ -751,7 +735,6 @@ void main() {
           final startup = Completer<SsoStartupResult>();
           final cubit = SessionCubit(
             secureStorage: storage,
-            appConfig: const AppConfig.prod(),
             ssoStartup: _FakeSsoStartup(startup.future),
             ssoStartupTimeLimit: timeLimit,
           );

@@ -73,11 +73,6 @@ class S {
     return Intl.message('Active', name: 'active', desc: '', args: []);
   }
 
-  /// `Authorities`
-  String get authorities {
-    return Intl.message('Authorities', name: 'authorities', desc: '', args: []);
-  }
-
   /// `Name`
   String get name {
     return Intl.message('Name', name: 'name', desc: '', args: []);
@@ -118,11 +113,6 @@ class S {
     return Intl.message('Save', name: 'save', desc: '', args: []);
   }
 
-  /// `Back`
-  String get back {
-    return Intl.message('Back', name: 'back', desc: '', args: []);
-  }
-
   /// `Are you sure you want to delete?`
   String get delete_confirmation {
     return Intl.message('Are you sure you want to delete?', name: 'delete_confirmation', desc: '', args: []);
@@ -131,11 +121,6 @@ class S {
   /// `Settings`
   String get settings {
     return Intl.message('Settings', name: 'settings', desc: '', args: []);
-  }
-
-  /// `Account`
-  String get account {
-    return Intl.message('Account', name: 'account', desc: '', args: []);
   }
 
   /// `Select Language`
@@ -278,16 +263,6 @@ class S {
     return Intl.message('Could not save the session', name: 'error_auth_session_persist_failed', desc: '', args: []);
   }
 
-  /// `Admin user cannot be deleted`
-  String get error_user_cannot_delete_admin {
-    return Intl.message('Admin user cannot be deleted', name: 'error_user_cannot_delete_admin', desc: '', args: []);
-  }
-
-  /// `No authorities found`
-  String get error_user_no_authorities {
-    return Intl.message('No authorities found', name: 'error_user_no_authorities', desc: '', args: []);
-  }
-
   /// `Could not change the language`
   String get error_settings_change_language_failed {
     return Intl.message(
@@ -346,11 +321,6 @@ class S {
   /// `Home`
   String get home {
     return Intl.message('Home', name: 'home', desc: '', args: []);
-  }
-
-  /// `Users`
-  String get users {
-    return Intl.message('Users', name: 'users', desc: '', args: []);
   }
 
   /// `New`
@@ -511,11 +481,6 @@ class S {
   /// `Inactive`
   String get inactive {
     return Intl.message('Inactive', name: 'inactive', desc: '', args: []);
-  }
-
-  /// `Submit`
-  String get submit {
-    return Intl.message('Submit', name: 'submit', desc: '', args: []);
   }
 
   /// `Apply`

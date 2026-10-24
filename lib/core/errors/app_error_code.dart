@@ -24,10 +24,6 @@ enum AppErrorCode {
   authOidcFailed('auth.oidc_failed'),
   authOidcLogoutIncomplete('auth.oidc_logout_incomplete'),
 
-  // --- users ---
-  userCannotDeleteAdmin('user.cannot_delete_admin'),
-  userNoAuthorities('user.no_authorities'),
-
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),
 

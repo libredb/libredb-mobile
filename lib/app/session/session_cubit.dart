@@ -9,7 +9,6 @@ import 'package:libredb_mobile/core/security/security_utils.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
-import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/startup_storage_time_limit.dart';
 
@@ -81,8 +80,8 @@ enum SessionExpiredReason {
   /// a token behind.
   noToken,
 
-  /// Token present but past its `exp` claim, or rejected with a 401
-  /// that a token refresh could not fix.
+  /// The startup step ended the stored session, or a 401 that a token
+  /// refresh could not fix ended it.
   expired,
 
   /// Secure storage read threw (platform / decryption failure).
@@ -113,17 +112,17 @@ enum SessionExpiredReason {
 
 /// Owns the single source of truth for "is this user authenticated?".
 ///
-/// Reads the JWT from [ISecureStorage] (the one place tokens live) and
-/// runs presence + validity checks via the pure [SecurityUtils] helpers.
+/// Runs the single sign-on startup step, which owns the expiry of the
+/// stored session, and then reads the token from [ISecureStorage] (the one
+/// place tokens live) for the presence check of [SecurityUtils.hasToken].
 /// Consumers (router redirect, UI guards) pattern-match on [state];
 /// callers that want to re-evaluate trigger [refresh].
 class SessionCubit extends Cubit<SessionState> {
   SessionCubit({
     ISecureStorage? secureStorage,
     IAuthSessionRepository? sessionRepository,
-    this._appConfig = const AppConfig.dev(),
+    required this._ssoStartup,
     this._restoreTimeLimit = defaultRestoreTimeLimit,
-    this._ssoStartup,
     this._ssoStartupTimeLimit = defaultSsoStartupTimeLimit,
   }) : _secureStorage = secureStorage ?? FlutterSecureStorageAdapter(),
        super(const SessionUnknown()) {
@@ -138,7 +137,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// the user is signed out by it.
   static const defaultRestoreTimeLimit = StartupStorageTimeLimit.defaultDuration;
 
-  /// How long [restore] waits for the startup step of an `oidc` build
+  /// How long [restore] waits for the startup step
   /// unless the constructor is given another `ssoStartupTimeLimit`. The
   /// step makes network calls, so it has its own limit, outside the
   /// storage one.
@@ -148,11 +147,10 @@ class SessionCubit extends Cubit<SessionState> {
 
   final ISecureStorage _secureStorage;
   late final IAuthSessionRepository _sessionRepository;
-  final AppConfig _appConfig;
   final Duration _restoreTimeLimit;
 
-  /// The startup step that refreshes an expired stored session; null only in a test that leaves it out.
-  final ISsoSessionStartup? _ssoStartup;
+  /// The startup step that refreshes an expired stored session.
+  final ISsoSessionStartup _ssoStartup;
   final Duration _ssoStartupTimeLimit;
 
   /// The time limits of the restores in flight, cancelled by [close].
@@ -192,11 +190,11 @@ class SessionCubit extends Cubit<SessionState> {
   /// out, the late answer is logged and ignored, so it can neither sign
   /// them back in nor replace the session they signed in to.
   ///
-  /// In an `oidc` build the startup step runs first, under its own time
-  /// limit ([defaultSsoStartupTimeLimit] unless the constructor is given
-  /// another): it refreshes an expired access token. Only when it keeps the stored session is that
-  /// session read, and then without the JWT `exp` check, because the
-  /// step owns the expiry. A step that does not answer in time is taken
+  /// The startup step runs first, under its own time limit
+  /// ([defaultSsoStartupTimeLimit] unless the constructor is given
+  /// another): it refreshes an expired access token. Only when it keeps the
+  /// stored session is that session read, and then only for a token,
+  /// because the step owns the expiry. A step that does not answer in time is taken
   /// as a provider that cannot be reached: the stored session is read as
   /// it is.
   ///
@@ -204,50 +202,45 @@ class SessionCubit extends Cubit<SessionState> {
   /// on only while the state is still the one that the read after the
   /// limit settled, see [_settleLateSsoStartup].
   Future<void> restore() async {
-    final ssoStartup = _ssoStartup;
-    if (ssoStartup != null) {
-      // Completes with the emit count once the stored read after a timed-out step has settled the state.
-      final settledAfterLimit = Completer<int>();
-      final SessionState? settled;
-      final bool timedOut;
-      try {
-        final SsoStartupResult result;
-        (:result, :timedOut) = await _runSsoStartup(
-          ssoStartup,
-          onLateAnswer: (late) => unawaited(_settleLateSsoStartup(late, settledAfterLimit.future)),
-        );
-        settled = switch (result) {
-          SsoStartupSignInFailed(:final errorCode) => SessionUnauthenticated(
+    // Completes with the emit count once the stored read after a timed-out step has settled the state.
+    final settledAfterLimit = Completer<int>();
+    final SessionState? settled;
+    final bool timedOut;
+    try {
+      final SsoStartupResult result;
+      (:result, :timedOut) = await _runSsoStartup(
+        _ssoStartup,
+        onLateAnswer: (late) => unawaited(_settleLateSsoStartup(late, settledAfterLimit.future)),
+      );
+      settled = switch (result) {
+        SsoStartupSignInFailed(:final errorCode) => SessionUnauthenticated(
+          reason: SessionExpiredReason.signInFailed,
+          signInError: errorCode,
+        ),
+        SsoStartupSessionEnded() => const SessionUnauthenticated(reason: SessionExpiredReason.expired),
+        SsoStartupUseStoredSession() => null,
+      };
+    } catch (e) {
+      // Only the type: the step handles every failure it expects, so this one is a defect.
+      _log.error('restore: the startup step failed → unauthenticated: {}', [e.runtimeType]);
+      _ssoStartup.giveUp();
+      if (!isClosed) {
+        emit(
+          const SessionUnauthenticated(
             reason: SessionExpiredReason.signInFailed,
-            signInError: errorCode,
+            signInError: AppErrorCode.authOidcFailed,
           ),
-          SsoStartupSessionEnded() => const SessionUnauthenticated(reason: SessionExpiredReason.expired),
-          SsoStartupUseStoredSession() => null,
-        };
-      } catch (e) {
-        // Only the type: the step handles every failure it expects, so this one is a defect.
-        _log.error('restore: the startup step failed → unauthenticated: {}', [e.runtimeType]);
-        ssoStartup.giveUp();
-        if (!isClosed) {
-          emit(
-            const SessionUnauthenticated(
-              reason: SessionExpiredReason.signInFailed,
-              signInError: AppErrorCode.authOidcFailed,
-            ),
-          );
-        }
-        return;
+        );
       }
-      if (isClosed) return;
-      if (settled != null) {
-        emit(settled);
-        return;
-      }
-      await _restoreStoredSession(checkJwtExpiry: false);
-      if (timedOut) settledAfterLimit.complete(_emitCount);
       return;
     }
-    await _restoreStoredSession(checkJwtExpiry: true);
+    if (isClosed) return;
+    if (settled != null) {
+      emit(settled);
+      return;
+    }
+    await _restoreStoredSession();
+    if (timedOut) settledAfterLimit.complete(_emitCount);
   }
 
   /// Runs [startup] for at most [_ssoStartupTimeLimit], after which it
@@ -318,8 +311,8 @@ class SessionCubit extends Cubit<SessionState> {
   }
 
   /// Settles [state] from the stored session, see [restore].
-  Future<void> _restoreStoredSession({required bool checkJwtExpiry}) async {
-    final storedSession = _readStoredSession(checkJwtExpiry: checkJwtExpiry);
+  Future<void> _restoreStoredSession() async {
+    final storedSession = _readStoredSession();
     final timeLimit = StartupStorageTimeLimit(storedSession, duration: _restoreTimeLimit);
     _restoreTimeLimits.add(timeLimit);
     final SessionState session;
@@ -353,10 +346,9 @@ class SessionCubit extends Cubit<SessionState> {
     emit(stored);
   }
 
-  /// The session that the stored token proves, for [restore]. Without
-  /// [checkJwtExpiry], which an `oidc` build turns off, a stored token is
-  /// a session in every environment.
-  Future<SessionState> _readStoredSession({required bool checkJwtExpiry}) async {
+  /// The session that the stored token proves, for [restore]: the startup
+  /// step has checked its expiry, so a stored token is a session.
+  Future<SessionState> _readStoredSession() async {
     // ISecureStorage.read can throw on platform / decryption failure.
     // restore() is invoked fire-and-forget from BlocProvider, so any
     // escaping exception becomes an unhandled async error. Wrap the
@@ -370,29 +362,8 @@ class SessionCubit extends Cubit<SessionState> {
         _log.info('restore: no token in secure storage → unauthenticated');
         return const SessionUnauthenticated(reason: SessionExpiredReason.noToken);
       }
-      // In production we additionally reject expired tokens. In non-prod
-      // (mocks/dev) we stay lenient so a static MOCK_TOKEN without an
-      // `exp` claim does not log the user out on every restart.
-      //
-      // An expired session stays stored until a sign-in replaces it. The
-      // screens a signed-out user can reach only call public endpoints,
-      // which never receive it.
-      if (!checkJwtExpiry) {
-        _log.info('restore: token found, its expiry checked by the startup step → authenticated');
-        return const SessionAuthenticated();
-      }
-      if (_appConfig.isProduction) {
-        final expired = SecurityUtils.isTokenExpired(token);
-        _log.info('restore: token found, expired={} → authenticated={}', [expired, !expired]);
-        if (expired) {
-          return const SessionUnauthenticated(reason: SessionExpiredReason.expired);
-        } else {
-          return const SessionAuthenticated();
-        }
-      } else {
-        _log.info('restore: token found (dev/test lenient) → authenticated');
-        return const SessionAuthenticated();
-      }
+      _log.info('restore: token found, its expiry checked by the startup step → authenticated');
+      return const SessionAuthenticated();
     } catch (e, st) {
       _log.error('restore: secure storage read failed → unauthenticated (safe default): {}\n{}', [e, st]);
       return const SessionUnauthenticated(reason: SessionExpiredReason.storageError);
