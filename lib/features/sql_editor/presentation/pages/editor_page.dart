@@ -100,6 +100,7 @@ class EditorPage extends StatelessWidget {
             containers: context.read<IContainersRepository>(),
             providerMeta: context.read<IProviderMetaRepository>(),
             activeCatalog: context.read<ActiveCatalogCubit>(),
+            activeConnection: context.read<ActiveConnectionCubit>(),
             connectionId: connectionId,
             onRequestedNotListed: (requested, used) => _sayCatalogNotListed(messenger, requested, used),
           )..add(const EditorCatalogRequested()),
