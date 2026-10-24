@@ -32,6 +32,7 @@ import 'package:libredb_mobile/features/connections/domain/entities/connection_t
 import 'package:libredb_mobile/features/connections/domain/entities/managed_connections.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
+import 'package:libredb_mobile/features/connections/presentation/widgets/connection_list_view.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -293,6 +294,71 @@ void main() {
       handle.dispose();
     });
   }
+
+  group('on a phone held sideways', () {
+    const sideways = Size(829, 393);
+
+    testWidgets('puts the search and the environment chips on one row', (tester) async {
+      answer(_mockAnswer());
+
+      await pumpPage(tester, size: sideways);
+
+      final field = tester.getRect(find.byType(TextField));
+      final chip = tester.getRect(find.byType(FilterChip).first);
+      expect(chip.left, greaterThan(field.right));
+      expect(chip.top, lessThan(field.bottom));
+    });
+
+    testWidgets('puts the badge on the name line', (tester) async {
+      answer(_mockAnswer());
+
+      await pumpPage(tester, size: sideways);
+
+      final production = find
+          .ancestor(
+            of: find.descendant(of: find.byType(ConnectionRow), matching: find.text('PROD')).first,
+            matching: find.byType(ConnectionRow),
+          )
+          .first;
+      final connection = tester.widget<ConnectionRow>(production).connection;
+      final name = tester.getRect(find.descendant(of: production, matching: find.text(connection.name)));
+      final badge = tester.getRect(find.descendant(of: production, matching: find.text('PROD')));
+      expect(badge.left, greaterThan(name.right));
+      expect(badge.top, lessThan(name.bottom));
+    });
+
+    testWidgets('a portrait phone keeps the chips under the search and the badge under the name', (tester) async {
+      answer(_mockAnswer());
+
+      await pumpPage(tester, size: const Size(393, 829));
+
+      expect(
+        tester.getRect(find.byType(FilterChip).first).top,
+        greaterThan(tester.getRect(find.byType(TextField)).bottom),
+      );
+      final production = row('seed:sales-postgres');
+      expect(
+        tester.getRect(find.descendant(of: production, matching: find.text('PROD'))).top,
+        greaterThan(tester.getRect(find.descendant(of: production, matching: find.text('Sales (PostgreSQL)'))).bottom),
+      );
+    });
+
+    testWidgets('a rotation while typing a search keeps its text and focus', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester, size: const Size(393, 829));
+      await tester.showKeyboard(find.byType(TextField));
+      await tester.enterText(find.byType(TextField), 'sal');
+      await tester.pump(const Duration(milliseconds: 250));
+
+      tester.view.physicalSize = sideways;
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, 'sal');
+      expect(field.focusNode?.hasFocus ?? tester.testTextInput.isVisible, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+    });
+  });
 
   testWidgets('shows no badge for the environment other, as Studio does', (tester) async {
     answer(

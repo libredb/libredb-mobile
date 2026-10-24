@@ -106,4 +106,70 @@ void main() {
       });
     }
   });
+
+  group('ResponsiveScaffold - a compact height', () {
+    // The Android 13 emulator held sideways, as #177 measured it: 829 by 393 with a 24 px status bar.
+    const sideways = Size(829, 393);
+    const statusBar = FakeViewPadding(top: 24);
+
+    Future<void> pumpOn(WidgetTester tester, String location, {Size size = sideways}) async {
+      await pumpSignedIn(tester, size: size, insets: statusBar);
+      (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(location);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a tab page shows the tabs in a navigation rail at the side instead of the bottom bar', (tester) async {
+      await pumpOn(tester, ApplicationRoutesConstants.connectionList);
+
+      expect(find.byType(NavigationBar), findsNothing);
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.destinations.map((destination) => (destination.label as Text).data), [
+        'Connections',
+        'Browse',
+        'SQL',
+      ]);
+      expect(rail.selectedIndex, 0);
+      expect(
+        tester.getRect(find.byType(NavigationRail)).right,
+        lessThanOrEqualTo(tester.getRect(find.byType(TopBarWidget)).left),
+      );
+    });
+
+    testWidgets('a tap on the rail opens the tab in place of the page', (tester) async {
+      await pumpOn(tester, ApplicationRoutesConstants.connectionList);
+
+      await tester.tap(find.descendant(of: find.byType(NavigationRail), matching: find.text('SQL')));
+      await tester.pumpAndSettle();
+
+      final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
+      expect(router.state.uri.path, ApplicationRoutesConstants.sql);
+      expect(router.canPop(), isFalse);
+      expect(tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex, 2);
+    });
+
+    testWidgets('the rail stays clear of a camera cutout on the left', (tester) async {
+      await pumpSignedIn(tester, size: sideways, insets: const FakeViewPadding(left: 48, top: 24, right: 48));
+
+      expect(tester.getRect(find.byType(NavigationRail)).left, greaterThanOrEqualTo(48));
+      expect(tester.getRect(find.byType(TopBarWidget)).right, lessThanOrEqualTo(sideways.width - 48));
+    });
+
+    testWidgets('a page that is no tab shows no rail', (tester) async {
+      await pumpOn(tester, ApplicationRoutesConstants.settings);
+
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
+    });
+
+    testWidgets('a portrait phone keeps the bottom bar, also with the keyboard up', (tester) async {
+      await pumpOn(tester, ApplicationRoutesConstants.connectionList, size: const Size(393, 829));
+      expect(find.byType(NavigationBar), findsOneWidget);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 400);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+  });
 }

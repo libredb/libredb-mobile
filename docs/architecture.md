@@ -107,6 +107,13 @@ On Android no activity sets `android:screenOrientation`, so that list alone deci
 On iOS the iPhone key of `UISupportedInterfaceOrientations` in `Info.plist` lists the same three; the iPad key keeps all four, which iPad multitasking requires, and since iOS ignores the run-time list on an iPad with multitasking on, all four apply there.
 `test/architecture/orientation_platform_setup_test.dart` keeps the platform files in line with the list.
 On the Android emulator, a rotation kept the state of the connection list, Browse, the rows page, the row detail sheet, the key value page and the SQL editor with its result, and sent no request (the device table of PR #179).
+Below a screen height of 480, Material's compact height class (`AppBreakpoints.isCompactHeight`), such as a phone held sideways, the layout gives the content the height (#177).
+The shell shows the tabs in a `NavigationRail` at the side instead of the bottom bar.
+A Browse heading puts its wrapped actions on the title row, and the key browser puts Load more and Load all beside its progress line.
+The result view puts Load more beside the card and table toggle, except for a failed page, whose banner stays under the rows.
+The connection list puts the search and the environment chips on one row, and the badges on the name line.
+The statement capture note stays fixed above the list.
+The test reads the screen size, which the keyboard does not change, so typing never switches the layout, and the page keeps its place in the tree, so a rotation keeps its state.
 
 ## Sessions
 
