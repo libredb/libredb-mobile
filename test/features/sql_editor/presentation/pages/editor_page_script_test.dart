@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/sql_editor/data/models/sql_editor_json.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/script_result.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
@@ -48,6 +49,7 @@ import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/screen_capture.dart';
 
 String _fixture(String name) => File('test/fixtures/studio/$name.json').readAsStringSync();
 
@@ -101,6 +103,7 @@ ScriptResult _rolledBack({required bool failed}) => ScriptResult(
 /// The SQL editor page with a script (#117): the routing to the script route, the cards, the not-run line, the rows
 /// of a statement, the rolled-back notice, a selection, and the elapsed time and Cancel of a script that runs.
 void main() {
+  late ScreenCaptureProtection screenCapture;
   late MockISqlEditorRepository repository;
   late MockIProviderMetaRepository providerMeta;
   late MockActiveConnectionCubit active;
@@ -111,6 +114,7 @@ void main() {
   late MockIStatementTextStore textStore;
 
   setUp(() {
+    screenCapture = recordingScreenCaptureProtection();
     repository = MockISqlEditorRepository();
     providerMeta = MockIProviderMetaRepository();
     for (final connection in [_postgres, _production]) {
@@ -209,6 +213,7 @@ void main() {
             dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
           ),
           RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
+          RepositoryProvider<ScreenCaptureProtection>.value(value: screenCapture),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -328,6 +333,22 @@ void main() {
     expect(find.text('1'), findsOneWidget);
     expect(find.text('2'), findsNothing);
     expect(scriptsOf(text), 1);
+  });
+
+  testWidgets("the open statement's rows hold one capture lease, and opening another card keeps one", (tester) async {
+    const text = 'SELECT 1 AS a; SELECT 2 AS b';
+    answerScript(text, () => Success(_recordedScript('multi_postgres_rows')));
+    await pump(tester);
+    await type(tester, text);
+    expect(screenCapture.leases, 0);
+
+    await runAndConfirm(tester);
+    expect(screenCapture.leases, 1);
+
+    await tester.tap(find.byKey(ScriptResultView.cardKey(0)));
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+    expect(screenCapture.leases, 1);
   });
 
   testWidgets('a failed card opens no rows', (tester) async {

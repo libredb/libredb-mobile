@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/features/object_browser/application/key_value_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/redis_key_read_generator.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/browse_failure_view.dart';
@@ -25,7 +26,8 @@ import 'package:libredb_mobile/shared/widgets/studio_role_scope.dart';
 ///
 /// A key with no type shows Studio's `TYPE` answer and offers 'Read value' for one of the seven types; nothing runs a
 /// second statement by itself, and a read runs again only on the user's pull or retry. The page is read-only; a copy
-/// goes through `SensitiveClipboard`.
+/// goes through `SensitiveClipboard`. A value on screen, its text or the result view, keeps out of screenshots,
+/// screen recordings and the recent-apps preview ([ScreenCaptureGuard]); the key's name and its type stay capturable.
 class KeyValuePage extends StatelessWidget {
   const KeyValuePage({
     super.key,
@@ -187,7 +189,7 @@ class _KeyValueView extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           switch (shown) {
-            KeyValueLoaded() => _textValue(context, text!),
+            KeyValueLoaded() => ScreenCaptureGuard(child: _textValue(context, text!)),
             KeyValueTypeAnswered() => _typeAnswer(context, shown),
             KeyValueVanished() => Text(S.of(context).keys_value_vanished, key: const ValueKey('key-value-vanished')),
           },

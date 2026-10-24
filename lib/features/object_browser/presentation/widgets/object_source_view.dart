@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
 import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_share.dart';
@@ -14,6 +15,9 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 /// truncated with Studio's own sentence), Copy all and Share, and its text in monospace with line numbers, scrolling
 /// both ways and built line by line, so a part of a million characters opens at once. A refusal shows that the
 /// definition could not be read, with the engine's sentence; a neutral statement shows only its sentence.
+///
+/// While on screen it keeps out of screenshots, screen recordings and the recent-apps preview ([ScreenCaptureGuard]):
+/// a definition can hold literals, such as a view's filter values or a function's constants.
 class ObjectSourceView extends StatefulWidget {
   const ObjectSourceView({super.key, required this.source});
 
@@ -40,34 +44,36 @@ class _ObjectSourceViewState extends State<ObjectSourceView> {
   Widget build(BuildContext context) {
     final parts = widget.source.parts;
     final part = parts[_selected];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (parts.length > 1)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-            child: SegmentedButton<int>(
-              showSelectedIcon: false,
-              segments: [
-                for (var index = 0; index < parts.length; index++)
-                  ButtonSegment(value: index, label: Text(parts[index].label)),
-              ],
-              selected: {_selected},
-              onSelectionChanged: (selection) => setState(() => _selected = selection.single),
+    return ScreenCaptureGuard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (parts.length > 1)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              child: SegmentedButton<int>(
+                showSelectedIcon: false,
+                segments: [
+                  for (var index = 0; index < parts.length; index++)
+                    ButtonSegment(value: index, label: Text(parts[index].label)),
+                ],
+                selected: {_selected},
+                onSelectionChanged: (selection) => setState(() => _selected = selection.single),
+              ),
             ),
+          Expanded(
+            child: switch (part) {
+              SourceText() => _TextPart(key: ValueKey(_selected), source: widget.source, part: part),
+              SourceUnavailable(:final reason) => _Sentence(
+                heading: S.of(context).browse_source_unavailable,
+                text: reason,
+              ),
+              SourceStatement(:final statement) => _Sentence(text: statement),
+            },
           ),
-        Expanded(
-          child: switch (part) {
-            SourceText() => _TextPart(key: ValueKey(_selected), source: widget.source, part: part),
-            SourceUnavailable(:final reason) => _Sentence(
-              heading: S.of(context).browse_source_unavailable,
-              text: reason,
-            ),
-            SourceStatement(:final statement) => _Sentence(text: statement),
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

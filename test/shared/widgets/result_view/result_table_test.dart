@@ -29,6 +29,8 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
+import '../../../support/screen_capture.dart';
+
 final _policy = MaskingPolicy.forRole(const StudioUserRole());
 
 const _orderNotice = 'Without an ORDER BY the engine may return rows that repeat or are skipped between pages.';
@@ -101,25 +103,27 @@ class _Harness {
     await tester.pump();
   }
 
-  Widget _app({Key? viewKey}) => MaterialApp(
-    localizationsDelegates: const [
-      S.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: S.delegate.supportedLocales,
-    home: ValueListenableBuilder(
-      valueListenable: offline,
-      builder: (context, isOffline, _) => OfflineStatus(
-        isOffline: isOffline,
-        child: Scaffold(
-          body: MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: modes),
-              BlocProvider.value(value: bloc),
-            ],
-            child: ResultView(key: viewKey),
+  Widget _app({Key? viewKey}) => withScreenCaptureProtection(
+    MaterialApp(
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: S.delegate.supportedLocales,
+      home: ValueListenableBuilder(
+        valueListenable: offline,
+        builder: (context, isOffline, _) => OfflineStatus(
+          isOffline: isOffline,
+          child: Scaffold(
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: modes),
+                BlocProvider.value(value: bloc),
+              ],
+              child: ResultView(key: viewKey),
+            ),
           ),
         ),
       ),
