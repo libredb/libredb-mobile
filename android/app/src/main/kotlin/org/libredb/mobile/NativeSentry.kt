@@ -3,6 +3,9 @@ package org.libredb.mobile
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.os.Build
+import io.sentry.DataCollection
+import io.sentry.HttpBodyType
+import io.sentry.KeyValueCollectionBehavior
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
@@ -116,18 +119,37 @@ object NativeSentry {
 
     /**
      * Sets each privacy option even where it equals the sentry-java default, as configureSentryOptions does on the
-     * Dart side, so an upgrade that changes a default cannot start sending more: no default personal data, no
-     * screenshot and no view hierarchy attached to an event, no request body, and Session Replay off, with no network
-     * body in a replay.
+     * Dart side, so an upgrade that changes a default cannot start sending more: no personal data collected
+     * ([collectNoPersonalData]), no screenshot and no view hierarchy attached to an event, no request body, and
+     * Session Replay off, with no network body in a replay.
      */
     private fun setPrivacyOptions(options: SentryAndroidOptions) {
-        options.isSendDefaultPii = false
+        options.dataCollection = collectNoPersonalData()
         options.isAttachScreenshot = false
         options.isAttachViewHierarchy = false
         options.maxRequestBodySize = SentryOptions.RequestSize.NONE
         options.sessionReplay.sessionSampleRate = 0.0
         options.sessionReplay.onErrorSampleRate = 0.0
         options.sessionReplay.isNetworkCaptureBodies = false
+    }
+
+    /**
+     * The data collection options with every one off, in place of sendDefaultPii = false, which sentry-java 8.61.0
+     * deprecates and no longer reads once these are set. Each option left unset would collect: DataCollectionResolver
+     * takes an unset option of a set dataCollection as on, so a new option a sentry-java upgrade adds has to be set
+     * here too (NativeSentryTest fails until it is).
+     */
+    private fun collectNoPersonalData() = DataCollection().apply {
+        userInfo = false
+        cookies = KeyValueCollectionBehavior.off()
+        urlQueryParams = KeyValueCollectionBehavior.off()
+        httpBodies = emptySet<HttpBodyType>()
+        databaseQueryData = false
+        filePaths = false
+        httpHeaders.request = KeyValueCollectionBehavior.off()
+        httpHeaders.response = KeyValueCollectionBehavior.off()
+        graphql.document = false
+        graphql.variables = false
     }
 
     /**

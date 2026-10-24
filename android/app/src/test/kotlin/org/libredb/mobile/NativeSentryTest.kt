@@ -1,12 +1,17 @@
 package org.libredb.mobile
 
 import io.sentry.Breadcrumb
+import io.sentry.DataCollection
 import io.sentry.Hint
+import io.sentry.HttpBodyType
+import io.sentry.KeyValueCollectionBehavior
+import io.sentry.MainEventProcessor
 import io.sentry.SentryEvent
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.protocol.SdkVersion
 import io.sentry.protocol.SentryException
+import io.sentry.protocol.User
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -89,8 +94,22 @@ class NativeSentryTest {
 
     // Each privacy option is set, not left to the sentry-java default, so an upgrade that changes a default changes
     // nothing. Each case starts from options whose value is the unsafe one, as a changed default would leave it.
+    @Suppress("DEPRECATION") // sendDefaultPii, which sentry-java 8.61 replaces with dataCollection
     private fun unsafeOptions() = SentryAndroidOptions().apply {
         isSendDefaultPii = true
+        dataCollection = DataCollection().apply {
+            forceDataCollection()
+            userInfo = true
+            cookies = KeyValueCollectionBehavior.denyList()
+            urlQueryParams = KeyValueCollectionBehavior.denyList()
+            httpBodies = HttpBodyType.values().toSet()
+            databaseQueryData = true
+            filePaths = true
+            httpHeaders.request = KeyValueCollectionBehavior.denyList()
+            httpHeaders.response = KeyValueCollectionBehavior.denyList()
+            graphql.document = true
+            graphql.variables = true
+        }
         isAttachScreenshot = true
         isAttachViewHierarchy = true
         maxRequestBodySize = SentryOptions.RequestSize.ALWAYS
@@ -99,9 +118,76 @@ class NativeSentryTest {
         sessionReplay.isNetworkCaptureBodies = true
     }
 
+    // dataCollection replaces the deprecated sendDefaultPii. Once it is set, each of its options left unset collects
+    // (DataCollectionResolver in sentry-java 8.61.0), so every one is set off, and sendDefaultPii no longer counts.
     @Test
-    fun setsSendDefaultPiiOffWhateverTheDefault() {
-        assertFalse(configured(unsafeOptions()).isSendDefaultPii)
+    fun setsDataCollectionToCollectNoPersonalDataWhateverTheDefault() {
+        val resolver = configured(unsafeOptions()).dataCollectionResolver
+
+        assertTrue(resolver.isDataCollectionConfigured)
+        assertFalse(resolver.isUserInfo)
+        assertFalse(resolver.isDatabaseQueryData)
+        assertFalse(resolver.isFilePaths)
+        assertFalse(resolver.isGraphqlDocument)
+        assertFalse(resolver.isGraphqlDocumentWithLegacyBodyGate)
+        assertFalse(resolver.isGraphqlDocumentWithLegacyAlways)
+        assertFalse(resolver.isGraphqlVariables)
+        assertFalse(resolver.isGraphqlVariablesWithLegacyBodyGate)
+        assertFalse(resolver.isGraphqlVariablesWithLegacyAlways)
+        assertEquals(KeyValueCollectionBehavior.off(), resolver.cookies)
+        assertEquals(KeyValueCollectionBehavior.off(), resolver.urlQueryParams)
+        assertEquals(KeyValueCollectionBehavior.off(), resolver.httpRequestHeaders)
+        assertEquals(KeyValueCollectionBehavior.off(), resolver.httpResponseHeaders)
+        assertFalse(resolver.isIncomingRequestBody)
+        assertFalse(resolver.isOutgoingRequestBody)
+        assertFalse(resolver.isIncomingResponseBody)
+        assertFalse(resolver.isOutgoingResponseBody)
+        assertFalse(resolver.isOutgoingResponseBodyWithLegacyBodyGate)
+    }
+
+    // A sentry-java upgrade that adds a dataCollection option would collect it, since the options here are set; this
+    // fails until the new option is set off in NativeSentry and named below.
+    @Test
+    fun setsEveryDataCollectionOption() {
+        val collection = configured().dataCollection
+        val values = mapOf(
+            "" to collection,
+            "httpHeaders." to collection.httpHeaders,
+            "graphql." to collection.graphql,
+        ).flatMap { (prefix, owner) ->
+            owner.javaClass.methods
+                .filter { it.name.startsWith("get") && it.parameterCount == 0 && it.declaringClass == owner.javaClass }
+                .filter { it.returnType != DataCollection.HttpHeaders::class.java }
+                .filter { it.returnType != DataCollection.Graphql::class.java }
+                .map { prefix + it.name.removePrefix("get").replaceFirstChar(Char::lowercase) to it.invoke(owner) }
+        }.toMap()
+
+        assertEquals(
+            setOf(
+                "userInfo",
+                "cookies",
+                "urlQueryParams",
+                "httpBodies",
+                "databaseQueryData",
+                "filePaths",
+                "httpHeaders.request",
+                "httpHeaders.response",
+                "graphql.document",
+                "graphql.variables",
+            ),
+            values.keys,
+        )
+        assertEquals(emptyList<String>(), values.filterValues { it == null }.keys.toList())
+    }
+
+    // The user info option decides whether an event asks Sentry to store the device's IP address ({{auto}}).
+    @Test
+    fun asksForNoIpAddressWhateverTheDefault() {
+        val event = SentryEvent().apply { user = User() }
+
+        MainEventProcessor(configured(unsafeOptions())).process(event, Hint())
+
+        assertNull(event.user!!.ipAddress)
     }
 
     @Test
