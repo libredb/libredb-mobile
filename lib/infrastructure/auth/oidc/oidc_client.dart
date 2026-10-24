@@ -379,9 +379,16 @@ final class OidcClient implements IOidcClient {
     }
   }
 
-  /// The discovery keys of the endpoints the client sends to or opens: the sign-in page, the code exchange and the
-  /// refresh, the keys that check an ID token, and the provider logout.
-  static const _usedEndpoints = ['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'end_session_endpoint'];
+  /// The discovery keys of the endpoints the client sends to or opens: the sign-in page, the pushed authorization
+  /// request the package sends first when the provider supports it, the code exchange and the refresh, the keys that
+  /// check an ID token, and the provider logout.
+  static const _usedEndpoints = [
+    'authorization_endpoint',
+    'pushed_authorization_request_endpoint',
+    'token_endpoint',
+    'jwks_uri',
+    'end_session_endpoint',
+  ];
 
   /// Throws [OidcInsecureEndpointException] for the first of [_usedEndpoints] that [discovered] names but that is not
   /// an https URL with a host. Only an http issuer, which [OidcSettings] allows on a loopback host and a prod build
@@ -532,9 +539,11 @@ final class OidcClient implements IOidcClient {
     };
   }
 
-  /// The type of [error] and, for an [OidcException], the provider's error code and status. Never its message, its
-  /// request or its response, which can carry a token, the code, the verifier or a URL with `state`.
+  /// The type of [error]; for an [OidcException], the provider's error code and status; for an
+  /// [OidcInsecureEndpointException], the endpoint's discovery key. Never its message, its request, its response or a
+  /// URL, which can carry a token, the code, the verifier or `state`.
   static String _describe(Object error) => switch (error) {
+    OidcInsecureEndpointException(:final endpoint) => 'OidcInsecureEndpointException(endpoint: $endpoint)',
     OidcException(:final errorResponse, :final rawResponse, :final internalException) =>
       'OidcException(error: ${errorResponse?.error}, status: ${rawResponse?.statusCode}, '
           'cause: ${internalException?.runtimeType})',

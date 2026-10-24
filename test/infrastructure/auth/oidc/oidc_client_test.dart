@@ -843,13 +843,27 @@ void main() {
   // An https issuer whose discovery names an http endpoint would send the code, the PKCE verifier, the refresh token
   // or the ID token hint over plain http (#218); neither the client nor oidc_core checked it.
   group('discovery endpoints', () {
-    const endpoints = ['authorization_endpoint', 'token_endpoint', 'jwks_uri', 'end_session_endpoint'];
+    const endpoints = [
+      'authorization_endpoint',
+      'token_endpoint',
+      'jwks_uri',
+      'end_session_endpoint',
+      'pushed_authorization_request_endpoint',
+    ];
 
+    // Requiring pushed authorization makes the client send the authorization request to that endpoint first.
     void discoveryWith(String key, Object value) {
-      provider.discoveryAnswer = () => http.Response(jsonEncode({...provider.discovery, key: value}), 200);
+      provider.discoveryAnswer = () => http.Response(
+        jsonEncode({...provider.discovery, 'require_pushed_authorization_requests': true, key: value}),
+        200,
+      );
     }
 
-    String httpVersion(String key) => '${provider.discovery[key]}'.replaceFirst('https://', 'http://');
+    String httpVersion(String key) =>
+        '${provider.discovery[key] ?? '${provider.issuer}/protocol/openid-connect/ext/par/request'}'.replaceFirst(
+          'https://',
+          'http://',
+        );
 
     test('a sign-in refuses an endpoint that is not https before it opens the browser, logging only its key', () async {
       for (final key in endpoints) {
@@ -862,7 +876,7 @@ void main() {
 
           expect(outcome, _failed(OidcFailure.insecureEndpoint), reason: '$key=$value');
           expect(platform.authorizeRequests, isEmpty, reason: '$key=$value');
-          expect(provider.tokenRequests, isEmpty, reason: '$key=$value');
+          expect(provider.requests.where((request) => request.method == 'POST'), isEmpty, reason: '$key=$value');
           expect(lines.where((line) => line.contains(key)), isNotEmpty, reason: 'no line names $key');
           expect(lines.where((line) => line.contains(value)), isEmpty, reason: 'a line printed $value');
         }
@@ -872,22 +886,32 @@ void main() {
     test('a refresh sends no refresh token to an http token endpoint and keeps the session', () async {
       discoveryWith('token_endpoint', httpVersion('token_endpoint'));
 
-      final result = await newClient().refresh(
-        refreshToken: 'refresh-old-value',
-        idToken: provider.signIdToken(),
-        accessToken: 'access-old-value',
-        accessTokenExpiresAt: clock.now().toUtc(),
+      late TokenRotationResult result;
+      final lines = await printedLines(
+        () async => result = await newClient().refresh(
+          refreshToken: 'refresh-old-value',
+          idToken: provider.signIdToken(),
+          accessToken: 'access-old-value',
+          accessTokenExpiresAt: clock.now().toUtc(),
+        ),
       );
 
       expect(result, isA<RotationUnavailable>());
+      expect(lines.where((line) => line.contains('token_endpoint')), isNotEmpty, reason: 'no line names the key');
       expect(provider.requests.where((request) => request.method == 'POST'), isEmpty);
     });
 
     test('a provider logout never opens an http end_session_endpoint', () async {
       discoveryWith('end_session_endpoint', httpVersion('end_session_endpoint'));
 
-      expect(await newClient().endProviderSession(idTokenHint: 'id-token-value'), isA<ProviderLogoutFailed>());
+      late OidcLogoutOutcome outcome;
+      final lines = await printedLines(
+        () async => outcome = await newClient().endProviderSession(idTokenHint: 'id-token-value'),
+      );
+
+      expect(outcome, isA<ProviderLogoutFailed>());
       expect(platform.endSessionOptions, isEmpty);
+      expect(lines.where((line) => line.contains('end_session_endpoint')), isNotEmpty, reason: 'no line names the key');
     });
 
     test('an https discovery without an end_session_endpoint signs in', () async {
