@@ -332,9 +332,10 @@ const _releasePleasePath = '.github/workflows/release-please.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
 const _checkScriptPath = 'tool/release/check_defines.sh';
 
-/// Defines the app reads that the release never sets: an Android build receives its redirect only on the scheme of the
-/// manifest placeholder, so the release keeps the default.
-const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME'};
+/// Defines the app reads that the release never sets, so a store build keeps their defaults:
+/// - `OIDC_REDIRECT_SCHEME`: an Android build receives its redirect only on the scheme of the manifest placeholder.
+/// - `SCREEN_CAPTURE_PROTECTION`: the store build keeps screen capture protection on, its prod default (#192).
+const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME', 'SCREEN_CAPTURE_PROTECTION'};
 
 /// The names in [_checkOnlyPath], one per line, without `#` comments.
 Set<String> _checkOnlyDefines() => {

@@ -93,6 +93,7 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 
 An empty variable is left out of the build, and the build stops when a required one is missing.
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
+`SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
 
 ## Check-only defines
 
