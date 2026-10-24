@@ -182,7 +182,7 @@ For steps 6, 9 and 10 the `postgres` container logged every statement with its d
 | --- | --- |
 | 1. Masked columns | Passed: View rows on `public.customers` shows `email` as `a**@e**********` and `g****@e**********` and `card_number` as `****-****-****-1111`, with the lock, for `user` and for `admin`, in the cards, the row detail and the table header; a NULL stays `NULL` |
 | 2. Cell types | Passed: `public.column_types` shows `bigint` `9007199254740993` and `numeric` `12345678901234.123456` with every digit, `jsonb` as `{"b":{"c":true}}` in a cell and pretty-printed in the row detail, `bytea` as `\xdeadbeef`, and `null_value` as the muted italic `NULL`; the table cuts some headers, #126 |
-| 3. Paging, modes, rotation | Passed but for the rotation: `sales.ledger` opens on 50 rows with the `limited` chip and the order notice; Load 50 more gives 100 rows, after which Studio offers no more and the chip, the notice and the button go; cards and table switch, and the table mode was still chosen after the app was relaunched; the rotation could not run, since the app is locked to portrait, #127; the table scrolls past its last row and column, #125, and cuts `entry 10` to `entry …`, #126 |
+| 3. Paging, modes, rotation | Passed: `sales.ledger` opens on 50 rows with the `limited` chip and the order notice; Load 50 more gives 100 rows, after which Studio offers no more and the chip, the notice and the button go; cards and table switch, and the table mode was still chosen after the app was relaunched; the rotation ran later, once the app rotated (#127, PR #179), and kept the 100 rows, the view mode and the position with no new statement in the Postgres log; the table scrolls past its last row and column, #125, and cuts `entry 10` to `entry …`, #126 |
 | 4. Row detail and copy | Passed: the sheet swipes from "Row 1 of 100" to row 3 and back; Copy value of a clear field and of a masked field and Copy row as JSON in the sheet, and Copy value of a masked cell in the table's long-press menu, say "Copied", and Android 13's clipboard preview shows only dots each time; pasted into a text field, the masked `email` gives `a**@e**********` and the row gives its JSON with both masked values |
 | 5. Count | Passed: Count rows on `public.orders` reads "4 rows" |
 | 6. Server-level seed | Passed: View rows on `app.public.orders` of Dev Postgres server shows its 4 rows, and the Postgres log shows `SELECT * FROM app.public.orders LIMIT 51;` in the database `app` |
@@ -201,7 +201,7 @@ Defects found, each filed and linked from #100:
 
 - #125: the rows page and the key value page scroll past their content in both directions and do not spring back after a pull.
 - #126: a table column sized to its content cuts its header or its longest value by a few pixels.
-- #127: the app is locked to portrait, so the rotation checks of #96 and #100 cannot run.
+- #127: the app was locked to portrait, so the rotation checks of #96 and #100 could not run; PR #179 lets phones rotate and ran them.
 
 No Studio defect was found.
 
