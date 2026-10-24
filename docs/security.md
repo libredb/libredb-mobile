@@ -348,3 +348,57 @@ The sheet answers confirmed or cancelled and keeps no statement after it closes;
   Moving the mouse without a button pressed does not count, and neither do the key events Flutter synthesizes to match the keyboard state.
 
 Compliance baselines that expect an inactivity timeout include SOC 2 CC6.1, ISO 27001 A.9.4.2 and GDPR Art. 32.
+
+## App lock
+
+With the app lock on, a phone left unlocked does not hand a stranger a client that can run statements: the app asks for the device's biometrics, with its screen lock (PIN, pattern or password) as the fallback, on a cold start that restores a session and on a return after a set time in the background.
+The feature lives in `lib/features/app_lock/`; `AppLockBloc` (`application/app_lock_bloc.dart`) decides when to lock.
+
+When it locks:
+
+- A cold start that restores a stored session locks; a sign-in at the identity provider opens unlocked, since Keycloak just proved who the user is.
+  A session that the restore's late answer brings back after its time limit (`SessionExpiredReason.storageTimeout`) counts as a restore and locks.
+- A return after at least the chosen time in the background locks: immediately, 1, 5 (the default) or 15 minutes.
+  The time away is measured by the wall clock from the moment the app leaves the screen (`hidden` or `paused`) to its return, as `IdleTimeoutObserver` measures it, since a timer does not run while the phone suspends the app.
+  A system sheet over the app, which only makes it `inactive`, is not time away.
+  The PIN screen that the prompt opens is not time away either, so unlocking with the PIN does not lock again on the return.
+- It never locks while nobody is signed in, and a sign-out removes the lock screen.
+- When the time away also reaches the idle period of the inactivity sign-out (15 minutes in prod), the idle sign-out wins: no lock shows over the login page.
+
+The lock screen:
+
+- `AppLockGate` (`lib/app/lock/app_lock_gate.dart`) puts it above the router in the `MaterialApp` builder, over the "Can't reach Studio" page too.
+  The pages stay mounted under it, offstage, so an editor's text and a shown result are as they were once it opens; offstage they are not painted, take no touch, are left out of the semantics tree, so a screen reader reads only the lock screen, and have their tickers off, so their screen capture guards give their leases back.
+- The system back does nothing while it covers the app: the gate is a binding observer registered before the router's back button dispatcher and takes the back first.
+- Unlock opens the system prompt (`local_auth` 3.0.2, biometrics with the device credential as fallback); a cancelled or failed prompt keeps the app locked and nothing is retried by itself.
+  Too many attempts say to try later.
+- Sign out runs the app's sign-out (Studio's logout record, the wipe, the identity provider's end-session) without a confirmation, so a user who cannot authenticate can still leave and wipe the session.
+- On a device without a screen lock the lock screen says to set one and offers only Sign out; it offers Unlock again once the user has set one and comes back.
+
+The settings:
+
+- The switch and the timeout are device preferences (`StorageKeys.appLockEnabled` and `appLockTimeout`, `StorageScope.device`): no sign-out removes them, and 'Remove my data' keeps them.
+- Turning the lock on asks the system prompt first, so only the device's owner can turn it on; turning it off or changing the timeout does not.
+- A device without a screen lock shows why the switch cannot be turned on; a lock left on after the screen lock was removed can still be turned off.
+- Stored settings that cannot be read keep the lock on with the default timeout, logged at error level: the lock fails closed.
+
+### The switch
+
+`APP_LOCK_REQUIRED` is read at build time in `AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`): `true` forces the lock on in every environment, `false` or absent leaves it to the user, and any other value stops the app at start (`AppLockRequiredConfigError`).
+A required lock shows the switch on and disabled ("Required by your organization"), and on a device without a screen lock a signed-in user sees only the lock screen with Sign out, after a sign-in too.
+
+### The recent-apps preview
+
+While the lock is on, the recent-apps screen shows no content of the app:
+
+| Platform | How |
+| --- | --- |
+| Android 13 (API 33) and later | `Activity.setRecentsScreenshotEnabled(false)` through the `org.libredb.mobile/recents_preview` channel of `MainActivity` (`RecentsPreview.kt`); measured on the API 33 emulator: the recents card is blank. Opening the recents screen from inside the app shows the launcher's live view of the current window, which is the lock screen whenever the app is locked. |
+| Android below 13 | `MainActivity` answers that it has no switch, and `AppLockBloc` holds a lease of `ScreenCaptureProtection` (`FLAG_SECURE`) from the moment the app starts to leave the screen (`inactive`) until it is back; measured on the API 30 emulator: the recents card is blank with the lock on and shows the connection list with it off, and a screenshot works again after the return. The lease does nothing in a build with `SCREEN_CAPTURE_PROTECTION=false`. |
+| iOS | No switch: the same lease, which blurs the task-switcher snapshot; #199 checks Face ID and the snapshot on a device. |
+
+### Platform setup
+
+- `MainActivity` is a `FlutterFragmentActivity`, which `local_auth` needs for `BiometricPrompt`, and the launch and normal themes inherit from `Theme.AppCompat`, without which the prompt crashes on Android 8 (`test/architecture/app_lock_platform_setup_test.dart`).
+- The `USE_BIOMETRIC` permission comes from `local_auth_android`'s manifest through the manifest merger; the main manifest does not declare it.
+- `ios/Runner/Info.plist` has `NSFaceIDUsageDescription`, with English and Turkish texts in `en.lproj` and `tr.lproj/InfoPlist.strings`.
