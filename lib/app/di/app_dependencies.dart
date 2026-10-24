@@ -24,6 +24,7 @@ import 'package:libredb_mobile/features/studio_status/data/repositories/studio_s
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
+import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/infrastructure/analytics/sentry_analytics_service.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_token_rotation.dart';
@@ -49,6 +50,8 @@ import 'package:libredb_mobile/infrastructure/storage/result_view_mode_preferenc
 import 'package:libredb_mobile/shared/active_connection/active_catalog_store.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_store.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
+import 'package:libredb_mobile/shared/utils/subject_hash.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
 import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
 import 'package:libredb_mobile/shared/utils/background_run_time.dart';
@@ -181,6 +184,31 @@ class AppDependencies {
   /// account in [secureStorage].
   IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) =>
       StatementTextStore(EncryptedTextFileStore(secureStorage: secureStorage));
+
+  /// Every store that keeps data of a signed-in account on this device, which the user's 'Remove my data' clears: the
+  /// drafts and the history, the starred and recent connections, the last open connection, the database of each
+  /// server-level connection, and the collapsed sections of the connection list, whose keys are Studio's environment
+  /// and group names. The language, the theme and the result view mode are device preferences and stay.
+  ///
+  /// Each store is the instance the app works with, so a clear joins the queue of the statement text store.
+  UserDataRegistry createUserDataRegistry({
+    required IStatementTextStore statementText,
+    required IFavoriteConnectionsRepository favorites,
+    required IActiveConnectionStore activeConnection,
+    required IActiveCatalogStore activeCatalog,
+    required ICollapsedSectionsRepository collapsedSections,
+  }) => UserDataRegistry([
+    UserDataStore(
+      name: 'statement_text',
+      clear: (subject) async {
+        if (await statementText.clearSubject(subjectHash(subject)) case Failure(:final error)) throw error;
+      },
+    ),
+    UserDataStore(name: StorageKeys.connectionFavorites.key, clear: favorites.clear),
+    UserDataStore(name: StorageKeys.activeConnection.key, clear: (subject) => activeConnection.write(subject, null)),
+    UserDataStore(name: StorageKeys.activeCatalog.key, clear: activeCatalog.clear),
+    UserDataStore(name: StorageKeys.connectionSectionsCollapsed.key, clear: (_) => collapsedSections.clear()),
+  ]);
 
   /// The statement history each account keeps on the device, in the history of [store].
   IStatementHistoryRepository createStatementHistoryRepository(IStatementTextStore store) =>
