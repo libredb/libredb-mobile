@@ -37,6 +37,8 @@ PROD_API_URL=https://studio.example.com/api
 
 Studio's API lives under `/api`, so `PROD_API_URL` ends with it and the repositories use paths such as `/connections/managed`.
 A prod build without `PROD_API_URL` stops at start with `ProdApiUrlConfigError`.
+Beside it, `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` pin the public keys of Studio's and Keycloak's hosts, each a comma-separated list of at least two base64 SHA-256 pins; both are empty by default, which keeps the system trust store.
+How to read the pins, the backup-pin rule, the rotation and the Caddy key reuse they need are in [security.md](security.md#certificate-pinning).
 In a Platform install Studio's role claim is `libredb_roles` instead of `realm_access.roles`; the app's build does not change.
 
 ## Try it locally

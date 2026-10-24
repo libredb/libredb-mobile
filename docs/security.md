@@ -45,45 +45,112 @@ The editor's drafts (one per connection, with its catalog) and the statement his
 
 ## Certificate pinning
 
-The HTTP client can pin the server's certificate, which defends against a user-installed root CA, a rogue intermediate and other ways the device's trust store can be compromised.
-Pinning is off: `AppConfig.certificatePins` is empty in every environment, because a wrong pin locks every installed app out of the server.
-Milestone M6 turns it on for the release build ([roadmap.md](roadmap.md)).
+A release build can pin the public keys of Studio's and Keycloak's servers, which defends against a user-installed root CA, a rogue intermediate and other ways the device's trust store can be compromised.
+Pinning is off by default: both defines below are empty unless the build sets them, because a wrong pin locks every installed app out of the server.
 
-How it works:
+### The defines
 
-- `AppConfig.certificatePins` (`lib/infrastructure/config/environment.dart`) is a list of base64 SHA-256 hashes.
-  An empty list leaves the system trust store in charge.
-  A non-empty list installs a Dio adapter (`lib/infrastructure/http/certificate_pinning_adapter.dart`) that uses `SecurityContext(withTrustedRoots: false)`, so every certificate reaches `badCertificateCallback` for the pin check, including one a system CA signed.
-- A pin mismatch fails the TLS handshake with a `CertificatePinningException` (`lib/infrastructure/http/certificate_pinner.dart`), so Dio reports `DioExceptionType.unknown` with that exception as its `error`, not `DioExceptionType.badCertificate` (Dio raises that only for `IOHttpClientAdapter.validateCertificate`).
+| Define | Host it pins | Read from |
+| --- | --- | --- |
+| `STUDIO_CERT_PINS` | the host of `PROD_API_URL` | `AppConfig.certificatePins` |
+| `OIDC_CERT_PINS` | the host of `OIDC_ISSUER` | `AppConfig.oidcCertificatePins` |
+
+Each is a comma-separated list of base64 SHA-256 values, read only in the prod environment (`AppConfig.fromEnvironment` in `lib/infrastructure/config/environment.dart`):
+
+```shell
+fvm flutter build apk --release --target lib/main/main_prod.dart \
+  --dart-define=PROD_API_URL=https://studio.example.com/api \
+  --dart-define=OIDC_ISSUER=https://keycloak.example.com/realms/libredb \
+  --dart-define=OIDC_CLIENT_ID=libredb-mobile \
+  --dart-define=STUDIO_CERT_PINS=<current key pin>,<backup key pin> \
+  --dart-define=OIDC_CERT_PINS=<current key pin>,<backup key pin>
+```
+
+- An empty define leaves that host on the system trust store.
+- A set define needs at least two distinct pins: the key the server uses now and a backup key that is not deployed yet.
+- Each pin must be exactly what the command below prints: 44 characters of standard base64 ending in `=`, 32 bytes once decoded.
+- A define that breaks either rule stops a prod build at start with `CertificatePinsConfigError`, as `ProdApiUrlConfigError` does; it never falls back to an unpinned connection.
+
+### What is checked
+
+A pin is the SHA-256 of the certificate's SubjectPublicKeyInfo (RFC 7469), not of the whole certificate, so a certificate renewed over the same key keeps its pin.
+`CertificatePinner` (`lib/infrastructure/http/certificate_pinner.dart`) reads the SubjectPublicKeyInfo with a small DER walker that only follows the TLV structure of `tbsCertificate` and hashes that element's bytes as they are; a certificate it cannot read matches no pin.
+
+A pinned client uses `SecurityContext(withTrustedRoots: false)`, so every certificate reaches `badCertificateCallback` for the pin check, including one a system CA signed (`createPinnedHttpClient` in `lib/infrastructure/http/certificate_pinning_adapter.dart`).
+
+Which certificate is checked, as measured on 2026-10-24: dart:io hands the callback the server's **leaf** certificate, once per handshake, whatever the server sends above it.
+Against tool/studio-dev (Caddy 2.10.2, `tls internal`), the callback on both `localhost:8443` and `localhost:9443` received the leaf issued by "Caddy Local Authority - ECC Intermediate", from a Dart program on the host and from a release build on the API 33 emulator, where a build that pinned only the intermediate's key was refused.
+`test/infrastructure/http/certificate_pinning_adapter_test.dart` keeps that result: a server that sends leaf, intermediate and root passes with the leaf's pin and fails with the intermediate's and the root's.
+So an operator pins the key of the leaf certificate; a CA key cannot be pinned.
+
+Both hosts' requests go through a pinned client when their define is set:
+
+- Studio: `ApiClient` installs the pinned Dio adapter for every request, retries included (`ResilienceInterceptor` sends them through the same adapter).
+- Keycloak: `OidcClient` sends discovery, the key set, the token exchange, the token refresh and the logout discovery through a pinned `package:http` client (`AppDependencies.createOidcClient`).
+- The Keycloak sign-in page itself opens in the system browser (a Custom Tab on Android, `ASWebAuthenticationSession` on iOS), which the app cannot pin: the page trusts the device's store as any browser does.
+  The authorization code it returns is worthless without the PKCE verifier, which only the pinned token exchange sends.
+
+### A mismatch
+
+- A pin mismatch fails the TLS handshake with a `CertificatePinningException` (`lib/infrastructure/http/certificate_pinner.dart`) before any request is written, so no bearer, refresh token or code leaves the device.
+- On Studio, Dio reports `DioExceptionType.unknown` with that exception as its `error`, not `DioExceptionType.badCertificate` (Dio raises that only for `IOHttpClientAdapter.validateCertificate`).
   `ResilienceInterceptor` neither retries it nor counts it toward opening the endpoint's circuit.
   `CacheInterceptor` never answers it from cache: the connection may be intercepted, so the request fails instead of showing earlier data.
-  Retries and the token refresh go through the same pinned adapter as the original request.
   `ApiClient` throws it as an `UntrustedCertificateException` (`lib/core/errors/app_api_exception.dart`), a `FetchDataException` whose message names the host and port for the log.
   `studioError` and the other repositories report it as an `AppError` with the `AppErrorCode.networkCertInvalid` key, and the screens show its translated message instead of the exception text.
+  At launch the Studio status check meets it first, so the app shows that message on its "Can't reach Studio" page.
+- On Keycloak, a sign-in ends with `OidcFailure.untrustedCertificate`, the login page shows `networkCertInvalid`, and no session is stored; a refresh ends with `RotationUnavailable`, which keeps the session, since the refresh token was never sent.
 - No other TLS failure is answered from cache either, pinning or not: a certificate the device does not trust (expired, self-signed, a wrong device clock, a captive portal or an intercepting proxy), a hostname mismatch, or a handshake closed before it completed ("Connection terminated during handshake") fails the request.
   A dropped network can close a handshake too, but so can anything between the device and the server, so that case fails closed as well.
   A handshake reset before it completed is a connection error instead, which the cache answers like a lost connection.
   `ApiClient` throws such a failure, and a certificate that `IOHttpClientAdapter.validateCertificate` rejects (`DioExceptionType.badCertificate`), as an `UntrustedCertificateException` too, so the screens show the same translated message; the exception message keeps the TLS error for the log.
   `ResilienceInterceptor` does not count it toward opening the endpoint's circuit, so a circuit-open error never replaces it.
 
-Read the pin from the live server:
+### Reading a pin
+
+From the live server, for each host:
 
 ```shell
 openssl s_client -servername studio.example.com -connect studio.example.com:443 < /dev/null 2>/dev/null \
-  | openssl x509 -outform DER \
+  | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform der \
   | openssl dgst -sha256 -binary \
   | openssl enc -base64
 ```
 
-The pin is the hash of the whole certificate, not of its SubjectPublicKeyInfo.
-The OWASP recommendation, `SHA-256(SubjectPublicKeyInfo)`, survives a certificate renewal that keeps the key pair; reading it from the DER needs an ASN.1 parser, which the app does not have yet.
-Moving to it changes only what is hashed, not the shape of a stored pin.
+`openssl s_client` prints the leaf first, and `openssl x509` reads only that first certificate, which is the one the app checks.
+For the backup pin, make a key that is kept offline until it is needed and read its pin from the key itself:
 
-Rotate a key in three steps, so that no installed version is left without a pin for the server's certificate:
+```shell
+openssl ecparam -name prime256v1 -genkey -noout -out backup.key
+openssl pkey -in backup.key -pubout -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+```
 
-1. Add the new pin to `certificatePins` before the server's key changes, and ship that version.
-2. Move the server to the new certificate.
-3. Remove the old pin in a later release.
+### Keys that outlive renewals
+
+Pin only a key that outlives certificate renewals.
+A Caddy edge, such as tool/studio-dev or a LibreDB Platform installer environment, makes a new key at each renewal unless its site is set to reuse it, so a pin of a default Caddy leaf breaks at the next renewal: about every 60 days with a public CA, and every 12 hours with `tls internal`.
+Set `reuse_private_keys` in the site's `tls` block before pinning a Caddy edge:
+
+```caddyfile
+studio.example.com {
+	tls {
+		reuse_private_keys
+	}
+}
+```
+
+Other ACME clients have the same choice, for example certbot's `--reuse-key`.
+
+### Rotating a key
+
+Rotate a key in three steps, so that no installed version is left without a pin for the server's key:
+
+1. Ship a release whose define holds the current pin and the pin of the next key, the backup, and wait until the installed base has updated.
+2. Move the server to a certificate over the next key.
+3. Ship a release whose define drops the old pin and adds a new backup pin.
+
+The tool/studio-dev stack runs unpinned: its CA and keys are made anew with each fresh volume, so `tool/studio-dev/studio-dev.env` lists the two defines as comments only.
 
 ## Screen capture protection
 
