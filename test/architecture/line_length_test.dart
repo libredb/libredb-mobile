@@ -2,26 +2,27 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Guards the 120-column line width of the Dart files in `lib/` and `test/`.
+/// Guards the 120-column line width of the Dart files in `lib/`, `test/` and `tool/`.
 ///
 /// `analysis_options.yaml` sets the formatter's page width to 120, and `dart format` keeps code within it, but it
 /// never rewraps a comment and cannot split a long string literal, so such lines grew past the limit unnoticed. No
 /// analyzer lint takes a width: `lines_longer_than_80_chars` is fixed at 80.
 ///
-/// This meta-test reads every Dart file in `lib/` and `test/`, outside the generated `lib/generated/`, and fails on a
-/// line longer than 120 characters, naming its file and line. Rewrap the comment, or split the string literal into
-/// adjacent literals.
+/// This meta-test reads every Dart file in `lib/`, `test/` and `tool/`, outside the generated `lib/generated/`, and
+/// fails on a line longer than 120 characters, naming its file and line. Rewrap the comment, or split the string
+/// literal into adjacent literals. In a template of `tool/generate_feature.dart`, break the code across lines with no
+/// new trailing comma: the generator formats what it writes, so the generated files stay the same.
 void main() {
-  test('no Dart line in lib or test is longer than 120 columns', () {
+  test('no Dart line in lib, test or tool is longer than 120 columns', () {
     final files = [
-      for (final root in ['lib', 'test'])
+      for (final root in ['lib', 'test', 'tool'])
         for (final file in Directory(root).listSync(recursive: true).whereType<File>())
           if (file.path.endsWith('.dart') && !file.path.replaceAll('\\', '/').startsWith('lib/generated/')) file,
     ];
     final offenders = [for (final file in files) ...longLines(file.path.replaceAll('\\', '/'), file.readAsStringSync())]
       ..sort();
 
-    expect(files, isNotEmpty, reason: 'no Dart file was found in lib or test, so the guard no longer reads any');
+    expect(files, isNotEmpty, reason: 'no Dart file was found in lib, test or tool, so the guard no longer reads any');
     expect(
       offenders,
       isEmpty,
