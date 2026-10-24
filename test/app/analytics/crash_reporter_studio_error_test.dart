@@ -77,8 +77,9 @@ void main() {
         CrashReporter.install(SentryAnalyticsService());
         PlatformDispatcher.instance.onError!(error, StackTrace.current);
       });
-      // SentryAnalyticsService does not wait for the capture it starts.
-      await pumpEventQueue();
+      // SentryAnalyticsService does not wait for the capture it starts, so wait for the event, as long as a slow runner
+      // needs.
+      await _untilSent(sentEvents);
       return (event: sentEvents.single, lines: lines);
     } finally {
       PlatformDispatcher.instance.onError = previousPlatform;
@@ -141,6 +142,14 @@ void main() {
       expectNoStudioText(lines.join('\n'));
       expect(event, contains('$type(code: $code)'));
     });
+  }
+}
+
+/// Waits until [sent] holds an item, for at most ten seconds.
+Future<void> _untilSent(List<Object> sent) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (sent.isEmpty && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
   }
 }
 
