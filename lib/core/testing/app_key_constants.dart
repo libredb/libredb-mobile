@@ -33,3 +33,11 @@ const Key communitySponsorKey = Key("communitySponsorKey");
 const Key communityDocsKey = Key("communityDocsKey");
 const Key settingsWebsiteButtonKey = Key("settingsWebsiteButtonKey");
 const Key settingsLicensesButtonKey = Key("settingsLicensesButtonKey");
+
+// App lock: the lock screen over the app and its section of the settings.
+const Key appLockScreenKey = Key("appLockScreenKey");
+const Key appLockUnlockKey = Key("appLockUnlockKey");
+const Key appLockSignOutKey = Key("appLockSignOutKey");
+const Key appLockSwitchKey = Key("appLockSwitchKey");
+const Key appLockTimeoutKey = Key("appLockTimeoutKey");
+const Key appLockRestoreKey = Key("appLockRestoreKey");

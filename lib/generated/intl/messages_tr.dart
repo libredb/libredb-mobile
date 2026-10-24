@@ -188,6 +188,33 @@ class MessageLookup extends MessageLookupByLibrary {
     "account_refusal_title": MessageLookupByLibrary.simpleMessage("Hesabınızın Studio\'ya erişimi yok"),
     "active": MessageLookupByLibrary.simpleMessage("Aktif"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
+    "app_lock": MessageLookupByLibrary.simpleMessage("Uygulama kilidi"),
+    "app_lock_enable_reason": MessageLookupByLibrary.simpleMessage(
+      "Uygulama kilidini açmak için kimliğinizi doğrulayın",
+    ),
+    "app_lock_failed": MessageLookupByLibrary.simpleMessage("Tanınmadı. Tekrar deneyin."),
+    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage(
+      "Devam etmek için parmak iziniz, yüzünüz veya ekran kilidinizle kilidi açın.",
+    ),
+    "app_lock_locked_out": MessageLookupByLibrary.simpleMessage("Çok fazla deneme yapıldı. Daha sonra tekrar deneyin."),
+    "app_lock_locked_title": MessageLookupByLibrary.simpleMessage("LibreDB kilitli"),
+    "app_lock_no_screen_lock": MessageLookupByLibrary.simpleMessage(
+      "LibreDB\'yi kullanmak için bu cihazda bir ekran kilidi ayarlayın veya çıkış yapın.",
+    ),
+    "app_lock_no_screen_lock_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Bunu açmak için bu cihazda bir ekran kilidi ayarlayın",
+    ),
+    "app_lock_prompt_reason": MessageLookupByLibrary.simpleMessage("LibreDB\'nin kilidini açın"),
+    "app_lock_required_subtitle": MessageLookupByLibrary.simpleMessage("Kuruluşunuz tarafından zorunlu tutuluyor"),
+    "app_lock_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Uygulama açılırken parmak izinizi, yüzünüzü veya ekran kilidinizi iste",
+    ),
+    "app_lock_timeout": MessageLookupByLibrary.simpleMessage("Kilitleme süresi"),
+    "app_lock_timeout_fifteen_minutes": MessageLookupByLibrary.simpleMessage("Arka planda 15 dakika sonra"),
+    "app_lock_timeout_five_minutes": MessageLookupByLibrary.simpleMessage("Arka planda 5 dakika sonra"),
+    "app_lock_timeout_immediately": MessageLookupByLibrary.simpleMessage("Hemen"),
+    "app_lock_timeout_one_minute": MessageLookupByLibrary.simpleMessage("Arka planda 1 dakika sonra"),
+    "app_lock_unlock": MessageLookupByLibrary.simpleMessage("Kilidi aç"),
     "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Uygula"),
     "browse_count_failed": m0,
@@ -358,6 +385,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
+    "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage("Uygulama kilidi ayarı kaydedilemedi."),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
     "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(
       "Verilerinizin bir kısmı bu telefondan silinemedi, bu yüzden oturumunuz açık.",
@@ -523,7 +551,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "remove_my_data_favorites": MessageLookupByLibrary.simpleMessage("Yıldızlı bağlantılar"),
     "remove_my_data_history": MessageLookupByLibrary.simpleMessage("Sorgu geçmişi"),
     "remove_my_data_kept": MessageLookupByLibrary.simpleMessage("Bu telefonda kalanlar"),
-    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage("Dil, tema ve sonuç görünümü"),
+    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage(
+      "Dil, tema, sonuç görünümü ve uygulama kilidi",
+    ),
     "remove_my_data_last_connection": MessageLookupByLibrary.simpleMessage("Son açık bağlantı ve veritabanı"),
     "remove_my_data_recents": MessageLookupByLibrary.simpleMessage("Son kullanılan bağlantılar"),
     "remove_my_data_removed": MessageLookupByLibrary.simpleMessage("Bu telefondan silinenler"),
@@ -578,6 +608,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
     ),
     "settings_privacy": MessageLookupByLibrary.simpleMessage("Gizlilik"),
+    "settings_security": MessageLookupByLibrary.simpleMessage("Güvenlik"),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Hesap tercihlerinizi yönetin"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("İptal et"),

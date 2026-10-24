@@ -3047,9 +3047,14 @@ class S {
     return Intl.message('Kept on this phone', name: 'remove_my_data_kept', desc: '', args: []);
   }
 
-  /// `Language, theme and result view`
+  /// `Language, theme, result view and app lock`
   String get remove_my_data_kept_preferences {
-    return Intl.message('Language, theme and result view', name: 'remove_my_data_kept_preferences', desc: '', args: []);
+    return Intl.message(
+      'Language, theme, result view and app lock',
+      name: 'remove_my_data_kept_preferences',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `You are signed out once your data is removed.`
@@ -3072,6 +3077,131 @@ class S {
     return Intl.message(
       'Some of your data could not be removed from this phone, so you are still signed in.',
       name: 'error_settings_user_data_not_removed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Security`
+  String get settings_security {
+    return Intl.message('Security', name: 'settings_security', desc: '', args: []);
+  }
+
+  /// `App lock`
+  String get app_lock {
+    return Intl.message('App lock', name: 'app_lock', desc: '', args: []);
+  }
+
+  /// `Ask for your fingerprint, face or screen lock when the app opens`
+  String get app_lock_subtitle {
+    return Intl.message(
+      'Ask for your fingerprint, face or screen lock when the app opens',
+      name: 'app_lock_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Required by your organization`
+  String get app_lock_required_subtitle {
+    return Intl.message('Required by your organization', name: 'app_lock_required_subtitle', desc: '', args: []);
+  }
+
+  /// `Set a screen lock on this device to turn this on`
+  String get app_lock_no_screen_lock_subtitle {
+    return Intl.message(
+      'Set a screen lock on this device to turn this on',
+      name: 'app_lock_no_screen_lock_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Lock after`
+  String get app_lock_timeout {
+    return Intl.message('Lock after', name: 'app_lock_timeout', desc: '', args: []);
+  }
+
+  /// `Immediately`
+  String get app_lock_timeout_immediately {
+    return Intl.message('Immediately', name: 'app_lock_timeout_immediately', desc: '', args: []);
+  }
+
+  /// `1 minute in the background`
+  String get app_lock_timeout_one_minute {
+    return Intl.message('1 minute in the background', name: 'app_lock_timeout_one_minute', desc: '', args: []);
+  }
+
+  /// `5 minutes in the background`
+  String get app_lock_timeout_five_minutes {
+    return Intl.message('5 minutes in the background', name: 'app_lock_timeout_five_minutes', desc: '', args: []);
+  }
+
+  /// `15 minutes in the background`
+  String get app_lock_timeout_fifteen_minutes {
+    return Intl.message('15 minutes in the background', name: 'app_lock_timeout_fifteen_minutes', desc: '', args: []);
+  }
+
+  /// `Confirm it is you to turn on the app lock`
+  String get app_lock_enable_reason {
+    return Intl.message(
+      'Confirm it is you to turn on the app lock',
+      name: 'app_lock_enable_reason',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `LibreDB is locked`
+  String get app_lock_locked_title {
+    return Intl.message('LibreDB is locked', name: 'app_lock_locked_title', desc: '', args: []);
+  }
+
+  /// `Unlock with your fingerprint, face or screen lock to continue.`
+  String get app_lock_locked_message {
+    return Intl.message(
+      'Unlock with your fingerprint, face or screen lock to continue.',
+      name: 'app_lock_locked_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock`
+  String get app_lock_unlock {
+    return Intl.message('Unlock', name: 'app_lock_unlock', desc: '', args: []);
+  }
+
+  /// `Unlock LibreDB`
+  String get app_lock_prompt_reason {
+    return Intl.message('Unlock LibreDB', name: 'app_lock_prompt_reason', desc: '', args: []);
+  }
+
+  /// `Not recognized. Try again.`
+  String get app_lock_failed {
+    return Intl.message('Not recognized. Try again.', name: 'app_lock_failed', desc: '', args: []);
+  }
+
+  /// `Too many attempts. Try again later.`
+  String get app_lock_locked_out {
+    return Intl.message('Too many attempts. Try again later.', name: 'app_lock_locked_out', desc: '', args: []);
+  }
+
+  /// `Set a screen lock on this device to use LibreDB, or sign out.`
+  String get app_lock_no_screen_lock {
+    return Intl.message(
+      'Set a screen lock on this device to use LibreDB, or sign out.',
+      name: 'app_lock_no_screen_lock',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The app lock setting could not be saved.`
+  String get error_settings_app_lock_not_saved {
+    return Intl.message(
+      'The app lock setting could not be saved.',
+      name: 'error_settings_app_lock_not_saved',
       desc: '',
       args: [],
     );

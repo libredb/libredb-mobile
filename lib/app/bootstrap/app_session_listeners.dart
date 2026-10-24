@@ -5,6 +5,7 @@ import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/idle_timeout_observer.dart';
+import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -48,6 +49,9 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
   static final _log = AppLogger.getLogger('AppSessionListeners');
 
   IdleTimeoutObserver? _idleObserver;
+
+  /// The session state before the one the app lock listener handles, starting as [SessionCubit] starts.
+  SessionState _lastSession = const SessionUnknown();
 
   @override
   void initState() {
@@ -176,6 +180,26 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
             context.read<CachedProviderMetaRepository>().invalidate(id);
           },
         ),
+        // The app lock locks a cold start that restores a session, opens unlocked after a sign-in at the identity
+        // provider, and never covers the login page.
+        BlocListener<SessionCubit, SessionState>(
+          listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+          listener: (context, state) {
+            final previous = _lastSession;
+            _lastSession = state;
+            final lock = context.read<AppLockBloc>();
+            switch (state) {
+              case SessionAuthenticated() when _isRestore(previous):
+                lock.add(const AppLockSessionRestored());
+              case SessionAuthenticated():
+                lock.add(const AppLockSignedIn());
+              case SessionUnauthenticated():
+                lock.add(const AppLockSignedOut());
+              case SessionUnknown():
+                break;
+            }
+          },
+        ),
         BlocListener<SessionCubit, SessionState>(
           listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
           listener: (context, state) {
@@ -210,6 +234,14 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
       ),
     );
   }
+
+  /// Whether a session that follows [previous] comes from the stored session, not from a sign-in: the restore at
+  /// start, or its late answer after the restore time limit signed the user out.
+  static bool _isRestore(SessionState previous) => switch (previous) {
+    SessionUnknown() => true,
+    SessionUnauthenticated(:final reason) => reason == SessionExpiredReason.storageTimeout,
+    SessionAuthenticated() => false,
+  };
 
   /// The app-scoped blocs and caches outlive the session, so the next user to sign in would see what they hold about
   /// the one who signed out: the sign-in form state, a password shown in plain text among it, who Studio said the user

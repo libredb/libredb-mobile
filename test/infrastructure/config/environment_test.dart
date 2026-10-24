@@ -233,4 +233,83 @@ void main() {
       expect(const AppConfig.dev().withoutSentry().screenCaptureProtection, isFalse);
     });
   });
+
+  // Run with and without `--dart-define=APP_LOCK_REQUIRED=...` to cover both branches of the define.
+  group('APP_LOCK_REQUIRED', () {
+    test('no build requires the app lock by default', () {
+      expect(const AppConfig.prod().appLockRequired, isFalse);
+      expect(const AppConfig.dev().appLockRequired, isFalse);
+      expect(const AppConfig.test().appLockRequired, isFalse);
+      for (final environment in Environment.values) {
+        expect(
+          AppConfig.fromEnvironment(
+            environment,
+            prodApiUrlDefine: 'https://studio.example.test/api',
+            appLockRequiredDefine: '',
+          ).appLockRequired,
+          isFalse,
+        );
+      }
+    });
+
+    test('true requires it in every environment', () {
+      for (final environment in Environment.values) {
+        expect(
+          AppConfig.fromEnvironment(
+            environment,
+            prodApiUrlDefine: 'https://studio.example.test/api',
+            appLockRequiredDefine: 'true',
+          ).appLockRequired,
+          isTrue,
+        );
+      }
+    });
+
+    test('false leaves it to the user', () {
+      expect(
+        AppConfig.fromEnvironment(
+          Environment.prod,
+          prodApiUrlDefine: 'https://studio.example.test/api',
+          appLockRequiredDefine: 'false',
+        ).appLockRequired,
+        isFalse,
+      );
+    });
+
+    test('any other value stops the start with an error that names the define', () {
+      for (final environment in Environment.values) {
+        expect(
+          () => AppConfig.fromEnvironment(
+            environment,
+            prodApiUrlDefine: 'https://studio.example.test/api',
+            appLockRequiredDefine: 'yes',
+          ),
+          throwsA(
+            isA<AppLockRequiredConfigError>().having(
+              (error) => '$error',
+              'message',
+              allOf(contains('APP_LOCK_REQUIRED'), contains('"yes"')),
+            ),
+          ),
+        );
+      }
+    });
+
+    test('a start reads the define of the build', () {
+      const define = String.fromEnvironment('APP_LOCK_REQUIRED');
+      final config = AppConfig.fromEnvironment(Environment.prod, prodApiUrlDefine: 'https://studio.example.test/api');
+      expect(config.appLockRequired, define == 'true');
+    });
+
+    test('a config without Sentry keeps the switch', () {
+      expect(
+        AppConfig.fromEnvironment(
+          Environment.prod,
+          prodApiUrlDefine: 'https://studio.example.test/api',
+          appLockRequiredDefine: 'true',
+        ).withoutSentry().appLockRequired,
+        isTrue,
+      );
+    });
+  });
 }

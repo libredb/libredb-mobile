@@ -20,6 +20,9 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
+import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
+import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
@@ -208,6 +211,8 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IAppLifecycleSource>(create: (context) => context.read<BindingAppLifecycleSource>()),
         RepositoryProvider<IBackgroundRunTime>(create: (_) => dependencies.createBackgroundRunTime()),
+        RepositoryProvider<IAppLockSettingsRepository>(create: (_) => dependencies.createAppLockSettingsRepository()),
+        RepositoryProvider<IDeviceAuthenticator>(create: (_) => dependencies.createDeviceAuthenticator()),
         RepositoryProvider<IStatementRepository>(
           create: (context) => dependencies.createStatementRepository(
             context.read<ApiClient>(),
@@ -332,6 +337,19 @@ class AppScope extends StatelessWidget {
           RepositoryProvider<SessionDefaultEntry>(
             create: (context) => SessionDefaultEntry(context.read<ActiveConnectionCubit>().connectionIds),
             dispose: (entry) => entry.dispose(),
+          ),
+          // Above the router, so the lock screen covers every page; AppSessionListeners tells it when a session is
+          // restored, starts and ends.
+          BlocProvider<AppLockBloc>(
+            create: (context) => AppLockBloc(
+              settingsRepository: context.read<IAppLockSettingsRepository>(),
+              authenticator: context.read<IDeviceAuthenticator>(),
+              lifecycle: context.read<IAppLifecycleSource>(),
+              recentsPreview: dependencies.createRecentsPreview(),
+              captureProtection: context.read<ScreenCaptureProtection>(),
+              lockRequired: dependencies.appConfig.appLockRequired,
+              idleTimeout: dependencies.appConfig.idleTimeout,
+            )..add(const AppLockStarted()),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

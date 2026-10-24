@@ -1,12 +1,16 @@
 package org.libredb.mobile
 
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.sentry.Sentry
 
-class MainActivity : FlutterActivity() {
+/**
+ * A [FlutterFragmentActivity], which local_auth needs to show `BiometricPrompt` for the app lock
+ * (lib/features/app_lock).
+ */
+class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The native crash of the Sentry device check (docs/crash-reporting.md), only in a build with its define.
@@ -25,5 +29,6 @@ class MainActivity : FlutterActivity() {
                 }
             }
         SensitiveClipboard.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        RecentsPreview.register(flutterEngine.dartExecutor.binaryMessenger, this)
     }
 }

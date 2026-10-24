@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('settings feature exposes expected route', () {
-    expect(SettingsFeatureRoutes.routes, hasLength(1));
-    expect(SettingsFeatureRoutes.routes.single.path, ApplicationRoutesConstants.settings);
-    expect(SettingsFeatureRoutes.routes.single.name, 'settings');
+    expect(SettingsFeatureRoutes.routes(), hasLength(1));
+    expect(SettingsFeatureRoutes.routes().single.path, ApplicationRoutesConstants.settings);
+    expect(SettingsFeatureRoutes.routes().single.name, 'settings');
   });
 }

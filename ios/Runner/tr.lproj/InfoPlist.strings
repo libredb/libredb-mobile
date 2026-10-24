@@ -1,0 +1,2 @@
+/* The texts iOS shows for the keys of Info.plist, in Turkish. */
+"NSFaceIDUsageDescription" = "LibreDB, uygulama kilidi açıkken uygulamanın kilidini açmak için Face ID kullanır.";

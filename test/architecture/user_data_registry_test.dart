@@ -38,6 +38,8 @@ const _devicePreferences = {
   StorageKeys.theme,
   StorageKeys.brightness,
   StorageKeys.resultViewMode,
+  StorageKeys.appLockEnabled,
+  StorageKeys.appLockTimeout,
 };
 
 /// The values of [SecureStorageKeys], each a token of the session, which every sign-out deletes. A secure value kept
@@ -69,7 +71,7 @@ final class _Session extends _Keeps {
   const _Session();
 }
 
-/// Device storage that holds no data of an account: the language, the theme, the result view mode.
+/// Device storage that holds no data of an account: the language, the theme, the result view mode, the app lock.
 final class _Device extends _Keeps {
   const _Device();
 }
@@ -103,6 +105,7 @@ const _storageUsers = <String, _Keeps>{
   'lib/app/theme/theme_bloc.dart': _Device(),
   'lib/app/bootstrap/app_bootstrap.dart': _Device(),
   'lib/infrastructure/storage/result_view_mode_preferences.dart': _Device(),
+  'lib/features/app_lock/data/repositories/app_lock_settings_preferences.dart': _Device(),
   'lib/infrastructure/storage/local_storage.dart': _Device(),
   'lib/app/app.dart': _NoneOfItsOwn(),
   'lib/app/di/app_dependencies.dart': _NoneOfItsOwn(),
