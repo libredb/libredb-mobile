@@ -242,6 +242,7 @@ Key-value engines page their keys with `scanKeys` until the cursor is `0`.
   The order is measured: Studio's abort bridge stops the run as soon as its request is dropped, so a cancel posted after the drop, the order of Studio's web Stop, answers `{"cancelled": false}` for a run that did stop.
   `{"cancelled": true}` or a 499 `QUERY_CANCELLED` says Cancelled, `{"cancelled": false}` says Studio could not confirm the cancel; a failed cancel, a 429 with its countdown included, leaves the run going, and no cancel is sent again by itself.
   Without the engine's cancel, Stop waiting drops the request only and says the statement may still run.
+  Offline, Cancel is disabled with the `OnlineOnlyAction` reason and posts nothing ([#164](https://github.com/libredb/libredb-mobile/issues/164)); Stop waiting posts nothing, so it stays enabled offline, both as the label of an engine without cancel and beside Cancel after a failed cancel.
 - The object browser's rows page and Redis key value page drop their requests in flight when they close, and post no `cancel`, so leaving spends no request slot; Studio's abort bridge then stops the run where the engine supports it.
 - A transaction's statements cannot be cancelled.
   Without governance Studio keeps one transaction per connection for every user of it, owned by the account that began it, and refuses others with `studio.transaction_not_owned` for up to five idle minutes.
