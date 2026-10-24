@@ -151,7 +151,7 @@ Steps 1 to 6 and 8 were walked through as `admin` / `admin` on the plain Studio,
 Also walked through:
 
 - The read-only seed: Dev Postgres (read-only role) shows `public.orders` with its columns and indexes, no key mark on `id`, and "Studio lists no foreign keys." on the Foreign keys tab, because Studio before 1.1.0 hid the keys from a role that does not own the table (see [Postgres seeds](#postgres-seeds)); Studio 1.1.0 shows them, as the check below records.
-  The read grant of Sales (production) shows `public.orders` without a key mark on `id` for the same reason.
+  Before 1.1.0, the read grant of Sales (production) showed `public.orders` without a key mark on `id` for the same reason.
 - Exclusion constraints: the seed then held none, so the table `sales.room_bookings`, with `EXCLUDE USING gist (during WITH &&)`, was created in `app` as `app_owner` during the walkthrough; its Indexes tab lists `room_bookings_during_excl` and, under "Exclusion constraints", its definition.
 
 The local Studio answers a key-scan page in a few milliseconds, so Load all ended before Stop could be tapped; for the Stop check the `redis` container was given a 1.5 second network delay (`tc qdisc add dev eth0 root netem delay 1500ms`, from a container sharing its network namespace with `NET_ADMIN`), removed again afterwards.

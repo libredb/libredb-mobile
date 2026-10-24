@@ -688,7 +688,7 @@ void main() {
       expect(result.pagination?.hasMore, isFalse);
     });
 
-    test('the preview and the count run the same on the read-only seed, whose describe carries no keys', () {
+    test('the preview and the count run the same on the read-only seed as on the owner\'s seed', () {
       expect(
         QueryResultJson.read(fixture('query_preview_postgres_readonly_customers')).rows,
         QueryResultJson.read(fixture('query_preview_postgres_customers')).rows,
