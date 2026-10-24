@@ -189,6 +189,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "active": MessageLookupByLibrary.simpleMessage("Aktif"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
     "app_lock": MessageLookupByLibrary.simpleMessage("Uygulama kilidi"),
+    "app_lock_check_failed": MessageLookupByLibrary.simpleMessage(
+      "LibreDB bu cihazın ekran kilidini denetleyemedi. Kilidi açmayı yeniden deneyin veya çıkış yapın.",
+    ),
     "app_lock_enable_reason": MessageLookupByLibrary.simpleMessage(
       "Uygulama kilidini açmak için kimliğinizi doğrulayın",
     ),

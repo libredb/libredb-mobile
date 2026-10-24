@@ -54,6 +54,10 @@ void main() {
       initialLocation: '/editor',
       routes: [
         GoRoute(
+          path: '/login',
+          builder: (_, _) => const Scaffold(body: Text('Login page')),
+        ),
+        GoRoute(
           path: '/',
           builder: (_, _) => const Scaffold(body: Text('Home')),
           routes: [
@@ -167,6 +171,61 @@ void main() {
     await emit(tester, const AppLockOff(settings: AppLockSettings.defaults));
     expect(find.byKey(appLockRestoreKey), findsNothing);
     expect(find.byKey(const Key('editor')), findsOneWidget);
+  });
+
+  testWidgets('keyboard input after locking does not reach the hidden editor', (tester) async {
+    await pump(tester, const AppLockUnlocked(settings: _on5));
+    await tester.enterText(find.byKey(const Key('editor')), 'SELECT 1');
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+
+    await emit(tester, const AppLockLocked(settings: _on5));
+    if (tester.testTextInput.hasAnyClients) {
+      tester.testTextInput.enterText('DROP TABLE t');
+      await tester.pump();
+    }
+
+    expect(tester.testTextInput.hasAnyClients, isFalse);
+    final editor = find.descendant(
+      of: find.byKey(const Key('editor'), skipOffstage: false),
+      matching: find.byType(EditableText, skipOffstage: false),
+    );
+    expect(tester.widget<EditableText>(editor).controller.text, 'SELECT 1');
+  });
+
+  testWidgets('while the idle sign-out ends the session the pages stay hidden, without the lock screen', (
+    tester,
+  ) async {
+    await pump(tester, const AppLockUnlocked(settings: _on5));
+
+    lockStates.add(const AppLockIdleSigningOut(settings: _on5));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(appLockRestoreKey), findsOneWidget);
+    expect(find.byKey(appLockScreenKey), findsNothing);
+    expect(find.byKey(const Key('editor')), findsNothing);
+    expect(await tester.binding.handlePopRoute(), isTrue);
+  });
+
+  testWidgets('Sign out keeps the pages hidden until the login page shows', (tester) async {
+    final signOutStates = StreamController<SignOutState>.broadcast();
+    addTearDown(signOutStates.close);
+    whenListen(signOut, signOutStates.stream, initialState: const SignOutInitial());
+    await pump(tester, const AppLockLocked(settings: _on5));
+
+    await tester.tap(find.byKey(appLockSignOutKey));
+    await tester.pump();
+    // The session ended, so the lock opens, before the sign-out has sent the router to the login page.
+    lockStates.add(const AppLockUnlocked(settings: _on5));
+    await tester.pump();
+    expect(find.byKey(const Key('editor')), findsNothing);
+    expect(find.byKey(appLockRestoreKey), findsOneWidget);
+
+    signOutStates.add(const SignedOut());
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Login page'), findsOneWidget);
+    expect(find.byKey(appLockRestoreKey), findsNothing);
   });
 
   testWidgets('while signed out the starting lock covers nothing', (tester) async {

@@ -81,6 +81,16 @@ void main() {
     expect(find.text('Too many attempts. Try again later.'), findsOneWidget);
   });
 
+  testWidgets('a failed check says so and keeps Unlock', (tester) async {
+    await pump(tester, const AppLockLocked(settings: _on5, failure: AppLockFailure.checkFailed));
+
+    expect(
+      find.text("LibreDB could not check this device's screen lock. Try Unlock again, or sign out."),
+      findsOneWidget,
+    );
+    expect(find.byKey(appLockUnlockKey), findsOneWidget);
+  });
+
   testWidgets('while the prompt is open both actions wait', (tester) async {
     await pump(tester, const AppLockAuthenticating(settings: _on5));
 

@@ -1018,5 +1018,6 @@
   "app_lock_failed": "Not recognized. Try again.",
   "app_lock_locked_out": "Too many attempts. Try again later.",
   "app_lock_no_screen_lock": "Set a screen lock on this device to use LibreDB, or sign out.",
-  "error_settings_app_lock_not_saved": "The app lock setting could not be saved."
+  "error_settings_app_lock_not_saved": "The app lock setting could not be saved.",
+  "app_lock_check_failed": "LibreDB could not check this device's screen lock. Try Unlock again, or sign out."
 }

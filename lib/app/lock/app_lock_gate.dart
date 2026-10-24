@@ -45,9 +45,25 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// Takes the system back while the lock covers the app, so nothing under it pops.
+  /// Whether the lock screen's sign-out runs, which keeps the pages hidden until the login page shows.
+  bool _leaving = false;
+
+  /// Whether the pages are hidden now, which [build] sets.
+  bool _hidden = false;
+
+  /// Takes the system back while the pages are hidden, so nothing under the lock pops.
   @override
-  Future<bool> didPopRoute() async => context.read<AppLockBloc>().state.coversApp;
+  Future<bool> didPopRoute() async => _hidden;
+
+  Future<void> _signOut() async {
+    setState(() => _leaving = true);
+    try {
+      await signOutThenOpenLogin(context.read<SignOutBloc>(), widget.router, isMounted: () => mounted);
+    } finally {
+      // In the same turn as the router's move to the login page, so both show in one frame.
+      if (mounted) setState(() => _leaving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,28 +71,31 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     final signedIn = context.select<SessionCubit, bool>((session) => session.state is SessionAuthenticated);
     final signingOut = context.select<SignOutBloc, bool>((signOut) => signOut.state is SignOutInProgress);
     final covered = lock.coversApp;
-    // The settings are still being read after a restore: nothing signed in shows until the lock has decided.
-    final deciding = lock is AppLockStarting && signedIn;
+    // Nothing signed in shows while the lock reads its settings after a restore, while the idle sign-out ends the
+    // session, or while the lock screen's sign-out has not reached the login page yet.
+    final waiting = !covered && (_leaving || (signedIn && (lock is AppLockStarting || lock is AppLockIdleSigningOut)));
+    final hidden = _hidden = covered || waiting;
     return Stack(
       fit: StackFit.expand,
       children: [
         Offstage(
-          offstage: covered || deciding,
-          child: TickerMode(enabled: !covered && !deciding, child: widget.child),
+          offstage: hidden,
+          // Without focus, the keyboard and a hardware key reach no hidden field and no hidden submit action.
+          child: ExcludeFocus(
+            excluding: hidden,
+            child: TickerMode(enabled: !hidden, child: widget.child),
+          ),
         ),
         if (covered)
-          AppLockScreen(
-            signingOut: signingOut,
-            onSignOut: () => signOutThenOpenLogin(context.read<SignOutBloc>(), widget.router, isMounted: () => mounted),
-          )
-        else if (deciding)
+          AppLockScreen(signingOut: signingOut || _leaving, onSignOut: _signOut)
+        else if (waiting)
           const _Deciding(),
       ],
     );
   }
 }
 
-/// The theme background with a spinner, as the restore shows, while the lock reads its settings.
+/// The theme background with a spinner, as the restore shows, while the pages wait hidden.
 class _Deciding extends StatelessWidget {
   const _Deciding();
 

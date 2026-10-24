@@ -3206,6 +3206,16 @@ class S {
       args: [],
     );
   }
+
+  /// `LibreDB could not check this device's screen lock. Try Unlock again, or sign out.`
+  String get app_lock_check_failed {
+    return Intl.message(
+      'LibreDB could not check this device\'s screen lock. Try Unlock again, or sign out.',
+      name: 'app_lock_check_failed',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

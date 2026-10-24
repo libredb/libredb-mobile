@@ -187,6 +187,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "active": MessageLookupByLibrary.simpleMessage("Active"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
     "app_lock": MessageLookupByLibrary.simpleMessage("App lock"),
+    "app_lock_check_failed": MessageLookupByLibrary.simpleMessage(
+      "LibreDB could not check this device\'s screen lock. Try Unlock again, or sign out.",
+    ),
     "app_lock_enable_reason": MessageLookupByLibrary.simpleMessage("Confirm it is you to turn on the app lock"),
     "app_lock_failed": MessageLookupByLibrary.simpleMessage("Not recognized. Try again."),
     "app_lock_locked_message": MessageLookupByLibrary.simpleMessage(

@@ -30,6 +30,7 @@ class AppLockScreen extends StatelessWidget {
           AppLockLocked(failure: null) => (l10n.app_lock_locked_message, false, true, false),
           AppLockLocked(failure: AppLockFailure.failed) => (l10n.app_lock_failed, true, true, false),
           AppLockLocked(failure: AppLockFailure.lockedOut) => (l10n.app_lock_locked_out, true, true, false),
+          AppLockLocked(failure: AppLockFailure.checkFailed) => (l10n.app_lock_check_failed, true, true, false),
           AppLockAuthenticating() => (l10n.app_lock_locked_message, false, true, true),
           AppLockUnavailable(reason: AppLockUnavailableReason.noScreenLock) => (
             l10n.app_lock_no_screen_lock,
@@ -38,7 +39,10 @@ class AppLockScreen extends StatelessWidget {
             false,
           ),
           // Not shown in these states; the app removes the screen.
-          AppLockStarting() || AppLockOff() || AppLockUnlocked() => (l10n.app_lock_locked_message, false, false, false),
+          AppLockStarting() ||
+          AppLockOff() ||
+          AppLockUnlocked() ||
+          AppLockIdleSigningOut() => (l10n.app_lock_locked_message, false, false, false),
         };
         return Scaffold(
           key: appLockScreenKey,

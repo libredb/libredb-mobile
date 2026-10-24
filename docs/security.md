@@ -358,22 +358,24 @@ When it locks:
 
 - A cold start that restores a stored session locks; a sign-in at the identity provider opens unlocked, since Keycloak just proved who the user is.
   A session that the restore's late answer brings back after its time limit (`SessionExpiredReason.storageTimeout`) counts as a restore and locks.
+  A restore that arrives while the settings are still read locks with no open state between, and no signed-in page shows until the lock has decided.
 - A return after at least the chosen time in the background locks: immediately, 1, 5 (the default) or 15 minutes.
   The time away is measured by the wall clock from the moment the app leaves the screen (`hidden` or `paused`) to its return, as `IdleTimeoutObserver` measures it, since a timer does not run while the phone suspends the app.
   A system sheet over the app, which only makes it `inactive`, is not time away.
   The PIN screen that the prompt opens is not time away either, so unlocking with the PIN does not lock again on the return.
 - It never locks while nobody is signed in, and a sign-out removes the lock screen.
-- When the time away also reaches the idle period of the inactivity sign-out (15 minutes in prod), the idle sign-out wins: no lock shows over the login page.
+- When the time away also reaches the idle period of the inactivity sign-out (15 minutes in prod), the idle sign-out wins: the pages stay hidden behind a spinner until the session has ended, and no lock shows over the login page.
 
 The lock screen:
 
 - `AppLockGate` (`lib/app/lock/app_lock_gate.dart`) puts it above the router in the `MaterialApp` builder, over the "Can't reach Studio" page too.
-  The pages stay mounted under it, offstage, so an editor's text and a shown result are as they were once it opens; offstage they are not painted, take no touch, are left out of the semantics tree, so a screen reader reads only the lock screen, and have their tickers off, so their screen capture guards give their leases back.
+  The pages stay mounted under it, offstage, so an editor's text and a shown result are as they were once it opens; offstage they are not painted, take no touch, are left out of the semantics tree, so a screen reader reads only the lock screen, have their tickers off, so their screen capture guards give their leases back, and lose the focus, so the keyboard and a hardware key reach no hidden field.
 - The system back does nothing while it covers the app: the gate is a binding observer registered before the router's back button dispatcher and takes the back first.
 - Unlock opens the system prompt (`local_auth` 3.0.2, biometrics with the device credential as fallback); a cancelled or failed prompt keeps the app locked and nothing is retried by itself.
   Too many attempts say to try later.
-- Sign out runs the app's sign-out (Studio's logout record, the wipe, the identity provider's end-session) without a confirmation, so a user who cannot authenticate can still leave and wipe the session.
+- Sign out runs the app's sign-out (Studio's logout record, the wipe, the identity provider's end-session) without a confirmation, so a user who cannot authenticate can still leave and wipe the session; the pages stay hidden until the login page shows.
 - On a device without a screen lock the lock screen says to set one and offers only Sign out; it offers Unlock again once the user has set one and comes back.
+- A check of the device that fails never opens the app: it is logged at error level and the lock screen says the check failed, with Unlock and Sign out; with `APP_LOCK_REQUIRED` a sign-in then lands on that screen too.
 
 The settings:
 

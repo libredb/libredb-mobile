@@ -13,6 +13,10 @@ enum AppLockFailure {
 
   /// Too many attempts: the device refuses more for a while.
   lockedOut,
+
+  /// The device could not tell whether it has a screen lock, so the lock stays; Unlock asks the prompt, which says
+  /// what is wrong.
+  checkFailed,
 }
 
 /// The app lock: whether the lock screen covers the app.
@@ -22,8 +26,12 @@ sealed class AppLockState extends Equatable {
   /// Whether the lock screen covers the app now.
   bool get coversApp => switch (this) {
     AppLockLocked() || AppLockAuthenticating() || AppLockUnavailable() => true,
-    AppLockStarting() || AppLockOff() || AppLockUnlocked() => false,
+    AppLockStarting() || AppLockOff() || AppLockUnlocked() || AppLockIdleSigningOut() => false,
   };
+
+  /// Whether the signed-in pages must stay hidden now: under the lock screen, or while the idle sign-out ends the
+  /// session.
+  bool get hidesApp => coversApp || this is AppLockIdleSigningOut;
 
   @override
   List<Object?> get props => const [];
@@ -62,6 +70,12 @@ final class AppLockLocked extends AppLockSettled {
 
   @override
   List<Object?> get props => [settings, failure];
+}
+
+/// A resume past the idle period: the idle sign-out ends the session, so the pages stay hidden, without the lock
+/// screen, until the login page shows.
+final class AppLockIdleSigningOut extends AppLockSettled {
+  const AppLockIdleSigningOut({required super.settings});
 }
 
 /// The system prompt is open over the lock screen.

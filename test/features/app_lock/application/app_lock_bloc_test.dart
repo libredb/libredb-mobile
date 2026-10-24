@@ -194,6 +194,41 @@ void main() {
       });
     });
 
+    test('a restore that arrives while the preview switch answers is never preceded by an open state', () {
+      fakeAsync((async) {
+        final preview = Completer<bool>();
+        when(() => recents.setHidden(any())).thenAnswer((_) => preview.future);
+        final states = <AppLockState>[];
+        final bloc = start(async, states);
+        states.clear();
+
+        bloc.add(const AppLockSessionRestored());
+        async.flushMicrotasks();
+
+        expect(bloc.state, const AppLockLocked(settings: _on5));
+        expect(states.whereType<AppLockUnlocked>(), isEmpty);
+        preview.complete(true);
+        async.flushMicrotasks();
+        expect(bloc.state, const AppLockLocked(settings: _on5));
+      });
+    });
+
+    test('a restore that arrives while the settings are read locks without an open state between', () {
+      fakeAsync((async) {
+        final read = Completer<AppLockSettings>();
+        when(() => settings.read()).thenAnswer((_) => read.future);
+        final states = <AppLockState>[];
+        final bloc = start(async, states)..add(const AppLockSessionRestored());
+        async.flushMicrotasks();
+
+        read.complete(_on5);
+        async.flushMicrotasks();
+
+        expect(bloc.state, const AppLockLocked(settings: _on5));
+        expect(states.whereType<AppLockUnlocked>(), isEmpty);
+      });
+    });
+
     test('a cold start does not lock while the lock is off', () {
       fakeAsync((async) {
         when(() => settings.read()).thenAnswer((_) async => AppLockSettings.defaults);
@@ -363,11 +398,15 @@ void main() {
         async.elapse(const Duration(minutes: 15));
         lifecycle.comeBack();
         async.flushMicrotasks();
-        expect(bloc.state, const AppLockUnlocked(settings: _on5));
+        // The pages stay hidden, without the lock screen, until the sign-out has ended the session.
+        expect(bloc.state, const AppLockIdleSigningOut(settings: _on5));
+        expect(bloc.state.coversApp, isFalse);
+        expect(bloc.state.hidesApp, isTrue);
 
         // The idle sign-out that IdleTimeoutObserver fires on the same resume.
         bloc.add(const AppLockSignedOut());
         async.flushMicrotasks();
+        expect(bloc.state, const AppLockUnlocked(settings: _on5));
         expect(states.where((state) => state.coversApp), isEmpty);
       });
     });
@@ -565,14 +604,28 @@ void main() {
       });
     });
 
-    test('a failed check keeps the lock screen with Unlock', () {
+    test('a failed check keeps the lock screen and says the check failed', () {
       fakeAsync((async) {
         when(() => authenticator.canAuthenticate()).thenThrow(StateError('no activity'));
         final states = <AppLockState>[];
         final bloc = start(async, states)..add(const AppLockSessionRestored());
         async.flushMicrotasks();
 
-        expect(bloc.state, const AppLockLocked(settings: _on5));
+        expect(bloc.state, const AppLockLocked(settings: _on5, failure: AppLockFailure.checkFailed));
+      });
+    });
+
+    test('a required lock whose check fails does not let a sign-in through', () {
+      fakeAsync((async) {
+        when(() => authenticator.canAuthenticate()).thenThrow(StateError('no activity'));
+        final states = <AppLockState>[];
+        final bloc = start(async, states, lockRequired: true);
+        states.clear();
+        bloc.add(const AppLockSignedIn());
+        async.flushMicrotasks();
+
+        expect(bloc.state, const AppLockLocked(settings: _on5, failure: AppLockFailure.checkFailed));
+        expect(states.whereType<AppLockUnlocked>(), isEmpty);
       });
     });
 

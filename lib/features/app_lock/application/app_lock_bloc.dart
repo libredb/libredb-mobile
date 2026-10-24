@@ -95,12 +95,36 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
       _log.error('the stored app lock settings cannot be read, so the lock stays on: {}', [e]);
       _settings = AppLockSettings.defaults.copyWith(enabled: true);
     }
-    emit(_open);
-    // The preview shows by default, so only a lock that is on needs the switch.
-    if (_isOn) await _applyPreview();
+    // A restore that arrived while the settings were read locks at once, with no open state between.
+    if (_restorePending && _isOn) {
+      emit(AppLockLocked(settings: _settings));
+    } else {
+      emit(_open);
+    }
+    // The preview shows by default, so only a lock that is on needs the switch. Off the queue, so a slow platform
+    // answer never holds back the session event behind it.
+    if (_isOn) _schedulePreview();
+  }
+
+  /// Whether a restored session waits in the queue, recorded when the event is added so the settings read can act on
+  /// it.
+  bool _restorePending = false;
+
+  @override
+  void onEvent(AppLockEvent event) {
+    super.onEvent(event);
+    switch (event) {
+      case AppLockSessionRestored():
+        _restorePending = true;
+      case AppLockSignedIn() || AppLockSignedOut():
+        _restorePending = false;
+      case _:
+        break;
+    }
   }
 
   Future<void> _onSessionRestored(Emitter<AppLockState> emit) async {
+    _restorePending = false;
     _signedIn = true;
     _backgroundedAt = null;
     if (!_isOn) return;
@@ -111,11 +135,13 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
   Future<void> _onSignedIn(Emitter<AppLockState> emit) async {
     _signedIn = true;
     _backgroundedAt = null;
-    emit(_open);
-    // A required lock cannot let anyone in on a device that cannot lock.
-    if (_lockRequired && !await _canAuthenticate()) {
-      emit(AppLockUnavailable(settings: _settings, reason: AppLockUnavailableReason.noScreenLock));
-    }
+    if (!_lockRequired) return emit(_open);
+    // A required lock cannot let anyone in on a device that cannot lock, nor on one it could not check.
+    emit(switch (await _canAuthenticate()) {
+      true => _open,
+      false => AppLockUnavailable(settings: _settings, reason: AppLockUnavailableReason.noScreenLock),
+      null => AppLockLocked(settings: _settings, failure: AppLockFailure.checkFailed),
+    });
   }
 
   Future<void> _onSignedOut(Emitter<AppLockState> emit) async {
@@ -134,7 +160,7 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
       AppLockUnavailable(:final reason) when _isOn => AppLockUnavailable(settings: settings, reason: reason),
       _ => _open,
     });
-    if (wasOn != _isOn) await _applyPreview();
+    if (wasOn != _isOn) _schedulePreview();
   }
 
   Future<void> _onLifecycleChanged(AppLifecycleState lifecycle, Emitter<AppLockState> emit) async {
@@ -159,7 +185,7 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
       _log.info('resumed after {}s away, past the idle period: the idle sign-out ends the session, no lock', [
         away.inSeconds,
       ]);
-      return;
+      return emit(AppLockIdleSigningOut(settings: _settings));
     }
     if (away < _settings.timeout.duration) return;
     _log.info('resumed after {}s away, past the {}s lock timeout: locked', [
@@ -172,24 +198,30 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
   /// Covers the app, then checks that the device can open the lock: one without a screen lock offers only Sign out.
   Future<void> _lock(Emitter<AppLockState> emit) async {
     emit(AppLockLocked(settings: _settings));
-    if (!await _canAuthenticate() && state is AppLockLocked) {
-      emit(AppLockUnavailable(settings: _settings, reason: AppLockUnavailableReason.noScreenLock));
+    final canAuthenticate = await _canAuthenticate();
+    if (state is! AppLockLocked) return;
+    switch (canAuthenticate) {
+      case true:
+        break;
+      case false:
+        emit(AppLockUnavailable(settings: _settings, reason: AppLockUnavailableReason.noScreenLock));
+      case null:
+        emit(AppLockLocked(settings: _settings, failure: AppLockFailure.checkFailed));
     }
   }
 
   /// Offers Unlock again once the user has set a screen lock and come back.
   Future<void> _recheckScreenLock(Emitter<AppLockState> emit) async {
-    if (await _canAuthenticate() && state is AppLockUnavailable) emit(AppLockLocked(settings: _settings));
+    if (await _canAuthenticate() == true && state is AppLockUnavailable) emit(AppLockLocked(settings: _settings));
   }
 
-  /// Whether the device can authenticate; a check that fails is logged and counted as able, so the lock screen keeps
-  /// Unlock and the prompt says what is wrong.
-  Future<bool> _canAuthenticate() async {
+  /// Whether the device can authenticate, or null when the check failed, which is logged and never opens the app.
+  Future<bool?> _canAuthenticate() async {
     try {
       return await _authenticator.canAuthenticate();
     } catch (e) {
       _log.error('checking whether the device can authenticate failed: {}', [e]);
-      return true;
+      return null;
     }
   }
 
@@ -216,6 +248,11 @@ class AppLockBloc extends Bloc<AppLockEvent, AppLockState> {
       ),
     });
   }
+
+  /// The preview switches in flight, one after another, so they apply in the order the lock changed.
+  Future<void> _previewQueue = Future<void>.value();
+
+  void _schedulePreview() => _previewQueue = _previewQueue.then((_) => _applyPreview());
 
   /// Hides the preview through the platform switch while the lock is on, and shows it again once off.
   Future<void> _applyPreview() async {
