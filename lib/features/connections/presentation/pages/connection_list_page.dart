@@ -286,44 +286,53 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
         ),
     ];
     if (state.connections.isEmpty) {
-      return Column(
-        children: [
-          ...header,
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                key: const ValueKey('connection-sections'),
-                physics: const AlwaysScrollableScrollPhysics(),
-                // An outage says nothing about what was granted, so it shows no empty state: the notice says why.
-                children: [if (!unavailable) const _EmptyList()],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    return Column(
-      children: [
-        ...header,
-        Expanded(
-          child: BlocSelector<ActiveConnectionCubit, ActiveConnectionState, String?>(
-            selector: (active) => active.connection?.id,
-            builder: (context, activeId) => ConnectionListView(
-              state: state,
-              search: _search,
-              activeId: activeId,
-              onRefresh: _refresh,
-              showRecent: true,
-              enabled: !unavailable,
-              onOpen: (connection) => _open(context, connection),
-              onLongPress: (connection) => showConnectionDetailsSheet(context, connection),
-            ),
+      return _underHeader(
+        header,
+        RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            key: const ValueKey('connection-sections'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            // An outage says nothing about what was granted, so it shows no empty state: the notice says why.
+            children: [if (!unavailable) const _EmptyList()],
           ),
         ),
-      ],
+      );
+    }
+    return _underHeader(
+      header,
+      BlocSelector<ActiveConnectionCubit, ActiveConnectionState, String?>(
+        selector: (active) => active.connection?.id,
+        builder: (context, activeId) => ConnectionListView(
+          state: state,
+          search: _search,
+          activeId: activeId,
+          onRefresh: _refresh,
+          showRecent: true,
+          enabled: !unavailable,
+          onOpen: (connection) => _open(context, connection),
+          onLongPress: (connection) => showConnectionDetailsSheet(context, connection),
+        ),
+      ),
     );
   }
+
+  /// [body] under the [header] banners. The keyboard of a phone held sideways can leave less height than the banners
+  /// need: they stay on top, scrolling inside the height there is rather than overflow, and [body] gives way.
+  Widget _underHeader(List<Widget> header, Widget body) => LayoutBuilder(
+    builder: (context, box) => Column(
+      children: [
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: box.maxHeight),
+          child: SingleChildScrollView(
+            primary: false,
+            child: Column(mainAxisSize: MainAxisSize.min, children: header),
+          ),
+        ),
+        Expanded(child: body),
+      ],
+    ),
+  );
 
   /// Makes [connection] the active one and the first of the recent ones, and opens it in the Browse tab.
   void _open(BuildContext context, StudioConnection connection) {

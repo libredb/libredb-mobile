@@ -1283,4 +1283,65 @@ void main() {
       verifyNever(() => repository.listManaged());
     });
   });
+
+  // #188: the banners above the list, with the keyboard up while typing a search on a phone held sideways.
+  group('a banner above the keyboard of a phone held sideways', () {
+    const sales = StudioConnection(id: 'seed:sales', name: 'Sales', type: 'postgres', environment: 'production');
+
+    // The page as the shell lays it out beside the rail and under the top bar of the 829x393 emulator (749x321), with
+    // the 255 px keyboard and the 24 px bottom inset the shell's safe area keeps: 42 px of height.
+    Future<void> pumpTyping(WidgetTester tester) async {
+      answer(const ManagedConnections(connections: [sales], cacheHint: Duration(seconds: 10)));
+      await pumpPage(tester, size: const Size(749, 321));
+      await tester.showKeyboard(find.byType(TextField));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 255 + 24);
+      await tester.pump();
+      await tester.pump();
+    }
+
+    void expectNoOverflowAndSearchShown(WidgetTester tester, Finder banner) {
+      expect(tester.takeException(), isNull);
+      const aboveKeyboard = 321.0 - 255 - 24;
+      // The banners scroll inside the height left above the keyboard, which with the offline banner of the shell
+      // above the page is only a few pixels.
+      final banners = find.ancestor(of: banner, matching: find.byType(SingleChildScrollView)).first;
+      expect(tester.getRect(banners).top, lessThan(aboveKeyboard), reason: 'the banners show');
+      expect(tester.getRect(banners).height, greaterThan(0));
+      expect(tester.testTextInput.isVisible, isTrue);
+    }
+
+    testWidgets('a failed refresh', (tester) async {
+      await pumpTyping(tester);
+      when(() => repository.listManaged())
+          .thenAnswer((_) async => Failure(NetworkError('down', code: AppErrorCode.networkCertInvalid.key)));
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(find.byType(StudioErrorBanner), findsOneWidget);
+      expectNoOverflowAndSearchShown(tester, find.byType(StudioErrorBanner));
+    });
+
+    testWidgets('a governance outage', (tester) async {
+      await pumpTyping(tester);
+      when(() => repository.listManaged()).thenAnswer(
+        (_) async => Failure(ServerError('Governance unavailable', code: AppErrorCode.studioGovernanceUnavailable.key)),
+      );
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(find.text(_outageNotice), findsOneWidget);
+      expectNoOverflowAndSearchShown(tester, find.byKey(const ValueKey('connection-list-outage')));
+    });
+
+    testWidgets('offline', (tester) async {
+      await pumpTyping(tester);
+
+      await goTo(tester, offline);
+
+      expect(find.textContaining('Offline: showing what was loaded'), findsOneWidget);
+      expectNoOverflowAndSearchShown(tester, find.textContaining('Offline: showing what was loaded'));
+    });
+  });
 }
