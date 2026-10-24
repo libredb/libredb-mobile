@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart' as wall;
 import 'package:flutter/widgets.dart';
 
 import 'package:libredb_mobile/core/logging/app_logger.dart';
@@ -32,7 +33,11 @@ typedef OnIdleTimeout = void Function();
 /// but prod) needs no per-call-site conditionals.
 class IdleTimeoutObserver with WidgetsBindingObserver {
   IdleTimeoutObserver({required this.idleThreshold, required this.onTimeout, DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+    : _clock = clock ?? _now;
+
+  /// The wall clock of package:clock, which is [DateTime.now] outside a test that fakes the time, so the app lock and
+  /// this observer measure the same time away.
+  static DateTime _now() => wall.clock.now();
 
   /// Inactivity window before [onTimeout] fires. `null` disables the
   /// observer entirely.

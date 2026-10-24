@@ -51,7 +51,13 @@ enum StorageKeys {
   activeCatalog('active_catalog'),
 
   /// Whether results show cards or a table; see `ResultViewModePreferences`.
-  resultViewMode('result_view_mode');
+  resultViewMode('result_view_mode'),
+
+  /// Whether the app lock is on, a bool; see `AppLockSettingsPreferences`.
+  appLockEnabled('app_lock_enabled'),
+
+  /// How long the app may stay in the background before the app lock asks again, by `AppLockTimeout` name.
+  appLockTimeout('app_lock_timeout');
 
   const StorageKeys(this.key);
 
@@ -72,6 +78,9 @@ enum StorageKeys {
     StorageKeys.activeCatalog => StorageScope.device,
     // A view mode holds no user data, so every account on the device shares it.
     StorageKeys.resultViewMode => StorageScope.device,
+    // The lock protects the device's copy of the app for whoever signs in next, so a sign-out keeps it.
+    StorageKeys.appLockEnabled => StorageScope.device,
+    StorageKeys.appLockTimeout => StorageScope.device,
   };
 }
 

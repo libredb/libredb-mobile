@@ -16,16 +16,24 @@ Future<void> confirmAndSignOut(BuildContext context) async {
 
 /// Signs out through [SignOutBloc] without asking, then opens the login page: Studio's logout record, the wipe and the
 /// identity provider's end-session, as every sign-out. 'Remove my data' runs it once its own confirmation was given.
-Future<void> signOutAndOpenLogin(BuildContext context) async {
+Future<void> signOutAndOpenLogin(BuildContext context) =>
+    signOutThenOpenLogin(context.read<SignOutBloc>(), GoRouter.of(context), isMounted: () => context.mounted);
+
+/// [signOutAndOpenLogin] for a caller above the router, such as the lock screen, which names the [signOutBloc] and the
+/// [router] itself; [isMounted] tells whether the caller is still on screen once the sign-out has ended.
+Future<void> signOutThenOpenLogin(
+  SignOutBloc signOutBloc,
+  GoRouter router, {
+  required bool Function() isMounted,
+}) async {
   // AWAIT the end of the sign-out before navigating: navigating
   // immediately would race the async logout work and (with the
   // router's "authenticated user on public route → home" rule)
   // momentarily bounce back to home until SessionCubit catches up.
-  final signOutBloc = context.read<SignOutBloc>();
   signOutBloc.add(const SignOutRequested());
   await signOutBloc.stream.firstWhere((state) => state is SignOutDone);
-  if (!context.mounted) return;
-  context.go(ApplicationRoutesConstants.login);
+  if (!isMounted()) return;
+  router.go(ApplicationRoutesConstants.login);
   // A logout that cannot remove all stored data signs out too, and
   // AppSessionListeners tells the user so.
 }

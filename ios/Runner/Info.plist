@@ -14,6 +14,8 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>LibreDB</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>LibreDB uses Face ID to unlock the app when the app lock is on.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

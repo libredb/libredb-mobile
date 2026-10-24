@@ -30,6 +30,9 @@ enum AppErrorCode {
   /// 'Remove my data' could not clear a store that keeps data of the signed-in account on this device.
   settingsUserDataNotRemoved('settings.user_data_not_removed'),
 
+  /// The device refused to store the app lock settings.
+  settingsAppLockNotSaved('settings.app_lock_not_saved'),
+
   // --- network ---
   networkCertInvalid('network.cert_invalid'),
 

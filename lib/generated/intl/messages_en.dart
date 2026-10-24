@@ -186,6 +186,34 @@ class MessageLookup extends MessageLookupByLibrary {
     "account_refusal_title": MessageLookupByLibrary.simpleMessage("Your account has no access to Studio"),
     "active": MessageLookupByLibrary.simpleMessage("Active"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
+    "app_lock": MessageLookupByLibrary.simpleMessage("App lock"),
+    "app_lock_check_failed": MessageLookupByLibrary.simpleMessage(
+      "LibreDB could not check this device\'s screen lock. Try Unlock again, or sign out.",
+    ),
+    "app_lock_enable_reason": MessageLookupByLibrary.simpleMessage("Confirm it is you to turn on the app lock"),
+    "app_lock_failed": MessageLookupByLibrary.simpleMessage("Not recognized. Try again."),
+    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage(
+      "Unlock with your fingerprint, face or screen lock to continue.",
+    ),
+    "app_lock_locked_out": MessageLookupByLibrary.simpleMessage("Too many attempts. Try again later."),
+    "app_lock_locked_title": MessageLookupByLibrary.simpleMessage("LibreDB is locked"),
+    "app_lock_no_screen_lock": MessageLookupByLibrary.simpleMessage(
+      "Set a screen lock on this device to use LibreDB, or sign out.",
+    ),
+    "app_lock_no_screen_lock_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Set a screen lock on this device to turn this on",
+    ),
+    "app_lock_prompt_reason": MessageLookupByLibrary.simpleMessage("Unlock LibreDB"),
+    "app_lock_required_subtitle": MessageLookupByLibrary.simpleMessage("Required by your organization"),
+    "app_lock_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Ask for your fingerprint, face or screen lock when the app opens",
+    ),
+    "app_lock_timeout": MessageLookupByLibrary.simpleMessage("Lock after"),
+    "app_lock_timeout_fifteen_minutes": MessageLookupByLibrary.simpleMessage("15 minutes in the background"),
+    "app_lock_timeout_five_minutes": MessageLookupByLibrary.simpleMessage("5 minutes in the background"),
+    "app_lock_timeout_immediately": MessageLookupByLibrary.simpleMessage("Immediately"),
+    "app_lock_timeout_one_minute": MessageLookupByLibrary.simpleMessage("1 minute in the background"),
+    "app_lock_unlock": MessageLookupByLibrary.simpleMessage("Unlock"),
     "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Apply"),
     "browse_count_failed": m0,
@@ -354,6 +382,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "No internet connection. Check your network and try again.",
     ),
+    "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage(
+      "The app lock setting could not be saved.",
+    ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Could not change the language"),
     "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(
       "Some of your data could not be removed from this phone, so you are still signed in.",
@@ -519,7 +550,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "remove_my_data_favorites": MessageLookupByLibrary.simpleMessage("Starred connections"),
     "remove_my_data_history": MessageLookupByLibrary.simpleMessage("Statement history"),
     "remove_my_data_kept": MessageLookupByLibrary.simpleMessage("Kept on this phone"),
-    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage("Language, theme and result view"),
+    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage(
+      "Language, theme, result view and app lock",
+    ),
     "remove_my_data_last_connection": MessageLookupByLibrary.simpleMessage("The last open connection and database"),
     "remove_my_data_recents": MessageLookupByLibrary.simpleMessage("Recent connections"),
     "remove_my_data_removed": MessageLookupByLibrary.simpleMessage("Removed from this phone"),
@@ -574,6 +607,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The licenses of LibreDB Mobile and the code it includes",
     ),
     "settings_privacy": MessageLookupByLibrary.simpleMessage("Privacy"),
+    "settings_security": MessageLookupByLibrary.simpleMessage("Security"),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
     "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),

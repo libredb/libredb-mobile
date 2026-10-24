@@ -8,6 +8,7 @@ import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/features/app_lock/presentation/widgets/app_lock_settings_section.dart';
 import 'package:libredb_mobile/features/auth/navigation/auth_routes.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
@@ -58,7 +59,7 @@ class AppRouterFactory {
             ...ConnectionsFeatureRoutes.routes,
             ...ObjectBrowserFeatureRoutes.routes,
             ...SqlEditorFeatureRoutes.routes,
-            ...SettingsFeatureRoutes.routes,
+            ...SettingsFeatureRoutes.routes(securitySection: (context) => const AppLockSettingsSection()),
           ],
         ),
         ...AuthFeatureRoutes.publicRoutes(

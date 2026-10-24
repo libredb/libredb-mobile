@@ -18,7 +18,10 @@ import '../../../../generated/l10n.dart';
 import '../../../../infrastructure/config/project_links.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.securitySection});
+
+  /// The rows of the Security section, which the app composes from the app lock feature; null shows no such section.
+  final WidgetBuilder? securitySection;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +66,12 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // Security section, composed by the app
+              if (securitySection case final security?) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _SettingsSection(title: S.of(context).settings_security, children: [security(context)]),
+              ],
 
               // Privacy section, while Studio names the signed-in account
               if (SignedInAccountScope.of(context).subject != null) ...[

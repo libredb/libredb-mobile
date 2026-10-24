@@ -94,6 +94,7 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 An empty variable is left out of the build, and the build stops when a required one is missing.
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
+`APP_LOCK_REQUIRED` is not read, so the store build leaves the app lock to the user ([security.md](security.md), "App lock").
 
 ## Check-only defines
 
@@ -115,11 +116,16 @@ Only the maintainer does these, and no value from them is ever written into an i
 5. Create the environment `play-internal`, add yourself as its required reviewer, and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
 6. Add the deployment's variables to the repository.
 7. Add a tag ruleset for `refs/tags/v*` that restricts creating, updating and deleting matching tags to yourself and the GitHub Actions app in its bypass list, so release-please can still tag its releases and no one else can start a signed build with a tag.
-8. Push the tag `v1.0.0` on the `main` commit whose `pubspec.yaml` names `1.0.0`, approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
-9. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
-10. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
-11. In the repository's Actions settings, allow GitHub Actions to create pull requests, which release-please needs.
-12. Approve the build job and then the upload job each time a release waits for them.
+8. In the repository settings, under Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests".
+   Without it release-please pushes its branch but fails with `GitHub Actions is not permitted to create or approve pull requests.` and opens no release pull request.
+   It is safe here because a pull request that a workflow opens reaches no key: the signed build still waits for your approval as the required reviewer of `release-signing`, and the upload waits for your approval of `play-internal`.
+9. Merge the first release pull request, which releases `1.0.0`: `release-please-config.json` sets `"release-as": "1.0.0"` on the `.` package, because the manifest already names `1.0.0` and release-please would otherwise plan the first release as `1.1.0`.
+   Merging it tags `v1.0.0` and starts the release; approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
+   Do not push the tag `v1.0.0` by hand as well, since release-please then cannot create its release of `1.0.0`.
+10. Once `v1.0.0` is tagged, remove `release-as` from `release-please-config.json` in a follow-up commit, or every later release pull request stays at `1.0.0`.
+11. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
+12. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
+13. Approve the build job and then the upload job each time a release waits for them.
 
 ## Dry run
 

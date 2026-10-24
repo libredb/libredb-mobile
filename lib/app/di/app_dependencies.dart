@@ -1,3 +1,9 @@
+import 'package:libredb_mobile/features/app_lock/data/repositories/app_lock_settings_preferences.dart';
+import 'package:libredb_mobile/features/app_lock/data/services/channel_recents_preview.dart';
+import 'package:libredb_mobile/features/app_lock/data/services/local_auth_device_authenticator.dart';
+import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
+import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
+import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
@@ -125,6 +131,15 @@ class AppDependencies {
   /// [AppConfig.screenCaptureProtection]: switched off, a guard takes no lease and every screen can be captured.
   ScreenCaptureProtection createScreenCaptureProtection() =>
       ScreenCaptureProtection(platform: const ScreenProtectorPlatform(), enabled: appConfig.screenCaptureProtection);
+
+  /// The app lock settings, kept in the device preferences.
+  IAppLockSettingsRepository createAppLockSettingsRepository() => AppLockSettingsPreferences();
+
+  /// The device's biometrics and screen lock, which open the app lock.
+  IDeviceAuthenticator createDeviceAuthenticator() => LocalAuthDeviceAuthenticator();
+
+  /// The switch of the app's recent-apps preview, which the app lock turns off while it is on.
+  IRecentsPreview createRecentsPreview() => const ChannelRecentsPreview();
 
   /// The logout clears the session through [sessionRepository], as the idle timeout and an unrefreshable 401 do.
   IAuthRepository createAuthRepository(IAuthSessionRepository sessionRepository) =>
