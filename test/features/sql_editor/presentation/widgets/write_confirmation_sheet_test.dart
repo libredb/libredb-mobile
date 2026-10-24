@@ -333,6 +333,64 @@ void main() {
     });
   });
 
+  // The sheet sizes from its content when space is short (#176): with every line a production connection can show,
+  // in either language, at a large text scale or on a small phone, nothing overflows, the statement keeps at least
+  // three lines, every reason shows, and the name field and Run can be hit, with the keyboard up or down.
+  group('on a short sheet', () {
+    const crowded = StudioConnection(
+      id: 'seed:sales-prod',
+      name: 'Sales Prod',
+      type: 'postgres',
+      environment: 'production',
+      readOnly: true,
+      access: StudioAccess.read,
+    );
+    const cases = [
+      (name: 'landscape', size: Size(829, 393), inset: 0.0, scale: 1.0, locale: Locale('en')),
+      (name: 'landscape, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('en')),
+      (name: 'landscape, Turkish', size: Size(829, 393), inset: 0.0, scale: 1.0, locale: Locale('tr')),
+      (name: 'landscape, Turkish, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('tr')),
+      (name: 'landscape, text scale 1.3', size: Size(829, 393), inset: 0.0, scale: 1.3, locale: Locale('en')),
+      (name: 'small portrait phone, keyboard up', size: Size(320, 568), inset: 260.0, scale: 1.0, locale: Locale('en')),
+    ];
+    for (final c in cases) {
+      testWidgets('fits with every line shown: ${c.name}', (tester) async {
+        tester.view
+          ..devicePixelRatio = 1
+          ..physicalSize = c.size;
+        tester.platformDispatcher.textScaleFactorTestValue = c.scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _open(tester, connection: crowded, locale: c.locale);
+
+        if (c.inset > 0) {
+          await tester.showKeyboard(_nameField);
+          tester.view.viewInsets = FakeViewPadding(bottom: c.inset);
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(_nameField, 'Sales Prod');
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(tester.getSize(find.byKey(WriteConfirmationSheet.linesKey)).height, greaterThanOrEqualTo(48));
+        for (final reason in [
+          _s.write_confirm_reason_may_write_at('DELETE', 3),
+          _s.write_confirm_reason_several,
+          _s.write_confirm_read_grant,
+          _s.write_confirm_read_only_connection,
+        ]) {
+          expect(find.text(reason), findsOneWidget, reason: reason);
+        }
+        expect(_nameField.hitTestable(), findsOneWidget);
+        expect(_run.hitTestable(), findsOneWidget);
+        expect(_runEnabled(tester), isTrue);
+        await tester.tap(_run);
+        await tester.pumpAndSettle();
+        expect(_answers, [WriteConfirmation.confirmed]);
+      });
+    }
+  });
+
   // A phone held in landscape with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing
   // overflows, the name field stays on screen while the user types, and Run works with the keyboard still up.
   testWidgets('fits a landscape phone with the keyboard up on a production connection', (tester) async {

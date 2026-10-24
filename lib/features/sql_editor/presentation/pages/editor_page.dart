@@ -544,6 +544,7 @@ class _EditorViewState extends State<_EditorView> {
       ],
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
+          primary: false,
           child: SizedBox(
             height: math.max(constraints.maxHeight, _minHeight),
             child: Column(

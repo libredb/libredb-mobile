@@ -1,6 +1,5 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
@@ -67,11 +66,8 @@ class WriteConfirmationSheet extends StatefulWidget {
 }
 
 class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
-  /// The least height the sheet lays out at; a shorter sheet scrolls, so the text keeps a few lines. A wide sheet puts
-  /// the name field and the buttons in one row and needs less, so a phone held sideways shows the whole sheet while
-  /// the keyboard is down.
-  static const _minHeight = 400.0;
-  static const _minWideHeight = 300.0;
+  /// The height of about three and a half lines of the text at a text scale of 1, the least the text box gets.
+  static const _linesMinHeight = 56.0;
 
   /// The width from which the name field and the buttons share one row, as on a phone held sideways.
   static const _wideFrom = 600.0;
@@ -109,95 +105,104 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      // A phone held sideways, above all with the keyboard up, leaves the sheet less height than its content needs: the
-      // sheet then scrolls at [_minHeight] ([_minWideHeight] when wide), keeping room for the text, and on a wide
-      // sheet the name field and the buttons share one row, so the field and Run show together above the keyboard.
+      // The sheet sizes from its content. When it is tall enough, the text box takes the room the other lines leave;
+      // when it is not, as on a phone held sideways or with the keyboard up, the sheet lays out at its natural height
+      // with the text box at a few lines and scrolls. On a wide sheet the name field and the buttons share one row, so
+      // the field and Run show together above the keyboard.
       child: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= _wideFrom;
           return SingleChildScrollView(
-            child: SizedBox(
-              height: math.max(constraints.maxHeight, wide ? _minWideHeight : _minHeight),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: AppSpacing.sm,
-                  children: [
-                    Row(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        Icon(Icons.warning_amber_rounded, color: headerColor),
-                        Expanded(
-                          child: Text(
-                            s.write_confirm_title,
-                            style: theme.textTheme.titleLarge?.copyWith(color: headerColor),
+            primary: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: AppSpacing.sm,
+                    children: [
+                      Row(
+                        spacing: AppSpacing.sm,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: headerColor),
+                          Expanded(
+                            child: Text(
+                              s.write_confirm_title,
+                              style: theme.textTheme.titleLarge?.copyWith(color: headerColor),
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (_hasName) Text(connection.name, style: theme.textTheme.titleSmall),
+                          if (EnvironmentBadge.showsFor(environment))
+                            EnvironmentBadge(environment: environment!, color: connection.color),
+                        ],
+                      ),
+                      for (final reason in WriteCheckReason.values)
+                        if (widget.answer.reasons.contains(reason))
+                          _Line(icon: Icons.error_outline, text: _reasonText(s, reason)),
+                      if (connection.readOnlyForUser) ...[
+                        if (connection.access == StudioAccess.read)
+                          _Line(icon: Icons.lock_outline, text: s.write_confirm_read_grant),
+                        if (connection.readOnly)
+                          _Line(icon: Icons.lock_outline, text: s.write_confirm_read_only_connection),
                       ],
-                    ),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        if (_hasName) Text(connection.name, style: theme.textTheme.titleSmall),
-                        if (EnvironmentBadge.showsFor(environment))
-                          EnvironmentBadge(environment: environment!, color: connection.color),
-                      ],
-                    ),
-                    for (final reason in WriteCheckReason.values)
-                      if (widget.answer.reasons.contains(reason))
-                        _Line(icon: Icons.error_outline, text: _reasonText(s, reason)),
-                    if (connection.readOnlyForUser) ...[
-                      if (connection.access == StudioAccess.read)
-                        _Line(icon: Icons.lock_outline, text: s.write_confirm_read_grant),
-                      if (connection.readOnly)
-                        _Line(icon: Icons.lock_outline, text: s.write_confirm_read_only_connection),
-                    ],
-                    Text(s.write_confirm_text_heading, style: theme.textTheme.labelLarge),
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: scheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Scrollbar(
-                          child: ListView.builder(
-                            key: WriteConfirmationSheet.linesKey,
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            itemCount: _lines.length,
-                            itemBuilder: (context, index) => _StatementLine(
-                              number: index + 1,
-                              digits: '${_lines.length}'.length,
-                              text: _lines[index],
-                              flagged: widget.answer.flaggedWord?.line == index + 1,
+                      Text(s.write_confirm_text_heading, style: theme.textTheme.labelLarge),
+                      Expanded(
+                        // The box reports a fixed natural height, which the list inside it cannot give, so the sheet's
+                        // natural height counts it at a few lines.
+                        child: _NaturalHeight(
+                          height: MediaQuery.textScalerOf(context).scale(_linesMinHeight) + 2 * AppSpacing.sm,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Scrollbar(
+                              child: ListView.builder(
+                                key: WriteConfirmationSheet.linesKey,
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                itemCount: _lines.length,
+                                itemBuilder: (context, index) => _StatementLine(
+                                  number: index + 1,
+                                  digits: '${_lines.length}'.length,
+                                  text: _lines[index],
+                                  flagged: widget.answer.flaggedWord?.line == index + 1,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    if (_isProduction) ...[
-                      Text(
-                        s.write_confirm_production_prompt,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: scheme.error),
-                      ),
-                      if (!_hasName) Text(s.write_confirm_no_name, style: theme.textTheme.bodyMedium),
+                      if (_isProduction) ...[
+                        Text(
+                          s.write_confirm_production_prompt,
+                          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.error),
+                        ),
+                        if (!_hasName) Text(s.write_confirm_no_name, style: theme.textTheme.bodyMedium),
+                      ],
+                      if (wide && _isProduction && _hasName)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          spacing: AppSpacing.sm,
+                          children: [
+                            Expanded(child: _nameField(s, wide: true)),
+                            _buttons(s, scheme),
+                          ],
+                        )
+                      else ...[
+                        if (_isProduction && _hasName) _nameField(s, wide: false),
+                        Align(alignment: AlignmentDirectional.centerEnd, child: _buttons(s, scheme)),
+                      ],
                     ],
-                    if (wide && _isProduction && _hasName)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        spacing: AppSpacing.sm,
-                        children: [
-                          Expanded(child: _nameField(s, wide: true)),
-                          _buttons(s, scheme),
-                        ],
-                      )
-                    else ...[
-                      if (_isProduction && _hasName) _nameField(s, wide: false),
-                      Align(alignment: AlignmentDirectional.centerEnd, child: _buttons(s, scheme)),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -305,4 +310,42 @@ class _StatementLine extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lays out its child as given, but reports [height] as its natural height without asking the child, so a scrolling
+/// list can sit in a layout that measures natural heights ([IntrinsicHeight]).
+class _NaturalHeight extends SingleChildRenderObjectWidget {
+  const _NaturalHeight({required this.height, required super.child});
+
+  final double height;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderNaturalHeight(height);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderNaturalHeight renderObject) => renderObject.height = height;
+}
+
+class _RenderNaturalHeight extends RenderProxyBox {
+  _RenderNaturalHeight(this._height);
+
+  double _height;
+
+  set height(double value) {
+    if (value == _height) return;
+    _height = value;
+    markNeedsLayout();
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _height;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _height;
+
+  @override
+  double computeMinIntrinsicWidth(double height) => 0;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => 0;
 }
