@@ -127,7 +127,7 @@ void main() {
   });
 
   testWidgets(
-    'with the keyboard up, the connection list keeps the whole statement capture note and the search in view',
+    'with the keyboard up, the connection list keeps the whole statement capture note and the top of the search above it',
     (tester) async {
       _serveAssets(tester);
       sideways(tester);
@@ -152,7 +152,7 @@ void main() {
       expect(note.bottom, lessThanOrEqualTo(aboveKeyboard));
       final field = tester.getRect(find.byType(TextField));
       expect(field.top, greaterThanOrEqualTo(note.bottom));
-      expect(field.top, lessThan(aboveKeyboard), reason: 'the search shows above the keyboard');
+      expect(field.top, lessThan(aboveKeyboard), reason: 'the top edge of the search stays above the keyboard');
     },
   );
 
