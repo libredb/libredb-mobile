@@ -63,14 +63,81 @@ void main() {
 
     expect(() => refusing.write(first, server, 'archive'), throwsStateError);
   });
+
+  group('clear', () {
+    test('removes only the databases of that subject', () async {
+      await store.write(first, server, 'archive');
+      await store.write(first, other, 'app');
+      await store.write(second, server, 'postgres');
+
+      await store.clear(first);
+
+      expect(await store.read(first, server), isNull);
+      expect(await store.read(first, other), isNull);
+      expect(await store.read(second, server), 'postgres');
+    });
+
+    test('removes the key once no subject is left', () async {
+      await store.write(first, server, 'archive');
+
+      await store.clear(first);
+
+      expect(await stored(), isNull);
+    });
+
+    test('leaves the device as it was when that subject stored nothing', () async {
+      await store.write(second, server, 'postgres');
+
+      await store.clear(first);
+
+      expect(await store.read(second, server), 'postgres');
+    });
+
+    test('does nothing on a device that stored nothing', () async {
+      await store.clear(first);
+
+      expect(await stored(), isNull);
+    });
+
+    test('removes a stored value of another shape, as a write replaces it', () async {
+      await AppLocalStorage().save(StorageKeys.activeCatalog.key, 'not json');
+
+      await store.clear(first);
+
+      expect(await stored(), isNull);
+    });
+
+    test('throws when the device refuses to store what is left', () async {
+      await store.write(first, server, 'archive');
+      await store.write(second, server, 'postgres');
+      final refusing = ActiveCatalogPreferences(storage: _RefusingStorage(stored: await stored()));
+
+      expect(() => refusing.clear(first), throwsStateError);
+    });
+
+    test('throws when the device refuses to remove the key', () async {
+      await store.write(first, server, 'archive');
+      final refusing = ActiveCatalogPreferences(storage: _RefusingStorage(stored: await stored()));
+
+      expect(() => refusing.clear(first), throwsStateError);
+    });
+  });
 }
 
 class _RefusingStorage implements AppLocalStorage {
+  _RefusingStorage({this.stored});
+
+  /// What the device answers for every key.
+  final Object? stored;
+
   @override
-  Future<dynamic> read(String key) async => null;
+  Future<dynamic> read(String key) async => stored;
 
   @override
   Future<bool> save(String key, dynamic value) async => false;
+
+  @override
+  Future<bool> remove(String key) async => false;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

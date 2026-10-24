@@ -24,4 +24,10 @@ class CollapsedSectionsRepository implements ICollapsedSectionsRepository {
     final saved = await _storage.save(_key, keys.toList()..sort());
     if (!saved) throw StateError('the device refused to store $_key');
   }
+
+  @override
+  Future<void> clear() async {
+    final removed = await _storage.remove(_key);
+    if (!removed) throw StateError('the device refused to remove $_key');
+  }
 }
