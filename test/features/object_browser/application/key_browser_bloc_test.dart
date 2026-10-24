@@ -97,8 +97,8 @@ void main() {
         (request) => Success(switch ((request['pattern'], request['cursor'])) {
           ('*', null) => keysPage(0, 3, next: '0'),
           ('user:*', null) => _page('keyscan_first'),
-          ('user:*', '406') => _page('keyscan_next'),
-          ('user:*', '907') => _page('keyscan_last'),
+          ('user:*', '1622') => _page('keyscan_next'),
+          ('user:*', '1483') => _page('keyscan_last'),
           _ => throw StateError('unexpected request $request'),
         }),
       );
@@ -114,8 +114,8 @@ void main() {
       expect(requests, [
         {'pattern': '*', 'database': 1},
         {'pattern': 'user:*', 'database': 1},
-        {'cursor': '406', 'pattern': 'user:*', 'database': 1},
-        {'cursor': '907', 'pattern': 'user:*', 'database': 1},
+        {'cursor': '1622', 'pattern': 'user:*', 'database': 1},
+        {'cursor': '1483', 'pattern': 'user:*', 'database': 1},
       ]);
       expect(last.hasMore, isFalse);
       expect(last.keys, hasLength(1203));

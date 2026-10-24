@@ -146,7 +146,7 @@ void main() {
         _postgres.id,
         customersPath,
         'table',
-        () => Success(detailAnswer('describe_postgres_orders_readonly')),
+        () => Success(detailAnswer('describe_postgres_room_bookings')),
       );
       await harness.pump(tester, location: ordersLocation);
       await openTab(tester, 'Foreign keys');
@@ -235,11 +235,24 @@ void main() {
     expect(find.text('Studio lists no indexes.'), findsOneWidget);
   });
 
-  testWidgets('the read-only answer, without keys, shows no key and says there is no foreign key', (tester) async {
+  // Studio 1.1.0 reads the keys from pg_catalog, so a role that may only read sees the owner's keys.
+  testWidgets("the read-only role's answer shows the primary key and the foreign key, as the owner's does", (
+    tester,
+  ) async {
     answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+    answerList('table', _tables());
     await harness.pump(tester, location: ordersLocation);
 
-    expect(find.byIcon(Icons.key), findsNothing);
+    final idRow = find.ancestor(of: find.text('id'), matching: find.byType(ListTile));
+    expect(find.descendant(of: idRow, matching: find.byIcon(Icons.key)), findsOneWidget);
+    await openTab(tester, 'Foreign keys');
+    expect(find.text('References customers.id'), findsOneWidget);
+  });
+
+  testWidgets('an answer without foreign keys says Studio lists none', (tester) async {
+    answerDescribe(_postgres.id, orders, 'table', () => Success(detailAnswer('describe_postgres_room_bookings')));
+    await harness.pump(tester, location: ordersLocation);
+
     await openTab(tester, 'Foreign keys');
     expect(find.text('Studio lists no foreign keys.'), findsOneWidget);
   });
@@ -452,7 +465,7 @@ void main() {
           ],
         ),
       );
-      answerDescribe(db2, path, 'table', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+      answerDescribe(db2, path, 'table', () => Success(detailAnswer('describe_postgres_room_bookings')));
       await harness.pump(tester, location: _location(db2, 'table', path));
 
       expect(tester.widget<TextButton>(viewRows()).onPressed, isNull);
@@ -474,10 +487,10 @@ void main() {
           ],
         ),
       );
-      answerDescribe(_documents, docs, 'index', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+      answerDescribe(_documents, docs, 'index', () => Success(detailAnswer('describe_postgres_room_bookings')));
       await harness.pump(tester, location: _location(_documents, 'index', docs));
 
-      expect(find.text('customer_id'), findsOneWidget);
+      expect(find.text('during'), findsOneWidget);
       expect(viewRows(), findsNothing);
       expect(countRows(), findsNothing);
       expect(openInEditor(), findsNothing);
@@ -489,7 +502,7 @@ void main() {
     final viewLocation = _location(_postgres.id, 'view', view);
 
     setUp(() {
-      answerDescribe(_postgres.id, view, 'view', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+      answerDescribe(_postgres.id, view, 'view', () => Success(detailAnswer('describe_postgres_room_bookings')));
       when(() => harness.repository.source(_postgres.id, path: view, kind: 'view'))
           .thenAnswer((_) async => Success(sourceAnswer('source_postgres_view')));
     });
@@ -623,7 +636,7 @@ void main() {
     tester,
   ) async {
     const path = ['sales/eu (q1)', 'İzmir & co'];
-    answerDescribe(_postgres.id, path, 'table', () => Success(detailAnswer('describe_postgres_orders_readonly')));
+    answerDescribe(_postgres.id, path, 'table', () => Success(detailAnswer('describe_postgres_room_bookings')));
     await harness.pump(tester);
 
     openBrowseDetail(tester.element(find.byType(BrowsePage)), _postgres.id, path, 'table');

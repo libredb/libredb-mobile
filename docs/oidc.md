@@ -100,7 +100,8 @@ Not yet run against a live tenant; this section follows Zitadel's documentation.
 2. Redirect URIs: `org.libredb.mobile:/oauth2redirect`, and the same URI as the post logout URI.
 3. Grant types: switch **Refresh Token** on, and add `offline_access` to `OIDC_SCOPE`, or Zitadel issues no refresh token.
 4. Roles: create the project roles, grant them to users, and request them with the scope `urn:zitadel:iam:org:project:roles`.
-   The claim is an object whose keys are the role names (`{"admin": {"<org id>": "<org domain>"}}`); check that Studio maps it from the access token (see [Roles](#roles)).
+   The claim is an object whose keys are the role names (`{"admin": {"<org id>": "<org domain>"}}`).
+   Set Studio's `OIDC_ROLE_CLAIM` to `urn:zitadel:iam:org:project:roles`: Studio 1.1.0 and later take the keys of that object as the role names, while Studio 1.0.0 mapped no role from it (see [Roles](#roles)).
 5. Audience: set the application's **Auth Token Type** to **JWT**, because the default bearer token is opaque and a backend cannot verify it against the JWKS.
    Add the scope `urn:zitadel:iam:org:project:id:<project id>:aud`, so the project id is in the access token's `aud`.
 
@@ -126,7 +127,8 @@ Not yet run against a live tenant; this section follows Auth0's documentation.
    Without an audience, Auth0 issues an opaque access token that your backend cannot verify against the JWKS.
 4. Refresh: switch **Allow Offline Access** on for that API and add `offline_access` to `OIDC_SCOPE`; refresh token rotation is recommended.
 5. Roles: Auth0 puts no roles in the tokens by default.
-   Add a post-login Action that writes them to the access token under a namespaced claim, for Studio to map:
+   Add a post-login Action that writes them to the access token under a namespaced claim, and set Studio's `OIDC_ROLE_CLAIM` to that claim's name, here `https://example.com/roles`.
+   Studio 1.1.0 and later read a claim whose name holds dots whole, while Studio 1.0.0 split it on the dots and mapped no role; the access token, not only the ID token, must carry it, because Studio's bearer channel maps the role from the access token:
 
 ```javascript
 exports.onExecutePostLogin = async (event, api) => {

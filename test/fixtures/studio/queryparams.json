@@ -1,1 +1,1 @@
-{"rows":[{"answer":42}],"fields":["answer"],"rowCount":1,"executionTime":1,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}
+{"rows":[{"answer":42}],"fields":["answer"],"rowCount":1,"executionTime":0,"pagination":{"limit":500,"offset":0,"hasMore":false,"totalReturned":1,"wasLimited":false}}
