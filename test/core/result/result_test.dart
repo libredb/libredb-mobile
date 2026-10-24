@@ -90,7 +90,7 @@ void main() {
 
       test('toString should include error', () {
         const result = Failure<int>(NetworkError('No internet'));
-        expect(result.toString(), 'Failure(NetworkError(No internet))');
+        expect(result.toString(), 'Failure(NetworkError)');
       });
 
       test('equality should compare error', () {

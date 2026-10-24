@@ -50,6 +50,10 @@ android {
         buildConfigField("String", "SENTRY_DSN", buildConfigString(nativeSentryDsn))
         buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString(dartDefines["SENTRY_ENVIRONMENT"].orEmpty()))
         buildConfigField("String", "SENTRY_DIST", buildConfigString(dartDefines["SENTRY_DIST"].orEmpty()))
+        // The native crash of the Sentry device check (SentryDeviceCheck.kt, docs/crash-reporting.md), only in a build
+        // that also starts the native SDK.
+        val sentryDeviceCheck = isProdTarget && dartDefines["SENTRY_DEVICE_CHECK"] == "true"
+        buildConfigField("boolean", "SENTRY_DEVICE_CHECK", sentryDeviceCheck.toString())
     }
 
     buildFeatures {

@@ -21,14 +21,16 @@ void main() {
         expect(error, isA<AppError>());
       });
 
-      test('toString should include type and message', () {
+      // The message can be a database's error that quotes the statement, and the text of an error reaches the log and
+      // Sentry.
+      test('toString names the type and leaves the message out', () {
         const error = NetworkError('No internet');
-        expect(error.toString(), 'NetworkError(No internet)');
+        expect(error.toString(), 'NetworkError');
       });
 
-      test('toString should include code when present', () {
+      test('toString names the code when present and leaves the message out', () {
         const error = NetworkError('No internet', code: 'NET_ERR');
-        expect(error.toString(), 'NetworkError(No internet, code: NET_ERR)');
+        expect(error.toString(), 'NetworkError(code: NET_ERR)');
       });
     });
 

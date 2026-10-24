@@ -1,5 +1,5 @@
 import 'dart:async' show unawaited;
-import 'dart:convert' show jsonDecode, utf8;
+import 'dart:convert' show jsonDecode, jsonEncode, utf8;
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
@@ -445,11 +445,13 @@ class ApiClient {
     );
     final code = errorCodeOf(e.response?.data);
     final serverMessage = _stringFieldOf(body, 'error');
+    final fixStatement = _stringFieldOf(body, 'fixStatement');
     final retryAfter = _retryAfterOf(e.response?.headers);
+    final text = _withoutDatabaseText(body);
     switch (statusCode) {
       case 400:
         return BadRequestException(
-          body,
+          text,
           statusCode: statusCode,
           errorCode: code,
           serverMessage: serverMessage,
@@ -457,22 +459,22 @@ class ApiClient {
         );
       case 401 || 403:
         return UnauthorizedException(
-          body,
+          text,
           statusCode: statusCode,
           errorCode: code,
           serverMessage: serverMessage,
-          fixStatement: _stringFieldOf(body, 'fixStatement'),
+          fixStatement: fixStatement,
         );
       case 404:
         return FetchDataException(
-          'Not found: $body',
+          'Not found: $text',
           statusCode: statusCode,
           errorCode: code,
           serverMessage: serverMessage,
         );
       case >= 500:
         return FetchDataException(
-          'Server error ($statusCode): $body',
+          'Server error ($statusCode): $text',
           statusCode: statusCode,
           errorCode: code,
           retryAfter: retryAfter,
@@ -480,13 +482,36 @@ class ApiClient {
         );
       default:
         return FetchDataException(
-          'HTTP $statusCode: $body',
+          'HTTP $statusCode: $text',
           statusCode: statusCode,
           errorCode: code,
           retryAfter: retryAfter,
           serverMessage: serverMessage,
         );
     }
+  }
+
+  /// The members of a JSON error body that LibreDB Studio fills with a database's own words and with statements:
+  /// `error` (the database's message, which can quote the statement), `details` (its `detail` and the error's position)
+  /// and `fixStatement` (`src/lib/api/error-body.ts` in Studio).
+  static const _databaseTextMembers = {'error', 'details', 'fixStatement'};
+
+  /// The scrubbed body text [scrubbedBody] without its [_databaseTextMembers] when it is a JSON object, as the text of
+  /// the exception: that text reaches the log and, for an uncaught error, Sentry, and no scrubber can tell a database's
+  /// words or a statement from other text. [AppException.serverMessage], [AppException.fixStatement] and
+  /// [AppException.position] keep what a screen shows. Any other body is returned as it is.
+  static String _withoutDatabaseText(String scrubbedBody) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(scrubbedBody);
+    } on FormatException {
+      return scrubbedBody;
+    }
+    if (decoded is! Map || !decoded.keys.any(_databaseTextMembers.contains)) return scrubbedBody;
+    return jsonEncode({
+      for (final MapEntry(:key, :value) in decoded.entries)
+        if (!_databaseTextMembers.contains(key)) key: value,
+    });
   }
 
   /// The string [field] of the scrubbed body text [scrubbedBody], when it is a JSON object.
