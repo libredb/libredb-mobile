@@ -2,7 +2,7 @@
 
 A release is a signed Android App Bundle built for one deployment and uploaded to the Play internal testing track.
 Studio's URL and the Keycloak settings are compiled into the build, so one Play listing serves one deployment; the store build targets the deployment the maintainer runs.
-No key, password or token is ever in the repository: they live in GitHub secrets, and the upload waits for the maintainer's approval.
+No key, password or token is ever in the repository: they live in GitHub secrets, and both the signed build and the upload wait for the maintainer's approval.
 iOS is released separately on macOS (#199).
 
 ## How a release flows
@@ -13,7 +13,7 @@ iOS is released separately on macOS (#199).
 2. Merging the release pull request tags the release (`v1.2.3`) and creates the GitHub release.
 3. The same workflow then calls `.github/workflows/release.yml`, because a tag that a workflow pushes with `GITHUB_TOKEN` starts no other workflow.
 4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
-5. The build job runs in the `release-signing` environment and checks out the commit the checks ran on.
+5. The build job waits for the maintainer's approval of the `release-signing` environment, then checks out the commit the checks ran on.
    It stops when the build would carry a define meant for checks only (see below), decodes the upload keystore into the runner's temp directory, builds `flutter build appbundle --release --target lib/main/main_prod.dart` with the deployment's defines and `-PrequireReleaseSigning=true`, and checks that the bundle's signing certificate has the fingerprint in `ANDROID_UPLOAD_CERT_SHA256`.
 6. It keeps the bundle and R8's `mapping.txt` for 7 days as the `release-bundle` workflow artifact, and deletes the keystore and the defines file, also when a step failed.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
@@ -54,7 +54,7 @@ fvm flutter build appbundle --release --target lib/main/main_prod.dart \
 
 The build job signs in one of two GitHub environments, which hold the same names:
 
-- `release-signing`, for a tag or a release-please release, with the real upload key; only `main` and `v*.*.*` tags may deploy to it.
+- `release-signing`, for a tag or a release-please release, with the real upload key; only `main` and `v*.*.*` tags may deploy to it, and the maintainer approves each build.
 - `release-dry-run`, for a manual run, with a throwaway key made only for dry runs.
 
 Secrets and variable of each signing environment:
@@ -107,16 +107,18 @@ Only the maintainer does these, and no value from them is ever written into an i
 
 1. Create the upload key on your own machine, for example with `keytool -genkeypair -v -keystore <path>/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`, and keep a backup of the keystore and its passwords outside the repository.
 2. In the Play Console, create the app with the package name `org.libredb.mobile` and enroll it in Play App Signing, so Google holds the app signing key and the upload key can be reset if it is lost.
-3. In the repository settings, create the environment `release-signing`, limit its deployment branches and tags to `main` and `v*.*.*`, and add the four signing secrets and `ANDROID_UPLOAD_CERT_SHA256` of the upload key.
+3. In the repository settings, create the environment `release-signing`, add yourself as its required reviewer, limit its deployment branches and tags to `main` and `v*.*.*`, and add the four signing secrets and `ANDROID_UPLOAD_CERT_SHA256` of the upload key.
+   The reviewer matters because the tag ruleset below lets the GitHub Actions app create `v*` tags, so a workflow on another branch with `contents: write` could create a tag that passes the branch and tag limit; with the reviewer, every build that reaches the upload key waits for your approval.
    `base64 -w0 <path>/upload-keystore.jks` prints the keystore on one line, and `keytool -list -v -keystore <path>/upload-keystore.jks -alias upload` shows the SHA-256 fingerprint.
 4. Create the environment `release-dry-run` with the same names for a throwaway keystore made only for dry runs; never put the upload key there.
-5. Add the deployment's variables to the repository.
-6. Add a tag ruleset for `refs/tags/v*` that restricts creating, updating and deleting matching tags to yourself and the GitHub Actions app in its bypass list, so release-please can still tag its releases and no one else can start a signed build with a tag.
-7. Push the tag `v1.0.0` on the `main` commit whose `pubspec.yaml` names `1.0.0`, let the build finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
-8. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
-9. Create the environment `play-internal`, add yourself as its required reviewer, limit its deployment branches and tags to `main` and `v*.*.*`, and store the service account's JSON key as its `PLAY_SERVICE_ACCOUNT_JSON` secret.
-10. In the repository's Actions settings, allow GitHub Actions to create pull requests, which release-please needs.
-11. Approve each upload job when a release waits for it.
+5. Create the environment `play-internal`, add yourself as its required reviewer, and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
+6. Add the deployment's variables to the repository.
+7. Add a tag ruleset for `refs/tags/v*` that restricts creating, updating and deleting matching tags to yourself and the GitHub Actions app in its bypass list, so release-please can still tag its releases and no one else can start a signed build with a tag.
+8. Push the tag `v1.0.0` on the `main` commit whose `pubspec.yaml` names `1.0.0`, approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
+9. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
+10. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
+11. In the repository's Actions settings, allow GitHub Actions to create pull requests, which release-please needs.
+12. Approve the build job and then the upload job each time a release waits for them.
 
 ## Dry run
 

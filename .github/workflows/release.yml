@@ -117,8 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: verify
-    # The upload key's secrets live in release-signing, which only main and v*.*.* tags may use; a dry run signs with
-    # the throwaway key of release-dry-run (docs/release.md).
+    # The upload key's secrets live in release-signing, which only main and v*.*.* tags may use and whose required
+    # reviewer approves each signed build; a dry run signs with the throwaway key of release-dry-run (docs/release.md).
     environment: ${{ github.event_name == 'workflow_dispatch' && 'release-dry-run' || 'release-signing' }}
     steps:
       - name: Checkout
