@@ -335,7 +335,8 @@ const _checkScriptPath = 'tool/release/check_defines.sh';
 /// Defines the app reads that the release never sets, so a store build keeps their defaults:
 /// - `OIDC_REDIRECT_SCHEME`: an Android build receives its redirect only on the scheme of the manifest placeholder.
 /// - `SCREEN_CAPTURE_PROTECTION`: the store build keeps screen capture protection on, its prod default (#192).
-const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME', 'SCREEN_CAPTURE_PROTECTION'};
+/// - `APP_LOCK_REQUIRED`: the store build leaves the app lock to the user, its default (#195).
+const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME', 'SCREEN_CAPTURE_PROTECTION', 'APP_LOCK_REQUIRED'};
 
 /// The names in [_checkOnlyPath], one per line, without `#` comments.
 Set<String> _checkOnlyDefines() => {
