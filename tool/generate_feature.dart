@@ -383,7 +383,10 @@ class ${f.singularPascal}Repository implements I${f.singularPascal}Repository {
     _log.debug('BEGIN:create');
     try {
       // Pass idempotent: true only when the backend deduplicates by Idempotency-Key (see README).
-      final response = await _apiClient.post<${f.singularPascal}Model>(_resource, ${f.singularPascal}Model.fromEntity(entity));
+      final response = await _apiClient.post<${f.singularPascal}Model>(
+        _resource,
+        ${f.singularPascal}Model.fromEntity(entity)
+      );
       final result = ${f.singularPascal}Model.fromJsonString(response.data!);
       _log.debug('END:create successful id: {}', [result.id]);
       return Success(result);
@@ -406,7 +409,10 @@ class ${f.singularPascal}Repository implements I${f.singularPascal}Repository {
   Future<Result<${f.singularPascal}Entity>> update(${f.singularPascal}Entity entity) async {
     _log.debug('BEGIN:update id: {}', [entity.id]);
     try {
-      final response = await _apiClient.put<${f.singularPascal}Model>(_resource, ${f.singularPascal}Model.fromEntity(entity));
+      final response = await _apiClient.put<${f.singularPascal}Model>(
+        _resource,
+        ${f.singularPascal}Model.fromEntity(entity)
+      );
       final result = ${f.singularPascal}Model.fromJsonString(response.data!);
       _log.debug('END:update successful id: {}', [result.id]);
       return Success(result);
@@ -711,7 +717,10 @@ part '${f.singularSnake}_editor_state.dart';
 ///
 /// Delete belongs to ${f.singularPascal}ListBloc, where the action is invoked and the list is reloaded.
 class ${f.singularPascal}EditorBloc extends Bloc<${f.singularPascal}EditorEvent, ${f.singularPascal}EditorState> {
-  ${f.singularPascal}EditorBloc({required this._fetch${f.singularPascal}UseCase, required this._save${f.singularPascal}UseCase})
+  ${f.singularPascal}EditorBloc({
+    required this._fetch${f.singularPascal}UseCase,
+    required this._save${f.singularPascal}UseCase
+  })
     : super(const ${f.singularPascal}EditorInitial()) {
     on<${f.singularPascal}EditorFetch>(_onFetch, transformer: EventTransformers.restart());
     on<${f.singularPascal}EditorSubmit>(_onSubmit, transformer: EventTransformers.dropConcurrent());
@@ -927,7 +936,10 @@ class ${f.pascal}FeatureRoutes {
       pageBuilder: (context, state) => appTransitionPage(
         state: state,
         type: AppPageTransitionType.slideRight,
-        child: _withEditorBloc(context, ${f.singularPascal}EditorPage(id: state.pathParameters['id']!, mode: EditorFormMode.edit)),
+        child: _withEditorBloc(
+          context,
+          ${f.singularPascal}EditorPage(id: state.pathParameters['id']!, mode: EditorFormMode.edit)
+        ),
       ),
     ),
     GoRoute(
@@ -936,7 +948,10 @@ class ${f.pascal}FeatureRoutes {
       pageBuilder: (context, state) => appTransitionPage(
         state: state,
         type: AppPageTransitionType.slideRight,
-        child: _withEditorBloc(context, ${f.singularPascal}EditorPage(id: state.pathParameters['id']!, mode: EditorFormMode.view)),
+        child: _withEditorBloc(
+          context,
+          ${f.singularPascal}EditorPage(id: state.pathParameters['id']!, mode: EditorFormMode.view)
+        ),
       ),
     ),
   ];
@@ -1004,10 +1019,13 @@ class _${f.singularPascal}ListPageState extends State<${f.singularPascal}ListPag
             child: BlocConsumer<${f.singularPascal}ListBloc, ${f.singularPascal}ListState>(
               listener: _onStateChanged,
               builder: (context, state) => switch (state) {
-                ${f.singularPascal}ListInitial() || ${f.singularPascal}ListLoading() || ${f.singularPascal}ListDeleteSuccess() => const Center(
+                ${f.singularPascal}ListInitial() ||
+                ${f.singularPascal}ListLoading() ||
+                ${f.singularPascal}ListDeleteSuccess() => const Center(
                   child: CircularProgressIndicator(),
                 ),
-                ${f.singularPascal}ListLoaded(:final items) when items.isEmpty => AppEmptyState(title: S.of(context).no_data),
+                ${f.singularPascal}ListLoaded(:final items) when items.isEmpty =>
+                  AppEmptyState(title: S.of(context).no_data),
                 ${f.singularPascal}ListLoaded(:final items) => _${f.singularPascal}ListView(items: items),
                 ${f.singularPascal}ListFailure(:final error) => AppErrorState(
                   title: S.of(context).error_generic,
@@ -1027,7 +1045,10 @@ class _${f.singularPascal}ListPageState extends State<${f.singularPascal}ListPag
     switch (state) {
       case ${f.singularPascal}ListDeleteSuccess():
         _load();
-      case ${f.singularPascal}ListInitial() || ${f.singularPascal}ListLoading() || ${f.singularPascal}ListLoaded() || ${f.singularPascal}ListFailure():
+      case ${f.singularPascal}ListInitial() ||
+          ${f.singularPascal}ListLoading() ||
+          ${f.singularPascal}ListLoaded() ||
+          ${f.singularPascal}ListFailure():
         break;
     }
   }
@@ -1312,7 +1333,10 @@ void main() {
     delete${f.singularPascal}UseCase: Delete${f.singularPascal}UseCase(repository),
   );
 
-  const items = [${f.singularPascal}Entity(id: '${f.singularKebab}-1', name: 'First'), ${f.singularPascal}Entity(id: '${f.singularKebab}-2', name: 'Second')];
+  const items = [
+    ${f.singularPascal}Entity(id: '${f.singularKebab}-1', name: 'First'),
+    ${f.singularPascal}Entity(id: '${f.singularKebab}-2', name: 'Second')
+  ];
 
   test('starts in ${f.singularPascal}ListInitial', () {
     final bloc = buildBloc();
@@ -1337,7 +1361,10 @@ void main() {
       ).thenAnswer((_) async => const Failure(NetworkError('Connection failed'))),
       build: buildBloc,
       act: (bloc) => bloc.add(const ${f.singularPascal}ListLoad()),
-      expect: () => const [${f.singularPascal}ListLoading(), ${f.singularPascal}ListFailure(error: 'Connection failed')],
+      expect: () => const [
+        ${f.singularPascal}ListLoading(),
+        ${f.singularPascal}ListFailure(error: 'Connection failed')
+      ],
     );
   });
 
@@ -1357,7 +1384,10 @@ void main() {
       ).thenAnswer((_) async => const Failure(NetworkError('Connection failed'))),
       build: buildBloc,
       act: (bloc) => bloc.add(const ${f.singularPascal}ListDelete('${f.singularKebab}-1')),
-      expect: () => const [${f.singularPascal}ListLoading(), ${f.singularPascal}ListFailure(error: 'Connection failed')],
+      expect: () => const [
+        ${f.singularPascal}ListLoading(),
+        ${f.singularPascal}ListFailure(error: 'Connection failed')
+      ],
     );
   });
 }
@@ -1401,7 +1431,8 @@ void main() {
   group('${f.singularPascal}EditorFetch', () {
     blocTest<${f.singularPascal}EditorBloc, ${f.singularPascal}EditorState>(
       'emits [Loading, Loaded] with the fetched item',
-      setUp: () => when(() => repository.retrieve('${f.singularKebab}-1')).thenAnswer((_) async => const Success(saved)),
+      setUp: () =>
+          when(() => repository.retrieve('${f.singularKebab}-1')).thenAnswer((_) async => const Success(saved)),
       build: buildBloc,
       act: (bloc) => bloc.add(const ${f.singularPascal}EditorFetch('${f.singularKebab}-1')),
       expect: () => const [${f.singularPascal}EditorLoading(), ${f.singularPascal}EditorLoaded(data: saved)],
@@ -1414,7 +1445,10 @@ void main() {
       ).thenAnswer((_) async => const Failure(NotFoundError('Not found'))),
       build: buildBloc,
       act: (bloc) => bloc.add(const ${f.singularPascal}EditorFetch('${f.singularKebab}-1')),
-      expect: () => const [${f.singularPascal}EditorLoading(), ${f.singularPascal}EditorLoadFailure(error: 'Not found')],
+      expect: () => const [
+        ${f.singularPascal}EditorLoading(),
+        ${f.singularPascal}EditorLoadFailure(error: 'Not found')
+      ],
     );
   });
 
@@ -1545,7 +1579,14 @@ void main() {
 
     final result = await repository.retrieve('${f.singularKebab}-1');
 
-    expect(result, isA<Success<${f.singularPascal}Entity>>().having((success) => success.data.name, 'name', 'Sample ${f.singularTitle} 1'));
+    expect(
+      result,
+      isA<Success<${f.singularPascal}Entity>>().having(
+        (success) => success.data.name,
+        'name',
+        'Sample ${f.singularTitle} 1'
+      )
+    );
   });
 
   test('create is served ${_createMock(f)}', () async {
@@ -1553,17 +1594,26 @@ void main() {
 
     final result = await repository.create(const ${f.singularPascal}Entity(name: 'New ${f.singularTitle}'));
 
-    expect(result, isA<Success<${f.singularPascal}Entity>>().having((success) => success.data.id, 'id', '${f.singularKebab}-new'));
+    expect(
+      result,
+      isA<Success<${f.singularPascal}Entity>>().having((success) => success.data.id, 'id', '${f.singularKebab}-new')
+    );
   });
 
   test('update is served ${_updateMock(f)}', () async {
     TestEnv.authenticate();
 
-    final result = await repository.update(const ${f.singularPascal}Entity(id: '${f.singularKebab}-1', name: 'Renamed'));
+    final result = await repository.update(
+      const ${f.singularPascal}Entity(id: '${f.singularKebab}-1', name: 'Renamed')
+    );
 
     expect(
       result,
-      isA<Success<${f.singularPascal}Entity>>().having((success) => success.data.name, 'name', 'Updated ${f.singularTitle}'),
+      isA<Success<${f.singularPascal}Entity>>().having(
+        (success) => success.data.name,
+        'name',
+        'Updated ${f.singularTitle}'
+      ),
     );
   });
 
@@ -1576,7 +1626,10 @@ void main() {
   test('list fails with an AuthError without a session', () async {
     final result = await repository.list();
 
-    expect(result, isA<Failure<List<${f.singularPascal}Entity>>>().having((failure) => failure.error, 'error', isA<AuthError>()));
+    expect(
+      result,
+      isA<Failure<List<${f.singularPascal}Entity>>>().having((failure) => failure.error, 'error', isA<AuthError>())
+    );
   });
 }
 ''');
