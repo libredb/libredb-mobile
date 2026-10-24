@@ -60,3 +60,10 @@ test/**/failures/
 
 # Widget Preview related
 .widget_preview/
+
+# coding agent team orchectration
+.team/ledger.log
+.team/decisions.md
+
+
+
