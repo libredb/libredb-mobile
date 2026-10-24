@@ -333,6 +333,136 @@ void main() {
     });
   });
 
+  // The sheet sizes from its content when space is short (#176): with every line a production connection can show,
+  // in either language, at a large text scale or on a small phone, nothing overflows, the statement keeps at least
+  // three lines, every reason shows, and the name field and Run can be hit, with the keyboard up or down.
+  group('on a short sheet', () {
+    const crowded = StudioConnection(
+      id: 'seed:sales-prod',
+      name: 'Sales Prod',
+      type: 'postgres',
+      environment: 'production',
+      readOnly: true,
+      access: StudioAccess.read,
+    );
+    const tr = Locale('tr');
+    const cases = [
+      (name: 'landscape', size: Size(829, 393), inset: 0.0, scale: 1.0, locale: Locale('en')),
+      (name: 'landscape, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('en')),
+      (name: 'landscape, Turkish', size: Size(829, 393), inset: 0.0, scale: 1.0, locale: Locale('tr')),
+      (name: 'landscape, Turkish, keyboard up', size: Size(829, 393), inset: 255.0, scale: 1.0, locale: Locale('tr')),
+      (name: 'landscape, text scale 1.3', size: Size(829, 393), inset: 0.0, scale: 1.3, locale: Locale('en')),
+      (name: 'small portrait phone, keyboard up', size: Size(320, 568), inset: 260.0, scale: 1.0, locale: Locale('en')),
+      // #182: the Turkish labels at text scale 1.3 do not fit side by side on a 320 pixel wide sheet.
+      (name: 'small portrait phone, Turkish, text scale 1.3', size: Size(320, 568), inset: 0.0, scale: 1.3, locale: tr),
+      (
+        name: 'small portrait phone, Turkish, text scale 1.3, keyboard up',
+        size: Size(320, 568),
+        inset: 260.0,
+        scale: 1.3,
+        locale: tr,
+      ),
+    ];
+    for (final c in cases) {
+      testWidgets('fits with every line shown: ${c.name}', (tester) async {
+        tester.view
+          ..devicePixelRatio = 1
+          ..physicalSize = c.size;
+        tester.platformDispatcher.textScaleFactorTestValue = c.scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _open(tester, connection: crowded, locale: c.locale);
+
+        if (c.inset > 0) {
+          await tester.showKeyboard(_nameField);
+          tester.view.viewInsets = FakeViewPadding(bottom: c.inset);
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(_nameField, 'Sales Prod');
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(tester.getSize(find.byKey(WriteConfirmationSheet.linesKey)).height, greaterThanOrEqualTo(48));
+        for (final reason in [
+          _s.write_confirm_reason_may_write_at('DELETE', 3),
+          _s.write_confirm_reason_several,
+          _s.write_confirm_read_grant,
+          _s.write_confirm_read_only_connection,
+        ]) {
+          expect(find.text(reason), findsOneWidget, reason: reason);
+        }
+        expect(_nameField.hitTestable(), findsOneWidget);
+        expect(_run.hitTestable(), findsOneWidget);
+        final screen = Offset.zero & c.size;
+        for (final button in [_run, find.widgetWithText(TextButton, _s.write_confirm_cancel)]) {
+          final rect = tester.getRect(button);
+          expect(screen.contains(rect.topLeft) && screen.contains(rect.bottomRight - const Offset(1, 1)), isTrue);
+        }
+        expect(_runEnabled(tester), isTrue);
+        await tester.tap(_run);
+        await tester.pumpAndSettle();
+        expect(_answers, [WriteConfirmation.confirmed]);
+      });
+    }
+  });
+
+  // A phone held in landscape with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing
+  // overflows, the name field stays on screen while the user types, and Run works with the keyboard still up.
+  testWidgets('fits a landscape phone with the keyboard up on a production connection', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(829, 393);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+
+    await tester.showKeyboard(_nameField);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 255);
+    await tester.pumpAndSettle();
+    await tester.enterText(_nameField, 'Sales Prod');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(_nameField.hitTestable(), findsOneWidget);
+    expect(_run.hitTestable(), findsOneWidget);
+    expect(_runEnabled(tester), isTrue);
+    await tester.tap(_run);
+    await tester.pumpAndSettle();
+    expect(_answers, [WriteConfirmation.confirmed]);
+  });
+
+  testWidgets('a rotation while the name is typed keeps the field, its text and its focus', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(393, 829);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+    await tester.showKeyboard(_nameField);
+    tester.testTextInput.enterText('Sales');
+    await tester.pump();
+
+    tester.view.physicalSize = const Size(829, 393);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.widget<TextField>(_nameField).controller!.text, 'Sales');
+    expect(tester.testTextInput.isVisible, isTrue);
+    tester.testTextInput.enterText('Sales Prod');
+    await tester.pump();
+    expect(_runEnabled(tester), isTrue);
+  });
+
+  testWidgets('shows at least three lines of the text in landscape without the keyboard', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(829, 393);
+    addTearDown(tester.view.reset);
+    await _open(tester, connection: _production);
+
+    expect(tester.takeException(), isNull);
+    final lines = tester.getRect(find.byKey(WriteConfirmationSheet.linesKey));
+    expect(lines.height, greaterThanOrEqualTo(3 * 16));
+  });
+
   testWidgets('shows its texts in Turkish', (tester) async {
     await _open(tester, connection: _production.copyWithAccess(StudioAccess.read), locale: const Locale('tr'));
 

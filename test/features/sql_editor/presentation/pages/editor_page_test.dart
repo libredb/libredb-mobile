@@ -331,6 +331,27 @@ void main() {
     expect(runsOf('SELECT * FROM customers'), 1);
   });
 
+  // A phone held in landscape with the keyboard up leaves the page about 70 logical pixels (#176): nothing overflows,
+  // the text field stays where the user types, and Run is reached by scrolling, with the keyboard still up.
+  testWidgets('fits a landscape phone with the keyboard up, and Run is reachable without closing it', (tester) async {
+    answerRun('SELECT * FROM customers', () => Success(_recorded('query_preview_postgres_customers')));
+    await pump(tester, size: const Size(829, 393), recordsInFull: true);
+    await tester.showKeyboard(find.byKey(EditorInput.fieldKey));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await tester.pumpAndSettle();
+    await type(tester, 'SELECT * FROM customers');
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(EditorInput.fieldKey).hitTestable(), findsOneWidget);
+    await tester.ensureVisible(runButton());
+    await tester.pumpAndSettle();
+    await run(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(runsOf('SELECT * FROM customers'), 1);
+    expect(find.textContaining('Ada Lovelace'), findsWidgets);
+  });
+
   group('a text that may write', () {
     const delete = 'DELETE FROM orders WHERE false';
 
