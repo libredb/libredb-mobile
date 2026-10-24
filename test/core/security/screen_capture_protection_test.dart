@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/security/screen_capture_platform.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 
+import '../../support/printed_lines.dart';
+
 /// Records what the protection asks of the platform; [failWith] makes every call throw.
 final class _RecordingPlatform implements IScreenCapturePlatform {
   final calls = <String>[];
@@ -76,6 +78,17 @@ void main() {
       await protection.release();
       expect(protection.leases, 0);
       expect(platform.calls, ['on', 'off']);
+    });
+
+    test('a failed plugin call is logged at error level, on and off', () async {
+      platform.failWith = PlatformException(code: 'boom');
+      final lines = await printedLines(() async {
+        await protection.acquire();
+        await protection.release();
+      });
+      final failures = lines.where((line) => line.contains('Turning screen capture protection')).toList();
+      expect(failures, hasLength(2));
+      expect(failures, everyElement(contains('[E]')));
     });
 
     test('two instances share no state', () async {

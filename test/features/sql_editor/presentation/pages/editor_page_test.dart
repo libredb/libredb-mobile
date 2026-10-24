@@ -363,6 +363,25 @@ void main() {
       expect(screenCapture.leases, 0);
     });
 
+    testWidgets("the database's own words of a refused statement hold a lease, since they can repeat a value", (
+      tester,
+    ) async {
+      const insert = "INSERT INTO customers (email) VALUES ('ada@example.com')";
+      answerRun(
+        insert,
+        () => const Failure(
+          ValidationError("Duplicate entry 'ada@example.com' for key 'email'", code: 'studio.query_error'),
+        ),
+      );
+      await pump(tester);
+      await type(tester, insert);
+      await run(tester);
+      await confirm(tester);
+
+      expect(find.byKey(const ValueKey('rows-database-words')), findsOneWidget);
+      expect(screenCapture.leases, 1);
+    });
+
     // The shell's tabs are routes of one ShellRoute, so a tab change disposes the editor and its result; nothing of
     // it stays mounted offstage to hold a lease (an offstage guard holds none either, screen_capture_guard_test).
     testWidgets('a tab change releases the lease of the result on screen', (tester) async {

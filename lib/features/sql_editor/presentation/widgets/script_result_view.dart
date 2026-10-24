@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/features/sql_editor/application/editor_run_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
@@ -18,6 +19,9 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart'
 /// The last statement with rows opens first, as Studio's web shows it; a tap on another successful card opens its
 /// rows the same way. A failed card shows the database's own words, on screen only. The notice keeps the advice to add
 /// the commit keyword only when every statement succeeded: after a failure nothing complete is left to keep.
+///
+/// The whole view keeps out of screen captures while on screen ([ScreenCaptureGuard]): with no rows open, the cards
+/// still show each statement's start and the database's words, which can repeat a value.
 class ScriptResultView extends StatefulWidget {
   const ScriptResultView({super.key, required this.answer});
 
@@ -48,7 +52,9 @@ class _ScriptResultViewState extends State<ScriptResultView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ScreenCaptureGuard(child: _view(context));
+
+  Widget _view(BuildContext context) {
     final s = S.of(context);
     final answer = widget.answer;
     final open = _open;

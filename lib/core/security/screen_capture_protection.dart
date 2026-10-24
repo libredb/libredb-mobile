@@ -36,7 +36,7 @@ class ScreenCaptureProtection {
     try {
       await _platform.protectOn();
     } catch (e, st) {
-      _log.warn('Turning screen capture protection on failed: {}\n{}', [e, st]);
+      _log.error('Turning screen capture protection on failed: {}\n{}', [e, st]);
     }
   }
 
@@ -52,7 +52,7 @@ class ScreenCaptureProtection {
     try {
       await _platform.protectOff();
     } catch (e, st) {
-      _log.warn('Turning screen capture protection off failed: {}\n{}', [e, st]);
+      _log.error('Turning screen capture protection off failed: {}\n{}', [e, st]);
     }
   }
 }

@@ -129,4 +129,13 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ScreenCaptureGuard(child: Text('secret'))));
     expect(tester.takeException(), isA<ProviderNotFoundException>());
   });
+
+  testWidgets('a guard that first mounts offstage without the protection above it fails too', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: TickerMode(enabled: false, child: ScreenCaptureGuard(child: Text('secret'))),
+      ),
+    );
+    expect(tester.takeException(), isA<ProviderNotFoundException>());
+  });
 }

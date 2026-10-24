@@ -287,6 +287,21 @@ void main() {
       expect(harness.screenCapture.leases, 0, reason: 'the Browse list stays capturable');
     });
 
+    testWidgets("a refused preview's database words hold a lease, since they can repeat a value", (tester) async {
+      answerPreview(
+        const Failure(
+          ValidationError(
+            'E11000 duplicate key error dup key: { email: "ada@example.com" }',
+            code: 'studio.query_error',
+          ),
+        ),
+      );
+      await harness.pump(tester, location: customersLocation);
+
+      expect(find.byKey(const ValueKey('rows-database-words')), findsOneWidget);
+      expect(harness.screenCapture.leases, 1);
+    });
+
     testWidgets('a tab change releases the lease', (tester) async {
       await harness.pump(tester, location: customersLocation);
       expect(harness.screenCapture.leases, 1);

@@ -10,8 +10,8 @@ import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 /// shell hidden under the refusal page, has [TickerMode] off and holds no lease, so the screen shown above it can be
 /// captured; a sheet over the widget leaves its tickers on and keeps the lease.
 ///
-/// Reads the protection when the widget is mounted, and fails there when none is provided, rather than showing the
-/// data unprotected.
+/// Reads the protection when the widget is mounted, on screen or not, and fails there when none is provided, rather
+/// than showing the data unprotected.
 mixin ScreenCaptureProtected<T extends StatefulWidget> on State<T> {
   late final ScreenCaptureProtection _protection = context.read<ScreenCaptureProtection>();
   bool _holdsLease = false;
@@ -19,6 +19,8 @@ mixin ScreenCaptureProtected<T extends StatefulWidget> on State<T> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Read on every mount, offstage too, so a missing protection fails before the widget ever shows.
+    _protection;
     final onScreen = TickerMode.valuesOf(context).enabled;
     if (onScreen == _holdsLease) return;
     _holdsLease = onScreen;

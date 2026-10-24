@@ -181,6 +181,8 @@ Protected while on screen:
 | --- | --- |
 | A result, empty or not: the editor's single run and each statement of a script, Browse rows, and a key value shown as a result | `ResultView` (`lib/shared/widgets/result_view/result_view.dart`) |
 | A row's detail | `RowDetailSheet` (`lib/shared/widgets/result_view/row_detail_sheet.dart`) |
+| A script's answer, its statement cards included, with rows open or not | `ScriptResultView` (`lib/features/sql_editor/presentation/widgets/script_result_view.dart`) |
+| The database's own words of a refused statement or read, which can repeat a value, as a duplicate key error does | `BrowseDatabaseWords` (`lib/shared/widgets/browse_database_words.dart`), in the editor, Browse rows and the key value page |
 | A key's text value, a string or a JSON document | `KeyValuePage` (`lib/features/object_browser/presentation/pages/key_value_page.dart`) |
 | An object's source, on the source page and the detail page's Source tab | `ObjectSourceView` (`lib/features/object_browser/presentation/widgets/object_source_view.dart`) |
 
@@ -196,7 +198,8 @@ How it works:
   The shell's tabs are routes of one `ShellRoute`, so a tab change disposes the editor and its result: nothing of it stays mounted offstage.
   The detail page's tab view keeps the Source tab alive off screen, so that tab turns its tickers off while none of it is in view, and the Columns tab shown in its place can be captured.
 - The plugin calls sit behind `IScreenCapturePlatform` (`lib/core/security/screen_capture_platform.dart`), so a widget test counts leases on its own instance without a platform channel (`test/support/screen_capture.dart`).
-- A guard without a `ScreenCaptureProtection` above it fails with `ProviderNotFoundException` rather than show the data unprotected.
+  A failed plugin call is logged at error level and keeps the lease count, so the leases stay balanced.
+- A guard without a `ScreenCaptureProtection` above it fails with `ProviderNotFoundException` when it mounts, on screen or offstage, rather than show the data unprotected.
 
 ### The switch
 

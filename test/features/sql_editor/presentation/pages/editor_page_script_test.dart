@@ -23,6 +23,7 @@ import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.d
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_actions.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/editor_input.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/script_result_view.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_json.dart';
@@ -335,7 +336,9 @@ void main() {
     expect(scriptsOf(text), 1);
   });
 
-  testWidgets("the open statement's rows hold one capture lease, and opening another card keeps one", (tester) async {
+  testWidgets("the script view and the open statement's rows hold a lease each, and opening another card keeps them", (
+    tester,
+  ) async {
     const text = 'SELECT 1 AS a; SELECT 2 AS b';
     answerScript(text, () => Success(_recordedScript('multi_postgres_rows')));
     await pump(tester);
@@ -343,11 +346,32 @@ void main() {
     expect(screenCapture.leases, 0);
 
     await runAndConfirm(tester);
-    expect(screenCapture.leases, 1);
+    expect(screenCapture.leases, 2, reason: 'the script view and its open rows');
 
     await tester.tap(find.byKey(ScriptResultView.cardKey(0)));
     await tester.pumpAndSettle();
     expect(find.text('1'), findsOneWidget);
+    expect(screenCapture.leases, 2);
+  });
+
+  testWidgets("a script with no rows holds one capture lease over the statements and the database's words", (
+    tester,
+  ) async {
+    const text = "INSERT INTO t VALUES ('ada@example.com'); SELECT 1";
+    // Studio stops at the first failure; the database's words repeat the value, as a duplicate key error does.
+    const answer =
+        '{"rows":[],"fields":[],"rowCount":0,"executionTime":2,"multiStatement":true,"statementCount":2,'
+        '"executedCount":1,"hasError":true,"statements":[{"index":0,"sql":"INSERT INTO t VALUES (\'ada@example.com\')",'
+        '"startLine":0,"status":"error","executionTime":1,'
+        '"error":"duplicate key value violates unique constraint \\"t_email_key\\": Key (email)=(ada@example.com)"}]}';
+    answerScript(text, () => Success(SqlEditorJson.scriptResult(answer)));
+    await pump(tester);
+    await type(tester, text);
+
+    await runAndConfirm(tester);
+
+    expect(find.byKey(ScriptResultView.cardKey(0)), findsOneWidget);
+    expect(find.byType(ResultView), findsNothing, reason: 'no statement has rows');
     expect(screenCapture.leases, 1);
   });
 
