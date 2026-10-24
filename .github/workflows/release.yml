@@ -185,7 +185,8 @@ jobs:
         id: sentry
         env:
           RELEASE_KIND: ${{ github.event_name == 'workflow_dispatch' && 'dry-run' || 'release' }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          # Only whether the secret is set, never its value.
+          SENTRY_TOKEN_SET: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
         run: tool/release/check_sentry_upload.sh
 
       # The id the native SDK reports with each event, and the id the R8 mapping is uploaded under, so Sentry can match
@@ -241,8 +242,26 @@ jobs:
           fi
           echo "The bundle is signed with the expected upload key."
 
-      # sentry_dart_plugin uploads the Dart symbols and the obfuscation map, then the sentry-cli it downloaded and
-      # checked uploads the R8 mapping, which the plugin does not. The settings come from this environment only: the
+      # The keystore is no longer needed, so no later step, such as the Sentry upload, runs while it is on disk.
+      - name: Delete the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload-keystore.jks"
+
+      # The sentry-cli the upload runs, checked against the hash written here: sentry_dart_plugin only logs a binary
+      # whose checksum does not match. 2.58.6 is the version sentry_dart_plugin 3.4.0 pins; change both together.
+      - name: Fetch sentry-cli
+        if: steps.sentry.outputs.upload == 'true'
+        run: |
+          cli="$RUNNER_TEMP/sentry-cli"
+          curl --fail --silent --show-error --location --output "$cli" \
+            https://downloads.sentry-cdn.com/sentry-cli/2.58.6/sentry-cli-Linux-x86_64
+          echo "36b689311b399d9332950d84f4299aee682d2d290a770a77372b30a74f7e7add  $cli" | sha256sum --check --strict
+          chmod +x "$cli"
+          echo "SENTRY_CLI=$cli" >> "$GITHUB_ENV"
+
+      # sentry_dart_plugin creates the release and uploads the Dart symbols; tool/release/upload_dart_symbol_map.sh
+      # uploads the obfuscation map and upload-proguard the R8 mapping, which the plugin would only log on failure or
+      # not upload at all. All three use the sentry-cli checked above. The settings come from this environment only: the
       # repository holds no sentry.properties and no sentry section in pubspec.yaml. A failed upload stops the release
       # before the bundle is kept.
       - name: Upload the symbols to Sentry
@@ -256,9 +275,10 @@ jobs:
           SENTRY_RELEASE=$(sed -n 's/^version: *\([^ ]*\).*$/\1/p' pubspec.yaml)
           export SENTRY_RELEASE
           echo "Uploading the symbols of release $SENTRY_RELEASE to Sentry."
-          dart run sentry_dart_plugin --sentry-define=symbols_path=build/debug-info \
-            --sentry-define=dart_symbol_map_path=build/debug-info/obfuscation.map.json --sentry-define=commits=false
-          .dart_tool/pub/bin/sentry_dart_plugin/sentry-cli upload-proguard --require-one \
+          dart run sentry_dart_plugin --sentry-define=bin_path="$SENTRY_CLI" \
+            --sentry-define=symbols_path=build/debug-info --sentry-define=commits=false
+          tool/release/upload_dart_symbol_map.sh "$SENTRY_CLI" build/debug-info/obfuscation.map.json build/debug-info
+          "$SENTRY_CLI" upload-proguard --require-one \
             --uuid "$SENTRY_PROGUARD_UUID" build/app/outputs/mapping/release/mapping.txt
 
       - name: Keep the bundle and the R8 mapping

@@ -111,8 +111,11 @@ A crash from such a build is readable only in Sentry, which needs three files fr
 - the obfuscation map (`build/debug-info/obfuscation.map.json`, from `--extra-gen-snapshot-options=--save-obfuscation-map=`), which turns obfuscated Dart type names in issue titles back into the real ones;
 - R8's `mapping.txt`, which turns the Java and Kotlin frames of a native event back into the real class and method names.
 
-After the build, [sentry_dart_plugin](https://pub.dev/packages/sentry_dart_plugin) (a dev dependency, run with `dart run sentry_dart_plugin`) creates the release in Sentry and uploads the Dart symbols and the obfuscation map.
-The plugin does not upload an R8 mapping, so the same step runs `sentry-cli upload-proguard` with the sentry-cli binary the plugin downloaded and checked against its pinned checksum.
+After the build, the job deletes the upload keystore, so no Sentry step runs while it is on disk.
+It then downloads sentry-cli 2.58.6, the version sentry_dart_plugin 3.4.0 pins, and stops unless its SHA-256 equals the hash written in `release.yml`; the plugin itself only logs a binary whose checksum does not match, so the job never lets the plugin download one.
+With that binary, [sentry_dart_plugin](https://pub.dev/packages/sentry_dart_plugin) (a dev dependency, run with `dart run sentry_dart_plugin --sentry-define=bin_path=...`) creates the release in Sentry and uploads the Dart symbols.
+The plugin would only log a failed upload of the obfuscation map, so `tool/release/upload_dart_symbol_map.sh` uploads it instead, once for each `app.android-*.symbols` file, and fails on any error or when there is no symbols file.
+The plugin does not upload an R8 mapping at all, so the same step runs `sentry-cli upload-proguard` with the same binary.
 The workflow gives the mapping a new UUID before each build: Gradle writes it into `BuildConfig.SENTRY_PROGUARD_UUID` from `-PsentryProguardUuid`, `NativeSentry.kt` sets it as the native SDK's `proguardUuid`, and `upload-proguard --uuid` uploads the mapping under it, so Sentry matches each event to its mapping.
 The release in Sentry is the `version` of `pubspec.yaml`, such as `1.0.0+1`, the release the app reports on both SDKs.
 The bundle also carries the native debug symbols that the Android Gradle plugin puts into its `BUNDLE-METADATA` for Play's own crash reports; Play never delivers them to a device, and the installed `libapp.so` holds no debug information.
@@ -121,7 +124,7 @@ The plugin's settings come only from the workflow's environment: the organizatio
 The repository holds no `sentry.properties` and no `sentry` section in `pubspec.yaml`; `sentry.properties` is git-ignored, and `test/architecture/sentry_release_symbols_test.dart` fails when one is tracked or when a tracked file holds what looks like a Sentry auth token.
 The Sentry wizard writes such a file with a token in it, so do not run it in this repository.
 
-Before the build, `tool/release/check_sentry_upload.sh` decides:
+Before the build, `tool/release/check_sentry_upload.sh` decides; it is told only whether the secret is set, never its value:
 
 - a release (a tag or a release-please release) without the secret fails with `The secret SENTRY_AUTH_TOKEN of the release-signing environment is not set`, before anything is built or signed;
 - a dry run never uploads, with or without the secret, and says `Dry run: the Dart symbols and the R8 mapping are not uploaded to Sentry` in the log.

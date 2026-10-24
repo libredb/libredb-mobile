@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Decides whether the release build uploads its Dart symbols and R8 mapping to Sentry (docs/release.md), and writes
-# upload=true or upload=false to $GITHUB_OUTPUT. A release needs the SENTRY_AUTH_TOKEN secret of the release-signing
-# environment and fails without it; a dry run never uploads, with or without the token.
-# Usage: RELEASE_KIND=release|dry-run SENTRY_AUTH_TOKEN=<token or empty> GITHUB_OUTPUT=<file> \
+# Decides whether the release build uploads its Dart symbols, obfuscation map and R8 mapping to Sentry
+# (docs/release.md), and writes upload=true or upload=false to $GITHUB_OUTPUT. A release needs the SENTRY_AUTH_TOKEN
+# secret of the release-signing environment and fails without it; a dry run never uploads, with or without the token.
+# The script gets only SENTRY_TOKEN_SET, true or false, never the token.
+# Usage: RELEASE_KIND=release|dry-run SENTRY_TOKEN_SET=true|false GITHUB_OUTPUT=<file> \
 #   tool/release/check_sentry_upload.sh
 set -euo pipefail
 
@@ -10,6 +11,13 @@ if [ -z "${GITHUB_OUTPUT:-}" ]; then
   echo "GITHUB_OUTPUT is not set; run this script as a step of the release workflow."
   exit 2
 fi
+case "${SENTRY_TOKEN_SET:-}" in
+  true | false) ;;
+  *)
+    echo "SENTRY_TOKEN_SET must be true or false."
+    exit 2
+    ;;
+esac
 
 case "${RELEASE_KIND:-}" in
   dry-run)
@@ -17,7 +25,7 @@ case "${RELEASE_KIND:-}" in
     echo "upload=false" >> "$GITHUB_OUTPUT"
     ;;
   release)
-    if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+    if [ "$SENTRY_TOKEN_SET" != true ]; then
       echo "The secret SENTRY_AUTH_TOKEN of the release-signing environment is not set, so the Dart symbols and the" \
         "R8 mapping of this release cannot be uploaded to Sentry (docs/release.md)."
       exit 1

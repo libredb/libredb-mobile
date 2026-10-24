@@ -80,6 +80,8 @@ void main() {
     late final check = indexOf((step) => '${step['run']}'.contains(_checkScriptPath), 'runs $_checkScriptPath');
     late final build = indexOf((step) => '${step['run']}'.contains('flutter build appbundle'), 'builds the bundle');
     late final upload = indexOf((step) => '${step['run']}'.contains('sentry_dart_plugin'), 'uploads the symbols');
+    late final fetch = indexOf((step) => '${step['run']}'.contains('sha256sum --check'), 'fetches sentry-cli');
+    late final signature = indexOf((step) => '${step['run']}'.contains('keytool -printcert'), 'checks the signature');
     late final keep = indexOf((step) => '${step['uses']}'.startsWith('actions/upload-artifact@'), 'keeps the bundle');
 
     test('builds obfuscated, with the Dart symbols and the obfuscation map outside the bundle', () {
@@ -93,7 +95,8 @@ void main() {
     test('checks for the token before the build, from the secret of the signing environment', () {
       expect(check, lessThan(build), reason: '$_checkScriptPath must run before the build');
       final env = steps[check]['env'] as YamlMap;
-      expect(env['SENTRY_AUTH_TOKEN'], r'${{ secrets.SENTRY_AUTH_TOKEN }}');
+      expect(env['SENTRY_TOKEN_SET'], r"${{ secrets.SENTRY_AUTH_TOKEN != '' }}");
+      expect(env.containsKey('SENTRY_AUTH_TOKEN'), isFalse, reason: 'the check needs to know only whether it is set');
       expect('${env['RELEASE_KIND']}', contains("github.event_name == 'workflow_dispatch' && 'dry-run'"));
       expect(steps[check]['id'], 'sentry');
     });
@@ -118,13 +121,49 @@ void main() {
       final run = '${step['run']}';
       expect(run, contains('dart run sentry_dart_plugin'));
       expect(run, contains('--sentry-define=symbols_path=$_debugInfo'));
-      expect(run, contains('--sentry-define=dart_symbol_map_path=$_obfuscationMap'));
-      expect(run, contains('upload-proguard'));
+      expect(run, contains(r'--sentry-define=bin_path="$SENTRY_CLI"'));
+      expect(
+        run,
+        isNot(contains('dart_symbol_map_path')),
+        reason: 'the plugin only logs a failed map upload; $_mapScriptPath uploads it and fails on an error',
+      );
+      expect(
+        run,
+        contains(
+          r'tool/release/upload_dart_symbol_map.sh "$SENTRY_CLI" '
+          '$_obfuscationMap $_debugInfo',
+        ),
+      );
+      expect(run, isNot(contains('.dart_tool/pub/bin')), reason: 'use only the sentry-cli whose hash the job checked');
+      expect(run, contains(r'"$SENTRY_CLI" upload-proguard'));
       expect(run, contains(r'--uuid "$SENTRY_PROGUARD_UUID"'));
       expect(run, contains('build/app/outputs/mapping/release/mapping.txt'));
       expect(run, isNot(contains('--auth-token')), reason: 'the token must stay in the environment');
       // The release the app reports: the version name and build number of pubspec.yaml (AppBootstrap, NativeSentry).
       expect(run, contains('SENTRY_RELEASE'));
+    });
+
+    test('fetches sentry-cli itself, checks it against a written hash, and only for an upload', () {
+      expect(fetch, lessThan(upload));
+      final step = steps[fetch];
+      expect('${step['if']}', "steps.sentry.outputs.upload == 'true'");
+      final run = '${step['run']}';
+      expect(run, contains('https://downloads.sentry-cdn.com/sentry-cli/2.58.6/sentry-cli-Linux-x86_64'));
+      expect(run, matches(RegExp(r'[0-9a-f]{64}  ')), reason: 'the expected sha256 must be written in $_releasePath');
+      expect(run, contains('SENTRY_CLI='));
+      expect(run, contains('GITHUB_ENV'));
+      expect('${step['env']}', isNot(contains('secrets.')), reason: 'the fetch must run without a secret');
+    });
+
+    test('deletes the upload keystore before any Sentry step runs, also after a failed step', () {
+      final delete = indexOf(
+        (step) => '${step['run']}'.trim() == r'rm -f "$RUNNER_TEMP/upload-keystore.jks"',
+        'deletes the keystore right after the signature check',
+      );
+      expect(delete, greaterThan(signature));
+      expect(delete, lessThan(fetch));
+      expect(delete, lessThan(upload));
+      expect(steps[delete]['if'], 'always()');
     });
 
     test('keeps the Dart symbols and the obfuscation map out of the release-bundle artifact', () {
@@ -147,23 +186,22 @@ void main() {
     });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    Future<ProcessResult> check(String? kind, {String token = '', bool withOutput = true}) => Process.run(
+    Future<ProcessResult> check(String? kind, {String tokenSet = 'false', bool withOutput = true}) => Process.run(
       'bash',
       [_checkScriptPath],
       environment: {
         'PATH': ?Platform.environment['PATH'],
         'RELEASE_KIND': ?kind,
-        'SENTRY_AUTH_TOKEN': token,
+        'SENTRY_TOKEN_SET': tokenSet,
         if (withOutput) 'GITHUB_OUTPUT': output.path,
       },
       includeParentEnvironment: false,
     );
 
     test('a release with the token uploads', () async {
-      final result = await check('release', token: 'not-a-real-token');
+      final result = await check('release', tokenSet: 'true');
       expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
       expect(output.readAsStringSync(), 'upload=true\n');
-      expect('${result.stdout}${result.stderr}', isNot(contains('not-a-real-token')));
     });
 
     test('a release without the token fails and names the secret', () async {
@@ -175,9 +213,9 @@ void main() {
     });
 
     test('a dry run never uploads, with or without the token, and says so', () async {
-      for (final token in ['', 'not-a-real-token']) {
+      for (final tokenSet in ['false', 'true']) {
         output.writeAsStringSync('');
-        final result = await check('dry-run', token: token);
+        final result = await check('dry-run', tokenSet: tokenSet);
         expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
         expect(output.readAsStringSync(), 'upload=false\n');
         expect(result.stdout, contains('not uploaded to Sentry'));
@@ -186,11 +224,105 @@ void main() {
 
     test('fails on an unknown or missing kind, and without GITHUB_OUTPUT', () async {
       for (final kind in ['tag', '', null]) {
-        final result = await check(kind, token: 'not-a-real-token');
+        final result = await check(kind, tokenSet: 'true');
         expect(result.exitCode, 2, reason: 'RELEASE_KIND=$kind was not an error');
       }
-      final result = await check('release', token: 'not-a-real-token', withOutput: false);
+      final result = await check('release', tokenSet: 'true', withOutput: false);
       expect(result.exitCode, 2);
+    });
+
+    test('fails when SENTRY_TOKEN_SET is neither true nor false', () async {
+      for (final tokenSet in ['', 'yes', 'sk-something']) {
+        final result = await check('release', tokenSet: tokenSet);
+        expect(result.exitCode, 2, reason: 'SENTRY_TOKEN_SET=$tokenSet was not an error');
+        expect(output.readAsStringSync(), isEmpty);
+      }
+    });
+  });
+
+  group('upload_dart_symbol_map.sh', () {
+    late Directory dir;
+    late Directory symbols;
+    late File map;
+    late File cli;
+    late Directory uploads;
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('upload_dart_symbol_map');
+      symbols = Directory('${dir.path}/debug-info')..createSync();
+      uploads = Directory('${dir.path}/uploads')..createSync();
+      map = File('${symbols.path}/obfuscation.map.json')..writeAsStringSync('["AuthError","uLa","Studio","xYz"]');
+      // A stand-in for sentry-cli: the debug id of a symbols file is its name, an upload copies the map it is given
+      // next to that name, and FAIL_UPLOAD names a symbols file whose upload fails.
+      cli = File('${dir.path}/sentry-cli')
+        ..writeAsStringSync(r'''#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1 $2" = "debug-files check" ]; then
+  printf '{"variants":[{"debug_id":"id-%s"}]}' "$(basename "$4")"
+elif [ "$1 $2" = "dart-symbol-map upload" ]; then
+  [ "$(basename "$4")" = "${FAIL_UPLOAD:-}" ] && { echo "upload refused" >&2; exit 3; }
+  cp "$3" "$UPLOADS/$(basename "$4").json"
+else
+  exit 9
+fi
+''');
+      Process.runSync('chmod', ['+x', cli.path]);
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    Future<ProcessResult> upload({String failUpload = ''}) => Process.run(
+      'bash',
+      [_mapScriptPath, cli.path, map.path, symbols.path],
+      environment: {'UPLOADS': uploads.path, 'FAIL_UPLOAD': failUpload},
+    );
+
+    void writeSymbols(List<String> names) {
+      for (final name in names) {
+        File('${symbols.path}/$name').writeAsStringSync('elf');
+      }
+    }
+
+    test('uploads the map once per Android symbols file, each starting with that file\'s debug id', () async {
+      writeSymbols(['app.android-arm64.symbols', 'app.android-arm.symbols', 'app.android-x64.symbols']);
+
+      final result = await upload();
+
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      for (final name in ['app.android-arm64.symbols', 'app.android-arm.symbols', 'app.android-x64.symbols']) {
+        expect(
+          File('${uploads.path}/$name.json').readAsStringSync().trim(),
+          '["SENTRY_DEBUG_ID_MARKER","id-$name","AuthError","uLa","Studio","xYz"]',
+        );
+      }
+      expect(map.readAsStringSync(), '["AuthError","uLa","Studio","xYz"]', reason: 'the map itself must not change');
+    });
+
+    test('fails when an upload fails', () async {
+      writeSymbols(['app.android-arm64.symbols', 'app.android-x64.symbols']);
+
+      final result = await upload(failUpload: 'app.android-arm64.symbols');
+
+      expect(result.exitCode, isNot(0));
+    });
+
+    test('fails without a symbols file or without the map', () async {
+      final none = await upload();
+      expect(none.exitCode, isNot(0));
+      expect(none.stdout, contains('app.android-*.symbols'));
+
+      writeSymbols(['app.android-arm64.symbols']);
+      map.deleteSync();
+      final noMap = await upload();
+      expect(noMap.exitCode, isNot(0));
+    });
+
+    test('fails when the debug id cannot be read', () async {
+      writeSymbols(['app.android-arm64.symbols']);
+      cli.writeAsStringSync('#!/usr/bin/env bash\necho "{}"\n');
+
+      final result = await upload();
+
+      expect(result.exitCode, isNot(0));
+      expect(uploads.listSync(), isEmpty);
     });
   });
 
@@ -228,6 +360,7 @@ void main() {
 const _releasePath = '.github/workflows/release.yml';
 const _releaseDocsPath = 'docs/release.md';
 const _checkScriptPath = 'tool/release/check_sentry_upload.sh';
+const _mapScriptPath = 'tool/release/upload_dart_symbol_map.sh';
 const _gradlePath = 'android/app/build.gradle.kts';
 const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt';
 const _debugInfo = 'build/debug-info';

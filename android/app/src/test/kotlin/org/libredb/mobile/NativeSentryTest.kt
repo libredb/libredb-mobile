@@ -39,7 +39,7 @@ class NativeSentryTest {
         assertEquals("3f2a0c1e-5b7d-4e8f-9a6b-1c2d3e4f5a6b", options.proguardUuid)
     }
 
-    // A build without the id, such as a dry run or a local build, sends no proguard debug image.
+    // A build without -PsentryProguardUuid, such as a local build, sends no proguard debug image.
     @Test
     fun leavesTheProguardUuidUnsetWithoutOne() {
         assertNull(configured().proguardUuid)
