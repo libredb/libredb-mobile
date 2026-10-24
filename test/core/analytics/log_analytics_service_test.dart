@@ -3,6 +3,8 @@ import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/printed_lines.dart';
+
 void main() {
   late LogAnalyticsService service;
 
@@ -131,6 +133,72 @@ void main() {
 
       test('does not throw with null stackTrace and null reason', () {
         expect(() => service.logError(error: 'error', stackTrace: null, reason: null), returnsNormally);
+      });
+
+      // The header that an obfuscated release build (--obfuscate --split-debug-info) prints before the first frame.
+      const obfuscatedHeader = [
+        '*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***',
+        'pid: 4361, tid: 4404, name 1.ui',
+        'os: android arch: arm64 comp: yes sim: no',
+        "build_id: '6d4b5d2c8a9f1e7b3c2a1d0e9f8b7a6c'",
+        'isolate_dso_base: 7a2c4b6000, vm_dso_base: 7a2c4b6000',
+        'isolate_instructions: 7a2c5d1000, vm_instructions: 7a2c5c4000',
+      ];
+
+      String obfuscatedFrame(int index) =>
+          '    #${index.toString().padLeft(2, '0')} abs 0000007a2c6e5f2b virt 000000000022ff2b '
+          '_kDartIsolateSnapshotInstructions+0x11ef2b';
+
+      // The printed stack trace line, joined, after the non_fatal_error line that serves as a positive control.
+      Future<String> printedStack(StackTrace stackTrace) async {
+        final printed = await printedLines(() => service.logError(error: Exception('boom'), stackTrace: stackTrace));
+        expect(printed.where((line) => line.contains('non_fatal_error: Exception: boom')), hasLength(1));
+        final stack = printed.join('\n');
+        expect(stack, contains('stack_trace: '));
+        return stack.substring(stack.indexOf('stack_trace: '));
+      }
+
+      test('keeps the build id and the first frames after an obfuscated header', () async {
+        final trace = [...obfuscatedHeader, for (var i = 0; i < 30; i++) obfuscatedFrame(i)].join('\n');
+
+        final stack = await printedStack(StackTrace.fromString(trace));
+
+        for (final line in obfuscatedHeader) {
+          expect(stack, contains(line));
+        }
+        for (var i = 0; i < 10; i++) {
+          expect(stack, contains(obfuscatedFrame(i)));
+        }
+        expect(stack, isNot(contains(obfuscatedFrame(10))));
+      });
+
+      test('keeps the first frames of a symbolic stack trace', () async {
+        final trace = [for (var i = 0; i < 30; i++) '#$i      frame$i (package:libredb_mobile/a.dart:$i:1)'].join('\n');
+
+        final stack = await printedStack(StackTrace.fromString(trace));
+
+        for (var i = 0; i < 10; i++) {
+          expect(stack, contains('frame$i '));
+        }
+        expect(stack, isNot(contains('frame10 ')));
+      });
+
+      test('bounds a stack trace without frame lines', () async {
+        final trace = [for (var i = 0; i < 30; i++) 'line$i end'].join('\n');
+
+        final stack = await printedStack(StackTrace.fromString(trace));
+
+        expect(stack, contains('line0 end'));
+        expect(stack, isNot(contains('line29 end')));
+      });
+
+      test('masks a secret in a kept stack line', () async {
+        final trace = [...obfuscatedHeader, 'Bearer eyJhbGciOiJSUzI1NiJ9.e30.c2ln', obfuscatedFrame(0)].join('\n');
+
+        final stack = await printedStack(StackTrace.fromString(trace));
+
+        expect(stack, contains(obfuscatedFrame(0)));
+        expect(stack, isNot(contains('eyJhbGciOiJSUzI1NiJ9')));
       });
     });
   });
