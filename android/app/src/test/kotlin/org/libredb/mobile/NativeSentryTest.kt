@@ -18,14 +18,31 @@ import org.junit.Test
 class NativeSentryTest {
     private val jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart"
 
-    private fun configured(options: SentryAndroidOptions = SentryAndroidOptions()) = options.also {
-        NativeSentry.configure(
-            it,
-            dsn = "https://public@example.invalid/1",
-            release = "1.0.0+1",
-            dist = "1",
-            environment = "production",
-        )
+    private fun configured(options: SentryAndroidOptions = SentryAndroidOptions(), proguardUuid: String = "") =
+        options.also {
+            NativeSentry.configure(
+                it,
+                dsn = "https://public@example.invalid/1",
+                release = "1.0.0+1",
+                dist = "1",
+                environment = "production",
+                proguardUuid = proguardUuid,
+            )
+        }
+
+    // The id release.yml gives the R8 mapping it uploads to Sentry (-PsentryProguardUuid), which Sentry matches to the
+    // proguard debug image of each event.
+    @Test
+    fun setsTheProguardUuidOfTheUploadedMapping() {
+        val options = configured(proguardUuid = "3f2a0c1e-5b7d-4e8f-9a6b-1c2d3e4f5a6b")
+
+        assertEquals("3f2a0c1e-5b7d-4e8f-9a6b-1c2d3e4f5a6b", options.proguardUuid)
+    }
+
+    // A build without -PsentryProguardUuid, such as a local build, sends no proguard debug image.
+    @Test
+    fun leavesTheProguardUuidUnsetWithoutOne() {
+        assertNull(configured().proguardUuid)
     }
 
     @Test

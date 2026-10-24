@@ -14,8 +14,11 @@ iOS is released separately on macOS (#199).
 3. The same workflow then calls `.github/workflows/release.yml`, because a tag that a workflow pushes with `GITHUB_TOKEN` starts no other workflow.
 4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
 5. The build job waits for the maintainer's approval of the `release-signing` environment, then checks out the commit the checks ran on.
-   It stops when the build would carry a define meant for checks only (see below), decodes the upload keystore into the runner's temp directory, builds `flutter build appbundle --release --target lib/main/main_prod.dart` with the deployment's defines and `-PrequireReleaseSigning=true`, and checks that the bundle's signing certificate has the fingerprint in `ANDROID_UPLOAD_CERT_SHA256`.
+   It stops when the build would carry a define meant for checks only (see below), or when a release has no `SENTRY_AUTH_TOKEN` (see "Crash symbols").
+   It decodes the upload keystore into the runner's temp directory, builds `flutter build appbundle --release --target lib/main/main_prod.dart --obfuscate --split-debug-info=build/debug-info` with the deployment's defines and `-PrequireReleaseSigning=true`, and checks that the bundle's signing certificate has the fingerprint in `ANDROID_UPLOAD_CERT_SHA256`.
+   It then uploads the Dart symbols, the obfuscation map and R8's `mapping.txt` to Sentry; a failed upload stops the release.
 6. It keeps the bundle and R8's `mapping.txt` for 7 days as the `release-bundle` workflow artifact, and deletes the keystore and the defines file, also when a step failed.
+   The artifact holds exactly those two files: the Dart symbols and the obfuscation map in `build/debug-info` go only to Sentry.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
 7. The upload job waits for the approval of the `play-internal` environment, then uploads the bundle and the mapping to the internal testing track.
 
@@ -66,6 +69,7 @@ Secrets and variable of each signing environment:
 | `ANDROID_UPLOAD_KEY_ALIAS` | Secret | The key's alias |
 | `ANDROID_UPLOAD_KEY_PASSWORD` | Secret | The key's password |
 | `ANDROID_UPLOAD_CERT_SHA256` | Variable | The SHA-256 fingerprint of the key's certificate, which the build compares with the bundle's |
+| `SENTRY_AUTH_TOKEN` | Secret | `release-signing` only: the Sentry organization token the symbol upload uses (see "Crash symbols"); never add it to `release-dry-run` |
 
 Secret of the `play-internal` environment:
 
@@ -98,6 +102,35 @@ Before the build, `tool/release/check_defines.sh` stops the release on the same 
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
 `APP_LOCK_REQUIRED` is not read, so the store build leaves the app lock to the user ([security.md](security.md), "App lock").
 
+## Crash symbols
+
+A release build is obfuscated: `--obfuscate --split-debug-info=build/debug-info` renames the Dart symbols and moves their debug information out of the bundle, and R8 shrinks and renames the Java and Kotlin classes.
+A crash from such a build is readable only in Sentry, which needs three files from the same build:
+
+- the Dart debug symbols (`build/debug-info/app.android-*.symbols`), which turn the Dart stack's addresses into functions, files and lines;
+- the obfuscation map (`build/debug-info/obfuscation.map.json`, from `--extra-gen-snapshot-options=--save-obfuscation-map=`), which turns obfuscated Dart type names in issue titles back into the real ones;
+- R8's `mapping.txt`, which turns the Java and Kotlin frames of a native event back into the real class and method names.
+
+After the build, the job deletes the upload keystore, so no Sentry step runs while it is on disk.
+It then downloads sentry-cli 2.58.6, the version sentry_dart_plugin 3.4.0 pins, and stops unless its SHA-256 equals the hash written in `release.yml`; the plugin itself only logs a binary whose checksum does not match, so the job never lets the plugin download one.
+With that binary, [sentry_dart_plugin](https://pub.dev/packages/sentry_dart_plugin) (a dev dependency, run with `dart run sentry_dart_plugin --sentry-define=bin_path=...`) creates the release in Sentry and uploads the Dart symbols.
+The plugin would only log a failed upload of the obfuscation map, so `tool/release/upload_dart_symbol_map.sh` uploads it instead, once for each `app.android-*.symbols` file, and fails on any error or when there is no symbols file.
+The plugin does not upload an R8 mapping at all, so the same step runs `sentry-cli upload-proguard` with the same binary.
+The workflow gives the mapping a new UUID before each build: Gradle writes it into `BuildConfig.SENTRY_PROGUARD_UUID` from `-PsentryProguardUuid`, `NativeSentry.kt` sets it as the native SDK's `proguardUuid`, and `upload-proguard --uuid` uploads the mapping under it, so Sentry matches each event to its mapping.
+The release in Sentry is the `version` of `pubspec.yaml`, such as `1.0.0+1`, the release the app reports on both SDKs.
+The bundle also carries the native debug symbols that the Android Gradle plugin puts into its `BUNDLE-METADATA` for Play's own crash reports; Play never delivers them to a device, and the installed `libapp.so` holds no debug information.
+
+The plugin's settings come only from the workflow's environment: the organization `libredb-org`, the project `libredb-mobile`, and the token from the `SENTRY_AUTH_TOKEN` secret of the `release-signing` environment.
+The repository holds no `sentry.properties` and no `sentry` section in `pubspec.yaml`; `sentry.properties` is git-ignored, and `test/architecture/sentry_release_symbols_test.dart` fails when one is tracked or when a tracked file holds what looks like a Sentry auth token.
+The Sentry wizard writes such a file with a token in it, so do not run it in this repository.
+
+Before the build, `tool/release/check_sentry_upload.sh` decides; it is told only whether the secret is set, never its value:
+
+- a release (a tag or a release-please release) without the secret fails with `The secret SENTRY_AUTH_TOKEN of the release-signing environment is not set`, before anything is built or signed;
+- a dry run never uploads, with or without the secret, and says `Dry run: the Dart symbols and the R8 mapping are not uploaded to Sentry` in the log.
+
+To read a crash from a build whose symbols never reached Sentry, such as a dry run's bundle, keep its `build/debug-info` and run `flutter symbolize -i <stack trace file> -d build/debug-info/app.android-arm64.symbols`.
+
 ## Check-only defines
 
 Some defines exist only for a check, such as `SENTRY_DEVICE_CHECK`, which crashes the app on purpose to prove the Sentry scrubber on a device.
@@ -118,21 +151,25 @@ Only the maintainer does these, and no value from them is ever written into an i
 5. Create the environment `play-internal`, add yourself as its required reviewer, and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
 6. Add the deployment's variables to the repository.
 7. Add a tag ruleset for `refs/tags/v*` that restricts creating, updating and deleting matching tags to yourself and the GitHub Actions app in its bypass list, so release-please can still tag its releases and no one else can start a signed build with a tag.
-8. In the repository settings, under Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests".
+8. In Sentry, open the organization `libredb-org`, go to Settings > Developer Settings > Organization Tokens, and create a token named for this workflow, such as `libredb-mobile release`.
+   An organization token can create releases and upload debug files and mappings for the organization's projects, and nothing else.
+   Copy it once into the secret `SENTRY_AUTH_TOKEN` of the `release-signing` environment, and never into `release-dry-run`, a file, an issue or a log.
+   Without it every release stops before the build; to replace it, create a new token, update the secret, and revoke the old token in Sentry.
+9. In the repository settings, under Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests".
    Without it release-please pushes its branch but fails with `GitHub Actions is not permitted to create or approve pull requests.` and opens no release pull request.
    It is safe here because a pull request that a workflow opens reaches no key: the signed build still waits for your approval as the required reviewer of `release-signing`, and the upload waits for your approval of `play-internal`.
-9. Merge the first release pull request, which releases `1.0.0`: `release-please-config.json` sets `"release-as": "1.0.0"` on the `.` package, because the manifest already names `1.0.0` and release-please would otherwise plan the first release as `1.1.0`.
+10. Merge the first release pull request, which releases `1.0.0`: `release-please-config.json` sets `"release-as": "1.0.0"` on the `.` package, because the manifest already names `1.0.0` and release-please would otherwise plan the first release as `1.1.0`.
    Merging it tags `v1.0.0` and starts the release; approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
    Do not push the tag `v1.0.0` by hand as well, since release-please then cannot create its release of `1.0.0`.
-10. Once `v1.0.0` is tagged, remove `release-as` from `release-please-config.json` in a follow-up commit, or every later release pull request stays at `1.0.0`.
-11. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
-12. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
-13. Approve the build job and then the upload job each time a release waits for them.
+11. Once `v1.0.0` is tagged, remove `release-as` from `release-please-config.json` in a follow-up commit, or every later release pull request stays at `1.0.0`.
+12. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
+13. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
+14. Approve the build job and then the upload job each time a release waits for them.
 
 ## Dry run
 
 Start `release.yml` by hand (Actions, Release, Run workflow) on any branch, or run `gh workflow run release.yml --ref <branch>`.
-A dry run checks, tests and builds a bundle signed with the throwaway key of the `release-dry-run` environment, keeps it as the `release-bundle` artifact, and never uploads.
+A dry run checks, tests and builds an obfuscated bundle signed with the throwaway key of the `release-dry-run` environment, keeps it as the `release-bundle` artifact, and never uploads, neither to Play nor to Sentry.
 It never reaches the upload key, so its bundle cannot go to Play.
 
 ## Rolling back
@@ -140,7 +177,7 @@ It never reaches the upload key, so its bundle cannot go to Play.
 Play never accepts a version code lower than one it has, so a bad build is replaced, not taken back.
 In the Play Console, open the internal testing track and halt or pause the release so no further tester receives it.
 Then fix the problem on `main` and release again; the next release has a higher build number.
-The `release-bundle` artifact of each run keeps the exact bundle and mapping for 7 days; Play keeps every uploaded bundle and its mapping after that.
+The `release-bundle` artifact of each run keeps the exact bundle and mapping for 7 days; Play keeps every uploaded bundle and its mapping after that, and Sentry keeps the release's symbols and mapping.
 
 ## Play requirements
 

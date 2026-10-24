@@ -15,6 +15,8 @@ fvm flutter build apk --release --target lib/main/main_prod.dart \
 
 The options are set in `configureSentryOptions` (`lib/app/bootstrap/sentry_start.dart`), including the trace sample rate of `0.2`.
 
+A store build is obfuscated, and the release workflow uploads its Dart symbols, obfuscation map and R8 mapping to Sentry, so its crashes arrive readable ([release.md](release.md), "Crash symbols").
+
 ## The release options
 
 Each option below is set explicitly on both SDKs, even where it equals today's default, so an SDK upgrade that changes a default cannot start sending more.

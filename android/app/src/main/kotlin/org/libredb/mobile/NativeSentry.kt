@@ -53,6 +53,7 @@ object NativeSentry {
                 release = "${packageInfo.versionName.orEmpty()}+$buildNumber",
                 dist = BuildConfig.SENTRY_DIST.ifEmpty { buildNumber.toString() },
                 environment = BuildConfig.SENTRY_ENVIRONMENT.ifEmpty { environmentFor(BuildConfig.BUILD_TYPE) },
+                proguardUuid = BuildConfig.SENTRY_PROGUARD_UUID,
             )
         }
     }
@@ -73,12 +74,24 @@ object NativeSentry {
         }
     }
 
-    /** Sets [options] as sentry_flutter would, and installs the scrubbing hooks of [NativeSentryScrubber]. */
-    fun configure(options: SentryAndroidOptions, dsn: String, release: String, dist: String, environment: String) {
+    /**
+     * Sets [options] as sentry_flutter would, and installs the scrubbing hooks of [NativeSentryScrubber].
+     * [proguardUuid] is the id release.yml uploads the R8 mapping under (docs/release.md, "Crash symbols"); an empty
+     * one, as in a build without -PsentryProguardUuid, leaves it unset.
+     */
+    fun configure(
+        options: SentryAndroidOptions,
+        dsn: String,
+        release: String,
+        dist: String,
+        environment: String,
+        proguardUuid: String,
+    ) {
         options.dsn = dsn
         options.release = release
         options.dist = dist
         options.environment = environment
+        if (proguardUuid.isNotEmpty()) options.proguardUuid = proguardUuid
         options.isEnableScopeSync = true
         // Dart owns the trace and pushes it to the native SDK.
         options.isEnableAutoTraceIdGeneration = false
