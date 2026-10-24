@@ -67,10 +67,15 @@ void main() {
       },
       appRunner: () {
         runSentryDeviceCheck(SentryAnalyticsService());
-        Timer(const Duration(milliseconds: 50), done.complete);
+        done.complete();
       },
     );
     await done.future;
+    // The error is thrown from a timer and captured asynchronously; wait for its event as long as a slow runner needs.
+    final deadline = DateTime.now().add(const Duration(seconds: 10));
+    while (sentEvents.isEmpty && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     await Sentry.close();
 
     final sent = sentEvents.single;

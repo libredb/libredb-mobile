@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
+import '../../../support/printed_lines.dart';
 
 void main() {
   late MockIConnectionRepository repository;
@@ -50,6 +51,23 @@ void main() {
       ]);
       await bloc.close();
     });
+  });
+
+  // The message of a Studio failure is the server's own words, such as a database's error, which no log line may carry.
+  test('logs the type and the code of a failed load, never the server text of its message', () async {
+    const serverText = 'connect ECONNREFUSED payroll-db.internal:5432 for role payroll_admin';
+    when(() => repository.listManaged())
+        .thenAnswer((_) async => Failure(ServerError(serverText, code: AppErrorCode.studioDatabaseUnreachable.key)));
+
+    final lines = await printedLines(() async {
+      final bloc = build();
+      bloc.add(const ConnectionListRequested());
+      await bloc.stream.firstWhere((state) => state is ConnectionListFailure);
+      await bloc.close();
+    });
+
+    expect(lines.join('\n'), isNot(contains('payroll')));
+    expect(lines, contains(contains('END: onLoad error: ServerError(code: studio.database_unreachable)')));
   });
 
   // A refresh sent while the device is offline, such as a pull or a timer, never reaches Studio: the rows stay on
