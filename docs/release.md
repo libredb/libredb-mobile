@@ -272,5 +272,6 @@ This build signs in to the publisher's own LibreDB deployment, which holds sampl
 
 ## Actions
 
-Every action in `release.yml` and `release-please.yml` is pinned to a full commit SHA with its version in a comment, and `test/architecture/android_release_setup_test.dart` fails on a tag or branch reference.
+Every action in every workflow under `.github/workflows/` is pinned to a full commit SHA with its version in a comment, and `test/architecture/android_release_setup_test.dart` fails on a tag or branch reference or a missing version comment.
+To update an action, resolve the new tag to its commit with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` (an annotated tag needs one more lookup of its object) and change the SHA and the comment together.
 The upload uses [r0adkll/upload-google-play](https://github.com/r0adkll/upload-google-play), which talks to the Play Developer API with the service account and uploads the mapping file with the bundle.
