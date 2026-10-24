@@ -5,9 +5,12 @@ import 'package:libredb_mobile/app/shell/bottom_nav/bottom_nav_widget.dart';
 import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 
 /// The frame around every signed-in page, at every screen width: the one top bar with the page title above it, and
 /// below it the bottom navigation bar on a tab, or a back arrow in the top bar on any other page, such as the settings.
+/// On a compact height, such as a phone held sideways, a tab page has its tabs in a rail at the side instead, which
+/// leaves the page the height a bottom bar takes.
 /// A page under the Browse root keeps the bottom navigation bar and has the back arrow too. On every Browse and SQL
 /// location the title is the active connection, which opens the connection switcher.
 class ResponsiveScaffold extends StatelessWidget {
@@ -20,26 +23,39 @@ class ResponsiveScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final tab = _tabOf(activeRoute);
     final title = _routeToTitle(activeRoute, S.of(context));
+    final rail = tab != null && AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
     return Scaffold(
-      // The Scaffold already keeps the body above the bottom navigation bar, which keeps clear of the bottom inset.
-      body: SafeArea(
-        child: Column(
-          children: [
-            TopBarWidget(
-              title: title,
-              onBack: tab == null
-                  ? () => _back(context)
-                  : _inBrowseStack(activeRoute)
-                  ? () => _backInBrowse(context)
-                  : null,
-              // The Browse and SQL tabs work on the active connection, so their title names it.
-              titleWidget: _worksOnActiveConnection(tab) ? ActiveConnectionTitle(fallback: title) : null,
+      // The page keeps its place in the tree whether the tabs are at the bottom or at the side, so a rotation keeps
+      // its state, such as a result's rows and scroll position.
+      body: Row(
+        children: [
+          if (rail) ...[SafeArea(right: false, child: SideNavWidget(activeTab: tab)), const VerticalDivider(width: 1)],
+          Expanded(
+            key: const ValueKey('shell-page'),
+            // The Scaffold already keeps the body above the bottom navigation bar, which keeps clear of the bottom
+            // inset; the rail keeps clear of the left one.
+            child: SafeArea(
+              left: !rail,
+              child: Column(
+                children: [
+                  TopBarWidget(
+                    title: title,
+                    onBack: tab == null
+                        ? () => _back(context)
+                        : _inBrowseStack(activeRoute)
+                        ? () => _backInBrowse(context)
+                        : null,
+                    // The Browse and SQL tabs work on the active connection, so their title names it.
+                    titleWidget: _worksOnActiveConnection(tab) ? ActiveConnectionTitle(fallback: title) : null,
+                  ),
+                  Expanded(child: child),
+                ],
+              ),
             ),
-            Expanded(child: child),
-          ],
-        ),
+          ),
+        ],
       ),
-      bottomNavigationBar: tab == null ? null : BottomNavWidget(activeTab: tab),
+      bottomNavigationBar: tab == null || rail ? null : BottomNavWidget(activeTab: tab),
     );
   }
 

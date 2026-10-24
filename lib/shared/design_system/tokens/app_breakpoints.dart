@@ -7,6 +7,11 @@ class AppBreakpoints {
   static const double tablet = 1024.0;
   static const double desktop = 1200.0;
 
+  /// Below this screen height, Material's compact height class, such as a phone held sideways, the shell puts its tabs
+  /// in a rail at the side and a page header shares its rows. It reads the screen, which the keyboard does not change,
+  /// so typing never switches the layout.
+  static const double compactHeight = 480.0;
+
   /// Content area max width.
   static const double contentMaxWidth = 1200.0;
 
@@ -14,4 +19,5 @@ class AppBreakpoints {
   static bool isMobile(double width) => width < mobile;
   static bool isTablet(double width) => width >= mobile && width < tablet;
   static bool isDesktop(double width) => width >= tablet;
+  static bool isCompactHeight(double height) => height < compactHeight;
 }

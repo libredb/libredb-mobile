@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/connections/application/favorite_connect
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_star_button.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
@@ -118,13 +119,36 @@ class ConnectionListView extends StatelessWidget {
       },
     );
     final refresh = onRefresh;
+    // On a compact height, such as a phone held sideways, the search and the chips share a row so the list keeps the
+    // height. A Flex that only turns keeps the field in its place in the tree, so a rotation keeps its focus.
+    final compact = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
+    // Without chips the search keeps the whole row.
+    final chipsBeside = compact && state.environments.isNotEmpty;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-          child: ConnectionSearchField(controller: search),
+        Flex(
+          direction: compact ? Axis.horizontal : Axis.vertical,
+          children: [
+            Flexible(
+              flex: compact ? 1 : 0,
+              fit: compact ? FlexFit.tight : FlexFit.loose,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  compact ? AppSpacing.xs : AppSpacing.sm,
+                  chipsBeside ? 0 : AppSpacing.lg,
+                  0,
+                ),
+                child: ConnectionSearchField(controller: search),
+              ),
+            ),
+            Flexible(
+              flex: chipsBeside ? 1 : 0,
+              fit: chipsBeside ? FlexFit.tight : FlexFit.loose,
+              child: EnvironmentChips(environments: state.environments, selected: state.environment, compact: compact),
+            ),
+          ],
         ),
-        EnvironmentChips(environments: state.environments, selected: state.environment),
         Expanded(
           child: refresh == null ? list : RefreshIndicator(onRefresh: refresh, child: list),
         ),
@@ -170,10 +194,13 @@ class ConnectionSearchField extends StatelessWidget {
 }
 
 class EnvironmentChips extends StatelessWidget {
-  const EnvironmentChips({super.key, required this.environments, required this.selected});
+  const EnvironmentChips({super.key, required this.environments, required this.selected, this.compact = false});
 
   final List<String> environments;
   final String? selected;
+
+  /// Whether the chips share the search's row on a compact height, with less padding above and below them.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +211,7 @@ class EnvironmentChips extends StatelessWidget {
       label: l10n.connection_environment_filter,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: compact ? AppSpacing.xs : AppSpacing.sm),
         child: Row(
           spacing: AppSpacing.sm,
           children: [
@@ -249,7 +276,7 @@ class ConnectionSectionHeader extends StatelessWidget {
 }
 
 /// One connection: its environment strip, engine, name, database or host, badges, a dot when it is the active one,
-/// and its star.
+/// and its star. On a compact height the badges follow the name on its line.
 class ConnectionRow extends StatelessWidget {
   const ConnectionRow({
     super.key,
@@ -283,6 +310,13 @@ class ConnectionRow extends StatelessWidget {
     ).strip;
     final secondary = connection.database ?? connection.host;
     final showsBadge = EnvironmentBadge.showsFor(environment);
+    final badges = [
+      if (showsBadge) EnvironmentBadge(environment: environment!, color: connection.color),
+      if (connection.readOnlyForUser) const ReadOnlyChip(),
+    ];
+    final name = Text(connection.name, style: theme.textTheme.bodyLarge);
+    // On a compact height, such as a phone held sideways, the badges share the name's line, so more rows fit.
+    final compact = AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
     final row = Semantics(
       selected: isActive,
       child: InkWell(
@@ -308,21 +342,22 @@ class ConnectionRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 2,
                   children: [
-                    Text(connection.name, style: theme.textTheme.bodyLarge),
+                    if (badges.isEmpty || !compact)
+                      name
+                    else
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [name, ...badges],
+                      ),
                     if (secondary != null)
                       Text(
                         secondary,
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
-                    if (showsBadge || connection.readOnlyForUser)
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
-                        children: [
-                          if (showsBadge) EnvironmentBadge(environment: environment!, color: connection.color),
-                          if (connection.readOnlyForUser) const ReadOnlyChip(),
-                        ],
-                      ),
+                    if (badges.isNotEmpty && !compact)
+                      Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: badges),
                   ],
                 ),
               ),

@@ -134,6 +134,25 @@ void main() {
       );
     });
 
+    for (final (name, size, beside) in const [
+      ('beside the progress line on a phone held sideways', Size(829, 393), true),
+      ('under the progress line in portrait', Size(393, 829), false),
+    ]) {
+      testWidgets('puts Load more and Load all $name', (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        answerRedisWalk();
+        await harness.pump(tester, location: '/browse/seed%3Adev-redis/keys?container=1');
+
+        final progressLine = tester.getRect(find.byKey(const ValueKey('key-progress')));
+        for (final label in [S.current.keys_load_more, S.current.keys_load_all]) {
+          final button = tester.getRect(find.widgetWithText(OutlinedButton, label));
+          expect(button.top < progressLine.bottom, beside, reason: label);
+        }
+      });
+    }
+
     testWidgets('user:* on db1 pages with Load more and groups its keys into folders with counts and type chips', (
       tester,
     ) async {

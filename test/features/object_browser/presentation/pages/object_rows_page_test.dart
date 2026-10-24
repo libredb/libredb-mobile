@@ -584,6 +584,52 @@ void main() {
       expect(find.textContaining('100 rows'), findsOneWidget);
     });
 
+    group('on a phone held sideways', () {
+      Future<void> pumpSideways(WidgetTester tester) async {
+        sideways(tester);
+        await harness.pump(tester, location: ledgerLocation);
+        await tester.tap(find.byTooltip('Table'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('shows at least three rows of the table after Load more', (tester) async {
+        await pumpSideways(tester);
+
+        await tester.tap(find.text('Load 50 more'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('100 rows'), findsOneWidget);
+        expect(fullyShownTableRows(tester), greaterThanOrEqualTo(3));
+      });
+
+      testWidgets('a rotation keeps the rows, the table and its scroll position, with no new request', (tester) async {
+        await pumpSideways(tester);
+        tester.view.physicalSize = const Size(393, 829);
+        await tester.pumpAndSettle();
+        scrollPositionOf(tester, tableRowsScrollable()).jumpTo(300);
+        await tester.pumpAndSettle();
+
+        tester.view.physicalSize = const Size(829, 393);
+        await tester.pumpAndSettle();
+        expect(scrollPositionOf(tester, tableRowsScrollable()).pixels, 300);
+        tester.view.physicalSize = const Size(393, 829);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ResultTable), findsOneWidget);
+        expect(scrollPositionOf(tester, tableRowsScrollable()).pixels, 300);
+        verify(
+          () => harness.statements.run(
+            _postgres.id,
+            ledgerPreview,
+            queryId: any(named: 'queryId'),
+            page: any(named: 'page'),
+            catalog: any(named: 'catalog'),
+            cancelSignal: any(named: 'cancelSignal'),
+          ),
+        ).called(1);
+      });
+    });
+
     testWidgets('a page refused with a vanished connection goes to the active connection\'s vanish flow', (
       tester,
     ) async {

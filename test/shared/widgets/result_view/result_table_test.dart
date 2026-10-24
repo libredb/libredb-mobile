@@ -22,6 +22,7 @@ import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dar
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_card.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_table.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/result_notices.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
@@ -421,6 +422,55 @@ void main() {
         expect(find.text(_orderNotice), findsNothing);
       });
     }
+
+    group('on a compact height', () {
+      const sideways = Size(829, 393);
+
+      testWidgets('sits in the stats strip beside the view toggle, with no footer under the rows', (tester) async {
+        final harness = _Harness(tester);
+        await harness.pump(_page(from: 1, count: 2), screen: sideways);
+
+        expect(find.descendant(of: find.byType(ResultStatsStrip), matching: _loadMore), findsOneWidget);
+        expect(
+          tester.getRect(_loadMore).top,
+          lessThan(tester.getRect(find.byKey(const ValueKey('result-table-header'))).top),
+          reason: 'above the rows',
+        );
+        await tester.tap(_loadMore);
+        await tester.pump();
+        await tester.pump();
+
+        expect(harness.requested, [const QueryPage(limit: 2, offset: 2)]);
+        expect(_loadMore, findsNothing);
+      });
+
+      testWidgets('a failed page keeps its banner under the rows', (tester) async {
+        final harness = _Harness(tester);
+        await harness.pump(
+          _page(from: 1, count: 2),
+          screen: sideways,
+          loadPage: (page) async => const Failure(ServerError('locked', code: 'studio.query_error')),
+        );
+
+        await tester.tap(_loadMore);
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.descendant(of: find.byType(ResultStatsStrip), matching: _loadMore), findsNothing);
+        expect(
+          tester.getRect(find.byType(StudioErrorBanner)).top,
+          greaterThan(tester.getRect(find.byKey(const ValueKey('result-table-header'))).top),
+        );
+      });
+
+      testWidgets('a portrait phone keeps Load more under the rows', (tester) async {
+        final harness = _Harness(tester);
+        await harness.pump(_page(from: 1, count: 2), screen: const Size(393, 829));
+
+        expect(find.descendant(of: find.byType(ResultStatsStrip), matching: _loadMore), findsNothing);
+        expect(_loadMore, findsOneWidget);
+      });
+    });
 
     testWidgets('a failed page keeps the rows and shows the banner, and the retry the user taps loads it', (
       tester,

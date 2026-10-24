@@ -6,6 +6,7 @@ import 'package:libredb_mobile/features/object_browser/application/key_tree.dart
 import 'package:libredb_mobile/features/object_browser/navigation/browse_navigation.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_tap_rule.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 
 /// The pattern field of the key browser: a glob that starts at `*`, or a literal prefix that starts empty. Submitting
@@ -66,13 +67,47 @@ class KeyWalkSummary extends StatelessWidget {
     final idle = walk.load == KeyPageLoad.idle;
     final skipped = walk.skipped;
     final readOutcome = walk.readOutcome;
+    final progress = Text(
+      _progress(context, s),
+      key: const ValueKey('key-progress'),
+      style: theme.textTheme.bodyMedium,
+    );
+    final pageControls = walk.load != KeyPageLoad.all && walk.hasMore && !walk.atCap
+        ? Wrap(
+            spacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton(
+                onPressed: idle ? () => bloc.add(const KeyBrowserMoreRequested()) : null,
+                child: Text(s.keys_load_more),
+              ),
+              OutlinedButton(
+                onPressed: idle ? () => bloc.add(const KeyBrowserAllRequested()) : null,
+                child: Text(s.keys_load_all),
+              ),
+              if (!idle) const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          )
+        : null;
+    // On a compact height, such as a phone held sideways, the page controls share the progress line so the keys keep
+    // the height.
+    final beside = pageControls != null && AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: AppSpacing.xs,
         children: [
-          Text(_progress(context, s), key: const ValueKey('key-progress'), style: theme.textTheme.bodyMedium),
+          if (beside)
+            Row(
+              spacing: AppSpacing.sm,
+              children: [
+                Expanded(child: progress),
+                pageControls,
+              ],
+            )
+          else
+            progress,
           if (walk.clustered == true) Text(s.keys_clustered, style: note),
           if (skipped != null)
             Text(s.keys_skipped(skipped.count, _number(context).format(skipped.count), skipped.reason), style: warning),
@@ -94,22 +129,8 @@ class KeyWalkSummary extends StatelessWidget {
               icon: const Icon(Icons.stop),
               label: Text(walk.stopping ? s.keys_stopping : s.keys_stop),
             ),
-          ] else if (walk.hasMore && !walk.atCap)
-            Wrap(
-              spacing: AppSpacing.sm,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                OutlinedButton(
-                  onPressed: idle ? () => bloc.add(const KeyBrowserMoreRequested()) : null,
-                  child: Text(s.keys_load_more),
-                ),
-                OutlinedButton(
-                  onPressed: idle ? () => bloc.add(const KeyBrowserAllRequested()) : null,
-                  child: Text(s.keys_load_all),
-                ),
-                if (!idle) const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-              ],
-            ),
+          ] else if (pageControls != null && !beside)
+            pageControls,
         ],
       ),
     );

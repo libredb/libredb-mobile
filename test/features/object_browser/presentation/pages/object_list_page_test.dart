@@ -18,6 +18,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../browse_answers.dart';
 import '../../browse_harness.dart';
+import '../../result_scroll.dart';
 
 const _postgres = StudioConnection(id: 'seed:dev-postgres', name: 'Dev (PostgreSQL)', type: 'postgres');
 const _server = StudioConnection(id: 'seed:dev-postgres-server', name: 'Dev server', type: 'postgres');
@@ -416,6 +417,25 @@ void main() {
         expect(find.text('Copy name'), findsNothing);
       },
     );
+
+    testWidgets('shows all its entries at once on a phone held sideways', (tester) async {
+      sideways(tester);
+      answerList(_postgres.id, ['public'], 'table', Success(objectsAnswer('list_postgres')));
+      await harness.pump(tester, location: _tables);
+      await tester.ensureVisible(find.text('orders', skipOffstage: false));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('orders'));
+      await tester.pumpAndSettle();
+
+      final shown = [
+        'View rows',
+        'Open in editor',
+        'Details',
+        'Copy name',
+      ].where((entry) => find.text(entry).hitTestable().evaluate().isNotEmpty);
+      expect(shown, hasLength(4), reason: 'shown: $shown');
+    });
   });
 
   group('View rows', () {

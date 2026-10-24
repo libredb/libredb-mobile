@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_card.dart';
@@ -55,6 +56,12 @@ class ResultView extends StatelessWidget {
       if (result.rows.isEmpty) return ResultEmptyView(result: result, rolledBackNotice: rolledBackNotice);
       final bloc = context.read<ResultViewBloc>();
       final pageSize = bloc.pageOffer(result);
+      // On a compact height, such as a phone held sideways, Load more shares the strip's row so the rows keep the
+      // height; a failed page keeps its banner under the rows, where it has the room to say why.
+      final besideToggle =
+          pageSize != null &&
+          state is! ResultViewLoadMoreFailed &&
+          AppBreakpoints.isCompactHeight(MediaQuery.sizeOf(context).height);
       return LayoutBuilder(
         builder: (context, constraints) {
           final maxHeight = constraints.hasBoundedHeight ? constraints.maxHeight * maxNoticeShare : double.infinity;
@@ -65,7 +72,20 @@ class ResultView extends StatelessWidget {
                 result: result,
                 maxHeight: maxHeight,
                 orderNotice: bloc.showsOrderNotice(result),
-                trailing: const ResultViewModeToggle(),
+                trailing: besideToggle
+                    ? Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const ResultViewModeToggle(),
+                          KeyedSubtree(
+                            key: const ValueKey('result-load-more'),
+                            child: ResultLoadMoreFooter.actionOf(context, state, pageSize),
+                          ),
+                        ],
+                      )
+                    : const ResultViewModeToggle(),
                 rolledBackNotice: rolledBackNotice,
               ),
               const Divider(height: 1),
@@ -91,7 +111,7 @@ class ResultView extends StatelessWidget {
                   },
                 ),
               ),
-              if (pageSize != null) ...[
+              if (pageSize != null && !besideToggle) ...[
                 const Divider(height: 1),
                 ResultLoadMoreFooter(state: state, pageSize: pageSize, maxHeight: maxHeight),
               ],
@@ -154,10 +174,24 @@ class ResultLoadMoreFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        child: Padding(
+          key: const ValueKey('result-load-more'),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          child: Center(child: actionOf(context, state, pageSize)),
+        ),
+      ),
+    );
+  }
+
+  /// The button or the banner the footer shows for [state], which the stats strip also shows on a compact height.
+  static Widget actionOf(BuildContext context, ResultViewState state, int pageSize) {
     final s = S.of(context);
     final size = resultNumberFormat(context).format(pageSize);
     void loadMore() => context.read<ResultViewBloc>().add(const ResultViewLoadMoreRequested());
-    final action = switch (state) {
+    return switch (state) {
       ResultViewLoadMoreFailed(:final error)
           when error is InterruptedError && error.code == AppErrorCode.editorPageOutcomeUnknown.key =>
         StudioErrorBanner(error: error),
@@ -177,16 +211,6 @@ class ResultLoadMoreFooter extends StatelessWidget {
             FilledButton.tonal(onPressed: enabled ? loadMore : null, child: Text(s.result_load_more(pageSize, size))),
       ),
     };
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      child: SingleChildScrollView(
-        child: Padding(
-          key: const ValueKey('result-load-more'),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-          child: Center(child: action),
-        ),
-      ),
-    );
   }
 }
 

@@ -74,3 +74,26 @@ Future<void> pullAndExpectSpringBack(WidgetTester tester, Finder scrollable) asy
   final position = scrollPositionOf(tester, scrollable);
   expect(position.pixels, moreOrLessEquals(position.minScrollExtent), reason: 'after the pull');
 }
+
+/// Turns the test view into the Android 13 emulator held sideways: 829 by 393 logical pixels with its 24 px status bar
+/// on top and its 24 px gesture bar at the bottom, as #177 measured it.
+void sideways(WidgetTester tester) {
+  tester.view.physicalSize = const Size(829, 393);
+  tester.view.devicePixelRatio = 1;
+  tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+  tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 24);
+  addTearDown(tester.view.reset);
+}
+
+/// How many rows of the [ResultTable] lie whole inside the part of its rows' view that is on the screen.
+int fullyShownTableRows(WidgetTester tester) {
+  final view = tester.view;
+  final screen = Offset.zero & (view.physicalSize / view.devicePixelRatio);
+  final shown = tester.getRect(tableRowsScrollable()).intersect(screen);
+  return find
+      .descendant(of: find.byType(ResultTable), matching: find.byType(ResultTableRow))
+      .evaluate()
+      .map((element) => tester.getRect(find.byElementPredicate((candidate) => candidate == element)))
+      .where((row) => row.top >= shown.top && row.bottom <= shown.bottom)
+      .length;
+}

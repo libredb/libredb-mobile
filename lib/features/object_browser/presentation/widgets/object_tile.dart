@@ -83,8 +83,10 @@ class ObjectTile extends StatelessWidget {
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      // Sized by its entries rather than capped at 9/16 of the page, so a phone held sideways shows them all at once.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        // Five entries outgrow a short sheet, such as a phone held sideways.
+        // Five entries still outgrow a sheet on a very short screen.
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
