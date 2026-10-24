@@ -5,69 +5,149 @@ import 'package:crypto/crypto.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-String _hashOf(Uint8List bytes) => base64.encode(sha256.convert(bytes).bytes);
+import '../../support/loopback_tls_server.dart';
+import '../../support/pin_test_certificates.dart';
+
+/// A DER element: [tag], its length in the shortest form, then [content].
+List<int> _tlv(int tag, List<int> content) {
+  final length = content.length;
+  final lengthBytes = length < 0x80
+      ? [length]
+      : length < 0x100
+      ? [0x81, length]
+      : [0x82, length >> 8, length & 0xff];
+  return [tag, ...lengthBytes, ...content];
+}
+
+List<int> _sequence(List<List<int>> elements) => _tlv(0x30, [for (final element in elements) ...element]);
+
+/// A key-shaped element, which the walker returns whole and never parses.
+final _spki = _sequence([
+  _sequence([
+    _tlv(0x06, const [0x2a, 0x03]),
+  ]),
+  _tlv(0x03, const [0x00, 0x01, 0x02, 0x03]),
+]);
+
+/// A certificate-shaped DER: the fields before the key are empty elements of the right tag.
+Uint8List _certificate({bool withVersion = true, List<int>? spki}) => Uint8List.fromList(
+  _sequence([
+    _sequence([
+      if (withVersion) _tlv(0xa0, _tlv(0x02, const [0x02])),
+      _tlv(0x02, const [0x01]),
+      _sequence(const []),
+      _sequence(const []),
+      _sequence(const []),
+      _sequence(const []),
+      spki ?? _spki,
+      _tlv(0xa3, _sequence(const [])),
+    ]),
+    _sequence(const []),
+    _tlv(0x03, const [0x00]),
+  ]),
+);
 
 void main() {
-  group('CertificatePinner.matches', () {
-    final certA = Uint8List.fromList([1, 2, 3, 4]);
-    final certB = Uint8List.fromList([5, 6, 7, 8]);
-    final pinA = _hashOf(certA);
-    final pinB = _hashOf(certB);
-
-    test('empty pin list returns false (pinning misconfigured — fail closed)', () {
-      // Disabled mode is enforced at the adapter wiring level, not here.
-      // If pinner is invoked with an empty list, it must reject — never
-      // silently allow.
-      expect(CertificatePinner.matches(certA, const []), isFalse);
+  group('CertificatePinner.computePin', () {
+    // Each expected value is what the openssl command in docs/security.md prints for the certificate.
+    test('hashes the SubjectPublicKeyInfo of an RSA certificate as openssl does', () {
+      expect(CertificatePinner.computePin(derOf(rsaCertificatePem)), rsaCertificatePin);
     });
 
-    test('exact pin match returns true', () {
-      expect(CertificatePinner.matches(certA, [pinA]), isTrue);
+    test('hashes the SubjectPublicKeyInfo of an EC certificate as openssl does', () {
+      expect(CertificatePinner.computePin(derOf(ecCertificatePem)), ecCertificatePin);
     });
 
-    test('non-matching pin returns false', () {
-      expect(CertificatePinner.matches(certA, [pinB]), isFalse);
+    test('hashes the SubjectPublicKeyInfo of the loopback test certificate as openssl does', () {
+      expect(CertificatePinner.computePin(loopbackCertificateDer), 'COJ+oMvPyJM6TDByJCYlNVA8YFGSMZ7jrCg/mRlmNZk=');
     });
 
-    test('multiple pins, one matching returns true (backup pin scenario)', () {
-      expect(CertificatePinner.matches(certA, [pinB, pinA]), isTrue);
+    test('gives a certificate renewed over the same key the same pin', () {
+      expect(derOf(ecRenewedCertificatePem), isNot(derOf(ecCertificatePem)));
+      expect(CertificatePinner.computePin(derOf(ecRenewedCertificatePem)), ecCertificatePin);
     });
 
-    test('multiple pins, none matching returns false', () {
-      final pinC = _hashOf(Uint8List.fromList([9, 9, 9]));
-      expect(CertificatePinner.matches(certA, [pinB, pinC]), isFalse);
+    test('is not the hash of the whole certificate', () {
+      final der = derOf(ecCertificatePem);
+      expect(CertificatePinner.computePin(der), isNot(base64.encode(sha256.convert(der).bytes)));
     });
 
-    test('pin comparison is case-sensitive (base64 is case-sensitive)', () {
-      // Deterministically pick a fixture whose pin contains at least one
-      // uppercase letter so the lowercased variant is guaranteed to differ —
-      // otherwise the assertion below could vacuously pass.
-      var seed = 0;
-      late Uint8List cert;
-      late String pin;
-      do {
-        cert = Uint8List.fromList([seed, seed + 1, seed + 2, seed + 3]);
-        pin = _hashOf(cert);
-        seed++;
-      } while (pin == pin.toLowerCase() && seed < 256);
-
-      expect(pin, isNot(equals(pin.toLowerCase())), reason: 'fixture must contain an uppercase base64 char');
-      expect(CertificatePinner.matches(cert, [pin.toLowerCase()]), isFalse);
-      expect(CertificatePinner.matches(cert, [pin]), isTrue);
+    test('throws a FormatException for bytes that are not a certificate', () {
+      expect(() => CertificatePinner.computePin(Uint8List.fromList([1, 2, 3, 4])), throwsFormatException);
     });
   });
 
-  group('CertificatePinner.computePin', () {
-    test('produces the canonical base64(sha256(cert.der)) string', () {
-      final der = Uint8List.fromList(List.generate(64, (i) => i));
-      final expected = base64.encode(sha256.convert(der).bytes);
-      expect(CertificatePinner.computePin(der), equals(expected));
+  group('CertificatePinner.subjectPublicKeyInfo', () {
+    test('returns the key element of a version 3 certificate whole', () {
+      expect(CertificatePinner.subjectPublicKeyInfo(_certificate()), _spki);
     });
 
-    test('different cert bytes → different pins', () {
-      final a = CertificatePinner.computePin(Uint8List.fromList([1, 2, 3]));
-      final b = CertificatePinner.computePin(Uint8List.fromList([3, 2, 1]));
-      expect(a, isNot(equals(b)));
+    test('returns the key element of a version 1 certificate, which has no version field', () {
+      expect(CertificatePinner.subjectPublicKeyInfo(_certificate(withVersion: false)), _spki);
+    });
+
+    test('reads a long-form length', () {
+      final spki = _sequence([
+        _sequence([
+          _tlv(0x06, const [0x2a, 0x03]),
+        ]),
+        _tlv(0x03, List.filled(300, 7)),
+      ]);
+      expect(CertificatePinner.subjectPublicKeyInfo(_certificate(spki: spki)), spki);
+    });
+
+    final malformed = <String, Uint8List>{
+      'empty input': Uint8List(0),
+      'a certificate cut short': Uint8List.sublistView(_certificate(), 0, 40),
+      'bytes after the certificate': Uint8List.fromList([..._certificate(), 0x00]),
+      'an outer element that is not a SEQUENCE': Uint8List.fromList([0x31, ..._certificate().sublist(1)]),
+      'an indefinite length': Uint8List.fromList([0x30, 0x80, 0x00, 0x00]),
+      'a length longer than the input': Uint8List.fromList([0x30, 0x84, 0x7f, 0xff, 0xff, 0xff]),
+      'a length that is not in its shortest form': Uint8List.fromList([0x30, 0x81, 0x01, 0x00]),
+      'a key element that is not a SEQUENCE': _certificate(spki: _tlv(0x04, const [1, 2])),
+      'too few fields before the key': Uint8List.fromList(
+        _sequence([
+          _sequence([
+            _tlv(0x02, const [0x01]),
+            _sequence(const []),
+          ]),
+        ]),
+      ),
+    };
+    for (final MapEntry(key: name, value: der) in malformed.entries) {
+      test('throws a FormatException for $name', () {
+        expect(() => CertificatePinner.subjectPublicKeyInfo(der), throwsFormatException);
+      });
+    }
+  });
+
+  group('CertificatePinner.matches', () {
+    final der = derOf(ecCertificatePem);
+
+    test('accepts a certificate whose key matches a pin', () {
+      expect(CertificatePinner.matches(der, [ecCertificatePin]), isTrue);
+    });
+
+    test('accepts a certificate whose key matches the backup pin', () {
+      expect(CertificatePinner.matches(der, [rsaCertificatePin, ecCertificatePin]), isTrue);
+    });
+
+    test('refuses a certificate whose key matches no pin', () {
+      expect(CertificatePinner.matches(der, [rsaCertificatePin]), isFalse);
+    });
+
+    test('refuses every certificate for an empty pin list, since pinning is switched off one level up', () {
+      expect(CertificatePinner.matches(der, const []), isFalse);
+    });
+
+    test('refuses a certificate whose DER cannot be read, even when a pin is its whole-certificate hash', () {
+      final unreadable = Uint8List.fromList([1, 2, 3, 4]);
+      expect(CertificatePinner.matches(unreadable, [base64.encode(sha256.convert(unreadable).bytes)]), isFalse);
+    });
+
+    test('compares pins case-sensitively, as base64 is', () {
+      expect(ecCertificatePin, isNot(ecCertificatePin.toLowerCase()));
+      expect(CertificatePinner.matches(der, [ecCertificatePin.toLowerCase()]), isFalse);
     });
   });
 }

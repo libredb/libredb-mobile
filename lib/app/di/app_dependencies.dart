@@ -32,6 +32,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
@@ -123,8 +124,13 @@ class AppDependencies {
   IAuthSessionRepository createAuthSessionRepository(ISecureStorage secureStorage) =>
       AuthSessionRepository(secureStorage: secureStorage, cacheStorage: SharedPrefsCacheStorage());
 
-  /// The OpenID Connect client, which talks to the identity provider.
-  IOidcClient createOidcClient(OidcSettings settings) => OidcClient(settings: settings);
+  /// The OpenID Connect client, which talks to the identity provider. With `OIDC_CERT_PINS` set, discovery, the key
+  /// set, the token exchange and the refresh go through a client pinned to them; the sign-in page itself opens in the
+  /// system browser, which the app cannot pin.
+  IOidcClient createOidcClient(OidcSettings settings) {
+    final pins = appConfig.oidcCertificatePins;
+    return OidcClient(settings: settings, httpClient: pins.isEmpty ? null : pinnedHttpClient(pins));
+  }
 
   /// The single sign-on, which stores the session through [sessionRepository].
   ISsoAuthRepository createSsoAuthRepository(IOidcClient client, IAuthSessionRepository sessionRepository) =>
