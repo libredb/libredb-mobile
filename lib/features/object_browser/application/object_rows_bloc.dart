@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show AppLifecycleState;
+
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +19,8 @@ import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/security/result_masking/mask_result.dart';
 import 'package:libredb_mobile/shared/security/result_masking/masking_policy.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'object_rows_event.dart';
@@ -32,16 +37,31 @@ part 'object_rows_state.dart';
 ///
 /// Closing the bloc, which leaving the page does, drops the requests still in flight, the preview and a Load more;
 /// Studio then cancels the run where the engine supports it, and no `/db/cancel` spends a request slot.
+///
+/// Backgrounding (#156), as the SQL editor's run and its Load more (#118, #150): the preview and each page of Load more
+/// ask [IBackgroundRunTime] for background time when sent and give it back on their answer, and at once when the bloc
+/// closes. The bloc follows [IAppLifecycleSource]: a request that fails without an answer from Studio (a dropped
+/// connection, or a timeout after it was sent) while or after the app was in the background is reported as
+/// interrupted, because Studio cancels a run whose request drops. The preview is always a read, so the preview ends in
+/// [ObjectRowsFailure] with [AppErrorCode.browseRowsInterrupted] and the page's Retry, and a page of Load more answers
+/// [AppErrorCode.editorPageInterrupted] with the result view's retry. Nothing is sent again by itself, and any answer
+/// Studio sent shows as usual, since it says what happened.
 class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
   ObjectRowsBloc({
     required this._statements,
     required this._providerMeta,
+    required IAppLifecycleSource lifecycle,
+    required this._backgroundRunTime,
     required this.connectionId,
     required this.path,
     required this.kind,
     this._generator = const PreviewStatementGenerator(),
     this._newRunId = newQueryId,
-  }) : super(const ObjectRowsLoading()) {
+  }) : _lifecycle = lifecycle,
+       super(const ObjectRowsLoading()) {
+    _lifecycleChanges = lifecycle.changes.listen((change) {
+      if (isInBackground(change)) _backgroundChanges++;
+    });
     on<ObjectRowsRequested>(_onRequested, transformer: EventTransformers.dropConcurrent());
   }
 
@@ -51,6 +71,12 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
   final IProviderMetaRepository _providerMeta;
   final PreviewStatementGenerator _generator;
   final String Function() _newRunId;
+  final IAppLifecycleSource _lifecycle;
+  final IBackgroundRunTime _backgroundRunTime;
+  late final StreamSubscription<AppLifecycleState> _lifecycleChanges;
+
+  /// How many times the app went to the background, so a request can tell whether it did while it was in flight.
+  int _backgroundChanges = 0;
 
   /// The connection, from the page's route.
   final String connectionId;
@@ -66,6 +92,9 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
 
   /// Drop the requests in flight.
   final _inFlight = <CancelSignal>{};
+
+  /// The background time of each request in flight.
+  final _leases = <BackgroundRunLease>{};
 
   Future<void> _onRequested(ObjectRowsRequested event, Emitter<ObjectRowsState> emit) async {
     final onScreen = switch (state) {
@@ -106,7 +135,7 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
         preview = statement;
     }
 
-    final result = await _dropOnClose(
+    final result = await _send(
       (signal) => _statements.run(
         connectionId,
         preview.statement,
@@ -115,6 +144,7 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
         catalog: preview.catalog,
         cancelSignal: signal,
       ),
+      interrupted: AppErrorCode.browseRowsInterrupted,
     );
     if (emit.isDone) return;
     switch (result) {
@@ -137,9 +167,10 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
   }
 
   /// Runs [preview], the statement of the rows on screen, again for [page], with a fresh run id and in its catalog, for
-  /// the result view's Load more; the state does not change, and a failure is answered, never run again by itself.
+  /// the result view's Load more; the state does not change, and a failure is answered, never run again by itself. A
+  /// page dropped in the background answers [AppErrorCode.editorPageInterrupted], see the class documentation.
   Future<Result<QueryResult>> loadPage(PreviewStatement preview, QueryPage page) async {
-    final answer = await _dropOnClose(
+    final answer = await _send(
       (signal) => _statements.run(
         connectionId,
         preview.statement,
@@ -148,27 +179,51 @@ class ObjectRowsBloc extends Bloc<ObjectRowsEvent, ObjectRowsState> {
         catalog: preview.catalog,
         cancelSignal: signal,
       ),
+      interrupted: AppErrorCode.editorPageInterrupted,
     );
     if (answer case Failure(:final error)) _log.warn('page not read: {}', [error.code ?? error.runtimeType]);
     return answer;
   }
 
-  /// Sends [run] with a signal that [close] cancels while the answer is awaited.
-  Future<Result<QueryResult>> _dropOnClose(Future<Result<QueryResult>> Function(CancelSignal signal) run) async {
+  /// Sends [run] once, with a signal that [close] cancels while the answer is awaited and with background time until
+  /// the answer arrives. A failure without an answer from Studio while or after the app was in the background answers
+  /// an [InterruptedError] of the [interrupted] code.
+  Future<Result<QueryResult>> _send(
+    Future<Result<QueryResult>> Function(CancelSignal signal) run, {
+    required AppErrorCode interrupted,
+  }) async {
     final signal = CancelSignal();
     _inFlight.add(signal);
+    final backgroundChanges = _backgroundChanges;
+    final startedInBackground = isInBackground(_lifecycle.current);
+    final lease = _backgroundRunTime.begin();
+    _leases.add(lease);
+    final Result<QueryResult> answer;
     try {
-      return await run(signal);
+      answer = await run(signal);
     } finally {
       _inFlight.remove(signal);
+      if (_leases.remove(lease)) unawaited(lease.end());
     }
+    final backgrounded = startedInBackground || _backgroundChanges != backgroundChanges;
+    if (answer case Failure(:final error) when backgrounded && droppedWithoutAnswer(error)) {
+      _log.info('a request was interrupted while the app was in the background');
+      return Failure(InterruptedError('The request was interrupted in the background', code: interrupted.key));
+    }
+    return answer;
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     for (final signal in _inFlight) {
       signal.cancel();
     }
+    // The page closed: the background time of every request in flight is given back now.
+    for (final lease in _leases) {
+      unawaited(lease.end());
+    }
+    _leases.clear();
+    await _lifecycleChanges.cancel();
     return super.close();
   }
 

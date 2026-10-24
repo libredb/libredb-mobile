@@ -183,14 +183,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
-    "account": MessageLookupByLibrary.simpleMessage("Account"),
     "account_refusal_title": MessageLookupByLibrary.simpleMessage("Your account has no access to Studio"),
     "active": MessageLookupByLibrary.simpleMessage("Active"),
     "admin": MessageLookupByLibrary.simpleMessage("Admin"),
     "app_title": MessageLookupByLibrary.simpleMessage("LibreDB"),
     "apply": MessageLookupByLibrary.simpleMessage("Apply"),
-    "authorities": MessageLookupByLibrary.simpleMessage("Authorities"),
-    "back": MessageLookupByLibrary.simpleMessage("Back"),
     "browse_count_failed": m0,
     "browse_count_rows": MessageLookupByLibrary.simpleMessage("Count rows"),
     "browse_detail_columns": MessageLookupByLibrary.simpleMessage("Columns"),
@@ -334,6 +331,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "You are signed out of this app, but your session at the identity provider may still be active.",
     ),
     "error_auth_session_persist_failed": MessageLookupByLibrary.simpleMessage("Could not save the session"),
+    "error_browse_rows_interrupted": MessageLookupByLibrary.simpleMessage(
+      "Reading the rows was interrupted when the app went to the background; Studio cancelled it.",
+    ),
     "error_editor_page_interrupted": MessageLookupByLibrary.simpleMessage(
       "Loading more was interrupted when the app went to the background; Studio cancelled it.",
     ),
@@ -406,8 +406,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Studio sent an answer this app cannot read. The app or Studio may need an update.",
     ),
-    "error_user_cannot_delete_admin": MessageLookupByLibrary.simpleMessage("Admin user cannot be deleted"),
-    "error_user_no_authorities": MessageLookupByLibrary.simpleMessage("No authorities found"),
     "failed": MessageLookupByLibrary.simpleMessage("Failed"),
     "help_resources": MessageLookupByLibrary.simpleMessage("Help & Resources"),
     "help_resources_subtitle": MessageLookupByLibrary.simpleMessage("Read the documentation and guides on GitHub"),
@@ -657,7 +655,6 @@ class MessageLookup extends MessageLookupByLibrary {
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
     "studio_unreachable_title": MessageLookupByLibrary.simpleMessage("Can\'t reach Studio"),
-    "submit": MessageLookupByLibrary.simpleMessage("Submit"),
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
@@ -675,7 +672,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "unsaved_changes": MessageLookupByLibrary.simpleMessage(
       "You have unsaved changes. Are you sure you want to leave?",
     ),
-    "users": MessageLookupByLibrary.simpleMessage("Users"),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
     "write_confirm_name_label": m71,

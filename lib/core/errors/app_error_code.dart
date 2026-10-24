@@ -24,10 +24,6 @@ enum AppErrorCode {
   authOidcFailed('auth.oidc_failed'),
   authOidcLogoutIncomplete('auth.oidc_logout_incomplete'),
 
-  // --- users ---
-  userCannotDeleteAdmin('user.cannot_delete_admin'),
-  userNoAuthorities('user.no_authorities'),
-
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),
 
@@ -74,6 +70,11 @@ enum AppErrorCode {
   /// A page of Load more of a text the write check flagged dropped without an answer while or after the app was in the
   /// background; whether its run wrote is unknown.
   editorPageOutcomeUnknown('editor.page_outcome_unknown'),
+
+  // --- Browse ---
+  /// The preview of an object's rows dropped without an answer while or after the app was in the background; Studio
+  /// cancelled its run.
+  browseRowsInterrupted('browse.rows_interrupted'),
 
   // --- generic fallback ---
   generic('error.generic');

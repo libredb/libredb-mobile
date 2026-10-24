@@ -13,6 +13,8 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/provider_meta.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
+import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
+import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/widgets/browse_database_words.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
@@ -41,6 +43,8 @@ class ObjectRowsPage extends StatelessWidget {
           create: (context) => ObjectRowsBloc(
             statements: context.read<IStatementRepository>(),
             providerMeta: context.read<IProviderMetaRepository>(),
+            lifecycle: context.read<IAppLifecycleSource>(),
+            backgroundRunTime: context.read<IBackgroundRunTime>(),
             connectionId: connectionId,
             path: path,
             kind: kind,

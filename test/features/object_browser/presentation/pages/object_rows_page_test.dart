@@ -445,6 +445,34 @@ void main() {
     expect(find.byType(ResultView), findsOneWidget);
   });
 
+  testWidgets(
+    'a preview dropped after a switch to another app says it was interrupted, and runs again only on a retry',
+    (tester) async {
+      var calls = 0;
+      answerRun(_postgres.id, _preview, () async {
+        if (calls++ > 0) return Success(_recorded('query_preview_postgres_customers'));
+        harness.lifecycle.leaveAndComeBack();
+        return const Failure(NetworkError('Connection closed before full header was received'));
+      });
+      await harness.pump(tester, location: customersLocation);
+
+      expect(
+        find.text('Reading the rows was interrupted when the app went to the background; Studio cancelled it.'),
+        findsOneWidget,
+      );
+      await harness.setOffline(tester, true);
+      await harness.setOffline(tester, false);
+      expect(calls, 1);
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pumpAndSettle();
+
+      expect(calls, 2);
+      expect(find.byType(StudioErrorBanner), findsNothing);
+      expect(find.byType(ResultView), findsOneWidget);
+    },
+  );
+
   testWidgets('another failure shows the banner without the error\'s text', (tester) async {
     answerPreview(const Failure(ServerError('connect ECONNREFUSED 10.0.0.1', code: 'studio.database_unreachable')));
     await harness.pump(tester, location: customersLocation);
@@ -577,6 +605,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(harness.active.state, isA<ActiveConnectionVanished>());
+    });
+
+    testWidgets('a page dropped after a switch to another app says it was interrupted, keeps the rows and offers a '
+        'retry', (tester) async {
+      var pages = 0;
+      when(
+        () => harness.statements.run(
+          _postgres.id,
+          ledgerPreview,
+          queryId: any(named: 'queryId'),
+          page: const QueryPage(limit: 50, offset: 50),
+          catalog: any(named: 'catalog'),
+          cancelSignal: any(named: 'cancelSignal'),
+        ),
+      ).thenAnswer((_) async {
+        if (pages++ > 0) return Success(_recorded('query_page_postgres_second'));
+        harness.lifecycle.leaveAndComeBack();
+        return const Failure(NetworkError('Connection closed before full header was received'));
+      });
+      await harness.pump(tester, location: ledgerLocation);
+
+      await tester.tap(find.text('Load 50 more'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Loading more was interrupted when the app went to the background; Studio cancelled it.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('50 rows'), findsOneWidget);
+      expect(pages, 1);
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pumpAndSettle();
+
+      expect(pages, 2);
+      expect(find.textContaining('100 rows'), findsOneWidget);
     });
 
     testWidgets('an engine that cannot page offers no Load more', (tester) async {
