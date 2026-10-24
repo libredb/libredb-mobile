@@ -24,7 +24,7 @@ The Dart side sets them in `configureSentryOptions`, the Android side in `Native
 
 | Option | Dart (`SentryFlutterOptions`) | Android (`SentryAndroidOptions`) |
 | --- | --- | --- |
-| Default personal data | `sendDefaultPii = false` | `isSendDefaultPii = false` |
+| Default personal data | `sendDefaultPii = false` | `dataCollection` with every option off, in place of the deprecated `isSendDefaultPii` |
 | Screenshot attachment | `attachScreenshot = false` | `isAttachScreenshot = false` |
 | View hierarchy attachment | `attachViewHierarchy = false` | `isAttachViewHierarchy = false` |
 | Request bodies | `maxRequestBodySize = MaxRequestBodySize.never` | `maxRequestBodySize = RequestSize.NONE` |
@@ -159,7 +159,7 @@ These steps need the Sentry account, so they are the user's and not the reposito
 - Create the Sentry project for the app.
 - Turn on its server-side data scrubbing (Data Scrubber, and Advanced Data Scrubbing rules for anything the app must never store), as a second layer behind the hooks.
 - Turn on 'Prevent Storing of IP Addresses' in the project's Security & Privacy settings.
-  The app sends no IP address, since `sendDefaultPii` is off, but Sentry reads the client IP of the request at ingestion and derives the user's geography from it: the device check showed a city and a country on the user.
+  The app sends no IP address, since `sendDefaultPii` is off on the Dart side and `dataCollection.userInfo` on Android, but Sentry reads the client IP of the request at ingestion and derives the user's geography from it: the device check showed a city and a country on the user.
   With that setting on, Sentry stores neither the IP address nor the place derived from it.
 - The DSN must be https: a prod build stops at start on any other ([security.md](security.md), "Encryption in transit").
 - Put the DSN into the CI secrets, from which the release build passes it as `SENTRY_DSN` (#194); never commit it, and never write it into an issue, a pull request or a log.
