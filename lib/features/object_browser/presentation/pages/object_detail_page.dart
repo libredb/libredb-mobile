@@ -163,7 +163,11 @@ class _DetailTabs extends StatelessWidget {
                 refreshable(_columns(context, detail)),
                 refreshable(_indexes(context, detail)),
                 refreshable(_foreignKeys(context, detail)),
-                if (hasSource) _SourceTab(connectionId: page.connectionId, path: page.path, kind: page.kind),
+                if (hasSource)
+                  _TabOnScreen(
+                    index: 3,
+                    child: _SourceTab(connectionId: page.connectionId, path: page.path, kind: page.kind),
+                  ),
               ],
             ),
           ),
@@ -288,6 +292,26 @@ class _ColumnTile extends StatelessWidget {
         ],
       ),
       trailing: column.nullable ? Text(s.browse_detail_nullable, style: theme.textTheme.labelMedium) : null,
+    );
+  }
+}
+
+/// [child], the page of the tab at [index] of the [DefaultTabController] above, with its tickers off while none of it
+/// is in view. The tab view keeps the Source tab alive off screen, and its source viewer holds a screen capture lease
+/// only while its tickers are on, so the tab shown in its place can be captured.
+class _TabOnScreen extends StatelessWidget {
+  const _TabOnScreen({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = DefaultTabController.of(context).animation!;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) => TickerMode(enabled: (animation.value - index).abs() < 1, child: child!),
+      child: child,
     );
   }
 }
