@@ -48,7 +48,7 @@ class AnalyticsRouteObserver extends NavigatorObserver {
     final name = screen?.settings.name;
     if (screen is PageRoute && screen != _screen && name != null && name.isNotEmpty) {
       _screen = screen;
-      _analytics.logScreenView(screenName: name, screenClass: screen.runtimeType.toString());
+      _analytics.logScreenView(screenName: name);
     }
   }
 }
