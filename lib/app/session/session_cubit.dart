@@ -416,7 +416,9 @@ class SessionCubit extends Cubit<SessionState> {
         case Success():
           _log.info('endSession({}): stored session cleared', [reason.name]);
         case Failure(:final error):
-          _log.error('endSession({}): stored session not fully cleared: {}', [reason.name, error]);
+          // A secure storage failure on the device, so its message holds no server text (AppError.toString leaves it
+          // out).
+          _log.error('endSession({}): stored session not fully cleared: {} {}', [reason.name, error, error.message]);
       }
     } else {
       _log.debug('endSession({}): no stored session to clear', [reason.name]);

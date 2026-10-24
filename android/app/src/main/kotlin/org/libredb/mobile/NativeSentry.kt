@@ -22,9 +22,10 @@ import io.sentry.protocol.SdkVersion
  * in sentry_flutter 10.1.0, lib/src/native/java/sentry_native_java_init.dart) where the sentry-java 8.61.0 default
  * differs from the Dart one: scope sync, trace id generation, the 5 second timeouts, logs, metrics and the SDK names.
  * The other options it sets keep the sentry-java default, which equals the Dart default (session tracking, ANR,
- * tombstones, threads, stack traces, breadcrumbs, cache and attachment limits, client reports, sendDefaultPii).
+ * tombstones, threads, stack traces, breadcrumbs, cache and attachment limits, client reports). The privacy options
+ * are set explicitly on both sides ([setPrivacyOptions]).
  * Not mirrored: the Dart SDK's integrations and packages, which sentry_flutter adds to the native SDK version, and
- * Session Replay, whose recorder callbacks are created in Dart. A native option set on the Dart side
+ * Session Replay, whose recorder callbacks are created in Dart and which stays off. A native option set on the Dart side
  * (configureSentryOptions in lib/app/bootstrap/sentry_start.dart) must be set here too, or it does nothing on
  * Android.
  */
@@ -63,8 +64,11 @@ object NativeSentry {
         options.isEnableAutoTraceIdGeneration = false
         options.connectionTimeoutMillis = DART_TIMEOUT_MILLIS
         options.readTimeoutMillis = DART_TIMEOUT_MILLIS
+        // For an explicit Sentry.logger call only, which the app makes nowhere: without the Sentry Android Gradle
+        // plugin no logcat line becomes a log, and the Dart side forwards no AppLogger line.
         options.logs.isEnabled = true
         options.metrics.isEnabled = true
+        setPrivacyOptions(options)
         val version = io.sentry.android.core.BuildConfig.VERSION_NAME
         options.sdkVersion = (options.sdkVersion ?: SdkVersion(JAVA_SDK_NAME, version)).apply { name = JAVA_SDK_NAME }
         options.sentryClientName = "$JAVA_SDK_NAME/$version"
@@ -75,6 +79,22 @@ object NativeSentry {
         options.beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
             NativeSentryScrubber.beforeBreadcrumb(breadcrumb)
         }
+    }
+
+    /**
+     * Sets each privacy option even where it equals the sentry-java default, as configureSentryOptions does on the
+     * Dart side, so an upgrade that changes a default cannot start sending more: no default personal data, no
+     * screenshot and no view hierarchy attached to an event, no request body, and Session Replay off, with no network
+     * body in a replay.
+     */
+    private fun setPrivacyOptions(options: SentryAndroidOptions) {
+        options.isSendDefaultPii = false
+        options.isAttachScreenshot = false
+        options.isAttachViewHierarchy = false
+        options.maxRequestBodySize = SentryOptions.RequestSize.NONE
+        options.sessionReplay.sessionSampleRate = 0.0
+        options.sessionReplay.onErrorSampleRate = 0.0
+        options.sessionReplay.isNetworkCaptureBodies = false
     }
 
     /**

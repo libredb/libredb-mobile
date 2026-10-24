@@ -3,11 +3,13 @@ package org.libredb.mobile
 import io.sentry.Breadcrumb
 import io.sentry.Hint
 import io.sentry.SentryEvent
+import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.protocol.SdkVersion
 import io.sentry.protocol.SentryException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -15,7 +17,7 @@ import org.junit.Test
 class NativeSentryTest {
     private val jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart"
 
-    private fun configured() = SentryAndroidOptions().also {
+    private fun configured(options: SentryAndroidOptions = SentryAndroidOptions()) = options.also {
         NativeSentry.configure(
             it,
             dsn = "https://public@example.invalid/1",
@@ -65,5 +67,58 @@ class NativeSentryTest {
         assertFalse(options.isEnableAutoTraceIdGeneration)
         assertEquals("sentry.java.android.flutter", options.sdkVersion!!.name)
         assertEquals("sentry.native.android.flutter", options.nativeSdkName)
+    }
+
+    // Each privacy option is set, not left to the sentry-java default, so an upgrade that changes a default changes
+    // nothing. Each case starts from options whose value is the unsafe one, as a changed default would leave it.
+    private fun unsafeOptions() = SentryAndroidOptions().apply {
+        isSendDefaultPii = true
+        isAttachScreenshot = true
+        isAttachViewHierarchy = true
+        maxRequestBodySize = SentryOptions.RequestSize.ALWAYS
+        sessionReplay.sessionSampleRate = 1.0
+        sessionReplay.onErrorSampleRate = 1.0
+        sessionReplay.isNetworkCaptureBodies = true
+    }
+
+    @Test
+    fun setsSendDefaultPiiOffWhateverTheDefault() {
+        assertFalse(configured(unsafeOptions()).isSendDefaultPii)
+    }
+
+    @Test
+    fun setsScreenshotAttachmentOffWhateverTheDefault() {
+        assertFalse(configured(unsafeOptions()).isAttachScreenshot)
+    }
+
+    @Test
+    fun setsViewHierarchyAttachmentOffWhateverTheDefault() {
+        assertFalse(configured(unsafeOptions()).isAttachViewHierarchy)
+    }
+
+    @Test
+    fun setsRequestBodiesOffWhateverTheDefault() {
+        assertEquals(SentryOptions.RequestSize.NONE, configured(unsafeOptions()).maxRequestBodySize)
+    }
+
+    @Test
+    fun setsSessionReplayOffWhateverTheDefault() {
+        val replay = configured(unsafeOptions()).sessionReplay
+
+        assertEquals(0.0, replay.sessionSampleRate!!, 0.0)
+        assertEquals(0.0, replay.onErrorSampleRate!!, 0.0)
+        assertFalse(replay.isNetworkCaptureBodies)
+        assertFalse(replay.isSessionReplayEnabled)
+        assertFalse(replay.isSessionReplayForErrorsEnabled)
+    }
+
+    // Logs stay on for an explicit Sentry.logger call, as sentry_flutter sets them; nothing in the app makes one, and
+    // without the Sentry Android Gradle plugin no logcat line becomes a log (sentry_native_scrub_patterns_test.dart).
+    @Test
+    fun keepsLogsForExplicitCallsOnly() {
+        val options = configured()
+
+        assertTrue(options.logs.isEnabled)
+        assertNull(options.logs.beforeSend)
     }
 }

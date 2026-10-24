@@ -165,6 +165,38 @@ void main() {
     expect(activity, contains('"$nativeSentryChannelName"'));
     expect(activity, contains('"isEnabled" -> result.success(Sentry.isEnabled())'));
   });
+
+  // Sentry Logs come only from an explicit Sentry.logger call, and the app makes none. The Sentry Android Gradle plugin
+  // would rewrite android.util.Log calls into Sentry logs, and sentry_logging would forward log records; neither may
+  // come in without a scrubber for the logs they bring.
+  test('nothing turns a log line into a Sentry log', () {
+    final gradleFiles = [
+      'android/settings.gradle.kts',
+      'android/build.gradle.kts',
+      'android/app/build.gradle.kts',
+    ].map((path) => File(path).readAsStringSync());
+    final dartFiles = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'));
+
+    for (final gradle in gradleFiles) {
+      expect(gradle, isNot(contains('io.sentry')));
+    }
+    expect(File('pubspec.yaml').readAsStringSync(), isNot(contains('sentry_logging')));
+    for (final file in dartFiles) {
+      expect(file.readAsStringSync(), isNot(matches(RegExp(r'Sentry\.logger|sentry_logging'))), reason: file.path);
+    }
+  });
+
+  // The device check of docs/crash-reporting.md crashes the app only in a build that also starts the native SDK.
+  test('the native crash of the device check is gated like the DSN', () {
+    final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+
+    expect(gradle, contains('val sentryDeviceCheck = isProdTarget && dartDefines["SENTRY_DEVICE_CHECK"] == "true"'));
+    expect(gradle, contains('buildConfigField("boolean", "SENTRY_DEVICE_CHECK", sentryDeviceCheck.toString())'));
+    expect(RegExp('SENTRY_DEVICE_CHECK').allMatches(gradle), hasLength(2));
+  });
 }
 
 /// What is wrong with how [gradle] passes SENTRY_DSN to the native SDK: the BuildConfig field must take a value that is
