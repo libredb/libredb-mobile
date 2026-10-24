@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 /// This file is used to set the environment
@@ -9,6 +11,7 @@ final class AppConfig {
     required this.apiBaseUrl,
     required this.certificatePins,
     required this.idleTimeout,
+    this.oidcCertificatePins = const <String>[],
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
   });
 
@@ -16,6 +19,7 @@ final class AppConfig {
     : environment = Environment.dev,
       apiBaseUrl = null,
       certificatePins = const <String>[],
+      oidcCertificatePins = const <String>[],
       idleTimeout = null,
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
@@ -23,26 +27,39 @@ final class AppConfig {
     : environment = Environment.test,
       apiBaseUrl = null,
       certificatePins = const <String>[],
+      oidcCertificatePins = const <String>[],
       idleTimeout = null,
       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
-  const AppConfig.prod({String this.apiBaseUrl = prodApiUrl})
-    : environment = Environment.prod,
-      certificatePins = const <String>[],
-      idleTimeout = const Duration(minutes: 15),
-      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
+  const AppConfig.prod({
+    String this.apiBaseUrl = prodApiUrl,
+    this.certificatePins = const <String>[],
+    this.oidcCertificatePins = const <String>[],
+  }) : environment = Environment.prod,
+       idleTimeout = const Duration(minutes: 15),
+       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
   /// The config the app starts with in [environment].
   ///
   /// Throws [ProdApiUrlConfigError] in the prod environment when [prodApiUrlDefine], the `PROD_API_URL` define unless
   /// a test passes its own, is empty: such a build has no server to call.
+  ///
+  /// Throws [CertificatePinsConfigError] in the prod environment when [studioCertPinsDefine] or [oidcCertPinsDefine],
+  /// the `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` defines unless a test passes its own, is set but breaks a pin rule:
+  /// such a build never falls back to an unpinned connection. Dev and test read neither define.
   factory AppConfig.fromEnvironment(
     Environment environment, {
     @visibleForTesting String prodApiUrlDefine = prodApiUrl,
+    @visibleForTesting String studioCertPinsDefine = studioCertPins,
+    @visibleForTesting String oidcCertPinsDefine = oidcCertPins,
   }) => switch (environment) {
     Environment.dev => const AppConfig.dev(),
     Environment.prod when prodApiUrlDefine.isEmpty => throw ProdApiUrlConfigError(),
-    Environment.prod => AppConfig.prod(apiBaseUrl: prodApiUrlDefine),
+    Environment.prod => AppConfig.prod(
+      apiBaseUrl: prodApiUrlDefine,
+      certificatePins: _pins('STUDIO_CERT_PINS', studioCertPinsDefine),
+      oidcCertificatePins: _pins('OIDC_CERT_PINS', oidcCertPinsDefine),
+    ),
     Environment.test => const AppConfig.test(),
   };
 
@@ -50,9 +67,60 @@ final class AppConfig {
   /// `--dart-define=PROD_API_URL=https://studio.example.com/api` (docs/studio.md).
   static const String prodApiUrl = String.fromEnvironment('PROD_API_URL');
 
+  /// The pins of the host of [prodApiUrl], given at build time with `--dart-define=STUDIO_CERT_PINS=<pin>,<pin>`
+  /// (docs/security.md, "Certificate pinning"); empty leaves that host on the system trust store.
+  static const String studioCertPins = String.fromEnvironment('STUDIO_CERT_PINS');
+
+  /// The pins of the host of `OIDC_ISSUER`, given at build time with `--dart-define=OIDC_CERT_PINS=<pin>,<pin>`
+  /// (docs/security.md, "Certificate pinning"); empty leaves that host on the system trust store.
+  static const String oidcCertPins = String.fromEnvironment('OIDC_CERT_PINS');
+
+  /// The bytes of a SHA-256 digest, which a pin encodes.
+  static const _pinBytes = 32;
+
+  /// The pins of [value], the define [name]: none for an empty value, else at least two distinct base64 SHA-256
+  /// values in the canonical padded form `CertificatePinner.computePin` prints, so string comparison matches.
+  static List<String> _pins(String name, String value) {
+    if (value.trim().isEmpty) return const <String>[];
+    final pins = value.split(',').map((pin) => pin.trim()).toList();
+    for (final (index, pin) in pins.indexed) {
+      if (!_isPin(pin)) {
+        throw CertificatePinsConfigError(
+          name,
+          'entry ${index + 1} must be the base64 SHA-256 of a public key, 44 characters ending in =, but it is "$pin"',
+        );
+      }
+    }
+    final distinct = pins.toSet().toList(growable: false);
+    if (distinct.length < 2) {
+      throw CertificatePinsConfigError(
+        name,
+        'needs at least two distinct pins, the current key and a backup key, but it has ${distinct.length}',
+      );
+    }
+    return List.unmodifiable(distinct);
+  }
+
+  static bool _isPin(String pin) {
+    try {
+      final bytes = base64.decode(pin);
+      return bytes.length == _pinBytes && base64.encode(bytes) == pin;
+    } on FormatException {
+      return false;
+    }
+  }
+
   final Environment environment;
   final String? apiBaseUrl;
+
+  /// The pins of Studio's host, the host of [apiBaseUrl], from `STUDIO_CERT_PINS`; empty when pinning is off for it.
+  /// `ApiClient` installs them on every Studio request, retries and the token refresh included.
   final List<String> certificatePins;
+
+  /// The pins of the identity provider's host, the host of `OIDC_ISSUER`, from `OIDC_CERT_PINS`; empty when pinning
+  /// is off for it. The OpenID Connect client sends discovery, the key set, the token exchange and the refresh
+  /// through them; the sign-in page in the system browser is never pinned.
+  final List<String> oidcCertificatePins;
   final Duration? idleTimeout;
 
   /// The `--dart-define=SENTRY_DSN=...` value, empty when it is absent.
@@ -78,6 +146,7 @@ final class AppConfig {
     environment: environment,
     apiBaseUrl: apiBaseUrl,
     certificatePins: certificatePins,
+    oidcCertificatePins: oidcCertificatePins,
     idleTimeout: idleTimeout,
     sentryDsnDefine: '',
   );
@@ -87,4 +156,19 @@ final class AppConfig {
 final class ProdApiUrlConfigError extends Error {
   @override
   String toString() => "PROD_API_URL is empty, but a prod build needs LibreDB Studio's API URL (docs/studio.md)";
+}
+
+/// A prod build whose `STUDIO_CERT_PINS` or `OIDC_CERT_PINS` breaks a pin rule, which stops the app at start instead
+/// of connecting unpinned or with a pin set that a key change would lock out.
+final class CertificatePinsConfigError extends Error {
+  CertificatePinsConfigError(this.define, this.rule);
+
+  /// The define that breaks the rule.
+  final String define;
+
+  /// The rule, written for the person who builds the app; a pin is not a secret, so it may quote one.
+  final String rule;
+
+  @override
+  String toString() => '$define $rule (docs/security.md, "Certificate pinning")';
 }

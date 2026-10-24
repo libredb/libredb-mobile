@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
@@ -7,11 +8,15 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/app_oidc_user_manager.da
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_transaction_store.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
+import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
 
+import '../../../support/loopback_tls_server.dart';
+import '../../../support/pin_test_certificates.dart';
 import 'support/fake_provider.dart';
 
 void main() {
@@ -190,6 +195,70 @@ void main() {
 
       expect(await signIn(newClient()), _failed(OidcFailure.discovery));
       await expectStoreEmpty();
+    });
+
+    group('a provider certificate that matches no pin', () {
+      const mismatch = CertificatePinningException('id.example.test', 443);
+
+      /// The client the app builds for OIDC_CERT_PINS, for an issuer on [server]. It must be built inside
+      /// withRealSockets, since an HttpClient takes its overrides when it is created.
+      OidcClient pinnedClient(HttpServer server, List<String> pins) => OidcClient(
+        settings: OidcSettings(issuer: Uri.parse('https://127.0.0.1:${server.port}/realms/demo'), clientId: 'app'),
+        store: store,
+        httpClient: pinnedHttpClient(pins),
+        platform: OidcPlatformKind.ios,
+      );
+
+      test('at discovery is untrustedCertificate, opens no browser and sends no token request', () async {
+        provider.discoveryAnswer = () => throw mismatch;
+
+        expect(await signIn(newClient()), _failed(OidcFailure.untrustedCertificate));
+        expect(platform.authorizeRequests, isEmpty);
+        expect(provider.tokenRequests, isEmpty);
+        await expectStoreEmpty();
+      });
+
+      test('at the token endpoint is untrustedCertificate and keeps nothing', () async {
+        provider.codeAnswer = () => throw mismatch;
+
+        expect(await signIn(newClient()), _failed(OidcFailure.untrustedCertificate));
+        await expectStoreEmpty();
+      });
+
+      test('at the JWKS is untrustedCertificate and keeps nothing', () async {
+        provider.jwksAnswer = () => throw mismatch;
+
+        expect(await signIn(newClient()), _failed(OidcFailure.untrustedCertificate));
+        await expectStoreEmpty();
+      });
+
+      // The client the app builds for OIDC_CERT_PINS, over a real TLS handshake with an issuer whose key is not
+      // pinned: the handshake fails before any request is written.
+      test('over a real handshake through the pinned client is untrustedCertificate', () async {
+        var requests = 0;
+        final server = await startLoopbackTlsServer(onRequest: (_) => requests++);
+
+        final outcome = await withRealSockets(
+          () => pinnedClient(server, [rsaCertificatePin, ecCertificatePin]).signIn(),
+        );
+
+        expect(outcome, _failed(OidcFailure.untrustedCertificate));
+        expect(requests, 0, reason: 'a request reached the server whose key is not pinned');
+        expect(platform.authorizeRequests, isEmpty);
+        await expectStoreEmpty();
+      });
+
+      test('over a real handshake through the pinned client passes the pin check when the key matches', () async {
+        var requests = 0;
+        final server = await startLoopbackTlsServer(onRequest: (_) => requests++);
+        final pins = [CertificatePinner.computePin(loopbackCertificateDer), rsaCertificatePin];
+
+        final outcome = await withRealSockets(() => pinnedClient(server, pins).signIn());
+
+        // The loopback server answers `ok` to discovery, so the pin passed and discovery failed after it.
+        expect(outcome, _failed(OidcFailure.discovery));
+        expect(requests, 1, reason: 'discovery did not reach the server whose key is pinned');
+      });
     });
 
     test('an error=access_denied redirect is failed', () async {
@@ -533,6 +602,14 @@ void main() {
       provider.refreshAnswer = () => FakeProvider.errorAnswer('database_on_fire', status: 500);
 
       expect(await refresh(newClient()), isA<RotationUnavailable>());
+    });
+
+    // The handshake failed before the refresh token was written, so the session is kept.
+    test('a token endpoint certificate that matches no pin is RotationUnavailable', () async {
+      provider.refreshAnswer = () => throw const CertificatePinningException('id.example.test', 443);
+
+      expect(await refresh(newClient()), isA<RotationUnavailable>());
+      await expectStoreEmpty();
     });
 
     test('discovery unreachable during a refresh gives RotationUnavailable', () async {

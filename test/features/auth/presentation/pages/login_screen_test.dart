@@ -264,6 +264,11 @@ void main() {
       ('an unreachable provider', const OidcSignInFailed(OidcFailure.discovery), _discoveryMessage),
       ('an error answer', const OidcSignInFailed(OidcFailure.failed), _failedMessage),
       (
+        'a provider certificate that matches no pin',
+        const OidcSignInFailed(OidcFailure.untrustedCertificate),
+        _insecureConnectionMessage,
+      ),
+      (
         'an ID token with no subject',
         OidcSignedIn(tokens: _signedIn.tokens, claims: const {'iss': 'https://id.example.com/realms/demo'}),
         _failedMessage,

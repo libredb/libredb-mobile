@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -21,6 +23,8 @@ import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_edito
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/loopback_tls_server.dart';
+import '../../support/pin_test_certificates.dart';
 import '../../support/test_env.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -303,5 +307,42 @@ void main() {
   test('every feature reads provider-meta and the object routes through the in-memory caches', () {
     expect(dependencies.createProviderMetaRepository(TestEnv.apiClient()), isA<CachedProviderMetaRepository>());
     expect(dependencies.createObjectBrowserRepository(TestEnv.apiClient()), isA<CachedObjectBrowserRepository>());
+  });
+
+  // OIDC_CERT_PINS: the provider calls (discovery, the key set, the token exchange and the refresh) go through the
+  // pinned client. Each client is built inside withRealSockets, since an HttpClient takes its overrides when created.
+  group('createOidcClient', () {
+    Future<OidcSignInOutcome> signInAt(HttpServer server, AppConfig config) => withRealSockets(
+      () => AppDependencies(appConfig: config, authMode: _oidcMode)
+          .createOidcClient(
+            OidcSettings(issuer: Uri.parse('https://127.0.0.1:${server.port}/realms/demo'), clientId: 'app'),
+          )
+          .signIn(),
+    );
+
+    test('pins the provider to OIDC_CERT_PINS: a provider whose key is not pinned is untrustedCertificate', () async {
+      final server = await startLoopbackTlsServer();
+      const config = AppConfig.prod(
+        apiBaseUrl: 'https://api.example.test',
+        oidcCertificatePins: [rsaCertificatePin, ecCertificatePin],
+      );
+
+      final outcome = await signInAt(server, config);
+
+      expect(outcome, isA<OidcSignInFailed>().having((o) => o.failure, 'failure', OidcFailure.untrustedCertificate));
+    });
+
+    test('keeps the system trust store without OIDC_CERT_PINS, whatever STUDIO_CERT_PINS holds', () async {
+      final server = await startLoopbackTlsServer();
+      const config = AppConfig.prod(
+        apiBaseUrl: 'https://api.example.test',
+        certificatePins: [rsaCertificatePin, ecCertificatePin],
+      );
+
+      final outcome = await signInAt(server, config);
+
+      // The test certificate is not in the system store, so the handshake fails as an unreachable provider.
+      expect(outcome, isA<OidcSignInFailed>().having((o) => o.failure, 'failure', OidcFailure.discovery));
+    });
   });
 }
