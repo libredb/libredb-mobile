@@ -1,89 +1,141 @@
 import 'package:flutter/services.dart';
-import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/core/security/screen_capture_platform.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
+
+import '../../support/printed_lines.dart';
+
+/// Records what the protection asks of the platform; [failWith] makes every call throw.
+final class _RecordingPlatform implements IScreenCapturePlatform {
+  final calls = <String>[];
+  Object? failWith;
+
+  @override
+  Future<void> protectOn() async {
+    calls.add('on');
+    if (failWith case final error?) throw error;
+  }
+
+  @override
+  Future<void> protectOff() async {
+    calls.add('off');
+    if (failWith case final error?) throw error;
+  }
+}
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('screen_protector');
-
-  final List<MethodCall> calls = <MethodCall>[];
+  late _RecordingPlatform platform;
+  late ScreenCaptureProtection protection;
 
   setUp(() {
-    calls.clear();
-    ScreenCaptureProtection.resetForTesting();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
-      MethodCall call,
-    ) async {
-      calls.add(call);
-      return null;
-    });
-  });
-
-  tearDown(() async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
-    ScreenCaptureProtection.resetForTesting();
+    platform = _RecordingPlatform();
+    protection = ScreenCaptureProtection(platform: platform, enabled: true);
   });
 
   group('ScreenCaptureProtection', () {
-    test('isEnabled starts false', () {
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
+    test('starts with no lease and protection off', () {
+      expect(protection.leases, 0);
+      expect(protection.isEngaged, isFalse);
+      expect(platform.calls, isEmpty);
     });
 
-    test('enable() flips isEnabled true and invokes both Android + iOS protect calls', () async {
-      await ScreenCaptureProtection.enable();
-      expect(ScreenCaptureProtection.isEnabled, isTrue);
-      final methods = calls.map((c) => c.method).toSet();
-      expect(methods, containsAll(<String>{'protectDataLeakageOn', 'protectDataLeakageWithBlur'}));
+    test('the first lease turns protection on', () async {
+      await protection.acquire();
+      expect(protection.leases, 1);
+      expect(protection.isEngaged, isTrue);
+      expect(platform.calls, ['on']);
     });
 
-    test('enable() is idempotent: second call does not re-invoke plugin', () async {
-      await ScreenCaptureProtection.enable();
-      calls.clear();
-      await ScreenCaptureProtection.enable();
-      expect(calls, isEmpty);
-      expect(ScreenCaptureProtection.isEnabled, isTrue);
-    });
-
-    test('disable() flips isEnabled false and invokes both off calls', () async {
-      await ScreenCaptureProtection.enable();
-      calls.clear();
-      await ScreenCaptureProtection.disable();
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
-      final methods = calls.map((c) => c.method).toSet();
-      expect(methods, containsAll(<String>{'protectDataLeakageOff', 'protectDataLeakageWithBlurOff'}));
-    });
-
-    test('disable() is idempotent when already disabled: no plugin call', () async {
-      await ScreenCaptureProtection.disable();
-      expect(calls, isEmpty);
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
-    });
-
-    test('plugin error during enable() is swallowed; state still flips true', () async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
-        throw PlatformException(code: 'boom');
-      });
-      await ScreenCaptureProtection.enable();
-      expect(ScreenCaptureProtection.isEnabled, isTrue);
+    test('a second lease only counts', () async {
+      await protection.acquire();
+      await protection.acquire();
+      expect(protection.leases, 2);
+      expect(platform.calls, ['on']);
     });
 
     test('nested leases: protection stays on until the last lease is released', () async {
-      // Two protected screens mounted (e.g. A pushes B).
-      await ScreenCaptureProtection.enable();
-      await ScreenCaptureProtection.enable();
-      expect(ScreenCaptureProtection.isEnabled, isTrue);
+      await protection.acquire();
+      await protection.acquire();
+      await protection.release();
+      expect(protection.isEngaged, isTrue);
+      expect(platform.calls, ['on']);
 
-      // Inner screen disposed: still one lease held, protection must stay on.
-      calls.clear();
-      await ScreenCaptureProtection.disable();
-      expect(calls, isEmpty);
-      expect(ScreenCaptureProtection.isEnabled, isTrue);
+      await protection.release();
+      expect(protection.leases, 0);
+      expect(protection.isEngaged, isFalse);
+      expect(platform.calls, ['on', 'off']);
+    });
 
-      // Outer screen disposed: last lease released, protection turns off.
-      await ScreenCaptureProtection.disable();
-      expect(ScreenCaptureProtection.isEnabled, isFalse);
-      final methods = calls.map((c) => c.method).toSet();
-      expect(methods, containsAll(<String>{'protectDataLeakageOff', 'protectDataLeakageWithBlurOff'}));
+    test('a release without a lease is refused, so a guard that releases twice is found', () async {
+      await expectLater(protection.release, throwsStateError);
+      expect(platform.calls, isEmpty);
+    });
+
+    test('a failed plugin call keeps the count, so the leases stay balanced', () async {
+      platform.failWith = PlatformException(code: 'boom');
+      await protection.acquire();
+      expect(protection.leases, 1);
+      await protection.release();
+      expect(protection.leases, 0);
+      expect(platform.calls, ['on', 'off']);
+    });
+
+    test('a failed plugin call is logged at error level, on and off', () async {
+      platform.failWith = PlatformException(code: 'boom');
+      final lines = await printedLines(() async {
+        await protection.acquire();
+        await protection.release();
+      });
+      final failures = lines.where((line) => line.contains('Turning screen capture protection')).toList();
+      expect(failures, hasLength(2));
+      expect(failures, everyElement(contains('[E]')));
+    });
+
+    test('two instances share no state', () async {
+      final other = ScreenCaptureProtection(platform: _RecordingPlatform(), enabled: true);
+      await protection.acquire();
+      expect(other.leases, 0);
+    });
+  });
+
+  group('switched off', () {
+    test('a lease is no lease: nothing is counted and the platform is never called', () async {
+      final off = ScreenCaptureProtection(platform: platform, enabled: false);
+      expect(off.isEnabled, isFalse);
+      await off.acquire();
+      await off.acquire();
+      expect(off.leases, 0);
+      expect(off.isEngaged, isFalse);
+      await off.release();
+      await off.release();
+      expect(platform.calls, isEmpty);
+    });
+  });
+
+  group('ScreenProtectorPlatform', () {
+    const channel = MethodChannel('screen_protector');
+    final methods = <String>[];
+
+    setUp(() {
+      methods.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+        methods.add(call.method);
+        return null;
+      });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    });
+
+    test('on blocks the capture on Android and blurs the snapshot on iOS', () async {
+      await const ScreenProtectorPlatform().protectOn();
+      expect(methods, ['protectDataLeakageOn', 'protectDataLeakageWithBlur']);
+    });
+
+    test('off undoes both', () async {
+      await const ScreenProtectorPlatform().protectOff();
+      expect(methods, ['protectDataLeakageOff', 'protectDataLeakageWithBlurOff']);
     });
   });
 }

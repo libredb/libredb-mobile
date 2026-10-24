@@ -348,7 +348,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
 - The HTTP log carries method, path, status and body length; bodies are logged only in verbose mode, which is off by default, and with secrets masked.
   The repositories never log statement text or database error text.
 - Certificate pinning by public key is built in and off by default; `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` turn it on per host for a release build ([security.md](security.md#certificate-pinning)).
-  Screen capture protection is built in, and no screen uses it yet.
+  Screen capture protection keeps results, a row's detail, a key's value and an object's source out of screenshots while they are on screen, on by default in the prod build.
   [security.md](security.md) describes them, the token storage and the inactivity sign-out, and [crash-reporting.md](crash-reporting.md) what a crash report may carry.
 
 ## Known gaps

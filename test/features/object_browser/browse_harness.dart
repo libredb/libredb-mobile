@@ -13,6 +13,7 @@ import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
@@ -41,6 +42,7 @@ import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
+import '../../support/screen_capture.dart';
 import 'browse_answers.dart';
 
 /// The Browse tab inside the real shell and its real routes, on mocktail repositories that answer what each test
@@ -71,6 +73,9 @@ class BrowseHarness {
 
   /// The app's refusal of the account, which a request meeting Studio's refusal reports.
   final refusal = StudioAccountRefusalCubit();
+
+  /// The app's screen capture protection, switched on, whose leases a test counts.
+  final screenCapture = recordingScreenCaptureProtection();
 
   /// The app's lifecycle the rows page follows, driven by the test.
   final lifecycle = BrowseLifecycle();
@@ -167,6 +172,7 @@ class BrowseHarness {
           RepositoryProvider<SessionDefaultEntry>.value(value: entry),
           RepositoryProvider<IAppLifecycleSource>.value(value: lifecycle),
           RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
+          RepositoryProvider<ScreenCaptureProtection>.value(value: screenCapture),
         ],
         child: MultiBlocProvider(
           providers: [

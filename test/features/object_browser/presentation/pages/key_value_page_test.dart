@@ -186,6 +186,37 @@ void main() {
     });
   });
 
+  group('screen capture', () {
+    testWidgets('a string value on screen holds one lease, and the back arrow releases it', (tester) async {
+      answerRun('GET cache:greeting', () => Success(_recorded('query_redis_string')));
+      await harness.pump(tester, location: _location('cache:greeting', type: 'string'));
+      expect(text(), findsOneWidget);
+      expect(harness.screenCapture.leases, 1);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(KeyValuePage), findsNothing);
+      expect(harness.screenCapture.leases, 0);
+    });
+
+    testWidgets('a hash in the result view holds one lease', (tester) async {
+      answerRun('HGETALL user:2', () => Success(_recorded('query_redis_hash')));
+      await harness.pump(tester, location: _location('user:2', type: 'hash'));
+      expect(harness.screenCapture.leases, 1);
+    });
+
+    testWidgets("Studio's TYPE answer shows no value and holds no lease, and the read value takes one", (tester) async {
+      answerRun('TYPE user:2', () => Success(_single('hash')));
+      answerRun('HGETALL user:2', () => Success(_recorded('query_redis_hash')));
+      await harness.pump(tester, location: _location('user:2'));
+      expect(harness.screenCapture.leases, 0);
+
+      await tester.tap(readValue());
+      await tester.pumpAndSettle();
+      expect(harness.screenCapture.leases, 1);
+    });
+  });
+
   // The read's request is dropped when the page goes, and no /db/cancel is posted (#116).
   testWidgets('leaving the page during a read drops its request and posts no cancel', (tester) async {
     final signals = <CancelSignal?>[];

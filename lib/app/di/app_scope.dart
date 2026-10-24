@@ -10,6 +10,7 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
@@ -95,6 +96,8 @@ class AppScope extends StatelessWidget {
         else
           RepositoryProvider<ISecureStorage>(create: (_) => dependencies.createSecureStorage()),
         RepositoryProvider<AppConfig>.value(value: dependencies.appConfig),
+        // One for the app, so the leases of every guarded value area on screen are counted together.
+        RepositoryProvider<ScreenCaptureProtection>(create: (_) => dependencies.createScreenCaptureProtection()),
         RepositoryProvider<ProjectLinks>.value(value: dependencies.projectLinks),
         RepositoryProvider<AuthMode>.value(value: dependencies.authMode),
         // Provided above SessionCubit and IAuthRepository, which clear the stored session when they end one.

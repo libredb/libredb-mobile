@@ -19,6 +19,7 @@ import 'package:libredb_mobile/app/shell/top_bar/active_connection_title.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_switcher_sheet.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
@@ -56,6 +57,7 @@ import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
+import '../../../../support/screen_capture.dart';
 
 /// The editor inside the real shell: the write confirmation covers the shell's top bar and tab bar, so nothing there
 /// can leave the tab or close the editor while the sheet waits for an answer.
@@ -68,8 +70,10 @@ void main() {
   late MockIStatementHistoryRepository history;
   late MockIStatementTextStore textStore;
   late SchemaChangeNotifier schemaChanges;
+  late ScreenCaptureProtection screenCapture;
 
   setUp(() {
+    screenCapture = recordingScreenCaptureProtection();
     final store = MockIActiveConnectionStore();
     when(() => store.read(any())).thenAnswer((_) async => null);
     when(() => store.write(any(), any())).thenAnswer((_) async {});
@@ -165,6 +169,7 @@ void main() {
             dispose: (source) => (source as BindingAppLifecycleSource).dispose(),
           ),
           RepositoryProvider<IBackgroundRunTime>.value(value: const NoBackgroundRunTime()),
+          RepositoryProvider<ScreenCaptureProtection>.value(value: screenCapture),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -284,6 +289,39 @@ void main() {
     expect(find.text('browse root'), findsOneWidget);
     expect(find.byType(WriteConfirmationSheet), findsNothing);
     verifyNothingSent();
+  });
+
+  // The tabs are routes of one ShellRoute: a tab change disposes the editor and its result, so nothing of it stays
+  // mounted offstage to hold a lease, and the tab the user went to can be captured.
+  testWidgets('a tap on another tab releases the lease of the result on screen', (tester) async {
+    const read = 'SELECT * FROM customers';
+    final rows = QueryResultJson.read(
+      File('test/fixtures/studio/query_preview_postgres_customers.json').readAsStringSync(),
+    );
+    when(
+      () => repository.run(
+        any(),
+        read,
+        queryId: any(named: 'queryId'),
+        page: any(named: 'page'),
+        cancelSignal: any(named: 'cancelSignal'),
+      ),
+    ).thenAnswer((_) async => Success(rows));
+    final router = await pumpShell(tester);
+    expect(screenCapture.leases, 0, reason: 'the editor before a run stays capturable');
+    await tester.enterText(find.byKey(EditorInput.fieldKey), read);
+    await tester.pump();
+    await tester.tap(find.byKey(EditorActions.runKey));
+    await tester.pumpAndSettle();
+    expect(screenCapture.leases, 1);
+
+    await tester.tap(find.text('Browse'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, '/browse');
+    expect(find.byKey(EditorInput.fieldKey, skipOffstage: false), findsNothing);
+    expect(screenCapture.leases, 0);
+    expect(screenCapture.isEngaged, isFalse);
   });
 
   testWidgets('a deep link that leaves the tab while the Load more sheet is open sends no page', (tester) async {

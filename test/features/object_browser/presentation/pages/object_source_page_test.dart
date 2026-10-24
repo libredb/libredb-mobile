@@ -59,6 +59,19 @@ void main() {
     expect(find.text('Databases'), findsOneWidget);
   });
 
+  testWidgets("a view's source holds one capture lease, and the back arrow to the Browse root releases it", (
+    tester,
+  ) async {
+    answerSource(viewPath, 'view', Success(sourceAnswer('source_postgres_view')));
+    await harness.pump(tester, location: viewLocation);
+    expect(harness.screenCapture.leases, 1);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Databases'), findsOneWidget);
+    expect(harness.screenCapture.leases, 0, reason: 'the Browse list stays capturable');
+  });
+
   testWidgets('an object path whose names hold /, a space, ( , & and İ survives the round trip through browseSource', (
     tester,
   ) async {
