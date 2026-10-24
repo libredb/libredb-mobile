@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,16 +10,36 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 void main() {
   const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart';
   late List<({String type, String json})> sent;
+  late Completer<void> logScrubbed;
+  late Completer<void> spanScrubbed;
 
   /// Starts the SDK with the scrubbers, sending spans as [lifecycle] says.
+  ///
+  /// The SDK hands a log or a streamed span to its scrubber only after adding the device's contexts, which on Linux
+  /// runs `cat /proc/meminfo` as a subprocess, so no fixed number of event-queue turns is sure to wait for it.
+  /// [logScrubbed] and [spanScrubbed] complete once the scrubber has returned; what is left before the item is in the
+  /// buffer that [Sentry.close] flushes runs in microtasks, which one more event-queue turn drains.
   Future<void> start({SentryTraceLifecycle lifecycle = SentryTraceLifecycle.stream}) async {
     sent = [];
+    logScrubbed = Completer<void>();
+    spanScrubbed = Completer<void>();
     await Sentry.init((options) {
       options.dsn = 'https://public@example.invalid/1';
       options.transport = _CapturingTransport(sent);
       options.tracesSampleRate = 1;
       options.traceLifecycle = lifecycle;
       installSentryScrubbers(options);
+      final scrubLog = options.beforeSendLog!;
+      options.beforeSendLog = (log, hint) async {
+        final scrubbed = await scrubLog(log, hint);
+        logScrubbed.complete();
+        return scrubbed;
+      };
+      final scrubSpan = options.beforeSendSpan!;
+      options.beforeSendSpan = (span, hint) async {
+        await scrubSpan(span, hint);
+        spanScrubbed.complete();
+      };
     });
     addTearDown(Sentry.close);
   }
@@ -42,8 +63,8 @@ void main() {
       span.setAttribute('url', SentryAttribute.string('https://api.example.test/users/jane.doe@example.com'));
       span.setAttribute('status', SentryAttribute.int(200));
     });
-    // The span reaches the processor asynchronously; Sentry.close then flushes it.
-    await pumpEventQueue();
+    await spanScrubbed.future;
+    await pumpEventQueue(times: 1);
     await Sentry.close();
 
     final json = sent.where((item) => item.type == 'span').map((item) => item.json).join();
@@ -85,8 +106,8 @@ void main() {
         'count': SentryAttribute.int(3),
       },
     );
-    // The log reaches the processor asynchronously; Sentry.close then flushes it.
-    await pumpEventQueue();
+    await logScrubbed.future;
+    await pumpEventQueue(times: 1);
     await Sentry.close();
 
     final json = sent.where((item) => item.type == 'log').map((item) => item.json).join();
