@@ -384,7 +384,7 @@ The refresh goes through `OidcTokenRotation`:
 | New tokens | `TokensRotated` | Stored, and the request is retried |
 | New tokens, but the JWKS for the new ID token could not be fetched | `TokensRotated` without an ID token | The new access and refresh tokens are stored, the stored ID token stays, and the request is retried |
 | `invalid_grant`, `invalid_client` or another client or authentication error, or a new ID token whose signature or claims fail a check | `RotationRefused` | The session ends with reason expired, and the login page shows the button with no error |
-| A token endpoint status of 429 or 5xx whatever its error code, `server_error`, `temporarily_unavailable`, discovery that cannot be fetched, or a transport failure | `RotationUnavailable` | The session is kept, the request fails as a network error, and the next 401 tries again |
+| A token endpoint status of 429 or 5xx whatever its error code, a redirect from the token endpoint, `server_error`, `temporarily_unavailable`, discovery that cannot be fetched, or a transport failure | `RotationUnavailable` | The session is kept, the request fails as a network error, and the next 401 tries again |
 
 ### Logout
 

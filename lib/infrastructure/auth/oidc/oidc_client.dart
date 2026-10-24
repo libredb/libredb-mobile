@@ -499,7 +499,8 @@ final class OidcClient implements IOidcClient {
 
   /// The provider refusing, or a refreshed ID token failing a check, ends the session; the provider being out of
   /// reach keeps it. A GET error status comes first, and so does a token endpoint status of 429 or 5xx, whatever its
-  /// error code. The JWKS of a refreshed ID token is handled before this, since its grant has already been answered.
+  /// error code, or a redirect from the token endpoint. The JWKS of a refreshed ID token is handled before this, since
+  /// its grant has already been answered.
   TokenRotationResult _refreshFailed(Object error) {
     final TokenRotationResult result;
     final status = error is OidcException ? error.rawResponse?.statusCode : null;
@@ -507,6 +508,9 @@ final class OidcClient implements IOidcClient {
       result = const RotationUnavailable();
     } else if (status != null && (status == 429 || status >= 500)) {
       // Too many requests, or the provider failing, says nothing about the refresh token, whatever the error code.
+      result = const RotationUnavailable();
+    } else if (_cause(error) is OidcRedirectRefusedException) {
+      // A redirect from the token endpoint says nothing about the refresh token, and nothing was sent to its Location.
       result = const RotationUnavailable();
     } else if (error is JoseException) {
       result = const RotationRefused();

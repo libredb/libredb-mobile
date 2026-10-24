@@ -1084,7 +1084,7 @@ void main() {
       await expectStoreEmpty();
     });
 
-    test('at the token endpoint during a refresh is not followed and is RotationRefused', () async {
+    test('at the token endpoint during a refresh is not followed and keeps the session', () async {
       await start(redirected: '/token');
       late TokenRotationResult result;
       final lines = await printedLines(
@@ -1098,7 +1098,7 @@ void main() {
         ),
       );
 
-      expect(result, isA<RotationRefused>());
+      expect(result, isA<RotationUnavailable>());
       expect(plainRequests, 0, reason: 'the refresh token was sent over http');
       expect(lines.where((line) => line.contains('token request') && line.contains('redirect')), isNotEmpty);
       expect(lines.where((line) => line.contains('${plain.port}')), isEmpty, reason: 'a line printed the Location');
