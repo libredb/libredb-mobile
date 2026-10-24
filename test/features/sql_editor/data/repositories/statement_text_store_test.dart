@@ -360,9 +360,10 @@ void main() {
       expect(secure.values, isEmpty);
     });
 
-    /// Three appends would already interleave if the queue let them. Each append opens and seals the history in two
-    /// isolates, and with ten appends (22 isolate runs) the case took 9 s of the 30 s test timeout in a folder run while
-    /// two other test runs compiled (#160); three appends take 8 isolate runs.
+    /// Three appends would already interleave if the queue let them. Every append seals the history in an isolate, and
+    /// each one after the first also opens it in one; with ten appends (22 isolate runs) the case took 9 s of the 30 s
+    /// test timeout in a folder run while two other test runs compiled (#160), a slowdown whose cause is not measured.
+    /// Three appends take 8 isolate runs.
     test('a draft save and history appends sent together lose nothing', () async {
       final entries = [for (var i = 0; i < 3; i++) entry('SELECT $i')];
       final results = await Future.wait<Result<Object?>>([
