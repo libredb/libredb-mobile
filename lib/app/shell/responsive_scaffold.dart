@@ -8,8 +8,8 @@ import 'package:libredb_mobile/generated/l10n.dart';
 
 /// The frame around every signed-in page, at every screen width: the one top bar with the page title above it, and
 /// below it the bottom navigation bar on a tab, or a back arrow in the top bar on any other page, such as the settings.
-/// A page under the Browse root keeps the bottom navigation bar and has the back arrow too. On every Browse location the
-/// title is the active connection, which opens the connection switcher.
+/// A page under the Browse root keeps the bottom navigation bar and has the back arrow too. On every Browse and SQL
+/// location the title is the active connection, which opens the connection switcher.
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({super.key, required this.child, required this.activeRoute});
 
@@ -32,8 +32,8 @@ class ResponsiveScaffold extends StatelessWidget {
                   : _inBrowseStack(activeRoute)
                   ? () => _backInBrowse(context)
                   : null,
-              // Only the Browse tab works on the active connection for now; the SQL tab follows in M5.
-              titleWidget: tab == ApplicationRoutesConstants.browse ? ActiveConnectionTitle(fallback: title) : null,
+              // The Browse and SQL tabs work on the active connection, so their title names it.
+              titleWidget: _worksOnActiveConnection(tab) ? ActiveConnectionTitle(fallback: title) : null,
             ),
             Expanded(child: child),
           ],
@@ -50,6 +50,10 @@ class ResponsiveScaffold extends StatelessWidget {
     }
     return null;
   }
+
+  /// Whether [tab] works on the active connection, so its top bar names it.
+  static bool _worksOnActiveConnection(String? tab) =>
+      tab == ApplicationRoutesConstants.browse || tab == ApplicationRoutesConstants.sql;
 
   /// Whether [route] is a page under the Browse root, which keeps the tab's bottom navigation bar and has a back arrow,
   /// since iOS has no system back.
