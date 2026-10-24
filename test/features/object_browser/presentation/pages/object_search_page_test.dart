@@ -269,6 +269,19 @@ void main() {
     );
   });
 
+  testWidgets("the recorded view, for which Studio 1.1.0 sends no size, shows its kind's label and no size", (
+    tester,
+  ) async {
+    tallScreen(tester);
+    answerSearch(_postgres.id, Success(objectsAnswer('search_postgres')));
+    await harness.pump(tester, location: _search);
+    await type(tester, 'ord');
+
+    final view = find.widgetWithText(ListTile, 'order_totals');
+    expect(find.descendant(of: view, matching: find.text('View')), findsOneWidget);
+    expect(find.descendant(of: view, matching: find.textContaining(' B')), findsNothing);
+  });
+
   testWidgets('a long press on a match offers the object list\'s menu, whose View source opens the source', (
     tester,
   ) async {
@@ -376,6 +389,50 @@ void main() {
     final tile = tester.widget<ListTile>(find.widgetWithText(ListTile, 'orders_q'));
     expect(tile.onTap, isNull);
     expect(find.text('queue'), findsNothing);
+  });
+
+  testWidgets("Studio's pair limit asks for kinds, with a chip per kind a search lists, instead of an error", (
+    tester,
+  ) async {
+    tallScreen(tester);
+    answerSearch(
+      _postgres.id,
+      Failure(ValidationError('too many pairs', code: AppErrorCode.studioSearchPairLimit.key)),
+    );
+    await harness.pump(tester, location: _search);
+    expect(find.byType(FilterChip), findsNothing, reason: 'no kinds are offered before Studio asks for them');
+
+    await type(tester, 'ord');
+
+    expect(find.text('Too many places to search. Pick object kinds to narrow the search.'), findsOneWidget);
+    expect(find.byType(StudioErrorBanner), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+    expect(
+      [for (final chip in tester.widgetList<FilterChip>(find.byType(FilterChip))) (chip.label as Text).data],
+      ['Tables', 'Views', 'Materialized Views', 'Sequences', 'Functions', 'Procedures', 'Triggers'],
+    );
+    expect(tester.widgetList<FilterChip>(find.byType(FilterChip)).every((chip) => !chip.selected), isTrue);
+  });
+
+  testWidgets('a picked kind searches the term again with it at once, and its chip stays with the results', (
+    tester,
+  ) async {
+    tallScreen(tester);
+    answerSearch(
+      _postgres.id,
+      Failure(ValidationError('too many pairs', code: AppErrorCode.studioSearchPairLimit.key)),
+    );
+    await harness.pump(tester, location: _search);
+    await type(tester, 'ord');
+
+    answerSearch(_postgres.id, Success(objectsAnswer('search_postgres_kinds')));
+    await tester.tap(find.widgetWithText(FilterChip, 'Tables'));
+    await tester.pumpAndSettle();
+
+    verify(() => harness.repository.search(_postgres.id, term: 'ord', kinds: ['table'])).called(1);
+    expect(find.text('orders'), findsOneWidget);
+    expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Tables')).selected, isTrue);
+    expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Views')).selected, isFalse);
   });
 
   testWidgets('back from the search opened by a link returns to the Browse root, with no query left over', (

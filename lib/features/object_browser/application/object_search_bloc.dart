@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/database_object.dart';
@@ -24,11 +26,16 @@ part 'object_search_state.dart';
 /// while after a failure the same term is sent again, so Retry works. A term too short to search clears the screen at
 /// once. A server-level connection (`catalogSessions`) sends no search at all: Studio refuses a walk over every
 /// database of its server. The results live in this bloc only and are never cached.
+///
+/// Studio refuses a search that would walk more container and kind pairs than one search may (`INVENTORY_PAIR_LIMIT`),
+/// which is [ObjectSearchTooBroad]; the kinds the user then picks narrow that term and every later one, and a change of
+/// the picked kinds sends the current term again at once.
 class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   ObjectSearchBloc({required this._repository, required this._providerMeta, required this.connectionId})
     : super(const ObjectSearchPreparing()) {
     on<ObjectSearchStarted>(_onStarted, transformer: EventTransformers.restart());
     on<ObjectSearchTermEvent>(_onTerm);
+    on<ObjectSearchKindsChanged>(_onKinds);
     on<_ObjectSearchRequest>(_onRequest, transformer: EventTransformers.restart());
   }
 
@@ -49,12 +56,18 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
   /// The wait of the last typed term.
   Timer? _wait;
 
-  /// The term whose request is in flight, null when none is.
-  String? _inFlight;
+  /// The search whose request is in flight, null when none is.
+  _Search? _inFlight;
 
-  /// The term whose results are on screen, or will be once the emit queued for them runs; null when none are. Kept
+  /// The search whose results are on screen, or will be once the emit queued for them runs; null when none are. Kept
   /// here, not read from `state`, because a clearing queued in the same burst has not reached `state` yet.
-  String? _shown;
+  _Search? _shown;
+
+  /// The last term typed or submitted, trimmed, while it is long enough to search; null otherwise.
+  String? _term;
+
+  /// The ids of the kinds the user picked, in the order the engine declares them; empty for every kind.
+  List<String> _kinds = const [];
 
   /// Counts every request sent and every clearing, so only the answer to the latest request is shown.
   int _generation = 0;
@@ -85,6 +98,7 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
     // holds none, so it never searches.
     if (state.meta == null) return;
     if (!_searchable(event.term)) {
+      _term = null;
       _cancelWait();
       _generation++;
       _inFlight = null;
@@ -93,6 +107,7 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
       return;
     }
     final term = _trimmed(event.term);
+    _term = term;
     if (_isCurrent(term)) {
       _cancelWait();
       return;
@@ -109,18 +124,37 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
     });
   }
 
-  /// Whether [term] is the search in flight, or the one on screen while none is.
+  void _onKinds(ObjectSearchKindsChanged event, Emitter<ObjectSearchState> emit) {
+    if (state.meta == null) return;
+    // Kept in the engine's order and only among the kinds a search lists, so the same pick is the same search.
+    final kinds = List<String>.unmodifiable([
+      for (final kind in state.searchKinds)
+        if (event.kinds.contains(kind.id)) kind.id,
+    ]);
+    if (listEquals(kinds, _kinds)) return;
+    _kinds = kinds;
+    final term = _term;
+    _cancelWait();
+    if (term == null) {
+      add(const _ObjectSearchCleared());
+      return;
+    }
+    _send(term);
+  }
+
+  /// Whether [term] with the picked kinds is the search in flight, or the one on screen while none is.
   bool _isCurrent(String term) {
+    final search = _Search(term, _kinds);
     final inFlight = _inFlight;
-    if (inFlight != null) return inFlight == term;
-    return _shown == term;
+    if (inFlight != null) return inFlight == search;
+    return _shown == search;
   }
 
   void _send(String term) {
     _generation++;
-    _inFlight = term;
+    _inFlight = _Search(term, _kinds);
     _shown = null;
-    add(_ObjectSearchSent(term, _generation));
+    add(_ObjectSearchSent(term, _kinds, _generation));
   }
 
   void _cancelWait() {
@@ -133,20 +167,23 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
     if (meta == null) return;
     switch (event) {
       case _ObjectSearchCleared():
-        emit(ObjectSearchIdle(meta: meta));
-      case _ObjectSearchSent(:final term, :final generation):
-        emit(ObjectSearchSearching(meta: meta, term: term));
-        final result = await _repository.search(connectionId, term: term);
+        emit(ObjectSearchIdle(meta: meta, kinds: _kinds));
+      case _ObjectSearchSent(:final term, :final kinds, :final generation):
+        emit(ObjectSearchSearching(meta: meta, term: term, kinds: kinds));
+        final result = await _repository.search(connectionId, term: term, kinds: kinds.isEmpty ? null : kinds);
         if (emit.isDone || generation != _generation) return;
         _inFlight = null;
         switch (result) {
+          case Failure(:final error) when error.code == AppErrorCode.studioSearchPairLimit.key:
+            _log.info('search refused for too many container and kind pairs; {} kinds picked', [kinds.length]);
+            emit(ObjectSearchTooBroad(meta: meta, term: term, kinds: kinds));
           case Failure(:final error):
             // Only the code: the message of a 400 is Studio's English sentence, never shown nor logged.
             _log.warn('search failed: {}', [error.code ?? error.runtimeType]);
-            emit(ObjectSearchFailure(error: error, meta: meta, term: term));
+            emit(ObjectSearchFailure(error: error, meta: meta, term: term, kinds: kinds));
           case Success(:final data):
-            _shown = term;
-            emit(ObjectSearchResults(meta: meta, term: term, groups: _group(meta, data)));
+            _shown = _Search(term, kinds);
+            emit(ObjectSearchResults(meta: meta, term: term, groups: _group(meta, data), kinds: kinds));
         }
     }
   }
@@ -180,4 +217,15 @@ class ObjectSearchBloc extends Bloc<ObjectSearchEvent, ObjectSearchState> {
     _cancelWait();
     return super.close();
   }
+}
+
+/// One search: a trimmed term and the kinds it is narrowed to.
+final class _Search extends Equatable {
+  const _Search(this.term, this.kinds);
+
+  final String term;
+  final List<String> kinds;
+
+  @override
+  List<Object?> get props => [term, kinds];
 }

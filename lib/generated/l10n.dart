@@ -2376,6 +2376,16 @@ class S {
     );
   }
 
+  /// `Too many places to search. Pick object kinds to narrow the search.`
+  String get error_studio_search_pair_limit {
+    return Intl.message(
+      'Too many places to search. Pick object kinds to narrow the search.',
+      name: 'error_studio_search_pair_limit',
+      desc: 'Studio refused an object search that would walk too many container and kind pairs; picking kinds narrows it.',
+      args: [],
+    );
+  }
+
   /// `Type one or more statements`
   String get sql_editor_hint {
     return Intl.message(

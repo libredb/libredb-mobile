@@ -437,6 +437,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_rate_limited": MessageLookupByLibrary.simpleMessage(
       "Kısa sürede çok fazla istek gönderildi. Biraz bekleyip tekrar deneyin.",
     ),
+    "error_studio_search_pair_limit": MessageLookupByLibrary.simpleMessage(
+      "Aranacak yer çok fazla. Aramayı daraltmak için nesne türlerini seçin.",
+    ),
     "error_studio_statement_too_large": MessageLookupByLibrary.simpleMessage(
       "Bu deyim çalıştırılamayacak kadar büyük. Kısaltıp tekrar deneyin.",
     ),
