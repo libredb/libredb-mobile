@@ -24,7 +24,7 @@ SQL düzenleyici
 Gizlilik ve güvenlik
 • Kuruluşunuzun Keycloak'u üzerinden tek oturum açma; belirteçler cihazın güvenli depolamasında tutulur.
 • Taslaklar ve geçmiş cihazda, her hesap için ayrı şifrelenir.
-• Veri gösteren ekranlar ekran görüntülerinin ve son uygulamalar görünümünün dışında tutulur.
+• Sonuç gösteren ekranlar ekran görüntülerinin ve son uygulamalar görünümünün dışında tutulur.
 • Uygulama 15 dakika işlem yapılmadığında oturumu kapatır.
 • Ayarlar'daki Verilerimi sil, uygulamanın hesabınız için tuttuklarını siler.
 

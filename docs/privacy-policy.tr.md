@@ -29,7 +29,7 @@ Uygulama Keycloak'a, Studio'ya ve Sentry'ye trafiği şifreleyen HTTPS üzerinde
 ## Uygulamanın yapmadıkları
 
 - Uygulama hiçbir veritabanı parolası ya da başka bir veritabanı kimlik bilgisi tutmaz: bunları Studio saklar ve her veritabanı bağlantısını Studio açar.
-- Uygulama reklam göstermez, hiçbir analiz ya da izleme hizmeti içermez ve uygulamayı nasıl kullandığınıza dair aşağıda anlatılan çökme raporlarının ötesinde hiçbir şey göndermez.
+- Uygulama reklam göstermez, hiçbir analiz ya da izleme hizmeti içermez ve uygulamayı nasıl kullandığınıza dair [Çökme raporları](#çökme-raporları) bölümünde anlatılan çökme raporları, oturum kayıtları ve süre bilgisinin ötesinde hiçbir şey göndermez.
 - Uygulama kişilerinizi, konumunuzu, fotoğraflarınızı, dosyalarınızı ya da başka uygulamaların verilerini okumaz.
 - Uygulama verilerinizi satmaz ve reklam amacıyla kimseyle paylaşmaz.
 
@@ -41,10 +41,10 @@ Uygulama Keycloak'a, Studio'ya ve Sentry'ye trafiği şifreleyen HTTPS üzerinde
   Oturumu kapattıktan sonra da kalırlar; böylece aynı hesapla yeniden oturum açtığınızda onları bulursunuz ve cihazdaki başka bir hesap onları okuyamaz.
 - **Bağlantı seçimleriniz**: yıldızladığınız ya da son açtığınız bağlantılar, en son açık olan bağlantı ve onda en son kullandığınız veritabanı, bağlantı listesinde daralttığınız bölümler.
 - **Cihaz tercihleri**: dil, tema ve sonuçların kart mı tablo mu gösterileceği.
-- **Studio'nun bazı yanıtlarının kısa ömürlü bir kopyası**, Studio'ya ulaşılamadığında uygulama onları gösterebilsin diye en çok 24 saat tutulur.
-  Oturumun sona ermesi onları siler.
 
 Uygulama kapandıktan sonra sorgu sonuçlarının hiçbir satırını tutmaz.
+Uygulama çalışırken bir bağlantının nesne listelerini, geri dönüldüğünde Studio'ya yeniden sorulmasın diye en çok 10 dakika bellekte tutar.
+Nesne aramasına yazdıklarınız yalnızca Studio'ya gider ve uygulama arama geçmişi tutmaz.
 Uygulamanın Android bulut yedeklemesi kapalıdır; tercihleri, taslakları ve geçmişi cihazdan cihaza aktarımların dışında bırakılır.
 
 ## Paylaşma ve kopyalama
@@ -58,10 +58,12 @@ Bir nesnenin kaynağını, örneğin bir görünümün tanımını paylaştığ�
 
 Bir Sentry proje anahtarıyla derlenmiş uygulama, bir hatayla karşılaştığında Sentry'ye bir rapor gönderir.
 Bir rapor şunları içerir: hatayı ve uygulamanın neresinde olduğunu, uygulamanın sürümünü, cihazın modeli, Android sürümü, dili, boş belleği ve pil düzeyi gibi teknik ayrıntılarını, kuruluma ait rastgele bir tanımlayıcıyı ve hatadan önceki olayların bir izini, örneğin açtığınız ekranları ve uygulamanın arka plana geçişini.
-Bir Sentry proje anahtarıyla derlenmiş uygulama ayrıca, uygulamanın nerede yavaş olduğunu göstermek için uygulama açılışlarının ve ekran değişikliklerinin yaklaşık beşte biri için süre bilgisi gönderir.
+Bir Sentry proje anahtarıyla derlenmiş uygulama ayrıca uygulamayı her kullanışınızda bir oturum kaydı gönderir: oturumun ne zaman başlayıp bittiği, ne kadar sürdüğü, bir çökmeyle bitip bitmediği ve kurulum tanımlayıcısı.
+Ayrıca, uygulamanın nerede yavaş olduğunu göstermek için uygulama açılışlarının ve ekran değişikliklerinin yaklaşık beşte biri için süre bilgisi gönderir.
 Bir rapor cihazdan çıkmadan önce uygulama içinden e-posta adreslerini, belirteçleri, parolaları ve diğer kimlik bilgilerini çıkarır.
 Bir rapor ekran görüntüsü, ekran düzeni, istek gövdesi ya da oturum kaydı taşımaz.
 Sentry, her sunucu bağlantısında olduğu gibi, her raporla birlikte cihazınızın IP adresini alır.
+Sentry projesi IP adreslerini saklamayacak şekilde ayarlanmadıkça Sentry bu adresten şehir ve ülke gibi yaklaşık bir konum çıkarır.
 Sentry proje anahtarı olmadan derlenmiş bir uygulama rapor göndermez.
 
 ## Cihazdaki korumalar

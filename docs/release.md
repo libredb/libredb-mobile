@@ -155,7 +155,7 @@ The screenshots, the 512 px icon and the 1024 by 500 feature graphic are added d
 ### Privacy policy
 
 [privacy-policy.md](privacy-policy.md) and [privacy-policy.tr.md](privacy-policy.tr.md) are the policy; the maintainer publishes them at a URL of their choice and enters that URL in the Play Console.
-Each sentence states something the app does, with its source in [security.md](security.md), [crash-reporting.md](crash-reporting.md), [architecture.md](architecture.md), [http-client.md](http-client.md) or `android/app/src/main/AndroidManifest.xml` and its backup rules.
+Each sentence states something the app does, with its source in [security.md](security.md), [crash-reporting.md](crash-reporting.md), [architecture.md](architecture.md), `lib/features/object_browser/data/repositories/cached_object_browser_repository.dart`, `NativeSentry.kt` with the sentry-android defaults it keeps, or `android/app/src/main/AndroidManifest.xml` and its backup rules.
 Update both files and their date in the pull request that changes what the app keeps or sends, and publish them again before that version ships, for example:
 
 - when #202 removes the temporary file of a shared source, drop the sentence that says it can stay;
@@ -176,7 +176,7 @@ Overview:
 | Account creation | The app does not allow users to create an account | Accounts are made in the deployment's Keycloak by the organisation; the app only signs in |
 | Can users request that their data is deleted? | Yes | Remove my data in Settings, uninstalling, and info@libredb.org for crash reports |
 
-The app does not check that `PROD_API_URL` is https, so the maintainer keeps the release variable on https; the encryption answer depends on it.
+The app does not check that `PROD_API_URL` is https yet ([#218](https://github.com/libredb/libredb-mobile/issues/218), before 1.0.0), so the maintainer keeps the release variable on https; the encryption answer depends on it.
 
 Data types (none is shared, none is processed ephemerally, and none is optional):
 
@@ -186,15 +186,16 @@ Data types (none is shared, none is processed ephemerally, and none is optional)
 | Personal info | Email address | Yes | App functionality, Account management | The same token; Studio names the user by `email` or `preferred_username` ([architecture.md](architecture.md)) |
 | Personal info | User IDs | Yes | App functionality, Account management | The same token's subject and username |
 | App activity | Other user-generated content | Yes | App functionality | The statements sent to Studio, which Studio may record in its audit and query logs |
-| App activity | App interactions | Yes (Sentry) | Analytics | The navigation breadcrumbs of a crash report ([crash-reporting.md](crash-reporting.md)) |
+| App activity | App interactions | Yes (Sentry) | Analytics | The navigation breadcrumbs of a crash report ([crash-reporting.md](crash-reporting.md)), and the session record sent for each use, since sentry-android 8.61.0 keeps `enableAutoSessionTracking` on and `NativeSentry.kt` does not change it |
 | App info and performance | Crash logs | Yes (Sentry) | Analytics | The crash reports |
-| App info and performance | Diagnostics | Yes (Sentry) | Analytics | The device context of a report and the traces of `tracesSampleRate = 0.2` (`lib/app/bootstrap/sentry_start.dart`) |
+| App info and performance | Diagnostics | Yes (Sentry) | Analytics | The device context of a report, the session records (start, end, duration, crashed or not) and the traces of `tracesSampleRate = 0.2` (`lib/app/bootstrap/sentry_start.dart`) |
 | Device or other IDs | Device or other IDs | Yes (Sentry) | Analytics | sentry-android 8.61.0 sets the user id of every event to a random installation id when the app sets none (`DefaultAndroidEventProcessor.mergeUser`), and the app sets none |
 | Location | Approximate location | Yes (Sentry), until the setting below is on | Analytics | Sentry derives a place from the client IP at ingestion ([crash-reporting.md](crash-reporting.md)) |
 
 Approximate location becomes No once 'Prevent Storing of IP Addresses' is on in the Sentry project ([crash-reporting.md](crash-reporting.md), the user's steps).
 Every other data type is No: precise location, financial info, health and fitness, messages, photos and videos, audio, files and docs, calendar, contacts, web browsing, and the other app activity and performance types.
 The app keeps its drafts and history on the device, which Play does not count as collection.
+Object search terms go only to the deployment's Studio, as part of the request, and the app keeps no search history.
 
 ### Content rating
 

@@ -24,7 +24,7 @@ SQL editor
 Privacy and security
 • Single sign-on through your organisation's Keycloak; the tokens are kept in the device's secure storage.
 • Drafts and history are encrypted on the device, separately for each account.
-• Screens that show data are kept out of screenshots and the recent apps view.
+• Screens that show results are kept out of screenshots and the recent apps view.
 • The app signs you out after 15 minutes without input.
 • Remove my data, in Settings, deletes what the app keeps for your account.
 

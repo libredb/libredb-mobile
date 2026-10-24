@@ -29,7 +29,7 @@ The app reaches Keycloak, Studio and Sentry over HTTPS, which encrypts the traff
 ## What the app does not do
 
 - The app holds no database password or other database credential: Studio keeps them and opens every database connection.
-- The app shows no advertising, contains no analytics or tracking service, and sends nothing about how you use it beyond the crash reports described below.
+- The app shows no advertising, contains no analytics or tracking service, and sends nothing about how you use it beyond the crash reports, session records and timing information described under [Crash reports](#crash-reports).
 - The app does not read your contacts, location, photos, files or other apps' data.
 - The app does not sell your data or share it with anyone for advertising.
 
@@ -41,10 +41,10 @@ The app reaches Keycloak, Studio and Sentry over HTTPS, which encrypts the traff
   They stay after you sign out, so you find them again when you sign in with the same account, and another account on the device cannot read them.
 - **Your connection choices**: the connections you starred or opened recently, the connection you had open last and the database you last used on it, and the sections of the connection list you collapsed.
 - **Device preferences**: the language, the theme and whether results show as cards or as a table.
-- **A short-lived copy of some of Studio's answers**, kept for up to 24 hours so the app can show them while Studio cannot be reached.
-  Ending the session deletes them.
 
 The app keeps no rows of query results after it closes.
+While it runs, it keeps the lists of a connection's objects in memory for up to 10 minutes, so going back does not ask Studio again.
+What you type into the object search goes only to Studio, and the app keeps no search history.
 Android's cloud backup is turned off for the app, and its preferences, drafts and history are left out of device-to-device transfers.
 
 ## Sharing and copying
@@ -58,10 +58,12 @@ A source longer than 100,000 characters is shared as a file, and that file can s
 
 A build made with a Sentry project key sends a report to Sentry when the app runs into an error.
 A report holds the error and where in the app it happened, the app's version, technical details of the device such as its model, Android version, language, free memory and battery level, a random identifier of the installation, and a trail of the events before the error, such as the screens you opened and the app going to the background.
-A build with a Sentry project key also sends timing information for about one in five app starts and screen changes, to show where the app is slow.
+A build with a Sentry project key also sends a session record each time you use the app: when the session started and ended, how long it lasted, whether it ended in a crash, and the installation identifier.
+It also sends timing information for about one in five app starts and screen changes, to show where the app is slow.
 Before a report leaves the device, the app removes e-mail addresses, tokens, passwords and other credentials from it.
 A report carries no screenshot, no layout of the screen, no request body and no recording of the session.
 Sentry receives your device's IP address with each report, as with any connection to a server.
+Sentry derives an approximate location, such as a city and a country, from that address, unless the Sentry project is set not to store IP addresses.
 A build made without a Sentry project key sends no reports.
 
 ## Protections on the device
