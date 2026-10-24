@@ -5,8 +5,7 @@ It signs in to Keycloak itself, as the public client `libredb-mobile` with the a
 Studio accepts that token through its bearer channel for native clients, which `OIDC_BEARER_AUDIENCE` turns on (Studio's `docs/OIDC.md`, "Bearer access tokens for native clients").
 The sign-in itself, the app's only one, is described in [oidc.md](oidc.md).
 
-The bearer channel came with libredb/libredb-studio#1914, which is on Studio's main branch; Studio 1.0.0 does not have it.
-Until a Studio release contains it, build the Studio image from main, as shown below.
+The bearer channel came with libredb/libredb-studio#1914, which Studio 1.1.0 is the first release to carry; Studio 1.0.0 does not have it.
 
 ## What Studio and Keycloak need
 
@@ -54,17 +53,12 @@ The realm has the users `admin` / `admin` (realm role `admin`) and `user` / `use
 `norole` / `norole` holds no realm role, so Studio refuses it: the sign-in stays on the login page with the refusal, and nothing is stored.
 The stack is unfit for production on purpose: `start-dev` with the embedded H2 store, a self-signed CA, and committed passwords and client secret.
 
-Build the Studio image from main, until a release contains the bearer channel:
-
-```shell
-git clone https://github.com/libredb/libredb-studio.git
-docker build -t libredb-studio:bearer libredb-studio
-```
-
+Studio runs the 1.1.0 release image, `ghcr.io/libredb/libredb-studio:1.1.0`, pinned by its digest in the compose file, so no local build is needed.
+To try a local build of Studio instead, such as one of its main branch, set `STUDIO_IMAGE` to that image on the `up` command.
 Start the stack and build the app against it:
 
 ```shell
-STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
 fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev.env
 docker compose -f tool/studio-dev/docker-compose.yml down -v
 ```
@@ -321,7 +315,7 @@ Sign in as `admin` / `admin` or `user` / `user`, as on the first Studio.
 Start the stack with the profile and build the app against the governed Studio:
 
 ```shell
-STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
+docker compose -f tool/studio-dev/docker-compose.yml --profile governed up -d --wait
 fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev-governed.env
 docker compose -f tool/studio-dev/docker-compose.yml --profile governed down -v
 ```

@@ -27,7 +27,7 @@ fvm flutter run --target lib/main/main_prod.dart
 
 # Against a local LibreDB Studio and Keycloak over TLS (docs/studio.md); an Android emulator also needs
 # tool/studio-dev/trust-android-emulator.sh after every boot
-STUDIO_IMAGE=libredb-studio:bearer docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
 fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev.env
 docker compose -f tool/studio-dev/docker-compose.yml down -v
 
