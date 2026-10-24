@@ -1,7 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io'
-    show CertificateException, InternetAddress, Platform, RawSocketOption, SecureSocket, ServerSocket, Socket;
+    show
+        CertificateException,
+        HttpServer,
+        InternetAddress,
+        Platform,
+        RawSocketOption,
+        SecureSocket,
+        ServerSocket,
+        Socket;
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -16,6 +24,7 @@ import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.d
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
@@ -1154,6 +1163,108 @@ void main() {
   // A connection closed or reset before the whole response arrived reaches the client in a shape that depends on
   // where it ends: a connection error, or an unknown error whose error is a dart:io HttpException, OSError or
   // SocketException. Only real sockets give these shapes, so a loopback server cuts the connections here.
+  // The store build declares encryption in transit (#218): Studio never redirects its API, so a redirect,
+  // to http above all, is refused instead of followed.
+  group('ApiClient when Studio answers with a redirect', () {
+    tearDown(ResilienceInterceptor.instance.resetAll);
+
+    for (final status in [301, 302, 307, 308]) {
+      test('a $status to http is not followed and fails through studioError', () async {
+        await withRealSockets(() async {
+          var plainRequests = 0;
+          final plain = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+          addTearDown(() => plain.close(force: true));
+          plain.listen((request) {
+            plainRequests++;
+            request.response
+              ..write('[{"login":"admin"}]')
+              ..close();
+          });
+          final studio = await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, loopbackServerContext());
+          addTearDown(() => studio.close(force: true));
+          studio.listen((request) {
+            request.response
+              ..statusCode = status
+              ..headers.set('location', 'http://127.0.0.1:${plain.port}${request.uri.path}')
+              ..close();
+          });
+          final client = ApiClient(
+            tokenRotation: const RefusingTokenRotation(),
+            appConfig: AppConfig(
+              environment: Environment.prod,
+              apiBaseUrl: 'https://127.0.0.1:${studio.port}',
+              certificatePins: const [],
+              idleTimeout: null,
+            ),
+            secureStorage: FlutterSecureStorageAdapter(),
+          );
+          client.instance.httpClientAdapter = loopbackTrustingAdapter();
+          TestEnv.authenticate();
+
+          Object? thrown;
+          try {
+            await client.get('/api/redirect/$status');
+          } on Object catch (error) {
+            thrown = error;
+          }
+
+          expect(thrown, isA<AppException>().having((e) => e.statusCode, 'statusCode', status));
+          expect(studioError(thrown!).message, isNot(contains('${plain.port}')));
+          expect(plainRequests, 0, reason: 'the client followed the redirect to http');
+        });
+      });
+    }
+
+    test('a retry after a 503 does not follow a redirect to http either', () async {
+      await withRealSockets(() async {
+        var plainRequests = 0;
+        final plain = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => plain.close(force: true));
+        plain.listen((request) {
+          plainRequests++;
+          request.response.close();
+        });
+        var studioRequests = 0;
+        final studio = await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, loopbackServerContext());
+        addTearDown(() => studio.close(force: true));
+        studio.listen((request) {
+          studioRequests++;
+          if (studioRequests == 1) {
+            request.response
+              ..statusCode = 503
+              ..close();
+          } else {
+            request.response
+              ..statusCode = 302
+              ..headers.set('location', 'http://127.0.0.1:${plain.port}/api/retry')
+              ..close();
+          }
+        });
+        final client = ApiClient(
+          tokenRotation: const RefusingTokenRotation(),
+          appConfig: AppConfig(
+            environment: Environment.prod,
+            apiBaseUrl: 'https://127.0.0.1:${studio.port}',
+            certificatePins: const [],
+            idleTimeout: null,
+          ),
+          secureStorage: FlutterSecureStorageAdapter(),
+        );
+        client.instance.httpClientAdapter = loopbackTrustingAdapter();
+        TestEnv.authenticate();
+
+        await expectLater(client.get('/api/redirect/retry'), throwsA(isA<AppException>()));
+        expect(studioRequests, greaterThanOrEqualTo(2), reason: 'the 503 was not retried');
+        expect(plainRequests, 0, reason: 'the retry followed the redirect to http');
+      });
+    });
+
+    test('the client follows no redirect at all', () {
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: const AppConfig.prod());
+      expect(client.instance.options.followRedirects, isFalse);
+    });
+  });
+
   group('ApiClient when the server cuts the connection off', () {
     const cached = '[{"login":"admin"}]';
 

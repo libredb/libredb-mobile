@@ -180,7 +180,7 @@ Overview:
 | Question | Answer | Why |
 | --- | --- | --- |
 | Does the app collect or share any of the required user data types? | Yes | The access token, the statements sent to Studio, and the Sentry reports |
-| Is all user data encrypted in transit? | Yes | A prod build stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is not https, and refuses a Keycloak discovery document that names an endpoint that is not https ([security.md](security.md), "Encryption in transit") |
+| Is all user data encrypted in transit? | Yes | A prod build stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is not https, refuses a Keycloak discovery document that names an endpoint that is not https, and follows no redirect from Studio ([security.md](security.md), "Encryption in transit") |
 | Account creation | The app does not allow users to create an account | Accounts are made in the deployment's Keycloak by the organisation; the app only signs in |
 | Can users request that their data is deleted? | Yes | Remove my data in Settings, uninstalling, and info@libredb.org for crash reports |
 

@@ -12,9 +12,10 @@ The rule is one pattern, `AppConfig.httpsUrlPattern`: the scheme in any case, op
 The error names the define and never its value, because the DSN carries the project's key.
 On Android the host app starts the native Sentry SDK before the Flutter engine, so `NativeSentry.requireHttpsDsn` (`android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt`) refuses such a DSN there first, with the same pattern and message.
 An https issuer is not enough on its own: its discovery document names the endpoints the app then uses.
-`OidcClient` (`lib/infrastructure/auth/oidc/oidc_client.dart`) refuses a discovery document whose `authorization_endpoint`, `token_endpoint`, `jwks_uri` or `end_session_endpoint` is not an https URL with a host, before it opens the browser or sends a code, a PKCE verifier, a refresh token or an ID token hint.
-A sign-in then fails with `OidcFailure.insecureEndpoint`, shown as `auth.oidc_config`, a refresh keeps the session without sending the refresh token, and a provider logout is not opened; the log names only the endpoint's key.
+`OidcClient` (`lib/infrastructure/auth/oidc/oidc_client.dart`) refuses a discovery document whose `authorization_endpoint`, `pushed_authorization_request_endpoint`, `token_endpoint`, `jwks_uri` or `end_session_endpoint` is not an https URL with a host, before it opens the browser or sends a code, a PKCE verifier, a refresh token or an ID token hint.
+A sign-in then fails with `OidcFailure.insecureEndpoint`, shown as `auth.oidc_config`, a refresh keeps the session without sending the refresh token, and a provider logout is not opened; every log line names only the endpoint's key.
 Only an http issuer, which a prod build never starts with, may name http endpoints, and only on its own host.
+`ApiClient` (`lib/infrastructure/http/api_client.dart`) follows no redirect: Studio's API answers JSON and never redirects, so a 3xx, to an http `Location` above all, is an error answer that `studioError` maps, and no request goes to the `Location`, a retry's included.
 An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
 The release stops before the build on the same rule (`tool/release/check_defines.sh`, [release.md](release.md)).
 `AppConfig.httpsOnlyDefines` lists the three, and `test/architecture/android_release_setup_test.dart` fails when the release passes a URL define that is not in it, or when the script or `NativeSentry.kt` does not carry the pattern verbatim.

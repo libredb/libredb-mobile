@@ -140,6 +140,10 @@ class ApiClient {
         receiveTimeout: const Duration(seconds: _timeoutSeconds),
         responseType: ResponseType.plain,
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+        // Studio's API answers JSON and never redirects (its src/proxy.ts, #909), so a 3xx is an error answer, which
+        // studioError maps, instead of a request to wherever the Location points, plain http included (#218,
+        // docs/security.md "Encryption in transit").
+        followRedirects: false,
       ),
     );
 
