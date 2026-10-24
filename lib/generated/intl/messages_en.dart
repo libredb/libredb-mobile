@@ -355,6 +355,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "No internet connection. Check your network and try again.",
     ),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Could not change the language"),
+    "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(
+      "Some of your data could not be removed from this phone, so you are still signed in.",
+    ),
     "error_studio_account_has_no_identity": MessageLookupByLibrary.simpleMessage(
       "Studio cannot tell who this account is. Ask an administrator to check the account\'s email and username.",
     ),
@@ -507,6 +510,24 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_role_user": MessageLookupByLibrary.simpleMessage("User"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Unknown user"),
     "refresh": MessageLookupByLibrary.simpleMessage("Refresh"),
+    "remove_my_data": MessageLookupByLibrary.simpleMessage("Remove my data"),
+    "remove_my_data_collapsed_sections": MessageLookupByLibrary.simpleMessage(
+      "Collapsed sections of the connection list",
+    ),
+    "remove_my_data_confirm": MessageLookupByLibrary.simpleMessage("Remove and sign out"),
+    "remove_my_data_drafts": MessageLookupByLibrary.simpleMessage("SQL editor drafts"),
+    "remove_my_data_favorites": MessageLookupByLibrary.simpleMessage("Starred connections"),
+    "remove_my_data_history": MessageLookupByLibrary.simpleMessage("Statement history"),
+    "remove_my_data_kept": MessageLookupByLibrary.simpleMessage("Kept on this phone"),
+    "remove_my_data_kept_preferences": MessageLookupByLibrary.simpleMessage("Language, theme and result view"),
+    "remove_my_data_last_connection": MessageLookupByLibrary.simpleMessage("The last open connection and database"),
+    "remove_my_data_recents": MessageLookupByLibrary.simpleMessage("Recent connections"),
+    "remove_my_data_removed": MessageLookupByLibrary.simpleMessage("Removed from this phone"),
+    "remove_my_data_signs_out": MessageLookupByLibrary.simpleMessage("You are signed out once your data is removed."),
+    "remove_my_data_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Remove what this app keeps about you on this phone, then sign out",
+    ),
+    "remove_my_data_title": MessageLookupByLibrary.simpleMessage("Remove my data?"),
     "required_field": MessageLookupByLibrary.simpleMessage("Required Field"),
     "result_affected_rows": m40,
     "result_card_id": m41,
@@ -552,6 +573,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
       "The licenses of LibreDB Mobile and the code it includes",
     ),
+    "settings_privacy": MessageLookupByLibrary.simpleMessage("Privacy"),
     "settings_subtitle": MessageLookupByLibrary.simpleMessage("Manage your account preferences"),
     "settings_theme_subtitle": MessageLookupByLibrary.simpleMessage("Choose your preferred theme style"),
     "sql_editor_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/settings/application/remove_my_data_bloc.dart';
+import 'package:libredb_mobile/features/settings/presentation/widgets/remove_my_data_dialog.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/l10n/locale_l10n.dart';
+import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
+import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import 'package:libredb_mobile/shared/utils/external_link.dart';
 import 'package:libredb_mobile/shared/widgets/language_selection_dialog.dart';
@@ -59,6 +64,12 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
 
+              // Privacy section, while Studio names the signed-in account
+              if (SignedInAccountScope.of(context).subject != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                const _PrivacySection(),
+              ],
+
               // Help & Resources section
               const SizedBox(height: AppSpacing.lg),
               _SettingsSection(
@@ -84,15 +95,103 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              // Logout intentionally lives only in the top bar of the
-              // shell, not here. Settings is feature-scoped and an
+              // Logout intentionally lives only in the profile sheet of
+              // the shell, not here. Settings is feature-scoped and an
               // auth-session lifecycle action would cross feature
               // boundaries (architecture guard rejects features/settings
-              // → features/auth imports). The top bar's SignOutBloc
-              // flow handles it correctly.
+              // → features/auth imports). 'Remove my data' signs out
+              // through the SignedInAccountScope the shell provides.
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 'Remove my data': clears what the phone keeps for the signed-in account, then signs out; a store that fails keeps
+/// the user signed in with the failure and a retry.
+class _PrivacySection extends StatelessWidget {
+  const _PrivacySection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context);
+    return BlocProvider<RemoveMyDataBloc>(
+      create: (context) => RemoveMyDataBloc(registry: context.read<UserDataRegistry>()),
+      child: BlocConsumer<RemoveMyDataBloc, RemoveMyDataState>(
+        listenWhen: (previous, current) => current is RemoveMyDataDone,
+        listener: (context, state) => SignedInAccountScope.of(context).signOut(),
+        builder: (context, state) {
+          // Once done, the shell's sign-out barrier covers the page until the login page opens.
+          final (clearing, enabled) = switch (state) {
+            RemoveMyDataInProgress() => (true, false),
+            RemoveMyDataDone() => (false, false),
+            RemoveMyDataIdle() || RemoveMyDataFailure() => (false, true),
+          };
+          return _SettingsSection(
+            title: l10n.settings_privacy,
+            children: [
+              _SettingsTile(
+                key: settingsRemoveMyDataKey,
+                icon: Icons.delete_forever_outlined,
+                title: l10n.remove_my_data,
+                subtitle: l10n.remove_my_data_subtitle,
+                trailing: clearing
+                    ? SizedBox.square(
+                        dimension: 24,
+                        child: CircularProgressIndicator(
+                          key: removeMyDataProgressKey,
+                          strokeWidth: 2,
+                          semanticsLabel: l10n.loading,
+                        ),
+                      )
+                    : null,
+                onTap: enabled ? () => _confirm(context) : null,
+              ),
+              if (state case RemoveMyDataFailure(:final errorCode))
+                _RemoveMyDataFailure(message: errorCode.resolve(context), onRetry: () => _remove(context)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirm(BuildContext context) async {
+    if (!await RemoveMyDataDialog.show(context) || !context.mounted) return;
+    _remove(context);
+  }
+
+  /// Clears the data of the account Studio names now, so a retry follows the account that is signed in.
+  void _remove(BuildContext context) {
+    final subject = SignedInAccountScope.of(context).subject;
+    if (subject == null) return;
+    context.read<RemoveMyDataBloc>().add(RemoveMyDataRequested(subject: subject));
+  }
+}
+
+/// The failure of 'Remove my data', which names no store or stored value, with a retry.
+class _RemoveMyDataFailure extends StatelessWidget {
+  const _RemoveMyDataFailure({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: colorScheme.error),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.error)),
+          ),
+          TextButton(key: removeMyDataRetryKey, onPressed: onRetry, child: Text(S.of(context).retry)),
+        ],
       ),
     );
   }
@@ -150,7 +249,17 @@ class _SettingsTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
 
-  const _SettingsTile({super.key, required this.icon, required this.title, required this.subtitle, this.onTap});
+  /// Shown in place of the chevron, such as a progress indicator while the tile's action runs.
+  final Widget? trailing;
+
+  const _SettingsTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +273,7 @@ class _SettingsTile extends StatelessWidget {
         subtitle,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
       ),
-      trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
+      trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
       onTap: onTap,
     );
   }

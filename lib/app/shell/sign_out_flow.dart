@@ -11,6 +11,12 @@ import 'package:libredb_mobile/shared/widgets/confirmation_dialog_widget.dart';
 Future<void> confirmAndSignOut(BuildContext context) async {
   final shouldLogout = await ConfirmationDialog.show(context: context, type: DialogType.logout) ?? false;
   if (!shouldLogout || !context.mounted) return;
+  await signOutAndOpenLogin(context);
+}
+
+/// Signs out through [SignOutBloc] without asking, then opens the login page: Studio's logout record, the wipe and the
+/// identity provider's end-session, as every sign-out. 'Remove my data' runs it once its own confirmation was given.
+Future<void> signOutAndOpenLogin(BuildContext context) async {
   // AWAIT the end of the sign-out before navigating: navigating
   // immediately would race the async logout work and (with the
   // router's "authenticated user on public route → home" rule)

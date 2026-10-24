@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
+import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +22,12 @@ void main() {
       routes: [
         GoRoute(
           path: '/settings',
-          builder: (context, state) => const Scaffold(body: SettingsScreen()),
+          // Studio has named no account, so the Privacy section is left out.
+          builder: (context, state) => SignedInAccountScope(
+            subject: null,
+            signOut: () async {},
+            child: const Scaffold(body: SettingsScreen()),
+          ),
         ),
         GoRoute(
           path: '/change-password',

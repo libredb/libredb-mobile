@@ -27,6 +27,9 @@ enum AppErrorCode {
   // --- settings ---
   settingsChangeLanguageFailed('settings.change_language_failed'),
 
+  /// 'Remove my data' could not clear a store that keeps data of the signed-in account on this device.
+  settingsUserDataNotRemoved('settings.user_data_not_removed'),
+
   // --- network ---
   networkCertInvalid('network.cert_invalid'),
 

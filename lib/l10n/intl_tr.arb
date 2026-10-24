@@ -973,5 +973,21 @@
   "editor_catalog_not_listed": "Sunucu {catalog} veritabanını listelemiyor, bu yüzden düzenleyici {used} kullanıyor.",
   "@editor_catalog_not_listed": {"description": "Shown when a statement opened in the editor names a database the server does not list; the editor runs in the default it names instead.", "placeholders": {"catalog": {"type": "String"}, "used": {"type": "String"}}},
   "editor_catalog_not_listed_none": "Sunucu {catalog} veritabanını listelemiyor.",
-  "@editor_catalog_not_listed_none": {"description": "Shown when a statement opened in the editor names a database the server does not list, and the server lists none to use instead.", "placeholders": {"catalog": {"type": "String"}}}
+  "@editor_catalog_not_listed_none": {"description": "Shown when a statement opened in the editor names a database the server does not list, and the server lists none to use instead.", "placeholders": {"catalog": {"type": "String"}}},
+  "settings_privacy": "Gizlilik",
+  "remove_my_data": "Verilerimi sil",
+  "remove_my_data_subtitle": "Bu uygulamanın bu telefonda sizinle ilgili tuttuklarını silin ve oturumu kapatın",
+  "remove_my_data_title": "Verileriniz silinsin mi?",
+  "remove_my_data_removed": "Bu telefondan silinenler",
+  "remove_my_data_drafts": "SQL düzenleyici taslakları",
+  "remove_my_data_history": "Sorgu geçmişi",
+  "remove_my_data_favorites": "Yıldızlı bağlantılar",
+  "remove_my_data_recents": "Son kullanılan bağlantılar",
+  "remove_my_data_last_connection": "Son açık bağlantı ve veritabanı",
+  "remove_my_data_collapsed_sections": "Bağlantı listesinde daraltılan bölümler",
+  "remove_my_data_kept": "Bu telefonda kalanlar",
+  "remove_my_data_kept_preferences": "Dil, tema ve sonuç görünümü",
+  "remove_my_data_signs_out": "Verileriniz silinince oturumunuz kapatılır.",
+  "remove_my_data_confirm": "Sil ve oturumu kapat",
+  "error_settings_user_data_not_removed": "Verilerinizin bir kısmı bu telefondan silinemedi, bu yüzden oturumunuz açık."
 }

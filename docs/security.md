@@ -1,6 +1,6 @@
 # Security
 
-This page describes the protections inside the app: how it stores tokens and statement text, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
+This page describes the protections inside the app: how it stores tokens and statement text, how the user removes what it keeps, how it checks the server's certificate, how it hides sensitive screens, how it masks sensitive result values, how it copies them, how it asks before a statement that may write runs, and when it signs an idle user out.
 What the app sends to Studio and what it never holds is in [architecture.md](architecture.md#security), and what leaves the device in a crash report is in [crash-reporting.md](crash-reporting.md).
 
 ## Token storage
@@ -40,8 +40,20 @@ The editor's drafts (one per connection, with its catalog) and the statement his
   iOS keeps the default, so a backup may hold the files but never the key; excluding the directory needs Swift that no build here checks, and moves to M6 with the iOS build.
 - Clears: `clearSubject` deletes the account's key first and its files after it, so an interrupted clear leaves only ciphertext no key opens, and it reports a failure.
   `clearAll` does that for every account directory, then deletes every key of the store left in `flutter_secure_storage` (found by its name prefix, such as a key whose directory is gone after an iOS reinstall), and only then the whole `statement_text/` directory.
-  Both are for 'Remove my data' in M6; a plain sign-out keeps the text.
+  'Remove my data' runs `clearSubject` for the signed-in account (see below); a plain sign-out keeps the text.
 - Logs and errors carry no text, key, subject, subject hash or path; a decode failure is reported without the decrypted bytes.
+
+## Removing the app's data
+
+A sign-out forgets the session: the tokens, the HTTP cache and what the app holds in memory.
+What the app keeps per account outlives it on purpose, so the same account finds it again and another account never reads it.
+'Remove my data', in the Privacy section of Settings while signed in, removes that too, for the signed-in account only, and then signs out through the usual sign-out (Studio's logout record, the wipe, the identity provider's end-session).
+
+- `UserDataRegistry` (`lib/shared/user_data/user_data_registry.dart`) lists every store that keeps data of an account, and `AppDependencies.createUserDataRegistry` fills it: the drafts and the history (`clearSubject`), the starred and recent connections, the last open connection, the database of each server-level connection, and the collapsed sections of the connection list, whose keys are Studio's environment and group names.
+- The language, the theme and the result view mode are device preferences and stay.
+- `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, or when a `StorageKeys` value is neither cleared nor named a device preference.
+- Every store is tried even when one fails; then the user stays signed in and sees the failure with Retry, which names no stored value, and the log names only the store and the error type.
+- Uninstalling the app removes its files and preferences, but on iOS a Keychain item can outlive a reinstall, so the key of an account's statement text may be left; `clearAll` of the statement text store deletes every key of the store it finds by name prefix, also one whose files are gone.
 
 ## Certificate pinning
 
