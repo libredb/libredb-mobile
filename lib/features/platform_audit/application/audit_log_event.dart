@@ -31,6 +31,11 @@ final class AuditLogFilterChanged extends AuditLogQueryEvent {
   String toString() => 'AuditLogFilterChanged($filter)';
 }
 
+/// Reads the first page without any filter, dropping a search text still waiting for its pause: clear all filters.
+final class AuditLogFiltersCleared extends AuditLogQueryEvent {
+  const AuditLogFiltersCleared();
+}
+
 /// The search field of the filter sheet now holds [text], as typed.
 final class AuditLogSearchChanged extends AuditLogEvent {
   const AuditLogSearchChanged(this.text);
