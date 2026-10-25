@@ -184,6 +184,7 @@ Platform mode calls LibreDB Platform's bearer API through `PlatformApiClient`; t
 - Never retry a write, and never log Platform's `message`, an e-mail or a name.
 - Read answers in the feature's `data/models/`: throw a `FormatException` for a missing or mistyped required field, and treat Platform's roles, permissions and codes as opaque strings.
 - Each new method needs a recorded answer in `assets/mock/` and an entry in the Platform table of `test/architecture/mock_asset_coverage_test.dart`.
+- Once a method can be recorded against the `platform` profile of `tool/studio-dev`, it also needs a fixture in `test/fixtures/platform/` read by `test/infrastructure/platform/recorded_platform_answers_test.dart`.
 
 ## Adding a New Feature
 
