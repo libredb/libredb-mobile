@@ -28,6 +28,7 @@ Dev and test builds, `main_local.dart` among them, check none of them; tool/stud
 The provider's tokens live in `flutter_secure_storage` (`lib/infrastructure/storage/secure_storage.dart`).
 On Android it encrypts them with AES-GCM under an RSA-OAEP wrapped Android Keystore key.
 On iOS the Keychain accessibility is pinned to `first_unlock_this_device`, so a background refresh can read the tokens while the device is locked, and they never move to another device through a backup or iCloud Keychain.
+The session's target (Studio or Platform) is stored with the tokens in secure storage, cleared with them, and holds no credential.
 
 ## Statement text on the device
 
@@ -75,7 +76,7 @@ What the app keeps per account outlives it on purpose, so the same account finds
   Both folders go with every sign-out (`AuthSessionRepository.clear`) and with 'Remove my data'; a removal the phone refuses is shown, and the sign-out then says that data stayed behind.
   A sign-in removes them too before it stores the new session (`SsoAuthRepository`), for a share the app was killed in before a session that ended without the wipe, and a removal the phone refuses refuses the sign-in.
 - The language, the theme and the result view mode are device preferences and stay.
-- `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, when a `StorageKeys` value is neither cleared nor named a device preference, when a `SecureStorageKeys` value is not a session token that a sign-out deletes, or when a file outside its list reaches a device directory through path_provider.
+- `test/architecture/user_data_registry_test.dart` fails when a class that keeps per-account data is not cleared by an entry, when a `StorageKeys` value is neither cleared nor named a device preference, when a `SecureStorageKeys` value is not a session value (a token or the session target) that a sign-out deletes, or when a file outside its list reaches a device directory through path_provider.
 - Every store is tried even when one fails; then the user stays signed in and sees the failure with Retry, which names no stored value, and the log names only the store and the error type.
   The favorites, the open connection and its database are then read again from what is left, so a later change never writes back what was cleared.
 - Uninstalling the app removes its files and preferences, but on iOS a Keychain item can outlive a reinstall, so the key of an account's statement text may be left.

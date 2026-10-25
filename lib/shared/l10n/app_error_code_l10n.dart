@@ -48,6 +48,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.editorPageInterrupted => s.error_editor_page_interrupted,
       AppErrorCode.editorPageOutcomeUnknown => s.error_editor_page_outcome_unknown,
       AppErrorCode.browseRowsInterrupted => s.error_browse_rows_interrupted,
+      AppErrorCode.platformNotConfigured => s.error_platform_not_configured,
       AppErrorCode.generic => s.error_generic,
     };
   }

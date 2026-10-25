@@ -12,6 +12,7 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
@@ -139,7 +140,7 @@ void main() {
     });
 
     test('lets a page ask while the session is authenticated', () {
-      when(() => sessionCubit.state).thenReturn(const SessionAuthenticated());
+      when(() => sessionCubit.state).thenReturn(const SessionAuthenticated(target: SessionTarget.studio));
 
       expect(factory.isExitForced(leaving(ApplicationRoutesConstants.settings)), isFalse);
     });

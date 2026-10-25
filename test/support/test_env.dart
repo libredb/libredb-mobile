@@ -8,6 +8,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -70,10 +71,13 @@ class TestEnv {
     await _clearStorage();
   }
 
-  /// Seeds a mock JWT in the secure-store backing. Call inside a test body or
-  /// `setUp` (i.e. AFTER the global reset has cleared the store), never in
-  /// `setUpAll`. Synchronous: the backing is just an in-memory map.
-  static void authenticate() {
+  /// Seeds a mock JWT and the session [target] (Studio unless given) in the
+  /// secure-store backing, as a sign-in of this build stores them. Call inside
+  /// a test body or `setUp` (i.e. AFTER the global reset has cleared the
+  /// store), never in `setUpAll`. Synchronous: the backing is just an
+  /// in-memory map.
+  static void authenticate({SessionTarget target = SessionTarget.studio}) {
+    _secureStore[SecureStorageKeys.sessionTarget.key] = target.storedValue;
     _secureStore[SecureStorageKeys.jwtToken.key] = 'MOCK_TOKEN';
   }
 

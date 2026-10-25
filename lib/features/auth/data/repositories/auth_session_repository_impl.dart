@@ -12,7 +12,7 @@ import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart
 
 /// Persistence-layer implementation of [IAuthSessionRepository].
 ///
-/// Writes the tokens to [ISecureStorage] (Keychain / EncryptedSharedPreferences).
+/// Writes the session's target and tokens to [ISecureStorage] (Keychain / EncryptedSharedPreferences).
 ///
 /// The store supports no transactions, so atomicity is emulated: writes
 /// happen in order, and on any failure every key that was written during
@@ -20,12 +20,17 @@ import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart
 /// none) before the failure is reported. Callers therefore never observe a
 /// half-written session.
 ///
-/// [clear] removes what belongs to the session: both tokens, every [StorageKeys] value of [StorageScope.session],
-/// the HTTP responses cached in [ICacheStorage] and the files the share sheet got ([TemporaryShareFiles]). Device
-/// preferences such as the language and theme stay.
+/// [clear] removes what belongs to the session: its target and tokens, every [StorageKeys] value of
+/// [StorageScope.session], the HTTP responses cached in [ICacheStorage] and the files the share sheet got
+/// ([TemporaryShareFiles]). Device preferences such as the language and theme stay.
 ///
 /// The session also owns [SecureStorageKeys.oidcIdToken] and [SecureStorageKeys.accessTokenExpiresAt]: [persist] writes
 /// them after the refresh token, and the rollback and [clear] cover them.
+///
+/// [SecureStorageKeys.sessionTarget] is the first write of [persist], before the access token, so a process killed
+/// after it leaves a target without a token in an empty store, which restores as signed out, never a new token next
+/// to a missing target. The rollback and [clear] cover it like the tokens. A token refresh rewrites only the tokens,
+/// so the target written at sign-in stays for the whole session.
 class AuthSessionRepository implements IAuthSessionRepository {
   AuthSessionRepository({
     required this._secureStorage,
@@ -53,11 +58,13 @@ class AuthSessionRepository implements IAuthSessionRepository {
     // the try block: ISecureStorage.read can throw on platform /
     // decryption failure, and the contract is that persist always
     // returns a Result — never propagates a raw exception.
+    String? priorTarget;
     String? priorJwt;
     String? priorRefresh;
     String? priorOidcIdToken;
     String? priorExpiry;
     try {
+      priorTarget = await _secureStorage.read(SecureStorageKeys.sessionTarget.key);
       priorJwt = await _secureStorage.read(SecureStorageKeys.jwtToken.key);
       priorRefresh = await _secureStorage.read(SecureStorageKeys.refreshToken.key);
       priorOidcIdToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
@@ -68,6 +75,8 @@ class AuthSessionRepository implements IAuthSessionRepository {
       // rollback path still knows to restore it. If the write throws
       // cleanly (state unchanged), the rollback is a no-op against
       // the snapshot (write same value back, or delete an absent key).
+      // The target goes first, see the class comment.
+      await _writeOrDelete(SecureStorageKeys.sessionTarget, session.target.storedValue, mutatedSecure);
       mutatedSecure.add(SecureStorageKeys.jwtToken);
       await _secureStorage.write(SecureStorageKeys.jwtToken.key, session.idToken);
       // Owner-of-keys contract: a session without a refresh token must
@@ -96,6 +105,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
       _log.error('persist failed after {} secure mutations; rolling back: {}', [mutatedSecure.length, e]);
       await _rollback(
         mutatedSecure: mutatedSecure,
+        priorTarget: priorTarget,
         priorJwt: priorJwt,
         priorRefresh: priorRefresh,
         priorOidcIdToken: priorOidcIdToken,
@@ -116,6 +126,11 @@ class AuthSessionRepository implements IAuthSessionRepository {
     // leftover token would let AuthInterceptor re-attach it on the
     // next request and silently defeat a clear/logout.
     final errors = <String>[];
+    try {
+      await _secureStorage.delete(SecureStorageKeys.sessionTarget.key);
+    } catch (e) {
+      errors.add('sessionTarget: $e');
+    }
     try {
       await _secureStorage.delete(SecureStorageKeys.jwtToken.key);
     } catch (e) {
@@ -163,7 +178,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
       _log.error('clear: partial failures: {}', [msg]);
       return Failure(UnknownError('Session clear failed: $msg'));
     }
-    _log.info('clear: tokens, {} session keys, cached responses and share files removed', [sessionKeys.length]);
+    _log.info('clear: target, tokens, {} session keys, cached responses and share files removed', [sessionKeys.length]);
     return const Success(null);
   }
 
@@ -180,6 +195,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
 
   Future<void> _rollback({
     required Set<SecureStorageKeys> mutatedSecure,
+    required String? priorTarget,
     required String? priorJwt,
     required String? priorRefresh,
     required String? priorOidcIdToken,
@@ -188,6 +204,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
     for (final key in mutatedSecure) {
       try {
         final prior = switch (key) {
+          SecureStorageKeys.sessionTarget => priorTarget,
           SecureStorageKeys.jwtToken => priorJwt,
           SecureStorageKeys.refreshToken => priorRefresh,
           SecureStorageKeys.oidcIdToken => priorOidcIdToken,

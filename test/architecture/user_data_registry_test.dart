@@ -43,13 +43,15 @@ const _devicePreferences = {
   StorageKeys.appLockTimeout,
 };
 
-/// The values of [SecureStorageKeys], each a token of the session, which every sign-out deletes. A secure value kept
-/// per account past the session is named by its store instead, as the statement text keys are.
-const _sessionTokens = {
+/// The values of [SecureStorageKeys], each a value of the session (its tokens and its target), which every sign-out
+/// deletes. A secure value kept per account past the session is named by its store instead, as the statement text keys
+/// are.
+const _sessionValues = {
   SecureStorageKeys.jwtToken,
   SecureStorageKeys.refreshToken,
   SecureStorageKeys.oidcIdToken,
   SecureStorageKeys.accessTokenExpiresAt,
+  SecureStorageKeys.sessionTarget,
 };
 
 /// The files under `lib/` that reach the device's directories through path_provider, with the registry entry that
@@ -261,12 +263,12 @@ void main() {
 
   // With the StorageKeys test above, these two close the other ways a store can keep data on the phone, so a new
   // per-account store behind an interface of its own fails one of them.
-  test('every secure storage key is a session token, which a sign-out deletes', () async {
+  test('every secure storage key is a session value, which a sign-out deletes', () async {
     expect(
       SecureStorageKeys.values.toSet(),
-      _sessionTokens,
+      _sessionValues,
       reason:
-          'A new SecureStorageKeys value must be a session token deleted by AuthSessionRepository.clear, or be kept '
+          'A new SecureStorageKeys value must be a session value deleted by AuthSessionRepository.clear, or be kept '
           'by a store that "Remove my data" clears',
     );
     final secure = _MemorySecureStorage();

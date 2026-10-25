@@ -5,6 +5,7 @@ import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_s
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -22,7 +23,7 @@ void main() {
     identityRepository = MockIStudioIdentityRepository();
     sessionRepository = MockIAuthSessionRepository();
     signIn = SignInWithSsoUseCase(ssoRepository, identityRepository, sessionRepository);
-    when(() => ssoRepository.signIn()).thenAnswer((_) async => const SsoProviderSignedIn());
+    when(() => ssoRepository.signIn(target: SessionTarget.studio)).thenAnswer((_) async => const SsoProviderSignedIn());
     when(() => sessionRepository.clear()).thenAnswer((_) async => const Success(null));
   });
 
@@ -36,7 +37,7 @@ void main() {
       final result = await signIn();
 
       expect(result, isA<SsoSignInSucceeded>().having((r) => r.identity, 'identity', _user));
-      verify(() => ssoRepository.signIn()).called(1);
+      verify(() => ssoRepository.signIn(target: SessionTarget.studio)).called(1);
       verify(() => identityRepository.fetch()).called(1);
       verifyNever(() => sessionRepository.clear());
     });
@@ -114,7 +115,8 @@ void main() {
     });
 
     test('a sign-in the user cancels at the provider asks Studio nothing and clears nothing', () async {
-      when(() => ssoRepository.signIn()).thenAnswer((_) async => const SsoProviderCancelled());
+      when(() => ssoRepository.signIn(target: SessionTarget.studio))
+          .thenAnswer((_) async => const SsoProviderCancelled());
 
       expect(await signIn(), isA<SsoSignInCancelled>());
       verifyNever(() => identityRepository.fetch());
@@ -122,7 +124,7 @@ void main() {
     });
 
     test('a sign-in the provider refuses rejects with its code, asks Studio nothing and clears nothing', () async {
-      when(() => ssoRepository.signIn())
+      when(() => ssoRepository.signIn(target: SessionTarget.studio))
           .thenAnswer((_) async => const SsoProviderRejected(AppErrorCode.authOidcFailed));
 
       expect(

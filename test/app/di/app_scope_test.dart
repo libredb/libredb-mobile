@@ -14,6 +14,7 @@ import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -493,6 +494,7 @@ SessionCubit _relaunchedSession() {
   final storage = FlutterSecureStorageAdapter();
   return SessionCubit(
     secureStorage: storage,
+    availableTargets: const {SessionTarget.studio},
     ssoStartup: SsoSessionStartup(
       rotation: _FakeRotation(),
       secureStorage: storage,
@@ -573,6 +575,24 @@ void main() {
       expect(response.statusCode, 200);
       expect(session.state, isA<SessionAuthenticated>());
       expect(await secure.read(SecureStorageKeys.jwtToken.key), LocalOidcClient.accessToken);
+    });
+
+    // This build has no Platform target yet (#244), so a stored Platform session is never opened as a Studio one.
+    testWidgets('ends and clears a stored Platform session, which this build cannot serve', (tester) async {
+      final secure = FlutterSecureStorageAdapter();
+      await secure.write(SecureStorageKeys.sessionTarget.key, 'platform');
+      await secure.write(SecureStorageKeys.jwtToken.key, 'MOCK_TOKEN');
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(
+        scope.read<SessionCubit>().state,
+        const SessionUnauthenticated(
+          reason: SessionExpiredReason.signInFailed,
+          signInError: AppErrorCode.platformNotConfigured,
+        ),
+      );
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), isNull);
+      expect(await secure.read(SecureStorageKeys.sessionTarget.key), isNull);
     });
 
     testWidgets('provides the auth mode that AppDependencies carries', (tester) async {

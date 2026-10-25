@@ -194,7 +194,7 @@ The contract, the endpoint table and the error mapping are in `docs/architecture
 - `test/flutter_test_config.dart` is the global bootstrap (auto-discovered by `flutter test`). It runs once per isolate — binding init, `AppLogger.configure`, `EquatableConfig.stringify`, mocktail `registerAllFallbackValues()` — and registers a global per-test `setUp`/`tearDown` that calls `TestEnv.reset()`.
 - The bootstrap also clears `rootBundle` before and after every test, including in files that opt out of `TestEnv.reset()`: an asset `Future` cached by one `testWidgets` resumes its awaiters only in that test's finished `FakeAsync` zone, so without the reset the later tests of a file never got their `assets/mock/*.json` responses (see "The asset cache" in `docs/testing-architecture.md`).
 - Tests need **no** manual setup for storage/router/secure-storage. Use `TestEnv` (`test/support/test_env.dart`):
-  - `TestEnv.authenticate()` for auth-dependent tests — call it in `setUp` or the test body, **never** in `setUpAll` (the global reset clears the secure store before each test).
+  - `TestEnv.authenticate()` for auth-dependent tests (an optional `target`, Studio by default, is stored with the token); call it in `setUp` or the test body, **never** in `setUpAll` (the global reset clears the secure store before each test).
   - `TestEnv.apiClient()` for the mock-backed `ApiClient`.
 - A test file that installs its own `MethodChannel` / `SharedPreferences` mock opts out of the global reset with `setUpAll(() => TestEnv.autoReset = false);` (isolated per file). Example: `test/infrastructure/storage/local_storage_test.dart`.
 - **Test doubles** — reach for a `mocktail` mock first; drop to a hand-fake only for genuine stateful behavior; Dio handlers are always handwritten:

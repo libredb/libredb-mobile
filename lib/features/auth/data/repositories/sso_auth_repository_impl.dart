@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// [ISsoAuthRepository] over [IOidcClient].
 ///
@@ -29,10 +30,10 @@ class SsoAuthRepository implements ISsoAuthRepository {
   final TemporaryShareFiles _shareFiles;
 
   @override
-  Future<SsoProviderSignIn> signIn() async => _toResult(await _client.signIn());
+  Future<SsoProviderSignIn> signIn({required SessionTarget target}) async => _toResult(await _client.signIn(), target);
 
-  Future<SsoProviderSignIn> _toResult(OidcSignInOutcome outcome) async => switch (outcome) {
-    OidcSignedIn(:final tokens, :final claims) => await _persist(tokens, claims),
+  Future<SsoProviderSignIn> _toResult(OidcSignInOutcome outcome, SessionTarget target) async => switch (outcome) {
+    OidcSignedIn(:final tokens, :final claims) => await _persist(tokens, claims, target),
     OidcSignInCancelled() => const SsoProviderCancelled(),
     OidcSignInFailed(failure: OidcFailure.discovery) => const SsoProviderRejected(AppErrorCode.authOidcDiscovery),
     OidcSignInFailed(failure: OidcFailure.failed) => const SsoProviderRejected(AppErrorCode.authOidcFailed),
@@ -42,7 +43,7 @@ class SsoAuthRepository implements ISsoAuthRepository {
     ),
   };
 
-  Future<SsoProviderSignIn> _persist(OidcTokens tokens, Map<String, Object?> claims) async {
+  Future<SsoProviderSignIn> _persist(OidcTokens tokens, Map<String, Object?> claims, SessionTarget target) async {
     if (_nonEmptyString(claims['sub']) == null || _nonEmptyString(claims['iss']) == null) {
       _log.warn('The ID token has no string sub or iss, so the sign-in is refused');
       return const SsoProviderRejected(AppErrorCode.authOidcNoClaims);
@@ -56,6 +57,7 @@ class SsoAuthRepository implements ISsoAuthRepository {
     }
     final persisted = await _sessionRepository.persist(
       AuthSession(
+        target: target,
         idToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         oidcIdToken: tokens.idToken,

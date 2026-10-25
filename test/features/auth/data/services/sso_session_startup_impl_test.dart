@@ -162,6 +162,27 @@ void main() {
       verifyNever(() => sessionRepository.clear());
     });
 
+    // The target is written once, at sign-in; a refresh rotates the tokens of the same session.
+    test('a refresh leaves the stored session target as it is', () async {
+      storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)));
+      storage.store[SecureStorageKeys.sessionTarget.key] = 'platform';
+      when(() => rotation.rotate('stored-refresh')).thenAnswer(
+        (_) async => TokensRotated(
+          accessToken: 'new-access',
+          refreshToken: 'new-refresh',
+          oidcIdToken: 'new-id',
+          accessTokenExpiresAt: _newExpiry,
+        ),
+      );
+
+      final result = await newStartup().run();
+
+      expect(result, isA<SsoStartupUseStoredSession>());
+      expect(storage.store[SecureStorageKeys.jwtToken.key], 'new-access');
+      expect(storage.store[SecureStorageKeys.sessionTarget.key], 'platform');
+      expect(storage.writes, isNot(contains(SecureStorageKeys.sessionTarget.key)));
+    });
+
     test('a refresh writes only the fields that are present and not empty', () async {
       storeSession(expiresAt: _now.subtract(const Duration(minutes: 1)));
       when(() => rotation.rotate('stored-refresh'))

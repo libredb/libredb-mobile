@@ -19,6 +19,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
@@ -113,7 +114,8 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
               // when that listener navigates to the `returnUrl` deep link.
               // Awaiting a storage read here would let navigation win the
               // race and bounce the deep link back to /login → home.
-              context.read<SessionCubit>().markAuthenticated();
+              // #247 replaces the constant with the target of the entry the user chose.
+              context.read<SessionCubit>().markAuthenticated(SessionTarget.studio);
             }
           },
         ),
