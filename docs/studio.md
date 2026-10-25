@@ -730,41 +730,41 @@ With `W` and `R` the ids of the write and the read-only connection from `connect
 
 ```shell
 J=(-X PUT -H 'Content-Type: application/json')
-token=$(tool/studio-dev/access-token.sh admin) && record_platform me /me                                  # 200
-token=$(tool/studio-dev/access-token.sh admin2) && record_platform me_admin_seats /me                     # 403 LICENSE_ADMIN_SEATS
-record_platform connections /connections                                                                  # 200, both
-record_platform directory /directory/users                                                                # 200, disabled with enabled false
-record_platform directory_query '/directory/users?q=adm'                                                  # 200, admin and admin2
-record_platform directory_bad_page '/directory/users?page=0'                                              # 400 VALIDATION_FAILED, page
-record_platform grant_put "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null}'  # 200 {id}
-record_platform grants "/connections/$W/grants"                                                           # 200, that grant
-record_platform grants_unknown_connection /connections/unknown/grants                                     # 404 NOT_FOUND
-record_platform grant_put_level "/connections/$R/grants/$U" "${J[@]}" --data '{"level":"write","expiresAt":null}'  # 400, level
-record_platform grant_put_subject_unknown "/connections/$W/grants/a0000000-0000-4000-8000-000000000099" "${J[@]}" \
-  --data '{"level":"read","expiresAt":null}'                                                              # 400, subject
-record_platform grant_put_subject_disabled "/connections/$W/grants/a0000000-0000-4000-8000-000000000005" "${J[@]}" \
-  --data '{"level":"read","expiresAt":null}'                                                              # 400, subject
-record_platform grant_put_expiry "/connections/$W/grants/$U" "${J[@]}" \
-  --data '{"level":"read","expiresAt":"2020-01-01T00:00:00.000Z"}'                                        # 400, expiresAt
-record_platform grant_put_body "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null,"note":"x"}'  # 400, ""
-record_platform grant_delete_unknown "/connections/$W/grants/unknown" -X DELETE                           # 404 NOT_FOUND
+token=$(tool/studio-dev/access-token.sh admin) && record_platform me /me  # 200
+token=$(tool/studio-dev/access-token.sh admin2) && record_platform me_admin_seats /me  # 403 LICENSE_ADMIN_SEATS
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connections /connections  # 200, both
+token=$(tool/studio-dev/access-token.sh admin) && record_platform directory /directory/users  # 200, disabled with enabled false
+token=$(tool/studio-dev/access-token.sh admin) && record_platform directory_query '/directory/users?q=adm'  # 200, admin and admin2
+token=$(tool/studio-dev/access-token.sh admin) && record_platform directory_bad_page '/directory/users?page=0'  # 400 VALIDATION_FAILED, page
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null}'  # 200 {id}
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grants "/connections/$W/grants"  # 200, that grant
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grants_unknown_connection /connections/unknown/grants  # 404 NOT_FOUND
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_level "/connections/$R/grants/$U" "${J[@]}" --data '{"level":"write","expiresAt":null}'  # 400, level
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_subject_unknown "/connections/$W/grants/a0000000-0000-4000-8000-000000000099" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'  # 400, subject
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_subject_disabled "/connections/$W/grants/a0000000-0000-4000-8000-000000000005" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'  # 400, subject
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_expiry "/connections/$W/grants/$U" "${J[@]}" \
+  --data '{"level":"read","expiresAt":"2020-01-01T00:00:00.000Z"}'  # 400, expiresAt
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_body "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null,"note":"x"}'  # 400, ""
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_delete_unknown "/connections/$W/grants/unknown" -X DELETE  # 404 NOT_FOUND
 ```
 
 `grant_put_body.json` carries the field key `""`, because the strict schema refuses an extra key at the root, and `grant_put_subject_disabled.json` names the username in its message, which the app never shows or logs.
 For `grant_put_user_seats.json`, `admin` (`...0001`) and `admin2` (`...0004`) were each granted `read` on `W` with the same `PUT`, which with `user`'s grant takes all three user seats (an admin with a grant takes a user seat too); the `PUT` for `norole` (`...0003`) then answers 403 `LICENSE_USER_SEATS`:
 
 ```shell
-record_platform grant_put_user_seats "/connections/$W/grants/a0000000-0000-4000-8000-000000000003" "${J[@]}" \
-  --data '{"level":"read","expiresAt":null}'                                                              # 403 LICENSE_USER_SEATS
+token=$(tool/studio-dev/access-token.sh admin) && record_platform grant_put_user_seats "/connections/$W/grants/a0000000-0000-4000-8000-000000000003" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'  # 403 LICENSE_USER_SEATS
 ```
 
 The answers of `PATCH /api/v1/connections/{id}` (libredb-platform#51), which the 1.3.0 image already serves, are recorded for M11-P on the read-only connection, so the no-op leaves it active:
 
 ```shell
 P=(-X PATCH -H 'Content-Type: application/json')
-record_platform connection_patch "/connections/$R" "${P[@]}" --data '{"active":true}'                     # 200, the connection
-record_platform connection_patch_body "/connections/$R" "${P[@]}" --data '{"active":true,"name":"x"}'     # 400, ""
-record_platform connection_patch_unknown /connections/unknown "${P[@]}" --data '{"active":true}'          # 404 NOT_FOUND
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch "/connections/$R" "${P[@]}" --data '{"active":true}'  # 200, the connection
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch_body "/connections/$R" "${P[@]}" --data '{"active":true,"name":"x"}'  # 400, ""
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch_unknown /connections/unknown "${P[@]}" --data '{"active":true}'  # 404 NOT_FOUND
 ```
 
 `directory_unavailable.json` is the 503 `DIRECTORY_UNAVAILABLE` of a directory search while Keycloak is stopped, with an `admin` token fetched, and its signing keys cached by Platform, before the stop:
@@ -780,5 +780,5 @@ Every grant made for the recording was revoked by its id, and each `DELETE /api/
 At the end `GET /api/v1/connections/{id}/grants` answered `{"grants":[]}` for both connections.
 
 `recorded_platform_answers_test.dart` reads these through the production repositories and `platformError` or `platformGrantWriteError`; `me_admin_seats.json` makes `platformAccountRefusal` return `platformLicenseAdminSeats`.
-`directory.json`, `directory_query.json` and `grant_put.json` are recorded for the directory and grant `PUT` readers of #250, which read them once they merge.
+`directory.json` and `directory_query.json` go through `PlatformDirectoryRepository.search`, and `grant_put.json` through `PlatformGrantRepository.put`, which must send the body it was recorded with.
 No fixture carries the license.
