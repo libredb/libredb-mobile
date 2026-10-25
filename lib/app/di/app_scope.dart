@@ -26,6 +26,7 @@ import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_se
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
@@ -214,6 +215,9 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IPlatformGrantRepository>(
           create: (context) => dependencies.createPlatformGrantRepository(context.read<PlatformApiClient>()),
+        ),
+        RepositoryProvider<IPlatformDirectoryRepository>(
+          create: (context) => dependencies.createPlatformDirectoryRepository(context.read<PlatformApiClient>()),
         ),
         // One set for the app: the managed list fills it, and the statement routes wait for what it holds.
         RepositoryProvider<ConnectionQueryTimeouts>(create: (_) => ConnectionQueryTimeouts()),
