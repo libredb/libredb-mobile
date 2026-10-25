@@ -845,7 +845,7 @@ App _appWithSwitch(SwitchSessionTargetUseCase switchTarget) => App(
   dependencies: _SwitchDependencies(
     switchTarget,
     appConfig: const AppConfig(
-      environment: Environment.dev,
+      environment: Environment.mock,
       apiBaseUrl: null,
       certificatePins: <String>[],
       idleTimeout: Duration(minutes: 5),
@@ -854,7 +854,7 @@ App _appWithSwitch(SwitchSessionTargetUseCase switchTarget) => App(
   ),
 );
 
-class _SwitchDependencies extends LocalSignInDependencies {
+class _SwitchDependencies extends MockSignInDependencies {
   _SwitchDependencies(this._switchTarget, {super.appConfig});
 
   final SwitchSessionTargetUseCase _switchTarget;

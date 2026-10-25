@@ -374,7 +374,7 @@ void main() {
         tester,
         identityState: const StudioIdentityLoaded(admin),
         appConfig: const AppConfig(
-          environment: Environment.test,
+          environment: Environment.mock,
           apiBaseUrl: null,
           certificatePins: <String>[],
           idleTimeout: null,

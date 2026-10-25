@@ -217,7 +217,7 @@ void main() {
 
     testWidgets('to Studio asks nothing and lands on the Studio home', (tester) async {
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await settle(tester);
       expect(find.byType(PlatformShell), findsOneWidget);
 
@@ -257,9 +257,9 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(
         App(
-          dependencies: LocalSignInDependencies(
+          dependencies: MockSignInDependencies(
             appConfig: const AppConfig(
-              environment: Environment.dev,
+              environment: Environment.mock,
               apiBaseUrl: null,
               certificatePins: <String>[],
               idleTimeout: null,
@@ -519,7 +519,7 @@ class _RefusingPlatformIdentity implements IPlatformIdentityRepository {
       Failure(platformError(UnauthorizedException('Platform answered 403', statusCode: 403, errorCode: code)));
 }
 
-class _RefusingPlatformDependencies extends LocalSignInDependencies {
+class _RefusingPlatformDependencies extends MockSignInDependencies {
   _RefusingPlatformDependencies(this.code);
 
   final String code;
