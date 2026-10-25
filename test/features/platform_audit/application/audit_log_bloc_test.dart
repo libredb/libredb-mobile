@@ -379,6 +379,60 @@ void main() {
     await bloc.close();
   });
 
+  test('a failed filter change keeps the filter of the listed rows, so Load more goes on with that filter', () async {
+    final bloc = await loaded();
+    sent();
+    answerWith(
+      (filter, offset) => filter.status == 'error'
+          ? Failure(serverError)
+          : Success(_page(_events(offset, 3), total: 10, offset: offset)),
+    );
+
+    bloc.add(AuditLogFilterChanged(AuditFilter(status: 'error')));
+    final failed = await bloc.stream.firstWhere((state) => state is AuditLogLoaded && !state.isRefreshing);
+
+    expect(
+      failed,
+      AuditLogLoaded(
+        filter: const AuditFilter(),
+        events: _events(0, 3),
+        total: 10,
+        nextOffset: 3,
+        refreshError: AppErrorCode.platformInternalError,
+      ),
+    );
+
+    bloc.add(const AuditLogLoadMoreRequested());
+    final more = await bloc.stream.firstWhere((state) => state is AuditLogLoaded && !state.isLoadingMore);
+
+    expect(sent(), ['AuditFilter(status)@0', 'AuditFilter()@3']);
+    expect(more, AuditLogLoaded(filter: const AuditFilter(), events: _events(0, 6), total: 10, nextOffset: 6));
+    await bloc.close();
+  });
+
+  test('a failed filter change that replaced another still running keeps the filter of the listed rows', () async {
+    final bloc = await loaded();
+    final slow = Completer<Result<AuditPage>>();
+    answerWith(
+      (filter, offset) => switch (filter.status) {
+        'error' => slow.future,
+        _ => Failure(serverError),
+      },
+    );
+
+    bloc
+      ..add(AuditLogFilterChanged(AuditFilter(status: 'error')))
+      ..add(AuditLogFilterChanged(AuditFilter(status: 'success')));
+    final failed = await bloc.stream.firstWhere((state) => state is AuditLogLoaded && state.refreshError != null);
+    slow.complete(Success(_page(_events(50, 3), total: 3)));
+    await pumpEventQueue();
+
+    expect(failed.filter, const AuditFilter());
+    expect(bloc.state, failed);
+    expect((bloc.state as AuditLogLoaded).events, _events(0, 3));
+    await bloc.close();
+  });
+
   test('a failed refresh of an empty list stays a loaded empty list with refreshError', () async {
     final bloc = await loaded(count: 0, total: 0);
     answerWith((filter, offset) => Failure(serverError));

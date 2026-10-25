@@ -20,7 +20,8 @@ part 'audit_log_state.dart';
 /// once the typing pauses for [debounce], trimmed, and never when it equals the current search. Load more reads the
 /// next page from the end of the rows Platform answered so far, is dropped while one runs, and its answer is used only
 /// while the list it was asked for is still on screen: a refresh or a filter change in between discards it. An event
-/// already listed is not listed again, since a new event moves every older one a place down between two pages.
+/// already listed is not listed again, since a new event moves every older one a place down between two pages. A
+/// failed filter change keeps the list with the filter it was read with, so the chips name the rows shown.
 ///
 /// `PLAN_FEATURE_REQUIRED` and `PERMISSION_DENIED` replace any list with their own state. The events live in this bloc
 /// only and are never stored, and no log line carries a filter value, a statement or a user.
@@ -43,6 +44,9 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
 
   /// Counts every first page asked for, so a Load more answer for an older list is dropped.
   int _generation = 0;
+
+  /// The filter the listed events were read with, which a failed filter change gives back to the list.
+  AuditFilter? _listedFilter;
 
   Future<void> _onQuery(AuditLogQueryEvent event, Emitter<AuditLogState> emit) async {
     final filter = switch (event) {
@@ -73,6 +77,7 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
     switch (result) {
       case Success(:final data):
         _log.debug('load: {} events of {}, filters {}', [data.events.length, data.total, filter.setFilterNames]);
+        _listedFilter = filter;
         emit(
           AuditLogLoaded(
             filter: filter,
@@ -89,7 +94,9 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
         if (refused != null) {
           emit(refused);
         } else if (state case final AuditLogLoaded loaded) {
-          emit(loaded._with(isRefreshing: false, refreshError: () => errorCode));
+          // The kept rows and their next offset belong to the filter they were read with, so the chips and a Load
+          // more go back to it rather than mixing the failed filter's pages into another filter's rows.
+          emit(loaded._with(filter: _listedFilter!, isRefreshing: false, refreshError: () => errorCode));
         } else {
           emit(AuditLogFailure(filter: filter, errorCode: errorCode));
         }
