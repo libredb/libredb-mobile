@@ -11,7 +11,8 @@ abstract class AppException implements Exception {
   /// The HTTP status of the response, or null when no response arrived.
   final int? statusCode;
 
-  /// The string `code` of a JSON error body, such as LibreDB Studio's `AUTH_ERROR` or `RATE_LIMITED`, or null.
+  /// The machine-readable code of a JSON error body, or null: LibreDB Studio's top-level `code`, such as `AUTH_ERROR`
+  /// or `RATE_LIMITED`, or LibreDB Platform's `error.code`, such as `BEARER_INVALID`.
   final String? errorCode;
 
   /// The whole seconds of a `Retry-After` header, or null when it is absent or is an HTTP date.
@@ -94,13 +95,29 @@ final class RequestCancelledException extends FetchDataException {
 }
 
 final class BadRequestException extends AppException {
-  BadRequestException(String? message, {super.statusCode, super.errorCode, super.serverMessage, super.position})
-    : super(message, "Invalid Request: ");
+  BadRequestException(
+    String? message, {
+    super.statusCode,
+    super.errorCode,
+    super.serverMessage,
+    super.position,
+    this.fieldErrorKeys = const <String>[],
+  }) : super(message, "Invalid Request: ");
+
+  /// The keys of LibreDB Platform's `error.fieldErrors`, the fields a 400 `VALIDATION_FAILED` refused, in the order
+  /// Platform sent them; empty for LibreDB Studio, which sends none. The messages of those fields are never kept.
+  final List<String> fieldErrorKeys;
 }
 
 final class UnauthorizedException extends AppException {
   UnauthorizedException(String? message, {super.statusCode, super.errorCode, super.serverMessage, super.fixStatement})
     : super(message, "Unauthorized: ");
+}
+
+/// Thrown by a call to LibreDB Platform in a build without a Platform target (`AppConfig.platform` is
+/// `PlatformNotConfigured`): no request was sent.
+final class PlatformNotConfiguredException extends AppException {
+  PlatformNotConfiguredException() : super('this build has no PLATFORM_API_URL', 'Platform not configured: ');
 }
 
 /// Thrown when a circuit breaker is in the OPEN state, rejecting requests

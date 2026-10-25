@@ -397,9 +397,53 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "No internet connection. Check your network and try again.",
     ),
+    "error_platform_admin_role_required": MessageLookupByLibrary.simpleMessage(
+      "This account is not a Platform admin. Sign in through Studio instead.",
+    ),
+    "error_platform_api_disabled": MessageLookupByLibrary.simpleMessage(
+      "This Platform install does not accept the mobile app.",
+    ),
+    "error_platform_directory_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform cannot read the user directory right now. Try again in a moment.",
+    ),
+    "error_platform_grant_expiry_refused": MessageLookupByLibrary.simpleMessage("The expiry must be in the future."),
+    "error_platform_grant_level_refused": MessageLookupByLibrary.simpleMessage(
+      "Write access needs a connection with a write credential.",
+    ),
+    "error_platform_grant_subject_refused": MessageLookupByLibrary.simpleMessage(
+      "Keycloak does not know this user, or has disabled it.",
+    ),
+    "error_platform_identity_provider_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform cannot reach the identity provider right now. Try again in a moment.",
+    ),
+    "error_platform_internal_error": MessageLookupByLibrary.simpleMessage(
+      "Platform could not complete the request. Try again later.",
+    ),
+    "error_platform_keycloak_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform cannot reach Keycloak right now. Try again in a moment.",
+    ),
+    "error_platform_license_admin_seats": MessageLookupByLibrary.simpleMessage(
+      "The Platform license has no free admin seat for this account.",
+    ),
+    "error_platform_license_expired": MessageLookupByLibrary.simpleMessage("The Platform license has expired."),
+    "error_platform_license_invalid": MessageLookupByLibrary.simpleMessage("The Platform license is not valid."),
+    "error_platform_license_user_seats": MessageLookupByLibrary.simpleMessage(
+      "The Platform license has no free user seat for this grant.",
+    ),
     "error_platform_not_configured": MessageLookupByLibrary.simpleMessage(
       "Platform mode is not available in this build of the app. Sign in through Studio.",
     ),
+    "error_platform_not_found": MessageLookupByLibrary.simpleMessage("Platform no longer has this item."),
+    "error_platform_permission_denied": MessageLookupByLibrary.simpleMessage(
+      "Platform does not allow this account to do this.",
+    ),
+    "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
+      "The plan of this Platform install does not include this feature.",
+    ),
+    "error_platform_unreadable_answer": MessageLookupByLibrary.simpleMessage(
+      "Platform sent an answer this app cannot read. The app may need an update.",
+    ),
+    "error_platform_validation_failed": MessageLookupByLibrary.simpleMessage("Platform did not accept the request."),
     "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage(
       "The app lock setting could not be saved.",
     ),

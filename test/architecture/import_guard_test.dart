@@ -38,6 +38,35 @@ const _knownFeatureAppExceptions = {
 };
 
 void main() {
+  group('studioPlatformViolations', () {
+    const studioImport = 'package:libredb_mobile/infrastructure/studio/studio_errors.dart';
+    const platformImport = 'package:libredb_mobile/infrastructure/platform/platform_errors.dart';
+
+    for (final (path, imports) in <(String, List<String>)>[
+      ('lib/infrastructure/platform/platform_api_client.dart', [studioImport]),
+      ('lib/infrastructure/studio/statement_repository.dart', [platformImport]),
+      ('lib/features/auth/data/repositories/mixed_repository.dart', [studioImport, platformImport]),
+      ('lib/features/platform_grants/data/grant_repository.dart', [studioImport]),
+    ]) {
+      test('fails $path importing ${imports.length == 2 ? 'both' : imports.single.split('/')[2]}', () {
+        expect(studioPlatformViolations([(path, imports)]), hasLength(1));
+      });
+    }
+
+    for (final (path, imports) in <(String, List<String>)>[
+      ('lib/infrastructure/platform/platform_api_client.dart', [platformImport]),
+      ('lib/infrastructure/studio/statement_repository.dart', [studioImport]),
+      ('lib/features/auth/data/repositories/studio_identity_repository.dart', [studioImport]),
+      ('lib/features/auth/data/repositories/platform_identity_repository.dart', [platformImport]),
+      ('lib/features/platform_grants/data/grant_repository.dart', [platformImport]),
+      ('lib/app/di/app_dependencies.dart', [studioImport, platformImport]),
+    ]) {
+      test('passes $path', () {
+        expect(studioPlatformViolations([(path, imports)]), isEmpty);
+      });
+    }
+  });
+
   group('Architecture Guard Tests', () {
     late List<File> dartFiles;
 
@@ -162,6 +191,14 @@ void main() {
       );
     });
 
+    test('Studio and Platform code stay apart', () {
+      final files = [for (final file in dartFiles) (_relative(file.path), _getImports(file))];
+
+      final violations = studioPlatformViolations(files);
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
     test('only shared/utils/external_link.dart imports url_launcher', () {
       final urlLauncherImport = RegExp(r'''^import\s+['"]package:url_launcher/''');
       final violations = dartFiles
@@ -180,6 +217,37 @@ void main() {
       );
     });
   });
+}
+
+/// The violations of the rules that keep LibreDB Studio and LibreDB Platform code apart, over (file path, imports)
+/// pairs with paths relative to the repository and imports in `package:libredb_mobile/...` form:
+///
+/// - no file under `lib/infrastructure/platform/` imports `infrastructure/studio/`, and the reverse;
+/// - no file under `lib/features/` imports both `infrastructure/studio/` and `infrastructure/platform/`;
+/// - no file under `lib/features/platform_*/` imports `infrastructure/studio/`.
+///
+/// `lib/app/` is exempt: it is the composition root that wires both clients.
+List<String> studioPlatformViolations(Iterable<(String, List<String>)> files) {
+  const studio = 'libredb_mobile/infrastructure/studio/';
+  const platform = 'libredb_mobile/infrastructure/platform/';
+  final violations = <String>[];
+  for (final (path, imports) in files) {
+    final importsStudio = imports.any((i) => i.contains(studio));
+    final importsPlatform = imports.any((i) => i.contains(platform));
+    if (path.startsWith('lib/infrastructure/platform/') && importsStudio) {
+      violations.add('$path: Platform infrastructure imports infrastructure/studio/');
+    }
+    if (path.startsWith('lib/infrastructure/studio/') && importsPlatform) {
+      violations.add('$path: Studio infrastructure imports infrastructure/platform/');
+    }
+    if (path.startsWith('lib/features/') && importsStudio && importsPlatform) {
+      violations.add('$path: a feature file imports both infrastructure/studio/ and infrastructure/platform/');
+    }
+    if (RegExp(r'^lib/features/platform_[^/]*/').hasMatch(path) && importsStudio) {
+      violations.add('$path: a Platform feature imports infrastructure/studio/');
+    }
+  }
+  return violations;
 }
 
 /// Extract package and relative imports from a Dart file (ignore dart: and external packages).

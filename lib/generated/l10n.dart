@@ -2416,6 +2416,191 @@ class S {
     );
   }
 
+  /// `Platform mode is not available in this build of the app. Sign in through Studio.`
+  String get error_platform_not_configured {
+    return Intl.message(
+      'Platform mode is not available in this build of the app. Sign in through Studio.',
+      name: 'error_platform_not_configured',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This account is not a Platform admin. Sign in through Studio instead.`
+  String get error_platform_admin_role_required {
+    return Intl.message(
+      'This account is not a Platform admin. Sign in through Studio instead.',
+      name: 'error_platform_admin_role_required',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The Platform license has no free admin seat for this account.`
+  String get error_platform_license_admin_seats {
+    return Intl.message(
+      'The Platform license has no free admin seat for this account.',
+      name: 'error_platform_license_admin_seats',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The Platform license has no free user seat for this grant.`
+  String get error_platform_license_user_seats {
+    return Intl.message(
+      'The Platform license has no free user seat for this grant.',
+      name: 'error_platform_license_user_seats',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The Platform license has expired.`
+  String get error_platform_license_expired {
+    return Intl.message(
+      'The Platform license has expired.',
+      name: 'error_platform_license_expired',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The Platform license is not valid.`
+  String get error_platform_license_invalid {
+    return Intl.message(
+      'The Platform license is not valid.',
+      name: 'error_platform_license_invalid',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This Platform install does not accept the mobile app.`
+  String get error_platform_api_disabled {
+    return Intl.message(
+      'This Platform install does not accept the mobile app.',
+      name: 'error_platform_api_disabled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform no longer has this item.`
+  String get error_platform_not_found {
+    return Intl.message('Platform no longer has this item.', name: 'error_platform_not_found', desc: '', args: []);
+  }
+
+  /// `Write access needs a connection with a write credential.`
+  String get error_platform_grant_level_refused {
+    return Intl.message(
+      'Write access needs a connection with a write credential.',
+      name: 'error_platform_grant_level_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Keycloak does not know this user, or has disabled it.`
+  String get error_platform_grant_subject_refused {
+    return Intl.message(
+      'Keycloak does not know this user, or has disabled it.',
+      name: 'error_platform_grant_subject_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The expiry must be in the future.`
+  String get error_platform_grant_expiry_refused {
+    return Intl.message(
+      'The expiry must be in the future.',
+      name: 'error_platform_grant_expiry_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform did not accept the request.`
+  String get error_platform_validation_failed {
+    return Intl.message(
+      'Platform did not accept the request.',
+      name: 'error_platform_validation_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform cannot reach the identity provider right now. Try again in a moment.`
+  String get error_platform_identity_provider_unavailable {
+    return Intl.message(
+      'Platform cannot reach the identity provider right now. Try again in a moment.',
+      name: 'error_platform_identity_provider_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform cannot read the user directory right now. Try again in a moment.`
+  String get error_platform_directory_unavailable {
+    return Intl.message(
+      'Platform cannot read the user directory right now. Try again in a moment.',
+      name: 'error_platform_directory_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform cannot reach Keycloak right now. Try again in a moment.`
+  String get error_platform_keycloak_unavailable {
+    return Intl.message(
+      'Platform cannot reach Keycloak right now. Try again in a moment.',
+      name: 'error_platform_keycloak_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The plan of this Platform install does not include this feature.`
+  String get error_platform_plan_feature_required {
+    return Intl.message(
+      'The plan of this Platform install does not include this feature.',
+      name: 'error_platform_plan_feature_required',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform does not allow this account to do this.`
+  String get error_platform_permission_denied {
+    return Intl.message(
+      'Platform does not allow this account to do this.',
+      name: 'error_platform_permission_denied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform could not complete the request. Try again later.`
+  String get error_platform_internal_error {
+    return Intl.message(
+      'Platform could not complete the request. Try again later.',
+      name: 'error_platform_internal_error',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform sent an answer this app cannot read. The app may need an update.`
+  String get error_platform_unreadable_answer {
+    return Intl.message(
+      'Platform sent an answer this app cannot read. The app may need an update.',
+      name: 'error_platform_unreadable_answer',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Type one or more statements`
   String get sql_editor_hint {
     return Intl.message(
@@ -3272,16 +3457,6 @@ class S {
     return Intl.message(
       'LibreDB could not check this device\'s screen lock. Try Unlock again, or sign out.',
       name: 'app_lock_check_failed',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Platform mode is not available in this build of the app. Sign in through Studio.`
-  String get error_platform_not_configured {
-    return Intl.message(
-      'Platform mode is not available in this build of the app. Sign in through Studio.',
-      name: 'error_platform_not_configured',
       desc: '',
       args: [],
     );

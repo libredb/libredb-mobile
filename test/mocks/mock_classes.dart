@@ -16,6 +16,8 @@ import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart
 // BLoC imports
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
@@ -27,6 +29,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
@@ -61,6 +64,8 @@ class MockIAuthSessionRepository extends Mock implements IAuthSessionRepository 
 class MockISsoAuthRepository extends Mock implements ISsoAuthRepository {}
 
 class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepository {}
+
+class MockPlatformIdentityRepository extends Mock implements IPlatformIdentityRepository {}
 
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
 
@@ -107,6 +112,11 @@ class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBlo
 class MockAppLockBloc extends MockBloc<AppLockEvent, AppLockState> implements AppLockBloc {}
 
 class MockStudioIdentityCubit extends MockCubit<StudioIdentityState> implements StudioIdentityCubit {}
+
+class MockPlatformIdentityCubit extends MockCubit<PlatformIdentityState> implements PlatformIdentityCubit {}
+
+class MockPlatformAccountRefusalCubit extends MockCubit<PlatformAccountRefusalState>
+    implements PlatformAccountRefusalCubit {}
 
 class MockConnectionPolicyCubit extends MockCubit<ConnectionPolicyState> implements ConnectionPolicyCubit {}
 

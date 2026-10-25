@@ -105,6 +105,7 @@ const _storageUsers = <String, _Keeps>{
   'lib/infrastructure/auth/oidc/oidc_token_rotation.dart': _Session(),
   'lib/infrastructure/cache/shared_prefs_cache_storage.dart': _Session(),
   'lib/infrastructure/http/api_client.dart': _Session(),
+  'lib/infrastructure/platform/platform_api_client.dart': _Session(),
   'lib/infrastructure/http/interceptors/auth_interceptor.dart': _Session(),
   'lib/infrastructure/http/interceptors/token_refresh_interceptor.dart': _Session(),
   'lib/app/localization/locale_cubit.dart': _Device(),

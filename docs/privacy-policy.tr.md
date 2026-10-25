@@ -1,6 +1,6 @@
 # LibreDB Mobile gizlilik politikası
 
-Son güncelleme: 24 Ekim 2026.
+Son güncelleme: 25 Ekim 2026.
 
 Bu politika, Android için LibreDB Mobile'ın verilerinizle ne yaptığını anlatır.
 LibreDB Mobile, LibreDB Studio'nun bir istemcisidir: Keycloak üzerinden oturumunuzu açar ve Studio'nun size sunduğu veritabanlarını gösterir.
@@ -8,7 +8,7 @@ Bu politikayla ilgili sorularınızı [info@libredb.org](mailto:info@libredb.org
 
 ## Uygulamanın konuştuğu sunucular
 
-Uygulama üç tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla konuşmaz:
+Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla konuşmaz:
 
 - **Keycloak**, uygulamanın derlenirken bağlandığı LibreDB kurulumunun oturum açma sunucusu.
   Oturumu Keycloak'un kendi sayfasında, cihazın tarayıcısında açarsınız; bu yüzden uygulama parolanızı hiç görmez.
@@ -17,14 +17,18 @@ Uygulama üç tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla k
   Uygulama isteklerinde Studio'ya Keycloak erişim belirtecinizi gönderir; böylece Studio kim olduğunuzu ve neyi kullanabileceğinizi bilir.
   Erişim belirteci, Keycloak'un içine koyduklarını taşır: örneğin kullanıcı adınızı, e-posta adresinizi ve adınızı.
   Uygulama Studio'ya ondan istediklerinizi de gönderir: açtığınız bağlantıyı, baktığınız nesneleri ve çalıştırdığınız deyimleri.
+- Aynı kurulumun **LibreDB Platform**'u; ancak yalnızca Platform modunu içeren bir sürümde ve yalnızca oturum açma sayfasında Platform girişini seçtikten sonra.
+  Uygulama isteklerinde Platform'a Keycloak erişim belirtecinizi gönderir ve Platform kimliğinizi alır: Platform kullanıcı kimliğinizi, e-posta adresinizi, adınızı ve kuruluşunuzu.
+  Uygulama bu kimliği oturumunuz açıkken bellekte tutar ve cihazda hiç saklamaz.
+  Platform'un hesabınıza ilk yanıtı, Platform kullanıcı kaydınızı oluşturur ve lisansın yönetici koltuklarından birini kullanır.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
   Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 
-Keycloak ile Studio'yu kurulumu işleten kuruluş çalıştırır ve bu sunucuların neyi kaydedeceğine o kuruluş karar verir.
+Keycloak'u, Studio'yu ve Platform'u kurulumu işleten kuruluş çalıştırır ve bu sunucuların neyi kaydedeceğine o kuruluş karar verir.
 Örneğin Studio, oturum açma ve kapatmaların bir denetim kaydını ve ayarlarına göre çalıştırdığınız deyimlerin bir kaydını tutabilir.
 Bu sunucuların tuttuklarına o kuruluşun kendi gizlilik koşulları uygulanır.
 
-Uygulama Keycloak'a, Studio'ya ve Sentry'ye trafiği şifreleyen HTTPS üzerinden ulaşır.
+Uygulama Keycloak'a, Studio'ya, Platform'a ve Sentry'ye trafiği şifreleyen HTTPS üzerinden ulaşır.
 
 ## Uygulamanın yapmadıkları
 

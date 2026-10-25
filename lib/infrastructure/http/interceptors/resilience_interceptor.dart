@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
-import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/api_target.dart';
 import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
@@ -14,14 +14,15 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 /// to improve resilience against transient failures.
 ///
 /// **Retry logic:**
-/// - Retryable errors: timeout, connection error, and an HTTP 502/503/504 without a Studio error code in its body.
+/// - Retryable errors: timeout, connection error, and an HTTP 502/503/504 without the server's error code in its body.
 ///   A connection that closed before a full response header arrived is not retried.
 /// - Only a GET is retried. A POST may run a statement on Studio, which a second copy would run again, and every
 ///   other method changes something on the server, so none of them is repeated, an `Idempotency-Key` header or not.
-/// - An answer whose body carries a Studio error code (`{"error": ..., "code": ...}`, read by
-///   [ApiClient.errorCodeOf]), such as a 503 `GOVERNANCE_UNAVAILABLE`, `AUDIT_UNAVAILABLE` or
-///   `IDENTITY_PROVIDER_UNAVAILABLE`, or a 504 `TIMEOUT_ERROR`, is Studio's own answer: it passes through after one
-///   request, so the repository can report what Studio said, and it does not count against the circuit breaker.
+/// - An answer whose body carries the server's error code, read by the [ErrorEnvelope] given to [forDio], is the
+///   server's own answer: it passes through after one request, so the repository can report what the server said, and
+///   it does not count against the circuit breaker. For Studio (`{"error": ..., "code": ...}`) that is, for example, a
+///   503 `GOVERNANCE_UNAVAILABLE` or a 504 `TIMEOUT_ERROR`; for Platform (`{"error": {"code": ...}}`) a 503
+///   `DIRECTORY_UNAVAILABLE` or a 502 `KEYCLOAK_AUTH_ERROR`.
 /// - Non-retryable: 400, 401, 403, 404, 422 pass through immediately.
 /// - A request that [ConnectivityInterceptor] rejected because the device is offline (its error is a
 ///   [ConnectivityException]) passes through immediately and does not count against the circuit breaker: it was
@@ -89,6 +90,9 @@ class ResilienceInterceptor extends Interceptor {
   /// The [Dio] whose adapter sends retries; null unless this instance was made by [forDio].
   final Dio? _dio;
 
+  /// Reads the error code of the server's answers ([forDio]).
+  final ErrorEnvelope _envelope;
+
   /// Unmodifiable view of per-endpoint circuit breakers for monitoring.
   Map<String, CircuitBreaker> get circuitBreakers => Map.unmodifiable(_breakers);
 
@@ -111,9 +115,10 @@ class ResilienceInterceptor extends Interceptor {
     this.failureThreshold = 5,
     this.cooldownDuration = const Duration(seconds: 30),
   }) : _breakers = {},
-       _dio = null;
+       _dio = null,
+       _envelope = const StudioErrorEnvelope();
 
-  ResilienceInterceptor._forDio(ResilienceInterceptor source, Dio dio)
+  ResilienceInterceptor._forDio(ResilienceInterceptor source, Dio dio, this._envelope)
     : maxRetries = source.maxRetries,
       baseDelay = source.baseDelay,
       maxJitter = source.maxJitter,
@@ -125,9 +130,11 @@ class ResilienceInterceptor extends Interceptor {
   /// Returns an interceptor for [dio] that shares this instance's circuit breakers and retry policy
   /// and sends every retry through [dio]'s adapter, so retries keep its certificate pinning.
   ///
-  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio)` to its chain, so the breakers
-  /// read through [instance] are the ones real traffic updates.
-  ResilienceInterceptor forDio(Dio dio) => ResilienceInterceptor._forDio(this, dio);
+  /// `ApiClient` adds `ResilienceInterceptor.instance.forDio(dio, envelope: ...)` to its chain, so the breakers
+  /// read through [instance] are the ones real traffic updates. [envelope] reads the error code of the server [dio]
+  /// talks to, which decides that an answer is passed on without a retry or a count.
+  ResilienceInterceptor forDio(Dio dio, {ErrorEnvelope envelope = const StudioErrorEnvelope()}) =>
+      ResilienceInterceptor._forDio(this, dio, envelope);
 
   // ---------------------------------------------------------------------------
   // Interceptor hooks
@@ -235,10 +242,10 @@ class ResilienceInterceptor extends Interceptor {
       return;
     }
 
-    // Studio answered with one of its error codes: that is the answer the repository must report, and it says
+    // The server answered with one of its error codes: that is the answer the repository must report, and it says
     // nothing about the endpoint's health, so it is neither retried nor counted.
-    if (_isStudioAnswer(err)) {
-      _log.debug('Passing on Studio answer {} for {} {} without retrying or counting it', [
+    if (_isCodedAnswer(err)) {
+      _log.debug('Passing on coded answer {} for {} {} without retrying or counting it', [
         err.response?.statusCode,
         err.requestOptions.method,
         err.requestOptions.path,
@@ -361,7 +368,7 @@ class ResilienceInterceptor extends Interceptor {
         ),
       );
     } on DioException catch (retryErr) {
-      if (!_isTlsFailure(retryErr) && !_isStudioAnswer(retryErr)) breaker.recordFailure();
+      if (!_isTlsFailure(retryErr) && !_isCodedAnswer(retryErr)) breaker.recordFailure();
 
       if (_isRetryable(retryErr) && nextAttempt < maxRetries) {
         retryErr.requestOptions.extra['_retryAttempt'] = nextAttempt;
@@ -431,7 +438,7 @@ class ResilienceInterceptor extends Interceptor {
         return !_isClosedAfterRequestSent(err);
       case DioExceptionType.badResponse:
         final statusCode = err.response?.statusCode ?? 0;
-        return (statusCode == 502 || statusCode == 503 || statusCode == 504) && !_isStudioAnswer(err);
+        return (statusCode == 502 || statusCode == 503 || statusCode == 504) && !_isCodedAnswer(err);
       case DioExceptionType.cancel:
       case DioExceptionType.badCertificate:
       // The server already answered; a retry would only repeat the same slow response transform.
@@ -457,9 +464,10 @@ class ResilienceInterceptor extends Interceptor {
   /// so none of them is repeated.
   bool _isSafeToRepeat(RequestOptions options) => options.method.toUpperCase() == 'GET';
 
-  /// Whether [err] is an HTTP answer whose body carries a Studio error code, such as `GOVERNANCE_UNAVAILABLE`.
-  bool _isStudioAnswer(DioException err) =>
-      err.type == DioExceptionType.badResponse && ApiClient.errorCodeOf(err.response?.data) != null;
+  /// Whether [err] is an HTTP answer whose body carries the server's error code, such as Studio's
+  /// `GOVERNANCE_UNAVAILABLE` or Platform's `DIRECTORY_UNAVAILABLE`.
+  bool _isCodedAnswer(DioException err) =>
+      err.type == DioExceptionType.badResponse && _envelope.codeOf(err.response?.data) != null;
 
   /// Whether the TLS handshake failed, so the request never reached the server: see [isTlsError].
   bool _isTlsFailure(DioException err) => err.type == DioExceptionType.badCertificate || isTlsError(err.error);

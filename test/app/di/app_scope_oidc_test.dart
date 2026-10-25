@@ -12,6 +12,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,6 +42,23 @@ class _OidcDependencies extends AppDependencies {
 
   final IOidcClient client;
   final apiClientRotations = <TokenRotation>[];
+  final platformApiClientRotations = <TokenRotation>[];
+
+  @override
+  PlatformApiClient createPlatformApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
+    required TokenRotation tokenRotation,
+  }) {
+    platformApiClientRotations.add(tokenRotation);
+    return super.createPlatformApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      onAccountRefused: onAccountRefused,
+      tokenRotation: tokenRotation,
+    );
+  }
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
@@ -71,6 +89,23 @@ class _MisconfiguredDependencies extends AppDependencies {
       );
 
   final apiClientRotations = <TokenRotation>[];
+  final platformApiClientRotations = <TokenRotation>[];
+
+  @override
+  PlatformApiClient createPlatformApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
+    required TokenRotation tokenRotation,
+  }) {
+    platformApiClientRotations.add(tokenRotation);
+    return super.createPlatformApiClient(
+      secureStorage,
+      onSessionExpired: onSessionExpired,
+      onAccountRefused: onAccountRefused,
+      tokenRotation: tokenRotation,
+    );
+  }
 
   @override
   ApiClient createApiClient(
@@ -143,6 +178,16 @@ void main() {
       expect(dependencies.apiClientRotations, hasLength(1));
       expect(dependencies.apiClientRotations.single, same(scope.read<TokenRotation>()));
     });
+
+    testWidgets('the Platform client refreshes through the same TokenRotation as the Studio client', (tester) async {
+      final dependencies = _OidcDependencies(_IdleOidcClient());
+      final scope = await _pumpScope(tester, dependencies);
+
+      scope.read<PlatformApiClient>();
+
+      expect(dependencies.platformApiClientRotations, hasLength(1));
+      expect(dependencies.platformApiClientRotations.single, same(scope.read<TokenRotation>()));
+    });
   });
 
   // A session that an earlier, correctly configured build stored holds the provider's tokens.
@@ -179,6 +224,16 @@ void main() {
       expect(dependencies.apiClientRotations, hasLength(1));
       final rotation = dependencies.apiClientRotations.single;
       expect(await rotation.rotate('provider-refresh-token'), isA<RotationRefused>());
+    });
+
+    testWidgets('the Platform client refreshes through a rotation that refuses every refresh', (tester) async {
+      final dependencies = _MisconfiguredDependencies();
+      final scope = await _pumpScope(tester, dependencies);
+
+      scope.read<PlatformApiClient>();
+
+      expect(dependencies.platformApiClientRotations, hasLength(1));
+      expect(dependencies.platformApiClientRotations.single, isA<RefusingTokenRotation>());
     });
   });
 

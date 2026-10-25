@@ -1,0 +1,8 @@
+{
+  "id": "cm0platformadmin0000000001",
+  "email": "platform.admin@example.org",
+  "name": "Platform Admin",
+  "roles": ["PLATFORM_ADMIN"],
+  "permissions": ["connection.view", "connection.edit", "schema.view", "query.execute"],
+  "tenant": { "id": "cm0tenant00000000000000001", "name": "Example Org", "slug": "example-org" }
+}

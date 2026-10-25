@@ -185,13 +185,16 @@ In dev/test mode it answers every request that reaches the end of the chain with
 **Step-by-step flow:**
 
 1. **Simulated latency** — 500 ms delay in dev mode, skipped in test mode
-2. **Auth check**: for a request to an endpoint that is not public, rejects with 401 if no `Authorization` header
+2. **Auth check**: for a request to an endpoint that is not public, rejects with 401 if no `Authorization` header; on a LibreDB Platform path (under `/v1/`) the body is Platform's envelope `{"error":{"code":"BEARER_INVALID",...}}`, elsewhere Studio's plain text
 3. **Status code** — POST → 201, DELETE → 204 (early return), everything else → 200
 4. **File resolution** — Builds a file name from the request metadata (see next section)
 5. **Asset loading** — Reads the JSON file via `rootBundle.loadString()`
 6. **Missing file**: if the file cannot be loaded, rejects with 501 Not Implemented and `callFollowingErrorInterceptor: true`, with an error that names the file, so the dev console, the log and the caller's error all show which file to add
 
 A GET, POST, PUT or PATCH the mock has no file for fails instead of getting a made-up success; DELETE needs no file and always answers 204.
+
+The LibreDB Platform client (`PlatformApiClient`) runs the same chain with the same mock: dev and test builds carry a Platform target without a base URL, so `GET /v1/me` reads `assets/mock/GET_v1_me.json`.
+Its answers are never cached (every `/v1/` path is `networkOnly`), and a coded Platform answer is never retried ([http-client.md](http-client.md#libredb-platform)).
 
 ### LoggingInterceptor
 

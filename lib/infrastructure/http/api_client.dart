@@ -1,11 +1,12 @@
 import 'dart:async' show unawaited;
-import 'dart:convert' show jsonDecode, jsonEncode, utf8;
+import 'dart:convert' show jsonDecode, utf8;
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/http/api_target.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinner.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
@@ -78,6 +79,10 @@ class InterceptorChainEntry {
 ///
 /// `onAccountRefused` is told the code of every answer that `accountRefusal` reads as a refusal of the signed-in
 /// account, whichever request met it; without `onAccountRefused` no request reports one.
+///
+/// `target` is the server the client talks to ([ApiTarget]): its base URL, the pins of its host and the envelope its
+/// error bodies are read with. Without one the client talks to LibreDB Studio, from `appConfig` ([ApiTarget.studio]);
+/// `PlatformApiClient` passes LibreDB Platform's.
 class ApiClient {
   ApiClient({
     required this._appConfig,
@@ -89,7 +94,9 @@ class ApiClient {
     this._isSessionRefused,
     this._onAccountRefused,
     this._accountRefusal,
-  }) : assert(_onAccountRefused == null || _accountRefusal != null, 'onAccountRefused needs an accountRefusal');
+    ApiTarget? target,
+  }) : _givenTarget = target,
+       assert(_onAccountRefused == null || _accountRefusal != null, 'onAccountRefused needs an accountRefusal');
 
   static final _log = AppLogger.getLogger('ApiClient');
 
@@ -103,6 +110,8 @@ class ApiClient {
   final SessionRefusedPredicate? _isSessionRefused;
   final OnAccountRefused? _onAccountRefused;
   final AccountRefusal? _accountRefusal;
+  final ApiTarget? _givenTarget;
+  late final ApiTarget _target = _givenTarget ?? ApiTarget.studio(_appConfig);
   Dio? _dio;
   List<InterceptorChainEntry> _chainSnapshot = const [];
 
@@ -135,25 +144,26 @@ class ApiClient {
 
     final dio = Dio(
       BaseOptions(
-        baseUrl: _appConfig.apiBaseUrl ?? '',
+        baseUrl: _target.baseUrl ?? '',
         connectTimeout: const Duration(seconds: _timeoutSeconds),
         receiveTimeout: const Duration(seconds: _timeoutSeconds),
         responseType: ResponseType.plain,
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
-        // Studio's API answers JSON and never redirects (its src/proxy.ts, #909), so a 3xx is an error answer, which
-        // studioError maps, instead of a request to wherever the Location points, plain http included (#218,
-        // docs/security.md "Encryption in transit").
+        // Studio's API answers JSON and never redirects (its src/proxy.ts, #909), and neither does Platform's /api/v1
+        // (its src/shared/lib/public-paths.ts), so a 3xx is an error answer, which studioError or platformError maps,
+        // instead of a request to wherever the Location points, plain http included (#218, docs/security.md
+        // "Encryption in transit").
         followRedirects: false,
       ),
     );
 
     // Certificate pinning. Empty pin list (default) keeps the system
-    // adapter; populating appConfig.certificatePins swaps in a
+    // adapter; the pins of the target's host swap in a
     // pinning adapter that fails closed on any non-matching cert.
     // Retries are sent through this same adapter
     // (ResilienceInterceptor.forDio), so the pins cover every request the
     // client sends.
-    final pins = _appConfig.certificatePins;
+    final pins = _target.certificatePins;
     if (pins.isNotEmpty) {
       _log.info('Installing certificate pinning adapter ({} pin(s))', [pins.length]);
       dio.httpClientAdapter = buildPinnedAdapter(pins);
@@ -207,7 +217,7 @@ class ApiClient {
         // Share the singleton's circuit breakers so metrics and reset
         // actions read through it see real HTTP traffic (fixes #60). forDio
         // sends retries through this Dio's adapter, pins included.
-        interceptor: ResilienceInterceptor.instance.forDio(dio),
+        interceptor: ResilienceInterceptor.instance.forDio(dio, envelope: _target.envelope),
         meta: const InterceptorChainEntry(name: 'ResilienceInterceptor', detail: 'Retry + circuit breaker'),
       ),
       (
@@ -281,7 +291,7 @@ class ApiClient {
         ),
       );
     } on DioException catch (e) {
-      throw _mapDioException(e);
+      throw _mapDioException(e, _target.envelope);
     }
   }
 
@@ -309,7 +319,7 @@ class ApiClient {
     try {
       return await instance.post<String>(fullPath, data: serialized, options: options, cancelToken: cancelToken);
     } on DioException catch (e) {
-      throw _mapDioException(e);
+      throw _mapDioException(e, _target.envelope);
     }
   }
 
@@ -336,7 +346,7 @@ class ApiClient {
         ),
       );
     } on DioException catch (e) {
-      throw _mapDioException(e);
+      throw _mapDioException(e, _target.envelope);
     }
   }
 
@@ -363,7 +373,7 @@ class ApiClient {
         ),
       );
     } on DioException catch (e) {
-      throw _mapDioException(e);
+      throw _mapDioException(e, _target.envelope);
     }
   }
 
@@ -376,7 +386,7 @@ class ApiClient {
         options: Options(extra: {'_basePath': path, '_pathParams': pathParams, '_queryParams': queryParams}),
       );
     } on DioException catch (e) {
-      throw _mapDioException(e);
+      throw _mapDioException(e, _target.envelope);
     }
   }
 
@@ -396,7 +406,7 @@ class ApiClient {
   // Error mapping — converts DioException to AppException hierarchy
   // ---------------------------------------------------------------------------
 
-  static AppException _mapDioException(DioException e) {
+  static AppException _mapDioException(DioException e, ErrorEnvelope envelope) {
     // If the wrapped error is already an AppException (e.g. from MockInterceptor),
     // unwrap and rethrow it directly.
     if (e.error is AppException) return e.error as AppException;
@@ -418,7 +428,7 @@ class ApiClient {
         if (e.error is ConnectivityException) return OfflineException();
         return FetchDataException('No Internet connection');
       case DioExceptionType.badResponse:
-        return _mapBadResponse(e);
+        return _mapBadResponse(e, envelope);
       case DioExceptionType.cancel:
         return RequestCancelledException();
       case DioExceptionType.badCertificate:
@@ -438,7 +448,7 @@ class ApiClient {
     return UntrustedCertificateException('Untrusted connection to ${uri.host}:${uri.port}: ${e.message ?? error}');
   }
 
-  static AppException _mapBadResponse(DioException e) {
+  static AppException _mapBadResponse(DioException e, ErrorEnvelope envelope) {
     final statusCode = e.response?.statusCode ?? 0;
     // The body becomes the text of the exception, which the log, the dev console and Sentry receive, and a validation
     // error can repeat the password or the code the request sent.
@@ -447,11 +457,11 @@ class ApiClient {
       requestBody: e.requestOptions.data,
       sensitiveKeys: sensitiveKeysOf(e.requestOptions),
     );
-    final code = errorCodeOf(e.response?.data);
-    final serverMessage = _stringFieldOf(body, 'error');
-    final fixStatement = _stringFieldOf(body, 'fixStatement');
+    final code = envelope.codeOf(e.response?.data);
+    final serverMessage = envelope.serverMessageOf(body);
+    final fixStatement = envelope.fixStatementOf(body);
     final retryAfter = _retryAfterOf(e.response?.headers);
-    final text = _withoutDatabaseText(body);
+    final text = envelope.exceptionText(status: statusCode, data: e.response?.data, scrubbedBody: body);
     switch (statusCode) {
       case 400:
         return BadRequestException(
@@ -459,7 +469,8 @@ class ApiClient {
           statusCode: statusCode,
           errorCode: code,
           serverMessage: serverMessage,
-          position: positionOf(e.response?.data),
+          position: envelope is StudioErrorEnvelope ? positionOf(e.response?.data) : null,
+          fieldErrorKeys: envelope.fieldErrorKeysOf(e.response?.data),
         );
       case 401 || 403:
         return UnauthorizedException(
@@ -495,39 +506,6 @@ class ApiClient {
     }
   }
 
-  /// The members of a JSON error body that LibreDB Studio fills with a database's own words and with statements:
-  /// `error` (the database's message, which can quote the statement), `details` (its `detail` and the error's position)
-  /// and `fixStatement` (`src/lib/api/error-body.ts` in Studio).
-  static const _databaseTextMembers = {'error', 'details', 'fixStatement'};
-
-  /// The scrubbed body text [scrubbedBody] without its [_databaseTextMembers] when it is a JSON object, as the text of
-  /// the exception: that text reaches the log and, for an uncaught error, Sentry, and no scrubber can tell a database's
-  /// words or a statement from other text. [AppException.serverMessage], [AppException.fixStatement] and
-  /// [AppException.position] keep what a screen shows. Any other body is returned as it is.
-  static String _withoutDatabaseText(String scrubbedBody) {
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(scrubbedBody);
-    } on FormatException {
-      return scrubbedBody;
-    }
-    if (decoded is! Map || !decoded.keys.any(_databaseTextMembers.contains)) return scrubbedBody;
-    return jsonEncode({
-      for (final MapEntry(:key, :value) in decoded.entries)
-        if (!_databaseTextMembers.contains(key)) key: value,
-    });
-  }
-
-  /// The string [field] of the scrubbed body text [scrubbedBody], when it is a JSON object.
-  static String? _stringFieldOf(String scrubbedBody, String field) {
-    try {
-      final decoded = jsonDecode(scrubbedBody);
-      return decoded is Map && decoded[field] is String ? decoded[field] as String : null;
-    } on FormatException {
-      return null;
-    }
-  }
-
   /// The `details.position` of a JSON object body, given as a decoded map or as text: a positive whole number, sent as
   /// a JSON integer or as a string of ASCII digits, else null. A position holds no request data, so it is read before
   /// the body is scrubbed.
@@ -553,19 +531,10 @@ class ApiClient {
 
   static final _digits = RegExp(r'^[0-9]+$');
 
-  /// The string `code` of a JSON object body, given as a decoded map or as text. A code names a kind of failure and
-  /// holds no request data, so it is read before the body is scrubbed.
-  static String? errorCodeOf(Object? data) {
-    Object? decoded = data;
-    if (data is String) {
-      try {
-        decoded = jsonDecode(data);
-      } on FormatException {
-        return null;
-      }
-    }
-    return decoded is Map && decoded['code'] is String ? decoded['code'] as String : null;
-  }
+  /// The string `code` of a JSON object body, given as a decoded map or as text: LibreDB Studio's error code
+  /// ([StudioErrorEnvelope.codeOf]). A code names a kind of failure and holds no request data, so it is read before the
+  /// body is scrubbed.
+  static String? errorCodeOf(Object? data) => const StudioErrorEnvelope().codeOf(data);
 
   /// The delay of a `Retry-After` header given in seconds; the HTTP-date form is not read.
   static Duration? _retryAfterOf(Headers? headers) {

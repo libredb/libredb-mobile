@@ -15,6 +15,7 @@ final class AppConfig {
     this.screenCaptureProtection = false,
     this.appLockRequired = false,
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
+    this.platform = const PlatformNotConfigured(),
   });
 
   const AppConfig.dev({this.screenCaptureProtection = false, this.appLockRequired = false})
@@ -23,7 +24,8 @@ final class AppConfig {
       certificatePins = const <String>[],
       oidcCertificatePins = const <String>[],
       idleTimeout = null,
-      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
+      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
+      platform = const PlatformConfigured(baseUrl: null);
 
   const AppConfig.test({this.screenCaptureProtection = false, this.appLockRequired = false})
     : environment = Environment.test,
@@ -31,7 +33,8 @@ final class AppConfig {
       certificatePins = const <String>[],
       oidcCertificatePins = const <String>[],
       idleTimeout = null,
-      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
+      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
+      platform = const PlatformConfigured(baseUrl: null);
 
   const AppConfig.prod({
     String this.apiBaseUrl = prodApiUrl,
@@ -40,6 +43,7 @@ final class AppConfig {
     this.screenCaptureProtection = true,
     this.appLockRequired = false,
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
+    this.platform = const PlatformNotConfigured(),
   }) : environment = Environment.prod,
        idleTimeout = const Duration(minutes: 15);
 
@@ -49,14 +53,18 @@ final class AppConfig {
   /// a test passes its own, is empty: such a build has no server to call.
   ///
   /// Throws [ProdHttpsConfigError] in the prod environment when one of [httpsOnlyDefines] is set but is not an https
-  /// URL: [prodApiUrlDefine], [oidcIssuerDefine] or [sentryDsnDefine], the `PROD_API_URL`, `OIDC_ISSUER` and
-  /// `SENTRY_DSN` defines unless a test passes its own. The store build declares that its traffic is encrypted in
-  /// transit, so it never starts with a plain http server. An unset `OIDC_ISSUER` still starts and fails closed on the
-  /// login page, and an unset `SENTRY_DSN` leaves Sentry off. Dev and test check none of them.
+  /// URL: [prodApiUrlDefine], [oidcIssuerDefine], [sentryDsnDefine] or [platformApiUrlDefine], the `PROD_API_URL`,
+  /// `OIDC_ISSUER`, `SENTRY_DSN` and `PLATFORM_API_URL` defines unless a test passes its own. The store build declares
+  /// that its traffic is encrypted in transit, so it never starts with a plain http server. An unset `OIDC_ISSUER`
+  /// still starts and fails closed on the login page, an unset `SENTRY_DSN` leaves Sentry off, and an unset
+  /// `PLATFORM_API_URL` gives a build without Platform mode ([PlatformNotConfigured]). Dev and test check none of them,
+  /// and both get a [PlatformConfigured] without a base URL, which `MockInterceptor` answers.
   ///
-  /// Throws [CertificatePinsConfigError] in the prod environment when [studioCertPinsDefine] or [oidcCertPinsDefine],
-  /// the `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` defines unless a test passes its own, is set but breaks a pin rule:
-  /// such a build never falls back to an unpinned connection. Dev and test read neither define.
+  /// Throws [CertificatePinsConfigError] in the prod environment when [studioCertPinsDefine], [oidcCertPinsDefine] or
+  /// [platformCertPinsDefine], the `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` and `PLATFORM_CERT_PINS` defines unless a test
+  /// passes its own, is set but breaks a pin rule: such a build never falls back to an unpinned connection. A set
+  /// `PLATFORM_CERT_PINS` with an empty `PLATFORM_API_URL` throws too, because a pin without a host is a build mistake.
+  /// Dev and test read none of them.
   ///
   /// [screenCaptureProtectionDefine], the `SCREEN_CAPTURE_PROTECTION` define unless a test passes its own, sets
   /// [screenCaptureProtection]: `true` or `false`, or empty for the environment's default, on in prod and off in dev
@@ -74,6 +82,8 @@ final class AppConfig {
     @visibleForTesting String oidcCertPinsDefine = oidcCertPins,
     @visibleForTesting String screenCaptureProtectionDefine = screenCaptureProtectionSwitch,
     @visibleForTesting String appLockRequiredDefine = appLockRequiredSwitch,
+    @visibleForTesting String platformApiUrlDefine = platformApiUrl,
+    @visibleForTesting String platformCertPinsDefine = platformCertPins,
   }) {
     if (environment == Environment.prod) {
       if (prodApiUrlDefine.isEmpty) throw ProdApiUrlConfigError();
@@ -81,6 +91,7 @@ final class AppConfig {
       // Trimmed first, as OidcSettings reads it; an unset issuer fails closed on the login page instead.
       if (oidcIssuerDefine.trim().isNotEmpty) _requireHttps('OIDC_ISSUER', oidcIssuerDefine.trim());
       if (sentryDsnDefine.isNotEmpty) _requireHttps('SENTRY_DSN', sentryDsnDefine);
+      if (platformApiUrlDefine.isNotEmpty) _requireHttps('PLATFORM_API_URL', platformApiUrlDefine);
     }
     final protection = _screenCaptureProtectionOf(screenCaptureProtectionDefine);
     final lockRequired = _appLockRequiredOf(appLockRequiredDefine);
@@ -93,6 +104,7 @@ final class AppConfig {
         oidcCertificatePins: _pins('OIDC_CERT_PINS', oidcCertPinsDefine),
         screenCaptureProtection: protection ?? true,
         appLockRequired: lockRequired,
+        platform: _platformOf(platformApiUrlDefine, platformCertPinsDefine),
       ),
       Environment.test => AppConfig.test(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
     };
@@ -101,6 +113,30 @@ final class AppConfig {
   /// LibreDB Studio's API, its origin plus `/api`, given at build time with
   /// `--dart-define=PROD_API_URL=https://studio.example.com/api` (docs/studio.md).
   static const String prodApiUrl = String.fromEnvironment('PROD_API_URL');
+
+  /// LibreDB Platform's API, its origin plus `/api`, given at build time with
+  /// `--dart-define=PLATFORM_API_URL=https://platform.example.org/api` (docs/platform.md); empty for a build without
+  /// Platform mode.
+  static const String platformApiUrl = String.fromEnvironment('PLATFORM_API_URL');
+
+  /// The pins of the host of [platformApiUrl], given at build time with `--dart-define=PLATFORM_CERT_PINS=<pin>,<pin>`
+  /// (docs/security.md, "Certificate pinning"); empty leaves that host on the system trust store.
+  static const String platformCertPins = String.fromEnvironment('PLATFORM_CERT_PINS');
+
+  /// The Platform target of a prod build: [PlatformNotConfigured] for an empty [url], else [url] with the pins of
+  /// [pinsDefine]. [url] was checked as https already.
+  static PlatformTargetConfig _platformOf(String url, String pinsDefine) {
+    if (url.isEmpty) {
+      if (pinsDefine.trim().isNotEmpty) {
+        throw CertificatePinsConfigError(
+          'PLATFORM_CERT_PINS',
+          'is set, but PLATFORM_API_URL is empty, so no host uses it',
+        );
+      }
+      return const PlatformNotConfigured();
+    }
+    return PlatformConfigured(baseUrl: url, certificatePins: _pins('PLATFORM_CERT_PINS', pinsDefine));
+  }
 
   /// The identity provider's issuer, given at build time with `--dart-define=OIDC_ISSUER=...` (docs/oidc.md);
   /// `AuthDefines` reads it for the sign-in, and [AppConfig.fromEnvironment] only checks its scheme in prod.
@@ -111,7 +147,7 @@ final class AppConfig {
 
   /// The defines a prod build accepts only as https URLs ([AppConfig.fromEnvironment], docs/security.md, "Encryption
   /// in transit").
-  static const Set<String> httpsOnlyDefines = {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN'};
+  static const Set<String> httpsOnlyDefines = {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN', 'PLATFORM_API_URL'};
 
   /// Whether [value] is an absolute https URL with a host: the scheme in any case, optional user info, a host name
   /// or an IPv6 literal, an optional port, then the end or a path, query or fragment. A space or an ASCII control
@@ -225,6 +261,10 @@ final class AppConfig {
   /// [sentryDsn] reads it in the prod environment only.
   final String sentryDsnDefine;
 
+  /// LibreDB Platform, which Platform mode calls: [PlatformConfigured] in dev and test and in a prod build with
+  /// `PLATFORM_API_URL`, else [PlatformNotConfigured].
+  final PlatformTargetConfig platform;
+
   bool get isProduction => environment == Environment.prod;
   bool get isDevelopment => environment == Environment.dev;
   bool get isTest => environment == Environment.test;
@@ -249,7 +289,29 @@ final class AppConfig {
     screenCaptureProtection: screenCaptureProtection,
     appLockRequired: appLockRequired,
     sentryDsnDefine: '',
+    platform: platform,
   );
+}
+
+/// Whether the build can call LibreDB Platform, and where.
+sealed class PlatformTargetConfig {
+  const PlatformTargetConfig();
+}
+
+/// The build calls LibreDB Platform at [baseUrl], with the pins of its host.
+final class PlatformConfigured extends PlatformTargetConfig {
+  const PlatformConfigured({this.baseUrl, this.certificatePins = const <String>[]});
+
+  /// Platform's origin plus `/api`, from `PLATFORM_API_URL`; null only outside prod, where `MockInterceptor` answers.
+  final String? baseUrl;
+
+  /// The pins of the host of [baseUrl], from `PLATFORM_CERT_PINS`; empty when pinning is off for it.
+  final List<String> certificatePins;
+}
+
+/// The build has no Platform target, so it offers no Platform mode and sends Platform nothing.
+final class PlatformNotConfigured extends PlatformTargetConfig {
+  const PlatformNotConfigured();
 }
 
 /// A prod build without `PROD_API_URL`, which stops the app at start instead of calling an empty base URL.
@@ -258,8 +320,8 @@ final class ProdApiUrlConfigError extends Error {
   String toString() => "PROD_API_URL is empty, but a prod build needs LibreDB Studio's API URL (docs/studio.md)";
 }
 
-/// A prod build whose `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, which stops the
-/// app at start instead of sending a bearer, a sign-in or a crash report over plain http.
+/// A prod build whose `PROD_API_URL`, `OIDC_ISSUER`, `SENTRY_DSN` or `PLATFORM_API_URL` is set but is not an https URL,
+/// which stops the app at start instead of sending a bearer, a sign-in or a crash report over plain http.
 final class ProdHttpsConfigError extends Error {
   ProdHttpsConfigError(this.define, {this.whitespace = false});
 
@@ -276,8 +338,8 @@ final class ProdHttpsConfigError extends Error {
       : '$define must be an https URL in a prod build (docs/security.md, "Encryption in transit")';
 }
 
-/// A prod build whose `STUDIO_CERT_PINS` or `OIDC_CERT_PINS` breaks a pin rule, which stops the app at start instead
-/// of connecting unpinned or with a pin set that a key change would lock out.
+/// A prod build whose `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` or `PLATFORM_CERT_PINS` breaks a pin rule, which stops the
+/// app at start instead of connecting unpinned or with a pin set that a key change would lock out.
 final class CertificatePinsConfigError extends Error {
   CertificatePinsConfigError(this.define, this.rule);
 
