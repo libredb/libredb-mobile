@@ -767,6 +767,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_mode_studio": MessageLookupByLibrary.simpleMessage("Studio"),
     "profile_role_admin": MessageLookupByLibrary.simpleMessage("Yönetici"),
     "profile_role_user": MessageLookupByLibrary.simpleMessage("Kullanıcı"),
+    "profile_switch_admin_role_required": MessageLookupByLibrary.simpleMessage(
+      "Bu hesap bir Platform yöneticisi değil, bu yüzden Studio\'da kalıyor.",
+    ),
+    "profile_switch_confirm": MessageLookupByLibrary.simpleMessage("Geç"),
+    "profile_switch_platform_message": MessageLookupByLibrary.simpleMessage(
+      "Platform modu Platform yöneticileri içindir. Bu hesap Platform\'u ilk kez açtığında lisansın bir yönetici koltuğunu kullanır.",
+    ),
+    "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Platform\'a geçilsin mi?"),
+    "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Platform\'a geç"),
+    "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Studio\'ya geç"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Bilinmeyen kullanıcı"),
     "refresh": MessageLookupByLibrary.simpleMessage("Yenile"),
     "remove_my_data": MessageLookupByLibrary.simpleMessage("Verilerimi sil"),

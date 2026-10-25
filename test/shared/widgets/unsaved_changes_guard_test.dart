@@ -217,6 +217,55 @@ void main() {
     expect(find.text('other'), findsOneWidget);
   });
 
+  group('confirmLeavingAll', () {
+    Future<bool?> confirmLeavingAll(WidgetTester tester) async {
+      final context = tester.element(find.byType(Scaffold).last);
+      bool? answer;
+      context.read<UnsavedChangesRegistry>().confirmLeavingAll(context).then((value) => answer = value);
+      await tester.pumpAndSettle();
+      return answer;
+    }
+
+    testWidgets('answers true without asking when no open form holds unsaved changes', (tester) async {
+      await _pumpDirtyForm(tester, dirty: false);
+
+      expect(await confirmLeavingAll(tester), isTrue);
+      expect(_dialog, findsNothing);
+    });
+
+    testWidgets('answers true without asking when no page registered a form', (tester) async {
+      final harness = _Harness();
+      addTearDown(harness.router.dispose);
+      await tester.pumpWidget(harness.app());
+      await tester.pumpAndSettle();
+
+      expect(await confirmLeavingAll(tester), isTrue);
+      expect(_dialog, findsNothing);
+    });
+
+    testWidgets('asks once about a dirty form and answers what the user picked', (tester) async {
+      await _pumpDirtyForm(tester);
+      final context = tester.element(find.byType(Scaffold).last);
+      final registry = context.read<UnsavedChangesRegistry>();
+
+      bool? stay;
+      registry.confirmLeavingAll(context).then((value) => stay = value);
+      await tester.pumpAndSettle();
+      expect(_dialog, findsOneWidget);
+      await tester.tap(find.text(S.current.no));
+      await tester.pumpAndSettle();
+      expect(stay, isFalse);
+      expect(find.text('changed'), findsOneWidget);
+
+      bool? leave;
+      registry.confirmLeavingAll(context).then((value) => leave = value);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(S.current.yes));
+      await tester.pumpAndSettle();
+      expect(leave, isTrue);
+    });
+  });
+
   testWidgets('formChanged without a scope above the context is an error', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

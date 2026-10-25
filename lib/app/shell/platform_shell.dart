@@ -35,8 +35,8 @@ class _PlatformShellState extends State<PlatformShell> {
   @override
   void initState() {
     super.initState();
-    // A restored session asks Platform who the admin is once the shell opens; a sign-in has already filled the cubit,
-    // and the sign-out clears it, so the next admin to sign in is asked about again.
+    // A restored session or a sign-in asks Platform who the admin is once the shell opens; a mode switch from Studio
+    // has already filled the cubit from its gate, and the sign-out clears it, so the next admin is asked again.
     final identity = context.read<PlatformIdentityCubit>();
     if (identity.state is PlatformIdentityInitial) identity.load();
   }

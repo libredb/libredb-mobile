@@ -7,11 +7,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/shared/models/platform_identity.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -23,6 +26,7 @@ void main() {
   late MockStudioIdentityCubit identity;
   late MockConnectionPolicyCubit policy;
   late MockPlatformIdentityCubit platformIdentity;
+  late MockSessionTargetSwitchBloc switchBloc;
 
   const admin = StudioIdentity(username: 'admin@example.com', role: StudioAdminRole());
   const user = StudioIdentity(username: 'user@example.com', role: StudioUserRole());
@@ -33,6 +37,7 @@ void main() {
     identity = MockStudioIdentityCubit();
     policy = MockConnectionPolicyCubit();
     platformIdentity = MockPlatformIdentityCubit();
+    switchBloc = MockSessionTargetSwitchBloc();
     when(() => platformIdentity.load()).thenAnswer((_) async {});
     when(() => identity.load()).thenAnswer((_) async {});
     when(() => policy.load()).thenAnswer((_) async {});
@@ -46,7 +51,10 @@ void main() {
     String language = 'en',
     SessionTarget target = SessionTarget.studio,
     PlatformIdentityState platformState = const PlatformIdentityInitial(),
+    AppConfig appConfig = const AppConfig.test(),
+    SessionTargetSwitchState switchState = const SessionTargetSwitchIdle(),
   }) async {
+    when(() => switchBloc.state).thenReturn(switchState);
     when(() => identity.state).thenReturn(identityState);
     when(() => platformIdentity.state).thenReturn(platformState);
     when(() => policy.state).thenReturn(policyState);
@@ -54,6 +62,8 @@ void main() {
     await tester.pumpWidget(
       MultiBlocProvider(
         providers: [
+          RepositoryProvider<AppConfig>.value(value: appConfig),
+          BlocProvider<SessionTargetSwitchBloc>.value(value: switchBloc),
           BlocProvider<StudioIdentityCubit>.value(value: identity),
           BlocProvider<ConnectionPolicyCubit>.value(value: policy),
           BlocProvider<PlatformIdentityCubit>.value(value: platformIdentity),
@@ -327,6 +337,76 @@ void main() {
         expect(inSheet(find.widgetWithText(ListTile, 'Logout')), findsOneWidget);
       });
     }
+
+    testWidgets('a Studio session in a build with Platform offers Switch to Platform above Settings', (tester) async {
+      final answers = await pumpSheet(tester, identityState: const StudioIdentityLoaded(admin));
+
+      final tile = inSheet(find.byKey(profileSwitchModeKey));
+      expect(find.descendant(of: tile, matching: find.text('Switch to Platform')), findsOneWidget);
+      expect(
+        tester.getTopLeft(tile).dy,
+        lessThan(tester.getTopLeft(inSheet(find.widgetWithText(ListTile, 'Settings'))).dy),
+      );
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProfileSheet), findsNothing);
+      expect(answers, [ProfileSheetAction.switchMode]);
+    });
+
+    testWidgets('a Platform session offers Switch to Studio', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityLoading(),
+      );
+
+      expect(
+        find.descendant(of: inSheet(find.byKey(profileSwitchModeKey)), matching: find.text('Switch to Studio')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a build without a Platform target offers no switch', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(admin),
+        appConfig: const AppConfig(
+          environment: Environment.test,
+          apiBaseUrl: null,
+          certificatePins: <String>[],
+          idleTimeout: null,
+        ),
+      );
+
+      expect(inSheet(find.byKey(profileSwitchModeKey)), findsNothing);
+      expect(inSheet(find.text('Switch to Platform')), findsNothing);
+    });
+
+    testWidgets('while a switch runs the tile shows progress and a tap sends nothing', (tester) async {
+      final answers = await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(admin),
+        switchState: const SessionTargetSwitchInProgress(SessionTarget.platform),
+      );
+
+      final tile = inSheet(find.byKey(profileSwitchModeKey));
+      expect(find.descendant(of: tile, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+
+      await tester.tap(tile);
+      await tester.pump();
+
+      expect(find.byType(ProfileSheet), findsOneWidget);
+      expect(answers, isEmpty);
+    });
+
+    testWidgets('the switch reads Turkish', (tester) async {
+      await pumpSheet(tester, identityState: const StudioIdentityLoaded(admin), language: 'tr');
+
+      expect(inSheet(find.text("Platform'a geç")), findsOneWidget);
+    });
 
     testWidgets('fits a 320 px phone at text scale 1.3 in Turkish', (tester) async {
       addTearDown(tester.view.reset);

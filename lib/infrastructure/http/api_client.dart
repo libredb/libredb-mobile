@@ -75,7 +75,8 @@ class InterceptorChainEntry {
 ///
 /// `tokenRotation` is how [TokenRefreshInterceptor] refreshes the session, at the identity provider; `isSessionExpired`
 /// decides which 401 starts that refresh, and `isSessionRefused` which 401 after it ends the session
-/// ([isUnauthorized], every 401, when either is null).
+/// ([isUnauthorized], every 401, when either is null). `onSessionRefused` is told that refusal after a refresh, and
+/// `onSessionExpired` a refresh that failed; without `onSessionRefused` the refusal goes to `onSessionExpired`.
 ///
 /// `onAccountRefused` is told the code of every answer that `accountRefusal` reads as a refusal of the signed-in
 /// account, whichever request met it; without `onAccountRefused` no request reports one.
@@ -89,6 +90,7 @@ class ApiClient {
     this._secureStorage,
     required this._tokenRotation,
     this._onSessionExpired,
+    this._onSessionRefused,
     this._dio,
     this._isSessionExpired,
     this._isSessionRefused,
@@ -105,6 +107,7 @@ class ApiClient {
   final AppConfig _appConfig;
   final ISecureStorage? _secureStorage;
   final OnSessionExpired? _onSessionExpired;
+  final OnSessionRefused? _onSessionRefused;
   final TokenRotation _tokenRotation;
   final SessionExpiredPredicate? _isSessionExpired;
   final SessionRefusedPredicate? _isSessionRefused;
@@ -186,6 +189,7 @@ class ApiClient {
         interceptor: TokenRefreshInterceptor(
           dio: dio,
           onSessionExpired: _onSessionExpired,
+          onSessionRefused: _onSessionRefused,
           secureStorage: _secureStorage,
           rotation: _tokenRotation,
           isSessionExpired: _isSessionExpired ?? isUnauthorized,

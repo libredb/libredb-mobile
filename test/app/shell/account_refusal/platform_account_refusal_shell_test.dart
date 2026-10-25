@@ -204,12 +204,14 @@ class _RefusingPlatformDependencies extends LocalSignInDependencies {
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
     final client = super.createPlatformApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );

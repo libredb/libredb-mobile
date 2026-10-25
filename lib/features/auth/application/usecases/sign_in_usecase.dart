@@ -1,7 +1,7 @@
-import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/gate_refusal.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
@@ -50,14 +50,14 @@ class SignInUseCase {
           case Success(:final data):
             return StudioSignInSucceeded(data);
           case Failure(:final error):
-            errorCode = _refusal(error);
+            errorCode = studioGateRefusal(error);
         }
       case SessionTarget.platform:
         switch (await platformIdentity!.fetch()) {
           case Success(:final data):
             return PlatformSignInSucceeded(data);
           case Failure(:final error):
-            errorCode = _platformRefusal(error);
+            errorCode = platformGateRefusal(error);
         }
     }
     _log.warn('The {} gate refused the sign-in, so the stored session is cleared: {}', [target.name, errorCode.key]);
@@ -65,31 +65,5 @@ class SignInUseCase {
       _log.error('The refused sign-in could not be cleared: {}', [error.runtimeType]);
     }
     return SsoSignInRejected(errorCode);
-  }
-
-  /// The code a sign-in Studio refused shows: Studio's account code of a 403 as it is,
-  /// [AppErrorCode.studioAccountRefused] for any other [AuthError], which is a 401 that reached the caller, and the
-  /// code `studioError` gave for anything else.
-  static AppErrorCode _refusal(AppError error) {
-    final code = AppErrorCode.fromKey(error.code);
-    return switch (error) {
-      AuthError() when code == AppErrorCode.studioAccountHasNoRole || code == AppErrorCode.studioAccountHasNoIdentity =>
-        code!,
-      AuthError() => AppErrorCode.studioAccountRefused,
-      _ => code ?? AppErrorCode.generic,
-    };
-  }
-
-  /// The code a sign-in Platform refused shows: a `platform.*` code that `platformError` gave as it is, whatever the
-  /// error type, [AppErrorCode.platformAccountRefused] for any other [AuthError], which is a 401 that reached the
-  /// caller (`BEARER_INVALID` again after the refresh, or one without Platform's envelope), and the code the shared
-  /// transport mapping gave, or the generic one, for anything else.
-  static AppErrorCode _platformRefusal(AppError error) {
-    final code = AppErrorCode.fromKey(error.code);
-    return switch (error) {
-      _ when code != null && code.key.startsWith('platform.') => code,
-      AuthError() => AppErrorCode.platformAccountRefused,
-      _ => code ?? AppErrorCode.generic,
-    };
   }
 }

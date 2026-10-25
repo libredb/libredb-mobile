@@ -10,8 +10,9 @@ part 'studio_identity_state.dart';
 
 /// Who Studio says the signed-in user is, for every screen that shows or decides on the user's role.
 ///
-/// The role lives here only, from Studio's latest `GET /api/auth/me` answer, and is never stored. A failure never ends
-/// the session: only the ApiClient does that, for a 401 `AUTH_REQUIRED` that survives the token refresh.
+/// The role lives here only, from Studio's latest `GET /api/auth/me` answer or a mode switch's ([signedIn]), and is
+/// never stored. A failure never ends the session: only the ApiClient does that, for a 401 `AUTH_REQUIRED` that
+/// survives the token refresh.
 class StudioIdentityCubit extends Cubit<StudioIdentityState> {
   StudioIdentityCubit({required this._repository}) : super(const StudioIdentityInitial());
 
@@ -36,6 +37,13 @@ class StudioIdentityCubit extends Cubit<StudioIdentityState> {
         _log.warn('load failed: {}', [error.code ?? error.runtimeType]);
         emit(StudioIdentityFailure(AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic));
     }
+  }
+
+  /// The identity Studio's gate has just read for a mode switch, so the shell needs no second request; an answer still
+  /// on its way is dropped.
+  void signedIn(StudioIdentity identity) {
+    _generation++;
+    emit(StudioIdentityLoaded(identity));
   }
 
   /// Forgets the signed-out user, including an answer still on its way.

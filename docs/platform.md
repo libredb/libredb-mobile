@@ -174,6 +174,9 @@ Each entry says when its own server does not answer ([Liveness and the two gates
 - A 502 or 503 never ends the session, whatever its code.
 - A 403 `ADMIN_ROLE_REQUIRED` or `LICENSE_ADMIN_SEATS` refuses the signed-in admin (`PlatformAccountRefusalCubit`); it is reported only under a signed-in Platform session, so a refusal during the sign-in stays on the login page.
 - `LICENSE_EXPIRED`, `LICENSE_INVALID` and `LICENSE_USER_SEATS` are shown by the caller and never refuse the account, because a grant `PUT` can answer them and refusing the whole account over one grant would lock the admin out.
+- The refusal of a refreshed token is scoped to the session's target, so a mode switch cannot sign the user out: Platform's second 401 `BEARER_INVALID` ends only a Platform session, and Studio's second 401 `AUTH_REQUIRED` ends only a Studio session (`onSessionRefused` in `lib/app/di/app_scope.dart`).
+- A token refresh the identity provider refuses ends the session whatever its target, because that refresh token is dead for both servers (`onSessionExpired`).
+- Studio's account refusals (`BEARER_NO_ROLE`, `BEARER_NO_IDENTITY`) are reported only under a signed-in Studio session, as Platform's are only under a Platform session.
 
 A deployment whose `libredb-mobile` access token lacks Platform's audience answers `BEARER_INVALID` to every call, so a Platform session there ends after its one refresh.
 
@@ -184,7 +187,14 @@ The router sends a Platform session away from every Studio route, and a Studio s
 The Platform shell reads nothing of Studio and provides none of the Studio scopes, and it keeps no data of an account on the device, so Settings shows no "Remove my data".
 While Platform refuses the admin, a refusal page covers the screens; Retry asks `GET /api/v1/me` again and uncovers them on a 200, and Logout signs out.
 The Studio unreachable page does not cover a signed-in Platform session, and the Platform unreachable page covers it while Platform does not answer.
-Switching mode is a sign-out followed by a sign-in through the other entry.
+In a build with a Platform target, the profile sheet switches the live session to the other mode in place: "Switch to Platform" in a Studio session, "Switch to Studio" in a Platform session.
+The switch asks only the other target's gate with the live access token, Platform's `GET /api/v1/me` or Studio's `GET /api/auth/me`, because one access token carries both audiences, so it needs no provider sign-in.
+A switch to Platform first asks for confirmation, because Platform's first answer to an account takes an admin seat of the license; a switch to Studio asks nothing.
+Either switch first asks once about the unsaved changes of any open form (`UnsavedChangesRegistry.confirmLeavingAll`).
+Only a 200 switches: the stored session target is rewritten alone (`IAuthSessionRepository.persistTarget`), the new mode's identity is filled from the gate's answer, the in-memory state of the mode left is cleared, and the router opens the new mode's home (`SessionTargetSwitchBloc`, `AppSessionListeners`).
+A refusal keeps the session, its target, its pages and its cubits, and a snackbar says why, such as an account that is not a Platform admin or a license without a free admin seat.
+A switch is no sign-out: it sends no Studio logout record, writes no warn line, starts no provider end-session, sends the app lock no event and removes no stored data.
+A sign-out or an idle timeout while a switch runs ends the session and leaves no target stored.
 
 A tap on a connection opens its grants (`/platform/connections/<id>`), with the tapped connection handed over as go_router `extra`, since go_router logs every location and Platform has no route that reads one connection.
 The location carries only the connection id; a location reached without that `extra`, such as a `returnUrl` after sign-in or a typed location, opens the connections list instead.
