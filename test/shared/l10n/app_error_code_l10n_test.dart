@@ -79,7 +79,7 @@ void main() {
   group('single sign-on error codes', () {
     const sentences = {
       AppErrorCode.authOidcConfig:
-          'Single sign-on is not configured correctly in this app. Contact your administrator.',
+          'This build has no sign-in settings. Ask whoever gave you the app for a complete build.',
       AppErrorCode.authOidcDiscovery:
           'The identity provider could not be reached. Try again later, or contact your administrator if this '
           'continues.',

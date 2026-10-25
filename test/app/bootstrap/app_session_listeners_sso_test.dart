@@ -257,7 +257,7 @@ void main() {
 
     expect(find.byType(ResponsiveScaffold), findsNothing);
     expect(
-      find.text('Single sign-on is not configured correctly in this app. Contact your administrator.'),
+      find.text('This build has no sign-in settings. Ask whoever gave you the app for a complete build.'),
       findsOneWidget,
     );
     expect(() => _app(tester).read<SsoAutoRedirectGate>(), throwsA(isA<ProviderNotFoundException>()));

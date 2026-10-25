@@ -390,7 +390,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "english": MessageLookupByLibrary.simpleMessage("İngilizce"),
     "error_auth_invalid_access_token": MessageLookupByLibrary.simpleMessage("Geçersiz erişim belirteci"),
     "error_auth_oidc_config": MessageLookupByLibrary.simpleMessage(
-      "Bu uygulamada tek oturum açma doğru yapılandırılmamış. Yöneticinize başvurun.",
+      "Bu sürümde oturum açma ayarları yok. Uygulamayı veren kişiden eksiksiz bir sürüm isteyin.",
     ),
     "error_auth_oidc_discovery": MessageLookupByLibrary.simpleMessage(
       "Kimlik sağlayıcıya ulaşılamadı. Daha sonra yeniden deneyin; sorun sürerse yöneticinize başvurun.",

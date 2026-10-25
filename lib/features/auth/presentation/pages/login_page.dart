@@ -453,11 +453,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget _ssoErrorLine(AuthMode mode) {
     return BlocBuilder<LoginBloc, LoginState>(
       builder: (context, state) => switch (_ssoErrorCode(mode, state)) {
-        final errorCode? => Center(
-          child: Text(
-            errorCode.resolve(context),
-            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error),
-            textAlign: TextAlign.center,
+        // A live region, because the line appears without a navigation or a focus change: without it VoiceOver and
+        // TalkBack never speak the error, and on a misconfigured build this page shows nothing else.
+        final errorCode? => Semantics(
+          liveRegion: true,
+          child: Center(
+            child: Text(
+              errorCode.resolve(context),
+              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
         null => const SizedBox.shrink(),
