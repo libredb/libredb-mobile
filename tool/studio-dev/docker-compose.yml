@@ -12,6 +12,7 @@
 #   https://localhost:9444  LibreDB Studio in governance mode, with --profile governed only (docs/studio.md)
 #   https://localhost:9445  LibreDB Platform; its bearer API is https://localhost:9445/api/v1, with --profile platform
 #                           only (docs/studio.md)
+#   https://localhost:9446  LibreDB Studio governed by that Platform, with --profile platform only (docs/studio.md)
 # Studio requires an https issuer, and the browser, the app on a device (through `adb reverse`) and Studio itself
 # must all name the issuer with the same URL. Studio therefore shares Caddy's network namespace, so its own
 # localhost:8443 reaches the same Keycloak as everyone else's.
@@ -49,6 +50,7 @@ services:
       - "127.0.0.1:9443:9443"
       - "127.0.0.1:9444:9444"
       - "127.0.0.1:9445:9445"
+      - "127.0.0.1:9446:9446"
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
@@ -390,6 +392,73 @@ services:
       retries: 60
       start_period: 10s
 
+  # Studio's storage for the Studio below, which governance mode keeps in Postgres; never Platform's database or the
+  # role libredb_studio. The init config creates the schema Studio requires.
+  platform-studio-db:
+    image: postgres:17.6-alpine
+    profiles: [platform]
+    environment:
+      POSTGRES_DB: studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: platform-studio-storage-dev-not-for-production
+    configs:
+      - source: platform-studio-storage
+        target: /docker-entrypoint-initdb.d/studio-schema.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "studio", "-d", "studio"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      # A cold initdb on a loaded host can take over 2 minutes; failed checks before then do not count.
+      start_period: 120s
+
+  # A Studio in governance mode whose governance source is this Platform's bridge schema, so the statements it runs
+  # become the query events of Platform's audit log. It opens the credentials Platform seals with the private key of
+  # governed/keyring.json, whose public key is libredb-platform's BRIDGE_SEAL_PUBLIC_KEY, and signs in as
+  # libredb_studio, which bootstrap.psql creates for exactly this. The app reaches it only with bearer tokens.
+  libredb-studio-platform:
+    image: ${STUDIO_IMAGE:-ghcr.io/libredb/libredb-studio:1.1.0@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c}
+    profiles: [platform]
+    # Beside the other Studios in Caddy's network namespace, on port 3003, which Caddy serves as localhost:9446.
+    network_mode: service:proxy
+    depends_on:
+      ca-export:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+      libredb-platform:
+        condition: service_healthy
+      platform-studio-db:
+        condition: service_healthy
+    environment:
+      PORT: "3003"
+      NEXT_PUBLIC_AUTH_PROVIDER: oidc
+      OIDC_ISSUER: https://localhost:8443/realms/libredb
+      OIDC_CLIENT_ID: libredb-studio
+      OIDC_CLIENT_SECRET: libredb-dev-secret-not-for-production
+      OIDC_ROLE_CLAIM: realm_access.roles
+      OIDC_ADMIN_ROLES: admin
+      OIDC_USER_ROLES: user
+      OIDC_BEARER_AUDIENCE: libredb-studio-api
+      OIDC_BEARER_CLIENT_IDS: libredb-mobile
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+      GOVERNANCE_SOURCE: postgres
+      GOVERNANCE_POSTGRES_URL: postgresql://libredb_studio:libredb_studio_dev@platform-db:5432/libredb?sslmode=disable
+      GOVERNANCE_INSTANCE_ID: libredb-studio-platform
+      GOVERNANCE_PRIVATE_KEYS_FILE: /etc/libredb/governance/keyring.json
+      STORAGE_PROVIDER: postgres
+      STORAGE_POSTGRES_URL: postgresql://studio:platform-studio-storage-dev-not-for-production@platform-studio-db:5432/studio?sslmode=disable
+      STORAGE_POSTGRES_SCHEMA: studio
+    volumes:
+      - dev-ca:/ca:ro
+      - ./governed/keyring.json:/etc/libredb/governance/keyring.json:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
 configs:
   caddyfile:
     content: |
@@ -422,6 +491,16 @@ configs:
       	tls internal
       	reverse_proxy localhost:3002
       }
+
+      # The Studio governed by that Platform, of the platform profile.
+      localhost:9446 {
+      	tls internal
+      	reverse_proxy localhost:3003
+      }
+
+  platform-studio-storage:
+    content: |
+      CREATE SCHEMA studio AUTHORIZATION studio;
 
   keycloak-realm:
     content: |
