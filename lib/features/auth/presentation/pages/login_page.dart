@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   children: [
                     _brandIcon(isDark),
                     const SizedBox(height: 32),
-                    _formHeading(context),
+                    _formHeading(context, carriesIdentity: true),
                     const SizedBox(height: 32),
                     _formBody(context, isDark, showCommunity: true),
                   ],
@@ -370,18 +370,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _formHeading(BuildContext context) {
+  /// The heading above the sign-in entries.
+  ///
+  /// With [carriesIdentity] it names the product and says what it does, which is what a phone needs: the brand panel
+  /// that carries both renders only at [_desktopBreakpoint], and the app has no onboarding flow, so this screen is a
+  /// first-time user's whole introduction. Without it the heading stays as it was, because the brand panel beside it
+  /// already says the same two things and a form panel should not repeat them.
+  Widget _formHeading(BuildContext context, {bool carriesIdentity = false}) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          S.of(context).login_welcome_title,
-          style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.8, color: cs.onSurface),
+        Semantics(
+          header: true,
+          child: Text(
+            carriesIdentity ? AppConstants.appName : S.of(context).login_welcome_title,
+            style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.8, color: cs.onSurface),
+          ),
         ),
         const SizedBox(height: 8),
-        Text(S.of(context).login_sso_subtitle, style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text(
+          carriesIdentity ? S.of(context).login_brand_description : S.of(context).login_sso_subtitle,
+          style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+        ),
       ],
     );
   }
