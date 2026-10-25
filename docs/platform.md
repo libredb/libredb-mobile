@@ -244,7 +244,7 @@ Build P was built from `main` at `3777948`, and build A from `053ef66`, both wit
 Builds N and U came from the commit of P, with the defines the issue names; every build had `OIDC_PROMPT=omit` and `SCREEN_CAPTURE_PROTECTION=false`.
 The device was the test phone, a Samsung Galaxy M51 (SM-M515F) on Android 12, reached over wireless debugging.
 The owner typed every Keycloak sign-in on the phone, as a dedicated test user with the client role `user` and no grant, or as the realm's admin account.
-The web console readings of steps 1, 4, 6, 7, 8 and 11 were replaced by the app's own Platform answers, and the owner read the console once at teardown (orchestrator ruling on #251).
+The web console readings of steps 1, 4, 6, 7, 8 and 11 were replaced by the app's own Platform answers, and the owner confirmed the test user's grants once at teardown (orchestrator ruling on #251).
 
 | Step | Result |
 | --- | --- |
@@ -263,11 +263,11 @@ The web console readings of steps 1, 4, 6, 7, 8 and 11 were replaced by the app'
 | 13. Idle timeout | Passed: the Platform session signed out to the login page 15 minutes after the last touch, with `endSession(idleTimeout)` in the log |
 | 14. Turkish | Passed: with the language switched to Turkish inside the Platform session before step 13's wait, the login page entries and helper text, the Platform home and the connection list read in Turkish; the language was switched back afterwards |
 | 15. Logs | Passed: the app's logcat for the whole run holds no JWT, no `Bearer` value, no e-mail address at all, no `subjectEmail` and no Platform error message text |
-| 16. Teardown | Pending the owner's web console reading |
+| 16. Teardown | Passed: the owner confirmed that the test user cannot sign in to Platform and holds no grant on any connection, and the app's grant lists show the play-review account still holding its 4 read grants (Postgres Air, Lego, Titanic, Periodic Table); the license page's seats in use were not read, so the admin seat comparison of step 4 is open; on the phone the app lock stayed off, the app is signed out and build P is installed |
 
 Notes:
 
-- The admin account had not used Platform before this run, so its first Platform call may have taken an admin seat; the license allows 4.
+- The admin account had not used Platform before this run, so its first Platform call may have taken an admin seat; the license page was not read before or after the run.
 - The idle timeout ends the app session but keeps the Keycloak session, so with `OIDC_PROMPT=omit` the Platform sign-in after it showed no Keycloak form.
 - The phone's network resolves every name, `studio.invalid` included, to its router, so build U met an untrusted certificate rather than a failed lookup, and Studio's liveness logged `network.cert_invalid`.
 - Two of the four Studio sign-outs logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared; the login page showed no message.
