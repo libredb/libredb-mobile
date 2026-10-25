@@ -8,7 +8,8 @@ typedef ShellTab = ({String route, IconData icon, String Function(S) label});
 
 /// The tabs of the shell of [target], in the order of [ApplicationRoutesConstants.tabsFor].
 ///
-/// Studio's are Connections, Browse and SQL, as Studio's MobileNav has them; Platform's are Home and Connections.
+/// Studio's are Connections, Browse and SQL, as Studio's MobileNav has them; Platform's are Home, Connections and
+/// Audit.
 List<ShellTab> shellTabsFor(SessionTarget target) => switch (target) {
   SessionTarget.studio => [
     (route: ApplicationRoutesConstants.connectionList, icon: Icons.storage_outlined, label: (l10n) => l10n.connections),
@@ -21,6 +22,11 @@ List<ShellTab> shellTabsFor(SessionTarget target) => switch (target) {
       route: ApplicationRoutesConstants.platformConnections,
       icon: Icons.storage_outlined,
       label: (l10n) => l10n.connections,
+    ),
+    (
+      route: ApplicationRoutesConstants.platformAudit,
+      icon: Icons.receipt_long_outlined,
+      label: (l10n) => l10n.platform_audit_tab,
     ),
   ],
 };

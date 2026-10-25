@@ -1336,5 +1336,229 @@
   "platform_home_connections_shortcut": "Connections",
   "@platform_home_connections_shortcut": {},
   "platform_home_connections_shortcut_description": "See every connection of this install.",
-  "@platform_home_connections_shortcut_description": {}
+  "@platform_home_connections_shortcut_description": {},
+  "platform_audit_tab": "Audit",
+  "@platform_audit_tab": {},
+  "platform_audit_load_failed": "Could not load the audit log",
+  "@platform_audit_load_failed": {},
+  "platform_audit_refresh_failed": "Could not refresh the audit log",
+  "@platform_audit_refresh_failed": {},
+  "platform_audit_load_more": "Load more",
+  "@platform_audit_load_more": {},
+  "platform_audit_load_more_failed": "Could not load more events",
+  "@platform_audit_load_more_failed": {},
+  "platform_audit_empty_title": "No governed queries yet",
+  "@platform_audit_empty_title": {},
+  "platform_audit_empty_description": "Queries that Studio runs on Platform connections appear here.",
+  "@platform_audit_empty_description": {},
+  "platform_audit_filtered_empty_title": "No event matches the filters",
+  "@platform_audit_filtered_empty_title": {},
+  "platform_audit_filtered_empty_description": "Remove a filter or choose another one.",
+  "@platform_audit_filtered_empty_description": {},
+  "platform_audit_clear_filters": "Clear filters",
+  "@platform_audit_clear_filters": {},
+  "platform_audit_filters": "Filters",
+  "@platform_audit_filters": {},
+  "platform_audit_plan_refused_title": "The audit log is not in this install's plan",
+  "@platform_audit_plan_refused_title": {},
+  "platform_audit_plan_refused_description": "A plan with the audit log is chosen in the Platform license.",
+  "@platform_audit_plan_refused_description": {},
+  "platform_audit_permission_refused_title": "Platform does not let this account read the audit log",
+  "@platform_audit_permission_refused_title": {},
+  "platform_audit_permission_refused_description": "A Platform admin can give this account the audit permission.",
+  "@platform_audit_permission_refused_description": {},
+  "platform_audit_unknown_connection": "Unknown connection",
+  "@platform_audit_unknown_connection": {},
+  "platform_audit_statement_not_captured": "Statement not captured",
+  "@platform_audit_statement_not_captured": {},
+  "platform_audit_time_just_now": "Just now",
+  "@platform_audit_time_just_now": {},
+  "platform_audit_time_minutes_ago": "{count} min ago",
+  "@platform_audit_time_minutes_ago": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_time_hours_ago": "{count} h ago",
+  "@platform_audit_time_hours_ago": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_duration": "{ms} ms",
+  "@platform_audit_duration": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_row_count": "Rows: {count}",
+  "@platform_audit_row_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_status_success": "Success",
+  "@platform_audit_status_success": {},
+  "platform_audit_status_error": "Error",
+  "@platform_audit_status_error": {},
+  "platform_audit_status_cancelled": "Cancelled",
+  "@platform_audit_status_cancelled": {},
+  "platform_audit_status_refused": "Refused",
+  "@platform_audit_status_refused": {},
+  "platform_audit_any": "Any",
+  "@platform_audit_any": {},
+  "platform_audit_filter_status": "Status",
+  "@platform_audit_filter_status": {},
+  "platform_audit_filter_statement_type": "Statement type",
+  "@platform_audit_filter_statement_type": {},
+  "platform_audit_filter_source": "Source",
+  "@platform_audit_filter_source": {},
+  "platform_audit_filter_from": "From",
+  "@platform_audit_filter_from": {},
+  "platform_audit_filter_to": "To",
+  "@platform_audit_filter_to": {},
+  "platform_audit_filter_any_day": "Any day",
+  "@platform_audit_filter_any_day": {},
+  "platform_audit_filter_clear_date": "Clear the date",
+  "@platform_audit_filter_clear_date": {},
+  "platform_audit_filter_search": "Statement text",
+  "@platform_audit_filter_search": {},
+  "platform_audit_filter_search_hint": "Text in the statement, any case",
+  "@platform_audit_filter_search_hint": {},
+  "platform_audit_filter_done": "Done",
+  "@platform_audit_filter_done": {},
+  "platform_audit_chip_status": "Status: {value}",
+  "@platform_audit_chip_status": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_statement_type": "Type: {value}",
+  "@platform_audit_chip_statement_type": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_source": "Source: {value}",
+  "@platform_audit_chip_source": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_from": "From {date}",
+  "@platform_audit_chip_from": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_to": "To {date}",
+  "@platform_audit_chip_to": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_search": "Text: {text}",
+  "@platform_audit_chip_search": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_user": "User: {user}",
+  "@platform_audit_chip_user": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_connection": "Connection: {connection}",
+  "@platform_audit_chip_connection": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_remove": "Remove this filter",
+  "@platform_audit_chip_remove": {},
+  "platform_audit_not_recorded": "Not recorded",
+  "@platform_audit_not_recorded": {},
+  "platform_audit_field_event_id": "Event id",
+  "@platform_audit_field_event_id": {},
+  "platform_audit_field_started": "Started",
+  "@platform_audit_field_started": {},
+  "platform_audit_field_finished": "Finished",
+  "@platform_audit_field_finished": {},
+  "platform_audit_field_user": "User",
+  "@platform_audit_field_user": {},
+  "platform_audit_field_subject": "Keycloak id",
+  "@platform_audit_field_subject": {},
+  "platform_audit_field_session_role": "Session role",
+  "@platform_audit_field_session_role": {},
+  "platform_audit_field_connection": "Connection",
+  "@platform_audit_field_connection": {},
+  "platform_audit_field_connection_id": "Connection id",
+  "@platform_audit_field_connection_id": {},
+  "platform_audit_field_engine": "Engine",
+  "@platform_audit_field_engine": {},
+  "platform_audit_field_access_level": "Access level",
+  "@platform_audit_field_access_level": {},
+  "platform_audit_field_source": "Source",
+  "@platform_audit_field_source": {},
+  "platform_audit_field_statement_type": "Statement type",
+  "@platform_audit_field_statement_type": {},
+  "platform_audit_field_explain": "Explain",
+  "@platform_audit_field_explain": {},
+  "platform_audit_field_capture": "Statement capture",
+  "@platform_audit_field_capture": {},
+  "platform_audit_field_statement": "Statement",
+  "@platform_audit_field_statement": {},
+  "platform_audit_field_rows": "Rows",
+  "@platform_audit_field_rows": {},
+  "platform_audit_field_duration": "Duration",
+  "@platform_audit_field_duration": {},
+  "platform_audit_field_status": "Status",
+  "@platform_audit_field_status": {},
+  "platform_audit_field_error_code": "Error code",
+  "@platform_audit_field_error_code": {},
+  "platform_audit_field_error_message": "Error message",
+  "@platform_audit_field_error_message": {},
+  "platform_audit_field_transaction": "Transaction outcome",
+  "@platform_audit_field_transaction": {},
+  "platform_audit_capture_full": "Full",
+  "@platform_audit_capture_full": {},
+  "platform_audit_capture_redacted": "Redacted",
+  "@platform_audit_capture_redacted": {},
+  "platform_audit_capture_none": "None",
+  "@platform_audit_capture_none": {},
+  "platform_audit_statement_truncated": "Truncated by Studio",
+  "@platform_audit_statement_truncated": {},
+  "platform_audit_statement_redacted": "Redacted by the connection's capture setting",
+  "@platform_audit_statement_redacted": {},
+  "platform_audit_statement_none": "Not captured",
+  "@platform_audit_statement_none": {},
+  "platform_audit_only_this_user": "Only this user",
+  "@platform_audit_only_this_user": {},
+  "platform_audit_only_this_connection": "Only this connection",
+  "@platform_audit_only_this_connection": {}
 }

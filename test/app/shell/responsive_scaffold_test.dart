@@ -211,9 +211,15 @@ void main() {
     });
   });
 
-  // The Platform shell's frame: Home and Connections are its tabs, and settings is no tab though it is under /platform.
+  // The Platform shell's frame: Home, Connections and Audit are its tabs, and settings is no tab though it is under
+  // /platform.
   group('ResponsiveScaffold - Platform', () {
-    Future<GoRouter> pumpPlatformFrame(WidgetTester tester, String location, {Size size = const Size(390, 844)}) async {
+    Future<GoRouter> pumpPlatformFrame(
+      WidgetTester tester,
+      String location, {
+      Size size = const Size(390, 844),
+      Locale locale = const Locale('en'),
+    }) async {
       addTearDown(tester.view.reset);
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1.0;
@@ -232,6 +238,8 @@ void main() {
                 builder: (_, state) => page('grants ${state.pathParameters['id']}'),
               ),
               GoRoute(path: ApplicationRoutesConstants.platformSettings, builder: (_, _) => page('settings')),
+              GoRoute(path: ApplicationRoutesConstants.platformAudit, builder: (_, _) => page('audit')),
+              GoRoute(path: ApplicationRoutesConstants.platformAuditEvent, builder: (_, _) => page('audit event')),
             ],
           ),
         ],
@@ -240,7 +248,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp.router(
           routerConfig: router,
-          locale: const Locale('en'),
+          locale: locale,
           localizationsDelegates: const [
             S.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -260,12 +268,12 @@ void main() {
         .map((destination) => (destination as NavigationDestination).label)
         .toList();
 
-    testWidgets('/platform shows exactly the tabs Home and Connections, with Home selected and no back arrow', (
+    testWidgets('/platform shows exactly the tabs Home, Connections and Audit, with Home selected and no back arrow', (
       tester,
     ) async {
       await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformHome);
 
-      expect(bottomLabels(tester), ['Home', 'Connections']);
+      expect(bottomLabels(tester), ['Home', 'Connections', 'Audit']);
       expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
       expect(find.byType(BackButton), findsNothing);
       expect(titleInTopBar('Home'), findsOneWidget);
@@ -277,6 +285,35 @@ void main() {
       expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
       expect(find.byType(BackButton), findsNothing);
       expect(titleInTopBar('Connections'), findsOneWidget);
+    });
+
+    testWidgets('/platform/audit shows the bar with Audit selected', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformAudit);
+
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 2);
+      expect(find.byType(BackButton), findsNothing);
+      expect(titleInTopBar('Audit'), findsOneWidget);
+    });
+
+    testWidgets('the Audit title follows the app language', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformAudit, locale: const Locale('tr'));
+
+      expect(titleInTopBar('Denetim'), findsOneWidget);
+    });
+
+    testWidgets('the audit event page keeps Audit selected, with a back arrow that pops to the list', (tester) async {
+      final router = await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformAudit);
+      router.push(ApplicationRoutesConstants.platformAuditEvent);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 2);
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(titleInTopBar('Audit'), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page audit'), findsOneWidget);
     });
 
     testWidgets('/platform/settings shows the back arrow and no bottom bar', (tester) async {
@@ -333,12 +370,16 @@ void main() {
       expect(router.canPop(), isFalse);
     });
 
-    testWidgets('a compact height shows exactly the two tabs in the rail', (tester) async {
+    testWidgets('a compact height shows exactly the three tabs in the rail', (tester) async {
       await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformConnections, size: const Size(829, 393));
 
       expect(find.byType(NavigationBar), findsNothing);
       final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.destinations.map((destination) => (destination.label as Text).data), ['Home', 'Connections']);
+      expect(rail.destinations.map((destination) => (destination.label as Text).data), [
+        'Home',
+        'Connections',
+        'Audit',
+      ]);
       expect(rail.selectedIndex, 1);
     });
 

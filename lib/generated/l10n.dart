@@ -4126,6 +4126,436 @@ class S {
       args: [],
     );
   }
+
+  /// `Audit`
+  String get platform_audit_tab {
+    return Intl.message('Audit', name: 'platform_audit_tab', desc: '', args: []);
+  }
+
+  /// `Could not load the audit log`
+  String get platform_audit_load_failed {
+    return Intl.message('Could not load the audit log', name: 'platform_audit_load_failed', desc: '', args: []);
+  }
+
+  /// `Could not refresh the audit log`
+  String get platform_audit_refresh_failed {
+    return Intl.message('Could not refresh the audit log', name: 'platform_audit_refresh_failed', desc: '', args: []);
+  }
+
+  /// `Load more`
+  String get platform_audit_load_more {
+    return Intl.message('Load more', name: 'platform_audit_load_more', desc: '', args: []);
+  }
+
+  /// `Could not load more events`
+  String get platform_audit_load_more_failed {
+    return Intl.message('Could not load more events', name: 'platform_audit_load_more_failed', desc: '', args: []);
+  }
+
+  /// `No governed queries yet`
+  String get platform_audit_empty_title {
+    return Intl.message('No governed queries yet', name: 'platform_audit_empty_title', desc: '', args: []);
+  }
+
+  /// `Queries that Studio runs on Platform connections appear here.`
+  String get platform_audit_empty_description {
+    return Intl.message(
+      'Queries that Studio runs on Platform connections appear here.',
+      name: 'platform_audit_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No event matches the filters`
+  String get platform_audit_filtered_empty_title {
+    return Intl.message(
+      'No event matches the filters',
+      name: 'platform_audit_filtered_empty_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Remove a filter or choose another one.`
+  String get platform_audit_filtered_empty_description {
+    return Intl.message(
+      'Remove a filter or choose another one.',
+      name: 'platform_audit_filtered_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Clear filters`
+  String get platform_audit_clear_filters {
+    return Intl.message('Clear filters', name: 'platform_audit_clear_filters', desc: '', args: []);
+  }
+
+  /// `Filters`
+  String get platform_audit_filters {
+    return Intl.message('Filters', name: 'platform_audit_filters', desc: '', args: []);
+  }
+
+  /// `The audit log is not in this install's plan`
+  String get platform_audit_plan_refused_title {
+    return Intl.message(
+      'The audit log is not in this install\'s plan',
+      name: 'platform_audit_plan_refused_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `A plan with the audit log is chosen in the Platform license.`
+  String get platform_audit_plan_refused_description {
+    return Intl.message(
+      'A plan with the audit log is chosen in the Platform license.',
+      name: 'platform_audit_plan_refused_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform does not let this account read the audit log`
+  String get platform_audit_permission_refused_title {
+    return Intl.message(
+      'Platform does not let this account read the audit log',
+      name: 'platform_audit_permission_refused_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `A Platform admin can give this account the audit permission.`
+  String get platform_audit_permission_refused_description {
+    return Intl.message(
+      'A Platform admin can give this account the audit permission.',
+      name: 'platform_audit_permission_refused_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unknown connection`
+  String get platform_audit_unknown_connection {
+    return Intl.message('Unknown connection', name: 'platform_audit_unknown_connection', desc: '', args: []);
+  }
+
+  /// `Statement not captured`
+  String get platform_audit_statement_not_captured {
+    return Intl.message('Statement not captured', name: 'platform_audit_statement_not_captured', desc: '', args: []);
+  }
+
+  /// `Just now`
+  String get platform_audit_time_just_now {
+    return Intl.message('Just now', name: 'platform_audit_time_just_now', desc: '', args: []);
+  }
+
+  /// `{count} min ago`
+  String platform_audit_time_minutes_ago(int count) {
+    return Intl.message('$count min ago', name: 'platform_audit_time_minutes_ago', desc: '', args: [count]);
+  }
+
+  /// `{count} h ago`
+  String platform_audit_time_hours_ago(int count) {
+    return Intl.message('$count h ago', name: 'platform_audit_time_hours_ago', desc: '', args: [count]);
+  }
+
+  /// `{ms} ms`
+  String platform_audit_duration(int ms) {
+    return Intl.message('$ms ms', name: 'platform_audit_duration', desc: '', args: [ms]);
+  }
+
+  /// `Rows: {count}`
+  String platform_audit_row_count(int count) {
+    return Intl.message('Rows: $count', name: 'platform_audit_row_count', desc: '', args: [count]);
+  }
+
+  /// `Success`
+  String get platform_audit_status_success {
+    return Intl.message('Success', name: 'platform_audit_status_success', desc: '', args: []);
+  }
+
+  /// `Error`
+  String get platform_audit_status_error {
+    return Intl.message('Error', name: 'platform_audit_status_error', desc: '', args: []);
+  }
+
+  /// `Cancelled`
+  String get platform_audit_status_cancelled {
+    return Intl.message('Cancelled', name: 'platform_audit_status_cancelled', desc: '', args: []);
+  }
+
+  /// `Refused`
+  String get platform_audit_status_refused {
+    return Intl.message('Refused', name: 'platform_audit_status_refused', desc: '', args: []);
+  }
+
+  /// `Any`
+  String get platform_audit_any {
+    return Intl.message('Any', name: 'platform_audit_any', desc: '', args: []);
+  }
+
+  /// `Status`
+  String get platform_audit_filter_status {
+    return Intl.message('Status', name: 'platform_audit_filter_status', desc: '', args: []);
+  }
+
+  /// `Statement type`
+  String get platform_audit_filter_statement_type {
+    return Intl.message('Statement type', name: 'platform_audit_filter_statement_type', desc: '', args: []);
+  }
+
+  /// `Source`
+  String get platform_audit_filter_source {
+    return Intl.message('Source', name: 'platform_audit_filter_source', desc: '', args: []);
+  }
+
+  /// `From`
+  String get platform_audit_filter_from {
+    return Intl.message('From', name: 'platform_audit_filter_from', desc: '', args: []);
+  }
+
+  /// `To`
+  String get platform_audit_filter_to {
+    return Intl.message('To', name: 'platform_audit_filter_to', desc: '', args: []);
+  }
+
+  /// `Any day`
+  String get platform_audit_filter_any_day {
+    return Intl.message('Any day', name: 'platform_audit_filter_any_day', desc: '', args: []);
+  }
+
+  /// `Clear the date`
+  String get platform_audit_filter_clear_date {
+    return Intl.message('Clear the date', name: 'platform_audit_filter_clear_date', desc: '', args: []);
+  }
+
+  /// `Statement text`
+  String get platform_audit_filter_search {
+    return Intl.message('Statement text', name: 'platform_audit_filter_search', desc: '', args: []);
+  }
+
+  /// `Text in the statement, any case`
+  String get platform_audit_filter_search_hint {
+    return Intl.message(
+      'Text in the statement, any case',
+      name: 'platform_audit_filter_search_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Done`
+  String get platform_audit_filter_done {
+    return Intl.message('Done', name: 'platform_audit_filter_done', desc: '', args: []);
+  }
+
+  /// `Status: {value}`
+  String platform_audit_chip_status(String value) {
+    return Intl.message('Status: $value', name: 'platform_audit_chip_status', desc: '', args: [value]);
+  }
+
+  /// `Type: {value}`
+  String platform_audit_chip_statement_type(String value) {
+    return Intl.message('Type: $value', name: 'platform_audit_chip_statement_type', desc: '', args: [value]);
+  }
+
+  /// `Source: {value}`
+  String platform_audit_chip_source(String value) {
+    return Intl.message('Source: $value', name: 'platform_audit_chip_source', desc: '', args: [value]);
+  }
+
+  /// `From {date}`
+  String platform_audit_chip_from(String date) {
+    return Intl.message('From $date', name: 'platform_audit_chip_from', desc: '', args: [date]);
+  }
+
+  /// `To {date}`
+  String platform_audit_chip_to(String date) {
+    return Intl.message('To $date', name: 'platform_audit_chip_to', desc: '', args: [date]);
+  }
+
+  /// `Text: {text}`
+  String platform_audit_chip_search(String text) {
+    return Intl.message('Text: $text', name: 'platform_audit_chip_search', desc: '', args: [text]);
+  }
+
+  /// `User: {user}`
+  String platform_audit_chip_user(String user) {
+    return Intl.message('User: $user', name: 'platform_audit_chip_user', desc: '', args: [user]);
+  }
+
+  /// `Connection: {connection}`
+  String platform_audit_chip_connection(String connection) {
+    return Intl.message(
+      'Connection: $connection',
+      name: 'platform_audit_chip_connection',
+      desc: '',
+      args: [connection],
+    );
+  }
+
+  /// `Remove this filter`
+  String get platform_audit_chip_remove {
+    return Intl.message('Remove this filter', name: 'platform_audit_chip_remove', desc: '', args: []);
+  }
+
+  /// `Not recorded`
+  String get platform_audit_not_recorded {
+    return Intl.message('Not recorded', name: 'platform_audit_not_recorded', desc: '', args: []);
+  }
+
+  /// `Event id`
+  String get platform_audit_field_event_id {
+    return Intl.message('Event id', name: 'platform_audit_field_event_id', desc: '', args: []);
+  }
+
+  /// `Started`
+  String get platform_audit_field_started {
+    return Intl.message('Started', name: 'platform_audit_field_started', desc: '', args: []);
+  }
+
+  /// `Finished`
+  String get platform_audit_field_finished {
+    return Intl.message('Finished', name: 'platform_audit_field_finished', desc: '', args: []);
+  }
+
+  /// `User`
+  String get platform_audit_field_user {
+    return Intl.message('User', name: 'platform_audit_field_user', desc: '', args: []);
+  }
+
+  /// `Keycloak id`
+  String get platform_audit_field_subject {
+    return Intl.message('Keycloak id', name: 'platform_audit_field_subject', desc: '', args: []);
+  }
+
+  /// `Session role`
+  String get platform_audit_field_session_role {
+    return Intl.message('Session role', name: 'platform_audit_field_session_role', desc: '', args: []);
+  }
+
+  /// `Connection`
+  String get platform_audit_field_connection {
+    return Intl.message('Connection', name: 'platform_audit_field_connection', desc: '', args: []);
+  }
+
+  /// `Connection id`
+  String get platform_audit_field_connection_id {
+    return Intl.message('Connection id', name: 'platform_audit_field_connection_id', desc: '', args: []);
+  }
+
+  /// `Engine`
+  String get platform_audit_field_engine {
+    return Intl.message('Engine', name: 'platform_audit_field_engine', desc: '', args: []);
+  }
+
+  /// `Access level`
+  String get platform_audit_field_access_level {
+    return Intl.message('Access level', name: 'platform_audit_field_access_level', desc: '', args: []);
+  }
+
+  /// `Source`
+  String get platform_audit_field_source {
+    return Intl.message('Source', name: 'platform_audit_field_source', desc: '', args: []);
+  }
+
+  /// `Statement type`
+  String get platform_audit_field_statement_type {
+    return Intl.message('Statement type', name: 'platform_audit_field_statement_type', desc: '', args: []);
+  }
+
+  /// `Explain`
+  String get platform_audit_field_explain {
+    return Intl.message('Explain', name: 'platform_audit_field_explain', desc: '', args: []);
+  }
+
+  /// `Statement capture`
+  String get platform_audit_field_capture {
+    return Intl.message('Statement capture', name: 'platform_audit_field_capture', desc: '', args: []);
+  }
+
+  /// `Statement`
+  String get platform_audit_field_statement {
+    return Intl.message('Statement', name: 'platform_audit_field_statement', desc: '', args: []);
+  }
+
+  /// `Rows`
+  String get platform_audit_field_rows {
+    return Intl.message('Rows', name: 'platform_audit_field_rows', desc: '', args: []);
+  }
+
+  /// `Duration`
+  String get platform_audit_field_duration {
+    return Intl.message('Duration', name: 'platform_audit_field_duration', desc: '', args: []);
+  }
+
+  /// `Status`
+  String get platform_audit_field_status {
+    return Intl.message('Status', name: 'platform_audit_field_status', desc: '', args: []);
+  }
+
+  /// `Error code`
+  String get platform_audit_field_error_code {
+    return Intl.message('Error code', name: 'platform_audit_field_error_code', desc: '', args: []);
+  }
+
+  /// `Error message`
+  String get platform_audit_field_error_message {
+    return Intl.message('Error message', name: 'platform_audit_field_error_message', desc: '', args: []);
+  }
+
+  /// `Transaction outcome`
+  String get platform_audit_field_transaction {
+    return Intl.message('Transaction outcome', name: 'platform_audit_field_transaction', desc: '', args: []);
+  }
+
+  /// `Full`
+  String get platform_audit_capture_full {
+    return Intl.message('Full', name: 'platform_audit_capture_full', desc: '', args: []);
+  }
+
+  /// `Redacted`
+  String get platform_audit_capture_redacted {
+    return Intl.message('Redacted', name: 'platform_audit_capture_redacted', desc: '', args: []);
+  }
+
+  /// `None`
+  String get platform_audit_capture_none {
+    return Intl.message('None', name: 'platform_audit_capture_none', desc: '', args: []);
+  }
+
+  /// `Truncated by Studio`
+  String get platform_audit_statement_truncated {
+    return Intl.message('Truncated by Studio', name: 'platform_audit_statement_truncated', desc: '', args: []);
+  }
+
+  /// `Redacted by the connection's capture setting`
+  String get platform_audit_statement_redacted {
+    return Intl.message(
+      'Redacted by the connection\'s capture setting',
+      name: 'platform_audit_statement_redacted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not captured`
+  String get platform_audit_statement_none {
+    return Intl.message('Not captured', name: 'platform_audit_statement_none', desc: '', args: []);
+  }
+
+  /// `Only this user`
+  String get platform_audit_only_this_user {
+    return Intl.message('Only this user', name: 'platform_audit_only_this_user', desc: '', args: []);
+  }
+
+  /// `Only this connection`
+  String get platform_audit_only_this_connection {
+    return Intl.message('Only this connection', name: 'platform_audit_only_this_connection', desc: '', args: []);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

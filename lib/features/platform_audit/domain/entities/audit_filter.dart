@@ -72,6 +72,27 @@ final class AuditFilter extends Equatable {
     if (search != null) 'search',
   ];
 
+  /// This filter with each value given replaced by what its function returns, null unsetting it.
+  AuditFilter copyWith({
+    String? Function()? subject,
+    String? Function()? connectionId,
+    String? Function()? source,
+    String? Function()? statementType,
+    String? Function()? status,
+    DateTime? Function()? from,
+    DateTime? Function()? to,
+    String? Function()? search,
+  }) => AuditFilter(
+    subject: subject == null ? this.subject : subject(),
+    connectionId: connectionId == null ? this.connectionId : connectionId(),
+    source: source == null ? this.source : source(),
+    statementType: statementType == null ? this.statementType : statementType(),
+    status: status == null ? this.status : status(),
+    from: from == null ? this.from : from(),
+    to: to == null ? this.to : to(),
+    search: search == null ? this.search : search(),
+  );
+
   static String? _clean(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;

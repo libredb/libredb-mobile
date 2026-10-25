@@ -82,8 +82,14 @@ class ApplicationRoutesConstants {
   /// The settings of a Platform session, opened from the profile sheet like the Studio settings.
   static const platformSettings = '$platformHome/settings';
 
+  /// The audit log of the install: governed query events, newest first.
+  static const platformAudit = '$platformHome/audit';
+
+  /// One event of the audit log, handed over by the list as route `extra`; the location carries no value of it.
+  static const platformAuditEvent = '$platformAudit/event';
+
   /// The tabs of the Platform shell, in the order of its bottom navigation bar.
-  static const platformTabs = [platformHome, platformConnections];
+  static const platformTabs = [platformHome, platformConnections, platformAudit];
 
   /// The routes a Studio session owns, each with the paths under it.
   static const _studioRoots = [connectionList, browse, sql, settings];

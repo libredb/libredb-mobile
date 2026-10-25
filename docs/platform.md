@@ -106,6 +106,16 @@ The route needs `GrantEditorArgs` as `extra`, built by the grants page from the 
   No filter value, statement, error text, subject, username or connection name is logged: the repository logs counts, the offset and the names of the set filters, `AuditEvent` and `AuditFilter` print no such value, and the request line masks every query value of a `/v1/` request.
   `MockInterceptor` answers every filter and offset from `assets/mock/GET_v1_audit_queryParams.json`.
 
+The Audit tab (`/platform/audit`, `AuditLogPage`) shows the events newest first: the time, relative within a day, the username or the start of the Keycloak id, the connection name or a localized marker for an unknown connection, the statement type, the status (an unknown one verbatim), the duration, the row count, and the first line of a captured statement or "Statement not captured".
+
+- `AuditLogBloc` reads the first page on a filter change, a pull or a retry, replacing a read still running; the statement search is sent once the typing pauses for 400 ms, trimmed, and never when it equals the current search.
+- Load more reads from the end of the rows Platform answered so far and shows while Platform's paging rule says another page exists; it is dropped while one runs, its answer is dropped after a refresh or a filter change, and an event already listed is not listed again.
+- A failed refresh or Load more shows a banner above the list it kept, an empty list included; `PLAN_FEATURE_REQUIRED` and `PERMISSION_DENIED` replace any list with their own page, without a filter or a retry.
+- The filter sheet sets status, statement type and source as single choices with Any, from and to as local days sent in UTC (from at the start of its day, to at its last millisecond, since `to` is inclusive), and the statement text, refused past 200 UTF-16 code units as Platform counts them; every set filter shows as a removable chip.
+- The event page (`/platform/audit/event`, `AuditEventPage`) lists every field of the event the list holds, a null one as not recorded, with the statement in a selectable monospace block; "Only this user" and "Only this connection" set `subject` or `connectionId` on the list and return to it.
+- The event reaches the page as go_router `extra`, `AuditEventArgs`, whose text names only the event id and status; the location carries no value, and a location without that `extra` opens the list.
+- The list rows, while the list is not empty, and the event's statement and error message are kept out of screenshots while on screen; leaving the tab disposes the bloc and its filters.
+
 ## Errors
 
 Every error body is `{"error":{"code","message","fieldErrors"?}}` (`src/shared/lib/bearer/api-v1-response.ts`); a 5xx keeps its code with a generic message, and a 500 is always `INTERNAL_ERROR`.
@@ -179,7 +189,7 @@ A deployment whose `libredb-mobile` access token lacks Platform's audience answe
 
 ## The Platform shell
 
-A Platform session lives in its own shell under `/platform` (`PlatformShell`), with the tabs Home and Connections and the settings opened from the profile sheet.
+A Platform session lives in its own shell under `/platform` (`PlatformShell`), with the tabs Home, Connections and Audit and the settings opened from the profile sheet.
 The router sends a Platform session away from every Studio route, and a Studio session away from every `/platform` route, to the home of its own target (`ApplicationRoutesConstants.belongsTo` and `homeFor`).
 The Platform shell reads nothing of Studio and provides none of the Studio scopes, and it keeps no data of an account on the device, so Settings shows no "Remove my data".
 While Platform refuses the admin, a refusal page covers the screens; Retry asks `GET /api/v1/me` again and uncovers them on a 200, and Logout signs out.
