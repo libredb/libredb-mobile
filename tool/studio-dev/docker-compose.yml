@@ -10,12 +10,16 @@
 #   https://localhost:8443  Keycloak, realm libredb; the issuer is https://localhost:8443/realms/libredb
 #   https://localhost:9443  LibreDB Studio; the app's API is https://localhost:9443/api
 #   https://localhost:9444  LibreDB Studio in governance mode, with --profile governed only (docs/studio.md)
+#   https://localhost:9445  LibreDB Platform; its bearer API is https://localhost:9445/api/v1, with --profile platform
+#                           only (docs/studio.md)
 # Studio requires an https issuer, and the browser, the app on a device (through `adb reverse`) and Studio itself
 # must all name the issuer with the same URL. Studio therefore shares Caddy's network namespace, so its own
 # localhost:8443 reaches the same Keycloak as everyone else's.
 #
-# Sign in as admin / admin (realm role admin) or user / user (realm role user). norole / norole holds no realm role,
-# so Studio refuses it, which shows the app's refused sign-in.
+# Sign in as admin / admin (realm role admin and client role libredb:admin) or user / user (realm role user and client
+# role libredb:user). norole / norole holds no role at all, so Studio refuses it, which shows the app's refused sign-in.
+# admin2 / admin2 is a second admin for Platform's admin seat limit, and disabled / disabled (libredb:user) is a
+# disabled account that cannot sign in, for Platform's directory.
 # Studio lists the Postgres and Redis seeds of seed-connections.yaml beside its built-in samples.
 # The Keycloak admin console is at https://localhost:8443/admin/ with kcadmin / kcadmin.
 #
@@ -26,7 +30,7 @@
 # Unfit for production on purpose: start-dev with the embedded H2 store (all state is lost when the containers are
 # removed), a short-lived self-signed CA, and the client secret, the user passwords, the Keycloak admin account and the
 # database passwords committed in this file.
-# Needs Docker Compose v2.23.1 or newer for inline `configs` content.
+# Needs Docker Compose v2.24.0 or newer, for inline `configs` content (v2.23.1) and an optional `env_file` (v2.24.0).
 
 name: libredb-mobile-studio-dev
 
@@ -44,6 +48,7 @@ services:
       - "127.0.0.1:8443:8443"
       - "127.0.0.1:9443:9443"
       - "127.0.0.1:9444:9444"
+      - "127.0.0.1:9445:9445"
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
@@ -291,6 +296,100 @@ services:
       retries: 60
       start_period: 10s
 
+  # The platform profile (--profile platform) adds LibreDB Platform 1.3.0 in self-hosted mode at
+  # https://localhost:9445, with its bearer API under /api/v1 for the app's tokens. platform-db holds Platform's
+  # database, bootstrapped by platform/postgres/, a byte-identical copy of docker/postgres/ of libredb-platform v1.3.0
+  # (0a84fa7, unchanged since v1.1.0); platform-migrate applies the image's migrations and seed once; libredb-platform serves.
+  # Platform needs a license that lists the host localhost (or none): without platform-license.local it runs with a
+  # placeholder that verifies as LICENSE_MALFORMED, and every /api/v1 call of an admin answers 403 LICENSE_INVALID.
+  # docs/studio.md describes the license file and how each Platform answer was recorded.
+  platform-db:
+    image: postgres:18
+    profiles: [platform]
+    environment:
+      # The image refuses to initialise without it. platform/postgres/init/01-bootstrap.sh signs in as postgres and
+      # gives the roles libredb_owner, libredb_platform and libredb_studio the passwords libredb_owner_dev,
+      # libredb_platform_dev and libredb_studio_dev.
+      POSTGRES_PASSWORD: platform-db-dev-not-for-production
+    volumes:
+      - ./platform/postgres/bootstrap.psql:/libredb/bootstrap.psql:ro
+      - ./platform/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP on 127.0.0.1 is only up after the init scripts have finished.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "libredb"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      # A cold initdb on a loaded host can take over 2 minutes; failed checks before then do not count.
+      start_period: 120s
+
+  # Exactly the migrate container's variables of Platform's docs/deploy/platform-runtime.md; never PLATFORM_LICENSE.
+  platform-migrate:
+    image: ${PLATFORM_IMAGE:-ghcr.io/libredb/libredb-platform:1.3.0@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9}
+    profiles: [platform]
+    command: migrate
+    depends_on:
+      platform-db:
+        condition: service_healthy
+    environment:
+      MIGRATE_DATABASE_URL: postgresql://libredb_owner:libredb_owner_dev@platform-db:5432/libredb?schema=platform
+      DATABASE_URL: postgresql://libredb_platform:libredb_platform_dev@platform-db:5432/libredb?schema=platform
+      DEPLOYMENT_MODE: self-hosted
+      PLATFORM_ORGANIZATION_NAME: LibreDB Mobile dev
+    restart: "no"
+
+  libredb-platform:
+    image: ${PLATFORM_IMAGE:-ghcr.io/libredb/libredb-platform:1.3.0@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9}
+    profiles: [platform]
+    command: serve
+    # Beside the Studios in Caddy's network namespace, on port 3002, which Caddy serves as localhost:9445; its
+    # https://localhost:8443 is the same Keycloak everyone else sees, Admin API included.
+    network_mode: service:proxy
+    depends_on:
+      ca-export:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+      platform-migrate:
+        condition: service_completed_successfully
+    # PLATFORM_LICENSE comes only from these files, never from `environment`, which would override both: the
+    # committed placeholder first, then the gitignored platform-license.local, which wins when it exists.
+    env_file:
+      - path: ./platform-license.placeholder.env
+        required: true
+      - path: ./platform-license.local
+        required: false
+    environment:
+      PORT: "3002"
+      DEPLOYMENT_MODE: self-hosted
+      DATABASE_URL: postgresql://libredb_platform:libredb_platform_dev@platform-db:5432/libredb?schema=platform
+      AUTH_SECRET: platform-auth-secret-dev-not-for-production
+      # Required, because the image sets NODE_ENV=production.
+      AUTH_URL: https://localhost:9445
+      STUDIO_PUBLIC_URL: https://localhost:9443
+      AUTH_KEYCLOAK_ISSUER: https://localhost:8443/realms/libredb
+      AUTH_KEYCLOAK_ID: libredb-platform
+      AUTH_KEYCLOAK_SECRET: libredb-platform-dev-secret-not-for-production
+      # The X25519 public key of the private key in governed/keyring.json, so the governed Studio could open what
+      # this Platform seals; derived with Node's crypto from that key (PKCS#8 prefix 302e020100300506032b656e04220420)
+      # as createPublicKey(...).export({ format: "jwk" }).x. It protects nothing.
+      BRIDGE_SEAL_PUBLIC_KEY: OJW5OYMFXdOYjSkPF_laLvbDOrQuKiWBx4M1LAP7uUk
+      # Without a colon, so `PLATFORM_API_AUDIENCE= docker compose ... --profile platform up -d libredb-platform`
+      # recreates Platform with the bearer API off (404 API_DISABLED), and a plain `up` turns it on again.
+      PLATFORM_API_AUDIENCE: ${PLATFORM_API_AUDIENCE-libredb-platform-api}
+      PLATFORM_API_CLIENT_IDS: libredb-mobile
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+    volumes:
+      - dev-ca:/ca:ro
+    healthcheck:
+      # The image's own HEALTHCHECK asks the liveness probe on port 3000; readiness on 3002 also waits for the
+      # migrations and the bridge contract.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
 configs:
   caddyfile:
     content: |
@@ -317,6 +416,13 @@ configs:
       	reverse_proxy localhost:3001
       }
 
+      # LibreDB Platform of the platform profile. The original Host, port included, is what Platform's AUTH_URL and
+      # its Auth.js callback compare against.
+      localhost:9445 {
+      	tls internal
+      	reverse_proxy localhost:3002
+      }
+
   keycloak-realm:
     content: |
       {
@@ -328,7 +434,13 @@ configs:
           "realm": [
             { "name": "admin", "description": "LibreDB admin" },
             { "name": "user", "description": "LibreDB user" }
-          ]
+          ],
+          "client": {
+            "libredb": [
+              { "name": "admin", "description": "LibreDB administrator" },
+              { "name": "user", "description": "LibreDB user" }
+            ]
+          }
         },
         "clients": [
           {
@@ -408,6 +520,84 @@ configs:
                   "id.token.claim": "false",
                   "access.token.claim": "true"
                 }
+              },
+              {
+                "name": "platform api audience",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-audience-mapper",
+                "consentRequired": false,
+                "config": {
+                  "included.custom.audience": "libredb-platform-api",
+                  "id.token.claim": "false",
+                  "access.token.claim": "true"
+                }
+              },
+              {
+                "name": "libredb roles",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-client-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "usermodel.clientRoleMapping.clientId": "libredb",
+                  "claim.name": "libredb_roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true",
+                  "id.token.claim": "true",
+                  "access.token.claim": "true",
+                  "userinfo.token.claim": "true",
+                  "introspection.token.claim": "true"
+                }
+              }
+            ]
+          },
+          {
+            "clientId": "libredb",
+            "name": "LibreDB roles",
+            "description": "Holds the LibreDB client roles admin and user. Every flow is disabled and no secret is used.",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": false
+          },
+          {
+            "clientId": "libredb-platform",
+            "name": "LibreDB Platform",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "libredb-platform-dev-secret-not-for-production",
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "rootUrl": "https://localhost:9445",
+            "redirectUris": ["https://localhost:9445/api/auth/callback/keycloak"],
+            "webOrigins": ["https://localhost:9445"],
+            "attributes": {
+              "pkce.code.challenge.method": "S256",
+              "post.logout.redirect.uris": "https://localhost:9445/login",
+              "use.refresh.tokens": "true"
+            },
+            "protocolMappers": [
+              {
+                "name": "libredb roles",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-client-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "usermodel.clientRoleMapping.clientId": "libredb",
+                  "claim.name": "libredb_roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true",
+                  "id.token.claim": "true",
+                  "access.token.claim": "true",
+                  "userinfo.token.claim": "true",
+                  "introspection.token.claim": "true"
+                }
               }
             ]
           }
@@ -422,7 +612,8 @@ configs:
             "firstName": "Demo",
             "lastName": "Admin",
             "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
-            "realmRoles": ["admin", "default-roles-libredb"]
+            "realmRoles": ["admin", "default-roles-libredb"],
+            "clientRoles": { "libredb": ["admin"] }
           },
           {
             "id": "a0000000-0000-4000-8000-000000000002",
@@ -433,7 +624,8 @@ configs:
             "firstName": "Demo",
             "lastName": "User",
             "credentials": [{ "type": "password", "value": "user", "temporary": false }],
-            "realmRoles": ["user", "default-roles-libredb"]
+            "realmRoles": ["user", "default-roles-libredb"],
+            "clientRoles": { "libredb": ["user"] }
           },
           {
             "id": "a0000000-0000-4000-8000-000000000003",
@@ -445,6 +637,37 @@ configs:
             "lastName": "Norole",
             "credentials": [{ "type": "password", "value": "norole", "temporary": false }],
             "realmRoles": ["default-roles-libredb"]
+          },
+          {
+            "id": "a0000000-0000-4000-8000-000000000004",
+            "username": "admin2",
+            "enabled": true,
+            "email": "admin2@example.com",
+            "emailVerified": true,
+            "firstName": "Demo",
+            "lastName": "Admin Two",
+            "credentials": [{ "type": "password", "value": "admin2", "temporary": false }],
+            "realmRoles": ["admin", "default-roles-libredb"],
+            "clientRoles": { "libredb": ["admin"] }
+          },
+          {
+            "id": "a0000000-0000-4000-8000-000000000005",
+            "username": "disabled",
+            "enabled": false,
+            "email": "disabled@example.com",
+            "emailVerified": true,
+            "firstName": "Demo",
+            "lastName": "Disabled",
+            "credentials": [{ "type": "password", "value": "disabled", "temporary": false }],
+            "realmRoles": ["default-roles-libredb"],
+            "clientRoles": { "libredb": ["user"] }
+          },
+          {
+            "username": "service-account-libredb-platform",
+            "enabled": true,
+            "serviceAccountClientId": "libredb-platform",
+            "realmRoles": ["default-roles-libredb"],
+            "clientRoles": { "realm-management": ["view-users", "view-clients"] }
           }
         ]
       }

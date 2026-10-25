@@ -3,12 +3,12 @@
 # signs in: the authorization code flow with PKCE against Keycloak's login form. For recording Studio answers with
 # curl (docs/studio.md). NOT FOR PRODUCTION: it posts the realm's committed dev passwords.
 #
-#   tool/studio-dev/access-token.sh admin        # or user
+#   tool/studio-dev/access-token.sh admin        # or admin2, user, norole
 #
 # Needs curl, openssl and python3. The token lives 60 seconds, as every token of the realm does.
 set -euo pipefail
 
-user="${1:?usage: access-token.sh <admin|user>}"
+user="${1:?usage: access-token.sh <admin|admin2|user|norole>}"
 kc=https://localhost:8443/realms/libredb/protocol/openid-connect
 redirect='org.libredb.mobile:/oauth2redirect'
 jar=$(mktemp)

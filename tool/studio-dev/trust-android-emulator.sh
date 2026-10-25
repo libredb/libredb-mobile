@@ -60,5 +60,6 @@ fi
 "${adb_cmd[@]}" reverse tcp:8443 tcp:8443 >/dev/null
 "${adb_cmd[@]}" reverse tcp:9443 tcp:9443 >/dev/null
 "${adb_cmd[@]}" reverse tcp:9444 tcp:9444 >/dev/null
+"${adb_cmd[@]}" reverse tcp:9445 tcp:9445 >/dev/null
 
-echo "Trusted the studio-dev CA as $hash.0 and forwarded ports 8443 (Keycloak), 9443 (Studio) and 9444 (governed Studio)."
+echo "Trusted the studio-dev CA as $hash.0 and forwarded ports 8443 (Keycloak), 9443 (Studio), 9444 (governed Studio) and 9445 (Platform)."

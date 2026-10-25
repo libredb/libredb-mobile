@@ -501,6 +501,25 @@ void main() {
       );
     });
 
+    test('the tool/studio-dev Platform values pass and give Platform mode', () {
+      final defines = {
+        for (final line in File('tool/studio-dev/studio-dev-platform.env').readAsLinesSync())
+          if (!line.startsWith('#') && line.contains('=')) line.split('=').first: line.substring(line.indexOf('=') + 1),
+      };
+      final config = AppConfig.fromEnvironment(
+        Environment.prod,
+        prodApiUrlDefine: defines['PROD_API_URL']!,
+        oidcIssuerDefine: defines['OIDC_ISSUER']!,
+        sentryDsnDefine: '',
+        platformApiUrlDefine: defines['PLATFORM_API_URL']!,
+      );
+      expect(config.apiBaseUrl, 'https://localhost:9443/api');
+      expect(
+        config.platform,
+        isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', 'https://localhost:9445/api'),
+      );
+    });
+
     test('dev and test check none of them, so main_local.dart keeps working', () {
       for (final environment in [Environment.dev, Environment.test]) {
         final config = AppConfig.fromEnvironment(
