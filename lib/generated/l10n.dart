@@ -1485,21 +1485,6 @@ class S {
     );
   }
 
-  /// `LibreDB Platform`
-  String get platform_placeholder_title {
-    return Intl.message('LibreDB Platform', name: 'platform_placeholder_title', desc: '', args: []);
-  }
-
-  /// `The Platform connections and their grants come to this screen in a later version.`
-  String get platform_placeholder_note {
-    return Intl.message(
-      'The Platform connections and their grants come to this screen in a later version.',
-      name: 'platform_placeholder_note',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `{name} is no longer available`
   String connection_vanished(String name) {
     return Intl.message('$name is no longer available', name: 'connection_vanished', desc: '', args: [name]);
@@ -3492,6 +3477,126 @@ class S {
     return Intl.message(
       'LibreDB could not check this device\'s screen lock. Try Unlock again, or sign out.',
       name: 'app_lock_check_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not load the connections`
+  String get platform_connections_load_failed {
+    return Intl.message('Could not load the connections', name: 'platform_connections_load_failed', desc: '', args: []);
+  }
+
+  /// `Filter by name or engine`
+  String get platform_connections_filter_hint {
+    return Intl.message('Filter by name or engine', name: 'platform_connections_filter_hint', desc: '', args: []);
+  }
+
+  /// `This install has no connections yet`
+  String get platform_connections_empty_title {
+    return Intl.message(
+      'This install has no connections yet',
+      name: 'platform_connections_empty_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Connections are added in the Platform web console.`
+  String get platform_connections_empty_description {
+    return Intl.message(
+      'Connections are added in the Platform web console.',
+      name: 'platform_connections_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No connection matches the filter`
+  String get platform_connections_search_empty_title {
+    return Intl.message(
+      'No connection matches the filter',
+      name: 'platform_connections_search_empty_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Try another name or engine.`
+  String get platform_connections_search_empty_description {
+    return Intl.message(
+      'Try another name or engine.',
+      name: 'platform_connections_search_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unknown status`
+  String get platform_connections_status_unknown {
+    return Intl.message('Unknown status', name: 'platform_connections_status_unknown', desc: '', args: []);
+  }
+
+  /// `Read grants only`
+  String get platform_connections_read_grants_only {
+    return Intl.message('Read grants only', name: 'platform_connections_read_grants_only', desc: '', args: []);
+  }
+
+  /// `This connection has no write credential, so only read access can be granted.`
+  String get platform_connections_read_grants_only_semantics {
+    return Intl.message(
+      'This connection has no write credential, so only read access can be granted.',
+      name: 'platform_connections_read_grants_only_semantics',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not refresh the connections`
+  String get platform_connections_refresh_failed {
+    return Intl.message(
+      'Could not refresh the connections',
+      name: 'platform_connections_refresh_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not load your Platform account`
+  String get platform_home_identity_load_failed {
+    return Intl.message(
+      'Could not load your Platform account',
+      name: 'platform_home_identity_load_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Organization`
+  String get platform_home_tenant_label {
+    return Intl.message('Organization', name: 'platform_home_tenant_label', desc: '', args: []);
+  }
+
+  /// `Signed in as`
+  String get platform_home_signed_in_as {
+    return Intl.message('Signed in as', name: 'platform_home_signed_in_as', desc: '', args: []);
+  }
+
+  /// `Platform admin`
+  String get platform_home_admin_label {
+    return Intl.message('Platform admin', name: 'platform_home_admin_label', desc: '', args: []);
+  }
+
+  /// `Connections`
+  String get platform_home_connections_shortcut {
+    return Intl.message('Connections', name: 'platform_home_connections_shortcut', desc: '', args: []);
+  }
+
+  /// `See every connection of this install.`
+  String get platform_home_connections_shortcut_description {
+    return Intl.message(
+      'See every connection of this install.',
+      name: 'platform_home_connections_shortcut_description',
       desc: '',
       args: [],
     );

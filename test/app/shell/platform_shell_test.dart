@@ -11,8 +11,8 @@ import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
-import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
+import 'package:libredb_mobile/features/platform_home/presentation/pages/platform_home_page.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
@@ -72,7 +72,7 @@ void main() {
             routes: [
               GoRoute(
                 path: ApplicationRoutesConstants.platformHome,
-                builder: (context, state) => const PlatformPlaceholderPage(),
+                builder: (context, state) => const PlatformHomePage(),
               ),
             ],
           ),
@@ -134,7 +134,7 @@ void main() {
       verifyNever(() => policy.load());
     });
 
-    testWidgets('the placeholder shows the email when Platform has no name', (tester) async {
+    testWidgets('the home shows the email when Platform has no name', (tester) async {
       when(() => platformIdentity.state).thenReturn(
         const PlatformIdentityLoaded(
           PlatformIdentity(
@@ -152,11 +152,11 @@ void main() {
       expect(find.text('platform.admin@example.org'), findsOneWidget);
     });
 
-    testWidgets('the placeholder shows a failed identity with a Retry that asks Platform again', (tester) async {
+    testWidgets('the home shows a failed identity with a Retry that asks Platform again', (tester) async {
       when(() => platformIdentity.state).thenReturn(const PlatformIdentityFailure(AppErrorCode.platformInternalError));
 
       await pumpShell(tester);
-      await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
 
       verify(() => platformIdentity.load()).called(1);
     });
@@ -202,7 +202,7 @@ void main() {
       expect(scope.reloadStoredData, throwsStateError);
     });
 
-    testWidgets('the placeholder shows the admin and the tenant from the mock identity', (tester) async {
+    testWidgets('the home shows the admin and the tenant from the mock identity', (tester) async {
       await pumpPlatformApp(tester);
 
       expect(find.byType(PlatformShell), findsOneWidget);

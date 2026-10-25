@@ -13,8 +13,9 @@ import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
-import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
+import 'package:libredb_mobile/features/platform_connections/presentation/pages/platform_connection_list_page.dart';
+import 'package:libredb_mobile/features/platform_home/presentation/pages/platform_home_page.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
@@ -299,7 +300,37 @@ void main() {
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.platformHome);
       expect(find.byType(PlatformShell), findsOneWidget);
       expect(find.byType(AppShell), findsNothing);
-      expect(find.byType(PlatformPlaceholderPage), findsOneWidget);
+      expect(find.byType(PlatformHomePage), findsOneWidget);
+    });
+
+    testWidgets('a Platform session shows the home and the connection list inside the Platform shell', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+      // The mock answers the identity after its latency.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byType(PlatformShell), matching: find.byType(PlatformHomePage)), findsOneWidget);
+      expect(find.text('Example Org'), findsOneWidget);
+
+      router.go(ApplicationRoutesConstants.platformConnections);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: find.byType(PlatformShell), matching: find.byType(PlatformConnectionListPage)),
+        findsOneWidget,
+      );
+      expect(find.text('İstanbul Önbellek'), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+    });
+
+    testWidgets('a Studio session still lands on the Studio connection list', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.studio);
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.connectionList);
+      expect(find.byType(ConnectionListPage), findsOneWidget);
+      expect(find.byType(PlatformShell), findsNothing);
+      expect(find.byType(PlatformConnectionListPage), findsNothing);
     });
 
     testWidgets('a Platform session at / goes to /platform', (tester) async {

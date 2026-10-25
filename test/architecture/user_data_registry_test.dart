@@ -304,10 +304,10 @@ void main() {
     bool isPlatform(String path) =>
         path.startsWith('lib/features/platform_') ||
         path == 'lib/app/shell/platform_shell.dart' ||
-        path == 'lib/app/shell/platform_placeholder_page.dart';
+        path == 'lib/app/shell/app_platform_identity_scope.dart';
 
     expect([..._storageUsers.keys, ..._directoryUsers.keys].where(isPlatform), isEmpty);
-    for (final path in ['lib/app/shell/platform_shell.dart', 'lib/app/shell/platform_placeholder_page.dart']) {
+    for (final path in ['lib/app/shell/platform_shell.dart', 'lib/app/shell/app_platform_identity_scope.dart']) {
       expect(File(path).existsSync(), isTrue, reason: '$path is the file this guard names');
     }
   });
