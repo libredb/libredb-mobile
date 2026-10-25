@@ -283,3 +283,39 @@ Notes:
 - The idle timeout ends the app session but keeps the Keycloak session, so with `OIDC_PROMPT=omit` the Platform sign-in after it showed no Keycloak form.
 - The phone's network resolves every name, `studio.invalid` included, to its router, so build U met an untrusted certificate rather than a failed lookup, and Studio's liveness logged `network.cert_invalid`.
 - Two of the four Studio sign-outs logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared; the login page showed no message.
+
+## M11-P walkthrough
+
+The end-to-end walkthrough of milestone M11-P (#271) was run on 2026-10-25 on Railway platform-dev, which ran Platform 1.3.0 and Studio 1.1.0 that day (the image digests the Railway CLI lists, matched to their GHCR tags), with Studio governed by that Platform at the default governance refresh.
+Builds P, U, V and S were built from `main` at `1077f3c` with Flutter 3.47.7 as release APKs of `main_prod.dart` signed with the debug key and without `SENTRY_DSN`, with the defines the issue names; P, U and V had `SCREEN_CAPTURE_PROTECTION=false`, S the prod default.
+The device was the test phone, a Samsung Galaxy M51 (SM-M515F) on Android 12, reached over wireless debugging.
+Every Keycloak sign-in was typed on the phone by the orchestrator, as the dedicated test user with the client role `user`, or as the realm's admin account, which already held an admin seat from the M10-P walkthrough.
+The walkthrough connection was Sample: Employees, on which the play-review account holds no grant and one other test user holds a read grant.
+To save sign-ins, the grant of step 4 was given in the admin's build U session of step 1, and step 14 ran in the test user's Studio session restored from build V by installing P over it.
+
+| Step | Result |
+| --- | --- |
+| 0. Baseline | Partly run: the web console was not read, so the license page's seats in use were not recorded; the app's grant lists served as the baseline of the grants |
+| 1. Studio unreachable | Passed: a cold start of U shows both entries, not covered by the Studio unreachable page, the Studio entry disabled with "Studio does not answer" and Retry; "Sign in to Platform" as the admin opens the Platform shell with Home, Connections and Audit |
+| 2. Switch refused | Passed: in the same session, "Switch to Studio" is refused with a snackbar and the app stays in the Platform shell, signed in; the message is the `network.cert_invalid` one, because the phone's network resolves `studio.invalid` to its router |
+| 3. Platform unreachable | Passed: a cold start of V shows the Platform entry disabled with "Platform does not answer" and Retry, and "Sign in to Studio" as the test user lands in the Studio shell, listing Sample: Employees as read only |
+| 4. Grant | Passed: the directory search finds the test user with "Takes a user seat", and read with no expiry saves and lists the grant, granted by the admin |
+| 5. Seed audit events | Passed: the test user ran the passing `SELECT` and the misspelled statement on Sample: Employees; the app asked to confirm the misspelled one as a possible write on a read-only connection, and Studio answered it with a syntax error |
+| 6. Disable | Passed: the confirmation says the connection closes for every Studio user within about 30 seconds, running queries are not stopped and its grants are kept; after Disable the badge reads Inactive, "Connection disabled" shows, and the grant list still shows both grants |
+| 7. Gone in Studio | Passed: the test user's first Studio load, 111 seconds after the disable, showed no databases |
+| 8. Enable | Passed: the confirmation says the grants can take user seats; Enable was not refused, the badge reads Active and "Connection enabled" shows; the test user's first Studio load, 100 seconds after the enable, lists Sample: Employees again; the connection was disabled for 4 minutes 26 seconds |
+| 9. Audit tab | Passed: both events of step 5 are listed first, newest first, with the user, connection, type, status, duration and the redacted statement, since platform-dev captures statements as `redacted` |
+| 10. Filters | Passed: status error leaves only the failed statement, type `SELECT` leaves the passing one and older selects, a one-day range from and to today keeps both, and the search text finds both, since the redacted statement keeps that text; the total is under one page, so no Load more showed and paging stays covered by #268's tests |
+| 11. Event detail | Passed: the failed event shows its fields, error code 42601, the redacted statement with "Redacted by the connection's capture setting", and the error message as not recorded; "Only this user" and "Only this connection" set those filters on the list |
+| 12. Screen capture | Passed for content: on S, a screenshot of the audit list and of the event detail is empty (0 bytes) and the window carries `FLAG_SECURE`; the recent-apps card was not black but showed a stale snapshot of the login page from earlier in the run, with no audit content |
+| 13. Mode switch | Passed: the admin switched from Platform to Studio without a Keycloak form (an empty Studio list, since the admin holds no grant), a relaunch restored Studio, the switch back to Platform asked the seat confirmation, and a relaunch restored Platform |
+| 14. Non-admin switch | Passed: the test user's "Switch to Platform" asked the seat confirmation and was then refused with "This account is not a Platform admin, so it stays in Studio."; the app stayed in the Studio shell, signed in, and a relaunch restored Studio |
+| 15. Turkish | Passed: the disable confirmation, Connections, the Audit tab and list, the filter sheet, the event detail, the profile's switch entry and the login page with "Studio yanıt vermiyor" and "Platform yanıt vermiyor" read in Turkish; the language was reset by clearing the app's data at the end |
+| 16. Logs | Passed: the app's logcat for the whole run holds no JWT, no `Bearer` value, no e-mail address at all, no `subjectEmail`, no statement or search text, no database error text and no Platform error message text |
+| 17. Teardown | Passed except the seats: the test user's grant was revoked on the phone, the app's grant lists of all 10 connections show the test user holding no grant, Sample: Employees active with its one original grant, and the play-review account still holding its 4 read grants (Postgres Air, Lego, Titanic, Periodic Table); the license page was not read, so the seats in use were not compared with step 0; build P is installed, signed out, with the app lock off |
+
+Notes:
+
+- The reload latency itself (at most `GOVERNANCE_REFRESH_MS`) was not timed in steps 7 and 8: one phone holds one session and no desktop browser watched Studio web, so each check is the first load after a sign-in; it is Studio's behaviour, not the app's.
+- `docs/security.md` says the recent-apps preview is black under `FLAG_SECURE`; on this Samsung phone the card keeps the last snapshot taken while the window was not secure.
+- One Studio sign-out logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared, as in the M10-P walkthrough (#277).
