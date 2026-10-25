@@ -223,7 +223,7 @@ const _refusedMessage = 'Studio did not accept this sign-in. Try again, or ask a
 const _noRoleMessage = 'This account has no role in Studio. Ask an administrator to give it one.';
 const _insecureConnectionMessage =
     'The connection could not be verified as secure, so it was blocked. Try again later or on another network.';
-const _configMessage = 'Single sign-on is not configured correctly in this app. Contact your administrator.';
+const _configMessage = 'This build has no sign-in settings. Ask whoever gave you the app for a complete build.';
 const _adminRoleRequiredMessage = 'This account is not a Platform admin. Sign in through Studio instead.';
 const _platformNotConfiguredMessage =
     'Platform mode is not available in this build of the app. Sign in through Studio.';
@@ -444,6 +444,26 @@ void main() {
 
       expect(find.text(_failedMessage), findsNothing);
       expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+    });
+
+    testWidgets('a misconfigured build announces its error to a screen reader', (tester) async {
+      // The error appears without a navigation or a focus change, so without a live region VoiceOver and TalkBack
+      // never speak it: a blind user gets no button and no reason. This is the only screen such a build ever shows.
+      final semantics = tester.ensureSemantics();
+
+      await pumpOidcApp(
+        tester,
+        const AppDependencies(
+          appConfig: AppConfig.test(),
+          authMode: OidcMisconfiguredAuthMode('OIDC_ISSUER is required'),
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.text(_configMessage)),
+        matchesSemantics(label: _configMessage, isLiveRegion: true),
+      );
+      semantics.dispose();
     });
 
     testWidgets('a misconfigured build says so and shows no button', (tester) async {

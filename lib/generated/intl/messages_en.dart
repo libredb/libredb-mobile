@@ -407,7 +407,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "english": MessageLookupByLibrary.simpleMessage("English"),
     "error_auth_invalid_access_token": MessageLookupByLibrary.simpleMessage("Invalid access token"),
     "error_auth_oidc_config": MessageLookupByLibrary.simpleMessage(
-      "Single sign-on is not configured correctly in this app. Contact your administrator.",
+      "This build has no sign-in settings. Ask whoever gave you the app for a complete build.",
     ),
     "error_auth_oidc_discovery": MessageLookupByLibrary.simpleMessage(
       "The identity provider could not be reached. Try again later, or contact your administrator if this continues.",

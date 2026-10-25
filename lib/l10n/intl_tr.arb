@@ -149,7 +149,7 @@
   "@theme_palette_sunset_description": {},
   "app_title": "LibreDB",
   "@app_title": {},
-  "error_auth_oidc_config": "Bu uygulamada tek oturum açma doğru yapılandırılmamış. Yöneticinize başvurun.",
+  "error_auth_oidc_config": "Bu sürümde oturum açma ayarları yok. Uygulamayı veren kişiden eksiksiz bir sürüm isteyin.",
   "@error_auth_oidc_config": {},
   "error_auth_oidc_discovery": "Kimlik sağlayıcıya ulaşılamadı. Daha sonra yeniden deneyin; sorun sürerse yöneticinize başvurun.",
   "@error_auth_oidc_discovery": {},
