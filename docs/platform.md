@@ -14,7 +14,8 @@ This page is the contract the app relies on; paths in libredb-platform are given
 `AppConfig.platform` (`lib/infrastructure/config/environment.dart`) is `PlatformConfigured` with that base URL and its pins, or `PlatformNotConfigured` when `PLATFORM_API_URL` is empty.
 A prod build refuses a `PLATFORM_API_URL` that is not an https URL, or has surrounding whitespace, with `ProdHttpsConfigError`, and a `PLATFORM_CERT_PINS` without `PLATFORM_API_URL` with `CertificatePinsConfigError`.
 Dev and test builds carry `PlatformConfigured` without a base URL, which `MockInterceptor` answers from `assets/mock/`.
-The release workflow does not pass either define until M12-P, so the store build stays Studio-only ([release.md](release.md)).
+The release workflow passes both defines when the owner sets them as variables ([release.md](release.md)).
+While `PLATFORM_API_URL` is unset, the store build stays Studio-only.
 
 `OIDC_SCOPE`, `OIDC_AUDIENCE` and `PROD_API_URL` do not change: one Keycloak access token of the client `libredb-mobile` carries both audiences, Studio's and Platform's (libredb-platform `docs/api/v1.md`, "One token serves Studio and Platform").
 
