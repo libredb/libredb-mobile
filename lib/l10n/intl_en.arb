@@ -299,6 +299,22 @@
       }
     }
   },
+  "platform_status_unreachable_title": "Can't reach Platform",
+  "@platform_status_unreachable_title": {},
+  "platform_status_unreachable_message": "LibreDB Platform does not answer. Check your internet connection, then try again.",
+  "@platform_status_unreachable_message": {},
+  "platform_status_unreachable_host": "Platform address: {host}",
+  "@platform_status_unreachable_host": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "login_unreachable_studio": "Studio does not answer.",
+  "@login_unreachable_studio": {},
+  "login_unreachable_platform": "Platform does not answer.",
+  "@login_unreachable_platform": {},
   "studio_governance_temporarily_unavailable": "Connection access is temporarily unavailable. The list updates by itself once it is back.",
   "@studio_governance_temporarily_unavailable": {},
   "studio_governance_cannot_serve": "Studio cannot serve connections right now. An administrator needs to check its governance setup.",

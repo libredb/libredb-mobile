@@ -12,6 +12,11 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
+import 'package:libredb_mobile/features/platform_status/domain/repositories/platform_status_repository.dart';
+import 'package:libredb_mobile/features/platform_status/presentation/pages/platform_unreachable_page.dart';
+import 'package:libredb_mobile/features/studio_status/domain/entities/studio_readiness.dart';
+import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_unreachable_page.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/shared/models/platform_identity.dart';
@@ -88,6 +93,8 @@ class _OidcDependencies extends AppDependencies {
     this.studio,
     PlatformTargetConfig platform = const PlatformNotConfigured(),
     this.platformIdentity,
+    this.studioStatus,
+    this.platformStatus,
   }) : super(
          appConfig: AppConfig(
            environment: Environment.test,
@@ -124,6 +131,20 @@ class _OidcDependencies extends AppDependencies {
   IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) =>
       platformIdentity ?? super.createPlatformIdentityRepository(apiClient);
 
+  /// Studio's liveness in place of the mocked one, when given.
+  final IStudioStatusRepository? studioStatus;
+
+  @override
+  IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) =>
+      studioStatus ?? super.createStudioStatusRepository(apiClient);
+
+  /// Platform's liveness in place of the mocked one, when given.
+  final IPlatformStatusRepository? platformStatus;
+
+  @override
+  IPlatformStatusRepository createPlatformStatusRepository(PlatformApiClient apiClient) =>
+      platformStatus ?? super.createPlatformStatusRepository(apiClient);
+
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
 
@@ -158,6 +179,27 @@ class _RefusingPlatform implements IPlatformIdentityRepository {
     return Failure(error);
   }
 }
+
+/// A liveness probe that answers [answer], which a test changes, and counts the checks in [checks].
+class _ScriptedLiveness implements IStudioStatusRepository, IPlatformStatusRepository {
+  _ScriptedLiveness({this.answer = const Success(null)});
+
+  Result<void> answer;
+  int checks = 0;
+
+  @override
+  Future<Result<void>> liveness() async {
+    checks++;
+    return answer;
+  }
+
+  @override
+  Future<Result<StudioReadiness>> readiness() async => const Success(StudioReadinessReady());
+}
+
+const _down = Failure<void>(NetworkError('No Internet connection'));
+const _studioDown = 'Studio does not answer.';
+const _platformDown = 'Platform does not answer.';
 
 /// A token refresh that fails with an error no rotation expects, so the startup step throws.
 class _ThrowingRotation implements TokenRotation {
@@ -612,6 +654,128 @@ void main() {
         });
       }
 
+      group('reachability', () {
+        final studioRetry = find.byKey(loginUnreachableRetryStudioKey);
+        final platformRetry = find.byKey(loginUnreachableRetryPlatformKey);
+
+        testWidgets('Studio down and Platform up: only the Studio entry is disabled, and Platform signs in', (
+          tester,
+        ) async {
+          final client = _ScriptedOidcClient();
+          final studio = _ScriptedLiveness(answer: _down);
+          final platform = _ScriptedLiveness();
+          await pumpOidcApp(
+            tester,
+            _OidcDependencies(client, platform: _withPlatform, studioStatus: studio, platformStatus: platform),
+          );
+
+          expect(find.byType(StudioUnreachablePage), findsNothing);
+          expect(find.byType(LoginScreen), findsOneWidget);
+          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
+          expect(find.text(_studioDown), findsOneWidget);
+          expect(studioRetry, findsOneWidget);
+          expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
+          expect(find.text(_platformDown), findsNothing);
+          expect(platformRetry, findsNothing);
+          expect(platform.checks, 1);
+
+          await tester.tap(platformButton);
+          await tester.pumpAndSettle();
+
+          expect(client.signIns, 1);
+          expect(find.byType(PlatformShell), findsOneWidget);
+          expect(find.byType(StudioUnreachablePage), findsNothing);
+        });
+
+        testWidgets('Platform down and Studio up: only the Platform entry is disabled', (tester) async {
+          await pumpOidcApp(
+            tester,
+            _OidcDependencies(
+              _ScriptedOidcClient(),
+              platform: _withPlatform,
+              platformStatus: _ScriptedLiveness(answer: _down),
+            ),
+          );
+
+          expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
+          expect(find.text(_platformDown), findsOneWidget);
+          expect(platformRetry, findsOneWidget);
+          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+          expect(find.text(_studioDown), findsNothing);
+          expect(studioRetry, findsNothing);
+          expect(find.byType(PlatformUnreachablePage), findsNothing);
+        });
+
+        testWidgets('both down: both entries are disabled, each with its notice', (tester) async {
+          await pumpOidcApp(
+            tester,
+            _OidcDependencies(
+              _ScriptedOidcClient(),
+              platform: _withPlatform,
+              studioStatus: _ScriptedLiveness(answer: _down),
+              platformStatus: _ScriptedLiveness(answer: _down),
+            ),
+          );
+
+          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
+          expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
+          expect(find.text(_studioDown), findsOneWidget);
+          expect(find.text(_platformDown), findsOneWidget);
+          expect(tester.getTopLeft(find.text(_studioDown)).dy, lessThan(tester.getTopLeft(platformButton).dy));
+          expect(tester.getTopLeft(find.text(_platformDown)).dy, greaterThan(tester.getTopLeft(platformButton).dy));
+        });
+
+        for (final retried in SessionTarget.values) {
+          testWidgets('Retry on the ${retried.name} entry asks only that server again', (tester) async {
+            final studio = _ScriptedLiveness(answer: _down);
+            final platform = _ScriptedLiveness(answer: _down);
+            await pumpOidcApp(
+              tester,
+              _OidcDependencies(
+                _ScriptedOidcClient(),
+                platform: _withPlatform,
+                studioStatus: studio,
+                platformStatus: platform,
+              ),
+            );
+            expect((studio.checks, platform.checks), (1, 1));
+            final (asked, other) = switch (retried) {
+              SessionTarget.studio => (studio, platform),
+              SessionTarget.platform => (platform, studio),
+            };
+            asked.answer = const Success(null);
+
+            await tester.tap(retried == SessionTarget.studio ? studioRetry : platformRetry);
+            await tester.pumpAndSettle();
+
+            expect((asked.checks, other.checks), (2, 1));
+            final (button, otherButton) = retried == SessionTarget.studio
+                ? (ssoButton, platformButton)
+                : (platformButton, ssoButton);
+            expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+            expect(tester.widget<FilledButton>(otherButton).onPressed, isNull);
+            expect(find.text(retried == SessionTarget.studio ? _studioDown : _platformDown), findsNothing);
+            expect(find.text(retried == SessionTarget.studio ? _platformDown : _studioDown), findsOneWidget);
+          });
+        }
+
+        testWidgets('shows the notices in Turkish', (tester) async {
+          await pumpOidcApp(
+            tester,
+            _OidcDependencies(
+              _ScriptedOidcClient(),
+              platform: _withPlatform,
+              studioStatus: _ScriptedLiveness(answer: _down),
+              platformStatus: _ScriptedLiveness(answer: _down),
+            ),
+            language: 'tr',
+          );
+
+          expect(find.text('Studio yanıt vermiyor.'), findsOneWidget);
+          expect(find.text('Platform yanıt vermiyor.'), findsOneWidget);
+        });
+      });
+
       testWidgets('with the automatic redirect on, two entries never launch the provider and leave the gate open', (
         tester,
       ) async {
@@ -624,6 +788,26 @@ void main() {
         expect(platformButton, findsOneWidget);
       });
     });
+
+    // As on 3777948: the Studio gate covers the single entry, and Platform is never asked.
+    testWidgets(
+      'a build without a Platform target covers the login page while Studio is down and never asks Platform',
+      (tester) async {
+        final platform = _ScriptedLiveness();
+        await pumpOidcApp(
+          tester,
+          _OidcDependencies(
+            _ScriptedOidcClient(),
+            studioStatus: _ScriptedLiveness(answer: _down),
+            platformStatus: platform,
+          ),
+        );
+
+        expect(find.byType(StudioUnreachablePage), findsOneWidget);
+        expect(find.text(_studioDown, skipOffstage: false), findsNothing);
+        expect(platform.checks, 0);
+      },
+    );
 
     testWidgets('a restored Platform session in a build without Platform says so and does not redirect', (
       tester,

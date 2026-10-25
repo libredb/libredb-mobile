@@ -35,6 +35,7 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `PUT /api/v1/connections/{id}/grants/{subject}` | `{id}` | `PlatformGrantRepository.put`, `GrantPutBody`, `GrantPutAnswerJson` |
 | `PATCH /api/v1/connections/{id}`, body `{active}` | one connection: `{id, name, engine, status, hasWriteCredential}` | `IPlatformConnectionRepository.setActive`, `PlatformConnectionsModel.readOne` |
 | `GET /api/v1/audit?subject=&connectionId=&source=&statementType=&status=&from=&to=&search=&limit=&offset=` | `{events: [{eventId, startedAt, finishedAt, subject, username, sessionRole, connectionId, connectionKnown, connectionName, engine, accessLevel, source, statementType, explain, statementCapture, statement, statementTruncated, rowCount, durationMs, status, errorCode, errorMessage, transactionOutcome}], total}` | `IPlatformAuditRepository.list`, `AuditPageJson` |
+| `GET /api/health/live` | `{status: "live"}` | `IPlatformStatusRepository.liveness`, `PlatformStatusJson` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -164,7 +165,7 @@ The gate starts no provider logout, so the Keycloak browser session stays and a 
 A refusal at the gate never opens the account refusal page, which covers only a signed-in Platform session.
 The login page shows no `returnUrl` of a Studio route after a Platform sign-in, and no `/platform` one after a Studio sign-in; it opens the home of the signed-in target instead.
 The Platform shell loads `PlatformIdentityCubit` itself when it opens, so a sign-in costs one more `GET /api/v1/me`, which takes no new seat because the account then already has its Platform user.
-While Studio is unreachable, its status page still covers the login page, so the Platform entry is unreachable too.
+Each entry says when its own server does not answer ([Liveness and the two gates](#liveness-and-the-two-gates)), so a Studio outage never blocks the Platform sign-in.
 
 ## Session and refusals
 
@@ -182,7 +183,7 @@ A Platform session lives in its own shell under `/platform` (`PlatformShell`), w
 The router sends a Platform session away from every Studio route, and a Studio session away from every `/platform` route, to the home of its own target (`ApplicationRoutesConstants.belongsTo` and `homeFor`).
 The Platform shell reads nothing of Studio and provides none of the Studio scopes, and it keeps no data of an account on the device, so Settings shows no "Remove my data".
 While Platform refuses the admin, a refusal page covers the screens; Retry asks `GET /api/v1/me` again and uncovers them on a 200, and Logout signs out.
-The Studio unreachable page does not cover a signed-in Platform session; it still covers the restore and the login page.
+The Studio unreachable page does not cover a signed-in Platform session, and the Platform unreachable page covers it while Platform does not answer.
 Switching mode is a sign-out followed by a sign-in through the other entry.
 
 A tap on a connection opens its grants (`/platform/connections/<id>`), with the tapped connection handed over as go_router `extra`, since go_router logs every location and Platform has no route that reads one connection.
@@ -190,6 +191,35 @@ The location carries only the connection id; a location reached without that `ex
 While a revoke runs every row's actions menu is disabled, because a second revoke would be dropped.
 
 A Platform sign-out sends no request to Studio and writes no warn line about a missing Studio record, since Platform v1 has no logout route and there is no Studio session to record; it still wipes the session and starts the Keycloak end-session with the ID token hint.
+
+## Liveness and the two gates
+
+`GET /api/health/live` answers 200 `{"status":"live"}` without any I/O (libredb-platform `src/app/api/health/live/route.ts`).
+It needs no session or bearer, since every `/api/health` path is public in both deployment modes (`src/shared/lib/public-paths.ts`) and is served before the session is read (`src/proxy.ts`).
+It is outside `/api/v1`, so it never answers `API_DISABLED`, and it is not in `docs/api/v1.md`.
+
+`PlatformStatusRepository` (`lib/features/platform_status/`) sends it as `GET /health/live` relative to `PLATFORM_API_URL`, without a bearer (`publicEndpoints`), never from the cache (`CacheInterceptor` makes it networkOnly), with a 10 second timeout and past the client's retries and circuit breaker, so one check sends one request.
+Only `{"status":"live"}` is an answer; anything else fails with `platform.unreadable_answer`.
+
+`PlatformStatusBloc` asks nothing on its own at first.
+In a build with a Platform target, the app layer (`AppStatusGate`) sends its first check once, when the login page or a Platform session first needs Platform; it checks again on a Retry, when the device comes back online while Platform is unreachable, and when the app comes back after more than 5 minutes in the background.
+A build without a Platform target never sends `GET /api/health/live`.
+
+The gates, in a build with a Platform target:
+
+| Session state | Studio unreachable page | Platform unreachable page |
+| --- | --- | --- |
+| Restore (`SessionUnknown`) | No | No |
+| Login page (`SessionUnauthenticated`) | No | No |
+| Studio session | Yes, while Studio does not answer | No |
+| Platform session | No | Yes, while Platform does not answer |
+
+The restore calls neither server, so neither gate covers it.
+On the login page, an entry whose server does not answer stays visible and disabled, with "Studio does not answer" or "Platform does not answer" under its helper text and a Retry that asks only that server again; the other entry is unaffected.
+Studio's governance outage does not disable the Studio entry.
+Both gates stay in the tree in every state and only their pass-through flags change, so the open pages keep their state across an outage, a recovery and a session change.
+
+A build without a Platform target keeps the Studio gate over the restore, the login page and a Studio session, and its single entry shows no notice.
 
 ## Where Platform mode works
 

@@ -36,6 +36,8 @@ import 'package:libredb_mobile/features/platform_grants/domain/repositories/plat
 import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_status/data/repositories/platform_status_repository.dart';
+import 'package:libredb_mobile/features/platform_status/domain/repositories/platform_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
@@ -260,6 +262,10 @@ class AppDependencies {
   /// Platform's audit log, the governed query events of the install.
   IPlatformAuditRepository createPlatformAuditRepository(PlatformApiClient apiClient) =>
       PlatformAuditRepository(apiClient);
+
+  /// Platform's public liveness probe, which the login page and a Platform session ask.
+  IPlatformStatusRepository createPlatformStatusRepository(PlatformApiClient apiClient) =>
+      PlatformStatusRepository(apiClient);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

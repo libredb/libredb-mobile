@@ -302,13 +302,25 @@ void main() {
       expect(find.textContaining('studio.example.test:9443'), findsOneWidget);
     });
 
+    // A build without a Platform target, where the Studio gate covers the restore and the login page.
+    const withoutPlatform = AppConfig(
+      environment: Environment.test,
+      apiBaseUrl: null,
+      certificatePins: [],
+      idleTimeout: null,
+    );
+
     testWidgets('checks Studio when the app starts, while the stored session is still read', (tester) async {
       final storedToken = Completer<String?>();
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
       when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
 
       await tester.pumpWidget(
-        App(language: 'en', secureStorage: secureStorage, dependencies: _StudioStatusDependencies(repository)),
+        App(
+          language: 'en',
+          secureStorage: secureStorage,
+          dependencies: _StudioStatusDependencies(repository, appConfig: withoutPlatform),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -321,7 +333,7 @@ void main() {
     });
 
     testWidgets('checks Studio again on resume only after more than five minutes in the background', (tester) async {
-      await pumpApp(tester);
+      await pumpApp(tester, appConfig: withoutPlatform);
       verify(() => repository.liveness()).called(1);
 
       await _sendToBackgroundAndBack(tester, away: StudioStatusBloc.defaultRecheckAfter);
@@ -334,6 +346,25 @@ void main() {
       verify(() => repository.liveness()).called(1);
       expect(find.byType(StudioUnreachablePage), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
+    });
+
+    // A build with a Platform target leaves the login page uncovered; its Studio entry says Studio does not answer.
+    testWidgets('in a build with a Platform target, a failed check on resume leaves the login page with its notice', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      verify(() => repository.liveness()).called(1);
+
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+      await _sendToBackgroundAndBack(tester, away: StudioStatusBloc.defaultRecheckAfter + const Duration(seconds: 1));
+
+      // Platform is checked on resume too, which the mock API answers after its 500 ms delay.
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => repository.liveness()).called(1);
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text('Studio does not answer.'), findsOneWidget);
     });
 
     // GET /health is a public endpoint, so the mock answers it before sign-in.

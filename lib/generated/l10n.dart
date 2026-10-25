@@ -1060,6 +1060,36 @@ class S {
     return Intl.message('Studio address: $host', name: 'studio_unreachable_host', desc: '', args: [host]);
   }
 
+  /// `Can't reach Platform`
+  String get platform_status_unreachable_title {
+    return Intl.message('Can\'t reach Platform', name: 'platform_status_unreachable_title', desc: '', args: []);
+  }
+
+  /// `LibreDB Platform does not answer. Check your internet connection, then try again.`
+  String get platform_status_unreachable_message {
+    return Intl.message(
+      'LibreDB Platform does not answer. Check your internet connection, then try again.',
+      name: 'platform_status_unreachable_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform address: {host}`
+  String platform_status_unreachable_host(String host) {
+    return Intl.message('Platform address: $host', name: 'platform_status_unreachable_host', desc: '', args: [host]);
+  }
+
+  /// `Studio does not answer.`
+  String get login_unreachable_studio {
+    return Intl.message('Studio does not answer.', name: 'login_unreachable_studio', desc: '', args: []);
+  }
+
+  /// `Platform does not answer.`
+  String get login_unreachable_platform {
+    return Intl.message('Platform does not answer.', name: 'login_unreachable_platform', desc: '', args: []);
+  }
+
   /// `Connection access is temporarily unavailable. The list updates by itself once it is back.`
   String get studio_governance_temporarily_unavailable {
     return Intl.message(

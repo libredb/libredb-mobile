@@ -16,8 +16,8 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 ///
 /// It wraps an [ApiClient] built with Platform's target: the base URL and pins of [AppConfig.platform] and
 /// [PlatformErrorEnvelope], with Platform's session rules ([isPlatformSessionExpired], [isPlatformSessionRefused]) and
-/// account refusals ([platformAccountRefusal]). Its answers are never cached (every `/v1/` path is networkOnly), a
-/// coded answer is never retried, and only a GET is ever sent twice.
+/// account refusals ([platformAccountRefusal]). Its answers are never cached (every `/v1/` path and the liveness probe
+/// `/health/live` are networkOnly), a coded answer is never retried, and only a GET is ever sent twice.
 ///
 /// In a build whose [AppConfig.platform] is [PlatformNotConfigured], every call throws
 /// [PlatformNotConfiguredException] and no request is sent.
@@ -62,8 +62,22 @@ final class PlatformApiClient {
   Dio get instance => _configured.instance;
 
   /// `GET` [path], relative to Platform's `/api`, with [pathParams] appended as one more path segment.
-  Future<Response<String>> get(String path, {String? pathParams, Map<String, dynamic>? queryParams}) async =>
-      _configured.get(path, pathParams: pathParams, queryParams: queryParams);
+  /// [timeout] replaces the 30 seconds the client waits to connect and for the answer, and [bypassResilience] sends the
+  /// request once, past an open circuit, for a probe whose failure is itself the answer, such as Platform's liveness
+  /// ([ApiClient.get]).
+  Future<Response<String>> get(
+    String path, {
+    String? pathParams,
+    Map<String, dynamic>? queryParams,
+    Duration? timeout,
+    bool bypassResilience = false,
+  }) async => _configured.get(
+    path,
+    pathParams: pathParams,
+    queryParams: queryParams,
+    timeout: timeout,
+    bypassResilience: bypassResilience,
+  );
 
   /// `PUT` [data] to [path]; never sent twice.
   Future<Response<String>> put<T>(String path, T data, {String? pathParams}) async =>
