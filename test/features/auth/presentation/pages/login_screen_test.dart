@@ -40,6 +40,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../support/user_menu.dart';
@@ -287,6 +288,40 @@ void main() {
       for (final templateText in ['Flutter 3.47.7', 'Core Layers', 'BLoC Ready', 'Clean Architecture', 'Platforms']) {
         expect(find.text(templateText), findsNothing, reason: templateText);
       }
+    });
+  });
+
+  group('LoginScreen identity on a phone', () {
+    testWidgets('names the product and says what it does, instead of greeting a return visit', (tester) async {
+      // The app has no onboarding flow, so this screen is the whole first-run experience. "Welcome back" assumes a
+      // visit that has not happened, and AppConstants.appName appears only in the brand panel, which needs >= 1024.
+      setViewport(tester, const Size(390, 844));
+      await pumpLogin(tester);
+
+      expect(find.text(AppConstants.appName), findsOneWidget);
+      expect(find.text('Reach the databases LibreDB Studio grants you, from your phone.'), findsOneWidget);
+      expect(find.text('Welcome back'), findsNothing);
+      expect(find.text('Sign in with your organization account.'), findsNothing);
+    });
+
+    testWidgets('keeps the desktop heading, whose brand panel already carries the identity', (tester) async {
+      setViewport(tester, const Size(1440, 900));
+      await pumpLogin(tester);
+
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Sign in with your organization account.'), findsOneWidget);
+    });
+
+    testWidgets('announces the heading as a heading', (tester) async {
+      final semantics = tester.ensureSemantics();
+      setViewport(tester, const Size(390, 844));
+      await pumpLogin(tester);
+
+      expect(
+        tester.getSemantics(find.text(AppConstants.appName)),
+        matchesSemantics(label: AppConstants.appName, isHeader: true),
+      );
+      semantics.dispose();
     });
   });
 
