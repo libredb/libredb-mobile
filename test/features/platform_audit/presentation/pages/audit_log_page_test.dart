@@ -178,6 +178,26 @@ void main() {
       expect(row('e1'), findsOneWidget);
     });
 
+    testWidgets('leaving the page while a pull to refresh waits for Platform throws nothing', (tester) async {
+      harness.answer([auditEvent('e1')]);
+      await harness.pump(tester);
+      final pending = Completer<Result<AuditPage>>();
+      harness.answerWith((filter, offset) => pending.future);
+
+      await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+      pending.complete(Success(AuditPage(events: [auditEvent('e1')], total: 1, offset: 0)));
+      await tester.pump(const Duration(seconds: 5));
+      // The closing bloc lets the pending request finish before its stream ends, outside the fake clock.
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(seconds: 5));
+
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a failed refresh shows a banner over the kept list', (tester) async {
       harness.answer([auditEvent('e1')]);
       await harness.pump(tester);

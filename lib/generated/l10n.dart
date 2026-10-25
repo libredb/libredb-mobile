@@ -1190,6 +1190,26 @@ class S {
     );
   }
 
+  /// `Platform did not accept this account, so it stays in Studio. Ask an administrator to check that this app is set up for Platform.`
+  String get profile_switch_platform_refused {
+    return Intl.message(
+      'Platform did not accept this account, so it stays in Studio. Ask an administrator to check that this app is set up for Platform.',
+      name: 'profile_switch_platform_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio did not accept this account, so it stays in Platform. Ask an administrator for access.`
+  String get profile_switch_studio_refused {
+    return Intl.message(
+      'Studio did not accept this account, so it stays in Platform. Ask an administrator for access.',
+      name: 'profile_switch_studio_refused',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Browse`
   String get tab_browse {
     return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);

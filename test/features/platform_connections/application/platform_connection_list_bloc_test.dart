@@ -292,6 +292,56 @@ void main() {
       await bloc.close();
     });
 
+    test('wins over the answer of a refresh that was already running', () async {
+      final bloc = await loaded();
+      final held = Completer<Result<List<PlatformConnection>>>();
+      when(() => repository.list()).thenAnswer((_) => held.future);
+      bloc.add(const PlatformConnectionListRefreshed());
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.isRefreshing);
+
+      bloc.add(const PlatformConnectionReplaced(disabledOrders));
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.connections.first == disabledOrders);
+      held.complete(const Success(all));
+      final state = await bloc.stream.firstWhere(
+        (s) => s is PlatformConnectionListLoaded && !s.isRefreshing,
+      ) as PlatformConnectionListLoaded;
+
+      expect(state.connections, [disabledOrders, cache, billing]);
+      await bloc.close();
+    });
+
+    test('does not change the answer of a refresh that started after it', () async {
+      final bloc = await loaded();
+      bloc.add(const PlatformConnectionReplaced(disabledOrders));
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.connections.first == disabledOrders);
+
+      bloc.add(const PlatformConnectionListRefreshed());
+      final state = await bloc.stream.firstWhere(
+        (s) => s is PlatformConnectionListLoaded && !s.isRefreshing,
+      ) as PlatformConnectionListLoaded;
+
+      expect(state.connections, all);
+      await bloc.close();
+    });
+
+    test('is not added back when the running refresh no longer lists its id', () async {
+      final bloc = await loaded();
+      final held = Completer<Result<List<PlatformConnection>>>();
+      when(() => repository.list()).thenAnswer((_) => held.future);
+      bloc.add(const PlatformConnectionListRefreshed());
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.isRefreshing);
+
+      bloc.add(const PlatformConnectionReplaced(disabledOrders));
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.connections.first == disabledOrders);
+      held.complete(const Success([cache, billing]));
+      final state = await bloc.stream.firstWhere(
+        (s) => s is PlatformConnectionListLoaded && !s.isRefreshing,
+      ) as PlatformConnectionListLoaded;
+
+      expect(state.connections, [cache, billing]);
+      await bloc.close();
+    });
+
     test('is ignored outside Loaded', () async {
       answer(Failure(serverError));
       final bloc = build()..add(const PlatformConnectionListRequested());

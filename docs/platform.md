@@ -49,6 +49,7 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
   The body is exactly `{"active": true}` or `{"active": false}`; the app never sends a name, a definition or a credential.
   Each action first shows a confirmation: a disable closes the connection for every Studio user within about 30 seconds (Studio's governance reload), does not stop a query already running and keeps its grants; an enable opens it again for every grant holder, and those grants can take user seats of the license.
   Platform answers 200 with the connection as it now holds it, also when it already had the asked value (a no-op that records no admin action), and the row shows that answered status in place, without a list reload, keeping the search.
+  A refresh that was already running when the answer arrived keeps that answered status on the row, and a refresh sent after the answer shows what Platform lists.
   A 404 `NOT_FOUND` says the connection no longer exists and refreshes the list; a 403 `LICENSE_USER_SEATS` (on enable only) opens a dialog worded for the connection's grants and never the account refusal page; a 400, `LICENSE_EXPIRED`, `LICENSE_INVALID`, a 5xx and a transport failure each show their message, and the row keeps its status.
   The request is never retried, and a second confirm while one is out is dropped; every row's menu is disabled until the answer arrives.
   The log carries the id and the answered status, never the connection name.
@@ -109,6 +110,7 @@ The route needs `GrantEditorArgs` as `extra`, built by the grants page from the 
 The Audit tab (`/platform/audit`, `AuditLogPage`) shows the events newest first: the time, relative within a day, the username or the start of the Keycloak id, the connection name or a localized marker for an unknown connection, the statement type, the status (an unknown one verbatim), the duration, the row count, and the first line of a captured statement or "Statement not captured".
 
 - `AuditLogBloc` reads the first page on a filter change, a pull or a retry, replacing a read still running; the statement search is sent once the typing pauses for 400 ms, trimmed, and never when it equals the current search.
+  A filter set while the search waits for its pause is sent together with that search, in one request; the search chip's delete and clear filters drop the waiting search.
 - Load more reads from the end of the rows Platform answered so far and shows while Platform's paging rule says another page exists; it is dropped while one runs, its answer is dropped after a refresh or a filter change, and an event already listed is not listed again.
 - A failed refresh or Load more shows a banner above the list it kept, an empty list included; `PLAN_FEATURE_REQUIRED` and `PERMISSION_DENIED` replace any list with their own page, without a filter or a retry.
 - The filter sheet sets status, statement type and source as single choices with Any, from and to as local days sent in UTC (from at the start of its day, to at its last millisecond, since `to` is inclusive), and the statement text, refused past 200 UTF-16 code units as Platform counts them; every set filter shows as a removable chip.
@@ -203,8 +205,10 @@ A switch to Platform first asks for confirmation, because Platform's first answe
 Either switch first asks once about the unsaved changes of any open form (`UnsavedChangesRegistry.confirmLeavingAll`).
 Only a 200 switches: the stored session target is rewritten alone (`IAuthSessionRepository.persistTarget`), the new mode's identity is filled from the gate's answer, the in-memory state of the mode left is cleared, and the router opens the new mode's home (`SessionTargetSwitchBloc`, `AppSessionListeners`).
 A refusal keeps the session, its target, its pages and its cubits, and a snackbar says why, such as an account that is not a Platform admin or a license without a free admin seat.
+The refusal names the mode the user stays in: a 401 from the other target does not end the session, so it never asks the user to sign in, unlike the login page's text for a refused sign-in.
 A switch is no sign-out: it sends no Studio logout record, writes no warn line, starts no provider end-session, sends the app lock no event and removes no stored data.
 A sign-out or an idle timeout while a switch runs ends the session and leaves no target stored.
+Such a switch is dropped (`SessionTargetSwitchAbandoned`): its answer shows nothing, in the next session or anywhere else, and it writes one info line and no warn or error line.
 
 A tap on a connection opens its grants (`/platform/connections/<id>`), with the tapped connection handed over as go_router `extra`, since go_router logs every location and Platform has no route that reads one connection.
 The location carries only the connection id; a location reached without that `extra`, such as a `returnUrl` after sign-in or a typed location, opens the connections list instead.

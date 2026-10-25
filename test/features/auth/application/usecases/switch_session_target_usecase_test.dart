@@ -161,6 +161,92 @@ void main() {
     });
   });
 
+  // A sign-out or an idle timeout while the gate is asked ends the session the switch started under: its answer then
+  // belongs to no session, so it is dropped, whichever session is open by the time it arrives.
+  group('SwitchSessionTargetUseCase after its session ended', () {
+    /// The [answer] of a gate that arrives only after a wipe has ended the session.
+    Future<Result<T>> afterWipe<T>(Result<T> answer) async {
+      await SessionGeneration.wipe(() async {});
+      return answer;
+    }
+
+    /// Expects the lines of an abandoned switch: one info line of the use case and nothing at warn or error.
+    void expectAbandonedLines(List<String> lines) {
+      expect(lines.where((line) => line.contains('[W]') || line.contains('[E]')), isEmpty);
+      expect(lines.where((line) => line.contains('SwitchSessionTargetUseCase') && line.contains('[I]')), hasLength(1));
+    }
+
+    test('a 200 from Platform is abandoned and stores nothing', () async {
+      when(() => platformIdentity.fetch()).thenAnswer((_) => afterWipe(const Success(_admin)));
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.platform));
+
+      expect(result, const SessionTargetSwitchAbandoned());
+      verifyZeroInteractions(sessionRepository);
+      expectAbandonedLines(lines);
+    });
+
+    test('a 200 from Studio is abandoned and stores nothing', () async {
+      when(() => studioIdentity.fetch()).thenAnswer((_) => afterWipe(const Success(_user)));
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.studio));
+
+      expect(result, const SessionTargetSwitchAbandoned());
+      verifyZeroInteractions(sessionRepository);
+      expectAbandonedLines(lines);
+    });
+
+    test('a Platform refusal is abandoned', () async {
+      when(() => platformIdentity.fetch())
+          .thenAnswer((_) => afterWipe(Failure(platformError(_platformAnswer(401, 'BEARER_INVALID')))));
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.platform));
+
+      expect(result, const SessionTargetSwitchAbandoned());
+      verifyZeroInteractions(sessionRepository);
+      expectAbandonedLines(lines);
+    });
+
+    test('a Studio refusal is abandoned', () async {
+      when(() => studioIdentity.fetch()).thenAnswer((_) => afterWipe<StudioIdentity>(const Failure(AuthError('no'))));
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.studio));
+
+      expect(result, const SessionTargetSwitchAbandoned());
+      verifyZeroInteractions(sessionRepository);
+      expectAbandonedLines(lines);
+    });
+
+    test('a target that cannot be stored because a wipe started during the write is abandoned', () async {
+      platformAnswers(const Success(_admin));
+      when(() => sessionRepository.persistTarget(any(), generation: any(named: 'generation'))).thenAnswer(
+        (_) => afterWipe<void>(const Failure(UnknownError('The session ended while its target was written'))),
+      );
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.platform));
+
+      expect(result, const SessionTargetSwitchAbandoned());
+      expectAbandonedLines(lines);
+    });
+
+    test('a target that cannot be stored under a live session is still refused with an error line', () async {
+      platformAnswers(const Success(_admin));
+      when(() => sessionRepository.persistTarget(any(), generation: any(named: 'generation')))
+          .thenAnswer((_) async => const Failure(UnknownError('write failed')));
+
+      late SessionTargetSwitchResult result;
+      final lines = await printedLines(() async => result = await switchTarget(SessionTarget.platform));
+
+      expect(result, const SessionTargetSwitchRefused(AppErrorCode.generic));
+      expect(lines.where((line) => line.contains('SwitchSessionTargetUseCase') && line.contains('[E]')), hasLength(1));
+    });
+  });
+
   test('a refusal writes no warn line', () async {
     platformAnswers(Failure(platformError(_platformAnswer(403, 'ADMIN_ROLE_REQUIRED'))));
 

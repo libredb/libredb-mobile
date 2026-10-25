@@ -17,7 +17,8 @@ part 'platform_connection_list_state.dart';
 ///
 /// It loads when the tab opens, on a pull to refresh and on a retry; there is no timed refresh. A newer load replaces
 /// one still running, so a late answer never overwrites a newer one. A connection that was enabled or disabled takes
-/// the place of its item without a reload.
+/// the place of its item without a reload, and keeps its answered status when a load that was already running answers
+/// after it; a load that starts after it shows what it answers.
 class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, PlatformConnectionListState> {
   PlatformConnectionListBloc({required this._listPlatformConnectionsUseCase})
     : super(const PlatformConnectionListInitial()) {
@@ -39,6 +40,12 @@ class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, Platf
   /// The search typed so far, applied to a list that arrives after it.
   String _query = '';
 
+  /// The connections replaced while a load runs, by id, which win over that load's older answer.
+  final Map<String, PlatformConnection> _replacedDuringLoad = {};
+
+  /// Whether a load is waiting for its answer.
+  bool _loading = false;
+
   FutureOr<void> _onLoad(PlatformConnectionListLoadEvent event, Emitter<PlatformConnectionListState> emit) async {
     _log.debug('BEGIN: onLoad {}', [event.runtimeType]);
     switch (state) {
@@ -47,11 +54,22 @@ class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, Platf
       case PlatformConnectionListInitial() || PlatformConnectionListLoading() || PlatformConnectionListFailure():
         emit(const PlatformConnectionListLoading());
     }
+    _replacedDuringLoad.clear();
+    _loading = true;
     final result = await _listPlatformConnectionsUseCase();
     if (emit.isDone) return;
+    _loading = false;
+    final replaced = Map.of(_replacedDuringLoad);
+    _replacedDuringLoad.clear();
     switch (result) {
       case Success(:final data):
-        emit(PlatformConnectionListLoaded(connections: data, query: _query));
+        if (replaced.isNotEmpty) _log.debug('onLoad: kept the answered status of {}', [replaced.keys.toList()]);
+        emit(
+          PlatformConnectionListLoaded(
+            connections: replaced.isEmpty ? data : List.unmodifiable([for (final c in data) replaced[c.id] ?? c]),
+            query: _query,
+          ),
+        );
         _log.debug('END: onLoad connections: {}', [data.length]);
       case Failure(:final error):
         final errorCode = AppErrorCode.fromKey(error.code) ?? AppErrorCode.generic;
@@ -78,6 +96,8 @@ class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, Platf
   }
 
   void _onReplaced(PlatformConnectionReplaced event, Emitter<PlatformConnectionListState> emit) {
+    // The running load's request may have been sent before this answer, so its list may still hold the old status.
+    if (_loading) _replacedDuringLoad[event.connection.id] = event.connection;
     switch (state) {
       case final PlatformConnectionListLoaded loaded:
         final id = event.connection.id;
