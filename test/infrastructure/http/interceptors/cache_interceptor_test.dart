@@ -913,6 +913,42 @@ void main() {
       });
     });
 
+    // Platform's liveness probe is outside /v1/, and a stored answer would report an offline Platform as live.
+    group('Platform liveness', () {
+      test('does not store the answer of GET /health/live even when the request names a caching policy', () async {
+        final options = RequestOptions(
+          path: '/health/live',
+          method: 'GET',
+          baseUrl: 'https://platform.example.test/api',
+          extra: {'cachePolicy': CachePolicy.networkFirst},
+        );
+
+        await interceptor.onResponse(
+          Response(requestOptions: options, statusCode: 200, data: '{"status":"live"}'),
+          _TestResponseHandler(),
+        );
+
+        verifyNever(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl')));
+      });
+
+      test('does not answer GET /health/live from the cache when the server cannot be reached', () async {
+        final options = RequestOptions(
+          path: '/health/live',
+          method: 'GET',
+          baseUrl: 'https://platform.example.test/api',
+        );
+
+        final handler = _TestErrorHandler();
+        await interceptor.onError(
+          DioException(requestOptions: options, type: DioExceptionType.connectionError),
+          handler,
+        );
+
+        expect(handler.resolveCalled, isFalse);
+        verifyNever(() => mockStorage.read(any()));
+      });
+    });
+
     group('default TTL', () {
       test('should use 5 minutes as default TTL', () async {
         when(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl'))).thenAnswer((_) async {});

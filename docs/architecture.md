@@ -74,7 +74,9 @@ In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oi
 ### Studio reachability
 
 `StudioStatusGate` (`lib/features/studio_status/`) sits in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
-It covers the session restore, the login page and a Studio session, but lets a signed-in Platform session through, since that session calls Platform and not Studio: `AppStudioStatusGate` (`lib/app/app_studio_status_gate.dart`) reads `SessionCubit` and sets the gate's `passThrough`, because a feature cannot read the session.
+It always covers a Studio session and never a signed-in Platform session, since that session calls Platform and not Studio.
+It covers the session restore and the login page only in a build without a Platform target; in a build with one, the login page shows on each entry whether its own server answers instead ([platform.md](platform.md#liveness-and-the-two-gates)).
+`AppStatusGate` (`lib/app/app_status_gate.dart`) reads `SessionCubit` and sets the gates' `passThrough`, because a feature cannot read the session, and `AppTargetReachability` gives the login page both servers' reachability through `TargetReachabilityScope`.
 
 - `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`), and when the device comes back online.
 - A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, over the session restore and the router.
@@ -89,6 +91,15 @@ It covers the session restore, the login page and a Studio session, but lets a s
   200 `degraded` and 503 `loading` read as "temporarily unavailable", and 503 `misconfigured` or `incompatible` as "Studio cannot serve connections right now", with Studio's `detail` shown to admins only (`StudioGovernanceNotice`).
   200 `degraded` never reads as healthy: a stale snapshot answers it while every connection route answers 503.
   A readiness that cannot be read still shows the outage, worded as temporary, and is logged.
+
+### Platform reachability
+
+`PlatformStatusGate` (`lib/features/platform_status/`) is the mirror of `StudioStatusGate` for a signed-in Platform session, in a build with a Platform target only.
+
+- `PlatformStatusBloc` checks `GET /api/health/live`, a public endpoint sent without a token, never cached and never retried, with a 10 second timeout.
+- `AppStatusGate` sends the first check once, when the login page or a Platform session first needs Platform; later checks come from a Retry, from the device coming back online while Platform is unreachable (`AppConnectivityScope`), and from the app coming back after more than 5 minutes in the background.
+- A failed check shows the full-screen "Can't reach Platform" page, with the host of `PLATFORM_API_URL` and a Retry, over a Platform session, which stays mounted underneath; on the login page it disables only the Platform entry.
+- A build without a Platform target never sends the check.
 
 ### Offline
 

@@ -78,7 +78,7 @@ The interceptor chain is the same, with the account refusal interceptor; both cl
   A 401 without Platform's envelope reaches the caller and keeps the session, and a 502 or 503 never ends it.
 - **Account refusal.** A 403 `ADMIN_ROLE_REQUIRED` or `LICENSE_ADMIN_SEATS` is reported to `PlatformAccountRefusalCubit`, only under a signed-in Platform session.
 - **Retries.** `ResilienceInterceptor` reads the code through the client's envelope, so a coded Platform answer, such as a 503 `DIRECTORY_UNAVAILABLE` or a 502 `KEYCLOAK_AUTH_ERROR`, is sent once and never counted against the circuit breaker; only a `GET` is ever repeated.
-- **Cache.** Every path under `/v1/` is `networkOnly`, whatever the request names, so a Platform answer is never stored or served from the cache.
+- **Cache.** Every path under `/v1/` and the liveness probe `/health/live` are `networkOnly`, whatever the request names, so a Platform answer is never stored or served from the cache, and an offline Platform never reads as live.
 - **No target.** In a build without `PLATFORM_API_URL` every call fails with `PlatformNotConfiguredException` and no request is sent.
 
 The contract and the error table are in [platform.md](platform.md).

@@ -13,6 +13,8 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:libredb_mobile/shared/models/session_target.dart';
+import 'package:libredb_mobile/shared/models/target_reachability.dart';
+import 'package:libredb_mobile/shared/widgets/target_reachability_scope.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 import '../../application/login_bloc.dart';
@@ -412,12 +414,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 const SizedBox(height: 24),
                 _entry(
                   context,
+                  SessionTarget.studio,
                   _entryButton(context, SessionTarget.studio, loginButtonSsoKey, l10n.login_studio_button),
                   l10n.login_studio_helper,
                 ),
                 const SizedBox(height: 20),
                 _entry(
                   context,
+                  SessionTarget.platform,
                   _entryButton(context, SessionTarget.platform, loginButtonPlatformKey, l10n.login_platform_button),
                   l10n.login_platform_helper,
                 ),
@@ -461,22 +465,56 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  /// A full-width sign-in [button] with its [helper] text below it.
-  Widget _entry(BuildContext context, Widget button, String helper) {
+  /// A full-width sign-in [button] of [target] with its [helper] text below it, and below that, while the target's
+  /// server does not answer, a one-line notice with a Retry that asks that server again.
+  Widget _entry(BuildContext context, SessionTarget target, Widget button, String helper) {
     final cs = Theme.of(context).colorScheme;
+    final reachability = _reachabilityOf(context, target);
+    final l10n = S.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: double.infinity, child: button),
         const SizedBox(height: 8),
         Text(helper, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
+        if (reachability.blocksSignIn)
+          Row(
+            children: [
+              Icon(Icons.cloud_off, size: 16, color: cs.error),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(switch (target) {
+                  SessionTarget.studio => l10n.login_unreachable_studio,
+                  SessionTarget.platform => l10n.login_unreachable_platform,
+                }, style: TextStyle(fontSize: 13, color: cs.error, height: 1.4)),
+              ),
+              TextButton(
+                key: switch (target) {
+                  SessionTarget.studio => loginUnreachableRetryStudioKey,
+                  SessionTarget.platform => loginUnreachableRetryPlatformKey,
+                },
+                onPressed: reachability == TargetReachability.checking
+                    ? null
+                    : () => TargetReachabilityScope.maybeOf(context)?.onRetry(target),
+                child: reachability == TargetReachability.checking
+                    ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(l10n.retry),
+              ),
+            ],
+          ),
       ],
     );
   }
 
+  /// Whether the server of [target] answers, from the scope the app provides; without one, as before any check.
+  static TargetReachability _reachabilityOf(BuildContext context, SessionTarget target) =>
+      TargetReachabilityScope.maybeOf(context)?.of(target) ?? TargetReachability.unknown;
+
   /// The sign-in button of [target]: every button is disabled while a sign-in runs, and only the one of the running
-  /// sign-in's target shows the spinner.
+  /// sign-in's target shows the spinner. In a build with a Platform target, the button is also disabled while its
+  /// target's server does not answer; the single entry of a build without one is covered by the Studio gate instead.
   Widget _entryButton(BuildContext context, SessionTarget target, Key key, String label) {
+    final unreachable = _entries.length > 1 && _reachabilityOf(context, target).blocksSignIn;
     return BlocBuilder<LoginBloc, LoginState>(
       buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
       builder: (context, state) {
@@ -484,7 +522,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final showsSpinner = state is LoginLoadingState && state.target == target;
         return FilledButton(
           key: key,
-          onPressed: isLoading ? null : () => _onSsoTapped(context, target),
+          onPressed: isLoading || unreachable ? null : () => _onSsoTapped(context, target),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: showsSpinner

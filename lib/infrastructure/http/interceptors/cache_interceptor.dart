@@ -218,11 +218,19 @@ class CacheInterceptor extends Interceptor {
   }
 
   static CachePolicy _extractPolicy(RequestOptions options) {
-    // LibreDB Platform's answers are never stored or served from the cache, whatever the request names.
-    if (isPlatformPath(options.path)) return CachePolicy.networkOnly;
+    // LibreDB Platform's answers are never stored or served from the cache, whatever the request names: a stored
+    // liveness answer would report an offline Platform as live.
+    if (isPlatformPath(options.path) || _isPlatformLiveness(options.path)) return CachePolicy.networkOnly;
     final extra = options.extra['cachePolicy'];
     if (extra is CachePolicy) return extra;
     return _isStudioLiveEndpoint(options.path) ? CachePolicy.networkOnly : CachePolicy.networkFirst;
+  }
+
+  /// Whether [path], relative to Platform's `/api`, is its liveness probe `/health/live`; no Studio path is.
+  static bool _isPlatformLiveness(String path) {
+    final queryStart = path.indexOf('?');
+    final bare = queryStart < 0 ? path : path.substring(0, queryStart);
+    return (bare.startsWith('/') ? bare : '/$bare') == '/health/live';
   }
 
   /// Studio's endpoints whose answers are never served from the cache unless the request names a policy.

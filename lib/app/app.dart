@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
-import 'package:libredb_mobile/app/app_studio_status_gate.dart';
+import 'package:libredb_mobile/app/app_status_gate.dart';
+import 'package:libredb_mobile/app/app_target_reachability.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
@@ -57,6 +58,10 @@ class _AppState extends State<App> {
       child: AppSessionListeners(
         scaffoldMessengerKey: _scaffoldMessengerKey,
         child: AppConnectivityScope(
+          checksPlatform: switch (widget.dependencies.appConfig.platform) {
+            PlatformConfigured() => true,
+            PlatformNotConfigured() => false,
+          },
           child: _AppView(analytics: analytics, scaffoldMessengerKey: _scaffoldMessengerKey),
         ),
       ),
@@ -141,25 +146,29 @@ class _AppViewState extends State<_AppView> {
             // its first route parsed, only once restore has settled the session. Later sign-ins and sign-outs are left
             // to its redirect. It also waits for the stored language, so the first page shows in it.
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
-            // StudioStatusGate shows the unreachable page over it while Studio does not answer and keeps it mounted
-            // underneath, so the open pages and the session are as they were once Studio answers; a signed-in Platform
-            // session passes through it (AppStudioStatusGate).
+            // AppStatusGate shows Studio's or Platform's unreachable page over it while that server does not answer
+            // and keeps it mounted underneath, so the open pages and the session are as they were once it answers. In
+            // a build with a Platform target each gate covers only its own target's session, and the login page shows
+            // on each entry whether its server answers (AppTargetReachability); in a build without one, the Studio
+            // gate also covers the restore and the login page.
             // AppLockGate covers all of it, the unreachable page included, with the lock screen while the app is
             // locked.
             builder: (context, router) => AppLockGate(
               router: _router!,
               child: RepositoryProvider<UnsavedChangesRegistry>.value(
                 value: _unsavedChanges!,
-                child: AppStudioStatusGate(
-                  child: BlocBuilder<SessionCubit, SessionState>(
-                    buildWhen: (previous, current) => previous is SessionUnknown,
-                    builder: (context, session) => switch (session) {
-                      SessionUnknown() => const _RestoreView(),
-                      SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
-                        LocaleRestoring() => const _RestoreView(),
-                        LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                child: AppStatusGate(
+                  child: AppTargetReachability(
+                    child: BlocBuilder<SessionCubit, SessionState>(
+                      buildWhen: (previous, current) => previous is SessionUnknown,
+                      builder: (context, session) => switch (session) {
+                        SessionUnknown() => const _RestoreView(),
+                        SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
+                          LocaleRestoring() => const _RestoreView(),
+                          LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                        },
                       },
-                    },
+                    ),
                   ),
                 ),
               ),

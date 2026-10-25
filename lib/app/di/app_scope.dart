@@ -50,6 +50,9 @@ import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
+import 'package:libredb_mobile/features/platform_status/application/usecases/check_platform_liveness_usecase.dart';
+import 'package:libredb_mobile/features/platform_status/domain/repositories/platform_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/usecases/check_studio_liveness_usecase.dart';
@@ -223,6 +226,9 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<IPlatformAuditRepository>(
           create: (context) => dependencies.createPlatformAuditRepository(context.read<PlatformApiClient>()),
         ),
+        RepositoryProvider<IPlatformStatusRepository>(
+          create: (context) => dependencies.createPlatformStatusRepository(context.read<PlatformApiClient>()),
+        ),
         // One set for the app: the managed list fills it, and the statement routes wait for what it holds.
         RepositoryProvider<ConnectionQueryTimeouts>(create: (_) => ConnectionQueryTimeouts()),
         RepositoryProvider<IConnectionRepository>(
@@ -355,12 +361,20 @@ class AppScope extends StatelessWidget {
           ),
           BlocProvider<ThemeBloc>(create: (_) => ThemeBloc()..add(const LoadTheme())),
           // Created, and the first liveness check sent, when App's StudioStatusGate first builds, which is before the
-          // stored session is restored.
+          // stored session is restored. The login page of a build with a Platform target reads it too.
           BlocProvider<StudioStatusBloc>(
             create: (context) => StudioStatusBloc(
               checkLivenessUseCase: CheckStudioLivenessUseCase(context.read<IStudioStatusRepository>()),
               readReadinessUseCase: ReadStudioReadinessUseCase(context.read<IStudioStatusRepository>()),
             )..add(const StudioLivenessCheckRequested()),
+          ),
+          // Provided in every build, so no widget needs a build-kind branch to read it, and asks nothing when created:
+          // AppStatusGate sends the first check, only in a build with a Platform target, when the login page or a
+          // Platform session needs Platform.
+          BlocProvider<PlatformStatusBloc>(
+            create: (context) => PlatformStatusBloc(
+              checkLivenessUseCase: CheckPlatformLivenessUseCase(context.read<IPlatformStatusRepository>()),
+            ),
           ),
           BlocProvider<LocaleCubit>(
             create: (_) =>

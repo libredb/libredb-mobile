@@ -5,6 +5,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/platform_status/data/repositories/platform_status_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/platform_audit/data/repositories/platform_audit_repository.dart';
@@ -94,6 +95,7 @@ void main() {
         PlatformConnectionRepository(client).setActive('cm0conn0000000000000000001', active: false),
     'IPlatformAuditRepository.list': (client) =>
         PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0),
+    'IPlatformStatusRepository.liveness': (client) => PlatformStatusRepository(client).liveness(),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {
@@ -121,6 +123,16 @@ void main() {
   for (final name in sentBeforeSignIn) {
     test('$name succeeds through the mock-backed client without a stored token', () async {
       final result = await requests[name]!(TestEnv.apiClient());
+
+      expect(result, isA<Success<Object?>>(), reason: '$result');
+    });
+  }
+
+  // Sent before sign-in: Platform's liveness, which the login page's Platform entry asks.
+  const platformSentBeforeSignIn = ['IPlatformStatusRepository.liveness'];
+  for (final name in platformSentBeforeSignIn) {
+    test('$name succeeds through the mock-backed Platform client without a stored token', () async {
+      final result = await platformRequests[name]!(TestEnv.platformApiClient());
 
       expect(result, isA<Success<Object?>>(), reason: '$result');
     });

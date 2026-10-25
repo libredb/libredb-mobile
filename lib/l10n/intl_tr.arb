@@ -299,6 +299,22 @@
       }
     }
   },
+  "platform_status_unreachable_title": "Platform'a ulaşılamıyor",
+  "@platform_status_unreachable_title": {},
+  "platform_status_unreachable_message": "LibreDB Platform yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+  "@platform_status_unreachable_message": {},
+  "platform_status_unreachable_host": "Platform adresi: {host}",
+  "@platform_status_unreachable_host": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "login_unreachable_studio": "Studio yanıt vermiyor.",
+  "@login_unreachable_studio": {},
+  "login_unreachable_platform": "Platform yanıt vermiyor.",
+  "@login_unreachable_platform": {},
   "studio_governance_temporarily_unavailable": "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
   "@studio_governance_temporarily_unavailable": {},
   "studio_governance_cannot_serve": "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",

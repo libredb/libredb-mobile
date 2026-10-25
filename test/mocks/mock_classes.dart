@@ -23,6 +23,9 @@ import 'package:libredb_mobile/features/connections/application/connection_polic
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_event.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sign_in_usecase.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 
@@ -43,6 +46,7 @@ import 'package:libredb_mobile/features/connections/domain/repositories/connecti
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
+import 'package:libredb_mobile/features/platform_status/domain/repositories/platform_status_repository.dart';
 import 'package:libredb_mobile/features/object_browser/domain/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/entities/statement_draft.dart';
@@ -88,6 +92,8 @@ class MockICollapsedSectionsRepository extends Mock implements ICollapsedSection
 class MockIFavoriteConnectionsRepository extends Mock implements IFavoriteConnectionsRepository {}
 
 class MockIStudioStatusRepository extends Mock implements IStudioStatusRepository {}
+
+class MockIPlatformStatusRepository extends Mock implements IPlatformStatusRepository {}
 
 class MockIProviderMetaRepository extends Mock implements IProviderMetaRepository {}
 
@@ -143,6 +149,8 @@ class MockActiveCatalogCubit extends MockCubit<ActiveCatalogState> implements Ac
 class MockConnectivityCubit extends MockCubit<ConnectivityState> implements ConnectivityCubit {}
 
 class MockStudioStatusBloc extends MockBloc<StudioStatusEvent, StudioStatusState> implements StudioStatusBloc {}
+
+class MockPlatformStatusBloc extends MockBloc<PlatformStatusEvent, PlatformStatusState> implements PlatformStatusBloc {}
 
 // Service mocks
 class MockAnalyticsService extends Mock implements IAnalyticsService {}

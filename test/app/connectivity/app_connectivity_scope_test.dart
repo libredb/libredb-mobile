@@ -8,6 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_event.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
@@ -23,21 +26,30 @@ void main() {
   const offline = ConnectivityState(status: ConnectivityStatus.offline);
   const reconnectCheck = StudioLivenessCheckRequested(trigger: StudioLivenessCheckTrigger.reconnect);
 
+  const platformReconnectCheck = PlatformLivenessCheckRequested(trigger: PlatformLivenessCheckTrigger.reconnect);
+
   late MockConnectivityCubit connectivity;
   late MockStudioStatusBloc studioStatus;
+  late MockPlatformStatusBloc platformStatus;
 
-  setUpAll(() => registerFallbackValue(const StudioAppPaused()));
+  setUpAll(() {
+    registerFallbackValue(const StudioAppPaused());
+    registerFallbackValue(const PlatformAppPaused());
+  });
 
   setUp(() {
     connectivity = MockConnectivityCubit();
     studioStatus = MockStudioStatusBloc();
     when(() => studioStatus.state).thenReturn(const StudioReachable());
+    platformStatus = MockPlatformStatusBloc();
+    when(() => platformStatus.state).thenReturn(const PlatformReachable());
   });
 
   Future<List<bool>> pumpScope(
     WidgetTester tester, {
     required ConnectivityState initial,
     List<ConnectivityState>? then,
+    bool checksPlatform = false,
   }) async {
     whenListen(connectivity, Stream.fromIterable(then ?? const <ConnectivityState>[]), initialState: initial);
     final seen = <bool>[];
@@ -46,8 +58,10 @@ void main() {
         providers: [
           BlocProvider<ConnectivityCubit>.value(value: connectivity),
           BlocProvider<StudioStatusBloc>.value(value: studioStatus),
+          BlocProvider<PlatformStatusBloc>.value(value: platformStatus),
         ],
         child: AppConnectivityScope(
+          checksPlatform: checksPlatform,
           child: Builder(
             builder: (context) {
               seen.add(OfflineStatus.isOfflineOf(context));
@@ -100,5 +114,32 @@ void main() {
     await pumpScope(tester, initial: online, then: [offline]);
 
     verifyNever(() => studioStatus.add(any()));
+  });
+
+  group('Platform', () {
+    testWidgets('checks Platform again once when the device comes back online while Platform is unreachable', (
+      tester,
+    ) async {
+      when(() => platformStatus.state).thenReturn(PlatformUnreachable(error: NetworkError('offline')));
+
+      await pumpScope(tester, initial: online, then: [offline, online, online], checksPlatform: true);
+
+      verify(() => platformStatus.add(platformReconnectCheck)).called(1);
+      verifyNever(() => studioStatus.add(any()));
+    });
+
+    testWidgets('does not check Platform when the device comes back online while Platform answers', (tester) async {
+      await pumpScope(tester, initial: online, then: [offline, online], checksPlatform: true);
+
+      verifyNever(() => platformStatus.add(any()));
+    });
+
+    testWidgets('a build without a Platform target never checks Platform', (tester) async {
+      when(() => platformStatus.state).thenReturn(PlatformUnreachable(error: NetworkError('offline')));
+
+      await pumpScope(tester, initial: online, then: [offline, online]);
+
+      verifyNever(() => platformStatus.add(any()));
+    });
   });
 }
