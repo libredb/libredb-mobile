@@ -26,6 +26,8 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Birine erişim vermek için dizinde arama yaptığınızda arama metni Platform'a gider, Platform da Keycloak'ta arar; uygulama bulunan kullanıcıların kullanıcı adlarını, adlarını, e-posta adreslerini, etkin olup olmadıklarını ve Studio rollerini gösterir.
   Bunları yalnızca ekran açıkken bellekte tutar, arama geçmişi tutmaz ve hiçbirini saklamaz; Platform'a da verdiğiniz ya da değiştirdiğiniz erişimi gönderir: kullanıcıyı, düzeyi ve bitiş zamanını.
   Platform modunda uygulama Platform'a istediğiniz bir bağlantının etkinleştirilmesini ya da devre dışı bırakılmasını da gönderir; o bağlantı hakkında başka bir şey göndermez.
+  Platform modunda uygulama yönetilen sorguların denetim kaydını gösterir: onları çalıştıran kullanıcıları (kullanıcı adlarını ve Keycloak kimliklerini), bağlantıları, veritabanlarından veri taşıyabilen deyim metnini, veritabanı hata mesajlarını ve zamanları.
+  Bunları denetim sayfası açıkken bellekte tutar ve cihazda hiç saklamaz; Platform'a da belirlediğiniz filtreleri, deyim arama metni dahil, gönderir.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
   Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 
@@ -77,7 +79,7 @@ Sentry proje anahtarı olmadan derlenmiş bir uygulama rapor göndermez.
 
 ## Cihazdaki korumalar
 
-- Sorgu sonuçlarını, bir satırın ayrıntısını, bir anahtarın değerini ya da bir nesnenin kaynağını gösteren ekranlar ekran görüntülerinin, ekran kayıtlarının ve son uygulamalar görünümünün dışında tutulur.
+- Sorgu sonuçlarını, bir satırın ayrıntısını, bir anahtarın değerini, bir nesnenin kaynağını, denetim kaydı listesini ya da bir denetim olayının deyimini ve hata mesajını gösteren ekranlar ekran görüntülerinin, ekran kayıtlarının ve son uygulamalar görünümünün dışında tutulur.
 - Adı hassas görünen sütunlar, örneğin e-posta, parola ya da kart numarası, ekranda maskelenir.
 - Uygulama 15 dakika işlem yapılmadığında oturumunuzu kapatır.
 

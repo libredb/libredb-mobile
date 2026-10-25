@@ -218,8 +218,10 @@ Protected while on screen:
 | The database's own words of a refused statement or read, which can repeat a value, as a duplicate key error does | `BrowseDatabaseWords` (`lib/shared/widgets/browse_database_words.dart`), in the editor, Browse rows and the key value page |
 | A key's text value, a string or a JSON document | `KeyValuePage` (`lib/features/object_browser/presentation/pages/key_value_page.dart`) |
 | An object's source, on the source page and the detail page's Source tab | `ObjectSourceView` (`lib/features/object_browser/presentation/widgets/object_source_view.dart`) |
+| The rows of the Platform audit log, which name users and connections and quote statements, while the list is not empty | `AuditLogPage` (`lib/features/platform_audit/presentation/pages/audit_log_page.dart`) |
+| An audit event's statement and database error message | `AuditEventPage` (`lib/features/platform_audit/presentation/pages/audit_event_page.dart`) |
 
-Everything else stays capturable: the connection list, the Browse lists, the editor with no result on screen, a key's name and Studio's `TYPE` answer, and the settings.
+Everything else stays capturable: the connection list, the Browse lists, the editor with no result on screen, a key's name and Studio's `TYPE` answer, the Platform pages other than the audit log rows and an audit event's statement and error message, and the settings.
 
 How it works:
 

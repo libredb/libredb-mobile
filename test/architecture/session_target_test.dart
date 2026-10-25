@@ -142,4 +142,20 @@ void main() {
       });
     });
   }
+
+  test('Platform has the tabs Home, Connections and Audit, in this order', () {
+    expect(ApplicationRoutesConstants.tabsFor(SessionTarget.platform), [
+      ApplicationRoutesConstants.platformHome,
+      ApplicationRoutesConstants.platformConnections,
+      ApplicationRoutesConstants.platformAudit,
+    ]);
+  });
+
+  test('Studio keeps the tabs Connections, Browse and SQL', () {
+    expect(ApplicationRoutesConstants.tabsFor(SessionTarget.studio), [
+      ApplicationRoutesConstants.connectionList,
+      ApplicationRoutesConstants.browse,
+      ApplicationRoutesConstants.sql,
+    ]);
+  });
 }

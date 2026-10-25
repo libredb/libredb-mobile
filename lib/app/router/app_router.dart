@@ -15,6 +15,7 @@ import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart'
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
+import 'package:libredb_mobile/features/platform_audit/navigation/platform_audit_routes.dart';
 import 'package:libredb_mobile/features/platform_connections/navigation/platform_connections_routes.dart';
 import 'package:libredb_mobile/features/platform_grants/navigation/platform_grants_routes.dart';
 import 'package:libredb_mobile/features/platform_home/navigation/platform_home_routes.dart';
@@ -88,6 +89,7 @@ class AppRouterFactory {
             ...PlatformHomeFeatureRoutes.routes,
             ...PlatformConnectionsFeatureRoutes.routes,
             ...PlatformGrantsFeatureRoutes.routes,
+            ...PlatformAuditFeatureRoutes.routes,
             ...SettingsFeatureRoutes.routes(
               path: ApplicationRoutesConstants.platformSettings,
               name: 'platformSettings',

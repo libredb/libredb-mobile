@@ -1338,5 +1338,229 @@
   "platform_home_connections_shortcut": "Bağlantılar",
   "@platform_home_connections_shortcut": {},
   "platform_home_connections_shortcut_description": "Bu kurulumun tüm bağlantılarını görün.",
-  "@platform_home_connections_shortcut_description": {}
+  "@platform_home_connections_shortcut_description": {},
+  "platform_audit_tab": "Denetim",
+  "@platform_audit_tab": {},
+  "platform_audit_load_failed": "Denetim kaydı yüklenemedi",
+  "@platform_audit_load_failed": {},
+  "platform_audit_refresh_failed": "Denetim kaydı yenilenemedi",
+  "@platform_audit_refresh_failed": {},
+  "platform_audit_load_more": "Daha fazla yükle",
+  "@platform_audit_load_more": {},
+  "platform_audit_load_more_failed": "Daha fazla olay yüklenemedi",
+  "@platform_audit_load_more_failed": {},
+  "platform_audit_empty_title": "Henüz yönetilen sorgu yok",
+  "@platform_audit_empty_title": {},
+  "platform_audit_empty_description": "Studio'nun Platform bağlantılarında çalıştırdığı sorgular burada görünür.",
+  "@platform_audit_empty_description": {},
+  "platform_audit_filtered_empty_title": "Filtrelere uyan olay yok",
+  "@platform_audit_filtered_empty_title": {},
+  "platform_audit_filtered_empty_description": "Bir filtreyi kaldırın ya da başka birini seçin.",
+  "@platform_audit_filtered_empty_description": {},
+  "platform_audit_clear_filters": "Filtreleri temizle",
+  "@platform_audit_clear_filters": {},
+  "platform_audit_filters": "Filtreler",
+  "@platform_audit_filters": {},
+  "platform_audit_plan_refused_title": "Denetim kaydı bu kurulumun planında yok",
+  "@platform_audit_plan_refused_title": {},
+  "platform_audit_plan_refused_description": "Denetim kaydı içeren bir plan Platform lisansında seçilir.",
+  "@platform_audit_plan_refused_description": {},
+  "platform_audit_permission_refused_title": "Platform bu hesabın denetim kaydını okumasına izin vermiyor",
+  "@platform_audit_permission_refused_title": {},
+  "platform_audit_permission_refused_description": "Bir Platform yöneticisi bu hesaba denetim iznini verebilir.",
+  "@platform_audit_permission_refused_description": {},
+  "platform_audit_unknown_connection": "Bilinmeyen bağlantı",
+  "@platform_audit_unknown_connection": {},
+  "platform_audit_statement_not_captured": "Komut kaydedilmedi",
+  "@platform_audit_statement_not_captured": {},
+  "platform_audit_time_just_now": "Az önce",
+  "@platform_audit_time_just_now": {},
+  "platform_audit_time_minutes_ago": "{count} dk önce",
+  "@platform_audit_time_minutes_ago": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_time_hours_ago": "{count} sa önce",
+  "@platform_audit_time_hours_ago": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_duration": "{ms} ms",
+  "@platform_audit_duration": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_row_count": "Satır: {count}",
+  "@platform_audit_row_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "platform_audit_status_success": "Başarılı",
+  "@platform_audit_status_success": {},
+  "platform_audit_status_error": "Hata",
+  "@platform_audit_status_error": {},
+  "platform_audit_status_cancelled": "İptal edildi",
+  "@platform_audit_status_cancelled": {},
+  "platform_audit_status_refused": "Reddedildi",
+  "@platform_audit_status_refused": {},
+  "platform_audit_any": "Hepsi",
+  "@platform_audit_any": {},
+  "platform_audit_filter_status": "Durum",
+  "@platform_audit_filter_status": {},
+  "platform_audit_filter_statement_type": "Komut türü",
+  "@platform_audit_filter_statement_type": {},
+  "platform_audit_filter_source": "Kaynak",
+  "@platform_audit_filter_source": {},
+  "platform_audit_filter_from": "Başlangıç",
+  "@platform_audit_filter_from": {},
+  "platform_audit_filter_to": "Bitiş",
+  "@platform_audit_filter_to": {},
+  "platform_audit_filter_any_day": "Herhangi bir gün",
+  "@platform_audit_filter_any_day": {},
+  "platform_audit_filter_clear_date": "Tarihi temizle",
+  "@platform_audit_filter_clear_date": {},
+  "platform_audit_filter_search": "Komut metni",
+  "@platform_audit_filter_search": {},
+  "platform_audit_filter_search_hint": "Komuttaki metin, büyük küçük harf fark etmez",
+  "@platform_audit_filter_search_hint": {},
+  "platform_audit_filter_done": "Tamam",
+  "@platform_audit_filter_done": {},
+  "platform_audit_chip_status": "Durum: {value}",
+  "@platform_audit_chip_status": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_statement_type": "Tür: {value}",
+  "@platform_audit_chip_statement_type": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_source": "Kaynak: {value}",
+  "@platform_audit_chip_source": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_from": "Başlangıç {date}",
+  "@platform_audit_chip_from": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_to": "Bitiş {date}",
+  "@platform_audit_chip_to": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_search": "Metin: {text}",
+  "@platform_audit_chip_search": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_user": "Kullanıcı: {user}",
+  "@platform_audit_chip_user": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_connection": "Bağlantı: {connection}",
+  "@platform_audit_chip_connection": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_audit_chip_remove": "Bu filtreyi kaldır",
+  "@platform_audit_chip_remove": {},
+  "platform_audit_not_recorded": "Kaydedilmedi",
+  "@platform_audit_not_recorded": {},
+  "platform_audit_field_event_id": "Olay kimliği",
+  "@platform_audit_field_event_id": {},
+  "platform_audit_field_started": "Başladı",
+  "@platform_audit_field_started": {},
+  "platform_audit_field_finished": "Bitti",
+  "@platform_audit_field_finished": {},
+  "platform_audit_field_user": "Kullanıcı",
+  "@platform_audit_field_user": {},
+  "platform_audit_field_subject": "Keycloak kimliği",
+  "@platform_audit_field_subject": {},
+  "platform_audit_field_session_role": "Oturum rolü",
+  "@platform_audit_field_session_role": {},
+  "platform_audit_field_connection": "Bağlantı",
+  "@platform_audit_field_connection": {},
+  "platform_audit_field_connection_id": "Bağlantı kimliği",
+  "@platform_audit_field_connection_id": {},
+  "platform_audit_field_engine": "Motor",
+  "@platform_audit_field_engine": {},
+  "platform_audit_field_access_level": "Erişim düzeyi",
+  "@platform_audit_field_access_level": {},
+  "platform_audit_field_source": "Kaynak",
+  "@platform_audit_field_source": {},
+  "platform_audit_field_statement_type": "Komut türü",
+  "@platform_audit_field_statement_type": {},
+  "platform_audit_field_explain": "Explain",
+  "@platform_audit_field_explain": {},
+  "platform_audit_field_capture": "Komut kaydı",
+  "@platform_audit_field_capture": {},
+  "platform_audit_field_statement": "Komut",
+  "@platform_audit_field_statement": {},
+  "platform_audit_field_rows": "Satırlar",
+  "@platform_audit_field_rows": {},
+  "platform_audit_field_duration": "Süre",
+  "@platform_audit_field_duration": {},
+  "platform_audit_field_status": "Durum",
+  "@platform_audit_field_status": {},
+  "platform_audit_field_error_code": "Hata kodu",
+  "@platform_audit_field_error_code": {},
+  "platform_audit_field_error_message": "Hata mesajı",
+  "@platform_audit_field_error_message": {},
+  "platform_audit_field_transaction": "İşlem sonucu",
+  "@platform_audit_field_transaction": {},
+  "platform_audit_capture_full": "Tam",
+  "@platform_audit_capture_full": {},
+  "platform_audit_capture_redacted": "Maskelenmiş",
+  "@platform_audit_capture_redacted": {},
+  "platform_audit_capture_none": "Yok",
+  "@platform_audit_capture_none": {},
+  "platform_audit_statement_truncated": "Studio tarafından kısaltıldı",
+  "@platform_audit_statement_truncated": {},
+  "platform_audit_statement_redacted": "Bağlantının kayıt ayarı tarafından maskelendi",
+  "@platform_audit_statement_redacted": {},
+  "platform_audit_statement_none": "Kaydedilmedi",
+  "@platform_audit_statement_none": {},
+  "platform_audit_only_this_user": "Yalnızca bu kullanıcı",
+  "@platform_audit_only_this_user": {},
+  "platform_audit_only_this_connection": "Yalnızca bu bağlantı",
+  "@platform_audit_only_this_connection": {}
 }

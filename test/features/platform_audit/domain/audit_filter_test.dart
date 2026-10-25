@@ -104,4 +104,19 @@ void main() {
     expect(AuditFilter(status: 'error'), AuditFilter(status: ' error '));
     expect(AuditFilter(status: 'error'), isNot(AuditFilter(status: 'success')));
   });
+
+  test('copyWith replaces the values it is given and keeps the others', () {
+    final filter = AuditFilter(status: 'error', source: 'editor', from: DateTime.utc(2026, 10, 1));
+
+    final changed = filter.copyWith(status: () => 'success', search: () => 'orders', from: () => null);
+
+    expect(changed, AuditFilter(status: 'success', source: 'editor', search: 'orders'));
+    expect(filter.copyWith(), filter);
+  });
+
+  test('copyWith unsets a value given as null', () {
+    final filter = AuditFilter(subject: 'kc-1', connectionId: 'c1', to: DateTime.utc(2026, 10, 2));
+
+    expect(filter.copyWith(subject: () => null, connectionId: () => null, to: () => null), const AuditFilter());
+  });
 }

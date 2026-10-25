@@ -26,6 +26,8 @@ The app talks to four kinds of servers, and to no others on its own:
   When you search the directory to give someone access, the search text goes to Platform, which searches Keycloak, and the app shows the usernames, names, e-mail addresses, enabled state and Studio role of the users found.
   It keeps them in memory only while the screen is open, keeps no search history and stores none of it, and it sends Platform the access you give or change: the user, the level and the expiry.
   In Platform mode the app also sends Platform the enabling or disabling of a connection that you ask for, and nothing else about that connection.
+  In Platform mode the app shows the audit log of the governed queries: the users who ran them (their usernames and Keycloak ids), the connections, the statement text, which can carry data from the databases, the database error messages and the times.
+  It holds them in memory while the audit page is open and never stores them on the device, and it sends Platform the filters you set, the statement search text included.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
   See the Crash reports section below.
 
@@ -77,7 +79,7 @@ A build made without a Sentry project key sends no reports.
 
 ## Protections on the device
 
-- The screens that show query results, a row's detail, a key's value or an object's source are kept out of screenshots, screen recordings and the recent apps view.
+- The screens that show query results, a row's detail, a key's value, an object's source, the audit log list or an audit event's statement and error message are kept out of screenshots, screen recordings and the recent apps view.
 - Columns whose names look sensitive, such as e-mail, password or card number, are masked on screen.
 - The app signs you out after 15 minutes without input.
 

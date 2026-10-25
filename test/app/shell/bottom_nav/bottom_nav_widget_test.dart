@@ -117,7 +117,7 @@ void main() {
   });
 
   group('BottomNavWidget - Platform', () {
-    testWidgets('the Platform shell on a phone shows exactly the tabs Home and Connections', (tester) async {
+    testWidgets('the Platform shell on a phone shows exactly the tabs Home, Connections and Audit', (tester) async {
       addTearDown(tester.view.reset);
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
@@ -131,7 +131,7 @@ void main() {
           .destinations
           .map((destination) => (destination as NavigationDestination).label)
           .toList();
-      expect(labels, ['Home', 'Connections']);
+      expect(labels, ['Home', 'Connections', 'Audit']);
       expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
     });
 
@@ -145,6 +145,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(inBottomNav('Bağlantılar'), findsOneWidget);
+      expect(inBottomNav('Denetim'), findsOneWidget);
       expect(inBottomNav('Gözat'), findsNothing);
     });
   });

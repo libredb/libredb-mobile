@@ -128,6 +128,7 @@ class ResponsiveScaffold extends StatelessWidget {
     final segment = segments.first;
     return switch (segment) {
       'connections' => l10n.connections,
+      'audit' => l10n.platform_audit_tab,
       'settings' => l10n.settings,
       _ => segment.replaceFirst(segment[0], segment[0].toUpperCase()),
     };

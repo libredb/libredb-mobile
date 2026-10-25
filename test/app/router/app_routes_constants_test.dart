@@ -45,7 +45,11 @@ void main() {
     expect(ApplicationRoutesConstants.homeFor(SessionTarget.studio), '/connections');
     expect(ApplicationRoutesConstants.homeFor(SessionTarget.platform), '/platform');
     expect(ApplicationRoutesConstants.tabsFor(SessionTarget.studio), ['/connections', '/browse', '/sql']);
-    expect(ApplicationRoutesConstants.tabsFor(SessionTarget.platform), ['/platform', '/platform/connections']);
+    expect(ApplicationRoutesConstants.tabsFor(SessionTarget.platform), [
+      '/platform',
+      '/platform/connections',
+      '/platform/audit',
+    ]);
     expect(ApplicationRoutesConstants.settingsFor(SessionTarget.studio), '/settings');
     expect(ApplicationRoutesConstants.settingsFor(SessionTarget.platform), '/platform/settings');
   });
