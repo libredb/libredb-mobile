@@ -10,7 +10,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 ///
 /// Debug builds only: the constructor throws in a profile or release build. Only the mock entry point and the
 /// tests import it, so it is never compiled into an entry point that signs in through a real Keycloak
-/// (`test/architecture/local_sign_in_test.dart`).
+/// (`test/architecture/mock_sign_in_test.dart`).
 class MockSignInDependencies extends AppDependencies {
   MockSignInDependencies({super.appConfig, super.projectLinks})
     : super(

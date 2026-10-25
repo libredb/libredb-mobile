@@ -18,9 +18,10 @@ void main() {
   });
 
   test('main_prod.dart gives PLATFORM_API_URL no default, so the store build stays Studio-only', () {
-    // .team/decisions.md — the store build stays Studio-only, without PLATFORM_API_URL, until the owner approves it.
-    // A committed default would cross that line without the owner, because release.yml does not pass the define and
-    // nothing else would override it. The doc comment may still name it: it says how to opt in by hand.
+    // docs/platform.md and docs/release.md — the store build stays Studio-only, without PLATFORM_API_URL, until the
+    // owner approves it; the team ledger carries the same ruling. A committed default would cross that line without
+    // the owner, because release.yml does not pass the define and nothing else would override it. The doc comment may
+    // still name it: it says how to opt in by hand.
     final code = sourceOf('main_prod.dart').split('\n').where((line) => !line.trimLeft().startsWith('///')).join('\n');
     expect(code, isNot(contains('PLATFORM_API_URL')));
     expect(code, isNot(contains('platformApiUrl')));
@@ -40,9 +41,13 @@ void main() {
   });
 
   test('every default is overridable, so an outside deployment can point the app elsewhere', () {
-    for (final entryPoint in ['main_local.dart', 'main_prod.dart']) {
+    const defines = {
+      'main_local.dart': ['PROD_API_URL', 'OIDC_ISSUER', 'OIDC_CLIENT_ID', 'PLATFORM_API_URL'],
+      'main_prod.dart': ['PROD_API_URL', 'OIDC_ISSUER', 'OIDC_CLIENT_ID'],
+    };
+    for (final entryPoint in defines.keys) {
       final source = sourceOf(entryPoint);
-      for (final define in ['PROD_API_URL', 'OIDC_ISSUER', 'OIDC_CLIENT_ID']) {
+      for (final define in defines[entryPoint]!) {
         expect(
           source,
           contains("String.fromEnvironment('$define'"),

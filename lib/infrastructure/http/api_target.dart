@@ -16,7 +16,8 @@ final class ApiTarget {
     envelope: const StudioErrorEnvelope(),
   );
 
-  /// The base URL every path is relative to; null only outside prod, where `MockInterceptor` answers.
+  /// The base URL every path is relative to; null only in the mock and test environments, where
+  /// `MockInterceptor` answers. A `local` build carries a real one.
   final String? baseUrl;
 
   /// The pins of the host of [baseUrl]; empty leaves that host on the system trust store.

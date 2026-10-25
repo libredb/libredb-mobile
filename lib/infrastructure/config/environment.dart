@@ -45,14 +45,17 @@ final class AppConfig {
   /// The config of `main_local.dart`: a real server on the developer's own machine. It reads the same defines a prod
   /// build does, but enforces none of prod's rules — no https requirement, no pin validation, no screen-capture
   /// protection and no idle timeout — because the build exists for hand testing against a development stack.
+  /// It pins no certificate, and takes no pin parameter: a development stack's CA and keys are regenerated with
+  /// every fresh volume, so a pin set here would lock the build out within hours. `STUDIO_CERT_PINS` and
+  /// `OIDC_CERT_PINS` are read in prod only (`environment_test.dart`, "mock and local read neither define").
   const AppConfig.local({
     this.apiBaseUrl,
-    this.certificatePins = const <String>[],
-    this.oidcCertificatePins = const <String>[],
     this.screenCaptureProtection = false,
     this.appLockRequired = false,
     this.platform = const PlatformNotConfigured(),
   }) : environment = Environment.local,
+       certificatePins = const <String>[],
+       oidcCertificatePins = const <String>[],
        idleTimeout = null,
        simulateLatency = false,
        sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
@@ -344,7 +347,8 @@ sealed class PlatformTargetConfig {
 final class PlatformConfigured extends PlatformTargetConfig {
   const PlatformConfigured({this.baseUrl, this.certificatePins = const <String>[]});
 
-  /// Platform's origin plus `/api`, from `PLATFORM_API_URL`; null only outside prod, where `MockInterceptor` answers.
+  /// Platform's origin plus `/api`, from `PLATFORM_API_URL`; null only in the mock and test environments, where
+  /// `MockInterceptor` answers. A `local` or `prod` build with Platform mode carries a real one.
   final String? baseUrl;
 
   /// The pins of the host of [baseUrl], from `PLATFORM_CERT_PINS`; empty when pinning is off for it.
