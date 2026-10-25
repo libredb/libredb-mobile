@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_r
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
@@ -83,6 +84,10 @@ void main() {
         PlatformGrantRepository(client).revoke('cm0connection000000000001', 'cm0grant000000000000000001'),
     'IPlatformIdentityRepository.fetch': (client) => PlatformIdentityRepository(client).fetch(),
     'IPlatformConnectionRepository.list': (client) => PlatformConnectionRepository(client).list(),
+    'IPlatformDirectoryRepository.search': (client) => PlatformDirectoryRepository(client).search(query: '', page: 1),
+    'IPlatformGrantRepository.put': (client) =>
+        PlatformGrantRepository(client)
+            .put('cm0connection000000000001', 'f:ldap-1:ken.ldap', level: 'read', expiresAt: null),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {

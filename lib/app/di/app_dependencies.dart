@@ -29,6 +29,8 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
@@ -248,6 +250,10 @@ class AppDependencies {
   /// Platform's grants of a connection: list and revoke.
   IPlatformGrantRepository createPlatformGrantRepository(PlatformApiClient apiClient) =>
       PlatformGrantRepository(apiClient);
+
+  /// Platform's directory of Keycloak users, the people a grant can name.
+  IPlatformDirectoryRepository createPlatformDirectoryRepository(PlatformApiClient apiClient) =>
+      PlatformDirectoryRepository(apiClient);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

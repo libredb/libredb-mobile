@@ -7,7 +7,9 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/platform_grants/application/grant_list_bloc.dart';
 import 'package:libredb_mobile/features/platform_grants/application/revoke_grant_bloc.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/entities/grant_target.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/entities/platform_grant.dart';
+import 'package:libredb_mobile/features/platform_grants/navigation/grant_editor_args.dart';
 import 'package:libredb_mobile/features/platform_grants/presentation/widgets/revoke_grant_dialog.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
@@ -38,6 +40,7 @@ class PlatformConnectionGrantsPage extends StatelessWidget {
       child: Column(
         children: [
           _ConnectionHeader(connection: connection),
+          _AddGrantButton(connection: connection),
           Expanded(
             child: BlocBuilder<GrantListBloc, GrantListState>(
               builder: (context, state) => switch (state) {
@@ -157,6 +160,60 @@ class _ConnectionHeader extends StatelessWidget {
   }
 }
 
+/// "Add access", enabled only while the grants are loaded, so the picker knows who already holds one.
+class _AddGrantButton extends StatelessWidget {
+  const _AddGrantButton({required this.connection});
+
+  final PlatformConnection connection;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    child: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: BlocSelector<GrantListBloc, GrantListState, List<PlatformGrant>?>(
+        selector: (state) => state is GrantListLoaded ? state.grants : null,
+        builder: (context, grants) => FilledButton.tonalIcon(
+          key: const ValueKey('platform-grants-add'),
+          onPressed: grants == null ? null : () => openGrantEditor(context, connection: connection, grants: grants),
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: Text(S.of(context).platform_grants_add),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Opens the grant editor of [connection], on [grant] when given, else on the directory picker, with the current
+/// [grants] as the holders; the grant list is read again whenever a save may have changed a grant.
+Future<void> openGrantEditor(
+  BuildContext context, {
+  required PlatformConnection connection,
+  required List<PlatformGrant> grants,
+  PlatformGrant? grant,
+}) async {
+  final grantList = context.read<GrantListBloc>();
+  final messenger = ScaffoldMessenger.of(context);
+  final saved = S.of(context).platform_grants_editor_saved;
+  final result = await context.push<bool>(
+    GrantEditorArgs.locationOf(connection.id),
+    extra: GrantEditorArgs(
+      target: GrantTarget.fromStatus(
+        connectionId: connection.id,
+        connectionName: connection.name,
+        hasWriteCredential: connection.hasWriteCredential,
+        status: connection.status,
+      ),
+      grant: grant,
+      holders: {for (final held in grants) held.subject: held},
+      onGrantMayHaveChanged: () {
+        if (!grantList.isClosed) grantList.add(const GrantListRefreshRequested());
+      },
+    ),
+  );
+  if (result == true) messenger.showSnackBar(SnackBar(content: Text(saved)));
+}
+
 /// [child] under a [RefreshIndicator] whose pull asks Platform again and waits for the answer.
 class _Refreshable extends StatelessWidget {
   const _Refreshable({required this.child});
@@ -218,8 +275,13 @@ class _LoadedList extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 itemCount: state.grants.length,
                 separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-                itemBuilder: (context, index) =>
-                    _GrantRow(connection: connection, grant: state.grants[index], now: now, actionsEnabled: !revoking),
+                itemBuilder: (context, index) => _GrantRow(
+                  connection: connection,
+                  grant: state.grants[index],
+                  grants: state.grants,
+                  now: now,
+                  actionsEnabled: !revoking,
+                ),
               ),
             ),
           ),
@@ -282,13 +344,22 @@ class _RefreshBanner extends StatelessWidget {
 }
 
 /// The entries of a grant's actions menu.
-enum _GrantAction { remove }
+enum _GrantAction { edit, remove }
 
 class _GrantRow extends StatelessWidget {
-  const _GrantRow({required this.connection, required this.grant, required this.now, required this.actionsEnabled});
+  const _GrantRow({
+    required this.connection,
+    required this.grant,
+    required this.grants,
+    required this.now,
+    required this.actionsEnabled,
+  });
 
   final PlatformConnection connection;
   final PlatformGrant grant;
+
+  /// Every grant listed, the holders the editor is told about.
+  final List<PlatformGrant> grants;
   final DateTime now;
 
   /// False while a revoke runs, since a second one would be dropped unseen.
@@ -355,9 +426,18 @@ class _GrantRow extends StatelessWidget {
             enabled: actionsEnabled,
             tooltip: s.platform_grants_actions,
             onSelected: (action) => switch (action) {
+              _GrantAction.edit => openGrantEditor(context, connection: connection, grants: grants, grant: grant),
               _GrantAction.remove => _confirmRemove(context),
             },
             itemBuilder: (_) => [
+              PopupMenuItem(
+                value: _GrantAction.edit,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.edit_outlined),
+                  title: Text(s.platform_grants_edit),
+                ),
+              ),
               PopupMenuItem(
                 value: _GrantAction.remove,
                 child: ListTile(

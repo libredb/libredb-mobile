@@ -1,0 +1,206 @@
+{
+  "users": [
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000001",
+      "username": "alice.reader",
+      "email": "alice.reader@example.org",
+      "firstName": "Alice",
+      "lastName": "Reader",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000002",
+      "username": "bob.writer",
+      "email": "bob.writer@example.org",
+      "firstName": "Bob",
+      "lastName": "Writer",
+      "enabled": true,
+      "studioRole": "admin",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000003",
+      "username": "carol",
+      "email": null,
+      "firstName": "Carol",
+      "lastName": null,
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000004",
+      "username": "dave",
+      "email": "dave@example.org",
+      "firstName": "Dave",
+      "lastName": "Miller",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000005",
+      "username": "erin",
+      "email": "erin@example.org",
+      "firstName": "Erin",
+      "lastName": "Lake",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000006",
+      "username": "frank.admin",
+      "email": "frank.admin@example.com",
+      "firstName": "Frank",
+      "lastName": "Hill",
+      "enabled": true,
+      "studioRole": "admin",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000007",
+      "username": "grace",
+      "email": "grace@example.com",
+      "firstName": "Grace",
+      "lastName": "Park",
+      "enabled": true,
+      "studioRole": null,
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000008",
+      "username": "heidi.disabled",
+      "email": "heidi@example.com",
+      "firstName": "Heidi",
+      "lastName": "Stone",
+      "enabled": false,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000009",
+      "username": "ivan.newhire",
+      "email": "ivan@example.com",
+      "firstName": "Ivan",
+      "lastName": "Moss",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": true
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000010",
+      "username": "judy",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": true
+    },
+    {
+      "id": "f:ldap-1:ken.ldap",
+      "username": "ken.ldap",
+      "email": "ken@example.com",
+      "firstName": "Ken",
+      "lastName": "Ward",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000012",
+      "username": "laura",
+      "email": "laura@example.com",
+      "firstName": "Laura",
+      "lastName": "Bell",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000013",
+      "username": "mallory",
+      "email": "mallory@example.com",
+      "firstName": "Mallory",
+      "lastName": "Fox",
+      "enabled": true,
+      "studioRole": null,
+      "needsSeat": true
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000014",
+      "username": "niaj",
+      "email": "niaj@example.com",
+      "firstName": "Niaj",
+      "lastName": "Gray",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000015",
+      "username": "olivia",
+      "email": "olivia@example.com",
+      "firstName": "Olivia",
+      "lastName": "Reed",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000016",
+      "username": "peggy",
+      "email": "peggy@example.com",
+      "firstName": "Peggy",
+      "lastName": "Shaw",
+      "enabled": true,
+      "studioRole": "admin",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000017",
+      "username": "quentin",
+      "email": "quentin@example.com",
+      "firstName": "Quentin",
+      "lastName": "Ray",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000018",
+      "username": "rupert",
+      "email": "rupert@example.com",
+      "firstName": "Rupert",
+      "lastName": "Cole",
+      "enabled": false,
+      "studioRole": null,
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000019",
+      "username": "sybil",
+      "email": "sybil@example.com",
+      "firstName": "Sybil",
+      "lastName": "Dunn",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    },
+    {
+      "id": "5f0c1a52-1d2e-4c1b-9a51-000000000020",
+      "username": "trent",
+      "email": "trent@example.com",
+      "firstName": "Trent",
+      "lastName": "Hale",
+      "enabled": true,
+      "studioRole": "user",
+      "needsSeat": false
+    }
+  ],
+  "page": 1,
+  "total": 43
+}

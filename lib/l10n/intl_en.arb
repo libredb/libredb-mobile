@@ -590,6 +590,92 @@
   "@platform_grants_removed": {},
   "platform_grants_already_removed": "Already removed",
   "@platform_grants_already_removed": {},
+  "platform_grants_add": "Add access",
+  "@platform_grants_add": {},
+  "platform_grants_edit": "Change access",
+  "@platform_grants_edit": {},
+  "platform_grants_picker_title": "Choose a user",
+  "@platform_grants_picker_title": {},
+  "platform_grants_picker_search_hint": "Search by username, name or e-mail",
+  "@platform_grants_picker_search_hint": {},
+  "platform_grants_picker_clear": "Clear search",
+  "@platform_grants_picker_clear": {},
+  "platform_grants_picker_query_too_long": "The search text is too long. Use at most 255 characters.",
+  "@platform_grants_picker_query_too_long": {},
+  "platform_grants_picker_empty_title": "No user found",
+  "@platform_grants_picker_empty_title": {},
+  "platform_grants_picker_empty_description": "No Keycloak user matches this search.",
+  "@platform_grants_picker_empty_description": {},
+  "platform_grants_picker_load_failed": "Could not search the directory",
+  "@platform_grants_picker_load_failed": {},
+  "platform_grants_picker_load_more": "Load more",
+  "@platform_grants_picker_load_more": {},
+  "platform_grants_picker_load_more_failed": "Could not load more users",
+  "@platform_grants_picker_load_more_failed": {},
+  "platform_grants_picker_role_admin": "Studio admin",
+  "@platform_grants_picker_role_admin": {},
+  "platform_grants_picker_role_user": "Studio user",
+  "@platform_grants_picker_role_user": {},
+  "platform_grants_picker_role_none": "No Studio role, cannot sign in to Studio",
+  "@platform_grants_picker_role_none": {},
+  "platform_grants_picker_disabled": "Disabled in Keycloak",
+  "@platform_grants_picker_disabled": {},
+  "platform_grants_picker_takes_seat": "Takes a user seat",
+  "@platform_grants_picker_takes_seat": {},
+  "platform_grants_picker_takes_seat_inactive": "Takes a user seat when the connection is active again",
+  "@platform_grants_picker_takes_seat_inactive": {},
+  "platform_grants_editor_title_new": "Give access to {connection}",
+  "@platform_grants_editor_title_new": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_title_edit": "Change access to {connection}",
+  "@platform_grants_editor_title_edit": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_change_user": "Choose another user",
+  "@platform_grants_editor_change_user": {},
+  "platform_grants_editor_level": "Access level",
+  "@platform_grants_editor_level": {},
+  "platform_grants_editor_write_unavailable": "This connection has no write credential, so only read access can be granted.",
+  "@platform_grants_editor_write_unavailable": {},
+  "platform_grants_editor_level_missing": "Choose an access level.",
+  "@platform_grants_editor_level_missing": {},
+  "platform_grants_editor_expiry": "Expiry",
+  "@platform_grants_editor_expiry": {},
+  "platform_grants_editor_expiry_never": "Never expires",
+  "@platform_grants_editor_expiry_never": {},
+  "platform_grants_editor_expiry_on": "Expires on {date}",
+  "@platform_grants_editor_expiry_on": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_expiry_pick": "Pick a date and time",
+  "@platform_grants_editor_expiry_pick": {},
+  "platform_grants_editor_expiry_local_time": "In this device's time zone.",
+  "@platform_grants_editor_expiry_local_time": {},
+  "platform_grants_editor_expiry_not_in_future": "Choose a time in the future, or no expiry.",
+  "@platform_grants_editor_expiry_not_in_future": {},
+  "platform_grants_editor_no_role_note": "This user has no Studio role and cannot sign in to Studio until a Keycloak admin gives them one.",
+  "@platform_grants_editor_no_role_note": {},
+  "platform_grants_editor_save": "Save",
+  "@platform_grants_editor_save": {},
+  "platform_grants_editor_saved": "Access saved",
+  "@platform_grants_editor_saved": {},
+  "platform_grants_editor_license_title": "The license does not allow this grant",
+  "@platform_grants_editor_license_title": {},
+  "platform_grants_editor_retry_title": "Platform could not check the user",
+  "@platform_grants_editor_retry_title": {},
   "connection_switcher_title": "Switch connection",
   "@connection_switcher_title": {},
   "connection_active": "Active connection",
