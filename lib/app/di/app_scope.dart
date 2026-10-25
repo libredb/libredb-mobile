@@ -135,8 +135,10 @@ class AppScope extends StatelessWidget {
             final session = SessionCubit(
               secureStorage: context.read<ISecureStorage>(),
               sessionRepository: context.read<IAuthSessionRepository>(),
-              // Studio only until #244 adds the Platform target.
-              availableTargets: const {SessionTarget.studio},
+              availableTargets: switch (dependencies.appConfig.platform) {
+                PlatformConfigured() => const {SessionTarget.studio, SessionTarget.platform},
+                PlatformNotConfigured() => const {SessionTarget.studio},
+              },
               ssoStartup: switch (dependencies.authMode) {
                 OidcAuthMode() => SsoSessionStartup(
                   rotation: context.read<TokenRotation>(),
@@ -183,9 +185,10 @@ class AppScope extends StatelessWidget {
             final session = context.read<SessionCubit>();
             final refusal = context.read<PlatformAccountRefusalCubit>();
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
-            // A refusal during the sign-in is the login page's to tell, so only a signed-in account is refused here.
+            // A refusal during the sign-in is the login page's to tell, and a Studio session has no Platform account to
+            // refuse, so only a signed-in Platform session is refused here.
             void onAccountRefused(AppErrorCode code) {
-              if (session.state is SessionAuthenticated) refusal.refuse(code);
+              if (session.state case SessionAuthenticated(target: SessionTarget.platform)) refusal.refuse(code);
             }
 
             return dependencies.createPlatformApiClient(

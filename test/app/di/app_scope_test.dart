@@ -87,6 +87,14 @@ const _prodPlatformConfig = AppConfig(
   platform: PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
 );
 
+/// The test config without a Platform target, as a Studio-only build has.
+const _testConfigWithoutPlatform = AppConfig(
+  environment: Environment.test,
+  apiBaseUrl: null,
+  certificatePins: <String>[],
+  idleTimeout: null,
+);
+
 /// A JWT whose `exp` lies far in the future, so a production [SessionCubit] restores it as authenticated.
 String _unexpiredJwt() => _jwt(exp: 4102444800);
 
@@ -590,12 +598,22 @@ void main() {
       expect(await secure.read(SecureStorageKeys.jwtToken.key), LocalOidcClient.accessToken);
     });
 
-    // This build has no Platform target yet (#244), so a stored Platform session is never opened as a Studio one.
-    testWidgets('ends and clears a stored Platform session, which this build cannot serve', (tester) async {
+    // A build with a Platform target restores a stored Platform session as one.
+    testWidgets('restores a stored Platform session in a build with a Platform target', (tester) async {
       final secure = FlutterSecureStorageAdapter();
       await secure.write(SecureStorageKeys.sessionTarget.key, 'platform');
       await secure.write(SecureStorageKeys.jwtToken.key, 'MOCK_TOKEN');
       final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+
+      expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
+    });
+
+    // A build without a Platform target never opens a stored Platform session as a Studio one.
+    testWidgets('ends and clears a stored Platform session in a build without a Platform target', (tester) async {
+      final secure = FlutterSecureStorageAdapter();
+      await secure.write(SecureStorageKeys.sessionTarget.key, 'platform');
+      await secure.write(SecureStorageKeys.jwtToken.key, 'MOCK_TOKEN');
+      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: _testConfigWithoutPlatform));
 
       expect(
         scope.read<SessionCubit>().state,
@@ -906,15 +924,16 @@ void main() {
       ('ADMIN_ROLE_REQUIRED', AppErrorCode.platformAdminRoleRequired),
       ('LICENSE_ADMIN_SEATS', AppErrorCode.platformLicenseAdminSeats),
     ]) {
-      testWidgets('a 403 $code under a signed-in session refuses the Platform account and keeps the session', (
+      testWidgets('a 403 $code under a signed-in Platform session refuses the Platform account and keeps the session', (
         tester,
       ) async {
+        await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'platform');
         await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
         final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
         final dependencies = _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig);
         final scope = await _pumpScope(tester, dependencies);
         final session = scope.read<SessionCubit>();
-        expect(session.state, isA<SessionAuthenticated>());
+        expect(session.state, const SessionAuthenticated(target: SessionTarget.platform));
         final client = scope.read<PlatformApiClient>();
         final server = _ServerAdapter({
           'GET /v1/me': (
@@ -932,11 +951,34 @@ void main() {
         expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
         expect(server.requests, hasLength(1));
         expect(rotation.rotations, 0);
-        expect(session.state, isA<SessionAuthenticated>());
+        expect(session.state, const SessionAuthenticated(target: SessionTarget.platform));
       });
     }
 
+    // Only a Platform session has a Platform account to refuse; a Studio session that reaches Platform refuses nothing.
+    testWidgets('a 403 ADMIN_ROLE_REQUIRED under a signed-in Studio session refuses nothing', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'studio');
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          403,
+          {
+            'error': {'code': 'ADMIN_ROLE_REQUIRED', 'message': 'refused'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<AppException>());
+
+      expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
+      expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+    });
+
     testWidgets('a 403 LICENSE_EXPIRED refuses nothing', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'platform');
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
       final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
       final client = scope.read<PlatformApiClient>();
