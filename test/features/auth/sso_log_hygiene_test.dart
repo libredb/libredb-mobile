@@ -353,7 +353,7 @@ void main() {
   });
 }
 
-/// The local sign-in in a build with a Platform target, counting the Studio logout records and the provider
+/// The mock sign-in in a build with a Platform target, counting the Studio logout records and the provider
 /// end-sessions it is asked for.
 class _SwitchDependencies extends MockSignInDependencies {
   _SwitchDependencies() : super(appConfig: const AppConfig.test());

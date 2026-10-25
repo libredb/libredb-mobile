@@ -24,7 +24,7 @@ class PlatformAuditRepository implements IPlatformAuditRepository {
     assert(limit >= 1 && limit <= 200, 'Platform accepts a limit from 1 to 200');
     assert(offset >= 0, 'Platform accepts an offset of 0 or more');
     try {
-      // Never a null map, so the mock asset of a local build is the same for every filter.
+      // Never a null map, so the mock asset of a mock build is the same for every filter.
       final response = await _apiClient.get(
         '/v1/audit',
         queryParams: {

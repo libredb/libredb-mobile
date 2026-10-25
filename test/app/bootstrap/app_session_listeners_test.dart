@@ -151,7 +151,7 @@ const _inputsWithoutPointerMoves = <String, Future<void> Function(WidgetTester)>
   'typing': _pressKey,
 };
 
-/// Signs in with the single sign-on button, through the local sign-in of the mock-backed app.
+/// Signs in with the single sign-on button, through the mock sign-in of the mock-backed app.
 Future<void> _signIn(WidgetTester tester) async {
   await tester.tap(find.byKey(loginButtonSsoKey));
   await tester.pumpAndSettle();

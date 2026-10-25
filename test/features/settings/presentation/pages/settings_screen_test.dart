@@ -58,7 +58,7 @@ class _LanguageRefusingStorage implements AppLocalStorage {
   void setPreferencesInstance(SharedPreferences prefs) => AppLocalStorage().setPreferencesInstance(prefs);
 }
 
-/// The local app with [statementText] as its statement text store, which in a widget test cannot reach the files.
+/// The mock app with [statementText] as its statement text store, which in a widget test cannot reach the files.
 class _StatementTextDependencies extends MockSignInDependencies {
   _StatementTextDependencies(this.statementText);
 

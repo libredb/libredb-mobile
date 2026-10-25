@@ -111,7 +111,7 @@ void main() {
       expect(line, allOf(isNot(contains('at-opaque-0a1b2c3d4e5f6a7b')), isNot(contains('rt-9f8e7d6c5b4a3f2e1d0c'))));
     });
 
-    test('verbose mode prints the requests of main_local without their credentials or tokens', () async {
+    test('verbose mode prints the requests of main_mock without their credentials or tokens', () async {
       LoggingInterceptor.verbose = true;
       final lines = <String>[];
       void collect(OutputEvent event) => lines.addAll(event.lines);
