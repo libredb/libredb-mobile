@@ -32,8 +32,8 @@ final class SwitchedToPlatform extends SessionTargetSwitchResult {
   List<Object?> get props => [identity];
 }
 
-/// The gate of the target switched to refused the account, or the new target could not be stored; the session keeps
-/// its target. [errorCode] is shown to the user.
+/// The gate of the target switched to refused the account, or the new target could not be stored, while the session the
+/// switch started under is still signed in; the session keeps its target. [errorCode] is shown to the user.
 final class SessionTargetSwitchRefused extends SessionTargetSwitchResult {
   const SessionTargetSwitchRefused(this.errorCode);
 
@@ -41,4 +41,11 @@ final class SessionTargetSwitchRefused extends SessionTargetSwitchResult {
 
   @override
   List<Object?> get props => [errorCode];
+}
+
+/// The session the switch started under ended before the switch finished, by a sign-out or an idle timeout while the
+/// gate was asked or the target was stored. Its answer belongs to no session, so nothing is stored or shown, whichever
+/// session is open by the time it arrives.
+final class SessionTargetSwitchAbandoned extends SessionTargetSwitchResult {
+  const SessionTargetSwitchAbandoned();
 }

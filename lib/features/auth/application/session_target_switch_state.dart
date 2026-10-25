@@ -42,3 +42,8 @@ final class SessionTargetSwitchRefusedState extends SessionTargetSwitchState {
   @override
   List<Object?> get props => [errorCode];
 }
+
+/// The session the switch started under ended before the switch finished, so nothing was stored and nothing is shown.
+final class SessionTargetSwitchAbandonedState extends SessionTargetSwitchState {
+  const SessionTargetSwitchAbandonedState();
+}

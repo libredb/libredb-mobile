@@ -117,14 +117,18 @@ class _Refreshable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => RefreshIndicator(
     onRefresh: () {
-      final bloc = context.read<PlatformConnectionListBloc>()..add(const PlatformConnectionListRefreshed());
-      return bloc.stream.firstWhere(
+      final bloc = context.read<PlatformConnectionListBloc>();
+      // Leaving the page closes the bloc, which ends its stream: that ends the refresh too, it is no error.
+      final done = bloc.stream.firstWhere(
         (state) => switch (state) {
           PlatformConnectionListLoaded(:final isRefreshing) => !isRefreshing,
           PlatformConnectionListFailure() => true,
           PlatformConnectionListInitial() || PlatformConnectionListLoading() => false,
         },
+        orElse: () => bloc.state,
       );
+      bloc.add(const PlatformConnectionListRefreshed());
+      return done;
     },
     child: child,
   );

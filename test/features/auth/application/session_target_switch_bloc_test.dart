@@ -86,6 +86,15 @@ void main() {
     ],
   );
 
+  blocTest<SessionTargetSwitchBloc, SessionTargetSwitchState>(
+    'a switch whose session ended while it ran is abandoned',
+    setUp: () =>
+        when(() => switchTarget(SessionTarget.platform)).thenAnswer((_) async => const SessionTargetSwitchAbandoned()),
+    build: build,
+    act: (bloc) => bloc.add(const SessionTargetSwitchRequested(SessionTarget.platform)),
+    expect: () => const [SessionTargetSwitchInProgress(SessionTarget.platform), SessionTargetSwitchAbandonedState()],
+  );
+
   final answer = Completer<SessionTargetSwitchResult>();
   blocTest<SessionTargetSwitchBloc, SessionTargetSwitchState>(
     'a second request while one runs is dropped',

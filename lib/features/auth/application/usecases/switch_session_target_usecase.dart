@@ -17,6 +17,10 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 /// the session generation the switch started under, so a sign-out during the switch leaves no target stored. A
 /// refusal keeps the session, its target and its stored data: unlike a refused sign-in nothing is cleared, and a switch
 /// is no sign-out, so it never reaches the identity provider and writes no warn line.
+///
+/// The generation read when the switch starts decides its outcome: once that session has ended, the gate's answer,
+/// a success or a refusal alike, and a target that could not be stored are [SessionTargetSwitchAbandoned], so no answer
+/// of an ended session reaches the next one.
 class SwitchSessionTargetUseCase {
   const SwitchSessionTargetUseCase(this._studioIdentity, this._platformIdentity, this._sessionRepository);
 
@@ -42,6 +46,7 @@ class SwitchSessionTargetUseCase {
           case Success(:final data):
             switched = SwitchedToStudio(data);
           case Failure(:final error):
+            if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
             return _refused(to, studioGateRefusal(error));
         }
       case SessionTarget.platform:
@@ -49,15 +54,24 @@ class SwitchSessionTargetUseCase {
           case Success(:final data):
             switched = SwitchedToPlatform(data);
           case Failure(:final error):
+            if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
             return _refused(to, platformGateRefusal(error));
         }
     }
+    if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
     if (await _sessionRepository.persistTarget(to, generation: generation) case Failure(:final error)) {
+      if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
       _log.error('The switch to {} could not store the target: {}', [to.name, error.runtimeType]);
       return const SessionTargetSwitchRefused(AppErrorCode.generic);
     }
     _log.info('The session switched to {}', [to.name]);
     return switched;
+  }
+
+  /// A sign-out or an idle timeout during a switch is an expected path, so it is told at info.
+  static SessionTargetSwitchAbandoned _abandoned(SessionTarget to) {
+    _log.info('The session ended before the switch to {} finished, so the switch is dropped', [to.name]);
+    return const SessionTargetSwitchAbandoned();
   }
 
   static SessionTargetSwitchRefused _refused(SessionTarget to, AppErrorCode errorCode) {

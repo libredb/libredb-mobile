@@ -122,7 +122,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
   @override
   Future<Result<void>> persistTarget(SessionTarget target, {required int generation}) async {
     if (SessionGeneration.hasEnded(generation)) {
-      _log.warn('persistTarget: the session ended before the target was written, so nothing is written');
+      _log.info('persistTarget: the session ended before the target was written, so nothing is written');
       return const Failure(UnknownError('The session ended before its target was written'));
     }
     final key = SecureStorageKeys.sessionTarget.key;
@@ -150,7 +150,7 @@ class AuthSessionRepository implements IAuthSessionRepository {
       return Failure(UnknownError('Writing the session target failed: $e'));
     }
     if (SessionGeneration.hasEnded(generation)) {
-      _log.warn('persistTarget: the session ended while the target was written, so it is taken back');
+      _log.info('persistTarget: the session ended while the target was written, so it is taken back');
       try {
         if (await _secureStorage.read(key) == value) await _secureStorage.delete(key);
       } catch (e) {

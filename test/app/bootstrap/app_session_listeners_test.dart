@@ -723,6 +723,37 @@ void main() {
         expect(find.byType(SnackBar), findsNothing);
       });
 
+      testWidgets('that outlived its session shows nothing in the next session', (tester) async {
+        final answer = Completer<SessionTargetSwitchResult>();
+        final switchTarget = MockSwitchSessionTargetUseCase();
+        when(() => switchTarget(SessionTarget.platform)).thenAnswer((_) => answer.future);
+        TestEnv.authenticate();
+        await tester.pumpWidget(_appWithSwitch(switchTarget));
+        await settle(tester);
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await tester.pump();
+        await app.read<SessionCubit>().endSession(reason: SessionExpiredReason.expired);
+        await settle(tester);
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        // As the single sign-on button does.
+        app.read<LoginBloc>().add(const SsoSignInRequested(target: SessionTarget.studio));
+        await settle(tester);
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        // The sign-in's own notice goes first, so any snackbar left is the switch's.
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(find.byType(SnackBar), findsNothing);
+        answer.complete(const SessionTargetSwitchAbandoned());
+        await settle(tester);
+
+        expect(app.read<SessionTargetSwitchBloc>().state, const SessionTargetSwitchAbandonedState());
+        expect(find.byType(SnackBar), findsNothing);
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        expect(find.byType(AppShell), findsOneWidget);
+      });
+
       testWidgets('that is refused while signed in says why in the mode the user stayed in', (tester) async {
         final switchTarget = MockSwitchSessionTargetUseCase();
         when(() => switchTarget(SessionTarget.platform))
@@ -739,6 +770,60 @@ void main() {
         expect(find.byType(AppShell), findsOneWidget);
         expect(find.text('This account is not a Platform admin, so it stays in Studio.'), findsOneWidget);
       });
+
+      // The other target's 401 does not end the session, so its refusal names the mode the user stays in and never asks
+      // for a sign-in, unlike the login page's text for the same code.
+      for (final (language, from, to, code, text) in <(String, SessionTarget, SessionTarget, AppErrorCode, String)>[
+        (
+          'en',
+          SessionTarget.studio,
+          SessionTarget.platform,
+          AppErrorCode.platformAccountRefused,
+          'Platform did not accept this account, so it stays in Studio. '
+              'Ask an administrator to check that this app is set up for Platform.',
+        ),
+        (
+          'en',
+          SessionTarget.platform,
+          SessionTarget.studio,
+          AppErrorCode.studioAccountRefused,
+          'Studio did not accept this account, so it stays in Platform. Ask an administrator for access.',
+        ),
+        (
+          'tr',
+          SessionTarget.studio,
+          SessionTarget.platform,
+          AppErrorCode.platformAccountRefused,
+          "Platform bu hesabı kabul etmedi, bu yüzden Studio'da kalıyor. "
+              'Bu uygulamanın Platform için ayarlandığını yöneticinize kontrol ettirin.',
+        ),
+        (
+          'tr',
+          SessionTarget.platform,
+          SessionTarget.studio,
+          AppErrorCode.studioAccountRefused,
+          "Studio bu hesabı kabul etmedi, bu yüzden Platform'da kalıyor. Erişim için bir yöneticiye başvurun.",
+        ),
+      ]) {
+        testWidgets('to ${to.name} refused with ${code.key} says in $language that the account stays in ${from.name}', (
+          tester,
+        ) async {
+          final switchTarget = MockSwitchSessionTargetUseCase();
+          when(() => switchTarget(to)).thenAnswer((_) async => SessionTargetSwitchRefused(code));
+          TestEnv.authenticate(target: from);
+          await tester.pumpWidget(_appWithSwitch(switchTarget, language: language));
+          await settle(tester);
+          final app = tester.element(find.byType(MaterialApp));
+
+          app.read<SessionTargetSwitchBloc>().add(SessionTargetSwitchRequested(to));
+          await tester.pumpAndSettle();
+
+          expect(app.read<SessionCubit>().state, SessionAuthenticated(target: from));
+          expect(find.text(text), findsOneWidget);
+          expect(find.textContaining('this sign-in'), findsNothing);
+          expect(find.textContaining('oturum açmayı'), findsNothing);
+        });
+      }
 
       testWidgets('a cold restart after a switch restores the new target', (tester) async {
         TestEnv.authenticate();
@@ -840,8 +925,8 @@ class _CacheKeepingStore extends InMemorySharedPreferencesStore {
 
 /// Records every event a BLoC is sent.
 /// [_platformApp] with [switchTarget] in place of the use case that asks the gate of the target switched to.
-App _appWithSwitch(SwitchSessionTargetUseCase switchTarget) => App(
-  language: 'en',
+App _appWithSwitch(SwitchSessionTargetUseCase switchTarget, {String language = 'en'}) => App(
+  language: language,
   dependencies: _SwitchDependencies(
     switchTarget,
     appConfig: const AppConfig(

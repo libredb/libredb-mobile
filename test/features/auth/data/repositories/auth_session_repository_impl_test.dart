@@ -18,6 +18,8 @@ import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../support/printed_lines.dart';
+
 /// In-memory ISecureStorage for tests.
 class _MemorySecureStorage implements ISecureStorage {
   final Map<String, String> _store = {};
@@ -644,11 +646,17 @@ void main() {
       await repo.clear();
       recording.calls.clear();
 
-      final result = await repo.persistTarget(SessionTarget.platform, generation: generation);
+      late Result<void> result;
+      final lines = await printedLines(
+        () async => result = await repo.persistTarget(SessionTarget.platform, generation: generation),
+      );
 
       expect(result, isA<Failure<void>>());
       expect(recording.calls, isEmpty);
       expect(recording._store, isEmpty);
+      // A sign-out during a switch is an expected path, so it is told at info.
+      expect(lines.where((line) => line.contains('persistTarget') && line.contains('[I]')), hasLength(1));
+      expect(lines.where((line) => line.contains('[W]')), isEmpty);
     });
 
     test('leaves no target stored when a wipe runs while it writes', () async {
@@ -656,13 +664,19 @@ void main() {
       store._store.addAll({targetKey: 'studio', SecureStorageKeys.jwtToken.key: 'ACCESS'});
       final repo = AuthSessionRepository(secureStorage: store, storage: storage);
 
-      final switching = repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
-      await store.writeStarted.future;
-      await repo.clear();
-      store.release.complete();
+      late Result<void> result;
+      final lines = await printedLines(() async {
+        final switching = repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
+        await store.writeStarted.future;
+        await repo.clear();
+        store.release.complete();
+        result = await switching;
+      });
 
-      expect(await switching, isA<Failure<void>>());
+      expect(result, isA<Failure<void>>());
       expect(store._store, isEmpty);
+      expect(lines.where((line) => line.contains('persistTarget') && line.contains('[I]')), hasLength(1));
+      expect(lines.where((line) => line.contains('[W]')), isEmpty);
     });
   });
 
