@@ -51,7 +51,7 @@ class InterceptorChainEntry {
 /// 6. [CacheInterceptor] — GET response caching with TTL
 /// 7. [DevConsoleInterceptor] — records requests in debug console
 /// 8. [LoggingInterceptor] — structured request/response logging
-/// 9. [MockInterceptor] — (dev/test only) simulates the network LAST, so its
+/// 9. [MockInterceptor] — (mock environment only) simulates the network LAST, so its
 ///    response propagates back through the observability interceptors above
 ///    just like a real round-trip (it resolves with callFollowing:true).
 ///
@@ -236,13 +236,13 @@ class ApiClient {
       // must travel back up through the observability interceptors above
       // (DevConsole capture + verbose logging). It resolves with
       // callFollowing:true to make that happen.
-      if (!_appConfig.isProduction)
+      if (_appConfig.isMock)
         (
           interceptor: MockInterceptor(appConfig: _appConfig),
           meta: const InterceptorChainEntry(
             name: 'MockInterceptor',
             active: false,
-            detail: 'Serves mock data in dev/test',
+            detail: 'Serves mock data in the mock environment',
           ),
         ),
     ];

@@ -892,7 +892,22 @@ void main() {
       expect(client.interceptorChainSnapshot, isNotEmpty);
     });
 
-    test('lists every interceptor in declared order (non-production includes MockInterceptor)', () {
+    test('the local environment gets no MockInterceptor, so it reaches its real server', () {
+      final client = ApiClient(
+        tokenRotation: const RefusingTokenRotation(),
+        appConfig: const AppConfig.local(apiBaseUrl: 'https://studio.lab.test/api'),
+      );
+      client.instance;
+      expect(client.interceptorChainSnapshot.map((e) => e.name), isNot(contains('MockInterceptor')));
+    });
+
+    test('the mock environment still gets the MockInterceptor last', () {
+      final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: const AppConfig.mock());
+      client.instance;
+      expect(client.interceptorChainSnapshot.last.name, 'MockInterceptor');
+    });
+
+    test('lists every interceptor in declared order (the mock environment includes MockInterceptor)', () {
       final client = TestEnv.apiClient();
       client.instance;
       final names = client.interceptorChainSnapshot.map((e) => e.name).toList();
@@ -926,7 +941,7 @@ void main() {
       expect(names.indexOf('AccountRefusalInterceptor'), names.indexOf('TokenRefreshInterceptor') + 1);
     });
 
-    test('MockInterceptor entry is flagged active=false (dev/test fallback)', () {
+    test('MockInterceptor entry is flagged active=false (mock fallback)', () {
       final client = TestEnv.apiClient();
       client.instance;
       final mock = client.interceptorChainSnapshot.firstWhere((e) => e.name == 'MockInterceptor');
