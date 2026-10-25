@@ -6,6 +6,7 @@ import 'package:libredb_mobile/features/auth/domain/entities/sso_sign_in_result.
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// Signs the user in through the identity provider, then asks Studio whether it accepts the account.
 ///
@@ -22,7 +23,8 @@ class SignInWithSsoUseCase {
   final IAuthSessionRepository _sessionRepository;
 
   Future<SsoSignInResult> call() async {
-    switch (await _ssoRepository.signIn()) {
+    // #247 replaces the constant with the target of the entry the user chose.
+    switch (await _ssoRepository.signIn(target: SessionTarget.studio)) {
       case SsoProviderCancelled():
         return const SsoSignInCancelled();
       case SsoProviderRejected(:final errorCode):

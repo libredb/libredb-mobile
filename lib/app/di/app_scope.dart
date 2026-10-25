@@ -36,6 +36,7 @@ import 'package:libredb_mobile/features/auth/data/services/misconfigured_sso_ses
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
 import 'package:libredb_mobile/shared/utils/background_run_time.dart';
@@ -130,6 +131,8 @@ class AppScope extends StatelessWidget {
             final session = SessionCubit(
               secureStorage: context.read<ISecureStorage>(),
               sessionRepository: context.read<IAuthSessionRepository>(),
+              // Studio only until #244 adds the Platform target.
+              availableTargets: const {SessionTarget.studio},
               ssoStartup: switch (dependencies.authMode) {
                 OidcAuthMode() => SsoSessionStartup(
                   rotation: context.read<TokenRotation>(),

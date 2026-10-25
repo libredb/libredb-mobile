@@ -403,6 +403,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
+    "error_platform_not_configured": MessageLookupByLibrary.simpleMessage(
+      "Platform modu uygulamanın bu sürümünde yok. Studio ile oturum açın.",
+    ),
     "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage("Uygulama kilidi ayarı kaydedilemedi."),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
     "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(

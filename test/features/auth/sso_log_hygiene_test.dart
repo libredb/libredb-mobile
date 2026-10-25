@@ -22,6 +22,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
@@ -162,11 +163,11 @@ void main() {
       // A code exchange the provider refuses.
       final defaultCodeAnswer = provider.codeAnswer;
       provider.codeAnswer = () => FakeProvider.errorAnswer('invalid_grant');
-      expect(await ssoRepository.signIn(), isA<SsoProviderRejected>());
+      expect(await ssoRepository.signIn(target: SessionTarget.studio), isA<SsoProviderRejected>());
       provider.codeAnswer = defaultCodeAnswer;
 
       // A sign-in, then a 401 that a refresh fixes.
-      expect(await ssoRepository.signIn(), isA<SsoProviderSignedIn>());
+      expect(await ssoRepository.signIn(target: SessionTarget.studio), isA<SsoProviderSignedIn>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
       expect((await apiClient.get('/connections/managed')).statusCode, 200);
       expect(provider.tokenRequests, hasLength(3));
@@ -176,7 +177,7 @@ void main() {
       expect(issued, contains(platform.endSessionRequests.single.idTokenHint));
 
       // A sign-in, then a 401 whose refresh the provider refuses, which ends the session.
-      expect(await ssoRepository.signIn(), isA<SsoProviderSignedIn>());
+      expect(await ssoRepository.signIn(target: SessionTarget.studio), isA<SsoProviderSignedIn>());
       server.rejected.add((await stored(SecureStorageKeys.jwtToken))!);
       provider.refreshAnswer = () => FakeProvider.errorAnswer('invalid_grant');
       apiError = await apiClient

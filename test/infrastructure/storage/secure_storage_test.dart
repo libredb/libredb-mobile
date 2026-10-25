@@ -170,6 +170,10 @@ void main() {
       expect(SecureStorageKeys.accessTokenExpiresAt.key, 'accessTokenExpiresAt');
     });
 
+    test('the session target keeps its stored name', () {
+      expect(SecureStorageKeys.sessionTarget.key, 'sessionTarget');
+    });
+
     test('an expiry round-trips through encode and read as the same instant in UTC', () {
       final expiresAt = DateTime.utc(2026, 10, 21, 12, 30, 15, 250);
 

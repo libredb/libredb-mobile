@@ -3276,6 +3276,16 @@ class S {
       args: [],
     );
   }
+
+  /// `Platform mode is not available in this build of the app. Sign in through Studio.`
+  String get error_platform_not_configured {
+    return Intl.message(
+      'Platform mode is not available in this build of the app. Sign in through Studio.',
+      name: 'error_platform_not_configured',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

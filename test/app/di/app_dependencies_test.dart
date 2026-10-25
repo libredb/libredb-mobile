@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
@@ -138,6 +139,7 @@ Future<void> _getUnauthorized(ApiClient client, _UnauthorizedAdapter adapter, [S
 }
 
 final _oidcSession = AuthSession(
+  target: SessionTarget.studio,
   idToken: 'ACCESS',
   oidcIdToken: 'ID_TOKEN',
   accessTokenExpiresAt: DateTime.utc(2026, 10, 21, 12),

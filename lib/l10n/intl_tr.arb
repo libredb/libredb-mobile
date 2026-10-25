@@ -1027,5 +1027,7 @@
   "app_lock_locked_out": "Çok fazla deneme yapıldı. Daha sonra tekrar deneyin.",
   "app_lock_no_screen_lock": "LibreDB'yi kullanmak için bu cihazda bir ekran kilidi ayarlayın veya çıkış yapın.",
   "error_settings_app_lock_not_saved": "Uygulama kilidi ayarı kaydedilemedi.",
-  "app_lock_check_failed": "LibreDB bu cihazın ekran kilidini denetleyemedi. Kilidi açmayı yeniden deneyin veya çıkış yapın."
+  "app_lock_check_failed": "LibreDB bu cihazın ekran kilidini denetleyemedi. Kilidi açmayı yeniden deneyin veya çıkış yapın.",
+  "error_platform_not_configured": "Platform modu uygulamanın bu sürümünde yok. Studio ile oturum açın.",
+  "@error_platform_not_configured": {}
 }

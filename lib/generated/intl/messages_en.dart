@@ -397,6 +397,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "No internet connection. Check your network and try again.",
     ),
+    "error_platform_not_configured": MessageLookupByLibrary.simpleMessage(
+      "Platform mode is not available in this build of the app. Sign in through Studio.",
+    ),
     "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage(
       "The app lock setting could not be saved.",
     ),

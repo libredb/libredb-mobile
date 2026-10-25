@@ -697,6 +697,39 @@ void main() {
       expect(await secureStorage.read(SecureStorageKeys.refreshToken.key), 'new-refresh');
     });
 
+    // The target is written once, at sign-in; a refresh rotates the tokens of the same session.
+    test('leaves the stored session target as it is', () async {
+      await secureStorage.write(SecureStorageKeys.sessionTarget.key, 'platform');
+      await secureStorage.write(SecureStorageKeys.jwtToken.key, 'old-jwt');
+      await secureStorage.write(SecureStorageKeys.refreshToken.key, 'valid-refresh');
+      dio.interceptors.add(_CapturingSuccessStub());
+      final interceptor = TokenRefreshInterceptor(
+        dio: dio,
+        secureStorage: secureStorage,
+        rotation: _DioRotation((source) {
+          final refreshDio = Dio(BaseOptions(baseUrl: source.options.baseUrl));
+          refreshDio.interceptors.add(
+            _StubInterceptor()..stubSuccess(data: '{"id_token":"new-jwt","refresh_token":"new-refresh"}'),
+          );
+          return refreshDio;
+        }),
+      );
+      final requestOptions = _sentRequest('/api/users', headers: {'Authorization': 'Bearer old-jwt'});
+      final handler = _TestErrorHandler();
+
+      await interceptor.onError(
+        DioException(
+          requestOptions: requestOptions,
+          response: Response(requestOptions: requestOptions, statusCode: 401),
+        ),
+        handler,
+      );
+
+      expect(handler.resolveCalled, isTrue);
+      expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), 'new-jwt');
+      expect(await secureStorage.read(SecureStorageKeys.sessionTarget.key), 'platform');
+    });
+
     test('persists only id_token when refresh response omits new refresh_token', () async {
       await secureStorage.write(SecureStorageKeys.jwtToken.key, 'old-jwt');
       await secureStorage.write(SecureStorageKeys.refreshToken.key, 'still-valid-refresh');

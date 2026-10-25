@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/startup_storage_time_limit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// Session state observed by router redirect and UI guards.
 ///
@@ -40,10 +41,16 @@ final class SessionUnknown extends SessionState {
 
 /// User holds a valid session token in secure storage.
 ///
-/// It carries no role: the role comes only from Studio's `GET /api/auth/me`
-/// and is never stored.
+/// It carries the session's [target], Studio or Platform, which the sign-in
+/// stored with the tokens. It still carries no role: the role comes only from
+/// Studio's `GET /api/auth/me` and is never stored.
 final class SessionAuthenticated extends SessionState {
-  const SessionAuthenticated();
+  const SessionAuthenticated({required this.target});
+
+  final SessionTarget target;
+
+  @override
+  List<Object?> get props => [target];
 }
 
 /// User holds no valid session token. The [reason] is for logs and
@@ -103,7 +110,13 @@ enum SessionExpiredReason {
 
   /// Single sign-on cannot run in this `oidc` build, such as when its
   /// settings break a rule; [SessionUnauthenticated.signInError] says why.
+  /// A stored session for a target this build cannot serve ends with it too,
+  /// with [AppErrorCode.platformNotConfigured].
   signInFailed,
+
+  /// The stored session holds a value this build cannot read, so it was
+  /// cleared.
+  corruptSession,
 
   /// Initial or otherwise uncategorized — e.g. an explicit logout
   /// flow that does not need to distinguish further.
@@ -117,14 +130,21 @@ enum SessionExpiredReason {
 /// place tokens live) for the presence check of [SecurityUtils.hasToken].
 /// Consumers (router redirect, UI guards) pattern-match on [state];
 /// callers that want to re-evaluate trigger [refresh].
+///
+/// [availableTargets] are the session targets this build can serve. Every
+/// build serves Studio; a build with a Platform target serves Platform too.
 class SessionCubit extends Cubit<SessionState> {
   SessionCubit({
     ISecureStorage? secureStorage,
     IAuthSessionRepository? sessionRepository,
+    required Set<SessionTarget> availableTargets,
     required this._ssoStartup,
     this._restoreTimeLimit = defaultRestoreTimeLimit,
     this._ssoStartupTimeLimit = defaultSsoStartupTimeLimit,
-  }) : _secureStorage = secureStorage ?? FlutterSecureStorageAdapter(),
+  }) : assert(availableTargets.isNotEmpty, 'a build serves at least one session target'),
+       assert(availableTargets.contains(SessionTarget.studio), 'every build serves Studio'),
+       _availableTargets = Set.unmodifiable(availableTargets),
+       _secureStorage = secureStorage ?? FlutterSecureStorageAdapter(),
        super(const SessionUnknown()) {
     _sessionRepository = sessionRepository ?? AuthSessionRepository(secureStorage: _secureStorage);
   }
@@ -147,14 +167,15 @@ class SessionCubit extends Cubit<SessionState> {
 
   final ISecureStorage _secureStorage;
   late final IAuthSessionRepository _sessionRepository;
+  final Set<SessionTarget> _availableTargets;
   final Duration _restoreTimeLimit;
 
   /// The startup step that refreshes an expired stored session.
   final ISsoSessionStartup _ssoStartup;
   final Duration _ssoStartupTimeLimit;
 
-  /// The time limits of the restores in flight, cancelled by [close].
-  final _restoreTimeLimits = <StartupStorageTimeLimit<SessionState>>{};
+  /// The time limits of the restores in flight, and of the clears they run, cancelled by [close].
+  final _restoreTimeLimits = <StartupStorageTimeLimit<Object?>>{};
 
   /// The time limits of the startup steps in flight, cancelled by [close].
   final _ssoStartupTimers = <Timer>{};
@@ -311,11 +332,17 @@ class SessionCubit extends Cubit<SessionState> {
   }
 
   /// Settles [state] from the stored session, see [restore].
+  ///
+  /// A stored session that this build cannot serve is cleared before its
+  /// ending state is emitted, and that clear has its own restore time limit,
+  /// so a storage that hangs on delete cannot keep the startup spinner: when
+  /// the limit passes first, the clear is logged at error level and the
+  /// session ends anyway.
   Future<void> _restoreStoredSession() async {
     final storedSession = _readStoredSession();
     final timeLimit = StartupStorageTimeLimit(storedSession, duration: _restoreTimeLimit);
     _restoreTimeLimits.add(timeLimit);
-    final SessionState session;
+    final _StoredSession session;
     try {
       session = await timeLimit.result;
     } on TimeoutException {
@@ -332,23 +359,93 @@ class SessionCubit extends Cubit<SessionState> {
     } finally {
       _restoreTimeLimits.remove(timeLimit);
     }
-    emit(session);
+    switch (session) {
+      case _EndAndClear(:final ending):
+        await _endUnusableSession(ending);
+      case _Settled(:final state):
+        emit(state);
+    }
   }
 
   /// Settles [state] from [stored], which [restore] read only after its
   /// time limit had signed the user out with [timedOut].
-  void _settleLate(SessionState stored, SessionUnauthenticated timedOut) {
+  ///
+  /// A stored session to end is cleared only while [timedOut] is still the
+  /// state when the clear starts, and its ending state is emitted only if it
+  /// still is once the clear completes, so a late answer never wipes or
+  /// signs out a session the user signed in to meanwhile.
+  Future<void> _settleLate(_StoredSession stored, SessionUnauthenticated timedOut) async {
     if (isClosed || !identical(state, timedOut)) {
-      _log.warn('restore: secure storage answered after the time limit, ignored: {}', [stored]);
+      _log.warn('restore: secure storage answered after the time limit, ignored: {}', [stored.state]);
       return;
     }
-    _log.info('restore: secure storage answered after the time limit, nobody signed in or out since → {}', [stored]);
-    emit(stored);
+    _log.info('restore: secure storage answered after the time limit, nobody signed in or out since → {}', [
+      stored.state,
+    ]);
+    switch (stored) {
+      case _EndAndClear(:final ending):
+        await _endUnusableSession(ending, signedOutBy: timedOut);
+      case _Settled(:final state):
+        emit(state);
+    }
   }
 
-  /// The session that the stored token proves, for [restore]: the startup
-  /// step has checked its expiry, so a stored token is a session.
-  Future<SessionState> _readStoredSession() async {
+  /// Clears the stored session that [_readStoredSession] could not serve and
+  /// emits [ending], with its sign-in error, as the end of the restore.
+  /// [endSession] cannot do this, because it emits no sign-in error.
+  ///
+  /// Without [signedOutBy], the restore answered in time: the clear is
+  /// bounded by the restore time limit and [ending] is emitted either way.
+  /// With [signedOutBy], the late answer of a restore whose time limit
+  /// emitted that state: [ending] is emitted only while [signedOutBy] is
+  /// still the state once the clear completes.
+  Future<void> _endUnusableSession(SessionUnauthenticated ending, {SessionUnauthenticated? signedOutBy}) async {
+    final clear = _clearUnusableSession(ending.reason);
+    if (signedOutBy == null) {
+      final timeLimit = StartupStorageTimeLimit(clear, duration: _restoreTimeLimit);
+      _restoreTimeLimits.add(timeLimit);
+      try {
+        await timeLimit.result;
+      } on TimeoutException {
+        _log.error('restore: clearing the stored session did not finish within {} ms → signed out ({}) anyway', [
+          _restoreTimeLimit.inMilliseconds,
+          ending.reason.name,
+        ]);
+      } finally {
+        _restoreTimeLimits.remove(timeLimit);
+      }
+    } else {
+      await clear;
+    }
+    if (isClosed) return;
+    if (signedOutBy != null && !identical(state, signedOutBy)) {
+      _log.warn('restore: the user signed in or out while the stored session was cleared, ignored: {}', [ending]);
+      return;
+    }
+    emit(ending);
+  }
+
+  /// Clears the stored session through [IAuthSessionRepository.clear], and
+  /// logs a failed clear at error level as [endSession] does.
+  Future<void> _clearUnusableSession(SessionExpiredReason reason) async {
+    switch (await _sessionRepository.clear()) {
+      case Success():
+        _log.info('restore({}): stored session cleared', [reason.name]);
+      case Failure(:final error):
+        // A secure storage failure on the device, so its message holds no server text.
+        _log.error('restore({}): stored session not fully cleared: {} {}', [reason.name, error, error.message]);
+    }
+  }
+
+  /// The session that the stored token and target prove, for [restore]: the
+  /// startup step has checked its expiry, so a stored token is a session for
+  /// its stored target.
+  ///
+  /// It never clears storage itself: this future goes on after the restore
+  /// time limit, and could wipe a session the user signed in to meanwhile.
+  /// A stored session to end comes back as [_EndAndClear], and the clear
+  /// runs only where its state is about to be emitted.
+  Future<_StoredSession> _readStoredSession() async {
     // ISecureStorage.read can throw on platform / decryption failure.
     // restore() is invoked fire-and-forget from BlocProvider, so any
     // escaping exception becomes an unhandled async error. Wrap the
@@ -360,22 +457,53 @@ class SessionCubit extends Cubit<SessionState> {
       final hasToken = SecurityUtils.hasToken(token);
       if (!hasToken) {
         _log.info('restore: no token in secure storage → unauthenticated');
-        return const SessionUnauthenticated(reason: SessionExpiredReason.noToken);
+        return const _Settled(SessionUnauthenticated(reason: SessionExpiredReason.noToken));
       }
-      _log.info('restore: token found, its expiry checked by the startup step → authenticated');
-      return const SessionAuthenticated();
+      final storedTarget = await _secureStorage.read(SecureStorageKeys.sessionTarget.key);
+      if (storedTarget == null) {
+        // Upgrade rule, deliberate and not a silent fallback: app version 1.0.0 and earlier stored no target, and
+        // every session they stored is a Studio session. Remove this rule once no supported upgrade source predates
+        // the sessionTarget key.
+        _log.info(
+          'restore: token found without a stored target, stored before targets existed → Studio (upgrade rule)',
+        );
+        return const _Settled(SessionAuthenticated(target: SessionTarget.studio));
+      }
+      final target = SessionTarget.fromStoredValue(storedTarget);
+      if (target == null) {
+        // The length only: the value is unknown, so it is never printed.
+        _log.warn('restore: the stored session target is unreadable ({} characters) → the stored session is cleared', [
+          storedTarget.length,
+        ]);
+        return const _EndAndClear(SessionUnauthenticated(reason: SessionExpiredReason.corruptSession));
+      }
+      if (!_availableTargets.contains(target)) {
+        // Every build serves Studio (see the constructor), so the target this build cannot serve is Platform.
+        _log.warn(
+          'restore: the stored session is for {}, which this build cannot serve → the stored session is cleared',
+          [target.name],
+        );
+        return const _EndAndClear(
+          SessionUnauthenticated(
+            reason: SessionExpiredReason.signInFailed,
+            signInError: AppErrorCode.platformNotConfigured,
+          ),
+        );
+      }
+      _log.info('restore: token found for {}, its expiry checked by the startup step → authenticated', [target.name]);
+      return _Settled(SessionAuthenticated(target: target));
     } catch (e, st) {
       _log.error('restore: secure storage read failed → unauthenticated (safe default): {}\n{}', [e, st]);
-      return const SessionUnauthenticated(reason: SessionExpiredReason.storageError);
+      return const _Settled(SessionUnauthenticated(reason: SessionExpiredReason.storageError));
     }
   }
 
-  /// Flips the cubit into [SessionAuthenticated]. Caller-trusted —
-  /// used after a sign-in has persisted the tokens via
-  /// [AuthSessionRepository.persist] and Studio has accepted the account.
+  /// Flips the cubit into [SessionAuthenticated] for [target]. Caller-trusted:
+  /// used after a sign-in has persisted the session via
+  /// [AuthSessionRepository.persist] and its backend has accepted the account.
   /// Does not re-read storage.
-  void markAuthenticated() {
-    emit(const SessionAuthenticated());
+  void markAuthenticated(SessionTarget target) {
+    emit(SessionAuthenticated(target: target));
   }
 
   /// Flips the cubit into [SessionUnauthenticated] with
@@ -396,7 +524,7 @@ class SessionCubit extends Cubit<SessionState> {
   /// session they ended.
   ///
   /// The wipe depends on what is stored, not on [state]. It is skipped
-  /// when no token is stored, so a 401 from a request still in flight when
+  /// when no session value is stored, so a 401 from a request still in flight when
   /// the user signed out leaves storage alone. A stored token is
   /// wiped even when the cubit is signed out, so no session the app has
   /// ended stays stored for a restart to restore. The wipe ends the
@@ -426,12 +554,13 @@ class SessionCubit extends Cubit<SessionState> {
     if (state is! SessionUnauthenticated) emit(SessionUnauthenticated(reason: reason));
   }
 
-  /// Whether secure storage holds a JWT or a refresh token. A failed read
+  /// Whether secure storage holds a JWT, a refresh token or a session
+  /// target, so a target left alone in storage is wiped too. A failed read
   /// counts as stored, so [endSession] wipes rather than leaves a session
   /// it could not inspect.
   Future<bool> _hasStoredSession() async {
     try {
-      for (final key in [SecureStorageKeys.jwtToken, SecureStorageKeys.refreshToken]) {
+      for (final key in [SecureStorageKeys.jwtToken, SecureStorageKeys.refreshToken, SecureStorageKeys.sessionTarget]) {
         if (await _secureStorage.read(key.key) != null) return true;
       }
       return false;
@@ -459,4 +588,30 @@ class SessionCubit extends Cubit<SessionState> {
     _ssoStartupTimers.clear();
     return super.close();
   }
+}
+
+/// What [SessionCubit._readStoredSession] found in the stored session.
+sealed class _StoredSession {
+  const _StoredSession();
+
+  /// The state the restore emits for it.
+  SessionState get state;
+}
+
+/// A stored session to settle [state] from as it is.
+final class _Settled extends _StoredSession {
+  const _Settled(this.state);
+
+  @override
+  final SessionState state;
+}
+
+/// A stored session that this build cannot serve: it is cleared, and the session ends with [ending].
+final class _EndAndClear extends _StoredSession {
+  const _EndAndClear(this.ending);
+
+  final SessionUnauthenticated ending;
+
+  @override
+  SessionState get state => ending;
 }

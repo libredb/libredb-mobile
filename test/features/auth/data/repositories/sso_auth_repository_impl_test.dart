@@ -12,6 +12,7 @@ import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:logger/logger.dart' show Logger, OutputEvent;
 
 /// Answers [signIn] with the configured outcome.
@@ -86,7 +87,7 @@ void main() {
 
   Future<SsoProviderSignIn> signInWith(Map<String, Object?> claims) {
     client.signInOutcome = OidcSignedIn(tokens: _tokens, claims: claims);
-    return repository.signIn();
+    return repository.signIn(target: SessionTarget.studio);
   }
 
   group('SsoAuthRepository.signIn', () {
@@ -100,6 +101,15 @@ void main() {
       expect(session.refreshToken, 'refresh-token');
       expect(session.oidcIdToken, 'id-token');
       expect(session.accessTokenExpiresAt, _expiresAt);
+      expect(session.target, SessionTarget.studio);
+    });
+
+    test('persists the target the sign-in was asked for', () async {
+      client.signInOutcome = OidcSignedIn(tokens: _tokens, claims: _claims());
+
+      expect(await repository.signIn(target: SessionTarget.platform), isA<SsoProviderSignedIn>());
+
+      expect(sessions.persisted.single.target, SessionTarget.platform);
     });
 
     // A share the app was killed in, before a session that ended without the wipe (a restore that timed out, lost
@@ -155,7 +165,7 @@ void main() {
         claims: _claims(),
       );
 
-      expect(await repository.signIn(), isA<SsoProviderSignedIn>());
+      expect(await repository.signIn(target: SessionTarget.studio), isA<SsoProviderSignedIn>());
 
       expect(sessions.persisted.single.refreshToken, isNull);
     });
@@ -182,7 +192,7 @@ void main() {
     test('a provider that could not be reached is rejected with the discovery code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.discovery);
 
-      final result = await repository.signIn();
+      final result = await repository.signIn(target: SessionTarget.studio);
 
       expect(
         result,
@@ -194,7 +204,7 @@ void main() {
     test('a failed sign-in is rejected with the failed code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.failed);
 
-      final result = await repository.signIn();
+      final result = await repository.signIn(target: SessionTarget.studio);
 
       expect(result, isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcFailed));
       expect(sessions.persisted, isEmpty);
@@ -203,7 +213,7 @@ void main() {
     test('a discovery naming an endpoint that is not https is rejected with the configuration code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.insecureEndpoint);
 
-      final result = await repository.signIn();
+      final result = await repository.signIn(target: SessionTarget.studio);
 
       expect(result, isA<SsoProviderRejected>().having((r) => r.errorCode, 'errorCode', AppErrorCode.authOidcConfig));
       expect(sessions.persisted, isEmpty);
@@ -212,7 +222,7 @@ void main() {
     test('a provider certificate that matches no pin is rejected with the certificate code', () async {
       client.signInOutcome = const OidcSignInFailed(OidcFailure.untrustedCertificate);
 
-      final result = await repository.signIn();
+      final result = await repository.signIn(target: SessionTarget.studio);
 
       expect(
         result,
@@ -224,7 +234,7 @@ void main() {
     test('a cancel passes through', () async {
       client.signInOutcome = const OidcSignInCancelled();
 
-      expect(await repository.signIn(), isA<SsoProviderCancelled>());
+      expect(await repository.signIn(target: SessionTarget.studio), isA<SsoProviderCancelled>());
       expect(sessions.persisted, isEmpty);
     });
 

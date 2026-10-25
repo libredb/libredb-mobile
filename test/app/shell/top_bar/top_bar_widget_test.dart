@@ -6,6 +6,7 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -133,7 +134,7 @@ void main() {
       await tester.pumpAndSettle();
 
       TestEnv.authenticate();
-      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated();
+      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated(SessionTarget.studio);
       await tester.pumpAndSettle();
       await tester.tap(avatar());
       await tester.pumpAndSettle();

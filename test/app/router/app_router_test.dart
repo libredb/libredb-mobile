@@ -11,6 +11,7 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -174,7 +175,7 @@ void main() {
 
       // What a sign-in leaves behind: the stored session, and the session marked as signed in.
       TestEnv.authenticate();
-      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated();
+      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated(SessionTarget.studio);
       await tester.pumpAndSettle();
 
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.home);

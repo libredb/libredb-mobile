@@ -347,9 +347,9 @@ Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`,
 5. On return the package checks `state`, exchanges the code with the verifier, and validates the ID token: its signature against the JWKS, `iss`, `aud`, `exp` and `nonce`.
 6. `OidcClient` requires an access token, an ID token and `expires_in`, and strips `nonce`, `at_hash` and `c_hash` from the claims it hands on.
 7. `SsoAuthRepository` requires a string `sub` and `iss` (`oidc_no_claims` otherwise), and reads no role and no username from the claims.
-8. The session is persisted through `AuthSessionRepository` with its rollback: the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`.
+8. The session is persisted through `AuthSessionRepository` with its rollback: first the session target (`SecureStorageKeys.sessionTarget`, `studio` for this sign-in), then the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`.
 9. `SignInWithSsoUseCase` calls Studio's `GET /api/auth/me` with the new bearer; any failure clears the stored session and rejects with the code of [Roles](#roles).
-10. On Studio's 200 `LoginBloc` emits `LoginLoadedState`; `AppSessionListeners`, `SessionCubit.markAuthenticated` and the idle observer run, and the page navigates to the safe return path.
+10. On Studio's 200 `LoginBloc` emits `LoginLoadedState`; `AppSessionListeners`, `SessionCubit.markAuthenticated` with the session target and the idle observer run, and the page navigates to the safe return path.
 
 A closed provider page is a cancel: no message, logged at info, and the automatic redirect gate closes.
 On Android a closed Custom Tab tells the app nothing, so `OidcClient` cancels the pending flow whenever the app resumes; after a real redirect that cancel does nothing.
@@ -413,9 +413,9 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/infrastructure/analytics/sentry_scrub.dart` | Masks those keys in breadcrumbs, keeping the navigation breadcrumb's `state` |
 | `lib/core/errors/app_error_code.dart`, `lib/shared/l10n/app_error_code_l10n.dart` | The five `auth.oidc_*` codes, the three `studio.account_*` codes of a refused sign-in, and their sentences |
 | `lib/l10n/intl_en.arb`, `lib/l10n/intl_tr.arb` (and `lib/generated/`) | The sentences, the SSO button and its subtitle |
-| `lib/infrastructure/storage/secure_storage.dart` | The `oidcIdToken` and `accessTokenExpiresAt` keys and the expiry encoding |
-| `lib/features/auth/domain/entities/auth_session.dart` | `AuthSession.oidcIdToken` and `accessTokenExpiresAt` |
-| `lib/features/auth/data/repositories/auth_session_repository_impl.dart` | Persist, rollback and clear of the OIDC keys |
+| `lib/infrastructure/storage/secure_storage.dart` | The `oidcIdToken`, `accessTokenExpiresAt` and `sessionTarget` keys and the expiry encoding |
+| `lib/features/auth/domain/entities/auth_session.dart` | `AuthSession.target`, `oidcIdToken` and `accessTokenExpiresAt` |
+| `lib/features/auth/data/repositories/auth_session_repository_impl.dart` | Persist, rollback and clear of the session target and the OIDC keys |
 | `lib/infrastructure/http/token_rotation.dart` | `TokenRotation`, `TokenRotationResult`, `RefusingTokenRotation` for a misconfigured build, and the `SessionExpiredPredicate` seam |
 | `lib/infrastructure/http/interceptors/token_refresh_interceptor.dart` | Refreshes through a `TokenRotation`, honors `RotationUnavailable`, stores the OIDC fields |
 | `lib/infrastructure/http/api_client.dart` | Passes the rotation and the 401 predicate to the interceptor |

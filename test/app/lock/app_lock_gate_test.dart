@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/lock/app_lock_gate.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -42,7 +43,11 @@ void main() {
     session = _MockSessionCubit();
     signOut = _MockSignOutBloc();
     capture = recordingScreenCaptureProtection();
-    whenListen(session, const Stream<SessionState>.empty(), initialState: const SessionAuthenticated());
+    whenListen(
+      session,
+      const Stream<SessionState>.empty(),
+      initialState: const SessionAuthenticated(target: SessionTarget.studio),
+    );
     whenListen(signOut, const Stream<SignOutState>.empty(), initialState: const SignOutInitial());
   });
 

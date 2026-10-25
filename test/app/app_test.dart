@@ -117,6 +117,7 @@ void main() {
       final storedToken = Completer<String?>();
       final secureStorage = MockISecureStorage();
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
+      when(() => secureStorage.read(SecureStorageKeys.sessionTarget.key)).thenAnswer((_) async => 'studio');
       await tester.pumpWidget(
         App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
@@ -141,6 +142,7 @@ void main() {
       final storedToken = Completer<String?>();
       final secureStorage = MockISecureStorage();
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
+      when(() => secureStorage.read(SecureStorageKeys.sessionTarget.key)).thenAnswer((_) async => 'studio');
       await tester.pumpWidget(
         App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
 import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
@@ -132,7 +133,7 @@ void main() {
   group('AuthSessionRepository', () {
     test('persist writes the tokens to secure storage and no username or role anywhere', () async {
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
-      const session = AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH');
+      const session = AuthSession(target: SessionTarget.studio, idToken: 'TOKEN', refreshToken: 'REFRESH');
 
       final result = await repo.persist(session);
 
@@ -146,7 +147,7 @@ void main() {
     test('persist deletes refreshToken from secure storage when null', () async {
       await secure.write(SecureStorageKeys.refreshToken.key, 'STALE');
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
-      const session = AuthSession(idToken: 'TOKEN');
+      const session = AuthSession(target: SessionTarget.studio, idToken: 'TOKEN');
 
       await repo.persist(session);
 
@@ -156,7 +157,7 @@ void main() {
     test('persist rolls back the token it wrote when a later write fails', () async {
       final failing = _WriteFailSecureStorage(failOnWrite: SecureStorageKeys.refreshToken.key);
       final repo = AuthSessionRepository(secureStorage: failing, storage: storage);
-      const session = AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH');
+      const session = AuthSession(target: SessionTarget.studio, idToken: 'TOKEN', refreshToken: 'REFRESH');
 
       final result = await repo.persist(session);
 
@@ -171,6 +172,7 @@ void main() {
       await failing.write(SecureStorageKeys.refreshToken.key, 'OLD_REFRESH');
       final repo = AuthSessionRepository(secureStorage: failing, storage: storage);
       final session = AuthSession(
+        target: SessionTarget.studio,
         idToken: 'NEW_JWT',
         refreshToken: 'NEW_REFRESH',
         accessTokenExpiresAt: DateTime.utc(2100),
@@ -189,7 +191,9 @@ void main() {
       await failing.write(SecureStorageKeys.refreshToken.key, 'STALE_REFRESH');
       final repo = AuthSessionRepository(secureStorage: failing, storage: storage);
 
-      final result = await repo.persist(AuthSession(idToken: 'NEW_JWT', accessTokenExpiresAt: DateTime.utc(2100)));
+      final result = await repo.persist(
+        AuthSession(target: SessionTarget.studio, idToken: 'NEW_JWT', accessTokenExpiresAt: DateTime.utc(2100)),
+      );
 
       expect(result, isA<Failure<void>>());
       expect(await failing.read(SecureStorageKeys.refreshToken.key), 'STALE_REFRESH');
@@ -202,7 +206,7 @@ void main() {
       // snapshot.
       final flaky = _ReadThrowsSecureStorage();
       final repo = AuthSessionRepository(secureStorage: flaky, storage: storage);
-      const session = AuthSession(idToken: 'TOKEN');
+      const session = AuthSession(target: SessionTarget.studio, idToken: 'TOKEN');
 
       final result = await repo.persist(session);
 
@@ -238,7 +242,7 @@ void main() {
       await storage.save(StorageKeys.theme.key, 'nature');
       await storage.save(StorageKeys.brightness.key, 'dark');
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
-      await repo.persist(const AuthSession(idToken: 'TOKEN'));
+      await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'TOKEN'));
 
       final result = await repo.clear();
 
@@ -250,7 +254,7 @@ void main() {
 
     test('clear removes the session keys', () async {
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
-      await repo.persist(const AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH'));
+      await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'TOKEN', refreshToken: 'REFRESH'));
 
       final result = await repo.clear();
 
@@ -279,7 +283,7 @@ void main() {
         storage: storage,
         cacheStorage: _FailingClearCacheStorage(),
       );
-      await repo.persist(const AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH'));
+      await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'TOKEN', refreshToken: 'REFRESH'));
 
       final result = await repo.clear();
 
@@ -313,7 +317,7 @@ void main() {
           temporaryDirectory: () async => throw const FileSystemException('refused', '/cache/share_files/a.sql'),
         ),
       );
-      await repo.persist(const AuthSession(idToken: 'TOKEN', refreshToken: 'REFRESH'));
+      await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'TOKEN', refreshToken: 'REFRESH'));
 
       final result = await repo.clear();
 
@@ -338,9 +342,9 @@ void main() {
       await AuthSessionRepository(secureStorage: recording, storage: storage, cacheStorage: cache).clear();
 
       expect(SessionGeneration.hasEnded(before), isTrue);
-      // The deletes of the access token, the refresh token, the ID token and the expiry, and the cache clear: the first
-      // and the last storage calls of the wipe.
-      expect(recording.calls, hasLength(4));
+      // The deletes of the target, the access token, the refresh token, the ID token and the expiry, and the cache
+      // clear: the first and the last storage calls of the wipe.
+      expect(recording.calls, hasLength(5));
       expect(recording.calls.map((call) => call.ended), everyElement(isTrue));
       expect(cache.endedWhenCleared, isTrue);
       expect(SessionGeneration.hasEnded(recording.calls.first.generation), isTrue);
@@ -356,6 +360,7 @@ void main() {
       final recording = _CallRecordingSecureStorage();
       final repo = AuthSessionRepository(secureStorage: recording, storage: storage);
       final session = AuthSession(
+        target: SessionTarget.studio,
         idToken: 'ACCESS',
         refreshToken: 'REFRESH',
         oidcIdToken: 'ID_TOKEN',
@@ -366,6 +371,7 @@ void main() {
 
       expect(result, isA<Success<void>>());
       expect(recording.calls.where((call) => call.startsWith('write ')), [
+        'write ${SecureStorageKeys.sessionTarget.key}',
         'write ${SecureStorageKeys.jwtToken.key}',
         'write ${SecureStorageKeys.refreshToken.key}',
         'write $idTokenKey',
@@ -381,7 +387,7 @@ void main() {
       await secure.write(expiryKey, encodeAccessTokenExpiry(expiresAt));
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
 
-      final result = await repo.persist(const AuthSession(idToken: 'ACCESS'));
+      final result = await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'ACCESS'));
 
       expect(result, isA<Success<void>>());
       expect(await secure.read(idTokenKey), isNull);
@@ -395,6 +401,7 @@ void main() {
       await failing.write(idTokenKey, 'OLD_ID_TOKEN');
       final repo = AuthSessionRepository(secureStorage: failing, storage: storage);
       final session = AuthSession(
+        target: SessionTarget.studio,
         idToken: 'NEW_ACCESS',
         refreshToken: 'NEW_REFRESH',
         oidcIdToken: 'NEW_ID_TOKEN',
@@ -418,6 +425,7 @@ void main() {
       failing._store[expiryKey] = priorExpiry;
       final repo = AuthSessionRepository(secureStorage: failing, storage: storage);
       final session = AuthSession(
+        target: SessionTarget.studio,
         idToken: 'NEW_ACCESS',
         oidcIdToken: 'NEW_ID_TOKEN',
         accessTokenExpiresAt: expiresAt.add(const Duration(minutes: 5)),
@@ -432,7 +440,14 @@ void main() {
 
     test('clear deletes the OIDC ID token and the expiry', () async {
       final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
-      await repo.persist(AuthSession(idToken: 'ACCESS', oidcIdToken: 'ID_TOKEN', accessTokenExpiresAt: expiresAt));
+      await repo.persist(
+        AuthSession(
+          target: SessionTarget.studio,
+          idToken: 'ACCESS',
+          oidcIdToken: 'ID_TOKEN',
+          accessTokenExpiresAt: expiresAt,
+        ),
+      );
 
       final result = await repo.clear();
 
@@ -467,6 +482,97 @@ void main() {
       expect((result as Failure<void>).error.message, contains('oidcIdToken'));
       expect(await flaky.read(SecureStorageKeys.jwtToken.key), isNull);
       expect(await flaky.read(expiryKey), isNull);
+    });
+  });
+
+  group('AuthSessionRepository with the session target', () {
+    final targetKey = SecureStorageKeys.sessionTarget.key;
+
+    test('persist writes the target before any token', () async {
+      final recording = _CallRecordingSecureStorage();
+      final repo = AuthSessionRepository(secureStorage: recording, storage: storage);
+
+      final result = await repo.persist(
+        const AuthSession(target: SessionTarget.platform, idToken: 'ACCESS', refreshToken: 'REFRESH'),
+      );
+
+      expect(result, isA<Success<void>>());
+      expect(recording.calls.firstWhere((call) => !call.startsWith('read ')), 'write $targetKey');
+      expect(await recording.read(targetKey), 'platform');
+      expect(await recording.read(SecureStorageKeys.jwtToken.key), 'ACCESS');
+    });
+
+    test('persist replaces the stored target of an earlier session', () async {
+      await secure.write(targetKey, 'platform');
+      final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
+
+      await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'ACCESS'));
+
+      expect(await secure.read(targetKey), 'studio');
+    });
+
+    // Every key is restored, the target included, so the store holds the earlier session or none, never a mix.
+    for (final failing in SecureStorageKeys.values) {
+      test('a failed write of ${failing.key} restores all five keys to their prior values', () async {
+        final store = _WriteFailSecureStorage(failOnWrite: failing.key);
+        store._store.addAll({
+          targetKey: 'platform',
+          SecureStorageKeys.jwtToken.key: 'OLD_ACCESS',
+          SecureStorageKeys.refreshToken.key: 'OLD_REFRESH',
+          SecureStorageKeys.oidcIdToken.key: 'OLD_ID_TOKEN',
+          SecureStorageKeys.accessTokenExpiresAt.key: encodeAccessTokenExpiry(DateTime.utc(2026)),
+        });
+        final prior = Map.of(store._store);
+        final repo = AuthSessionRepository(secureStorage: store, storage: storage);
+
+        final result = await repo.persist(
+          AuthSession(
+            target: SessionTarget.studio,
+            idToken: 'NEW_ACCESS',
+            refreshToken: 'NEW_REFRESH',
+            oidcIdToken: 'NEW_ID_TOKEN',
+            accessTokenExpiresAt: DateTime.utc(2100),
+          ),
+        );
+
+        expect(result, isA<Failure<void>>());
+        expect(store._store, prior);
+      });
+    }
+
+    test('a failed write of the target into an empty store leaves it empty', () async {
+      final store = _WriteFailSecureStorage(failOnWrite: targetKey);
+      final repo = AuthSessionRepository(secureStorage: store, storage: storage);
+
+      final result = await repo.persist(const AuthSession(target: SessionTarget.studio, idToken: 'NEW_ACCESS'));
+
+      expect(result, isA<Failure<void>>());
+      expect(store._store, isEmpty);
+    });
+
+    test('clear deletes the target', () async {
+      final repo = AuthSessionRepository(secureStorage: secure, storage: storage);
+      await repo.persist(const AuthSession(target: SessionTarget.platform, idToken: 'ACCESS'));
+
+      final result = await repo.clear();
+
+      expect(result, isA<Success<void>>());
+      expect(await secure.read(targetKey), isNull);
+    });
+
+    test('clear names a target it cannot delete and still removes the tokens', () async {
+      final flaky = _SelectiveFailSecureStorage(failOn: targetKey);
+      await flaky.write(targetKey, 'studio');
+      await flaky.write(SecureStorageKeys.jwtToken.key, 'ACCESS');
+      await flaky.write(SecureStorageKeys.refreshToken.key, 'REFRESH');
+      final repo = AuthSessionRepository(secureStorage: flaky, storage: storage);
+
+      final result = await repo.clear();
+
+      expect(result, isA<Failure<void>>());
+      expect((result as Failure<void>).error.message, contains('sessionTarget'));
+      expect(await flaky.read(SecureStorageKeys.jwtToken.key), isNull);
+      expect(await flaky.read(SecureStorageKeys.refreshToken.key), isNull);
     });
   });
 

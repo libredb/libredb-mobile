@@ -124,11 +124,17 @@ class FlutterSecureStorageAdapter implements ISecureStorage {
 /// with [jwtToken], which holds the bearer. The
 /// expiry is stored with [encodeAccessTokenExpiry] and read with
 /// [readAccessTokenExpiry].
+///
+/// [sessionTarget] holds the `SessionTarget.storedValue` of the session,
+/// Studio or Platform. It is a value of the session, not a credential: the
+/// sign-in writes it with the tokens and every sign-out deletes it with them.
+/// It is never written to SharedPreferences.
 enum SecureStorageKeys {
   jwtToken('jwtToken'),
   refreshToken('refreshToken'),
   oidcIdToken('oidcIdToken'),
-  accessTokenExpiresAt('accessTokenExpiresAt');
+  accessTokenExpiresAt('accessTokenExpiresAt'),
+  sessionTarget('sessionTarget');
 
   const SecureStorageKeys(this.key);
 

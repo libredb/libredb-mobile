@@ -87,6 +87,10 @@ enum AppErrorCode {
   /// cancelled its run.
   browseRowsInterrupted('browse.rows_interrupted'),
 
+  // --- LibreDB Platform ---
+  /// The stored session belongs to LibreDB Platform, which this build of the app has no target for, so it was cleared.
+  platformNotConfigured('platform.not_configured'),
+
   // --- generic fallback ---
   generic('error.generic');
 

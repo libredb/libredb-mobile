@@ -12,6 +12,7 @@ import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -33,6 +34,7 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -385,6 +387,19 @@ void main() {
 
         expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
         expect(app.read<SsoAutoRedirectGate>().isOpen, isFalse);
+      });
+
+      testWidgets('a sign-in marks the session authenticated for Studio and stores that target', (tester) async {
+        await tester.pumpWidget(App(language: 'en', dependencies: _OidcDependencies(_FakeOidcClient())));
+        await tester.pumpAndSettle();
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<LoginBloc>().add(const SsoSignInRequested());
+        await tester.pumpAndSettle();
+
+        expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
       });
 
       // A sign-in closes the gate as well, so this logout comes from a run that was never signed in.
