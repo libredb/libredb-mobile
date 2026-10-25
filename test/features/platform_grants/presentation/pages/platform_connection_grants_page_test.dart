@@ -378,6 +378,29 @@ void main() {
       expect(find.text('carol'), findsOneWidget);
     });
 
+    testWidgets('leaving the page while a pull to refresh waits for Platform throws nothing', (tester) async {
+      answerList([
+        Success([_bob]),
+      ]);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      final pending = Completer<Result<List<PlatformGrant>>>();
+      when(() => repository.list(any())).thenAnswer((_) => pending.future);
+
+      await tester.fling(find.text('bob'), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+      pending.complete(Success([_bob]));
+      await tester.pump(const Duration(seconds: 5));
+      // The closing bloc lets the pending request finish before its stream ends, outside the fake clock.
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(seconds: 5));
+
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a failed refresh of an empty list shows the banner above the empty state', (tester) async {
       answerList([
         const Success([]),

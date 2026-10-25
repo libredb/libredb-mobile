@@ -202,6 +202,12 @@ The App Store listing reuses them (#199).
 `android/fastlane/metadata/android/en-US/` and `tr-TR/` hold `title.txt`, `short_description.txt` and `full_description.txt` in the fastlane metadata layout, so a later pipeline step can upload them.
 `test/architecture/play_listing_metadata_test.dart` fails when a text is missing, empty or longer than Play allows (30, 80 and 4000 characters), or when the two locales do not hold the same files.
 The texts say only what the app does today, and that it signs in to the deployment it was built for; change them in the same pull request as a feature they name.
+
+The listing for an upcoming feature is drafted under `android/fastlane/drafts/<feature>/`, in the same layout, and passes the same test, which also requires both locales to hold the same files as the live `en-US`.
+`android/fastlane/drafts/platform-mode/` holds the listing for the release that turns Platform mode on.
+#306 moves it into `android/fastlane/metadata/android/` in that pull request and deletes the draft directory.
+A file the feature does not change is a copy of the live one, so the move replaces whole locale directories.
+
 The release notes of each version come from the generated `CHANGELOG.md` and are never written by hand.
 The screenshots, the 512 px icon and the 1024 by 500 feature graphic are added during the phone walkthrough (#196), from the tool/studio-dev sample data only.
 

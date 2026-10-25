@@ -190,6 +190,14 @@ void main() {
       );
     });
 
+    // AuthInterceptor refused the request unsent: no session is stored or one is ending (#277).
+    test('a request not sent for want of a session is an AuthError of an invalid access token', () {
+      expect(
+        studioError(NoSessionException('no access token is stored')),
+        isA<AuthError>().having((e) => e.code, 'code', AppErrorCode.authInvalidAccessToken.key),
+      );
+    });
+
     test('an answer that does not have the documented shape is a ServerError', () {
       expect(
         studioError(const FormatException('no connections list')),

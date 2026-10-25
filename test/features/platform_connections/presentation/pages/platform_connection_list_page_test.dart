@@ -186,6 +186,27 @@ void main() {
     expect(find.text('Legacy Billing'), findsOneWidget);
   });
 
+  testWidgets('leaving the page while a pull to refresh waits for Platform throws nothing', (tester) async {
+    answer(const Success([_orders]));
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+    final pending = Completer<Result<List<PlatformConnection>>>();
+    when(() => repository.list()).thenAnswer((_) => pending.future);
+
+    await tester.fling(find.text('Orders'), const Offset(0, 400), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+    pending.complete(const Success([_orders]));
+    await tester.pump(const Duration(seconds: 5));
+    // The closing bloc lets the pending request finish before its stream ends, outside the fake clock.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump(const Duration(seconds: 5));
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('keeps the list under a banner when a refresh fails, and its retry asks again', (tester) async {
     answer(const Success([_orders]));
     await pumpPage(tester);

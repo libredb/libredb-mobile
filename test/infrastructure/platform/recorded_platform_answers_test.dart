@@ -435,21 +435,26 @@ void main() {
       expect({for (final e in page.events) e.statementCapture}, {'full', 'redacted'});
     });
 
-    test('audit_bad_filters: 400 VALIDATION_FAILED on from, limit and status', () async {
+    test('audit_bad_filters: 400 VALIDATION_FAILED on status, a value the repository sends as it is', () async {
       final body = fixture('audit_bad_filters');
       final error = (jsonDecode(body) as Map)['error'] as Map;
       adapter.answer(400, body);
 
-      final thrown = await _thrown(
-        () => client.get('/v1/audit', queryParams: {'limit': 201, 'status': 'nope', 'from': 'yesterday'}),
+      final failure = await failureOf(
+        () => PlatformAuditRepository(client).list(filter: const AuditFilter(status: 'nope'), offset: 0),
       );
 
       expect(adapter.requests, ['GET /v1/audit']);
-      expect(thrown.errorCode, 'VALIDATION_FAILED');
-      expect((thrown as BadRequestException).fieldErrorKeys, unorderedEquals(['from', 'limit', 'status']));
-      expect(platformError(thrown).code, AppErrorCode.platformValidationFailed.key);
+      expect(
+        adapter.queries.single,
+        {'limit': '50', 'offset': '0', 'status': 'nope'},
+        reason:
+            'the fixture was recorded with limit 201 and from "yesterday", which the repository cannot send '
+            '(it asserts the limit and sends from as an ISO time), so only status is replayed',
+      );
+      expect(failure.code, AppErrorCode.platformValidationFailed.key);
       for (final text in [error['message'], ...(error['fieldErrors'] as Map).values.expand((v) => v)]) {
-        expect('$thrown', isNot(contains('$text')));
+        expect(failure.message, isNot(contains('$text')));
       }
       expect(sessionExpiredCalls, 0);
       expect(refusals, isEmpty);
@@ -469,8 +474,43 @@ void main() {
       expect(refusals, isEmpty);
     });
 
-    test('PERMISSION_DENIED has no fixture: a bearer caller is always a Platform admin', () {
+    test('PERMISSION_DENIED: 403 for a user without audit.view, never an account refusal', () async {
+      // Platform's own body, quoted from libredb-platform src/app/api/v1/audit/route.test.ts:128: every /api/v1
+      // caller holds the admin role, which carries audit.view, so this answer cannot be recorded from tool/studio-dev.
+      const body = '{"error":{"code":"PERMISSION_DENIED","message":"Permission denied: audit.view required"}}';
+      adapter.answer(403, body);
+
+      final error = await failureOf(() => PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0));
+
+      expect(adapter.requests, ['GET /v1/audit'], reason: 'sent once');
+      expect(error.code, AppErrorCode.platformPermissionDenied.key);
+      expect(error.message, isNot(contains('audit.view')), reason: "Platform's message never reaches the error");
+      expect(platformAccountRefusal(answer(403, body)), isNull, reason: 'it never locks the admin out');
+      expect(sessionExpiredCalls, 0);
+      expect(refusals, isEmpty);
       expect(File('test/fixtures/platform/audit_permission_denied.json').existsSync(), isFalse);
+    });
+  });
+
+  group('GET /api/v1/audit, read through PlatformApiClient', () {
+    test('audit_bad_filters: 400 VALIDATION_FAILED on from, limit and status', () async {
+      final body = fixture('audit_bad_filters');
+      final error = (jsonDecode(body) as Map)['error'] as Map;
+      adapter.answer(400, body);
+
+      final thrown = await _thrown(
+        () => client.get('/v1/audit', queryParams: {'limit': 201, 'status': 'nope', 'from': 'yesterday'}),
+      );
+
+      expect(adapter.requests, ['GET /v1/audit']);
+      expect(thrown.errorCode, 'VALIDATION_FAILED');
+      expect((thrown as BadRequestException).fieldErrorKeys, unorderedEquals(['from', 'limit', 'status']));
+      expect(platformError(thrown).code, AppErrorCode.platformValidationFailed.key);
+      for (final text in [error['message'], ...(error['fieldErrors'] as Map).values.expand((v) => v)]) {
+        expect('$thrown', isNot(contains('$text')));
+      }
+      expect(sessionExpiredCalls, 0);
+      expect(refusals, isEmpty);
     });
   });
 

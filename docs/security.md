@@ -261,8 +261,14 @@ fvm flutter build apk --release --target lib/main/main_prod.dart --dart-define=S
 
 | Platform | What happens |
 | --- | --- |
-| Android | `FLAG_SECURE`: a screenshot and a screen recording are black, and the recent-apps preview is black. |
+| Android | `FLAG_SECURE`: a screenshot and a screen recording are black, and the recent-apps card of a protected screen shows none of it (below). |
 | iOS | iOS offers no API to block a screenshot. `screen_protector` blurs the task-switcher snapshot, so the app preview shows no value; a screenshot taken in the foreground still succeeds (#199 checks this on a device). |
+
+The Android recent-apps card is not black.
+Measured on a fresh install of a build with protection on, on the API 33 emulator and on a Samsung SM-M515F on Android 12 (#323): with the audit list on screen, the card is a plain card in the window background colour of the app's theme, dark grey with the device in dark mode, while the login page opened before it showed in full.
+On the API 33 emulator, opening the recents screen from inside the app shows the launcher's live view of the window instead, and a screencap of that screen comes back empty.
+The card can also be an older snapshot, which Android took while the window was not secure: the M11-P walkthrough saw the login page there (`docs/platform.md`, step 12), and an install over the app keeps its last card until the new build leaves the screen.
+Such a snapshot shows a screen that the app leaves capturable by design, unless an earlier build with `SCREEN_CAPTURE_PROTECTION=false` took it; after switching from such a build, remove the app's card from the recent-apps screen.
 
 ## Result masking
 

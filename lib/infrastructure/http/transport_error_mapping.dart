@@ -9,6 +9,7 @@ AppError transportError(AppException error) {
     return NetworkError(error.toString(), code: AppErrorCode.networkCertInvalid.key);
   }
   if (error is RequestCancelledException) return RequestCancelledError(error.toString());
+  if (error is NoSessionException) return AuthError(error.toString(), code: AppErrorCode.authInvalidAccessToken.key);
   if (error is OfflineException) return NetworkError(error.toString(), code: AppErrorCode.networkOffline.key);
   final message = error.toString();
   if (error is TimeoutBeforeSentException) return TimeoutError(message, sent: false);

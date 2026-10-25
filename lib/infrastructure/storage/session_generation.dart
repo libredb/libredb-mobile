@@ -7,16 +7,39 @@
 /// stored session through [wipe], so a refresh still on its way drops the rotated tokens instead of storing a session
 /// the user ended, which a relaunch would restore.
 ///
+/// A sign-out the user starts runs inside [signOut], from before its first request until its wipe has ended, so
+/// `AuthInterceptor` sends no other request of the session meanwhile ([signingOut]).
+///
 /// The generation lives in memory, so it counts the wipes of one app process, which holds the stored session alone.
 abstract final class SessionGeneration {
   static int _current = 0;
   static int _wipesRunning = 0;
+  static int _signOutsRunning = 0;
 
   /// The generation of the stored session.
   static int get current => _current;
 
   /// Whether the session of [generation] has ended: a wipe has run since [generation] was read, or one is running.
   static bool hasEnded(int generation) => _wipesRunning > 0 || generation != _current;
+
+  /// Whether a sign-out the user started is running ([signOut]).
+  static bool get signingOut => _signOutsRunning > 0;
+
+  /// Whether a wipe of the stored session is running ([wipe]).
+  static bool get wiping => _wipesRunning > 0;
+
+  /// Runs [body], the sign-out the user started, as a sign-out: [signingOut] holds until [body] completes or throws.
+  ///
+  /// It ends no generation itself: the wipe inside [body] does, through [wipe]. Only the requests of the sign-out,
+  /// such as Studio's sign-out record, still leave while it runs.
+  static Future<T> signOut<T>(Future<T> Function() body) async {
+    _signOutsRunning++;
+    try {
+      return await body();
+    } finally {
+      _signOutsRunning--;
+    }
+  }
 
   /// Runs [body], which wipes the stored session, as the end of the current generation.
   ///

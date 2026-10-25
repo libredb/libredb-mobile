@@ -879,7 +879,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_switch_platform_message": MessageLookupByLibrary.simpleMessage(
       "Platform mode is for Platform admins. The first time this account opens Platform, it takes one admin seat of the license.",
     ),
+    "profile_switch_platform_refused": MessageLookupByLibrary.simpleMessage(
+      "Platform did not accept this account, so it stays in Studio. Ask an administrator to check that this app is set up for Platform.",
+    ),
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Switch to Platform?"),
+    "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
+      "Studio did not accept this account, so it stays in Platform. Ask an administrator for access.",
+    ),
     "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Switch to Platform"),
     "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Switch to Studio"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Unknown user"),

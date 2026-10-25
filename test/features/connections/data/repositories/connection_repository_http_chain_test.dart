@@ -15,6 +15,8 @@ import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 
+import '../../../../support/test_env.dart';
+
 /// [ConnectionRepository] over the production interceptor chain, retry, circuit breaker and response cache included,
 /// with only the network replaced.
 void main() {
@@ -24,6 +26,7 @@ void main() {
   setUp(() {
     ResilienceInterceptor.instance.resetAll();
     adapter = _QueuedAdapter();
+    TestEnv.authenticate();
     final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
     repository = ConnectionRepository(client, ConnectionQueryTimeouts());

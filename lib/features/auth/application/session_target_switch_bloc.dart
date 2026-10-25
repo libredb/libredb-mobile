@@ -13,7 +13,8 @@ part 'session_target_switch_state.dart';
 ///
 /// App-scoped, because the shell that starts a switch is disposed by it. A request while a switch runs is dropped.
 /// It only asks the gate and stores the target; `AppSessionListeners` acts on [SessionTargetSwitchSucceeded], clearing
-/// the mode left and opening the new one, and tells the user of a [SessionTargetSwitchRefusedState].
+/// the mode left and opening the new one, tells the user of a [SessionTargetSwitchRefusedState], and ignores a
+/// [SessionTargetSwitchAbandonedState], whose session ended while the switch ran.
 class SessionTargetSwitchBloc extends Bloc<SessionTargetSwitchEvent, SessionTargetSwitchState> {
   SessionTargetSwitchBloc({required this._switchTarget}) : super(const SessionTargetSwitchIdle()) {
     on<SessionTargetSwitchRequested>(_onRequested, transformer: EventTransformers.dropConcurrent());
@@ -27,6 +28,7 @@ class SessionTargetSwitchBloc extends Bloc<SessionTargetSwitchEvent, SessionTarg
     emit(switch (result) {
       SwitchedToStudio() || SwitchedToPlatform() => SessionTargetSwitchSucceeded(result),
       SessionTargetSwitchRefused(:final errorCode) => SessionTargetSwitchRefusedState(errorCode),
+      SessionTargetSwitchAbandoned() => const SessionTargetSwitchAbandonedState(),
     });
   }
 }

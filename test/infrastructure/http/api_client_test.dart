@@ -730,8 +730,9 @@ void main() {
         expect(response.statusCode, lessThan(300));
       });
 
-      test('given test environment without token when GET request is made then should throw', () async {
-        expect(() => mockClient.get('/test'), throwsA(isA<UnauthorizedException>()));
+      // Without a stored token the request is refused before it leaves (#277).
+      test('given test environment without token when GET request is made then it is not sent', () async {
+        expect(() => mockClient.get('/test'), throwsA(isA<NoSessionException>()));
       });
 
       test('given test environment when POST request is made then should return mock data', () async {
@@ -741,8 +742,9 @@ void main() {
         expect(response.statusCode, lessThan(300));
       });
 
-      test('given test environment without token when POST request is made then should throw', () async {
-        expect(() => mockClient.post('/test', {'data': 'test'}), throwsA(isA<UnauthorizedException>()));
+      // Without a stored token the request is refused before it leaves (#277).
+      test('given test environment without token when POST request is made then it is not sent', () async {
+        expect(() => mockClient.post('/test', {'data': 'test'}), throwsA(isA<NoSessionException>()));
       });
 
       test('given test environment when PUT request is made then should return mock data', () async {
@@ -752,8 +754,9 @@ void main() {
         expect(response.statusCode, lessThan(300));
       });
 
-      test('given test environment without token when PUT request is made then should throw', () async {
-        expect(() => mockClient.put('/test', {'data': 'test'}), throwsA(isA<UnauthorizedException>()));
+      // Without a stored token the request is refused before it leaves (#277).
+      test('given test environment without token when PUT request is made then it is not sent', () async {
+        expect(() => mockClient.put('/test', {'data': 'test'}), throwsA(isA<NoSessionException>()));
       });
 
       // Regression: a request without a mock file was answered with "OK", so the demo reported success for a request
@@ -778,8 +781,9 @@ void main() {
         expect(response.statusCode, lessThan(300));
       });
 
-      test('given test environment without token when DELETE request is made then should throw', () async {
-        expect(() => mockClient.delete('/test'), throwsA(isA<UnauthorizedException>()));
+      // Without a stored token the request is refused before it leaves (#277).
+      test('given test environment without token when DELETE request is made then it is not sent', () async {
+        expect(() => mockClient.delete('/test'), throwsA(isA<NoSessionException>()));
       });
     });
   });
@@ -817,6 +821,7 @@ void main() {
     late ApiClient client;
 
     setUp(() {
+      TestEnv.authenticate();
       ResilienceInterceptor.instance.resetAll();
       adapter = _HeldRequestAdapter();
       client = ApiClient(
@@ -984,6 +989,7 @@ void main() {
     late _FakeHttpClientAdapter adapter;
 
     setUp(() {
+      TestEnv.authenticate();
       // Production chain (no MockInterceptor) with pinning configured. The fake replaces the pinned
       // adapter in its slot, so it sees every request that adapter would carry.
       client = ApiClient(
@@ -2187,6 +2193,7 @@ void main() {
     late ApiClient client;
 
     setUp(() {
+      TestEnv.authenticate();
       ResilienceInterceptor.instance.resetAll();
       adapter = _OptionsRecordingAdapter();
       client = ApiClient(

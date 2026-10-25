@@ -50,6 +50,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
@@ -247,6 +248,7 @@ class _CountingDependencies extends AppDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) => super.createApiClient(
     secureStorage,
@@ -256,6 +258,7 @@ class _CountingDependencies extends AppDependencies {
     },
     onSessionRefused: onSessionRefused,
     onAccountRefused: onAccountRefused,
+    onTokenMissing: onTokenMissing,
     tokenRotation: tokenRotation,
   );
 }
@@ -272,6 +275,7 @@ class _RecordingServerDependencies extends _CountingDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     final apiClient = super.createApiClient(
@@ -279,6 +283,7 @@ class _RecordingServerDependencies extends _CountingDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
     apiClient.instance.httpClientAdapter = server;
@@ -595,9 +600,11 @@ void main() {
       expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
     });
 
-    testWidgets('ends the session in mock mode when a request without a token gets 401', (tester) async {
-      // The mock answers a protected request without a token with 401, as the server does. That happens when the
-      // stored token is gone while the session is open. No refresh token is stored, so the refresh fails.
+    testWidgets('ends the session in mock mode when a request finds no token while the session is open', (
+      tester,
+    ) async {
+      // The stored token is gone while the session is open, so the request is refused before it leaves (#277), and
+      // the session, which can no longer be used, ends.
       TestEnv.authenticate();
       final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
       final session = scope.read<SessionCubit>();
@@ -606,11 +613,38 @@ void main() {
       await FlutterSecureStorageAdapter().delete(SecureStorageKeys.jwtToken.key);
       final apiClient = scope.read<ApiClient>();
       // Dio runs each interceptor step on a timer, so the request moves only while fake time does.
-      final request = expectLater(apiClient.get('/connections/managed'), throwsA(isA<UnauthorizedException>()));
+      final request = expectLater(apiClient.get('/connections/managed'), throwsA(isA<NoSessionException>()));
       await tester.pump(Duration.zero);
       await request;
+      await tester.pump(Duration.zero);
 
       expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+    });
+
+    // A list reload right after a sign-out wiped the session went out without a token, and its 401 ended the session
+    // that had already ended a second time (#277).
+    testWidgets('a request after the sign-out sends nothing and does not end the session again', (tester) async {
+      TestEnv.authenticate();
+      final dependencies = _CountingDependencies(appConfig: const AppConfig.test());
+      final scope = await _pumpScope(tester, dependencies);
+      final session = scope.read<SessionCubit>();
+      await tester.runAsync(() => scope.read<IAuthSessionRepository>().clear());
+      session.markLoggedOut();
+      final states = <SessionState>[];
+      final subscription = session.stream.listen(states.add);
+      addTearDown(subscription.cancel);
+
+      final request = expectLater(
+        scope.read<ApiClient>().get('/connections/managed'),
+        throwsA(isA<NoSessionException>()),
+      );
+      await tester.pump(Duration.zero);
+      await request;
+      await tester.pump(Duration.zero);
+
+      expect(dependencies.sessionExpiredCalls, 0);
+      expect(states, isEmpty);
+      expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.noToken));
     });
 
     testWidgets('keeps the session in mock mode when a 401 can be fixed by a token refresh', (tester) async {
@@ -1219,6 +1253,7 @@ void main() {
     });
 
     testWidgets('provides the Platform grant repository on the Platform client', (tester) async {
+      TestEnv.authenticate(target: SessionTarget.platform);
       final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
       scope.read<PlatformApiClient>().instance.httpClientAdapter = _ServerAdapter({
         'GET /v1/connections/c1/grants': (200, {'grants': <Object?>[]}),
@@ -1230,6 +1265,7 @@ void main() {
     });
 
     testWidgets('provides the Platform directory repository on the Platform client', (tester) async {
+      TestEnv.authenticate(target: SessionTarget.platform);
       final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
       scope.read<PlatformApiClient>().instance.httpClientAdapter = _ServerAdapter({
         'GET /v1/directory/users': (200, {'users': <Object?>[], 'page': 1, 'total': 0}),

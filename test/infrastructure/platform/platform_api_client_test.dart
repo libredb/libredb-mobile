@@ -393,7 +393,9 @@ void main() {
   });
 
   group('PlatformApiClient against the mock', () {
+    // A request without a stored token is not sent at all (#277), so the unauthenticated /v1/me carries an expired one.
     test('answers an unauthenticated /v1/me with 401 BEARER_INVALID in the envelope', () async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _expiredJwt());
       final client = TestEnv.platformApiClient();
 
       await expectLater(
@@ -410,4 +412,11 @@ void main() {
       expect(TestEnv.platformApiClient().instance.interceptors.last, isA<MockInterceptor>());
     });
   });
+}
+
+/// A JWT signed nowhere whose `exp` has passed, which MockInterceptor answers with 401 as an expired bearer.
+String _expiredJwt() {
+  String part(Map<String, Object> json) => base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+  final exp = DateTime.now().subtract(const Duration(minutes: 1)).millisecondsSinceEpoch ~/ 1000;
+  return '${part({'alg': 'RS256', 'typ': 'JWT'})}.${part({'sub': 'admin', 'exp': exp})}.c2lnbmF0dXJl';
 }

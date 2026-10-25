@@ -114,6 +114,15 @@ final class UnauthorizedException extends AppException {
     : super(message, "Unauthorized: ");
 }
 
+/// Thrown for a request the app did not send because the session it needs has ended or is ending: no access token is
+/// stored, or a sign-out or the wipe of the stored session is running (`AuthInterceptor`). Its message names which.
+///
+/// It is an [UnauthorizedException] without a status: no server saw the request, so it is no reason to refresh the
+/// session or end it again. A repository reports it as an `AuthError` with `AppErrorCode.authInvalidAccessToken`.
+final class NoSessionException extends UnauthorizedException {
+  NoSessionException(String reason) : super('Not sent, no session: $reason');
+}
+
 /// Thrown by a call to LibreDB Platform in a build without a Platform target (`AppConfig.platform` is
 /// `PlatformNotConfigured`): no request was sent.
 final class PlatformNotConfiguredException extends AppException {
