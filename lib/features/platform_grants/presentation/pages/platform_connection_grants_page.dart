@@ -42,14 +42,21 @@ class PlatformConnectionGrantsPage extends StatelessWidget {
             child: BlocBuilder<GrantListBloc, GrantListState>(
               builder: (context, state) => switch (state) {
                 GrantListInitial() || GrantListLoading() => const _Skeleton(),
-                GrantListLoaded(grants: []) => _Refreshable(
-                  child: _centered(
-                    AppEmptyState(
-                      icon: Icons.group_off_outlined,
-                      title: S.of(context).platform_grants_empty_title,
-                      description: S.of(context).platform_grants_empty_description,
+                GrantListLoaded(grants: [], :final refreshError) => Column(
+                  children: [
+                    if (refreshError != null) _RefreshBanner(errorCode: refreshError),
+                    Expanded(
+                      child: _Refreshable(
+                        child: _centered(
+                          AppEmptyState(
+                            icon: Icons.group_off_outlined,
+                            title: S.of(context).platform_grants_empty_title,
+                            description: S.of(context).platform_grants_empty_description,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
                 final GrantListLoaded loaded => _LoadedList(connection: connection, state: loaded),
                 GrantListFailure(errorCode: AppErrorCode.platformNotFound) => _centered(

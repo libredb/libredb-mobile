@@ -378,6 +378,29 @@ void main() {
       expect(find.text('carol'), findsOneWidget);
     });
 
+    testWidgets('a failed refresh of an empty list shows the banner above the empty state', (tester) async {
+      answerList([
+        const Success([]),
+        Failure(ServerError('500', code: AppErrorCode.platformInternalError.key)),
+        Success([_bob]),
+      ]);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+
+      await tester.fling(find.byType(AppEmptyState), const Offset(0, 400), 1000);
+      await tester.pumpAndSettle();
+
+      verify(() => repository.list('c1')).called(2);
+      expect(find.text('No one has access yet'), findsOneWidget);
+      expect(find.text('Could not refresh the grants'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not refresh the grants'), findsNothing);
+      expect(find.text('bob'), findsOneWidget);
+    });
+
     testWidgets('a refresh answered 404 says the connection no longer exists, with a way back', (tester) async {
       answerList([
         Success([_bob]),
