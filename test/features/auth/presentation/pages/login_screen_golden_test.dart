@@ -36,7 +36,7 @@ void main() {
         RepositoryProvider<AuthMode>.value(value: authMode),
         RepositoryProvider<AppConfig>.value(
           value: AppConfig(
-            environment: Environment.test,
+            environment: Environment.mock,
             apiBaseUrl: null,
             certificatePins: const <String>[],
             idleTimeout: null,

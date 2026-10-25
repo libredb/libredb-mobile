@@ -10,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/object_browser/domain/entities/object_source.dart';
@@ -60,7 +60,7 @@ class _ShareFiles extends TemporaryShareFiles {
 }
 
 /// The local sign-in's dependencies, with [shareFiles] wherever the app uses its share files.
-class _Dependencies extends LocalSignInDependencies {
+class _Dependencies extends MockSignInDependencies {
   _Dependencies(this.shareFiles) : super(appConfig: const AppConfig.test());
 
   final _ShareFiles shareFiles;

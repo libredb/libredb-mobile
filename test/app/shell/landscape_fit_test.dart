@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/connections/presentation/widgets/connection_list_view.dart';
@@ -81,7 +81,7 @@ void main() {
     Future<void> pumpList(WidgetTester tester) async {
       sideways(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(
         ApplicationRoutesConstants.connectionList,
@@ -132,7 +132,7 @@ void main() {
       _serveAssets(tester);
       sideways(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).go(
         ApplicationRoutesConstants.connectionList,

@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
@@ -137,14 +137,14 @@ void main() {
     Future<GoRouter> startAuthenticated(WidgetTester tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en', analytics: analytics));
       await tester.pumpAndSettle();
       return routerFromApp(tester);
     }
 
     testWidgets('logs the login page once on an unauthenticated start', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en', analytics: analytics));
       await tester.pumpAndSettle();
 
       expect(loggedScreens(), ['login']);
@@ -172,7 +172,7 @@ void main() {
     testWidgets('logs the Platform home once when a Platform session starts', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en', analytics: analytics));
       await tester.pumpAndSettle();
 
       expect(loggedScreens(), ['platformHome']);
@@ -181,7 +181,7 @@ void main() {
     testWidgets('logs the Platform settings once as platformSettings', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en', analytics: analytics));
       await tester.pumpAndSettle();
       clearInteractions(analytics);
 

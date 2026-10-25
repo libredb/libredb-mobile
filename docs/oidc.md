@@ -274,7 +274,7 @@ A 401 the predicate does not match reaches the caller as an ordinary error.
 ## Troubleshooting
 
 The log lines below come from `AppLogger`.
-A `main_local.dart` build uses its development filter, which prints nothing once asserts are off, so its sign-in and refresh lines are seen only in a debug build; a `main_prod.dart` build prints info and above.
+A `main_mock.dart` or `main_local.dart` build uses its development filter, which prints nothing once asserts are off, so its sign-in and refresh lines are seen only in a debug build; a `main_prod.dart` build prints info and above.
 
 **The login page says "Single sign-on is not configured correctly in this app."**
 The `OIDC_*` settings break a rule, or the build has none.
@@ -322,16 +322,16 @@ The `oidc_android` plugin needs the `oidcRedirectScheme` placeholder in `android
 
 ## Mock mode without Keycloak
 
-`main_prod.dart` signs in through the provider its `OIDC_*` defines name, and `main_local.dart` signs in without one.
-`main_local.dart` passes `LocalSignInDependencies` (`lib/app/di/local_sign_in_dependencies.dart`) to `AppBootstrap.run`, which replaces only the provider: its `IOidcClient` is `LocalOidcClient` (`lib/infrastructure/auth/oidc/local_oidc_client.dart`).
+`main_prod.dart` and `main_local.dart` sign in through the provider their `OIDC_*` values name — each entry point's own defaults, overridable with `--dart-define` — and `main_mock.dart` signs in without a provider at all.
+`main_mock.dart` passes `MockSignInDependencies` (`lib/app/di/mock_sign_in_dependencies.dart`) to `AppBootstrap.run`, which replaces only the provider: its `IOidcClient` is `MockOidcClient` (`lib/infrastructure/auth/oidc/mock_oidc_client.dart`).
 A tap on "Sign in to Studio" or "Sign in to Platform" (the dev config has a Platform target, which the mocked Platform answers) signs in at once with tokens the mock API accepts (`MOCK_TOKEN`, valid for an hour), every refresh gives new ones, and there is no provider logout.
 Everything above the client runs as in production: `SsoAuthRepository` stores the session, the API calls go to the mocked Studio of `assets/mock/`, and a 401 refreshes through `OidcTokenRotation`.
 
 The double is debug only and never part of a production build:
 - both constructors throw a `StateError` in a profile or release build;
-- only `main_local.dart` and the tests import it, so the compiler leaves it out of `main_prod.dart`, and `test/architecture/local_sign_in_test.dart` fails when anything that `main_prod.dart` imports, directly or not, imports it.
+- only `main_mock.dart` and the tests import it, so the compiler leaves it out of the entry points with a real backend, and `test/architecture/mock_sign_in_test.dart` fails when anything that `main_prod.dart` or `main_local.dart` imports, directly or not, imports it.
 
-The widget tests build the app with `LocalSignInDependencies` as well, so they need neither a network nor a provider.
+The widget tests build the app with `MockSignInDependencies` as well, so they need neither a network nor a provider.
 
 ## Known limitations
 
@@ -350,7 +350,7 @@ The widget tests build the app with `LocalSignInDependencies` as well, so they n
 
 ### Bootstrap
 
-`AppBootstrap.run` builds the `AppDependencies` through `AppBootstrap.definedDependencies`, unless `main_local.dart` passes its local sign-in, which reads `AuthMode.fromDefines(const AuthDefines())` once.
+`AppBootstrap.run` builds the `AppDependencies` through `AppBootstrap.definedDependencies`, unless `main_mock.dart` passes its mock sign-in, which reads `AuthMode.fromDefines(config.authDefines)` once.
 The defines become `OidcAuthMode(settings)`, or `OidcMisconfiguredAuthMode(reason)` when the settings break a rule or are missing; the reason is logged at error.
 The mode is injected through `AppDependencies.authMode`, and `AppScope` provides it as `AuthMode`.
 Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`, one `TokenRotation` shared by the startup step and the `ApiClient`, `SsoSignOutAuthRepository` and `SsoAutoRedirectGate`.
@@ -456,8 +456,8 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/features/auth/data/repositories/sso_sign_out_auth_repository.dart` | `SsoSignOutAuthRepository`: the local clear, then the provider logout |
 | `lib/features/auth/data/services/misconfigured_sso_session_startup.dart` | `MisconfiguredSsoSessionStartup`, which answers `oidc_config` without reading the stored session |
 | `lib/app/session/session_cubit.dart` | Runs the startup step under its own limit, `SessionUnauthenticated.signInError` |
-| `lib/app/bootstrap/app_bootstrap.dart` | Reads the mode from the defines, or takes the local sign-in of `main_local.dart` |
-| `lib/app/di/local_sign_in_dependencies.dart`, `lib/infrastructure/auth/oidc/local_oidc_client.dart` | The debug-only provider double of `main_local.dart`, see [Mock mode without Keycloak](#mock-mode-without-keycloak) |
+| `lib/app/bootstrap/app_bootstrap.dart` | Reads the mode from the entry point's defines, or takes the mock sign-in of `main_mock.dart` |
+| `lib/app/di/mock_sign_in_dependencies.dart`, `lib/infrastructure/auth/oidc/mock_oidc_client.dart` | The debug-only provider double of `main_mock.dart`, see [Mock mode without Keycloak](#mock-mode-without-keycloak) |
 | `lib/app/bootstrap/app_session_listeners.dart` | Closes the gate on sign-in, logout and a restore past the storage limit, and shows the logout notice, also when it follows the sign-out |
 | `lib/app/di/app_dependencies.dart`, `lib/app/di/app_scope.dart` | Builds and provides the OIDC pieces in `OidcAuthMode` only, the fail-closed startup and rotation of `OidcMisconfiguredAuthMode`, and `sessionExpiredPredicate` |
 | `lib/features/auth/application/sign_out_bloc.dart` | Signs out on the local clear, then `SignedOutWithProviderSessionLeft` when the provider logout fails |
@@ -538,7 +538,7 @@ Each test file below names the behavior it pins.
 | `test/features/auth/data/repositories/sso_sign_out_auth_repository_test.dart`, `test/features/auth/application/sign_out_bloc_test.dart`, `test/app/bootstrap/app_session_listeners_test.dart`, `test/app/bootstrap/app_session_listeners_sso_test.dart` | Provider logout; the sign-out answers before the provider logout ends, so the login page opens while it is pending; the incomplete-logout notice, also when it comes later; the gate after logout and after a restore past the storage limit |
 | `test/features/auth/presentation/pages/login_screen_test.dart`, `login_screen_golden_test.dart` | The SSO page, each error sentence, the Turkish text, the automatic redirect and the `login_screen_sso_light` golden |
 | `test/app/router/app_router_test.dart` | The password routes resolve to nothing, and a callback URL, with or without a trailing slash, lands on `/login` with no `returnUrl` |
-| `test/infrastructure/config/auth_config_test.dart`, `test/integration/app_smoke_test.dart`, `test/architecture/local_sign_in_test.dart` | A build without OIDC settings has no password sign-in to fall back to; `main_local.dart`'s local sign-in opens the connection list; `main_prod.dart` never imports the double |
+| `test/infrastructure/config/auth_config_test.dart`, `test/integration/app_smoke_test.dart`, `test/architecture/mock_sign_in_test.dart` | A build without OIDC settings has no password sign-in to fall back to; `main_mock.dart`'s mock sign-in opens the connection list; neither `main_prod.dart` nor `main_local.dart` imports the double |
 | `test/features/auth/sso_log_hygiene_test.dart` | A full sign-in, refresh, logout and pushed callback route print no token, code, verifier, `state` or `nonce` |
 | `test/architecture/oidc_platform_setup_test.dart` | The Android placeholder equals the default scheme, no client secret in `lib/` and only `.none` client authentication, and no intent filter for the scheme or its placeholder in any app manifest |
 

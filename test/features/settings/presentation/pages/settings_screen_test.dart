@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -59,7 +59,7 @@ class _LanguageRefusingStorage implements AppLocalStorage {
 }
 
 /// The local app with [statementText] as its statement text store, which in a widget test cannot reach the files.
-class _StatementTextDependencies extends LocalSignInDependencies {
+class _StatementTextDependencies extends MockSignInDependencies {
   _StatementTextDependencies(this.statementText);
 
   final IStatementTextStore statementText;
@@ -68,7 +68,7 @@ class _StatementTextDependencies extends LocalSignInDependencies {
   IStatementTextStore createStatementTextStore(ISecureStorage secureStorage) => statementText;
 }
 
-class _LocalStorageDependencies extends LocalSignInDependencies {
+class _LocalStorageDependencies extends MockSignInDependencies {
   _LocalStorageDependencies(this.localStorage, {super.projectLinks});
 
   final AppLocalStorage localStorage;
@@ -133,7 +133,7 @@ void main() {
         dependencies:
             dependencies ??
             (localStorage == null
-                ? LocalSignInDependencies(projectLinks: projectLinks)
+                ? MockSignInDependencies(projectLinks: projectLinks)
                 : _LocalStorageDependencies(localStorage, projectLinks: projectLinks)),
       ),
     );
@@ -264,7 +264,7 @@ void main() {
 
       // The next cold start: a new App, which reads the stored language.
       await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);
