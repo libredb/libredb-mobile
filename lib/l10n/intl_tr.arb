@@ -588,6 +588,92 @@
   "@platform_grants_removed": {},
   "platform_grants_already_removed": "Zaten kaldırılmış",
   "@platform_grants_already_removed": {},
+  "platform_grants_add": "Erişim ver",
+  "@platform_grants_add": {},
+  "platform_grants_edit": "Erişimi değiştir",
+  "@platform_grants_edit": {},
+  "platform_grants_picker_title": "Bir kullanıcı seçin",
+  "@platform_grants_picker_title": {},
+  "platform_grants_picker_search_hint": "Kullanıcı adı, ad veya e-posta ile arayın",
+  "@platform_grants_picker_search_hint": {},
+  "platform_grants_picker_clear": "Aramayı temizle",
+  "@platform_grants_picker_clear": {},
+  "platform_grants_picker_query_too_long": "Arama metni çok uzun. En fazla 255 karakter kullanın.",
+  "@platform_grants_picker_query_too_long": {},
+  "platform_grants_picker_empty_title": "Kullanıcı bulunamadı",
+  "@platform_grants_picker_empty_title": {},
+  "platform_grants_picker_empty_description": "Bu aramayla eşleşen bir Keycloak kullanıcısı yok.",
+  "@platform_grants_picker_empty_description": {},
+  "platform_grants_picker_load_failed": "Dizinde arama yapılamadı",
+  "@platform_grants_picker_load_failed": {},
+  "platform_grants_picker_load_more": "Daha fazla yükle",
+  "@platform_grants_picker_load_more": {},
+  "platform_grants_picker_load_more_failed": "Daha fazla kullanıcı yüklenemedi",
+  "@platform_grants_picker_load_more_failed": {},
+  "platform_grants_picker_role_admin": "Studio yöneticisi",
+  "@platform_grants_picker_role_admin": {},
+  "platform_grants_picker_role_user": "Studio kullanıcısı",
+  "@platform_grants_picker_role_user": {},
+  "platform_grants_picker_role_none": "Studio rolü yok, Studio'ya giriş yapamaz",
+  "@platform_grants_picker_role_none": {},
+  "platform_grants_picker_disabled": "Keycloak'ta devre dışı",
+  "@platform_grants_picker_disabled": {},
+  "platform_grants_picker_takes_seat": "Bir kullanıcı koltuğu kullanır",
+  "@platform_grants_picker_takes_seat": {},
+  "platform_grants_picker_takes_seat_inactive": "Bağlantı yeniden etkin olduğunda bir kullanıcı koltuğu kullanır",
+  "@platform_grants_picker_takes_seat_inactive": {},
+  "platform_grants_editor_title_new": "{connection} için erişim ver",
+  "@platform_grants_editor_title_new": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_title_edit": "{connection} için erişimi değiştir",
+  "@platform_grants_editor_title_edit": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_change_user": "Başka bir kullanıcı seçin",
+  "@platform_grants_editor_change_user": {},
+  "platform_grants_editor_level": "Erişim düzeyi",
+  "@platform_grants_editor_level": {},
+  "platform_grants_editor_write_unavailable": "Bu bağlantının yazma kimlik bilgisi yok, bu yüzden yalnızca okuma erişimi verilebilir.",
+  "@platform_grants_editor_write_unavailable": {},
+  "platform_grants_editor_level_missing": "Bir erişim düzeyi seçin.",
+  "@platform_grants_editor_level_missing": {},
+  "platform_grants_editor_expiry": "Bitiş",
+  "@platform_grants_editor_expiry": {},
+  "platform_grants_editor_expiry_never": "Süresiz",
+  "@platform_grants_editor_expiry_never": {},
+  "platform_grants_editor_expiry_on": "{date} tarihinde sona erer",
+  "@platform_grants_editor_expiry_on": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_editor_expiry_pick": "Tarih ve saat seçin",
+  "@platform_grants_editor_expiry_pick": {},
+  "platform_grants_editor_expiry_local_time": "Bu cihazın saat diliminde.",
+  "@platform_grants_editor_expiry_local_time": {},
+  "platform_grants_editor_expiry_not_in_future": "Gelecekte bir zaman seçin ya da süresiz bırakın.",
+  "@platform_grants_editor_expiry_not_in_future": {},
+  "platform_grants_editor_no_role_note": "Bu kullanıcının Studio rolü yok; bir Keycloak yöneticisi rol verene kadar Studio'ya giriş yapamaz.",
+  "@platform_grants_editor_no_role_note": {},
+  "platform_grants_editor_save": "Kaydet",
+  "@platform_grants_editor_save": {},
+  "platform_grants_editor_saved": "Erişim kaydedildi",
+  "@platform_grants_editor_saved": {},
+  "platform_grants_editor_license_title": "Lisans bu yetkiye izin vermiyor",
+  "@platform_grants_editor_license_title": {},
+  "platform_grants_editor_retry_title": "Platform kullanıcıyı denetleyemedi",
+  "@platform_grants_editor_retry_title": {},
   "connection_switcher_title": "Bağlantı değiştir",
   "@connection_switcher_title": {},
   "connection_active": "Etkin bağlantı",

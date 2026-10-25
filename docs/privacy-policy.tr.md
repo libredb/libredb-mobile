@@ -23,6 +23,8 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Platform'un hesabınıza ilk yanıtı, Platform kullanıcı kaydınızı oluşturur ve lisansın yönetici koltuklarından birini kullanır.
   Platform modunda uygulama bir bağlantıya kimlerin erişimi olduğunu gösterir: kullanıcı adlarını ve e-posta adreslerini, ayrıca erişimi veren yöneticinin adını ya da e-posta adresini.
   Bunları sayfa açıkken bellekte tutar ve cihazda hiç saklamaz; Platform'a da kaldırmak istediğiniz erişimleri gönderir.
+  Birine erişim vermek için dizinde arama yaptığınızda arama metni Platform'a gider, Platform da Keycloak'ta arar; uygulama bulunan kullanıcıların kullanıcı adlarını, adlarını, e-posta adreslerini, etkin olup olmadıklarını ve Studio rollerini gösterir.
+  Bunları yalnızca ekran açıkken bellekte tutar, arama geçmişi tutmaz ve hiçbirini saklamaz; Platform'a da verdiğiniz ya da değiştirdiğiniz erişimi gönderir: kullanıcıyı, düzeyi ve bitiş zamanını.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
   Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 

@@ -68,8 +68,8 @@ void main() {
   }
 
   testWidgets('the route is named, so analytics logs it by name and not by its location', (tester) async {
-    expect(PlatformGrantsFeatureRoutes.routes.single.name, 'platformConnectionGrants');
-    expect(PlatformGrantsFeatureRoutes.routes.single.path, ApplicationRoutesConstants.platformConnectionGrants);
+    expect(PlatformGrantsFeatureRoutes.routes.first.name, 'platformConnectionGrants');
+    expect(PlatformGrantsFeatureRoutes.routes.first.path, ApplicationRoutesConstants.platformConnectionGrants);
   });
 
   testWidgets('opens the grants of the connection passed as extra', (tester) async {

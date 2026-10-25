@@ -119,86 +119,92 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m43(time) => "Çevrimdışı: ${time} itibarıyla yüklenenler gösteriliyor";
 
-  static String m44(date) => "${date} tarihinde sona erdi";
+  static String m44(date) => "${date} tarihinde sona erer";
 
-  static String m45(date) => "${date} tarihinde sona eriyor";
+  static String m45(connection) => "${connection} için erişimi değiştir";
 
-  static String m46(name, date) => "Veren: ${name}, ${date}";
+  static String m46(connection) => "${connection} için erişim ver";
 
-  static String m47(username, level, connection) =>
+  static String m47(date) => "${date} tarihinde sona erdi";
+
+  static String m48(date) => "${date} tarihinde sona eriyor";
+
+  static String m49(name, date) => "Veren: ${name}, ${date}";
+
+  static String m50(username, level, connection) =>
       "${username} kullanıcısının ${connection} bağlantısındaki ${level} erişimi kaldırılacak.";
 
-  static String m48(count, rows) => "${Intl.plural(count, one: '1 satır etkilendi', other: '${rows} satır etkilendi')}";
+  static String m51(count, rows) => "${Intl.plural(count, one: '1 satır etkilendi', other: '${rows} satır etkilendi')}";
 
-  static String m49(id) => "#${id}";
+  static String m52(id) => "#${id}";
 
-  static String m50(code) => "Kopyalanamadı (${code})";
+  static String m53(code) => "Kopyalanamadı (${code})";
 
-  static String m51(count, rows) => "${Intl.plural(count, one: '1 tane daha yükle', other: '${rows} tane daha yükle')}";
+  static String m54(count, rows) => "${Intl.plural(count, one: '1 tane daha yükle', other: '${rows} tane daha yükle')}";
 
-  static String m52(count, rows) =>
+  static String m55(count, rows) =>
       "${Intl.plural(count, one: '1 tane daha yükleniyor…', other: '${rows} tane daha yükleniyor…')}";
 
-  static String m53(count) => "${Intl.plural(count, one: '+1 alan daha', other: '+${count} alan daha')}";
+  static String m56(count) => "${Intl.plural(count, one: '+1 alan daha', other: '+${count} alan daha')}";
 
-  static String m54(index, count) => "Satır ${index} / ${count}";
+  static String m57(index, count) => "Satır ${index} / ${count}";
 
-  static String m55(index) => "Satır ${index}";
+  static String m58(index) => "Satır ${index}";
 
-  static String m56(count, rows, time) =>
+  static String m59(count, rows, time) =>
       "${Intl.plural(count, one: '1 satır, ${time} ms', other: '${rows} satır, ${time} ms')}";
 
-  static String m57(code) => "Kod ${code}";
+  static String m60(code) => "Kod ${code}";
 
-  static String m58(code) => "Uyarı ${code}";
+  static String m61(code) => "Uyarı ${code}";
 
-  static String m59(severity, message) => "${severity}: ${message}";
+  static String m62(severity, message) => "${severity}: ${message}";
 
-  static String m60(count) => "${Intl.plural(count, one: '1 uyarı', other: '${count} uyarı')}";
+  static String m63(count) => "${Intl.plural(count, one: '1 uyarı', other: '${count} uyarı')}";
 
-  static String m61(label, catalog) => "${label}: ${catalog}";
+  static String m64(label, catalog) => "${label}: ${catalog}";
 
-  static String m62(reason) => "Metin bu telefona kaydedilemedi. ${reason}";
+  static String m65(reason) => "Metin bu telefona kaydedilemedi. ${reason}";
 
-  static String m63(reason) =>
+  static String m66(reason) =>
       "Bu bağlantı için kaydedilen metin okunamadı, bu yüzden yeni metin saklanmıyor. ${reason}";
 
-  static String m64(language) => "Dil: ${language}";
+  static String m67(language) => "Dil: ${language}";
 
-  static String m65(reason) => "Bu bağlantının dili okunamadı, bu yüzden metin renklendirilmiyor. ${reason}";
+  static String m68(reason) => "Bu bağlantının dili okunamadı, bu yüzden metin renklendirilmiyor. ${reason}";
 
-  static String m66(keyword) =>
+  static String m69(keyword) =>
       "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı. Korumak için ${keyword} ekleyin.";
 
-  static String m67(time) => "${time} süredir çalışıyor";
+  static String m70(time) => "${time} süredir çalışıyor";
 
-  static String m68(time) => "${time} ms";
+  static String m71(time) => "${time} ms";
 
-  static String m69(count) =>
+  static String m72(count) =>
       "${Intl.plural(count, one: '1 deyim çalıştırılmadı', other: '${count} deyim çalıştırılmadı')}";
 
-  static String m70(keyword) =>
+  static String m73(keyword) =>
       "Betik bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı. Korumak için ${keyword} ekleyin.";
 
-  static String m71(number) => "Deyim ${number}";
+  static String m74(number) => "Deyim ${number}";
 
-  static String m72(milliseconds) => "${milliseconds} ms";
+  static String m75(milliseconds) => "${milliseconds} ms";
 
-  static String m73(count) => "${Intl.plural(count, one: '1 satır', other: '${count} satır')}";
+  static String m76(count) => "${Intl.plural(count, one: '1 satır', other: '${count} satır')}";
 
-  static String m74(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
+  static String m77(seconds) => "${seconds} sn sonra yeniden deneyebilirsiniz.";
 
-  static String m75(message) => "Hata: ${message}";
+  static String m78(message) => "Hata: ${message}";
 
-  static String m76(detail) => "Ayrıntı: ${detail}";
+  static String m79(detail) => "Ayrıntı: ${detail}";
 
-  static String m77(host) => "Studio adresi: ${host}";
+  static String m80(host) => "Studio adresi: ${host}";
 
-  static String m78(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
+  static String m81(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
-  static String m79(name) => "Onaylamak için \"${name}\" yazın";
+  static String m82(name) => "Onaylamak için \"${name}\" yazın";
 
-  static String m80(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
+  static String m83(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -641,29 +647,79 @@ class MessageLookup extends MessageLookupByLibrary {
     "platform_connections_search_empty_title": MessageLookupByLibrary.simpleMessage("Filtreyle eşleşen bağlantı yok"),
     "platform_connections_status_unknown": MessageLookupByLibrary.simpleMessage("Bilinmeyen durum"),
     "platform_grants_actions": MessageLookupByLibrary.simpleMessage("Erişim işlemleri"),
+    "platform_grants_add": MessageLookupByLibrary.simpleMessage("Erişim ver"),
     "platform_grants_already_removed": MessageLookupByLibrary.simpleMessage("Zaten kaldırılmış"),
     "platform_grants_back_to_connections": MessageLookupByLibrary.simpleMessage("Bağlantılara dön"),
     "platform_grants_connection_gone_description": MessageLookupByLibrary.simpleMessage(
       "Platform web konsolunda silinmiş olabilir.",
     ),
     "platform_grants_connection_gone_title": MessageLookupByLibrary.simpleMessage("Bu bağlantı artık yok"),
+    "platform_grants_edit": MessageLookupByLibrary.simpleMessage("Erişimi değiştir"),
+    "platform_grants_editor_change_user": MessageLookupByLibrary.simpleMessage("Başka bir kullanıcı seçin"),
+    "platform_grants_editor_expiry": MessageLookupByLibrary.simpleMessage("Bitiş"),
+    "platform_grants_editor_expiry_local_time": MessageLookupByLibrary.simpleMessage("Bu cihazın saat diliminde."),
+    "platform_grants_editor_expiry_never": MessageLookupByLibrary.simpleMessage("Süresiz"),
+    "platform_grants_editor_expiry_not_in_future": MessageLookupByLibrary.simpleMessage(
+      "Gelecekte bir zaman seçin ya da süresiz bırakın.",
+    ),
+    "platform_grants_editor_expiry_on": m44,
+    "platform_grants_editor_expiry_pick": MessageLookupByLibrary.simpleMessage("Tarih ve saat seçin"),
+    "platform_grants_editor_level": MessageLookupByLibrary.simpleMessage("Erişim düzeyi"),
+    "platform_grants_editor_level_missing": MessageLookupByLibrary.simpleMessage("Bir erişim düzeyi seçin."),
+    "platform_grants_editor_license_title": MessageLookupByLibrary.simpleMessage("Lisans bu yetkiye izin vermiyor"),
+    "platform_grants_editor_no_role_note": MessageLookupByLibrary.simpleMessage(
+      "Bu kullanıcının Studio rolü yok; bir Keycloak yöneticisi rol verene kadar Studio\'ya giriş yapamaz.",
+    ),
+    "platform_grants_editor_retry_title": MessageLookupByLibrary.simpleMessage("Platform kullanıcıyı denetleyemedi"),
+    "platform_grants_editor_save": MessageLookupByLibrary.simpleMessage("Kaydet"),
+    "platform_grants_editor_saved": MessageLookupByLibrary.simpleMessage("Erişim kaydedildi"),
+    "platform_grants_editor_title_edit": m45,
+    "platform_grants_editor_title_new": m46,
+    "platform_grants_editor_write_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantının yazma kimlik bilgisi yok, bu yüzden yalnızca okuma erişimi verilebilir.",
+    ),
     "platform_grants_empty_description": MessageLookupByLibrary.simpleMessage(
       "Bu bağlantıda kimseye erişim verilmemiş.",
     ),
     "platform_grants_empty_title": MessageLookupByLibrary.simpleMessage("Henüz kimsenin erişimi yok"),
-    "platform_grants_expired": m44,
-    "platform_grants_expires": m45,
-    "platform_grants_granted_by": m46,
+    "platform_grants_expired": m47,
+    "platform_grants_expires": m48,
+    "platform_grants_granted_by": m49,
     "platform_grants_level_read": MessageLookupByLibrary.simpleMessage("Okuma"),
     "platform_grants_level_read_in_sentence": MessageLookupByLibrary.simpleMessage("okuma"),
     "platform_grants_level_write": MessageLookupByLibrary.simpleMessage("Yazma"),
     "platform_grants_level_write_in_sentence": MessageLookupByLibrary.simpleMessage("yazma"),
     "platform_grants_load_failed": MessageLookupByLibrary.simpleMessage("Erişimler yüklenemedi"),
     "platform_grants_no_expiry": MessageLookupByLibrary.simpleMessage("Süresiz"),
+    "platform_grants_picker_clear": MessageLookupByLibrary.simpleMessage("Aramayı temizle"),
+    "platform_grants_picker_disabled": MessageLookupByLibrary.simpleMessage("Keycloak\'ta devre dışı"),
+    "platform_grants_picker_empty_description": MessageLookupByLibrary.simpleMessage(
+      "Bu aramayla eşleşen bir Keycloak kullanıcısı yok.",
+    ),
+    "platform_grants_picker_empty_title": MessageLookupByLibrary.simpleMessage("Kullanıcı bulunamadı"),
+    "platform_grants_picker_load_failed": MessageLookupByLibrary.simpleMessage("Dizinde arama yapılamadı"),
+    "platform_grants_picker_load_more": MessageLookupByLibrary.simpleMessage("Daha fazla yükle"),
+    "platform_grants_picker_load_more_failed": MessageLookupByLibrary.simpleMessage("Daha fazla kullanıcı yüklenemedi"),
+    "platform_grants_picker_query_too_long": MessageLookupByLibrary.simpleMessage(
+      "Arama metni çok uzun. En fazla 255 karakter kullanın.",
+    ),
+    "platform_grants_picker_role_admin": MessageLookupByLibrary.simpleMessage("Studio yöneticisi"),
+    "platform_grants_picker_role_none": MessageLookupByLibrary.simpleMessage(
+      "Studio rolü yok, Studio\'ya giriş yapamaz",
+    ),
+    "platform_grants_picker_role_user": MessageLookupByLibrary.simpleMessage("Studio kullanıcısı"),
+    "platform_grants_picker_search_hint": MessageLookupByLibrary.simpleMessage(
+      "Kullanıcı adı, ad veya e-posta ile arayın",
+    ),
+    "platform_grants_picker_takes_seat": MessageLookupByLibrary.simpleMessage("Bir kullanıcı koltuğu kullanır"),
+    "platform_grants_picker_takes_seat_inactive": MessageLookupByLibrary.simpleMessage(
+      "Bağlantı yeniden etkin olduğunda bir kullanıcı koltuğu kullanır",
+    ),
+    "platform_grants_picker_title": MessageLookupByLibrary.simpleMessage("Bir kullanıcı seçin"),
     "platform_grants_refresh_failed": MessageLookupByLibrary.simpleMessage("Erişimler yenilenemedi"),
     "platform_grants_remove_access": MessageLookupByLibrary.simpleMessage("Erişimi kaldır"),
     "platform_grants_remove_confirm": MessageLookupByLibrary.simpleMessage("Kaldır"),
-    "platform_grants_remove_message": m47,
+    "platform_grants_remove_message": m50,
     "platform_grants_removed": MessageLookupByLibrary.simpleMessage("Erişim kaldırıldı"),
     "platform_home_admin_label": MessageLookupByLibrary.simpleMessage("Platform yöneticisi"),
     "platform_home_connections_shortcut": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
@@ -703,10 +759,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "remove_my_data_title": MessageLookupByLibrary.simpleMessage("Verileriniz silinsin mi?"),
     "required_field": MessageLookupByLibrary.simpleMessage("Zorunlu Alan"),
-    "result_affected_rows": m48,
-    "result_card_id": m49,
+    "result_affected_rows": m51,
+    "result_card_id": m52,
     "result_copied": MessageLookupByLibrary.simpleMessage("Kopyalandı"),
-    "result_copy_failed": m50,
+    "result_copy_failed": m53,
     "result_copy_row": MessageLookupByLibrary.simpleMessage("Satırı JSON olarak kopyala"),
     "result_copy_value": MessageLookupByLibrary.simpleMessage("Değeri kopyala"),
     "result_empty": MessageLookupByLibrary.simpleMessage("Sorgu veri döndürmedi"),
@@ -718,26 +774,26 @@ class MessageLookup extends MessageLookupByLibrary {
     "result_limited_notice": MessageLookupByLibrary.simpleMessage(
       "Studio bu sonucu sınırladı. Sınırın ötesindeki hiçbir şey bu sonuçta yok.",
     ),
-    "result_load_more": m51,
-    "result_loading_more": m52,
+    "result_load_more": m54,
+    "result_loading_more": m55,
     "result_masked_semantics": MessageLookupByLibrary.simpleMessage("Maskelenmiş değer"),
-    "result_more_fields": m53,
+    "result_more_fields": m56,
     "result_order_notice": MessageLookupByLibrary.simpleMessage(
       "ORDER BY olmadan motor, sayfalar arasında satırları tekrarlayabilir ya da atlayabilir.",
     ),
     "result_rolled_back": MessageLookupByLibrary.simpleMessage(
       "Bu deyim bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı.",
     ),
-    "result_row_position": m54,
-    "result_row_title": m55,
-    "result_stats": m56,
+    "result_row_position": m57,
+    "result_row_title": m58,
+    "result_stats": m59,
     "result_view_cards": MessageLookupByLibrary.simpleMessage("Kartlar"),
     "result_view_table": MessageLookupByLibrary.simpleMessage("Tablo"),
-    "result_warning_code": m57,
+    "result_warning_code": m60,
     "result_warning_fallback": MessageLookupByLibrary.simpleMessage("Uyarı"),
-    "result_warning_fallback_code": m58,
-    "result_warning_line": m59,
-    "result_warnings": m60,
+    "result_warning_fallback_code": m61,
+    "result_warning_line": m62,
+    "result_warnings": m63,
     "retry": MessageLookupByLibrary.simpleMessage("Tekrar Dene"),
     "role": MessageLookupByLibrary.simpleMessage("Rol"),
     "save": MessageLookupByLibrary.simpleMessage("Kaydet"),
@@ -757,7 +813,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_editor_cancelled": MessageLookupByLibrary.simpleMessage("İptal edildi"),
     "sql_editor_cancelling": MessageLookupByLibrary.simpleMessage("İptal ediliyor"),
-    "sql_editor_catalog_chip": m61,
+    "sql_editor_catalog_chip": m64,
     "sql_editor_catalog_failed": MessageLookupByLibrary.simpleMessage(
       "Deyimlerin çalışacağı veritabanları listelenemedi.",
     ),
@@ -772,8 +828,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_editor_draft_not_kept": MessageLookupByLibrary.simpleMessage(
       "Bu metin 100.000 karakterden uzun olduğu için bu telefonda saklanmıyor ve bu bağlantı için daha önce kaydedilen metin silindi.",
     ),
-    "sql_editor_draft_not_saved": m62,
-    "sql_editor_draft_read_failed": m63,
+    "sql_editor_draft_not_saved": m65,
+    "sql_editor_draft_read_failed": m66,
     "sql_editor_draft_unreadable_note": MessageLookupByLibrary.simpleMessage(
       "Kaydedilen metni silene kadar yeni metin saklanmaz.",
     ),
@@ -785,23 +841,23 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_editor_interrupted_unknown": MessageLookupByLibrary.simpleMessage(
       "Sonuç bilinmiyor: yeniden çalıştırmadan önce verileri kontrol edin.",
     ),
-    "sql_editor_language": m64,
-    "sql_editor_language_unknown": m65,
+    "sql_editor_language": m67,
+    "sql_editor_language_unknown": m68,
     "sql_editor_redo": MessageLookupByLibrary.simpleMessage("Yinele"),
-    "sql_editor_rolled_back": m66,
+    "sql_editor_rolled_back": m69,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Çalıştır"),
     "sql_editor_run_again": MessageLookupByLibrary.simpleMessage("Yeniden çalıştır"),
     "sql_editor_run_selection": MessageLookupByLibrary.simpleMessage("Seçimi çalıştır"),
-    "sql_editor_script_elapsed": m67,
+    "sql_editor_script_elapsed": m70,
     "sql_editor_script_failed": MessageLookupByLibrary.simpleMessage("Başarısız"),
-    "sql_editor_script_failed_time": m68,
-    "sql_editor_script_not_run": m69,
+    "sql_editor_script_failed_time": m71,
+    "sql_editor_script_not_run": m72,
     "sql_editor_script_rolled_back": MessageLookupByLibrary.simpleMessage(
       "Betik bir işlemi açık bıraktı ve Studio işlemi geri aldı; değişiklikleri atıldı.",
     ),
-    "sql_editor_script_rolled_back_keep": m70,
+    "sql_editor_script_rolled_back_keep": m73,
     "sql_editor_script_show_rows": MessageLookupByLibrary.simpleMessage("Satırları göster"),
-    "sql_editor_script_statement": m71,
+    "sql_editor_script_statement": m74,
     "sql_editor_script_succeeded": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "sql_editor_stop_waiting": MessageLookupByLibrary.simpleMessage("Beklemeyi bırak"),
     "sql_editor_stopped_waiting": MessageLookupByLibrary.simpleMessage(
@@ -816,7 +872,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_history_clear_title": MessageLookupByLibrary.simpleMessage("Geçmiş temizlensin mi?"),
     "sql_history_delete": MessageLookupByLibrary.simpleMessage("Sil"),
-    "sql_history_duration": m72,
+    "sql_history_duration": m75,
     "sql_history_empty": MessageLookupByLibrary.simpleMessage("Henüz deyim yok"),
     "sql_history_empty_description": MessageLookupByLibrary.simpleMessage(
       "Çalıştırdığınız deyimler burada görünür. Yalnızca bu telefonda kalırlar.",
@@ -828,7 +884,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_history_open": MessageLookupByLibrary.simpleMessage("Geçmiş"),
     "sql_history_replace": MessageLookupByLibrary.simpleMessage("Değiştir"),
     "sql_history_replace_title": MessageLookupByLibrary.simpleMessage("Düzenleyicideki metin değiştirilsin mi?"),
-    "sql_history_rows": m73,
+    "sql_history_rows": m76,
     "sql_history_search_hint": MessageLookupByLibrary.simpleMessage("Deyimlerde ve bağlantılarda ara"),
     "sql_history_succeeded": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "sql_history_title": MessageLookupByLibrary.simpleMessage("Geçmiş"),
@@ -837,17 +893,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "Bir yönetici sorunu gidermek için bu ifadeyi çalıştırabilir:",
     ),
-    "studio_error_retry_in": m74,
-    "studio_error_semantics": m75,
+    "studio_error_retry_in": m77,
+    "studio_error_semantics": m78,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("İfade kopyalandı"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio şu anda bağlantı sunamıyor. Bir yöneticinin yönetişim kurulumunu kontrol etmesi gerekiyor.",
     ),
-    "studio_governance_detail": m76,
+    "studio_governance_detail": m79,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Bağlantı erişimi geçici olarak kullanılamıyor. Erişim geri geldiğinde liste kendiliğinden güncellenir.",
     ),
-    "studio_unreachable_host": m77,
+    "studio_unreachable_host": m80,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio yanıt vermiyor. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     ),
@@ -855,7 +911,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Başarılı"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Gözat"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m78,
+    "table_rows_listed": m81,
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),
@@ -871,7 +927,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("İptal"),
-    "write_confirm_name_label": m79,
+    "write_confirm_name_label": m82,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "Bu üretim bağlantısının yazılacak bir adı yok, bu yüzden deyim burada onaylanamaz.",
     ),
@@ -887,7 +943,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "Veriyi değiştirebilir: uygulama deyimin nasıl başladığını okuyamıyor",
     ),
-    "write_confirm_reason_may_write_at": m80,
+    "write_confirm_reason_may_write_at": m83,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "Uygulama bu motorun bir komutunun ne yaptığını okuyamaz",
     ),

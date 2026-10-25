@@ -31,6 +31,8 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `GET /api/v1/connections` | `{connections: [{id, name, engine, status, hasWriteCredential}]}` | `IPlatformConnectionRepository.list`, `PlatformConnectionsModel` |
 | `GET /api/v1/connections/{id}/grants` | `{grants: [{id, subject, subjectUsername, subjectEmail, level, expiresAt, grantedBy: {id, name, email}, grantedAt}]}` | `PlatformGrantRepository.list`, `PlatformGrantJson` |
 | `DELETE /api/v1/connections/{id}/grants/{grantId}` | 204, no body | `PlatformGrantRepository.revoke` |
+| `GET /api/v1/directory/users?q=&page=` | `{users: [{id, username, email, firstName, lastName, enabled, studioRole, needsSeat}], page, total}` | `IPlatformDirectoryRepository.search`, `DirectoryPageJson` |
+| `PUT /api/v1/connections/{id}/grants/{subject}` | `{id}` | `PlatformGrantRepository.put`, `GrantPutBody`, `GrantPutAnswerJson` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -53,6 +55,28 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 - Each id is sent as one path segment encoded with `Uri.encodeComponent`.
   `MockInterceptor` answers every GET under `/v1/connections/<something>` from `assets/mock/GET_v1_connections_pathParams.json`, so a later GET on another path under that base needs its own mock naming.
 - `/api/v1` is a public path of Platform's proxy, so it never answers with a redirect to `/login` (`src/shared/lib/public-paths.ts`); the client follows no redirect.
+
+## Directory search and grant editor
+
+The grant editor (`lib/features/platform_grants/presentation/pages/platform_grant_editor_page.dart`, route `/platform/connections/:id/grant`) picks a user from Platform's directory, then sets the level and the expiry; opened on a grant from the grants list, it shows the form at once.
+The route needs `GrantEditorArgs` as `extra`, built by the grants page from the connection and its loaded grants; a location without it opens the grants page of that connection.
+
+- `GET /api/v1/directory/users` searches Keycloak's users anywhere in the username, first name, last name or e-mail address, 20 per page, `page` from 1 to 100000 (libredb-platform `src/features/connections/lib/grant.schema.ts`).
+  `q` is trimmed and at most 255 UTF-16 code units; the app never sends a longer one and shows a hint instead, and sends no `q` for an empty search.
+  `studioRole` is kept as an opaque nullable string, null meaning the user cannot sign in to Studio; `needsSeat` says a grant on an active connection would take a user seat.
+  `total` comes from a separate Keycloak count, so paging stops when `page * 20` reaches it, when a page holds fewer than 20 users, or at page 100000, and a page adds only users not already listed.
+- Each search costs Platform up to 22 Keycloak Admin calls, which cancelling on the phone does not stop, so `DirectoryPickerBloc` sends few: one request when the picker opens, then a trimmed query once typing pauses for 400 ms, never a query already in flight or on screen, and the same query again only on Retry.
+  A newer query drops the answer to an older one, or to a page of it.
+- The directory refuses with 400 `VALIDATION_FAILED` on `q` or `page`, 503 `DIRECTORY_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR` or `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND` for a user deleted during the search, and 500 `INTERNAL_ERROR`.
+- `PUT /api/v1/connections/{id}/grants/{subject}` creates the subject's grant or replaces it, and answers `{id}`; sending it twice leaves the same grant.
+  The subject is the directory `id`, one path segment encoded with `Uri.encodeComponent`, such as `f%3Aldap-1%3Abob` for an LDAP user without import.
+  The body is exactly `{level, expiresAt}`: `read` or `write`, and a UTC ISO 8601 time or JSON `null` for no expiry.
+- Platform refuses the `PUT` in this order: 400 on the body or a field, 404 `NOT_FOUND` for the connection, 400 on `level` (write without a write credential), 503 or 502 from the user read, 400 on `subject` (unknown or disabled user), 400 on `expiresAt` (not in the future by Platform's clock), and 403 `LICENSE_INVALID`, `LICENSE_EXPIRED` or `LICENSE_USER_SEATS` only on an active connection for a user without a seat.
+  `platformGrantWriteError` gives each field refusal its own code, and the form shows it under that field or the user line; a license refusal shows a banner and keeps the form, and never opens the account refusal page.
+- `GrantEditorBloc` checks the level and that the expiry is after now before sending, drops a save while one runs, and never sends the `PUT` again on its own: after a 503 or 502 only Retry sends the same `PUT` again.
+  A timeout, a lost connection, a 500 or an unreadable 200 may have saved the grant, so the grants list is read again.
+- The search text, the users found, the subject and the grant's values are held in memory only, never stored, and never logged; the logs carry page numbers, counts and codes.
+  `MockInterceptor` answers the directory from `assets/mock/GET_v1_directory_users_queryParams.json` for every query and page, and the `PUT` from `assets/mock/PUT_v1_connections_pathParams.json`.
 
 ## Errors
 

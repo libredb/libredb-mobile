@@ -1645,6 +1645,251 @@ class S {
     return Intl.message('Already removed', name: 'platform_grants_already_removed', desc: '', args: []);
   }
 
+  /// `Add access`
+  String get platform_grants_add {
+    return Intl.message('Add access', name: 'platform_grants_add', desc: '', args: []);
+  }
+
+  /// `Change access`
+  String get platform_grants_edit {
+    return Intl.message('Change access', name: 'platform_grants_edit', desc: '', args: []);
+  }
+
+  /// `Choose a user`
+  String get platform_grants_picker_title {
+    return Intl.message('Choose a user', name: 'platform_grants_picker_title', desc: '', args: []);
+  }
+
+  /// `Search by username, name or e-mail`
+  String get platform_grants_picker_search_hint {
+    return Intl.message(
+      'Search by username, name or e-mail',
+      name: 'platform_grants_picker_search_hint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Clear search`
+  String get platform_grants_picker_clear {
+    return Intl.message('Clear search', name: 'platform_grants_picker_clear', desc: '', args: []);
+  }
+
+  /// `The search text is too long. Use at most 255 characters.`
+  String get platform_grants_picker_query_too_long {
+    return Intl.message(
+      'The search text is too long. Use at most 255 characters.',
+      name: 'platform_grants_picker_query_too_long',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No user found`
+  String get platform_grants_picker_empty_title {
+    return Intl.message('No user found', name: 'platform_grants_picker_empty_title', desc: '', args: []);
+  }
+
+  /// `No Keycloak user matches this search.`
+  String get platform_grants_picker_empty_description {
+    return Intl.message(
+      'No Keycloak user matches this search.',
+      name: 'platform_grants_picker_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not search the directory`
+  String get platform_grants_picker_load_failed {
+    return Intl.message(
+      'Could not search the directory',
+      name: 'platform_grants_picker_load_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Load more`
+  String get platform_grants_picker_load_more {
+    return Intl.message('Load more', name: 'platform_grants_picker_load_more', desc: '', args: []);
+  }
+
+  /// `Could not load more users`
+  String get platform_grants_picker_load_more_failed {
+    return Intl.message(
+      'Could not load more users',
+      name: 'platform_grants_picker_load_more_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Studio admin`
+  String get platform_grants_picker_role_admin {
+    return Intl.message('Studio admin', name: 'platform_grants_picker_role_admin', desc: '', args: []);
+  }
+
+  /// `Studio user`
+  String get platform_grants_picker_role_user {
+    return Intl.message('Studio user', name: 'platform_grants_picker_role_user', desc: '', args: []);
+  }
+
+  /// `No Studio role, cannot sign in to Studio`
+  String get platform_grants_picker_role_none {
+    return Intl.message(
+      'No Studio role, cannot sign in to Studio',
+      name: 'platform_grants_picker_role_none',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Disabled in Keycloak`
+  String get platform_grants_picker_disabled {
+    return Intl.message('Disabled in Keycloak', name: 'platform_grants_picker_disabled', desc: '', args: []);
+  }
+
+  /// `Takes a user seat`
+  String get platform_grants_picker_takes_seat {
+    return Intl.message('Takes a user seat', name: 'platform_grants_picker_takes_seat', desc: '', args: []);
+  }
+
+  /// `Takes a user seat when the connection is active again`
+  String get platform_grants_picker_takes_seat_inactive {
+    return Intl.message(
+      'Takes a user seat when the connection is active again',
+      name: 'platform_grants_picker_takes_seat_inactive',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Give access to {connection}`
+  String platform_grants_editor_title_new(String connection) {
+    return Intl.message(
+      'Give access to $connection',
+      name: 'platform_grants_editor_title_new',
+      desc: '',
+      args: [connection],
+    );
+  }
+
+  /// `Change access to {connection}`
+  String platform_grants_editor_title_edit(String connection) {
+    return Intl.message(
+      'Change access to $connection',
+      name: 'platform_grants_editor_title_edit',
+      desc: '',
+      args: [connection],
+    );
+  }
+
+  /// `Choose another user`
+  String get platform_grants_editor_change_user {
+    return Intl.message('Choose another user', name: 'platform_grants_editor_change_user', desc: '', args: []);
+  }
+
+  /// `Access level`
+  String get platform_grants_editor_level {
+    return Intl.message('Access level', name: 'platform_grants_editor_level', desc: '', args: []);
+  }
+
+  /// `This connection has no write credential, so only read access can be granted.`
+  String get platform_grants_editor_write_unavailable {
+    return Intl.message(
+      'This connection has no write credential, so only read access can be granted.',
+      name: 'platform_grants_editor_write_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose an access level.`
+  String get platform_grants_editor_level_missing {
+    return Intl.message('Choose an access level.', name: 'platform_grants_editor_level_missing', desc: '', args: []);
+  }
+
+  /// `Expiry`
+  String get platform_grants_editor_expiry {
+    return Intl.message('Expiry', name: 'platform_grants_editor_expiry', desc: '', args: []);
+  }
+
+  /// `Never expires`
+  String get platform_grants_editor_expiry_never {
+    return Intl.message('Never expires', name: 'platform_grants_editor_expiry_never', desc: '', args: []);
+  }
+
+  /// `Expires on {date}`
+  String platform_grants_editor_expiry_on(String date) {
+    return Intl.message('Expires on $date', name: 'platform_grants_editor_expiry_on', desc: '', args: [date]);
+  }
+
+  /// `Pick a date and time`
+  String get platform_grants_editor_expiry_pick {
+    return Intl.message('Pick a date and time', name: 'platform_grants_editor_expiry_pick', desc: '', args: []);
+  }
+
+  /// `In this device's time zone.`
+  String get platform_grants_editor_expiry_local_time {
+    return Intl.message(
+      'In this device\'s time zone.',
+      name: 'platform_grants_editor_expiry_local_time',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose a time in the future, or no expiry.`
+  String get platform_grants_editor_expiry_not_in_future {
+    return Intl.message(
+      'Choose a time in the future, or no expiry.',
+      name: 'platform_grants_editor_expiry_not_in_future',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This user has no Studio role and cannot sign in to Studio until a Keycloak admin gives them one.`
+  String get platform_grants_editor_no_role_note {
+    return Intl.message(
+      'This user has no Studio role and cannot sign in to Studio until a Keycloak admin gives them one.',
+      name: 'platform_grants_editor_no_role_note',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Save`
+  String get platform_grants_editor_save {
+    return Intl.message('Save', name: 'platform_grants_editor_save', desc: '', args: []);
+  }
+
+  /// `Access saved`
+  String get platform_grants_editor_saved {
+    return Intl.message('Access saved', name: 'platform_grants_editor_saved', desc: '', args: []);
+  }
+
+  /// `The license does not allow this grant`
+  String get platform_grants_editor_license_title {
+    return Intl.message(
+      'The license does not allow this grant',
+      name: 'platform_grants_editor_license_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform could not check the user`
+  String get platform_grants_editor_retry_title {
+    return Intl.message(
+      'Platform could not check the user',
+      name: 'platform_grants_editor_retry_title',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Switch connection`
   String get connection_switcher_title {
     return Intl.message('Switch connection', name: 'connection_switcher_title', desc: '', args: []);

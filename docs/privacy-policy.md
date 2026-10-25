@@ -23,6 +23,8 @@ The app talks to four kinds of servers, and to no others on its own:
   Platform's first answer to your account creates your Platform user record and takes one of the license's admin seats.
   In Platform mode the app shows who holds access to a connection: their usernames and e-mail addresses, and the name or e-mail address of the admin who granted it.
   It holds them in memory while the page is open and never stores them on the device, and it sends Platform the removals of access you ask for.
+  When you search the directory to give someone access, the search text goes to Platform, which searches Keycloak, and the app shows the usernames, names, e-mail addresses, enabled state and Studio role of the users found.
+  It keeps them in memory only while the screen is open, keeps no search history and stores none of it, and it sends Platform the access you give or change: the user, the level and the expiry.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
   See the Crash reports section below.
 
