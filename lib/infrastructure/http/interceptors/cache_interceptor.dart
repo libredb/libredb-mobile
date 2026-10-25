@@ -4,6 +4,7 @@ import 'package:libredb_mobile/infrastructure/cache/cache_storage.dart';
 import 'package:libredb_mobile/infrastructure/cache/shared_prefs_cache_storage.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/dev_console_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/platform_path.dart';
 import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
@@ -218,14 +219,11 @@ class CacheInterceptor extends Interceptor {
 
   static CachePolicy _extractPolicy(RequestOptions options) {
     // LibreDB Platform's answers are never stored or served from the cache, whatever the request names.
-    if (_isPlatformPath(options.path)) return CachePolicy.networkOnly;
+    if (isPlatformPath(options.path)) return CachePolicy.networkOnly;
     final extra = options.extra['cachePolicy'];
     if (extra is CachePolicy) return extra;
     return _isStudioLiveEndpoint(options.path) ? CachePolicy.networkOnly : CachePolicy.networkFirst;
   }
-
-  /// Whether [path] is under `/v1/`, LibreDB Platform's bearer API relative to its `/api`; no Studio path is.
-  static bool _isPlatformPath(String path) => (path.startsWith('/') ? path : '/$path').startsWith('/v1/');
 
   /// Studio's endpoints whose answers are never served from the cache unless the request names a policy.
   static const _studioLiveEndpoints = {'/connections/managed', '/connections/policy', '/auth/me', '/health', '/ready'};

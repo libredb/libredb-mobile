@@ -35,7 +35,21 @@ const Set<String> sensitiveHeaderNameSubstrings = {'authorization', 'api-key', '
 /// Body keys whose values are masked when any of these appears as a
 /// lower-cased substring (so `accessToken`, `refreshToken`, `newPassword`
 /// and `clientSecret` all match).
-const Set<String> sensitiveBodyKeySubstrings = {'password', 'otp', 'token', 'refreshtoken', 'secret', 'subjectemail'};
+///
+/// `statement` and `errormessage` keep the statement and the database's
+/// error text of a Platform audit event out of every exit; as substrings
+/// they also mask `statementType`, `statementCapture`, `fixStatement` and
+/// the like, which is accepted for logs and crash reports.
+const Set<String> sensitiveBodyKeySubstrings = {
+  'password',
+  'otp',
+  'token',
+  'refreshtoken',
+  'secret',
+  'subjectemail',
+  'statement',
+  'errormessage',
+};
 
 /// Keys of the OpenID Connect protocol whose values are masked too: the
 /// authorization code, the PKCE verifier, `state`, `nonce`, `session_state`
@@ -212,8 +226,18 @@ String scrubBodyText(Object? body, {Set<String> sensitiveKeys = const {}}) =>
 /// and the values under [echoedValueKeys] are masked too. Every value of
 /// [requestBody] that such a scrub would mask is masked wherever the body
 /// repeats it, so a free-text detail that names the OTP is caught too.
-String scrubErrorBody(Object? body, {Object? requestBody, Set<String> sensitiveKeys = const {}}) {
-  final isSensitive = _sensitiveKeyTest(sensitiveKeys);
+///
+/// A key is not masked for containing one of [exceptKeySubstrings], one
+/// of [sensitiveBodyKeySubstrings], though every other rule still applies
+/// to it: `ApiClient` reads LibreDB Studio's `fixStatement`, the statement a
+/// screen shows for the user to copy, with `statement` excepted.
+String scrubErrorBody(
+  Object? body, {
+  Object? requestBody,
+  Set<String> sensitiveKeys = const {},
+  Set<String> exceptKeySubstrings = const {},
+}) {
+  final isSensitive = _sensitiveKeyTest(sensitiveKeys, exceptKeySubstrings);
   final secrets = _secretValues(_decoded(requestBody), isSensitive).toSet().toList()
     ..sort((a, b) => b.length - a.length);
   bool isSecret(Object? key) => isSensitive(key) || echoedValueKeys.contains('$key'.toLowerCase());
@@ -241,17 +265,21 @@ String _scrubBodyText(Object? body, bool Function(Object? key) isSecret, List<St
 /// error repeats.
 const int _minEchoedLength = 4;
 
-bool _isSensitiveKey(Object? key) {
+bool _isSensitiveKey(Object? key) => _matchesSensitiveKey(key, sensitiveBodyKeySubstrings);
+
+bool _matchesSensitiveKey(Object? key, Set<String> substrings) {
   final lower = '$key'.toLowerCase();
-  return sensitiveBodyKeySubstrings.any(lower.contains) || sensitiveExactKeys.contains(lower);
+  return substrings.any(lower.contains) || sensitiveExactKeys.contains(lower);
 }
 
-/// [_isSensitiveKey], which also matches each of [sensitiveKeys], compared
-/// whole and lower-cased.
-bool Function(Object? key) _sensitiveKeyTest(Set<String> sensitiveKeys) {
-  if (sensitiveKeys.isEmpty) return _isSensitiveKey;
+/// [_isSensitiveKey] without the substrings of [exceptKeySubstrings], which
+/// also matches each of [sensitiveKeys], compared whole and lower-cased.
+bool Function(Object? key) _sensitiveKeyTest(Set<String> sensitiveKeys, [Set<String> exceptKeySubstrings = const {}]) {
+  final substrings = sensitiveBodyKeySubstrings.difference(exceptKeySubstrings);
+  bool base(Object? key) => _matchesSensitiveKey(key, substrings);
+  if (sensitiveKeys.isEmpty) return base;
   final names = {for (final key in sensitiveKeys) key.toLowerCase()};
-  return (key) => _isSensitiveKey(key) || names.contains('$key'.toLowerCase());
+  return (key) => base(key) || names.contains('$key'.toLowerCase());
 }
 
 Object? _scrubKeys(Object? body, bool Function(Object? key) isSecret) => switch (body) {

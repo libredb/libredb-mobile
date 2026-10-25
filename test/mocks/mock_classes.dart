@@ -58,6 +58,7 @@ import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/query_page.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_store.dart';
+import 'package:libredb_mobile/features/platform_audit/domain/repositories/platform_audit_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 
@@ -73,6 +74,8 @@ class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepos
 class MockIPlatformGrantRepository extends Mock implements IPlatformGrantRepository {}
 
 class MockPlatformDirectoryRepository extends Mock implements IPlatformDirectoryRepository {}
+
+class MockIPlatformAuditRepository extends Mock implements IPlatformAuditRepository {}
 
 class MockPlatformIdentityRepository extends Mock implements IPlatformIdentityRepository {}
 

@@ -20,6 +20,10 @@ final class PreviewStatement extends PreviewAnswer {
 
   @override
   List<Object?> get props => [statement, catalog];
+
+  /// Leaves the statement out, which names the user's objects and never goes into a log.
+  @override
+  String toString() => 'PreviewStatement(catalog: $catalog)';
 }
 
 /// The generator writes no statement for the object, because Studio refuses it or writes it in a way the app does not

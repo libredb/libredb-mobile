@@ -102,4 +102,8 @@ final class SourceStatement extends SourcePart {
 
   @override
   List<Object?> get props => [id, label, statement];
+
+  /// Leaves the statement out, as [SourceText] leaves out its text.
+  @override
+  String toString() => 'SourceStatement($id, $label)';
 }

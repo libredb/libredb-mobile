@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
+import 'package:libredb_mobile/infrastructure/http/platform_path.dart';
 import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 
 /// Dio interceptor that records HTTP requests/responses to [DevConsoleStore].
@@ -116,15 +117,17 @@ class DevConsoleInterceptor extends Interceptor {
         : scrubBodyText(response.data, sensitiveKeys: sensitiveKeysOf(response.requestOptions)),
   );
 
-  /// Records [options] in [DevConsoleStore] as a request in flight and returns the id of its entry.
+  /// Records [options] in [DevConsoleStore] as a request in flight and returns the id of its entry. The id and the url
+  /// mask a Platform request's query values ([loggedUri]).
   String _addEntry(RequestOptions options) {
-    final id = '${options.method}_${options.uri}_${DateTime.now().microsecondsSinceEpoch}';
+    final uri = loggedUri(options);
+    final id = '${options.method}_${uri}_${DateTime.now().microsecondsSinceEpoch}';
     options.extra['_devConsoleId'] = id;
 
     final entry = NetworkEntry(
       id: id,
       method: options.method,
-      url: options.uri.toString(),
+      url: uri,
       startTime: DateTime.now(),
       requestHeaders: maskHeaders(options.headers),
       requestBody: options.data == null ? null : scrubBodyText(options.data, sensitiveKeys: sensitiveKeysOf(options)),

@@ -19,7 +19,9 @@ sealed class AppError {
   /// own words, such as a database's error quoting the statement, and this text reaches the log and, for an uncaught
   /// error, Sentry. A screen reads [message] itself.
   @override
-  String toString() => code == null ? '$runtimeType' : '$runtimeType(code: $code)';
+  String toString() => _typeAndCode;
+
+  String get _typeAndCode => code == null ? '$runtimeType' : '$runtimeType(code: $code)';
 }
 
 /// Network connectivity error (no internet, DNS failure).
@@ -40,6 +42,10 @@ final class AuthError extends AppError {
 
   @override
   int get hashCode => Object.hash(super.hashCode, fixStatement);
+
+  /// The text of every [AppError], without the fix statement, which a screen reads itself.
+  @override
+  String toString() => _typeAndCode;
 }
 
 /// Input validation error (invalid form data, bad request params).

@@ -64,6 +64,8 @@ The editor's drafts (one per connection, with its catalog) and the statement his
   'Remove my data' runs `clearSubject` for the signed-in account (see below); a plain sign-out keeps the text.
 - Logs and errors carry no text, key, subject, subject hash or path; a decode failure is reported without the decrypted bytes.
 
+The statements and database error texts of Platform's audit log (`GET /api/v1/audit`, [platform.md](platform.md#audit-log)) are held in memory only, never stored and never logged.
+
 ## Removing the app's data
 
 A sign-out forgets the session: the tokens, the HTTP cache, the files the share sheet got and what the app holds in memory.

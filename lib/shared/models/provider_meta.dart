@@ -170,6 +170,11 @@ class ProviderMeta extends Equatable {
     schemaRefreshPattern,
     labels,
   ];
+
+  /// The query language only: a field named for a statement stays out of every text that can reach a log, and the
+  /// props would print it.
+  @override
+  String toString() => 'ProviderMeta(queryLanguage: $queryLanguage, queryDialect: $queryDialect)';
 }
 
 /// The result column the engine never masks, such as a key-value engine's key column.

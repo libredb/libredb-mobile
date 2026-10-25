@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
+import 'package:libredb_mobile/infrastructure/http/platform_path.dart';
 import 'package:libredb_mobile/infrastructure/http/sensitive_keys.dart';
 
 /// Structured request/response logging via AppLogger.
@@ -61,9 +62,10 @@ class LoggingInterceptor extends Interceptor {
     handler.next(err);
   }
 
-  /// Build the request log line. Concise unless [verbose] is set.
+  /// Build the request log line. Concise unless [verbose] is set. A Platform request's query values are masked
+  /// ([loggedUri]).
   static String formatRequest(RequestOptions options) {
-    final concise = '${options.method} ${options.uri} (headers: ${options.headers.keys.join(', ')})';
+    final concise = '${options.method} ${loggedUri(options)} (headers: ${options.headers.keys.join(', ')})';
     if (!verbose) return concise;
 
     final headers = scrubHeaders(options.headers);

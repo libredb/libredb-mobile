@@ -16,6 +16,18 @@
     "expected": "{\"subjectEmail\":\"[REDACTED]\",\"level\":\"read\"}"
   },
   {
+    "input": "{\"statement\":\"SELECT salary FROM payroll\",\"rowCount\":3}",
+    "expected": "{\"statement\":\"[REDACTED]\",\"rowCount\":3}"
+  },
+  {
+    "input": "{\"errorMessage\":\"permission denied for payroll\",\"errorCode\":\"42501\"}",
+    "expected": "{\"errorMessage\":\"[REDACTED]\",\"errorCode\":\"42501\"}"
+  },
+  {
+    "input": "{\"statementType\":\"SELECT\",\"status\":\"error\"}",
+    "expected": "{\"statementType\":\"[REDACTED]\",\"status\":\"error\"}"
+  },
+  {
     "input": "{\"password\":\"hunter2\",\"n\":1}",
     "expected": "{\"password\":\"[REDACTED]\",\"n\":1}"
   },

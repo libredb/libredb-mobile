@@ -20,4 +20,8 @@ class ConnectionPolicy extends Equatable {
 
   @override
   List<Object?> get props => [customConnections, governance, statementCapture];
+
+  /// The flags only: a field named for a statement stays out of every text that can reach a log.
+  @override
+  String toString() => 'ConnectionPolicy(customConnections: $customConnections, governance: $governance)';
 }
