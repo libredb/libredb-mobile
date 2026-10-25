@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_r
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -77,6 +78,9 @@ void main() {
 
   // Keyed like [requests]; later Platform repositories append their rows here.
   final platformRequests = <String, Future<Result<Object?>> Function(PlatformApiClient client)>{
+    'IPlatformGrantRepository.list': (client) => PlatformGrantRepository(client).list('cm0connection000000000001'),
+    'IPlatformGrantRepository.revoke': (client) =>
+        PlatformGrantRepository(client).revoke('cm0connection000000000001', 'cm0grant000000000000000001'),
     'IPlatformIdentityRepository.fetch': (client) => PlatformIdentityRepository(client).fetch(),
     'IPlatformConnectionRepository.list': (client) => PlatformConnectionRepository(client).list(),
   };

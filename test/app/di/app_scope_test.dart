@@ -34,6 +34,8 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/entities/platform_grant.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -1079,6 +1081,17 @@ void main() {
       final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
 
       expect(scope.read<IPlatformConnectionRepository>(), isA<PlatformConnectionRepository>());
+    });
+
+    testWidgets('provides the Platform grant repository on the Platform client', (tester) async {
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      scope.read<PlatformApiClient>().instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/connections/c1/grants': (200, {'grants': <Object?>[]}),
+      });
+
+      final result = await tester.runAsync(() => scope.read<IPlatformGrantRepository>().list('c1'));
+
+      expect(result, isA<Success<List<PlatformGrant>>>());
     });
 
     testWidgets('a build without a Platform target still provides a client that sends nothing', (tester) async {

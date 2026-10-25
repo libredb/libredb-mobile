@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_i
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
@@ -29,6 +30,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_reposi
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
@@ -242,6 +244,10 @@ class AppDependencies {
   /// Platform's connection list: every connection of the install, read only.
   IPlatformConnectionRepository createPlatformConnectionRepository(PlatformApiClient client) =>
       PlatformConnectionRepository(client);
+
+  /// Platform's grants of a connection: list and revoke.
+  IPlatformGrantRepository createPlatformGrantRepository(PlatformApiClient apiClient) =>
+      PlatformGrantRepository(apiClient);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

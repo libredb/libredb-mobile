@@ -15,6 +15,7 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/features/platform_connections/presentation/pages/platform_connection_list_page.dart';
+import 'package:libredb_mobile/features/platform_grants/presentation/pages/platform_connection_grants_page.dart';
 import 'package:libredb_mobile/features/platform_home/presentation/pages/platform_home_page.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -322,6 +323,36 @@ void main() {
       );
       expect(find.text('İstanbul Önbellek'), findsOneWidget);
       expect(find.byType(AppShell), findsNothing);
+    });
+
+    testWidgets('a tap on a Platform connection opens its grants inside the Platform shell', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+      router.go(ApplicationRoutesConstants.platformConnections);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Legacy Billing'));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, '/platform/connections/cm0conn0000000000000000002');
+      expect(
+        find.descendant(of: find.byType(PlatformShell), matching: find.byType(PlatformConnectionGrantsPage)),
+        findsOneWidget,
+      );
+      expect(find.text('alice.reader'), findsOneWidget);
+    });
+
+    testWidgets('a Platform grants location without its connection opens the connections list', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+
+      router.go('/platform/connections/cm0conn0000000000000000002');
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.platformConnections);
+      expect(find.byType(PlatformConnectionGrantsPage), findsNothing);
+      expect(find.byType(PlatformConnectionListPage), findsOneWidget);
     });
 
     testWidgets('a Studio session still lands on the Studio connection list', (tester) async {

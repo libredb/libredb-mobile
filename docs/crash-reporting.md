@@ -75,11 +75,11 @@ That Sentry receives the timer's error comes from the #191 device check on the t
 `sentryBeforeSend` (`lib/infrastructure/analytics/sentry_scrub.dart`) changes every event before it leaves the device:
 
 - The `Authorization`, `Cookie` and `Set-Cookie` headers are dropped, whatever their case.
-- Any other header whose name contains `password`, `otp`, `token`, `secret`, `authorization` or an api-key name (`api-key`, `api_key`, `apikey`), or is an OpenID Connect key, such as `X-Auth-Token`, `Proxy-Authorization` or `X-Api-Key`, keeps its name and has its whole value replaced with `[REDACTED]`.
+- Any other header whose name contains `password`, `otp`, `token`, `secret`, `subjectemail`, `authorization` or an api-key name (`api-key`, `api_key`, `apikey`), or is an OpenID Connect key, such as `X-Auth-Token`, `Proxy-Authorization` or `X-Api-Key`, keeps its name and has its whole value replaced with `[REDACTED]`.
 - A tag named like a credential body key has its whole value masked, and every other tag value has its email addresses, JWTs and the secrets `maskSecrets` finds masked.
 - The user's id, username, email, IP address and name have their email addresses, JWTs and secrets masked, and the user's data is masked like a breadcrumb's data.
 - Every other request header value and every `request.env` value has its email addresses, JWTs and secrets masked; the header names are kept.
-- The values of body keys whose names contain `password`, `otp`, `token` or `secret` (case-insensitive substring) are replaced with `[REDACTED]` at any depth.
+- The values of body keys whose names contain `password`, `otp`, `token`, `secret` or `subjectemail` (case-insensitive substring) are replaced with `[REDACTED]` at any depth.
 - Email addresses and JWT-shaped strings (three base64url segments) in exception values, the event message and the request body are replaced with `[REDACTED_EMAIL]` and `[REDACTED_JWT]`.
   Only an HTTP integration such as `sentry_dio` attaches a request body; the app has none today.
 - Email addresses and JWTs in the request URL (`request.url`, query string, fragment) and the transaction name are masked the same way.

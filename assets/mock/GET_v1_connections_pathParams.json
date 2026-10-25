@@ -1,0 +1,54 @@
+{
+  "grants": [
+    {
+      "id": "cm0grant000000000000000001",
+      "subject": "5f0c1a52-1d2e-4c1b-9a51-000000000001",
+      "subjectUsername": "alice.reader",
+      "subjectEmail": "alice.reader@example.org",
+      "level": "read",
+      "expiresAt": "2030-06-30T00:00:00.000Z",
+      "grantedBy": { "id": "cm0platformadmin0000000001", "name": "Platform Admin", "email": "platform.admin@example.org" },
+      "grantedAt": "2026-09-01T08:30:00.000Z"
+    },
+    {
+      "id": "cm0grant000000000000000002",
+      "subject": "5f0c1a52-1d2e-4c1b-9a51-000000000002",
+      "subjectUsername": "bob.writer",
+      "subjectEmail": "bob.writer@example.org",
+      "level": "write",
+      "expiresAt": null,
+      "grantedBy": { "id": "cm0platformadmin0000000001", "name": "Platform Admin", "email": "platform.admin@example.org" },
+      "grantedAt": "2026-09-02T10:00:00.000Z"
+    },
+    {
+      "id": "cm0grant000000000000000003",
+      "subject": "5f0c1a52-1d2e-4c1b-9a51-000000000003",
+      "subjectUsername": "carol",
+      "subjectEmail": null,
+      "level": "read",
+      "expiresAt": null,
+      "grantedBy": { "id": "cm0platformadmin0000000001", "name": "Platform Admin", "email": "platform.admin@example.org" },
+      "grantedAt": "2026-09-03T12:15:00.000Z"
+    },
+    {
+      "id": "cm0grant000000000000000004",
+      "subject": "5f0c1a52-1d2e-4c1b-9a51-000000000004",
+      "subjectUsername": "dave",
+      "subjectEmail": "dave@example.org",
+      "level": "read",
+      "expiresAt": "2026-01-15T00:00:00.000Z",
+      "grantedBy": { "id": "cm0platformadmin0000000001", "name": "Platform Admin", "email": "platform.admin@example.org" },
+      "grantedAt": "2025-12-01T09:00:00.000Z"
+    },
+    {
+      "id": "cm0grant000000000000000005",
+      "subject": "5f0c1a52-1d2e-4c1b-9a51-000000000005",
+      "subjectUsername": "erin",
+      "subjectEmail": "erin@example.org",
+      "level": "write",
+      "expiresAt": "2031-01-01T00:00:00.000Z",
+      "grantedBy": { "id": "cm0otheradmin0000000000001", "name": null, "email": "second.admin@example.org" },
+      "grantedAt": "2026-10-01T16:45:00.000Z"
+    }
+  ]
+}

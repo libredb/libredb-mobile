@@ -29,6 +29,8 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | --- | --- | --- |
 | `GET /api/v1/me` | `{id, email, name, roles, permissions, tenant: {id, name, slug}}` | `PlatformIdentityRepository`, `PlatformIdentityModel` |
 | `GET /api/v1/connections` | `{connections: [{id, name, engine, status, hasWriteCredential}]}` | `IPlatformConnectionRepository.list`, `PlatformConnectionsModel` |
+| `GET /api/v1/connections/{id}/grants` | `{grants: [{id, subject, subjectUsername, subjectEmail, level, expiresAt, grantedBy: {id, name, email}, grantedAt}]}` | `PlatformGrantRepository.list`, `PlatformGrantJson` |
+| `DELETE /api/v1/connections/{id}/grants/{grantId}` | 204, no body | `PlatformGrantRepository.revoke` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -39,6 +41,17 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
   All five fields are always present; `status` is `active` or `inactive` today, and the app keeps `engine` and `status` as opaque strings, an unknown value included, and keeps Platform's order.
   The connections tab (`lib/features/platform_connections/`) shows the list read only: no connection is created, edited or deleted on the phone, and enabling or disabling one comes in M11-P with `PATCH /api/v1/connections/{id}`.
   It loads when the tab opens, on a pull to refresh and on a retry, never on a timer; a tap opens the connection's grants at `/platform/connections/:id`.
+- `GET /api/v1/connections/{id}/grants` lists a connection's grants by username, then id, expired grants included (libredb-platform `src/features/connections/lib/grant-service.ts`, `grant.repository.ts`).
+  The app keeps that order and never sorts.
+  `subjectEmail`, `expiresAt` and `grantedBy.name` are nullable, and a null `expiresAt` is a grant without expiry; `level` is kept as an opaque string, so an unknown level is shown as Platform sent it.
+  A connection that is not in the install tenant, or is deleted, answers 404 `NOT_FOUND`; an inactive connection lists its grants.
+  The usernames and e-mail addresses are held in memory by the page's bloc only, never stored, never logged, and `PlatformGrant.toString` prints none of them.
+- `DELETE /api/v1/connections/{id}/grants/{grantId}` revokes one grant and answers 204 with no body, which the app does not read.
+  The last segment is the grant id from the list, never the subject that a `PUT` takes.
+  It answers 404 `NOT_FOUND` for a grant another admin already revoked, a grant of another connection, and an unknown or deleted connection alike; the app reads only the code, so it says "Already removed" and lets the refresh that follows tell a revoked grant from a connection that is gone.
+  It reads nothing from Keycloak, so it never answers `DIRECTORY_UNAVAILABLE`, and like every non-GET it is never sent twice.
+- Each id is sent as one path segment encoded with `Uri.encodeComponent`.
+  `MockInterceptor` answers every GET under `/v1/connections/<something>` from `assets/mock/GET_v1_connections_pathParams.json`, so a later GET on another path under that base needs its own mock naming.
 - `/api/v1` is a public path of Platform's proxy, so it never answers with a redirect to `/login` (`src/shared/lib/public-paths.ts`); the client follows no redirect.
 
 ## Errors
@@ -120,6 +133,10 @@ The Platform shell reads nothing of Studio and provides none of the Studio scope
 While Platform refuses the admin, a refusal page covers the screens; Retry asks `GET /api/v1/me` again and uncovers them on a 200, and Logout signs out.
 The Studio unreachable page does not cover a signed-in Platform session; it still covers the restore and the login page.
 Switching mode is a sign-out followed by a sign-in through the other entry.
+
+A tap on a connection opens its grants (`/platform/connections/<id>`), with the tapped connection handed over as go_router `extra`, since go_router logs every location and Platform has no route that reads one connection.
+The location carries only the connection id; a location reached without that `extra`, such as a `returnUrl` after sign-in or a typed location, opens the connections list instead.
+While a revoke runs every row's actions menu is disabled, because a second revoke would be dropped.
 
 A Platform sign-out sends no request to Studio and writes no warn line about a missing Studio record, since Platform v1 has no logout route and there is no Studio session to record; it still wipes the session and starts the Keycloak end-session with the ID token hint.
 
