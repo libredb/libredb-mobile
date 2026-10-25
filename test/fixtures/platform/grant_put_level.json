@@ -1,0 +1,1 @@
+{"error":{"code":"VALIDATION_FAILED","message":"Validation failed","fieldErrors":{"level":["The connection has no write credential, so it can be granted read only"]}}}

@@ -434,7 +434,7 @@ On the Android emulator, `tool/studio-dev/trust-android-emulator.sh` also forwar
 Platform in self-hosted mode needs a license, and verifies it against the keys built into the image and, when the license lists hosts, against the host of `AUTH_URL`, here `localhost`.
 `libredb-platform` reads `PLATFORM_LICENSE` from two env files: the committed `tool/studio-dev/platform-license.placeholder.env` first, then the gitignored `tool/studio-dev/platform-license.local`, which wins when it exists.
 The placeholder `no-license-in-tool-studio-dev` verifies as `LICENSE_MALFORMED`: Platform still starts, in state `invalid`, and logs one warn line "License invalid, no seat can be added" with `state` `invalid` and `code` `LICENSE_MALFORMED`.
-Without a license no account can take an admin seat, so an admin's first call of any `/api/v1` route answers 403 `LICENSE_INVALID`, and the web console refuses the sign-in too; only the refusals of [Platform answers](#platform-answers) can be recorded.
+Without a license no account can take an admin seat, so an admin's first call of any `/api/v1` route answers 403 `LICENSE_INVALID`, and the web console refuses the sign-in too; only the refusals of [Platform answers](#platform-answers) can be recorded, and the localhost license below unlocks the [Success and write answers](#success-and-write-answers).
 
 A license that lists the host `localhost`, or no host, goes into the local file with a command that never prints it, such as:
 
@@ -708,3 +708,77 @@ docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --
 `me_api_disabled.json` comes from Platform recreated with `PLATFORM_API_AUDIENCE` empty, which turns the bearer API off; the plain `up` after it turns it on again.
 `me_idp_unavailable.json` comes from Platform restarted while Keycloak is stopped, so it has no signing keys cached and Caddy answers its discovery read with 502.
 `test/infrastructure/platform/recorded_platform_answers_test.dart` reads every one of them.
+
+### Success and write answers
+
+The success and write answers need the localhost license of [The license](#the-license) in `tool/studio-dev/platform-license.local`; Platform then logs "License active" when `serve` starts.
+They were recorded on 2026-10-25 from Platform 1.3.0, the image the compose file pins, from a fresh volume, with a free localhost dev license of one admin seat and three user seats.
+`me.json` comes first, so `admin` takes the only admin seat, and `admin2` is refused it afterwards.
+
+The app never creates a connection, so the two connections the grant answers need were created by hand in Platform's web console:
+
+1. Open `https://localhost:9445/login` in a browser, press its sign-in button and sign in to Keycloak as `admin` / `admin`.
+2. Open `https://localhost:9445/connections/new`, the form that adds a connection, and fill it in: Name `Dev app (write)`, Environment `development`, Engine PostgreSQL, Host `postgres`, Port `5432`, Database `app`.
+3. Under the read credential, enter User `studio_reader` with the password of `x-studio-reader-password` in the compose file, and tick the box that confirms the read credential can only read.
+4. Set Write credential to "Add a write credential", enter User `app_owner` with the password of `x-app-owner-password` in the compose file, and create the connection.
+5. Create a second connection the same way, named `Dev app (read-only)`, with Write credential left at "No write credential".
+
+Platform reaches `postgres` through the stack's network, and the passwords are the dev ones the compose file holds; no other credential is used.
+Platform lists the newest connection first, so `connections.json` lists `Dev app (read-only)` before `Dev app (write)`.
+
+With `W` and `R` the ids of the write and the read-only connection from `connections.json`, `U` the id of `user` (`a0000000-0000-4000-8000-000000000002`) and `record_platform` of [Platform answers](#platform-answers), each line with a fresh `admin` token unless it names another user:
+
+```shell
+J=(-X PUT -H 'Content-Type: application/json')
+token=$(tool/studio-dev/access-token.sh admin) && record_platform me /me                                  # 200
+token=$(tool/studio-dev/access-token.sh admin2) && record_platform me_admin_seats /me                     # 403 LICENSE_ADMIN_SEATS
+record_platform connections /connections                                                                  # 200, both
+record_platform directory /directory/users                                                                # 200, disabled with enabled false
+record_platform directory_query '/directory/users?q=adm'                                                  # 200, admin and admin2
+record_platform directory_bad_page '/directory/users?page=0'                                              # 400 VALIDATION_FAILED, page
+record_platform grant_put "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null}'  # 200 {id}
+record_platform grants "/connections/$W/grants"                                                           # 200, that grant
+record_platform grants_unknown_connection /connections/unknown/grants                                     # 404 NOT_FOUND
+record_platform grant_put_level "/connections/$R/grants/$U" "${J[@]}" --data '{"level":"write","expiresAt":null}'  # 400, level
+record_platform grant_put_subject_unknown "/connections/$W/grants/a0000000-0000-4000-8000-000000000099" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'                                                              # 400, subject
+record_platform grant_put_subject_disabled "/connections/$W/grants/a0000000-0000-4000-8000-000000000005" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'                                                              # 400, subject
+record_platform grant_put_expiry "/connections/$W/grants/$U" "${J[@]}" \
+  --data '{"level":"read","expiresAt":"2020-01-01T00:00:00.000Z"}'                                        # 400, expiresAt
+record_platform grant_put_body "/connections/$W/grants/$U" "${J[@]}" --data '{"level":"read","expiresAt":null,"note":"x"}'  # 400, ""
+record_platform grant_delete_unknown "/connections/$W/grants/unknown" -X DELETE                           # 404 NOT_FOUND
+```
+
+`grant_put_body.json` carries the field key `""`, because the strict schema refuses an extra key at the root, and `grant_put_subject_disabled.json` names the username in its message, which the app never shows or logs.
+For `grant_put_user_seats.json`, `admin` (`...0001`) and `admin2` (`...0004`) were each granted `read` on `W` with the same `PUT`, which with `user`'s grant takes all three user seats (an admin with a grant takes a user seat too); the `PUT` for `norole` (`...0003`) then answers 403 `LICENSE_USER_SEATS`:
+
+```shell
+record_platform grant_put_user_seats "/connections/$W/grants/a0000000-0000-4000-8000-000000000003" "${J[@]}" \
+  --data '{"level":"read","expiresAt":null}'                                                              # 403 LICENSE_USER_SEATS
+```
+
+The answers of `PATCH /api/v1/connections/{id}` (libredb-platform#51), which the 1.3.0 image already serves, are recorded for M11-P on the read-only connection, so the no-op leaves it active:
+
+```shell
+P=(-X PATCH -H 'Content-Type: application/json')
+record_platform connection_patch "/connections/$R" "${P[@]}" --data '{"active":true}'                     # 200, the connection
+record_platform connection_patch_body "/connections/$R" "${P[@]}" --data '{"active":true,"name":"x"}'     # 400, ""
+record_platform connection_patch_unknown /connections/unknown "${P[@]}" --data '{"active":true}'          # 404 NOT_FOUND
+```
+
+`directory_unavailable.json` is the 503 `DIRECTORY_UNAVAILABLE` of a directory search while Keycloak is stopped, with an `admin` token fetched, and its signing keys cached by Platform, before the stop:
+
+```shell
+token=$(tool/studio-dev/access-token.sh admin) && curl -sk -o /dev/null -H "Authorization: Bearer $token" https://localhost:9445/api/v1/directory/users
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform stop keycloak
+record_platform directory_unavailable '/directory/users?q=zz'                                             # 503 DIRECTORY_UNAVAILABLE
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait
+```
+
+Every grant made for the recording was revoked by its id, and each `DELETE /api/v1/connections/{id}/grants/{grant id}` answered 204 with no body, so it has no fixture.
+At the end `GET /api/v1/connections/{id}/grants` answered `{"grants":[]}` for both connections.
+
+`recorded_platform_answers_test.dart` reads these through the production repositories and `platformError` or `platformGrantWriteError`; `me_admin_seats.json` makes `platformAccountRefusal` return `platformLicenseAdminSeats`.
+`directory.json`, `directory_query.json` and `grant_put.json` are recorded for the directory and grant `PUT` readers of #250, which read them once they merge.
+No fixture carries the license.

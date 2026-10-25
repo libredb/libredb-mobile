@@ -382,7 +382,7 @@ services:
     volumes:
       - dev-ca:/ca:ro
     healthcheck:
-      # The image's own HEALTHCHECK asks the liveness probe on port 3000; readiness on 3002 also waits for the
+      # The image's own HEALTHCHECK asks the liveness probe on the port in PORT; readiness on 3002 also waits for the
       # migrations and the bridge contract.
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 5s
