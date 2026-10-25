@@ -560,10 +560,10 @@ class S {
     return Intl.message('LibreDB', name: 'app_title', desc: '', args: []);
   }
 
-  /// `Single sign-on is not configured correctly in this app. Contact your administrator.`
+  /// `This build has no sign-in settings. Ask whoever gave you the app for a complete build.`
   String get error_auth_oidc_config {
     return Intl.message(
-      'Single sign-on is not configured correctly in this app. Contact your administrator.',
+      'This build has no sign-in settings. Ask whoever gave you the app for a complete build.',
       name: 'error_auth_oidc_config',
       desc: '',
       args: [],
