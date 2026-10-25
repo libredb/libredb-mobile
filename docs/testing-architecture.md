@@ -315,7 +315,7 @@ singleton or `setTestInstance`.
 
 `test/integration/app_smoke_test.dart` boots the **whole app** in mock mode
 (`MockSignInDependencies()`, as `main_mock.dart` passes it: `AppConfig.mock()`, which serves
-`assets/mock/*.json`, and the local sign-in in place of Keycloak) and drives cold-start → single sign-on → connection list, exercising
+`assets/mock/*.json`, and the mock sign-in in place of Keycloak) and drives cold-start → single sign-on → connection list, exercising
 routing + DI + BLoCs + the mock HTTP layer together. It is a full-app widget test
 (`TestWidgetsFlutterBinding`), so it runs headless under the normal
 `flutter test` — no device, no `integration_test` package, no CI changes. The

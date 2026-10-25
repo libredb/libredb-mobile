@@ -9,8 +9,8 @@ import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// End-to-end smoke: boots the full app as `main_local.dart` does, the mocked API of `assets/mock/*.json`
-/// (`AppConfig.mock()`) and the local sign-in in place of Keycloak, and drives cold-start → single sign-on → connection
+/// End-to-end smoke: boots the full app as `main_mock.dart` does, the mocked API of `assets/mock/*.json`
+/// (`AppConfig.mock()`) and the mock sign-in in place of Keycloak, and drives cold-start → single sign-on → connection
 /// list. Exercises routing + DI + BLoCs + the mock HTTP layer together.
 ///
 /// Runs headless under the normal `flutter test` (no device/emulator). The
@@ -25,7 +25,7 @@ void main() {
     // Cold start lands on the login screen (no token after the reset), which offers only single sign-on.
     expect(find.byKey(loginButtonSsoKey), findsOneWidget);
 
-    // The local sign-in stands in for Keycloak and needs no server.
+    // The mock sign-in stands in for Keycloak and needs no server.
     await tester.tap(find.byKey(loginButtonSsoKey));
     await tester.pumpAndSettle();
 

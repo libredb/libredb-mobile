@@ -71,7 +71,7 @@ Sign in as `admin` / `admin` or `user` / `user`.
 Without a Studio, the app runs against recorded answers, and "Sign in to Studio" or "Sign in to Platform" signs in through a debug-only stand-in for Keycloak ([docs/oidc.md](docs/oidc.md#mock-mode-without-keycloak)):
 
 ```shell
-fvm flutter run --target lib/main/main_local.dart
+fvm flutter run --target lib/main/main_mock.dart
 ```
 
 ## Development

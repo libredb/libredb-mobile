@@ -59,7 +59,7 @@ class _ShareFiles extends TemporaryShareFiles {
   }
 }
 
-/// The local sign-in's dependencies, with [shareFiles] wherever the app uses its share files.
+/// The mock sign-in's dependencies, with [shareFiles] wherever the app uses its share files.
 class _Dependencies extends MockSignInDependencies {
   _Dependencies(this.shareFiles) : super(appConfig: const AppConfig.test());
 
@@ -117,7 +117,7 @@ void main() {
       file.path.substring(temporary.path.length + 1),
   ]..sort();
 
-  /// The app's scope with the long source on screen, signed in as the local sign-in signs in.
+  /// The app's scope with the long source on screen, signed in as the mock sign-in signs in.
   Future<BuildContext> pumpSource(WidgetTester tester) async {
     TestEnv.authenticate();
     late BuildContext scope;

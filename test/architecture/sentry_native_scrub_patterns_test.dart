@@ -139,7 +139,7 @@ void main() {
   });
 
   // Without this a Gradle file that feeds SENTRY_DSN straight from the define passes the test above, and a
-  // main_local.dart build with a DSN starts sentry-android while the Dart side never starts Sentry.
+  // main_mock.dart or main_local.dart build with a DSN starts sentry-android while the Dart side never starts Sentry.
   test('the native SDK gets the DSN only through the Gradle gate', () {
     final gradle = File('android/app/build.gradle.kts').readAsStringSync();
 

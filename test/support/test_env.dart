@@ -48,7 +48,7 @@ class TestEnv {
 
   /// Mock-backed client for tests: test AppConfig → MockInterceptor serves
   /// assets/mock/*.json; shared secure adapter → same MethodChannel mock the
-  /// repo layer reads; the token refresh of `main_local.dart`'s local sign-in.
+  /// repo layer reads; the token refresh of `main_mock.dart`'s mock sign-in.
   /// Pass [dio] to inject a stub.
   static ApiClient apiClient({Dio? dio}) {
     final dependencies = MockSignInDependencies(appConfig: const AppConfig.test());

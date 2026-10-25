@@ -615,7 +615,7 @@ void main() {
 
     testWidgets('keeps the session in mock mode when a 401 can be fixed by a token refresh', (tester) async {
       // The mock answers a request whose JWT bearer has expired with 401, which starts a token refresh, as it does in
-      // production. The local sign-in answers the refresh as the identity provider would, the request is sent again
+      // production. The mock sign-in answers the refresh as the identity provider would, the request is sent again
       // with the new token, and the user stays signed in.
       final secure = FlutterSecureStorageAdapter();
       await secure.write(SecureStorageKeys.jwtToken.key, _expiredJwt());

@@ -26,7 +26,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
 
-/// The answer of `assets/mock/GET_connections_managed.json`, which the app shows in local mode.
+/// The answer of `assets/mock/GET_connections_managed.json`, which the app shows in mock mode.
 ManagedConnections _mockAnswer() =>
     ManagedConnectionsModel.read(File('assets/mock/GET_connections_managed.json').readAsStringSync());
 

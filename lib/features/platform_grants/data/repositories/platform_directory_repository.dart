@@ -22,7 +22,7 @@ class PlatformDirectoryRepository implements IPlatformDirectoryRepository {
   Future<Result<DirectoryPage>> search({required String query, required int page}) async {
     try {
       final q = query.trim();
-      // Never a null map, so the mock asset of a local build is the same for every query.
+      // Never a null map, so the mock asset of a mock build is the same for every query.
       final response = await _apiClient.get(
         '/v1/directory/users',
         queryParams: {'page': page, if (q.isNotEmpty) 'q': q},
