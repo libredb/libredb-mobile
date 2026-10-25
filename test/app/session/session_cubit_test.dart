@@ -95,6 +95,10 @@ class _HeldClearSessionRepository implements IAuthSessionRepository {
 
   @override
   Future<Result<void>> persist(AuthSession session) => throw UnimplementedError('a restore never persists');
+
+  @override
+  Future<Result<void>> persistTarget(SessionTarget target, {required int generation}) =>
+      throw UnimplementedError('a restore never switches the target');
 }
 
 /// A startup step that answers [answer], and counts the times the cubit gave up on it.

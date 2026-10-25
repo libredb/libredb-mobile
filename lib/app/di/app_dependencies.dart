@@ -4,6 +4,7 @@ import 'package:libredb_mobile/features/app_lock/data/services/local_auth_device
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/switch_session_target_usecase.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
@@ -124,17 +125,20 @@ class AppDependencies {
   AccountRefusal get accountRefusal => studioAccountRefusal;
 
   /// The [ApiClient], which refreshes the session through [tokenRotation] at the identity provider. [onSessionExpired]
-  /// runs when a 401 cannot be fixed by a token refresh; the caller ends the session there. [onAccountRefused] is told
-  /// every answer that refuses the signed-in account ([accountRefusal]).
+  /// runs when the token refresh fails; the caller ends the session there. [onSessionRefused] runs when Studio refuses
+  /// the token a refresh has just issued ([sessionRefusedPredicate]), and [onSessionExpired] does when it is null.
+  /// [onAccountRefused] is told every answer that refuses the signed-in account ([accountRefusal]).
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) => ApiClient(
     appConfig: appConfig,
     secureStorage: secureStorage,
     onSessionExpired: onSessionExpired,
+    onSessionRefused: onSessionRefused,
     tokenRotation: tokenRotation,
     isSessionExpired: sessionExpiredPredicate,
     isSessionRefused: sessionRefusedPredicate,
@@ -156,18 +160,21 @@ class AppDependencies {
   AccountRefusal get platformAccountRefusalOf => platformAccountRefusal;
 
   /// The [PlatformApiClient], built from [AppConfig.platform], which refreshes the session through [tokenRotation], the
-  /// same rotation as the Studio [ApiClient]. [onSessionExpired] runs when a 401 `BEARER_INVALID` survives the refresh;
+  /// same rotation as the Studio [ApiClient]. [onSessionExpired] runs when the token refresh fails, and
+  /// [onSessionRefused] when a 401 `BEARER_INVALID` survives the refresh ([onSessionExpired] when it is null);
   /// [onAccountRefused] is told every answer that refuses the signed-in admin ([platformAccountRefusalOf]). In a build
   /// without a Platform target every call fails without a request.
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) => PlatformApiClient(
     appConfig: appConfig,
     secureStorage: secureStorage,
     onSessionExpired: onSessionExpired,
+    onSessionRefused: onSessionRefused,
     tokenRotation: tokenRotation,
     isSessionExpired: platformSessionExpiredPredicate,
     isSessionRefused: platformSessionRefusedPredicate,
@@ -266,6 +273,14 @@ class AppDependencies {
   /// Platform's public liveness probe, which the login page and a Platform session ask.
   IPlatformStatusRepository createPlatformStatusRepository(PlatformApiClient apiClient) =>
       PlatformStatusRepository(apiClient);
+
+  /// The in-place switch of the live session between Studio and Platform, which asks the gate of the target switched
+  /// to; [platformIdentity] is null in a build without a Platform target.
+  SwitchSessionTargetUseCase createSwitchSessionTargetUseCase(
+    IStudioIdentityRepository studioIdentity,
+    IPlatformIdentityRepository? platformIdentity,
+    IAuthSessionRepository sessionRepository,
+  ) => SwitchSessionTargetUseCase(studioIdentity, platformIdentity, sessionRepository);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

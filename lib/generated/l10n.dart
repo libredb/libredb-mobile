@@ -1150,6 +1150,46 @@ class S {
     return Intl.message('Platform admin', name: 'profile_mode_platform', desc: '', args: []);
   }
 
+  /// `Switch to Platform`
+  String get profile_switch_to_platform {
+    return Intl.message('Switch to Platform', name: 'profile_switch_to_platform', desc: '', args: []);
+  }
+
+  /// `Switch to Studio`
+  String get profile_switch_to_studio {
+    return Intl.message('Switch to Studio', name: 'profile_switch_to_studio', desc: '', args: []);
+  }
+
+  /// `Switch to Platform?`
+  String get profile_switch_platform_title {
+    return Intl.message('Switch to Platform?', name: 'profile_switch_platform_title', desc: '', args: []);
+  }
+
+  /// `Platform mode is for Platform admins. The first time this account opens Platform, it takes one admin seat of the license.`
+  String get profile_switch_platform_message {
+    return Intl.message(
+      'Platform mode is for Platform admins. The first time this account opens Platform, it takes one admin seat of the license.',
+      name: 'profile_switch_platform_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Switch`
+  String get profile_switch_confirm {
+    return Intl.message('Switch', name: 'profile_switch_confirm', desc: '', args: []);
+  }
+
+  /// `This account is not a Platform admin, so it stays in Studio.`
+  String get profile_switch_admin_role_required {
+    return Intl.message(
+      'This account is not a Platform admin, so it stays in Studio.',
+      name: 'profile_switch_admin_role_required',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Browse`
   String get tab_browse {
     return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);

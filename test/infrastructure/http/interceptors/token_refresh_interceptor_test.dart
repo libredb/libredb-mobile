@@ -1676,6 +1676,7 @@ void main() {
       String body, {
       TokenRotationResult rotated = const TokensRotated(accessToken: 'new-access'),
       Future<void> Function()? beforeFirstAnswer,
+      OnSessionRefused? onSessionRefused,
     }) {
       final server = _UnauthorizedServerStub(body, beforeFirstAnswer);
       final rotation = _FakeRotation(rotated);
@@ -1685,6 +1686,7 @@ void main() {
           dio: dio,
           secureStorage: secureStorage,
           onSessionExpired: () => sessionExpiredCalls++,
+          onSessionRefused: onSessionRefused,
           rotation: rotation,
           isSessionExpired: isStudioSessionExpired,
           isSessionRefused: isStudioSessionRefused,
@@ -1718,6 +1720,35 @@ void main() {
 
       expect(rotation.sent, ['valid-refresh'], reason: 'exactly one refresh');
       expect(server.authorizations, ['Bearer old-access', 'Bearer new-access']);
+      expect(sessionExpiredCalls, 1);
+    });
+
+    // The refusal of a token just issued is the one server's answer, so the app decides per session target whether it
+    // ends the session; a refresh token the identity provider refused is dead for every server.
+    test('tells onSessionRefused, not onSessionExpired, when the retry gets 401 AUTH_REQUIRED again', () async {
+      var sessionRefusedCalls = 0;
+      studioClient(
+        '{"error":"Invalid access token","code":"AUTH_REQUIRED"}',
+        onSessionRefused: () => sessionRefusedCalls++,
+      );
+
+      await expectUnauthorized('/connections/managed');
+
+      expect(sessionRefusedCalls, 1);
+      expect(sessionExpiredCalls, 0);
+    });
+
+    test('tells onSessionExpired, not onSessionRefused, when the refresh fails at the identity provider', () async {
+      var sessionRefusedCalls = 0;
+      studioClient(
+        '{"authenticated":false}',
+        rotated: const RotationRefused(),
+        onSessionRefused: () => sessionRefusedCalls++,
+      );
+
+      await expectUnauthorized('/auth/me');
+
+      expect(sessionRefusedCalls, 0);
       expect(sessionExpiredCalls, 1);
     });
 

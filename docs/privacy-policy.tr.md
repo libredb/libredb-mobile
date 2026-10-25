@@ -17,7 +17,7 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Uygulama isteklerinde Studio'ya Keycloak erişim belirtecinizi gönderir; böylece Studio kim olduğunuzu ve neyi kullanabileceğinizi bilir.
   Erişim belirteci, Keycloak'un içine koyduklarını taşır: örneğin kullanıcı adınızı, e-posta adresinizi ve adınızı.
   Uygulama Studio'ya ondan istediklerinizi de gönderir: açtığınız bağlantıyı, baktığınız nesneleri ve çalıştırdığınız deyimleri.
-- Aynı kurulumun **LibreDB Platform**'u; ancak yalnızca Platform modunu içeren bir sürümde ve yalnızca oturum açma sayfasında Platform girişini seçtikten sonra.
+- Aynı kurulumun **LibreDB Platform**'u; ancak yalnızca Platform modunu içeren bir sürümde ve yalnızca oturum açma sayfasında Platform girişini seçtikten ya da profilde Platform'a geçtikten sonra.
   Uygulama isteklerinde Platform'a Keycloak erişim belirtecinizi gönderir ve Platform kimliğinizi alır: Platform kullanıcı kimliğinizi, e-posta adresinizi, adınızı ve kuruluşunuzu.
   Uygulama bu kimliği oturumunuz açıkken bellekte tutar ve cihazda hiç saklamaz.
   Platform'un hesabınıza ilk yanıtı, Platform kullanıcı kaydınızı oluşturur ve lisansın yönetici koltuklarından birini kullanır.

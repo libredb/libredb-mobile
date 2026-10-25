@@ -15,6 +15,7 @@ import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
+import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
@@ -23,6 +24,16 @@ import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/switch_session_target_usecase.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/session_target_switch_result.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
+import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
@@ -37,10 +48,14 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
+import 'package:libredb_mobile/shared/models/platform_identity.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../mocks/mock_classes.dart';
 import '../../support/test_env.dart';
 import '../../support/user_menu.dart';
 
@@ -521,6 +536,228 @@ void main() {
       });
     }
 
+    // A mode switch is no sign-out: it clears only the in-memory state of the mode it leaves, fills the identity of the
+    // mode it opens from the gate's answer, and opens that mode's home.
+    group('a mode switch', () {
+      late _RecordingObserver observer;
+
+      setUp(() {
+        final previous = Bloc.observer;
+        observer = _RecordingObserver();
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previous);
+      });
+
+      /// Waits for the mock's latency of the gate, then for what the switch opens.
+      Future<void> settle(WidgetTester tester) async {
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('from Studio clears the Studio state, fills the Platform identity and opens the Platform home', (
+        tester,
+      ) async {
+        await AppLocalStorage().save(
+          StorageKeys.connectionFavorites.key,
+          '{"6f1c9a52-0d7e-4b8e-9f43-2b0c4b1f7a10": {"starred": ["seed:sales-db"], "recent": []}}',
+        );
+        TestEnv.authenticate();
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+        expect(find.byType(AppShell), findsOneWidget);
+        final app = tester.element(find.byType(MaterialApp));
+        expect(app.read<StudioIdentityCubit>().state, isA<StudioIdentityLoaded>());
+        final refusal = app.read<StudioAccountRefusalCubit>()..refuse(AppErrorCode.studioAccountHasNoRole);
+        final browser = app.read<CachedObjectBrowserRepository>();
+        await tester.runAsync(() => browser.containers('seed:sales-db'));
+        expect(browser.entryCount, 1);
+        observer.events.clear();
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await settle(tester);
+
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
+        expect(find.byType(PlatformShell), findsOneWidget);
+        expect(app.read<PlatformIdentityCubit>().state, isA<PlatformIdentityLoaded>());
+        expect(app.read<StudioIdentityCubit>().state, const StudioIdentityInitial());
+        expect(app.read<ConnectionPolicyCubit>().state, const ConnectionPolicyInitial());
+        expect(refusal.state, const StudioAccountAccepted());
+        expect(app.read<ActiveConnectionCubit>().state.connection, isNull);
+        expect(browser.entryCount, 0);
+        expect(app.read<FavoriteConnectionsBloc>().state, const FavoriteConnectionsNone());
+        // Only the target changed in storage, and what the account stored on the device stays.
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), 'MOCK_TOKEN');
+        expect(await AppLocalStorage().read(StorageKeys.connectionFavorites.key), contains('seed:sales-db'));
+        expect(observer.events.whereType<AppLockEvent>(), isEmpty, reason: 'no app lock event');
+        expect(observer.events.whereType<LoginReset>(), isEmpty, reason: 'the sign-in form is left alone');
+        expect(observer.events.whereType<SignOutRequested>(), isEmpty, reason: 'no sign-out');
+      });
+
+      testWidgets('from Platform clears the Platform state, fills the Studio identity and opens the Studio home', (
+        tester,
+      ) async {
+        TestEnv.authenticate(target: SessionTarget.platform);
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+        expect(find.byType(PlatformShell), findsOneWidget);
+        final app = tester.element(find.byType(MaterialApp));
+        expect(app.read<PlatformIdentityCubit>().state, isA<PlatformIdentityLoaded>());
+        final refusal = app.read<PlatformAccountRefusalCubit>();
+        observer.events.clear();
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.studio));
+        await settle(tester);
+
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        expect(find.byType(AppShell), findsOneWidget);
+        expect(
+          app.read<StudioIdentityCubit>().state,
+          isA<StudioIdentityLoaded>().having((s) => s.identity.username, 'username', 'admin@example.com'),
+        );
+        expect(app.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+        expect(refusal.state, const PlatformAccountAccepted());
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+        expect(observer.events.whereType<AppLockEvent>(), isEmpty, reason: 'no app lock event');
+      });
+
+      testWidgets('keeps the idle timeout running', (tester) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await settle(tester);
+        expect(find.byType(PlatformShell), findsOneWidget);
+
+        await tester.pump(const Duration(minutes: 5));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        expect(find.text('You were signed out due to inactivity.').hitTestable(), findsOneWidget);
+      });
+
+      testWidgets('does nothing when the session ends while the gate is asked, and leaves no target stored', (
+        tester,
+      ) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await tester.pump();
+        await app.read<SessionCubit>().endSession(reason: SessionExpiredReason.idleTimeout);
+        await settle(tester);
+
+        expect(app.read<SessionCubit>().state, isA<SessionUnauthenticated>());
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        expect(app.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), isNull);
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
+      });
+
+      // The switch answers only after the session ended, as when a 401 ends it while the gate is asked; the stored
+      // target guard cannot stop that answer here, because the use case is a double that answers success anyway.
+      for (final (from, to, result) in <(SessionTarget, SessionTarget, SessionTargetSwitchResult)>[
+        (SessionTarget.studio, SessionTarget.platform, const SwitchedToPlatform(_platformAdmin)),
+        (SessionTarget.platform, SessionTarget.studio, const SwitchedToStudio(_studioAdmin)),
+      ]) {
+        testWidgets('to ${to.name} that succeeds after the session ended opens nothing and fills no identity', (
+          tester,
+        ) async {
+          final answer = Completer<SessionTargetSwitchResult>();
+          final switchTarget = MockSwitchSessionTargetUseCase();
+          when(() => switchTarget(to)).thenAnswer((_) => answer.future);
+          TestEnv.authenticate(target: from);
+          await tester.pumpWidget(_appWithSwitch(switchTarget));
+          await settle(tester);
+          final app = tester.element(find.byType(MaterialApp));
+
+          app.read<SessionTargetSwitchBloc>().add(SessionTargetSwitchRequested(to));
+          await tester.pump();
+          await app.read<SessionCubit>().endSession(reason: SessionExpiredReason.expired);
+          await settle(tester);
+          expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+          observer.states.clear();
+          answer.complete(result);
+          await settle(tester);
+
+          expect(app.read<SessionTargetSwitchBloc>().state, SessionTargetSwitchSucceeded(result));
+          // Not even for a moment: a session marked authenticated again would send requests the next 401 ends.
+          expect(observer.states.whereType<SessionAuthenticated>(), isEmpty, reason: 'no markAuthenticated');
+          expect(observer.states.whereType<PlatformIdentityLoaded>(), isEmpty);
+          expect(observer.states.whereType<StudioIdentityLoaded>(), isEmpty);
+          expect(app.read<SessionCubit>().state, isA<SessionUnauthenticated>());
+          expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+          expect(app.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+          expect(app.read<StudioIdentityCubit>().state, const StudioIdentityInitial());
+        });
+      }
+
+      testWidgets('that is refused after the session ended shows no notice on the login page', (tester) async {
+        final answer = Completer<SessionTargetSwitchResult>();
+        final switchTarget = MockSwitchSessionTargetUseCase();
+        when(() => switchTarget(SessionTarget.platform)).thenAnswer((_) => answer.future);
+        TestEnv.authenticate();
+        await tester.pumpWidget(_appWithSwitch(switchTarget));
+        await settle(tester);
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await tester.pump();
+        await app.read<SessionCubit>().endSession(reason: SessionExpiredReason.expired);
+        await settle(tester);
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        answer.complete(const SessionTargetSwitchRefused(AppErrorCode.platformAdminRoleRequired));
+        await settle(tester);
+
+        expect(
+          app.read<SessionTargetSwitchBloc>().state,
+          const SessionTargetSwitchRefusedState(AppErrorCode.platformAdminRoleRequired),
+        );
+        expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
+      testWidgets('that is refused while signed in says why in the mode the user stayed in', (tester) async {
+        final switchTarget = MockSwitchSessionTargetUseCase();
+        when(() => switchTarget(SessionTarget.platform))
+            .thenAnswer((_) async => const SessionTargetSwitchRefused(AppErrorCode.platformAdminRoleRequired));
+        TestEnv.authenticate();
+        await tester.pumpWidget(_appWithSwitch(switchTarget));
+        await settle(tester);
+        final app = tester.element(find.byType(MaterialApp));
+
+        app.read<SessionTargetSwitchBloc>().add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await tester.pumpAndSettle();
+
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        expect(find.byType(AppShell), findsOneWidget);
+        expect(find.text('This account is not a Platform admin, so it stays in Studio.'), findsOneWidget);
+      });
+
+      testWidgets('a cold restart after a switch restores the new target', (tester) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+        tester
+            .element(find.byType(MaterialApp))
+            .read<SessionTargetSwitchBloc>()
+            .add(const SessionTargetSwitchRequested(SessionTarget.platform));
+        await settle(tester);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(_platformApp);
+        await settle(tester);
+
+        expect(find.byType(PlatformShell), findsOneWidget);
+      });
+    });
+
     // The logout from the refusal page is tested with the page, in studio_account_refusal_shell_test.dart.
     testWidgets('after an idle timeout, the refusal of the signed-out account is forgotten', (tester) async {
       await tester.pumpWidget(_app);
@@ -599,4 +836,62 @@ class _CacheKeepingStore extends InMemorySharedPreferencesStore {
 
   @override
   Future<bool> remove(String key) async => key.startsWith('flutter._cache_') ? false : super.remove(key);
+}
+
+/// Records every event a BLoC is sent.
+/// [_platformApp] with [switchTarget] in place of the use case that asks the gate of the target switched to.
+App _appWithSwitch(SwitchSessionTargetUseCase switchTarget) => App(
+  language: 'en',
+  dependencies: _SwitchDependencies(
+    switchTarget,
+    appConfig: const AppConfig(
+      environment: Environment.dev,
+      apiBaseUrl: null,
+      certificatePins: <String>[],
+      idleTimeout: Duration(minutes: 5),
+      platform: PlatformConfigured(),
+    ),
+  ),
+);
+
+class _SwitchDependencies extends LocalSignInDependencies {
+  _SwitchDependencies(this._switchTarget, {super.appConfig});
+
+  final SwitchSessionTargetUseCase _switchTarget;
+
+  @override
+  SwitchSessionTargetUseCase createSwitchSessionTargetUseCase(
+    IStudioIdentityRepository studioIdentity,
+    IPlatformIdentityRepository? platformIdentity,
+    IAuthSessionRepository sessionRepository,
+  ) => _switchTarget;
+}
+
+const _platformAdmin = PlatformIdentity(
+  id: 'u1',
+  email: 'admin@example.com',
+  roles: ['admin'],
+  permissions: [],
+  tenant: PlatformTenant(id: 't1', name: 'Example Org', slug: 'example-org'),
+);
+
+const _studioAdmin = StudioIdentity(username: 'admin@example.com', role: StudioAdminRole());
+
+class _RecordingObserver extends BlocObserver {
+  final events = <Object?>[];
+
+  /// The states every bloc and cubit moved to, in order.
+  final states = <Object?>[];
+
+  @override
+  void onEvent(Bloc<dynamic, dynamic> bloc, Object? event) {
+    super.onEvent(bloc, event);
+    events.add(event);
+  }
+
+  @override
+  void onChange(BlocBase<dynamic> bloc, Change<dynamic> change) {
+    super.onChange(bloc, change);
+    states.add(change.nextState);
+  }
 }

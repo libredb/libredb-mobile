@@ -27,6 +27,8 @@ import 'package:libredb_mobile/features/platform_status/application/platform_sta
 import 'package:libredb_mobile/features/platform_status/application/platform_status_event.dart';
 import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sign_in_usecase.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/switch_session_target_usecase.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 
 // Repository imports (interfaces)
@@ -126,10 +128,15 @@ class MockTemporaryShareFiles extends Mock implements TemporaryShareFiles {}
 // Use case mocks (for BLoC tests)
 class MockSignInUseCase extends Mock implements SignInUseCase {}
 
+class MockSwitchSessionTargetUseCase extends Mock implements SwitchSessionTargetUseCase {}
+
 // BLoC mocks (using MockBloc from bloc_test)
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
 
 class MockSignOutBloc extends MockBloc<SignOutEvent, SignOutState> implements SignOutBloc {}
+
+class MockSessionTargetSwitchBloc extends MockBloc<SessionTargetSwitchEvent, SessionTargetSwitchState>
+    implements SessionTargetSwitchBloc {}
 
 class MockAppLockBloc extends MockBloc<AppLockEvent, AppLockState> implements AppLockBloc {}
 
@@ -173,6 +180,7 @@ void registerAllFallbackValues() {
   registerFallbackValue(FakeLoginEvent());
   registerFallbackValue(FakeUri());
   registerFallbackValue(SessionTarget.studio);
+  registerFallbackValue(const SessionTargetSwitchRequested(SessionTarget.studio));
   registerFallbackValue(<String>{});
   registerFallbackValue(ConnectionFavorites.empty);
   registerFallbackValue(QueryPage.first);

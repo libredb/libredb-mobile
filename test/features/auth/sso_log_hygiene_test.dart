@@ -8,6 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
+import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/shared/models/studio_identity.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
@@ -30,6 +38,7 @@ import 'package:logging/logging.dart' as logging;
 
 import '../../infrastructure/auth/oidc/support/fake_provider.dart';
 import '../../support/printed_lines.dart';
+import '../../support/test_env.dart';
 
 final _settings = OidcSettings(issuer: Uri.parse(fakeIssuer), clientId: fakeClientId);
 
@@ -279,6 +288,37 @@ void main() {
     expect(studioRequests, isNotEmpty);
   });
 
+  // .team decision '2026-10-25: M11-P rulings': a mode switch is no sign-out, so it records nothing at Studio, starts
+  // no provider end-session and writes no warn line.
+  testWidgets('a mode switch both ways sends no Studio logout record, no provider end-session and no warn line', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    tester.view.physicalSize = const Size(1600, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    TestEnv.authenticate();
+    final dependencies = _SwitchDependencies();
+
+    final lines = await printedLines(() async {
+      await tester.pumpWidget(App(language: 'en', dependencies: dependencies));
+      await tester.pumpAndSettle();
+      final app = tester.element(find.byType(MaterialApp));
+      for (final to in [SessionTarget.platform, SessionTarget.studio]) {
+        app.read<SessionTargetSwitchBloc>().add(SessionTargetSwitchRequested(to));
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        expect(app.read<SessionCubit>().state, SessionAuthenticated(target: to));
+      }
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    expect(lines.where((line) => line.contains('The session switched to platform')), hasLength(1));
+    expect(lines.where((line) => line.contains('The session switched to studio')), hasLength(1));
+    expect(lines.where((line) => line.contains('[W]')), isEmpty);
+    expect(dependencies.signOutRecords, 0);
+    expect(dependencies.providerLogouts, 0);
+  });
+
   testWidgets('a callback URL the platform pushes logs neither its code nor its state', (tester) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(1600, 1600);
@@ -311,4 +351,66 @@ void main() {
     expect(lines, isNotEmpty, reason: 'the capture saw no log');
     _expectNoSecret(lines, {'SECRETCODE', 'SECRETSTATE'});
   });
+}
+
+/// The local sign-in in a build with a Platform target, counting the Studio logout records and the provider
+/// end-sessions it is asked for.
+class _SwitchDependencies extends LocalSignInDependencies {
+  _SwitchDependencies() : super(appConfig: const AppConfig.test());
+
+  int signOutRecords = 0;
+  int providerLogouts = 0;
+
+  @override
+  IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) =>
+      _CountingStudioIdentity(super.createStudioIdentityRepository(apiClient), () => signOutRecords++);
+
+  @override
+  IOidcClient createOidcClient(OidcSettings settings) =>
+      _CountingOidcClient(super.createOidcClient(settings), () => providerLogouts++);
+}
+
+class _CountingStudioIdentity implements IStudioIdentityRepository {
+  _CountingStudioIdentity(this._inner, this._onRecord);
+
+  final IStudioIdentityRepository _inner;
+  final void Function() _onRecord;
+
+  @override
+  Future<Result<StudioIdentity>> fetch() => _inner.fetch();
+
+  @override
+  Future<Result<void>> recordSignOut() {
+    _onRecord();
+    return _inner.recordSignOut();
+  }
+}
+
+class _CountingOidcClient implements IOidcClient {
+  _CountingOidcClient(this._inner, this._onLogout);
+
+  final IOidcClient _inner;
+  final void Function() _onLogout;
+
+  @override
+  Future<OidcSignInOutcome> signIn() => _inner.signIn();
+
+  @override
+  Future<TokenRotationResult> refresh({
+    required String refreshToken,
+    required String idToken,
+    required String accessToken,
+    required DateTime accessTokenExpiresAt,
+  }) => _inner.refresh(
+    refreshToken: refreshToken,
+    idToken: idToken,
+    accessToken: accessToken,
+    accessTokenExpiresAt: accessTokenExpiresAt,
+  );
+
+  @override
+  Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) {
+    _onLogout();
+    return _inner.endProviderSession(idTokenHint: idTokenHint);
+  }
 }

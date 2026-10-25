@@ -17,7 +17,7 @@ The app talks to four kinds of servers, and to no others on its own:
   The app sends Studio your Keycloak access token with its requests, so Studio knows who you are and what you may use.
   The access token carries what Keycloak puts into it, such as your username, your e-mail address and your name.
   The app also sends Studio what you ask it to do: the connection you open, the objects you look at and the statements you run.
-- **LibreDB Platform** of the same deployment, but only in a build that includes Platform mode, and only after you pick the Platform entry on the sign-in page.
+- **LibreDB Platform** of the same deployment, but only in a build that includes Platform mode, and only after you pick the Platform entry on the sign-in page or switch to Platform in the profile.
   The app sends Platform your Keycloak access token with its requests and receives your Platform identity: your Platform user id, e-mail address, name and organisation.
   The app holds that identity in memory while you are signed in and never stores it on the device.
   Platform's first answer to your account creates your Platform user record and takes one of the license's admin seats.

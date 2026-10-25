@@ -2,22 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 /// What the user picked in the [ProfileSheet]; the caller acts on it once the sheet has closed.
-enum ProfileSheetAction { settings, signOut }
+enum ProfileSheetAction { switchMode, settings, signOut }
 
-/// Who the user is signed in as and in which mode, with the way to the settings and to sign out.
+/// Who the user is signed in as and in which mode, with the way to the other mode, to the settings and to sign out.
 ///
 /// In Studio mode the identity is Studio's `GET /api/auth/me`; Studio sends no display name, so the sheet shows the
 /// username Studio keys the user by. In Platform mode it is Platform's `GET /api/v1/me`: the admin's name, or the
 /// e-mail when Platform has none, and the tenant; nothing of Studio is read.
+///
+/// The switch to the other mode is offered only in a build with a Platform target ([PlatformConfigured]); while a
+/// switch runs it shows progress and takes no tap.
 class ProfileSheet extends StatelessWidget {
   const ProfileSheet({super.key, required this.target});
 
@@ -63,6 +68,7 @@ class ProfileSheet extends StatelessWidget {
               SessionTarget.platform => [_ModeLabel(l10n.profile_mode_platform), const _PlatformIdentity()],
             },
             const Divider(height: AppSpacing.xl),
+            if (context.read<AppConfig>().platform is PlatformConfigured) _SwitchModeTile(target: target),
             ListTile(
               key: profileSettingsKey,
               leading: const Icon(Icons.settings_outlined),
@@ -78,6 +84,36 @@ class ProfileSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The way to the mode the session is not in, which shows progress and takes no tap while a switch runs.
+class _SwitchModeTile extends StatelessWidget {
+  const _SwitchModeTile({required this.target});
+
+  /// The target of the signed-in session, the one the switch leaves.
+  final SessionTarget target;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context);
+    return BlocBuilder<SessionTargetSwitchBloc, SessionTargetSwitchState>(
+      builder: (context, state) {
+        final running = state is SessionTargetSwitchInProgress;
+        return ListTile(
+          key: profileSwitchModeKey,
+          leading: running
+              ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.swap_horiz),
+          title: Text(switch (target) {
+            SessionTarget.studio => l10n.profile_switch_to_platform,
+            SessionTarget.platform => l10n.profile_switch_to_studio,
+          }),
+          enabled: !running,
+          onTap: () => Navigator.of(context).pop(ProfileSheetAction.switchMode),
+        );
+      },
     );
   }
 }

@@ -223,12 +223,14 @@ class _RefusingStudioDependencies extends LocalSignInDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
     final client = super.createApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );

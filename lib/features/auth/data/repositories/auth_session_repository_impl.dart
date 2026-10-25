@@ -9,6 +9,7 @@ import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// Persistence-layer implementation of [IAuthSessionRepository].
 ///
@@ -113,6 +114,52 @@ class AuthSessionRepository implements IAuthSessionRepository {
       );
       return Failure(UnknownError('Session persistence failed: $e'));
     }
+  }
+
+  /// The target is snapshot, written and, on a failed write, restored, like the target of [persist]. The session
+  /// generation is checked before the snapshot and again once the write has ended: a wipe that ran meanwhile may have
+  /// run before the write landed, so the target this call wrote is deleted again, and any other value stays.
+  @override
+  Future<Result<void>> persistTarget(SessionTarget target, {required int generation}) async {
+    if (SessionGeneration.hasEnded(generation)) {
+      _log.warn('persistTarget: the session ended before the target was written, so nothing is written');
+      return const Failure(UnknownError('The session ended before its target was written'));
+    }
+    final key = SecureStorageKeys.sessionTarget.key;
+    final value = target.storedValue;
+    String? prior;
+    try {
+      prior = await _secureStorage.read(key);
+    } catch (e) {
+      _log.error('persistTarget: reading the stored target failed, so nothing is written: {}', [e]);
+      return Failure(UnknownError('Reading the session target failed: $e'));
+    }
+    try {
+      await _secureStorage.write(key, value);
+    } catch (e) {
+      _log.error('persistTarget: writing the target failed; restoring the prior one: {}', [e]);
+      try {
+        if (prior == null) {
+          await _secureStorage.delete(key);
+        } else {
+          await _secureStorage.write(key, prior);
+        }
+      } catch (e) {
+        _log.warn('persistTarget: restoring the prior target failed: {}', [e]);
+      }
+      return Failure(UnknownError('Writing the session target failed: $e'));
+    }
+    if (SessionGeneration.hasEnded(generation)) {
+      _log.warn('persistTarget: the session ended while the target was written, so it is taken back');
+      try {
+        if (await _secureStorage.read(key) == value) await _secureStorage.delete(key);
+      } catch (e) {
+        _log.error('persistTarget: taking the target back failed: {}', [e]);
+      }
+      return const Failure(UnknownError('The session ended while its target was written'));
+    }
+    _log.info('persistTarget: target {} written', [target.name]);
+    return const Success(null);
   }
 
   /// The whole wipe runs inside [SessionGeneration.wipe], so a token refresh on its way when the session ends does not

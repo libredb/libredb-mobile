@@ -23,6 +23,13 @@ class _AuthHeader {
 /// infrastructure layer.
 typedef OnSessionExpired = void Function();
 
+/// Callback signature for notifying the app layer that the server refused the token a refresh has just issued: a 401
+/// that its [SessionRefusedPredicate] accepts, for a request sent again after the refresh.
+///
+/// Only that server refused the token, so the app decides whether the session ends, such as only while the session is
+/// one of that server; a failed refresh calls [OnSessionExpired] instead.
+typedef OnSessionRefused = void Function();
+
 /// How a token refresh ended. Every request that waits for the refresh gets the same outcome.
 sealed class _RefreshOutcome {
   const _RefreshOutcome();
@@ -64,7 +71,9 @@ final class _SessionEnded extends _RefreshOutcome {
 /// [isUnauthorized] (every 401) by default; any other error is passed on.
 /// Which 401 for a request sent again after a refresh ends the session is
 /// [SessionRefusedPredicate]'s call, also [isUnauthorized] by default; any
-/// other 401 then reaches the caller and the session is kept.
+/// other 401 then reaches the caller and the session is kept. That refusal
+/// calls [OnSessionRefused] (or [OnSessionExpired] when none is given), and
+/// a refresh that fails calls [OnSessionExpired].
 /// The refresh itself is a [TokenRotation], at the identity provider's
 /// token endpoint. A rotation whose server cannot be reached
 /// ([RotationUnavailable]) keeps the session and fails the request as a
@@ -111,6 +120,7 @@ class TokenRefreshInterceptor extends Interceptor {
 
   final Dio _dio;
   final OnSessionExpired? _onSessionExpired;
+  final OnSessionRefused? _onSessionRefused;
   final ISecureStorage _secureStorage;
   final TokenRotation _rotation;
   final SessionExpiredPredicate _isSessionExpired;
@@ -124,6 +134,7 @@ class TokenRefreshInterceptor extends Interceptor {
   TokenRefreshInterceptor({
     required Dio dio,
     OnSessionExpired? onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     required TokenRotation rotation,
     ISecureStorage? secureStorage,
     SessionExpiredPredicate isSessionExpired = isUnauthorized,
@@ -132,6 +143,8 @@ class TokenRefreshInterceptor extends Interceptor {
   }) : _dio = dio,
        // ignore: prefer_initializing_formals
        _onSessionExpired = onSessionExpired,
+       // ignore: prefer_initializing_formals
+       _onSessionRefused = onSessionRefused,
        _secureStorage = secureStorage ?? FlutterSecureStorageAdapter(),
        // ignore: prefer_initializing_formals
        _rotation = rotation,
@@ -228,8 +241,8 @@ class TokenRefreshInterceptor extends Interceptor {
     // reaches the caller with the session kept.
     if (_retriedAfterRefresh[err.requestOptions] == true) {
       if (_isSessionRefused(err)) {
-        _log.warn('401 again after refresh+retry for {}: the token was refused, ending the session', [requestPath]);
-        _triggerLogout();
+        _log.warn('401 again after refresh+retry for {}: the token was refused', [requestPath]);
+        _triggerRefused();
       } else {
         _log.warn('401 again after refresh+retry for {}: not a refusal of the session, which is kept', [requestPath]);
       }
@@ -517,6 +530,17 @@ class TokenRefreshInterceptor extends Interceptor {
     } catch (e) {
       _log.warn('Rollback failed for {}: {}', [key.key, e]);
     }
+  }
+
+  /// Tells [OnSessionRefused], or [OnSessionExpired] for a client given no [OnSessionRefused].
+  void _triggerRefused() {
+    final onSessionRefused = _onSessionRefused;
+    if (onSessionRefused == null) {
+      _triggerLogout();
+      return;
+    }
+    _log.info('Triggering session refused callback');
+    onSessionRefused();
   }
 
   void _triggerLogout() {
