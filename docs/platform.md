@@ -75,6 +75,28 @@ The grant rows stay out of `platformError`, because `GET /api/v1/audit` also has
 `PLAN_FEATURE_REQUIRED` is reachable on `GET /api/v1/audit`, since the plan is checked before any permission (`src/features/audit/lib/audit-read.ts`).
 `PERMISSION_DENIED` cannot reach a bearer caller today, because every bearer caller holds `PLATFORM_ADMIN`; it is mapped so that a later Platform change does not show up unlabelled.
 
+## Sign-in
+
+A build with a Platform target shows two entries on the login page, "Sign in to Studio" and "Sign in to Platform"; a build without one shows the single "Sign in with SSO" button.
+The Platform button's helper text says that the entry is for Platform admins and that the first Platform sign-in takes one admin seat of the license, because the first successful call of an account provisions its Platform user and takes the seat (libredb-platform `docs/api/v1.md`, `src/shared/lib/bearer/with-bearer.ts`).
+There is no confirmation dialog, and the page remembers no last entry.
+
+The Platform entry stores the Keycloak tokens with the session target `platform`, then calls `GET /api/v1/me` (`SignInUseCase`); only its 200 with an answer `PlatformIdentityModel` can read is a sign-in, and Studio's `GET /api/auth/me` is never called.
+Platform checks a sign-in in this order (`with-bearer.ts`), and the login page shows the first refusal it meets:
+
+1. 404 `API_DISABLED`, when the bearer API is off.
+2. 401 `BEARER_INVALID` for a missing or malformed header, then 503 `IDENTITY_PROVIDER_UNAVAILABLE` when the issuer's keys cannot be read, then 401 `BEARER_INVALID` for a token that fails a check, such as one without Platform's audience.
+3. 403 `ADMIN_ROLE_REQUIRED` for a valid token without the admin role, before any seat is taken.
+4. Only on an account's first call: 403 `LICENSE_INVALID` or `LICENSE_EXPIRED`, then a Keycloak failure (503 `KEYCLOAK_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR` or `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND`), then 403 `LICENSE_ADMIN_SEATS` when every admin seat is in use.
+5. 500 `INTERNAL_ERROR` for anything else.
+
+A refusal clears the stored tokens and the session target and leaves the user on the login page with the sentence of its code ([oidc.md](oidc.md#roles) lists them); a 401 that reaches the gate shows `platform.account_refused`.
+The gate starts no provider logout, so the Keycloak browser session stays and a sign-in through the Studio entry right after usually needs no password.
+A refusal at the gate never opens the account refusal page, which covers only a signed-in Platform session.
+The login page shows no `returnUrl` of a Studio route after a Platform sign-in, and no `/platform` one after a Studio sign-in; it opens the home of the signed-in target instead.
+The Platform shell loads `PlatformIdentityCubit` itself when it opens, so a sign-in costs one more `GET /api/v1/me`, which takes no new seat because the account then already has its Platform user.
+While Studio is unreachable, its status page still covers the login page, so the Platform entry is unreachable too.
+
 ## Session and refusals
 
 - A 401 `BEARER_INVALID` starts one token refresh; a second 401 `BEARER_INVALID` for the request sent again after it ends the session as expired (`lib/infrastructure/platform/platform_session_policy.dart`).

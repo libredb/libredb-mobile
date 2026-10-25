@@ -38,6 +38,7 @@ A file of `KEY=value` lines works too, through `--dart-define-from-file=oidc.env
 Every value is compiled in, so a change needs a new build.
 
 The login page then shows a single "Sign in with SSO" button.
+A build that also sets `PLATFORM_API_URL` ([platform.md](platform.md)) shows two buttons of equal weight instead, "Sign in to Studio" and "Sign in to Platform", each with a helper text.
 Registration, forgot password and change password belong to the provider, so the app has no page for them.
 
 ### Redirect URI
@@ -206,6 +207,7 @@ On Android the scheme the app sends must equal the manifest placeholder, so an A
 ### Automatic redirect
 
 With `OIDC_AUTO_REDIRECT` on, a signed-out cold start that lands on the login page starts the sign-in without a tap.
+It fires only when the page shows one entry: with the Studio and Platform entries the user has to choose, so the page never starts a sign-in on its own and leaves the gate open.
 It fires at most once per app run, and never after a sign-in error, the configuration error, a cancel at the provider, or a logout the user started in the same run.
 The SSO button stays available in every case.
 
@@ -224,6 +226,22 @@ Any other answer clears the stored tokens and leaves the user on the login page 
 | 403 `BEARER_NO_ROLE` (from libredb-studio#1922 on) | This account has no role in Studio. Ask an administrator to give it one. |
 | 403 `BEARER_NO_IDENTITY` (from libredb-studio#1922 on) | Studio cannot tell who this account is. Ask an administrator to check the account's email and username. |
 | 503 `IDENTITY_PROVIDER_UNAVAILABLE`, no network, or another error | The sentence of that error |
+
+A sign-in through the Platform entry asks Platform instead: it calls Platform's `GET /api/v1/me` and never Studio's `GET /api/auth/me`, and succeeds only on Platform's 200 with an answer the app can read.
+Platform's answer never decides a Studio role, and Studio's never decides a Platform right.
+Any other answer clears the stored tokens and the session target, without a provider logout, and leaves the user on the login page with the reason:
+
+| Platform answers | The login page says |
+| --- | --- |
+| 403 `ADMIN_ROLE_REQUIRED` | This account is not a Platform admin. Sign in through Studio instead. |
+| 403 `LICENSE_ADMIN_SEATS` | The Platform license has no free admin seat for this account. |
+| 403 `LICENSE_EXPIRED` or `LICENSE_INVALID` | The Platform license has expired, or is not valid. |
+| 404 `API_DISABLED` | This Platform install does not accept the mobile app. |
+| 401, without a code or with `BEARER_INVALID` after one refresh | Platform did not accept this sign-in. Ask an administrator to check that this app is set up for Platform, or sign in to Studio. |
+| 503 `IDENTITY_PROVIDER_UNAVAILABLE` | Platform cannot reach the identity provider right now. Try again in a moment. |
+| 503 `KEYCLOAK_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR` or `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND` | Platform cannot reach Keycloak right now. Try again in a moment. |
+| 500 `INTERNAL_ERROR` | Platform could not complete the request. Try again later. |
+| An answer the app cannot read, no network, or another error | The sentence of that error |
 
 Studio records a refused account in its audit as `permission_denied` with the reason `bearer_no_role`, `bearer_no_identity` or `bearer_token_invalid` (Studio's `docs/OIDC.md`).
 The role can lag the provider by one access token lifetime, because Studio maps it from the token; Studio answers 403 meanwhile.
@@ -306,7 +324,7 @@ The `oidc_android` plugin needs the `oidcRedirectScheme` placeholder in `android
 
 `main_prod.dart` signs in through the provider its `OIDC_*` defines name, and `main_local.dart` signs in without one.
 `main_local.dart` passes `LocalSignInDependencies` (`lib/app/di/local_sign_in_dependencies.dart`) to `AppBootstrap.run`, which replaces only the provider: its `IOidcClient` is `LocalOidcClient` (`lib/infrastructure/auth/oidc/local_oidc_client.dart`).
-A tap on "Sign in with SSO" signs in at once with tokens the mock API accepts (`MOCK_TOKEN`, valid for an hour), every refresh gives new ones, and there is no provider logout.
+A tap on "Sign in to Studio" or "Sign in to Platform" (the dev config has a Platform target, which the mocked Platform answers) signs in at once with tokens the mock API accepts (`MOCK_TOKEN`, valid for an hour), every refresh gives new ones, and there is no provider logout.
 Everything above the client runs as in production: `SsoAuthRepository` stores the session, the API calls go to the mocked Studio of `assets/mock/`, and a 401 refreshes through `OidcTokenRotation`.
 
 The double is debug only and never part of a production build:
@@ -340,16 +358,16 @@ Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`,
 
 ### Sign-in
 
-1. The SSO button, or the automatic redirect, adds `SsoSignInRequested` to `LoginBloc`, whose handler drops a second request while one runs.
-2. `SignInWithSsoUseCase` calls `SsoAuthRepository.signIn`, which calls `OidcClient.signIn`.
+1. The SSO button, the Studio or Platform button, or the automatic redirect, adds `SsoSignInRequested` with the entry's session target to `LoginBloc`, whose handler drops a second request for either target while one runs.
+2. `SignInUseCase` calls `SsoAuthRepository.signIn` with the target, which calls `OidcClient.signIn`.
 3. `OidcClient` fetches discovery (cached for 5 minutes, failures never cached), and the package builds the request with a PKCE S256 challenge, `state`, `nonce`, the redirect URI `<scheme>:/oauth2redirect`, the scope, `prompt` unless it is `omit`, and `audience` when it is set.
 4. The platform opens the provider's page: a Custom Tab on Android, `ASWebAuthenticationSession` on iOS.
 5. On return the package checks `state`, exchanges the code with the verifier, and validates the ID token: its signature against the JWKS, `iss`, `aud`, `exp` and `nonce`.
 6. `OidcClient` requires an access token, an ID token and `expires_in`, and strips `nonce`, `at_hash` and `c_hash` from the claims it hands on.
 7. `SsoAuthRepository` requires a string `sub` and `iss` (`oidc_no_claims` otherwise), and reads no role and no username from the claims.
-8. The session is persisted through `AuthSessionRepository` with its rollback: first the session target (`SecureStorageKeys.sessionTarget`, `studio` for this sign-in), then the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`.
-9. `SignInWithSsoUseCase` calls Studio's `GET /api/auth/me` with the new bearer; any failure clears the stored session and rejects with the code of [Roles](#roles).
-10. On Studio's 200 `LoginBloc` emits `LoginLoadedState`; `AppSessionListeners`, `SessionCubit.markAuthenticated` with the session target and the idle observer run, and the page navigates to the safe return path.
+8. The session is persisted through `AuthSessionRepository` with its rollback: first the session target (`SecureStorageKeys.sessionTarget`, `studio` or `platform`), then the access token in the bearer slot (`SecureStorageKeys.jwtToken`), the refresh token when one was issued, the ID token under `oidcIdToken`, and the access token expiry under `accessTokenExpiresAt`.
+9. `SignInUseCase` calls the gate of the target with the new bearer, Studio's `GET /api/auth/me` or Platform's `GET /api/v1/me`, and never the other; any failure clears the stored session and rejects with the code of [Roles](#roles).
+10. On the gate's 200 `LoginBloc` emits `LoginLoadedState` with the target of the answer; `AppSessionListeners`, `SessionCubit.markAuthenticated` with that target and the idle observer run, and the page navigates to the safe return path when it belongs to that target's shell, else to the target's home.
 
 A closed provider page is a cancel: no message, logged at info, and the automatic redirect gate closes.
 On Android a closed Custom Tab tells the app nothing, so `OidcClient` cancels the pending flow whenever the app resumes; after a real redirect that cancel does nothing.
@@ -430,7 +448,7 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/infrastructure/auth/oidc/oidc_token_rotation.dart` | `OidcTokenRotation` |
 | `lib/features/auth/domain/repositories/sso_auth_repository.dart`, `lib/features/auth/data/repositories/sso_auth_repository_impl.dart` | `ISsoAuthRepository` and `SsoAuthRepository`: claims and persist |
 | `lib/features/auth/domain/entities/sso_sign_in_result.dart` | The sealed `SsoProviderSignIn` of the provider and `SsoSignInResult` of the whole sign-in |
-| `lib/features/auth/application/usecases/sign_in_with_sso_usecase.dart` | `SignInWithSsoUseCase`: the provider sign-in, then Studio's `GET /api/auth/me`, clearing the session on a refusal |
+| `lib/features/auth/application/usecases/sign_in_usecase.dart` | `SignInUseCase`: the provider sign-in, then the gate of the session target, Studio's `GET /api/auth/me` or Platform's `GET /api/v1/me`, clearing the session on a refusal |
 | `lib/features/auth/application/login_bloc.dart`, `login_event.dart` | `SsoSignInRequested` and its handler |
 | `lib/features/auth/domain/services/sso_session_startup.dart`, `lib/features/auth/data/services/sso_session_startup_impl.dart` | The startup step and its sealed result |
 | `lib/features/auth/domain/services/sso_auto_redirect_gate.dart` | `SsoAutoRedirectGate` |
@@ -443,7 +461,7 @@ An idle timeout or an unrefreshable 401 clears the local session only, through `
 | `lib/app/bootstrap/app_session_listeners.dart` | Closes the gate on sign-in, logout and a restore past the storage limit, and shows the logout notice, also when it follows the sign-out |
 | `lib/app/di/app_dependencies.dart`, `lib/app/di/app_scope.dart` | Builds and provides the OIDC pieces in `OidcAuthMode` only, the fail-closed startup and rotation of `OidcMisconfiguredAuthMode`, and `sessionExpiredPredicate` |
 | `lib/features/auth/application/sign_out_bloc.dart` | Signs out on the local clear, then `SignedOutWithProviderSessionLeft` when the provider logout fails |
-| `lib/features/auth/presentation/pages/login_page.dart` | The SSO variant of the login page, its error line and the automatic redirect |
+| `lib/features/auth/presentation/pages/login_page.dart` | The SSO variant of the login page, its one or two entries, its error line and the automatic redirect |
 | `lib/features/auth/navigation/auth_routes.dart` | The `login` route, the only public one |
 | `lib/app/router/app_router.dart`, `lib/app/app.dart` | `/oauth2redirect` to `/login` with no `returnUrl` |
 | `android/app/build.gradle.kts` | The `oidcRedirectScheme` manifest placeholder |
@@ -515,7 +533,7 @@ Each test file below names the behavior it pins.
 | `test/infrastructure/http/token_rotation_test.dart`, `test/infrastructure/http/interceptors/token_refresh_interceptor_test.dart` | The rotation seam, `RotationUnavailable`, `RefusingTokenRotation` and the narrowed 401 predicate |
 | `test/infrastructure/auth/oidc/oidc_transaction_store_test.dart` | The store's namespaces, what `clearTransactions` removes, and the refused `session` namespace |
 | `test/infrastructure/auth/oidc/oidc_client_test.dart`, `oidc_token_rotation_test.dart` | Sign-in, the custom-scheme redirect URI, Android cancel on resume, refresh classification (a 429 or 5xx token answer keeps the session, an unreachable JWKS after the grant keeps the new tokens and the stored ID token), a provider that does not rotate refresh tokens, one operation at a time, provider logout and the Auth0 fallback |
-| `test/features/auth/data/repositories/sso_auth_repository_impl_test.dart`, `test/features/auth/application/login_bloc_test.dart`, `test/features/auth/application/usecases/sign_in_with_sso_usecase_test.dart`, `test/app/di/app_scope_test.dart` | Claims and persist, whatever the role claim holds; the production log names no user; Studio's 200 as the only success, each refusal clearing once with its code, also for Studio main's 401 and #1922's 403; each outcome in `LoginBloc`; dropped concurrent taps |
+| `test/features/auth/data/repositories/sso_auth_repository_impl_test.dart`, `test/features/auth/application/login_bloc_test.dart`, `test/features/auth/application/usecases/sign_in_usecase_test.dart`, `test/app/di/app_scope_test.dart` | Claims and persist, whatever the role claim holds; the production log names no user; the target's gate's 200 as the only success, each Studio and Platform refusal clearing once with its code, also for Studio main's 401 and #1922's 403; each outcome in `LoginBloc`; dropped concurrent taps on either entry; the Platform gate wired only in a build with a Platform target |
 | `test/features/auth/data/services/sso_session_startup_impl_test.dart`, `test/features/auth/domain/services/sso_auto_redirect_gate_test.dart`, `test/app/session/session_cubit_test.dart` | The startup step, its time limit and late answers, and the gate |
 | `test/features/auth/data/repositories/sso_sign_out_auth_repository_test.dart`, `test/features/auth/application/sign_out_bloc_test.dart`, `test/app/bootstrap/app_session_listeners_test.dart`, `test/app/bootstrap/app_session_listeners_sso_test.dart` | Provider logout; the sign-out answers before the provider logout ends, so the login page opens while it is pending; the incomplete-logout notice, also when it comes later; the gate after logout and after a restore past the storage limit |
 | `test/features/auth/presentation/pages/login_screen_test.dart`, `login_screen_golden_test.dart` | The SSO page, each error sentence, the Turkish text, the automatic redirect and the `login_screen_sso_light` golden |

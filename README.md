@@ -68,7 +68,7 @@ fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/st
 Sign in as `admin` / `admin` or `user` / `user`.
 [docs/studio.md](docs/studio.md) explains the stack, the iOS simulator and how to point the app at your own Studio and Keycloak.
 
-Without a Studio, the app runs against recorded answers, and "Sign in with SSO" signs in through a debug-only stand-in for Keycloak ([docs/oidc.md](docs/oidc.md#mock-mode-without-keycloak)):
+Without a Studio, the app runs against recorded answers, and "Sign in to Studio" or "Sign in to Platform" signs in through a debug-only stand-in for Keycloak ([docs/oidc.md](docs/oidc.md#mock-mode-without-keycloak)):
 
 ```shell
 fvm flutter run --target lib/main/main_local.dart
