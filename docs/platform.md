@@ -236,3 +236,38 @@ A build without a Platform target keeps the Studio gate over the restore, the lo
 Only Docker or VM installer installs with `mobile.enabled`, and Railway platform-dev, serve Platform mode today.
 The Helm chart does not create the mobile client yet (libredb-platform `charts/libredb-platform/Chart.yaml`, the `mobile.enabled` change note).
 The audit log is empty unless a Studio governed by that Platform has run statements: Platform lists the query events such a Studio writes into its `bridge` schema, and nothing else.
+
+## M10-P walkthrough
+
+The end-to-end walkthrough of milestone M10-P (#251) was run on 2026-10-25 on Railway platform-dev, which ran Platform 1.3.0 and Studio 1.1.0 that day (the image digests the Railway CLI lists, matched to their GHCR tags).
+Build P was built from `main` at `3777948`, and build A from `053ef66`, both with Flutter 3.47.7 as release APKs of `main_prod.dart` signed with the debug key and without `SENTRY_DSN`.
+Builds N and U came from the commit of P, with the defines the issue names; every build had `OIDC_PROMPT=omit` and `SCREEN_CAPTURE_PROTECTION=false`.
+The device was the test phone, a Samsung Galaxy M51 (SM-M515F) on Android 12, reached over wireless debugging.
+The owner typed every Keycloak sign-in on the phone, as a dedicated test user with the client role `user` and no grant, or as the realm's admin account.
+The web console readings of steps 1, 4, 6, 7, 8 and 11 were replaced by the app's own Platform answers, and the owner confirmed the test user's grants once at teardown (orchestrator ruling on #251).
+
+| Step | Result |
+| --- | --- |
+| 1. Upgrade in place | Passed: the test user signed in on A, and after `install -r` of P the stored session restored into the Studio shell with no login page; sign-out returned to the login page |
+| 2. Login page | Passed: a cold start shows "Sign in to Studio" and "Sign in to Platform" with equal weight, the Platform helper text says it is for Platform admins and that the first sign-in takes an admin seat, no dialog opens, and the browser does not open on its own |
+| 3. Non-admin refusal | Passed: Platform answered `GET /api/v1/me` with 403 `ADMIN_ROLE_REQUIRED`, so the mobile access token carries Platform's audience; the login page showed the `platform.admin_role_required` message, a relaunch showed the login page, and "Sign in to Studio" then landed in the Studio shell without a Keycloak form |
+| 4. Admin sign-in | Passed: the Platform home shows the tenant name and slug and the admin's name, the navigation shows only Home and Connections, and the profile sheet labels the mode "Platform admin"; see step 16 for the admin seats |
+| 5. Connections | Passed: nine active Postgres sample connections, none with the "Read grants only" chip, so each has a write credential; the filter narrows by name and pull to refresh reloads |
+| 6. Grants | Passed: Sample: Netflix, on which the test user held no grant, lists its one grant with username, level, expiry and granted by |
+| 7. Add a grant | Passed: the directory search for part of the username shows one row with "Takes a user seat"; a past expiry is refused with "Choose a time in the future, or no expiry" before anything is sent; read with an expiry the next day saves and the grant list shows it, granted by the admin |
+| 8. Change, lock | Partly run: the change to write saved and the list shows write; platform-dev has no connection without a write credential, so the disabled write option stays covered by #250's widget test; the app lock part was skipped by the orchestrator, since the phone has no screen lock and Settings keeps the app lock off with "Set a screen lock on this device to turn this on" |
+| 9. Studio cross-check | Passed: the test user's Studio list shows Sample: Netflix after a pull, without the read-only chip, while the grant was write |
+| 10. Unreachable, not configured | Passed: with the Platform session stored, U restored into the Platform shell and loaded the connections and the grant list; P over U restored the shell again; N showed only the Studio entry with the `platform.not_configured` message, and a relaunch showed the login page without it; P over N signed in through Platform again |
+| 11. Revoke | Passed: the dialog names the test user, write access and Sample: Netflix, the row is gone after Remove, and the test user's Studio list no longer shows the connection after a pull |
+| 12. Platform sign-out | Passed: the sign-out returned to the login page and the app's log has no `logout: Studio has no record of this sign-out` line and no warn line for it; the next sign-in, the admin's through Studio, showed the Keycloak form and landed in the Studio shell |
+| 13. Idle timeout | Passed: the Platform session signed out to the login page 15 minutes after the last touch, with `endSession(idleTimeout)` in the log |
+| 14. Turkish | Passed: with the language switched to Turkish inside the Platform session before step 13's wait, the login page entries and helper text, the Platform home and the connection list read in Turkish; the language was switched back afterwards |
+| 15. Logs | Passed: the app's logcat for the whole run holds no JWT, no `Bearer` value, no e-mail address at all, no `subjectEmail` and no Platform error message text |
+| 16. Teardown | Passed: the owner confirmed that the test user cannot sign in to Platform and holds no grant on any connection, and the app's grant lists show the play-review account still holding its 4 read grants (Postgres Air, Lego, Titanic, Periodic Table); the license page's seats in use were not read, so the admin seat comparison of step 4 is open; on the phone the app lock stayed off, the app is signed out and build P is installed |
+
+Notes:
+
+- The admin account had not used Platform before this run, so its first Platform call may have taken an admin seat; the license page was not read before or after the run.
+- The idle timeout ends the app session but keeps the Keycloak session, so with `OIDC_PROMPT=omit` the Platform sign-in after it showed no Keycloak form.
+- The phone's network resolves every name, `studio.invalid` included, to its router, so build U met an untrusted certificate rather than a failed lookup, and Studio's liveness logged `network.cert_invalid`.
+- Two of the four Studio sign-outs logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared; the login page showed no message.
