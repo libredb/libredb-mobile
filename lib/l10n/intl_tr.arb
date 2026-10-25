@@ -505,6 +505,81 @@
       }
     }
   },
+  "platform_grants_load_failed": "Erişimler yüklenemedi",
+  "@platform_grants_load_failed": {},
+  "platform_grants_refresh_failed": "Erişimler yenilenemedi",
+  "@platform_grants_refresh_failed": {},
+  "platform_grants_empty_title": "Henüz kimsenin erişimi yok",
+  "@platform_grants_empty_title": {},
+  "platform_grants_empty_description": "Bu bağlantıda kimseye erişim verilmemiş.",
+  "@platform_grants_empty_description": {},
+  "platform_grants_connection_gone_title": "Bu bağlantı artık yok",
+  "@platform_grants_connection_gone_title": {},
+  "platform_grants_connection_gone_description": "Platform web konsolunda silinmiş olabilir.",
+  "@platform_grants_connection_gone_description": {},
+  "platform_grants_back_to_connections": "Bağlantılara dön",
+  "@platform_grants_back_to_connections": {},
+  "platform_grants_level_read": "Okuma",
+  "@platform_grants_level_read": {},
+  "platform_grants_level_write": "Yazma",
+  "@platform_grants_level_write": {},
+  "platform_grants_level_read_in_sentence": "okuma",
+  "@platform_grants_level_read_in_sentence": {},
+  "platform_grants_level_write_in_sentence": "yazma",
+  "@platform_grants_level_write_in_sentence": {},
+  "platform_grants_no_expiry": "Süresiz",
+  "@platform_grants_no_expiry": {},
+  "platform_grants_expires": "{date} tarihinde sona eriyor",
+  "@platform_grants_expires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_expired": "{date} tarihinde sona erdi",
+  "@platform_grants_expired": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_granted_by": "Veren: {name}, {date}",
+  "@platform_grants_granted_by": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_actions": "Erişim işlemleri",
+  "@platform_grants_actions": {},
+  "platform_grants_remove_access": "Erişimi kaldır",
+  "@platform_grants_remove_access": {},
+  "platform_grants_remove_message": "{username} kullanıcısının {connection} bağlantısındaki {level} erişimi kaldırılacak.",
+  "@platform_grants_remove_message": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      },
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_grants_remove_confirm": "Kaldır",
+  "@platform_grants_remove_confirm": {},
+  "platform_grants_removed": "Erişim kaldırıldı",
+  "@platform_grants_removed": {},
+  "platform_grants_already_removed": "Zaten kaldırılmış",
+  "@platform_grants_already_removed": {},
   "connection_switcher_title": "Bağlantı değiştir",
   "@connection_switcher_title": {},
   "connection_active": "Etkin bağlantı",

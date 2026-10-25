@@ -118,76 +118,84 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m43(time) => "Offline: showing what was loaded at ${time}";
 
-  static String m44(count, rows) => "${Intl.plural(count, one: '1 row affected', other: '${rows} rows affected')}";
+  static String m44(date) => "Expired ${date}";
 
-  static String m45(id) => "#${id}";
+  static String m45(date) => "Expires ${date}";
 
-  static String m46(code) => "Could not copy (${code})";
+  static String m46(name, date) => "Granted by ${name}, ${date}";
 
-  static String m47(count, rows) => "${Intl.plural(count, one: 'Load 1 more', other: 'Load ${rows} more')}";
+  static String m47(username, level, connection) => "${username} will lose ${level} access to ${connection}.";
 
-  static String m48(count, rows) => "${Intl.plural(count, one: 'Loading 1 more…', other: 'Loading ${rows} more…')}";
+  static String m48(count, rows) => "${Intl.plural(count, one: '1 row affected', other: '${rows} rows affected')}";
 
-  static String m49(count) => "${Intl.plural(count, one: '+1 more field', other: '+${count} more fields')}";
+  static String m49(id) => "#${id}";
 
-  static String m50(index, count) => "Row ${index} of ${count}";
+  static String m50(code) => "Could not copy (${code})";
 
-  static String m51(index) => "Row ${index}";
+  static String m51(count, rows) => "${Intl.plural(count, one: 'Load 1 more', other: 'Load ${rows} more')}";
 
-  static String m52(count, rows, time) =>
+  static String m52(count, rows) => "${Intl.plural(count, one: 'Loading 1 more…', other: 'Loading ${rows} more…')}";
+
+  static String m53(count) => "${Intl.plural(count, one: '+1 more field', other: '+${count} more fields')}";
+
+  static String m54(index, count) => "Row ${index} of ${count}";
+
+  static String m55(index) => "Row ${index}";
+
+  static String m56(count, rows, time) =>
       "${Intl.plural(count, one: '1 row, ${time} ms', other: '${rows} rows, ${time} ms')}";
 
-  static String m53(code) => "Code ${code}";
+  static String m57(code) => "Code ${code}";
 
-  static String m54(code) => "Warning ${code}";
+  static String m58(code) => "Warning ${code}";
 
-  static String m55(severity, message) => "${severity}: ${message}";
+  static String m59(severity, message) => "${severity}: ${message}";
 
-  static String m56(count) => "${Intl.plural(count, one: '1 warning', other: '${count} warnings')}";
+  static String m60(count) => "${Intl.plural(count, one: '1 warning', other: '${count} warnings')}";
 
-  static String m57(label, catalog) => "${label}: ${catalog}";
+  static String m61(label, catalog) => "${label}: ${catalog}";
 
-  static String m58(reason) => "The text could not be saved on this phone. ${reason}";
+  static String m62(reason) => "The text could not be saved on this phone. ${reason}";
 
-  static String m59(reason) =>
+  static String m63(reason) =>
       "The text saved for this connection could not be read, so new text is not kept. ${reason}";
 
-  static String m60(language) => "Language: ${language}";
+  static String m64(language) => "Language: ${language}";
 
-  static String m61(reason) =>
+  static String m65(reason) =>
       "The language of this connection could not be read, so the text is not highlighted. ${reason}";
 
-  static String m62(keyword) =>
+  static String m66(keyword) =>
       "This statement left a transaction open, and Studio rolled it back, so its changes were discarded. Add ${keyword} to keep them.";
 
-  static String m63(time) => "Running for ${time}";
+  static String m67(time) => "Running for ${time}";
 
-  static String m64(time) => "${time} ms";
+  static String m68(time) => "${time} ms";
 
-  static String m65(count) => "${Intl.plural(count, one: '1 statement not run', other: '${count} statements not run')}";
+  static String m69(count) => "${Intl.plural(count, one: '1 statement not run', other: '${count} statements not run')}";
 
-  static String m66(keyword) =>
+  static String m70(keyword) =>
       "The script left a transaction open, and Studio rolled it back, so its changes were discarded. Add ${keyword} to keep them.";
 
-  static String m67(number) => "Statement ${number}";
+  static String m71(number) => "Statement ${number}";
 
-  static String m68(milliseconds) => "${milliseconds} ms";
+  static String m72(milliseconds) => "${milliseconds} ms";
 
-  static String m69(count) => "${Intl.plural(count, one: '1 row', other: '${count} rows')}";
+  static String m73(count) => "${Intl.plural(count, one: '1 row', other: '${count} rows')}";
 
-  static String m70(seconds) => "You can try again in ${seconds} s.";
+  static String m74(seconds) => "You can try again in ${seconds} s.";
 
-  static String m71(message) => "Error: ${message}";
+  static String m75(message) => "Error: ${message}";
 
-  static String m72(detail) => "Details: ${detail}";
+  static String m76(detail) => "Details: ${detail}";
 
-  static String m73(host) => "Studio address: ${host}";
+  static String m77(host) => "Studio address: ${host}";
 
-  static String m74(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
+  static String m78(count) => "${Intl.plural(count, one: '1 row listed.', other: '${count} rows listed.')}";
 
-  static String m75(name) => "Type \"${name}\" to confirm";
+  static String m79(name) => "Type \"${name}\" to confirm";
 
-  static String m76(word, line) => "May change data: ${word} on line ${line}";
+  static String m80(word, line) => "May change data: ${word} on line ${line}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -616,6 +624,31 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "platform_connections_search_empty_title": MessageLookupByLibrary.simpleMessage("No connection matches the filter"),
     "platform_connections_status_unknown": MessageLookupByLibrary.simpleMessage("Unknown status"),
+    "platform_grants_actions": MessageLookupByLibrary.simpleMessage("Grant actions"),
+    "platform_grants_already_removed": MessageLookupByLibrary.simpleMessage("Already removed"),
+    "platform_grants_back_to_connections": MessageLookupByLibrary.simpleMessage("Back to connections"),
+    "platform_grants_connection_gone_description": MessageLookupByLibrary.simpleMessage(
+      "It may have been deleted in the Platform web console.",
+    ),
+    "platform_grants_connection_gone_title": MessageLookupByLibrary.simpleMessage("This connection no longer exists"),
+    "platform_grants_empty_description": MessageLookupByLibrary.simpleMessage(
+      "No one holds a grant on this connection.",
+    ),
+    "platform_grants_empty_title": MessageLookupByLibrary.simpleMessage("No one has access yet"),
+    "platform_grants_expired": m44,
+    "platform_grants_expires": m45,
+    "platform_grants_granted_by": m46,
+    "platform_grants_level_read": MessageLookupByLibrary.simpleMessage("Read"),
+    "platform_grants_level_read_in_sentence": MessageLookupByLibrary.simpleMessage("read"),
+    "platform_grants_level_write": MessageLookupByLibrary.simpleMessage("Write"),
+    "platform_grants_level_write_in_sentence": MessageLookupByLibrary.simpleMessage("write"),
+    "platform_grants_load_failed": MessageLookupByLibrary.simpleMessage("Could not load the grants"),
+    "platform_grants_no_expiry": MessageLookupByLibrary.simpleMessage("No expiry"),
+    "platform_grants_refresh_failed": MessageLookupByLibrary.simpleMessage("Could not refresh the grants"),
+    "platform_grants_remove_access": MessageLookupByLibrary.simpleMessage("Remove access"),
+    "platform_grants_remove_confirm": MessageLookupByLibrary.simpleMessage("Remove"),
+    "platform_grants_remove_message": m47,
+    "platform_grants_removed": MessageLookupByLibrary.simpleMessage("Access removed"),
     "platform_home_admin_label": MessageLookupByLibrary.simpleMessage("Platform admin"),
     "platform_home_connections_shortcut": MessageLookupByLibrary.simpleMessage("Connections"),
     "platform_home_connections_shortcut_description": MessageLookupByLibrary.simpleMessage(
@@ -654,10 +687,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "remove_my_data_title": MessageLookupByLibrary.simpleMessage("Remove my data?"),
     "required_field": MessageLookupByLibrary.simpleMessage("Required Field"),
-    "result_affected_rows": m44,
-    "result_card_id": m45,
+    "result_affected_rows": m48,
+    "result_card_id": m49,
     "result_copied": MessageLookupByLibrary.simpleMessage("Copied"),
-    "result_copy_failed": m46,
+    "result_copy_failed": m50,
     "result_copy_row": MessageLookupByLibrary.simpleMessage("Copy row as JSON"),
     "result_copy_value": MessageLookupByLibrary.simpleMessage("Copy value"),
     "result_empty": MessageLookupByLibrary.simpleMessage("Query returned no data"),
@@ -669,26 +702,26 @@ class MessageLookup extends MessageLookupByLibrary {
     "result_limited_notice": MessageLookupByLibrary.simpleMessage(
       "Studio bounded this result. Anything beyond the bound is not in it.",
     ),
-    "result_load_more": m47,
-    "result_loading_more": m48,
+    "result_load_more": m51,
+    "result_loading_more": m52,
     "result_masked_semantics": MessageLookupByLibrary.simpleMessage("Masked value"),
-    "result_more_fields": m49,
+    "result_more_fields": m53,
     "result_order_notice": MessageLookupByLibrary.simpleMessage(
       "Without an ORDER BY the engine may return rows that repeat or are skipped between pages.",
     ),
     "result_rolled_back": MessageLookupByLibrary.simpleMessage(
       "This statement left a transaction open, and Studio rolled it back, so its changes were discarded.",
     ),
-    "result_row_position": m50,
-    "result_row_title": m51,
-    "result_stats": m52,
+    "result_row_position": m54,
+    "result_row_title": m55,
+    "result_stats": m56,
     "result_view_cards": MessageLookupByLibrary.simpleMessage("Cards"),
     "result_view_table": MessageLookupByLibrary.simpleMessage("Table"),
-    "result_warning_code": m53,
+    "result_warning_code": m57,
     "result_warning_fallback": MessageLookupByLibrary.simpleMessage("Warning"),
-    "result_warning_fallback_code": m54,
-    "result_warning_line": m55,
-    "result_warnings": m56,
+    "result_warning_fallback_code": m58,
+    "result_warning_line": m59,
+    "result_warnings": m60,
     "retry": MessageLookupByLibrary.simpleMessage("Retry"),
     "role": MessageLookupByLibrary.simpleMessage("Role"),
     "save": MessageLookupByLibrary.simpleMessage("Save"),
@@ -708,7 +741,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_editor_cancelled": MessageLookupByLibrary.simpleMessage("Cancelled"),
     "sql_editor_cancelling": MessageLookupByLibrary.simpleMessage("Cancelling"),
-    "sql_editor_catalog_chip": m57,
+    "sql_editor_catalog_chip": m61,
     "sql_editor_catalog_failed": MessageLookupByLibrary.simpleMessage(
       "The databases to run statements in could not be listed.",
     ),
@@ -723,8 +756,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_editor_draft_not_kept": MessageLookupByLibrary.simpleMessage(
       "This text is longer than 100,000 characters, so it is not kept on this phone, and the text saved earlier for this connection was removed.",
     ),
-    "sql_editor_draft_not_saved": m58,
-    "sql_editor_draft_read_failed": m59,
+    "sql_editor_draft_not_saved": m62,
+    "sql_editor_draft_read_failed": m63,
     "sql_editor_draft_unreadable_note": MessageLookupByLibrary.simpleMessage(
       "New text is not kept until you discard the saved text.",
     ),
@@ -736,23 +769,23 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_editor_interrupted_unknown": MessageLookupByLibrary.simpleMessage(
       "Outcome unknown: check the data before running it again.",
     ),
-    "sql_editor_language": m60,
-    "sql_editor_language_unknown": m61,
+    "sql_editor_language": m64,
+    "sql_editor_language_unknown": m65,
     "sql_editor_redo": MessageLookupByLibrary.simpleMessage("Redo"),
-    "sql_editor_rolled_back": m62,
+    "sql_editor_rolled_back": m66,
     "sql_editor_run": MessageLookupByLibrary.simpleMessage("Run"),
     "sql_editor_run_again": MessageLookupByLibrary.simpleMessage("Run again"),
     "sql_editor_run_selection": MessageLookupByLibrary.simpleMessage("Run selection"),
-    "sql_editor_script_elapsed": m63,
+    "sql_editor_script_elapsed": m67,
     "sql_editor_script_failed": MessageLookupByLibrary.simpleMessage("Failed"),
-    "sql_editor_script_failed_time": m64,
-    "sql_editor_script_not_run": m65,
+    "sql_editor_script_failed_time": m68,
+    "sql_editor_script_not_run": m69,
     "sql_editor_script_rolled_back": MessageLookupByLibrary.simpleMessage(
       "The script left a transaction open, and Studio rolled it back, so its changes were discarded.",
     ),
-    "sql_editor_script_rolled_back_keep": m66,
+    "sql_editor_script_rolled_back_keep": m70,
     "sql_editor_script_show_rows": MessageLookupByLibrary.simpleMessage("Show rows"),
-    "sql_editor_script_statement": m67,
+    "sql_editor_script_statement": m71,
     "sql_editor_script_succeeded": MessageLookupByLibrary.simpleMessage("Succeeded"),
     "sql_editor_stop_waiting": MessageLookupByLibrary.simpleMessage("Stop waiting"),
     "sql_editor_stopped_waiting": MessageLookupByLibrary.simpleMessage(
@@ -767,7 +800,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "sql_history_clear_title": MessageLookupByLibrary.simpleMessage("Clear the history?"),
     "sql_history_delete": MessageLookupByLibrary.simpleMessage("Delete"),
-    "sql_history_duration": m68,
+    "sql_history_duration": m72,
     "sql_history_empty": MessageLookupByLibrary.simpleMessage("No statements yet"),
     "sql_history_empty_description": MessageLookupByLibrary.simpleMessage(
       "Statements you run appear here. They stay on this phone.",
@@ -779,7 +812,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "sql_history_open": MessageLookupByLibrary.simpleMessage("History"),
     "sql_history_replace": MessageLookupByLibrary.simpleMessage("Replace"),
     "sql_history_replace_title": MessageLookupByLibrary.simpleMessage("Replace the editor\'s text?"),
-    "sql_history_rows": m69,
+    "sql_history_rows": m73,
     "sql_history_search_hint": MessageLookupByLibrary.simpleMessage("Search statements and connections"),
     "sql_history_succeeded": MessageLookupByLibrary.simpleMessage("Succeeded"),
     "sql_history_title": MessageLookupByLibrary.simpleMessage("History"),
@@ -788,17 +821,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "studio_error_fix_statement": MessageLookupByLibrary.simpleMessage(
       "An administrator can run this statement to fix it:",
     ),
-    "studio_error_retry_in": m70,
-    "studio_error_semantics": m71,
+    "studio_error_retry_in": m74,
+    "studio_error_semantics": m75,
     "studio_error_statement_copied": MessageLookupByLibrary.simpleMessage("Statement copied"),
     "studio_governance_cannot_serve": MessageLookupByLibrary.simpleMessage(
       "Studio cannot serve connections right now. An administrator needs to check its governance setup.",
     ),
-    "studio_governance_detail": m72,
+    "studio_governance_detail": m76,
     "studio_governance_temporarily_unavailable": MessageLookupByLibrary.simpleMessage(
       "Connection access is temporarily unavailable. The list updates by itself once it is back.",
     ),
-    "studio_unreachable_host": m73,
+    "studio_unreachable_host": m77,
     "studio_unreachable_message": MessageLookupByLibrary.simpleMessage(
       "LibreDB Studio does not answer. Check your internet connection, then try again.",
     ),
@@ -806,7 +839,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "success": MessageLookupByLibrary.simpleMessage("Success"),
     "tab_browse": MessageLookupByLibrary.simpleMessage("Browse"),
     "tab_sql": MessageLookupByLibrary.simpleMessage("SQL"),
-    "table_rows_listed": m74,
+    "table_rows_listed": m78,
     "theme": MessageLookupByLibrary.simpleMessage("Theme"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Select your preferred theme style"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),
@@ -822,7 +855,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "warning": MessageLookupByLibrary.simpleMessage("Warning"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
-    "write_confirm_name_label": m75,
+    "write_confirm_name_label": m79,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "This production connection has no name to type, so the statement cannot be confirmed here.",
     ),
@@ -838,7 +871,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "May change data: the app cannot tell how the statement starts",
     ),
-    "write_confirm_reason_may_write_at": m76,
+    "write_confirm_reason_may_write_at": m80,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "The app cannot read what a command of this engine does",
     ),

@@ -1490,6 +1490,131 @@ class S {
     return Intl.message('$name is no longer available', name: 'connection_vanished', desc: '', args: [name]);
   }
 
+  /// `Could not load the grants`
+  String get platform_grants_load_failed {
+    return Intl.message('Could not load the grants', name: 'platform_grants_load_failed', desc: '', args: []);
+  }
+
+  /// `Could not refresh the grants`
+  String get platform_grants_refresh_failed {
+    return Intl.message('Could not refresh the grants', name: 'platform_grants_refresh_failed', desc: '', args: []);
+  }
+
+  /// `No one has access yet`
+  String get platform_grants_empty_title {
+    return Intl.message('No one has access yet', name: 'platform_grants_empty_title', desc: '', args: []);
+  }
+
+  /// `No one holds a grant on this connection.`
+  String get platform_grants_empty_description {
+    return Intl.message(
+      'No one holds a grant on this connection.',
+      name: 'platform_grants_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This connection no longer exists`
+  String get platform_grants_connection_gone_title {
+    return Intl.message(
+      'This connection no longer exists',
+      name: 'platform_grants_connection_gone_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `It may have been deleted in the Platform web console.`
+  String get platform_grants_connection_gone_description {
+    return Intl.message(
+      'It may have been deleted in the Platform web console.',
+      name: 'platform_grants_connection_gone_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Back to connections`
+  String get platform_grants_back_to_connections {
+    return Intl.message('Back to connections', name: 'platform_grants_back_to_connections', desc: '', args: []);
+  }
+
+  /// `Read`
+  String get platform_grants_level_read {
+    return Intl.message('Read', name: 'platform_grants_level_read', desc: '', args: []);
+  }
+
+  /// `Write`
+  String get platform_grants_level_write {
+    return Intl.message('Write', name: 'platform_grants_level_write', desc: '', args: []);
+  }
+
+  /// `read`
+  String get platform_grants_level_read_in_sentence {
+    return Intl.message('read', name: 'platform_grants_level_read_in_sentence', desc: '', args: []);
+  }
+
+  /// `write`
+  String get platform_grants_level_write_in_sentence {
+    return Intl.message('write', name: 'platform_grants_level_write_in_sentence', desc: '', args: []);
+  }
+
+  /// `No expiry`
+  String get platform_grants_no_expiry {
+    return Intl.message('No expiry', name: 'platform_grants_no_expiry', desc: '', args: []);
+  }
+
+  /// `Expires {date}`
+  String platform_grants_expires(String date) {
+    return Intl.message('Expires $date', name: 'platform_grants_expires', desc: '', args: [date]);
+  }
+
+  /// `Expired {date}`
+  String platform_grants_expired(String date) {
+    return Intl.message('Expired $date', name: 'platform_grants_expired', desc: '', args: [date]);
+  }
+
+  /// `Granted by {name}, {date}`
+  String platform_grants_granted_by(String name, String date) {
+    return Intl.message('Granted by $name, $date', name: 'platform_grants_granted_by', desc: '', args: [name, date]);
+  }
+
+  /// `Grant actions`
+  String get platform_grants_actions {
+    return Intl.message('Grant actions', name: 'platform_grants_actions', desc: '', args: []);
+  }
+
+  /// `Remove access`
+  String get platform_grants_remove_access {
+    return Intl.message('Remove access', name: 'platform_grants_remove_access', desc: '', args: []);
+  }
+
+  /// `{username} will lose {level} access to {connection}.`
+  String platform_grants_remove_message(String username, String level, String connection) {
+    return Intl.message(
+      '$username will lose $level access to $connection.',
+      name: 'platform_grants_remove_message',
+      desc: '',
+      args: [username, level, connection],
+    );
+  }
+
+  /// `Remove`
+  String get platform_grants_remove_confirm {
+    return Intl.message('Remove', name: 'platform_grants_remove_confirm', desc: '', args: []);
+  }
+
+  /// `Access removed`
+  String get platform_grants_removed {
+    return Intl.message('Access removed', name: 'platform_grants_removed', desc: '', args: []);
+  }
+
+  /// `Already removed`
+  String get platform_grants_already_removed {
+    return Intl.message('Already removed', name: 'platform_grants_already_removed', desc: '', args: []);
+  }
+
   /// `Switch connection`
   String get connection_switcher_title {
     return Intl.message('Switch connection', name: 'connection_switcher_title', desc: '', args: []);

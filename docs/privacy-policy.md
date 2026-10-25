@@ -21,6 +21,8 @@ The app talks to four kinds of servers, and to no others on its own:
   The app sends Platform your Keycloak access token with its requests and receives your Platform identity: your Platform user id, e-mail address, name and organisation.
   The app holds that identity in memory while you are signed in and never stores it on the device.
   Platform's first answer to your account creates your Platform user record and takes one of the license's admin seats.
+  In Platform mode the app shows who holds access to a connection: their usernames and e-mail addresses, and the name or e-mail address of the admin who granted it.
+  It holds them in memory while the page is open and never stores them on the device, and it sends Platform the removals of access you ask for.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
   See the Crash reports section below.
 

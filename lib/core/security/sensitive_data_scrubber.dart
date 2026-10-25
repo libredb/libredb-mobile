@@ -35,7 +35,7 @@ const Set<String> sensitiveHeaderNameSubstrings = {'authorization', 'api-key', '
 /// Body keys whose values are masked when any of these appears as a
 /// lower-cased substring (so `accessToken`, `refreshToken`, `newPassword`
 /// and `clientSecret` all match).
-const Set<String> sensitiveBodyKeySubstrings = {'password', 'otp', 'token', 'refreshtoken', 'secret'};
+const Set<String> sensitiveBodyKeySubstrings = {'password', 'otp', 'token', 'refreshtoken', 'secret', 'subjectemail'};
 
 /// Keys of the OpenID Connect protocol whose values are masked too: the
 /// authorization code, the PKCE verifier, `state`, `nonce`, `session_state`
