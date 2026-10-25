@@ -260,7 +260,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Evet'));
       await tester.pumpAndSettle();
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);
-      expect(find.text('SSO ile giriş yap'), findsOneWidget);
+      expect(find.text("Studio'ya giriş yap"), findsOneWidget);
 
       // The next cold start: a new App, which reads the stored language.
       await tester.pumpWidget(const SizedBox());
@@ -268,8 +268,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(loginButtonSsoKey), findsOneWidget);
-      expect(find.text('SSO ile giriş yap'), findsOneWidget);
-      expect(find.text('Sign in with SSO'), findsNothing);
+      expect(find.text("Studio'ya giriş yap"), findsOneWidget);
+      expect(find.text('Sign in to Studio'), findsNothing);
     });
 
     testWidgets('keeps the language and says so when the device cannot store it', (tester) async {

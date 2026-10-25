@@ -173,7 +173,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.bySemanticsLabel('Loading...'), findsNothing);
-      expect(find.text('SSO ile giriş yap'), findsOneWidget);
+      expect(find.text("Studio'ya giriş yap"), findsOneWidget);
     });
 
     testWidgets('starts in the language that an earlier run stored', (tester) async {
@@ -182,8 +182,8 @@ void main() {
       await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
-      expect(find.text('SSO ile giriş yap'), findsOneWidget);
-      expect(find.text('Sign in with SSO'), findsNothing);
+      expect(find.text("Studio'ya giriş yap"), findsOneWidget);
+      expect(find.text('Sign in to Studio'), findsNothing);
     });
 
     // A guard rather than a reproduction: it passed before the stored language was read. It keeps the router mounting
@@ -194,8 +194,8 @@ void main() {
       await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
       await tester.pumpAndSettle();
 
-      expect(find.text('SSO ile giriş yap'), findsOneWidget);
-      expect(find.text('Sign in with SSO'), findsNothing);
+      expect(find.text("Studio'ya giriş yap"), findsOneWidget);
+      expect(find.text('Sign in to Studio'), findsNothing);
     });
 
     // The task switcher shows this title.

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -25,10 +26,23 @@ void main() {
     when(() => loginBloc.state).thenReturn(const LoginInitialState());
   });
 
-  Widget buildScreen({required AuthMode authMode, bool dark = false}) {
+  Widget buildScreen({
+    required AuthMode authMode,
+    PlatformTargetConfig platform = const PlatformNotConfigured(),
+    bool dark = false,
+  }) {
     final screen = MultiBlocProvider(
       providers: [
         RepositoryProvider<AuthMode>.value(value: authMode),
+        RepositoryProvider<AppConfig>.value(
+          value: AppConfig(
+            environment: Environment.test,
+            apiBaseUrl: null,
+            certificatePins: const <String>[],
+            idleTimeout: null,
+            platform: platform,
+          ),
+        ),
         BlocProvider<LoginBloc>.value(value: loginBloc),
         RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
       ],
@@ -52,6 +66,28 @@ void main() {
             size: kGoldenScreenSize,
             child: buildScreen(
               authMode: OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.com'), clientId: 'app')),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // A build with a Platform target: Studio and Platform as two entries of equal weight, each with its helper text.
+  goldenTest(
+    'LoginScreen: Studio and Platform entries, light',
+    fileName: 'login_screen_two_entries_light',
+    pumpBeforeTest: (tester) => tester.pump(const Duration(milliseconds: 600)),
+    builder: () => GoldenTestGroup(
+      columns: 1,
+      children: [
+        GoldenTestScenario(
+          name: 'initial',
+          child: SizedBox.fromSize(
+            size: kGoldenScreenSize,
+            child: buildScreen(
+              authMode: OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.com'), clientId: 'app')),
+              platform: const PlatformConfigured(),
             ),
           ),
         ),

@@ -407,7 +407,7 @@ void main() {
         expect(app.read<SsoAutoRedirectGate>().isOpen, isTrue);
 
         // As the single sign-on button does.
-        app.read<LoginBloc>().add(const SsoSignInRequested());
+        app.read<LoginBloc>().add(const SsoSignInRequested(target: SessionTarget.studio));
         await tester.pumpAndSettle();
 
         expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
@@ -419,12 +419,33 @@ void main() {
         await tester.pumpAndSettle();
         final app = tester.element(find.byType(MaterialApp));
 
-        app.read<LoginBloc>().add(const SsoSignInRequested());
+        app.read<LoginBloc>().add(const SsoSignInRequested(target: SessionTarget.studio));
         await tester.pumpAndSettle();
 
-        expect(app.read<LoginBloc>().state, isA<LoginLoadedState>());
+        expect(app.read<LoginBloc>().state, const LoginLoadedState(target: SessionTarget.studio));
         expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+      });
+
+      testWidgets('a Platform sign-in marks the session authenticated for Platform and stores that target', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          App(
+            language: 'en',
+            dependencies: _OidcDependencies(_FakeOidcClient(), appConfig: _platformApp.dependencies.appConfig),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final app = tester.element(find.byType(MaterialApp));
+
+        // As the Platform button does.
+        app.read<LoginBloc>().add(const SsoSignInRequested(target: SessionTarget.platform));
+        await tester.pumpAndSettle();
+
+        expect(app.read<LoginBloc>().state, const LoginLoadedState(target: SessionTarget.platform));
+        expect(app.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
       });
 
       // A sign-in closes the gate as well, so this logout comes from a run that was never signed in.
@@ -554,9 +575,9 @@ class _FakeOidcClient implements IOidcClient {
 
 /// The dependencies of [_app] over [client].
 class _OidcDependencies extends AppDependencies {
-  _OidcDependencies(this.client)
+  _OidcDependencies(this.client, {AppConfig? appConfig})
     : super(
-        appConfig: _app.dependencies.appConfig,
+        appConfig: appConfig ?? _app.dependencies.appConfig,
         authMode: OidcAuthMode(OidcSettings(issuer: Uri.parse('https://id.example.com/realms/demo'), clientId: 'app')),
       );
 
