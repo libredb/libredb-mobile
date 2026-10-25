@@ -10,6 +10,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/models/platform_connections_model.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_target.dart';
@@ -39,8 +40,7 @@ import '../../support/test_env.dart';
 /// (one admin seat, three user seats), from a fresh volume, as `admin` unless named otherwise, after `me.json`, so
 /// `admin` held the admin seat; `me_admin_seats.json` is `admin2`'s. The two connections were created by hand in
 /// Platform's web console (docs/studio.md, "Success and write answers"); every grant made for the recording was
-/// revoked. `directory.json`, `directory_query.json` and `grant_put.json` are read by the directory and grant `PUT`
-/// readers of #250 once they merge.
+/// revoked.
 ///
 /// Each body is answered to a [PlatformApiClient], so it goes through the client's envelope reader and exception path,
 /// then through [platformError]; the session predicates read a [DioException] built from the status and the raw body.
@@ -176,6 +176,58 @@ void main() {
       expect(grant.grantedBy.email, 'admin@example.com');
       expect(grant.grantedAt.isUtc, isTrue);
     });
+
+    test('GET /api/v1/directory/users directory: every user, the disabled one with enabled false', () async {
+      adapter.answer(200, fixture('directory'));
+
+      final page = (await PlatformDirectoryRepository(client).search(query: '', page: 1)).dataOrNull!;
+
+      expect(adapter.requests, ['GET /v1/directory/users']);
+      expect(adapter.queries.single, {'page': '1'}, reason: 'an empty query sends no q');
+      expect((page.page, page.total), (1, 5));
+      expect(
+        [for (final u in page.users) (u.username, u.enabled, u.studioRole, u.needsSeat)],
+        [
+          ('admin', true, 'admin', true),
+          ('admin2', true, 'admin', true),
+          ('disabled', false, 'user', true),
+          ('norole', true, null, true),
+          ('user', true, 'user', true),
+        ],
+      );
+      final user = page.users.last;
+      expect(user.id, _user);
+      expect(user.email, 'user@example.com');
+      expect(user.fullName, 'Demo User');
+    });
+
+    test('GET /api/v1/directory/users?q=adm directory_query: admin and admin2', () async {
+      adapter.answer(200, fixture('directory_query'));
+
+      final page = (await PlatformDirectoryRepository(client).search(query: ' adm ', page: 1)).dataOrNull!;
+
+      expect(adapter.requests, ['GET /v1/directory/users']);
+      expect(adapter.queries.single, {'page': '1', 'q': 'adm'}, reason: 'the query is sent trimmed');
+      expect((page.page, page.total), (1, 2));
+      expect([for (final u in page.users) u.username], ['admin', 'admin2']);
+      expect(page.users.first.fullName, 'Demo Admin');
+    });
+
+    test('PUT /api/v1/connections/{id}/grants/{subject} grant_put: the id of the read grant of user', () async {
+      adapter.answer(200, fixture('grant_put'));
+
+      final id = (await PlatformGrantRepository(
+        client,
+      ).put(_writeConnection, _user, level: 'read', expiresAt: null)).dataOrNull;
+
+      expect(adapter.requests, ['PUT /v1/connections/$_writeConnection/grants/$_user']);
+      expect(
+        adapter.bodies.single,
+        '{"level":"read","expiresAt":null}',
+        reason: 'the body the fixture was recorded with',
+      );
+      expect(id, 'cmvnibe6j000501p6r2h279hr');
+    });
   });
 
   group('refusals of the grant and directory routes', () {
@@ -310,6 +362,12 @@ class _FixtureAdapter implements HttpClientAdapter {
   /// Each request as `METHOD path`, in the order sent.
   final requests = <String>[];
 
+  /// The query parameters of each request, in the order sent.
+  final queries = <Map<String, String>>[];
+
+  /// The body of each request as sent, empty for a request without one.
+  final bodies = <String>[];
+
   void answer(int status, String body) {
     _status = status;
     _body = body;
@@ -321,8 +379,10 @@ class _FixtureAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    await requestStream?.drain<void>();
+    final body = requestStream == null ? <int>[] : [for (final chunk in await requestStream.toList()) ...chunk];
     requests.add('${options.method} ${options.uri.path.replaceFirst('/api', '')}');
+    queries.add(options.uri.queryParameters);
+    bodies.add(utf8.decode(body));
     return ResponseBody.fromString(
       _body,
       _status,
