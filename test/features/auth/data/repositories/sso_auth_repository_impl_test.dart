@@ -47,6 +47,10 @@ class _FakeAuthSessionRepository implements IAuthSessionRepository {
 
   @override
   Future<Result<void>> clear() async => const Success(null);
+
+  @override
+  Future<Result<void>> persistTarget(SessionTarget target, {required int generation}) =>
+      throw UnimplementedError('a sign-in never switches the target');
 }
 
 final _expiresAt = DateTime.utc(2026, 10, 21, 12);

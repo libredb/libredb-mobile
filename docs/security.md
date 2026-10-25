@@ -29,6 +29,7 @@ The provider's tokens live in `flutter_secure_storage` (`lib/infrastructure/stor
 On Android it encrypts them with AES-GCM under an RSA-OAEP wrapped Android Keystore key.
 On iOS the Keychain accessibility is pinned to `first_unlock_this_device`, so a background refresh can read the tokens while the device is locked, and they never move to another device through a backup or iCloud Keychain.
 The session's target (Studio or Platform) is stored with the tokens in secure storage, cleared with them, and holds no credential.
+A mode switch in the profile sheet rewrites only that target, atomically, under the session it started in, so a sign-out during the switch leaves no target stored; the tokens stay as they are.
 
 ## Statement text on the device
 
@@ -73,6 +74,7 @@ What the app keeps per account outlives it on purpose, so the same account finds
 'Remove my data', in the Privacy section of Settings while signed in, removes that too, for the signed-in account only, and then signs out through the usual sign-out (Studio's logout record, the wipe, the identity provider's end-session).
 A Platform session keeps no data of an account on the device: `SignedInAccountScope` names no subject there, so Settings shows no 'Remove my data', and `test/architecture/user_data_registry_test.dart` fails when a Platform file reaches the secure store, the device preferences or the device directories.
 Its sign-out sends nothing to Studio, since it has no Studio session and Platform v1 has no logout route; it wipes the session and starts the identity provider's end-session like a Studio sign-out ([oidc.md](oidc.md#logout)).
+A mode switch between Studio and Platform is not a sign-out: it rewrites only the stored target, clears what the app holds in memory about the mode it leaves, and removes no stored data, so the account finds its Studio data again when it switches back.
 
 - `UserDataRegistry` (`lib/shared/user_data/user_data_registry.dart`) lists every store that keeps data of an account, and `AppDependencies.createUserDataRegistry` fills it: the drafts and the history (`clearSubject`), the starred and recent connections, the last open connection, the database of each server-level connection, the collapsed sections of the connection list, whose keys are Studio's environment and group names, and the share files.
 - The share files (`TemporaryShareFiles`, `lib/infrastructure/storage/temporary_share_files.dart`): an object source longer than 100,000 characters is shared as a file in `<temporary directory>/share_files/`, removed once the share sheet answers.

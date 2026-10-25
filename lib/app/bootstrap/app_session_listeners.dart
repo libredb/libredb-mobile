@@ -4,15 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
+import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/idle_timeout_observer.dart';
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
+import 'package:libredb_mobile/features/auth/domain/entities/session_target_switch_result.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/cached_object_browser_repository.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -21,6 +24,8 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
@@ -141,6 +146,19 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
         BlocListener<SignOutBloc, SignOutState>(
           listenWhen: (previous, current) => previous is SignedOut && current is SignedOutWithProviderSessionLeft,
           listener: (context, state) => _showNotice((strings) => strings.error_auth_oidc_logout_incomplete),
+        ),
+        // A mode switch the other target's gate accepted opens that mode; a refused one keeps the session and says why.
+        BlocListener<SessionTargetSwitchBloc, SessionTargetSwitchState>(
+          listener: (context, state) {
+            switch (state) {
+              case SessionTargetSwitchSucceeded(:final result):
+                _completeSwitch(context, result);
+              case SessionTargetSwitchRefusedState(:final errorCode):
+                _tellSwitchRefused(context, errorCode);
+              case SessionTargetSwitchIdle() || SessionTargetSwitchInProgress():
+                break;
+            }
+          },
         ),
         // The favorites are kept per subject: Studio's answer names whose to show, and the sign-out, which clears the
         // answer, hides them until the next user is known.
@@ -264,6 +282,60 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
     context.read<ActiveCatalogCubit>().clear();
     context.read<CachedObjectBrowserRepository>().clear();
     context.read<CachedProviderMetaRepository>().clear();
+  }
+
+  /// Opens the mode a switch moved the session to, while the session is still signed in to the mode it left.
+  ///
+  /// A switch is no sign-out: it clears only the in-memory state of the mode it leaves, as [_forgetSignedOutUser] does
+  /// for that mode, fills the identity of the mode it opens from the gate's answer, and then marks the session
+  /// authenticated for the new target, so the router opens its home. It removes no stored data, leaves the sign-in
+  /// form alone, sends no Studio logout record and starts no provider end-session. The session stays
+  /// [SessionAuthenticated], so the app lock gets no event and the idle timeout keeps running. A session that ended or
+  /// moved while the gate was asked is left as it is.
+  void _completeSwitch(BuildContext context, SessionTargetSwitchResult result) {
+    final (SessionTarget from, SessionTarget to) = switch (result) {
+      SwitchedToStudio() => (SessionTarget.platform, SessionTarget.studio),
+      SwitchedToPlatform() => (SessionTarget.studio, SessionTarget.platform),
+      SessionTargetSwitchRefused() => throw StateError('A refused switch has no mode to open'),
+    };
+    final session = context.read<SessionCubit>();
+    if (session.state != SessionAuthenticated(target: from)) {
+      _log.info('The session is no longer signed in to {}, so the switch to {} opens nothing', [from.name, to.name]);
+      return;
+    }
+    switch (result) {
+      case SwitchedToPlatform(:final identity):
+        context.read<StudioIdentityCubit>().clear();
+        context.read<ConnectionPolicyCubit>().clear();
+        context.read<StudioAccountRefusalCubit>().clear();
+        context.read<ActiveConnectionCubit>().clear();
+        context.read<ActiveCatalogCubit>().clear();
+        context.read<CachedObjectBrowserRepository>().clear();
+        context.read<CachedProviderMetaRepository>().clear();
+        context.read<PlatformIdentityCubit>().signedIn(identity);
+      case SwitchedToStudio(:final identity):
+        context.read<PlatformIdentityCubit>().clear();
+        context.read<PlatformAccountRefusalCubit>().clear();
+        context.read<StudioIdentityCubit>().signedIn(identity);
+      case SessionTargetSwitchRefused():
+        break;
+    }
+    session.markAuthenticated(to);
+  }
+
+  /// Tells the user, in the mode they stayed in, why the other target's gate refused the switch. A session that ended
+  /// while the gate was asked has its own notice.
+  void _tellSwitchRefused(BuildContext context, AppErrorCode errorCode) {
+    if (context.read<SessionCubit>().state is! SessionAuthenticated) return;
+    final messenger = widget.scaffoldMessengerKey.currentState;
+    if (messenger == null) {
+      throw StateError('No ScaffoldMessenger is mounted with scaffoldMessengerKey to show a session notice');
+    }
+    final message = switch (errorCode) {
+      AppErrorCode.platformAdminRoleRequired => S.of(messenger.context).profile_switch_admin_role_required,
+      _ => errorCode.resolve(messenger.context),
+    };
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Stops the login page of an `oidc` build from sending the user to the identity provider on its own for the rest of

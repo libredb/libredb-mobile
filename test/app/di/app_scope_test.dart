@@ -168,6 +168,9 @@ class _CountingSessionRepository implements IAuthSessionRepository {
   Future<Result<void>> persist(AuthSession session) async => const Success(null);
 
   @override
+  Future<Result<void>> persistTarget(SessionTarget target, {required int generation}) async => const Success(null);
+
+  @override
   Future<Result<void>> clear() async {
     clears++;
     return const Success(null);
@@ -242,6 +245,7 @@ class _CountingDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) => super.createApiClient(
@@ -250,6 +254,7 @@ class _CountingDependencies extends AppDependencies {
       sessionExpiredCalls++;
       onSessionExpired();
     },
+    onSessionRefused: onSessionRefused,
     onAccountRefused: onAccountRefused,
     tokenRotation: tokenRotation,
   );
@@ -265,12 +270,14 @@ class _RecordingServerDependencies extends _CountingDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
     final apiClient = super.createApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );
@@ -942,6 +949,79 @@ void main() {
     });
   });
 
+  // A mode switch from Platform asks Studio with the live token: what Studio answers about Studio never ends or
+  // refuses the Platform session, while a dead refresh token ends either.
+  group('AppScope Studio client under a Platform session', () {
+    Future<Object?> studioGet(WidgetTester tester, ApiClient client, String path) async {
+      Object? outcome;
+      client.get(path).then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
+      await _pumpUntil(tester, () => outcome != null);
+      return outcome;
+    }
+
+    Future<BuildContext> signedIn(WidgetTester tester, String target, {TokenRotation? rotation}) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, target);
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      return _pumpScope(tester, _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig));
+    }
+
+    const authRequired = (401, {'error': 'Invalid access token', 'code': 'AUTH_REQUIRED'});
+
+    testWidgets('a 401 AUTH_REQUIRED that survives the refresh keeps a Platform session', (tester) async {
+      final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+      final scope = await signedIn(tester, 'platform', rotation: rotation);
+      final client = scope.read<ApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({'GET /auth/me': authRequired});
+
+      expect(await studioGet(tester, client, '/auth/me'), isA<UnauthorizedException>());
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(rotation.rotations, 1);
+      expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
+    });
+
+    testWidgets('a 401 AUTH_REQUIRED that survives the refresh ends a Studio session as expired', (tester) async {
+      final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+      final scope = await signedIn(tester, 'studio', rotation: rotation);
+      final session = scope.read<SessionCubit>();
+      final client = scope.read<ApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({'GET /auth/me': authRequired});
+
+      expect(await studioGet(tester, client, '/auth/me'), isA<UnauthorizedException>());
+      await _pumpUntil(tester, () => session.state is SessionUnauthenticated);
+
+      expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+    });
+
+    testWidgets('a refresh the identity provider refuses ends a Platform session from the Studio client', (
+      tester,
+    ) async {
+      final scope = await signedIn(tester, 'platform');
+      final session = scope.read<SessionCubit>();
+      final client = scope.read<ApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({'GET /auth/me': authRequired});
+
+      expect(await studioGet(tester, client, '/auth/me'), isA<UnauthorizedException>());
+      await _pumpUntil(tester, () => session.state is SessionUnauthenticated);
+
+      expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+    });
+
+    testWidgets('a 403 BEARER_NO_ROLE refuses no Studio account under a Platform session', (tester) async {
+      final scope = await signedIn(tester, 'platform');
+      final client = scope.read<ApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /auth/me': (403, {'error': 'refused', 'code': 'BEARER_NO_ROLE'}),
+      });
+
+      expect(await studioGet(tester, client, '/auth/me'), isA<AppException>());
+
+      expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+      expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
+    });
+  });
+
   // Platform refuses an admin whose token lacks the admin role, or for whom the license has no admin seat, on every
   // route. Only a signed-in Platform session is refused here; the login page tells a refusal during the sign-in.
   group('AppScope Platform client', () {
@@ -1049,7 +1129,8 @@ void main() {
       expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
     });
 
-    testWidgets('a 401 BEARER_INVALID that survives the refresh ends the session as expired', (tester) async {
+    testWidgets('a 401 BEARER_INVALID that survives the refresh ends a Platform session as expired', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'platform');
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
       await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
       final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
@@ -1069,6 +1150,58 @@ void main() {
       await _pumpUntil(tester, () => session.state is SessionUnauthenticated);
 
       expect(rotation.rotations, 1);
+      expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+    });
+
+    // A mode switch from Studio asks Platform with the live token; Platform refusing that token is Platform's answer
+    // about Platform, so the Studio session stays and the switch is refused.
+    testWidgets('a 401 BEARER_INVALID that survives the refresh keeps a Studio session', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'studio');
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+      final scope = await _pumpScope(tester, _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig));
+      final session = scope.read<SessionCubit>();
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          401,
+          {
+            'error': {'code': 'BEARER_INVALID', 'message': 'invalid'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<UnauthorizedException>());
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(rotation.rotations, 1);
+      expect(session.state, const SessionAuthenticated(target: SessionTarget.studio));
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNotNull);
+    });
+
+    // A refresh token the identity provider refused is dead for both servers.
+    testWidgets('a refresh the identity provider refuses ends a Studio session from the Platform client', (
+      tester,
+    ) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'studio');
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'rejected-refresh-token');
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      final session = scope.read<SessionCubit>();
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          401,
+          {
+            'error': {'code': 'BEARER_INVALID', 'message': 'invalid'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<UnauthorizedException>());
+      await _pumpUntil(tester, () => session.state is SessionUnauthenticated);
+
       expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
     });
 

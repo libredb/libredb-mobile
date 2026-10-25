@@ -872,6 +872,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_mode_studio": MessageLookupByLibrary.simpleMessage("Studio"),
     "profile_role_admin": MessageLookupByLibrary.simpleMessage("Administrator"),
     "profile_role_user": MessageLookupByLibrary.simpleMessage("User"),
+    "profile_switch_admin_role_required": MessageLookupByLibrary.simpleMessage(
+      "This account is not a Platform admin, so it stays in Studio.",
+    ),
+    "profile_switch_confirm": MessageLookupByLibrary.simpleMessage("Switch"),
+    "profile_switch_platform_message": MessageLookupByLibrary.simpleMessage(
+      "Platform mode is for Platform admins. The first time this account opens Platform, it takes one admin seat of the license.",
+    ),
+    "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Switch to Platform?"),
+    "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Switch to Platform"),
+    "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Switch to Studio"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Unknown user"),
     "refresh": MessageLookupByLibrary.simpleMessage("Refresh"),
     "remove_my_data": MessageLookupByLibrary.simpleMessage("Remove my data"),

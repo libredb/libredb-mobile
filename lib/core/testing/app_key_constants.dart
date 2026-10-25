@@ -10,6 +10,7 @@ const Key signOutProgressIndicatorKey = Key("signOutProgressIndicatorKey");
 
 // the profile sheet of the shell
 const Key profileButtonKey = Key("profileButtonKey");
+const Key profileSwitchModeKey = Key("profileSwitchModeKey");
 const Key profileSettingsKey = Key("profileSettingsKey");
 const Key profileSignOutKey = Key("profileSignOutKey");
 const Key profileIdentityRetryKey = Key("profileIdentityRetryKey");

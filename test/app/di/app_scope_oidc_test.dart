@@ -48,6 +48,7 @@ class _OidcDependencies extends AppDependencies {
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
@@ -55,6 +56,7 @@ class _OidcDependencies extends AppDependencies {
     return super.createPlatformApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );
@@ -67,6 +69,7 @@ class _OidcDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
@@ -74,6 +77,7 @@ class _OidcDependencies extends AppDependencies {
     return super.createApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );
@@ -95,6 +99,7 @@ class _MisconfiguredDependencies extends AppDependencies {
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
@@ -102,6 +107,7 @@ class _MisconfiguredDependencies extends AppDependencies {
     return super.createPlatformApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );
@@ -111,6 +117,7 @@ class _MisconfiguredDependencies extends AppDependencies {
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
+    OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
     required TokenRotation tokenRotation,
   }) {
@@ -118,6 +125,7 @@ class _MisconfiguredDependencies extends AppDependencies {
     return super.createApiClient(
       secureStorage,
       onSessionExpired: onSessionExpired,
+      onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
       tokenRotation: tokenRotation,
     );

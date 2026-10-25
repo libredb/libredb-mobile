@@ -10,7 +10,22 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_errors.dart';
+import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/platform_identity.dart';
+import 'package:libredb_mobile/shared/widgets/unsaved_changes_guard.dart';
+import 'package:mocktail/mocktail.dart';
+
+import '../../../mocks/mock_classes.dart';
+
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
@@ -154,6 +169,210 @@ void main() {
     });
   });
 
+  group('TopBarWidget - mode switch', () {
+    Finder switchTile() => inSheet(find.byKey(profileSwitchModeKey));
+
+    /// Waits for the mock's latency of the gate, then for the home the switch opens.
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> openSwitch(WidgetTester tester) async {
+      await tester.tap(avatar());
+      await tester.pumpAndSettle();
+      await tester.tap(switchTile());
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('to Platform asks with the admin seat note first, then lands on the Platform home', (tester) async {
+      await pumpSignedIn(tester);
+
+      await openSwitch(tester);
+
+      expect(find.text('Switch to Platform?'), findsOneWidget);
+      expect(find.textContaining('takes one admin seat of the license'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Switch'));
+      await settle(tester);
+
+      expect(find.byType(PlatformShell), findsOneWidget);
+      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.homeFor(SessionTarget.platform));
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
+    });
+
+    testWidgets('to Platform, Cancel in the seat note keeps the Studio session and sends nothing', (tester) async {
+      await pumpSignedIn(tester);
+
+      await openSwitch(tester);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await settle(tester);
+
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(
+        tester.element(find.byType(AppShell)).read<SessionTargetSwitchBloc>().state,
+        const SessionTargetSwitchIdle(),
+      );
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+    });
+
+    testWidgets('to Studio asks nothing and lands on the Studio home', (tester) async {
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await settle(tester);
+      expect(find.byType(PlatformShell), findsOneWidget);
+
+      await openSwitch(tester);
+      await settle(tester);
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.homeFor(SessionTarget.studio));
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+    });
+
+    for (final (code, message) in [
+      ('ADMIN_ROLE_REQUIRED', 'This account is not a Platform admin, so it stays in Studio.'),
+      ('LICENSE_ADMIN_SEATS', 'The Platform license has no free admin seat for this account.'),
+    ]) {
+      testWidgets('a Platform 403 $code keeps the Studio session and says why', (tester) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(App(dependencies: _RefusingPlatformDependencies(code), language: 'en'));
+        await settle(tester);
+
+        await openSwitch(tester);
+        await tester.tap(find.widgetWithText(FilledButton, 'Switch'));
+        await settle(tester);
+
+        expect(find.text(message), findsOneWidget);
+        expect(find.byType(AppShell), findsOneWidget);
+        expect(routerOf(tester).state.uri.path, ApplicationRoutesConstants.connectionList);
+        final shell = tester.element(find.byType(AppShell));
+        expect(shell.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.studio));
+        expect(shell.read<StudioIdentityCubit>().state, isA<StudioIdentityLoaded>());
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+      });
+    }
+
+    testWidgets('a build without a Platform target offers no switch', (tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(
+        App(
+          dependencies: LocalSignInDependencies(
+            appConfig: const AppConfig(
+              environment: Environment.dev,
+              apiBaseUrl: null,
+              certificatePins: <String>[],
+              idleTimeout: null,
+            ),
+          ),
+          language: 'en',
+        ),
+      );
+      await settle(tester);
+
+      await tester.tap(avatar());
+      await tester.pumpAndSettle();
+
+      expect(switchTile(), findsNothing);
+    });
+  });
+
+  // No route of the app registers a form yet, so a page with one is built here, under a router as the shell is.
+  group('TopBarWidget - mode switch with unsaved changes', () {
+    late MockSessionTargetSwitchBloc switchBloc;
+    late MockStudioIdentityCubit identity;
+    late MockConnectionPolicyCubit policy;
+
+    setUp(() {
+      switchBloc = MockSessionTargetSwitchBloc();
+      identity = MockStudioIdentityCubit();
+      policy = MockConnectionPolicyCubit();
+      when(() => switchBloc.state).thenReturn(const SessionTargetSwitchIdle());
+      when(() => identity.state).thenReturn(const StudioIdentityInitial());
+      when(() => policy.state).thenReturn(const ConnectionPolicyInitial());
+    });
+
+    Future<void> pumpDirtyPage(WidgetTester tester, {required bool dirty}) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => UnsavedChangesScope(
+              hasUnsavedChanges: () => dirty,
+              onBack: () {},
+              child: const Scaffold(
+                body: TopBarWidget(target: SessionTarget.studio, title: 'Form'),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            RepositoryProvider<AppConfig>.value(value: const AppConfig.test()),
+            RepositoryProvider<UnsavedChangesRegistry>(
+              create: (_) => UnsavedChangesRegistry(isExitForced: (_) => false),
+            ),
+            BlocProvider<SessionTargetSwitchBloc>.value(value: switchBloc),
+            BlocProvider<StudioIdentityCubit>.value(value: identity),
+            BlocProvider<ConnectionPolicyCubit>.value(value: policy),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              S.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: S.delegate.supportedLocales,
+          ),
+        ),
+      );
+      await tester.tap(avatar());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.byKey(profileSwitchModeKey));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // The seat note comes first.
+      await tester.tap(find.widgetWithText(FilledButton, 'Switch'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    testWidgets('asks the unsaved-changes question once and sends nothing on No', (tester) async {
+      await pumpDirtyPage(tester, dirty: true);
+
+      expect(find.text(S.current.unsaved_changes), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'No'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(S.current.unsaved_changes), findsNothing);
+      verifyNever(() => switchBloc.add(any()));
+    });
+
+    testWidgets('switches on Yes', (tester) async {
+      await pumpDirtyPage(tester, dirty: true);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Yes'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => switchBloc.add(const SessionTargetSwitchRequested(SessionTarget.platform))).called(1);
+    });
+
+    testWidgets('a clean page switches without the question', (tester) async {
+      await pumpDirtyPage(tester, dirty: false);
+
+      expect(find.text(S.current.unsaved_changes), findsNothing);
+      verify(() => switchBloc.add(const SessionTargetSwitchRequested(SessionTarget.platform))).called(1);
+    });
+  });
+
   group('TopBarWidget - a failed /auth/me', () {
     testWidgets('shows the user as unknown with a retry, keeps the user signed in, and Retry asks Studio again', (
       tester,
@@ -287,4 +506,25 @@ class _StudioIdentityDependencies extends LocalSignInDependencies {
 
   @override
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => studio;
+}
+
+/// Platform's `GET /api/v1/me`, refusing the account with a 403 [code] through the mapping of the Platform repository.
+class _RefusingPlatformIdentity implements IPlatformIdentityRepository {
+  _RefusingPlatformIdentity(this.code);
+
+  final String code;
+
+  @override
+  Future<Result<PlatformIdentity>> fetch() async =>
+      Failure(platformError(UnauthorizedException('Platform answered 403', statusCode: 403, errorCode: code)));
+}
+
+class _RefusingPlatformDependencies extends LocalSignInDependencies {
+  _RefusingPlatformDependencies(this.code);
+
+  final String code;
+
+  @override
+  IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) =>
+      _RefusingPlatformIdentity(code);
 }

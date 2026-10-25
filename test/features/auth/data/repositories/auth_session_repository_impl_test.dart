@@ -119,6 +119,23 @@ class _FailingClearCacheStorage implements ICacheStorage {
   Future<void> clear() async => throw StateError('Cache clear left 1 of 2 entries');
 }
 
+/// In-memory ISecureStorage whose write of [heldKey] waits for [release] and lands afterwards, as a platform write that
+/// a wipe overtakes.
+class _HeldTargetWriteSecureStorage extends _MemorySecureStorage {
+  _HeldTargetWriteSecureStorage(this.heldKey);
+  final String heldKey;
+  final writeStarted = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> write(String key, String value) async {
+    if (key == heldKey && !writeStarted.isCompleted) {
+      writeStarted.complete();
+      await release.future;
+    }
+    await super.write(key, value);
+  }
+}
+
 void main() {
   late AppLocalStorage storage;
   late _MemorySecureStorage secure;
@@ -573,6 +590,79 @@ void main() {
       expect((result as Failure<void>).error.message, contains('sessionTarget'));
       expect(await flaky.read(SecureStorageKeys.jwtToken.key), isNull);
       expect(await flaky.read(SecureStorageKeys.refreshToken.key), isNull);
+    });
+  });
+
+  // A mode switch rewrites the target of the live session and nothing else: the tokens are shared by both targets.
+  group('AuthSessionRepository.persistTarget', () {
+    final targetKey = SecureStorageKeys.sessionTarget.key;
+    final tokenKeys = SecureStorageKeys.values.where((key) => key != SecureStorageKeys.sessionTarget).map((k) => k.key);
+
+    test('rewrites only the target and never reads or writes a token key', () async {
+      final recording = _CallRecordingSecureStorage();
+      recording._store.addAll({
+        targetKey: 'studio',
+        SecureStorageKeys.jwtToken.key: 'ACCESS',
+        SecureStorageKeys.refreshToken.key: 'REFRESH',
+      });
+      final repo = AuthSessionRepository(secureStorage: recording, storage: storage);
+
+      final result = await repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
+
+      expect(result, isA<Success<void>>());
+      expect(recording._store, {
+        targetKey: 'platform',
+        SecureStorageKeys.jwtToken.key: 'ACCESS',
+        SecureStorageKeys.refreshToken.key: 'REFRESH',
+      });
+      expect(recording.calls.where((call) => tokenKeys.any(call.endsWith)), isEmpty);
+    });
+
+    test('restores the prior target when the write fails', () async {
+      final store = _WriteFailSecureStorage(failOnWrite: targetKey);
+      store._store.addAll({targetKey: 'studio', SecureStorageKeys.jwtToken.key: 'ACCESS'});
+      final repo = AuthSessionRepository(secureStorage: store, storage: storage);
+
+      final result = await repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
+
+      expect(result, isA<Failure<void>>());
+      expect(store._store, {targetKey: 'studio', SecureStorageKeys.jwtToken.key: 'ACCESS'});
+    });
+
+    test('answers a Failure, and does not throw, when the snapshot read fails', () async {
+      final repo = AuthSessionRepository(secureStorage: _ReadThrowsSecureStorage(), storage: storage);
+
+      final result = await repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
+
+      expect(result, isA<Failure<void>>());
+    });
+
+    test('writes nothing when the session it started under has ended', () async {
+      final recording = _CallRecordingSecureStorage();
+      final repo = AuthSessionRepository(secureStorage: recording, storage: storage);
+      final generation = SessionGeneration.current;
+      await repo.clear();
+      recording.calls.clear();
+
+      final result = await repo.persistTarget(SessionTarget.platform, generation: generation);
+
+      expect(result, isA<Failure<void>>());
+      expect(recording.calls, isEmpty);
+      expect(recording._store, isEmpty);
+    });
+
+    test('leaves no target stored when a wipe runs while it writes', () async {
+      final store = _HeldTargetWriteSecureStorage(targetKey);
+      store._store.addAll({targetKey: 'studio', SecureStorageKeys.jwtToken.key: 'ACCESS'});
+      final repo = AuthSessionRepository(secureStorage: store, storage: storage);
+
+      final switching = repo.persistTarget(SessionTarget.platform, generation: SessionGeneration.current);
+      await store.writeStarted.future;
+      await repo.clear();
+      store.release.complete();
+
+      expect(await switching, isA<Failure<void>>());
+      expect(store._store, isEmpty);
     });
   });
 

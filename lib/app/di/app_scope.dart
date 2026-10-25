@@ -65,6 +65,7 @@ import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart'
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
@@ -166,15 +167,25 @@ class AppScope extends StatelessWidget {
           create: (context) {
             final session = context.read<SessionCubit>();
             final refusal = context.read<StudioAccountRefusalCubit>();
+            // A refresh token the identity provider refused is dead for Studio and Platform alike.
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
-            // A refusal during the sign-in is the login page's to tell, so only a signed-in account is refused here.
+            // Studio refusing a token just refreshed is Studio's answer about Studio, such as during a switch from a
+            // Platform session, so it ends only a Studio session, or one that is not signed in yet.
+            void onSessionRefused() {
+              if (session.state case SessionAuthenticated(target: SessionTarget.platform)) return;
+              session.endSession(reason: SessionExpiredReason.expired);
+            }
+
+            // A refusal during the sign-in is the login page's to tell, and a Platform session has no Studio account to
+            // refuse, so only a signed-in Studio session is refused here.
             void onAccountRefused(AppErrorCode code) {
-              if (session.state is SessionAuthenticated) refusal.refuse(code);
+              if (session.state case SessionAuthenticated(target: SessionTarget.studio)) refusal.refuse(code);
             }
 
             return dependencies.createApiClient(
               context.read<ISecureStorage>(),
               onSessionExpired: onSessionExpired,
+              onSessionRefused: onSessionRefused,
               onAccountRefused: onAccountRefused,
               tokenRotation: switch (dependencies.authMode) {
                 OidcAuthMode() => context.read<TokenRotation>(),
@@ -191,7 +202,15 @@ class AppScope extends StatelessWidget {
           create: (context) {
             final session = context.read<SessionCubit>();
             final refusal = context.read<PlatformAccountRefusalCubit>();
+            // A refresh token the identity provider refused is dead for Studio and Platform alike.
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
+            // Platform refusing a token just refreshed is Platform's answer about Platform, such as during a switch
+            // from a Studio session, so it ends only a Platform session, or one that is not signed in yet.
+            void onSessionRefused() {
+              if (session.state case SessionAuthenticated(target: SessionTarget.studio)) return;
+              session.endSession(reason: SessionExpiredReason.expired);
+            }
+
             // A refusal during the sign-in is the login page's to tell, and a Studio session has no Platform account to
             // refuse, so only a signed-in Platform session is refused here.
             void onAccountRefused(AppErrorCode code) {
@@ -201,6 +220,7 @@ class AppScope extends StatelessWidget {
             return dependencies.createPlatformApiClient(
               context.read<ISecureStorage>(),
               onSessionExpired: onSessionExpired,
+              onSessionRefused: onSessionRefused,
               onAccountRefused: onAccountRefused,
               // The one rotation the Studio client and the startup step share, so a refresh token is never spent twice.
               tokenRotation: switch (dependencies.authMode) {
@@ -431,6 +451,19 @@ class AppScope extends StatelessWidget {
               lockRequired: dependencies.appConfig.appLockRequired,
               idleTimeout: dependencies.appConfig.idleTimeout,
             )..add(const AppLockStarted()),
+          ),
+          // App-scoped, since the shell that starts a switch is disposed by it; AppSessionListeners acts on its answer.
+          BlocProvider<SessionTargetSwitchBloc>(
+            create: (context) => SessionTargetSwitchBloc(
+              switchTarget: dependencies.createSwitchSessionTargetUseCase(
+                context.read<IStudioIdentityRepository>(),
+                switch (dependencies.appConfig.platform) {
+                  PlatformConfigured() => context.read<IPlatformIdentityRepository>(),
+                  PlatformNotConfigured() => null,
+                },
+                context.read<IAuthSessionRepository>(),
+              ),
+            ),
           ),
           BlocProvider<SignOutBloc>(
             create: (context) => SignOutBloc(

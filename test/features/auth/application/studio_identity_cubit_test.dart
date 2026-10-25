@@ -135,4 +135,26 @@ void main() {
     expect(cubit.state, const StudioIdentityLoaded(admin));
     expect(calls, 2);
   });
+
+  blocTest<StudioIdentityCubit, StudioIdentityState>(
+    'signedIn emits the loaded state without a request',
+    build: build,
+    act: (cubit) => cubit.signedIn(admin),
+    expect: () => const [StudioIdentityLoaded(admin)],
+    verify: (_) => verifyNever(() => repository.fetch()),
+  );
+
+  test('an answer still on its way when signedIn runs is dropped', () async {
+    final answer = Completer<Result<StudioIdentity>>();
+    when(() => repository.fetch()).thenAnswer((_) => answer.future);
+    final cubit = build();
+    addTearDown(cubit.close);
+
+    final loading = cubit.load();
+    cubit.signedIn(admin);
+    answer.complete(const Failure(AuthError('late')));
+    await loading;
+
+    expect(cubit.state, const StudioIdentityLoaded(admin));
+  });
 }

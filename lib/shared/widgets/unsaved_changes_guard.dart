@@ -33,6 +33,15 @@ class UnsavedChangesRegistry {
     });
   }
 
+  /// Asks once whether every open page may close although its form holds unsaved changes, before something closes them
+  /// all at once, such as a mode switch. Answers true without asking when no open form holds unsaved changes, and
+  /// otherwise what the user picked.
+  Future<bool> confirmLeavingAll(BuildContext context) async {
+    final dirty = _scopes.values.any((scopes) => scopes.last.widget.hasUnsavedChanges());
+    if (!dirty) return true;
+    return _ask(context);
+  }
+
   Future<bool> _ask(BuildContext context) async {
     return await ConfirmationDialog.show(context: context, type: DialogType.unsavedChanges) ?? false;
   }
