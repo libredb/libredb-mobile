@@ -13,8 +13,8 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 ///
 /// `PLATFORM_API_URL` has no default on purpose. The store build stays Studio-only until the owner approves it
 /// ([docs/platform.md](../../docs/platform.md), [docs/release.md](../../docs/release.md); the team ledger carries the
-/// same ruling), and a committed default would cross that line silently, because the release workflow does not pass
-/// the define. To reach Platform from a hand-built APK, pass it:
+/// same ruling), and a committed default would cross that line silently; the release workflow passes it only from
+/// the owner's variable. To reach Platform from a hand-built APK, pass it:
 /// `--dart-define=PLATFORM_API_URL=https://platform-dev.libredb.org/api`
 void main() async {
   await AppBootstrap.run(

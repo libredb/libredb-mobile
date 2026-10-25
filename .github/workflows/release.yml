@@ -144,6 +144,9 @@ jobs:
 
       # One deployment's values (docs/studio.md, docs/oidc.md, docs/security.md, docs/crash-reporting.md), written to a
       # file in the runner's temp directory so no value appears on a command line. An empty value is left out.
+      # PLATFORM_API_URL and PLATFORM_CERT_PINS are optional and read from variables only, never from secrets: while
+      # they are unset the build stays Studio-only (docs/platform.md). A variable of the job's environment overrides the
+      # repository's, so the owner can try Platform mode on release-dry-run alone first (docs/release.md).
       - name: Write the deployment's dart-defines
         env:
           PROD_API_URL: ${{ vars.PROD_API_URL }}
@@ -159,6 +162,8 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
           SENTRY_DIST: ${{ vars.SENTRY_DIST }}
+          PLATFORM_API_URL: ${{ vars.PLATFORM_API_URL }}
+          PLATFORM_CERT_PINS: ${{ vars.PLATFORM_CERT_PINS }}
         run: |
           for name in PROD_API_URL OIDC_ISSUER OIDC_CLIENT_ID; do
             if [ -z "${!name}" ]; then
@@ -169,7 +174,7 @@ jobs:
           jq -n 'env | with_entries(select(.value != "" and (.key | IN(
             "PROD_API_URL", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_SCOPE", "OIDC_AUDIENCE", "OIDC_PROMPT",
             "OIDC_AUTO_REDIRECT", "OIDC_LOGOUT_HINT", "STUDIO_CERT_PINS", "OIDC_CERT_PINS", "SENTRY_DSN",
-            "SENTRY_ENVIRONMENT", "SENTRY_DIST"))))' \
+            "SENTRY_ENVIRONMENT", "SENTRY_DIST", "PLATFORM_API_URL", "PLATFORM_CERT_PINS"))))' \
             > "$RUNNER_TEMP/dart-defines.json"
           echo "Defines set: $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/dart-defines.json")"
 

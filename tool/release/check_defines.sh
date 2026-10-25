@@ -3,7 +3,10 @@
 # the dart-defines file the build reads, or one set as a variable of the repository or of the job's GitHub environment.
 # It also stops one whose PROD_API_URL, OIDC_ISSUER, SENTRY_DSN or PLATFORM_API_URL is set but is not an https URL, the
 # rule a prod start applies (AppConfig.httpsOnlyDefines, docs/security.md "Encryption in transit"); it names the define,
-# never its value. The release does not pass PLATFORM_API_URL until M13-P, but a defines file that carries it is checked.
+# never its value. The release passes PLATFORM_API_URL and PLATFORM_CERT_PINS only when the owner sets them as variables.
+# It also stops one whose STUDIO_CERT_PINS, OIDC_CERT_PINS or PLATFORM_CERT_PINS breaks a pin rule of a prod start
+# (AppConfig._pins, docs/security.md "Certificate pinning"), or that sets PLATFORM_CERT_PINS without PLATFORM_API_URL;
+# it names the define and the rule, never a pin.
 # Usage: RELEASE_VARS='<the variables as a JSON object>' tool/release/check_defines.sh <dart-defines.json>
 set -euo pipefail
 
@@ -89,7 +92,39 @@ for name in PROD_API_URL OIDC_ISSUER SENTRY_DSN PLATFORM_API_URL; do
   esac
 done
 
+# A pin is the canonical padded base64 of a 32-byte SHA-256: 43 characters carry 258 bits, so the last one before the
+# "=" has its two low bits zero. jq alone checks it, so the script behaves the same on Linux and macOS.
+pin='^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$'
+for name in STUDIO_CERT_PINS OIDC_CERT_PINS PLATFORM_CERT_PINS; do
+  status=0
+  # One broken rule per line. Absent, or only whitespace, is no pins, as a prod start reads it.
+  rules=$(jq -r --arg name "$name" --arg pin "$pin" '
+    def strip: sub("^\\s+"; "") | sub("\\s+$"; "");
+    def empty_define($n): (has($n) | not) or .[$n] == "";
+    if has($name) | not then empty
+    elif (.[$name] | type) != "string" then "must be a string"
+    elif (.[$name] | strip) == "" then empty
+    elif $name == "PLATFORM_CERT_PINS" and empty_define("PLATFORM_API_URL") then
+      "is set, but PLATFORM_API_URL is empty, so no host uses it"
+    else (.[$name] | split(",") | map(strip)) as $pins
+      | [$pins | to_entries[] | select(.value | test($pin) | not)
+          | "has entry \(.key + 1), which is not a base64 SHA-256 pin of 44 characters ending in ="] as $bad
+      | if ($bad | length) > 0 then $bad[]
+        elif ($pins | unique | length) < 2 then "needs at least two distinct pins, the current key and a backup key"
+        else empty end
+    end' "$1" 2> /dev/null) || status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "Could not read $name from the defines file $1 (jq exit $status)."
+    exit 2
+  fi
+  while IFS= read -r rule; do
+    [ -n "$rule" ] || continue
+    echo "$name $rule (docs/security.md, \"Certificate pinning\")."
+    found=1
+  done <<< "$rules"
+done
+
 if [ "$found" -ne 0 ]; then
   exit 1
 fi
-echo "No check-only define and no non-https URL in the store build."
+echo "No check-only define, no non-https URL and no pin define that breaks a rule in the store build."

@@ -20,8 +20,8 @@ void main() {
   test('main_prod.dart gives PLATFORM_API_URL no default, so the store build stays Studio-only', () {
     // docs/platform.md and docs/release.md — the store build stays Studio-only, without PLATFORM_API_URL, until the
     // owner approves it; the team ledger carries the same ruling. A committed default would cross that line without
-    // the owner, because release.yml does not pass the define and nothing else would override it. The doc comment may
-    // still name it: it says how to opt in by hand.
+    // the owner, because release.yml passes the define only from the owner's variable and nothing else would override
+    // it. The doc comment may still name it: it says how to opt in by hand.
     final code = sourceOf('main_prod.dart').split('\n').where((line) => !line.trimLeft().startsWith('///')).join('\n');
     expect(code, isNot(contains('PLATFORM_API_URL')));
     expect(code, isNot(contains('platformApiUrl')));
