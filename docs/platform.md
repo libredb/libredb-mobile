@@ -225,3 +225,4 @@ A build without a Platform target keeps the Studio gate over the restore, the lo
 
 Only Docker or VM installer installs with `mobile.enabled`, and Railway platform-dev, serve Platform mode today.
 The Helm chart does not create the mobile client yet (libredb-platform `charts/libredb-platform/Chart.yaml`, the `mobile.enabled` change note).
+The audit log is empty unless a Studio governed by that Platform has run statements: Platform lists the query events such a Studio writes into its `bridge` schema, and nothing else.

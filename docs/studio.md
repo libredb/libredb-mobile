@@ -410,11 +410,15 @@ Platform's `docs/api/v1.md` is the contract of its bearer API, and `docs/deploy/
 | `platform-db` | PostgreSQL 18 holding Platform's database `libredb`, bootstrapped by `tool/studio-dev/platform/postgres/` |
 | `platform-migrate` | The image's `migrate` command, run once before Platform starts: preflight, migrations and seed |
 | `libredb-platform` | The image's `serve` command, in Caddy's network namespace on port 3002, healthy once `/api/health/ready` answers 200 |
+| `https://localhost:9446` | `libredb-studio-platform`, a Studio 1.1.0 in governance mode whose governance source is this Platform's `bridge` schema, so the statements it runs are the events of Platform's audit log; its API is `https://localhost:9446/api` |
+| `platform-studio-db` | PostgreSQL 17 holding that Studio's storage, database and schema `studio` as role `studio`, never Platform's database or the role `libredb_studio` |
 
 Platform runs the 1.3.0 release image, `ghcr.io/libredb/libredb-platform:1.3.0`, pinned by its digest in the compose file; `PLATFORM_IMAGE` overrides it for both Platform services.
 The image is published for `linux/amd64` only, so an arm64 host runs it under emulation.
 `tool/studio-dev/platform/postgres/bootstrap.psql` and `init/01-bootstrap.sh` are byte-identical copies of `docker/postgres/` of libredb-platform `v1.3.0` (`0a84fa7`), unchanged since `v1.1.0`; copy them again from the tag of a new Platform release, never edit them.
 `platform-db` has no named volume, so `down -v` starts it empty.
+`libredb-studio-platform` signs in to `platform-db` as `libredb_studio`, the role `bootstrap.psql` creates for a Studio, with the instance id `libredb-studio-platform`, and opens the credentials Platform seals with the private key of `tool/studio-dev/governed/keyring.json`, whose public key is Platform's `BRIDGE_SEAL_PUBLIC_KEY`.
+It is reached with bearer tokens only, so the realm's `libredb-studio` client has no callback for port 9446.
 
 Start the stack with the profile and build the app against it:
 
@@ -782,3 +786,69 @@ At the end `GET /api/v1/connections/{id}/grants` answered `{"grants":[]}` for bo
 `recorded_platform_answers_test.dart` reads these through the production repositories and `platformError` or `platformGrantWriteError`; `me_admin_seats.json` makes `platformAccountRefusal` return `platformLicenseAdminSeats`.
 `directory.json` and `directory_query.json` go through `PlatformDirectoryRepository.search`, and `grant_put.json` through `PlatformGrantRepository.put`, which must send the body it was recorded with.
 No fixture carries the license.
+
+### Audit, liveness and enable or disable answers
+
+These were recorded on 2026-10-25 from Platform 1.3.0 and the Studio 1.1.0 of `libredb-studio-platform`, the images the compose file pins, from a fresh volume, with the localhost license of [The license](#the-license).
+`GET /api/v1/me` as `admin` came first, so `admin` took the admin seat.
+Then the three connections were created in Platform's web console as in [Success and write answers](#success-and-write-answers): `Dev app (write)` and `Dev app (read-only)` as there, and a third, `Dev app (toggle)`, made like the read-only one, with a read credential only, and used only for enable and disable.
+The console was driven by a Playwright script with the same labels as Platform's own `e2e/self-hosted/connections.spec.ts`; a browser by hand does the same.
+`W`, `R` and `T` are the ids of the write, the read-only and the toggle connection; the fixtures carry these new ids, and no earlier fixture was recorded again.
+
+`user` (`a0000000-0000-4000-8000-000000000002`) was granted `write` on `W` and `read` on `R` with the grant `PUT` of [Success and write answers](#success-and-write-answers).
+Then `user` ran test statements through `libredb-studio-platform` with a fresh token each, as `POST https://localhost:9446/api/db/query` with `{"connectionId":"seed:<id>","sql":...,"options":{"offset":0}}`.
+Statement capture, the Studio setting `queryLog.statementCapture`, was changed on Platform's page `https://localhost:9445/studio-settings` before each group, and its change reaches Studio within a second through `bridge.settings_v1`:
+
+| Capture | Connection | Statement | Studio's answer | Event |
+| --- | --- | --- | --- | --- |
+| `full` | `W` | `CREATE TABLE mobile_audit_fixture (id int)` | 200 | `success`, `DDL` |
+| `full` | `W` | `INSERT INTO mobile_audit_fixture VALUES (1)` | 200 | `success`, `INSERT` |
+| `full` | `W` | `SELECT 1 AS mobile_audit_fixture` | 200 | `success`, `SELECT` |
+| `redacted` | `W` | `SELECT 1/0 AS mobile_audit_fixture_error` | 400 `QUERY_ERROR` | `error`, `22012` |
+| `redacted` | `R` | `INSERT INTO mobile_audit_fixture VALUES (2)` | 403 `PERMISSION_DENIED` | `error`, `42501` |
+| `redacted` | `T` | `SELECT 1 AS mobile_audit_fixture_refused` | 404 `CONNECTION_NOT_FOUND` | `refused`, no statement |
+| `none` | `W` | `SELECT pg_sleep(30)` with a `queryId`, cancelled after 3 seconds with `POST /api/db/cancel` | 499 `QUERY_CANCELLED` | `cancelled`, `57014` |
+| `none` | `W` | `SELECT 2 AS mobile_audit_fixture_none` | 200 | `success`, no statement |
+
+Capture was set back to `redacted`, Platform's seeded default, right after.
+Studio does not refuse the `INSERT` on `R` before it runs: it runs it with the read credential and PostgreSQL refuses it, so its event has status `error`.
+A `refused` event comes from a request that Studio refuses before anything runs (Studio `docs/GOVERNANCE.md`, query events), here a statement on `T`, on which `user` holds no grant.
+Under `redacted` capture Studio replaces literals with `?` and records no error text, and under `none` it records neither, so every `errorMessage` of these answers is null.
+
+With `record_platform` of [Platform answers](#platform-answers), each line with a fresh `admin` token:
+
+```shell
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit /audit  # 200, the 8 events, newest first
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit_page '/audit?limit=2&offset=2'  # 200, 2 events, total 8
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit_filtered \
+  "/audit?status=error&statementType=SELECT&connectionId=$W&from=2026-10-25T13:28:00.000Z&to=2026-10-25T13:30:00.000Z"  # 200, the 1/0 event
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit_search '/audit?search=mobile_audit_fixture'  # 200, 5 events
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit_bad_filters '/audit?limit=201&status=nope&from=yesterday'  # 400, from, limit, status
+plan() { # plan <FREE|ENTERPRISE>: the plan of the install tenant
+  docker compose -f tool/studio-dev/docker-compose.yml --profile platform exec platform-db psql -U postgres -d libredb -c \
+    "UPDATE platform.tenants SET \"planConfigId\" = (SELECT id FROM platform.plan_configs WHERE code = '$1') WHERE slug = 'default'"
+}
+plan FREE
+token=$(tool/studio-dev/access-token.sh admin) && record_platform audit_plan_feature_required /audit  # 403 PLAN_FEATURE_REQUIRED
+plan ENTERPRISE
+curl -sk -o test/fixtures/platform/health_live.json -w "health_live %{http_code}\n" https://localhost:9445/api/health/live  # 200, no token
+P=(-X PATCH -H 'Content-Type: application/json')
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch_disable "/connections/$T" "${P[@]}" --data '{"active":false}'  # 200, inactive
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch_enable "/connections/$T" "${P[@]}" --data '{"active":true}'  # 200, active
+```
+
+Right after `plan ENTERPRISE`, `GET /api/v1/audit` answered 200 again.
+`health_live.json` is fetched with curl directly, because `record_platform` prefixes `/api/v1` and the liveness probe needs no token.
+For `connection_patch_user_seats.json`, `admin` (`...0001`) was granted `read` on `W`, which with `user`'s grants takes two user seats; `T` was disabled, and `admin2` (`...0004`) and `norole` (`...0003`) were granted `read` on it, which takes no seat while `T` is paused; enabling `T` would need four seats of the license's three:
+
+```shell
+token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_patch_user_seats "/connections/$T" "${P[@]}" --data '{"active":true}'  # 403 LICENSE_USER_SEATS
+```
+
+`PERMISSION_DENIED` of `GET /api/v1/audit` has no fixture: a bearer caller is always a Platform admin, whom the audit read lets through (libredb-platform `docs/api/v1.md`, `src/features/audit/lib/audit-read.ts`), so it cannot be recorded through the bearer API, and the mock-based tests of the audit repository cover it.
+
+At the end `admin2`'s and `norole`'s grants on `T` were revoked before `T` was enabled again, every other grant made here was revoked by its id (each `DELETE` answered 204), and `GET /api/v1/connections/{id}/grants` answered `{"grants":[]}` for all three connections.
+`T` was left active, `mobile_audit_fixture` was dropped from the database `app`, the plan was `ENTERPRISE` and statement capture `redacted`.
+
+`recorded_platform_answers_test.dart` reads the audit answers through `PlatformAuditRepository.list` and `platformError`, and the enable and disable answers through `PlatformConnectionRepository.setActive`, which must send the body it was recorded with.
+The audit events carry `user@example.com`, the realm's test address, as `username`, and only test statements.

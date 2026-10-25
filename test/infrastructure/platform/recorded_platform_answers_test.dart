@@ -8,6 +8,8 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_audit/data/repositories/platform_audit_repository.dart';
+import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_filter.dart';
 import 'package:libredb_mobile/features/platform_connections/data/models/platform_connections_model.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
@@ -41,6 +43,13 @@ import '../../support/test_env.dart';
 /// `admin` held the admin seat; `me_admin_seats.json` is `admin2`'s. The two connections were created by hand in
 /// Platform's web console (docs/studio.md, "Success and write answers"); every grant made for the recording was
 /// revoked.
+///
+/// The audit, enable and disable answers were recorded the same day from the same image and license, from a fresh
+/// volume, as `admin`, with a third hand-made connection `Dev app (toggle)` for enable and disable. The audit events
+/// are the statements `user` ran through a Studio 1.1.0 governed by that Platform (`libredb-studio-platform`), with
+/// statement capture switched between `full`, `redacted` and `none` on Platform's Studio settings page; the plan was
+/// set to FREE for `audit_plan_feature_required.json` only. docs/studio.md ("Audit, liveness and enable or disable
+/// answers") has every step.
 ///
 /// Each body is answered to a [PlatformApiClient], so it goes through the client's envelope reader and exception path,
 /// then through [platformError]; the session predicates read a [DioException] built from the status and the raw body.
@@ -316,6 +325,154 @@ void main() {
     });
   });
 
+  group('GET /api/v1/audit, read by PlatformAuditRepository', () {
+    Future<AppError> failureOf(Future<Result<Object?>> Function() call) async {
+      final result = await call();
+      expect(result, isA<Failure<Object?>>());
+      return (result as Failure<Object?>).error;
+    }
+
+    test('audit: every event of the run, newest first, with each status and each capture', () async {
+      adapter.answer(200, fixture('audit'));
+
+      final page = (await PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0)).dataOrNull!;
+
+      expect(adapter.requests, ['GET /v1/audit']);
+      expect(adapter.queries.single, {'limit': '50', 'offset': '0'});
+      expect((page.total, page.offset, page.events.length), (8, 0, 8));
+      expect(
+        [for (final e in page.events) (e.status, e.statementCapture, e.statementType, e.connectionName)],
+        [
+          ('success', 'none', 'SELECT', 'Dev app (write)'),
+          ('cancelled', 'none', 'SELECT', 'Dev app (write)'),
+          ('refused', 'redacted', 'SELECT', 'Dev app (toggle)'),
+          ('error', 'redacted', 'INSERT', 'Dev app (read-only)'),
+          ('error', 'redacted', 'SELECT', 'Dev app (write)'),
+          ('success', 'full', 'SELECT', 'Dev app (write)'),
+          ('success', 'full', 'INSERT', 'Dev app (write)'),
+          ('success', 'full', 'DDL', 'Dev app (write)'),
+        ],
+      );
+      // Checked as booleans and lengths, so a failing expect prints no statement and no error text.
+      expect([for (final e in page.events) e.statement != null], [false, false, false, true, true, true, true, true]);
+      expect([for (final e in page.events) e.errorMessage == null], everyElement(isTrue));
+      expect(
+        [for (final e in page.events) e.errorCode],
+        [null, '57014', 'CONNECTION_NOT_FOUND', '42501', '22012', null, null, null],
+      );
+      expect(
+        [for (final e in page.events) e.accessLevel],
+        ['write', 'write', null, 'read', 'write', 'write', 'write', 'write'],
+        reason: 'a refused request names no grant level',
+      );
+      for (final e in page.events) {
+        expect(e.subject, _user);
+        expect(e.sessionRole, 'user');
+        expect(e.source, 'editor');
+        expect(e.engine, 'postgres');
+        expect(e.connectionKnown, isTrue);
+        expect(e.statementTruncated, isFalse);
+        expect(e.startedAt.isUtc, isTrue);
+      }
+      expect(page.events.first.connectionId, _auditWriteConnection);
+      expect(page.events[1].durationMs, greaterThan(1000), reason: 'pg_sleep ran until the cancel');
+    });
+
+    test('audit_page: two events from offset 2, the total of the whole log', () async {
+      adapter.answer(200, fixture('audit_page'));
+
+      final page = (await PlatformAuditRepository(
+        client,
+      ).list(filter: const AuditFilter(), offset: 2, limit: 2)).dataOrNull!;
+
+      expect(adapter.queries.single, {'limit': '2', 'offset': '2'});
+      expect((page.total, page.offset), (8, 2));
+      expect([for (final e in page.events) (e.status, e.statementType)], [('refused', 'SELECT'), ('error', 'INSERT')]);
+    });
+
+    test('audit_filtered: the SELECT that failed on the write connection, and only it', () async {
+      adapter.answer(200, fixture('audit_filtered'));
+
+      final page = (await PlatformAuditRepository(client).list(
+        filter: AuditFilter(
+          status: 'error',
+          statementType: 'SELECT',
+          connectionId: _auditWriteConnection,
+          from: DateTime.utc(2026, 10, 25, 13, 28),
+          to: DateTime.utc(2026, 10, 25, 13, 30),
+        ),
+        offset: 0,
+      )).dataOrNull!;
+
+      expect(adapter.queries.single, {
+        'limit': '50',
+        'offset': '0',
+        'connectionId': _auditWriteConnection,
+        'statementType': 'SELECT',
+        'status': 'error',
+        'from': '2026-10-25T13:28:00.000Z',
+        'to': '2026-10-25T13:30:00.000Z',
+      }, reason: 'the query the fixture was recorded with');
+      final event = page.events.single;
+      expect(page.total, 1);
+      expect((event.status, event.statementType, event.statementCapture), ('error', 'SELECT', 'redacted'));
+      expect((event.connectionId, event.errorCode), (_auditWriteConnection, '22012'));
+      expect(event.statement?.contains('mobile_audit_fixture_error'), isTrue, reason: 'redacted keeps identifiers');
+      expect(event.errorMessage, isNull, reason: 'redacted capture records no error text');
+    });
+
+    test('audit_search: the events whose recorded statement holds the term, none without a statement', () async {
+      adapter.answer(200, fixture('audit_search'));
+
+      final page = (await PlatformAuditRepository(
+        client,
+      ).list(filter: const AuditFilter(search: ' mobile_audit_fixture '), offset: 0)).dataOrNull!;
+
+      expect(adapter.queries.single, {'limit': '50', 'offset': '0', 'search': 'mobile_audit_fixture'});
+      expect(page.total, 5);
+      expect([for (final e in page.events) e.statement?.contains('mobile_audit_fixture')], everyElement(isTrue));
+      expect({for (final e in page.events) e.statementCapture}, {'full', 'redacted'});
+    });
+
+    test('audit_bad_filters: 400 VALIDATION_FAILED on from, limit and status', () async {
+      final body = fixture('audit_bad_filters');
+      final error = (jsonDecode(body) as Map)['error'] as Map;
+      adapter.answer(400, body);
+
+      final thrown = await _thrown(
+        () => client.get('/v1/audit', queryParams: {'limit': 201, 'status': 'nope', 'from': 'yesterday'}),
+      );
+
+      expect(adapter.requests, ['GET /v1/audit']);
+      expect(thrown.errorCode, 'VALIDATION_FAILED');
+      expect((thrown as BadRequestException).fieldErrorKeys, unorderedEquals(['from', 'limit', 'status']));
+      expect(platformError(thrown).code, AppErrorCode.platformValidationFailed.key);
+      for (final text in [error['message'], ...(error['fieldErrors'] as Map).values.expand((v) => v)]) {
+        expect('$thrown', isNot(contains('$text')));
+      }
+      expect(sessionExpiredCalls, 0);
+      expect(refusals, isEmpty);
+    });
+
+    test('audit_plan_feature_required: 403 PLAN_FEATURE_REQUIRED, a plan without the audit log', () async {
+      final body = fixture('audit_plan_feature_required');
+      adapter.answer(403, body);
+
+      final error = await failureOf(() => PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0));
+
+      expect(adapter.requests, ['GET /v1/audit'], reason: 'sent once');
+      expect(error.code, AppErrorCode.platformPlanFeatureRequired.key);
+      expect(error.message, isNot(contains('plan upgrade')), reason: "Platform's message never reaches the error");
+      expect(platformAccountRefusal(answer(403, body)), isNull, reason: 'a plan refusal never locks the admin out');
+      expect(sessionExpiredCalls, 0);
+      expect(refusals, isEmpty);
+    });
+
+    test('PERMISSION_DENIED has no fixture: a bearer caller is always a Platform admin', () {
+      expect(File('test/fixtures/platform/audit_permission_denied.json').existsSync(), isFalse);
+    });
+  });
+
   // IPlatformConnectionRepository.setActive sends it and reads the 200 through PlatformConnectionsModel.readOne: one
   // connection in the item shape of GET /api/v1/connections.
   group('PATCH /api/v1/connections/{id}', () {
@@ -326,6 +483,41 @@ void main() {
         (connection.name, connection.status, connection.hasWriteCredential),
         ('Dev app (read-only)', 'active', false),
       );
+    });
+
+    for (final (name, active, status) in [
+      ('connection_patch_disable', false, 'inactive'),
+      ('connection_patch_enable', true, 'active'),
+    ]) {
+      test('$name: the toggle connection answers $status', () async {
+        adapter.answer(200, fixture(name));
+
+        final connection = (await PlatformConnectionRepository(
+          client,
+        ).setActive(_toggleConnection, active: active)).dataOrNull!;
+
+        expect(adapter.requests, ['PATCH /v1/connections/$_toggleConnection']);
+        expect(adapter.bodies.single, '{"active":$active}', reason: 'the body the fixture was recorded with');
+        expect(
+          (connection.id, connection.name, connection.status, connection.hasWriteCredential),
+          (_toggleConnection, 'Dev app (toggle)', status, false),
+        );
+      });
+    }
+
+    test('connection_patch_user_seats: 403 LICENSE_USER_SEATS, sent once, never locks the admin', () async {
+      final body = fixture('connection_patch_user_seats');
+      adapter.answer(403, body);
+
+      final result = await PlatformConnectionRepository(client).setActive(_toggleConnection, active: true);
+
+      expect(adapter.requests, ['PATCH /v1/connections/$_toggleConnection'], reason: 'a PATCH is never sent again');
+      final error = (result as Failure<Object?>).error;
+      expect(error.code, AppErrorCode.platformLicenseUserSeats.key);
+      expect(error.message, isNot(contains('Not enough user seats')));
+      expect(platformAccountRefusal(answer(403, body)), isNull);
+      expect(sessionExpiredCalls, 0);
+      expect(refusals, isEmpty);
     });
 
     for (final (name, status, code, fieldKeys) in [
@@ -343,6 +535,9 @@ void main() {
 }
 
 const _writeConnection = '641ed0ff-6669-41eb-9976-557025a3eb80';
+// The connections of the audit, enable and disable recording, on a later fresh volume than the grant answers.
+const _auditWriteConnection = '51e50862-781e-4010-b4ea-d9a9db5f24d7';
+const _toggleConnection = '4c25dc92-af0c-4a36-857c-095d4e602b31';
 const _user = 'a0000000-0000-4000-8000-000000000002';
 
 Future<AppException> _thrown(Future<Object?> Function() call) async {
