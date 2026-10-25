@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -21,7 +21,7 @@ import '../../mocks/mock_classes.dart';
 import '../../support/test_env.dart';
 
 /// The mock-backed app with the device's authentication and the preview switch as doubles.
-class _LockDependencies extends LocalSignInDependencies {
+class _LockDependencies extends MockSignInDependencies {
   _LockDependencies(this.authenticator, {super.appConfig});
 
   final IDeviceAuthenticator authenticator;
@@ -48,7 +48,7 @@ class _RecordingRecentsPreview implements IRecentsPreview {
 
 /// The idle timeout of production, which the app lock's idle rule reads.
 const _config = AppConfig(
-  environment: Environment.dev,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 15),
@@ -56,7 +56,7 @@ const _config = AppConfig(
 
 /// [_config] in a build that serves Platform mode too.
 const _platformConfig = AppConfig(
-  environment: Environment.dev,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 15),
@@ -254,7 +254,7 @@ void main() {
     await tester.pumpWidget(
       app(
         config: const AppConfig(
-          environment: Environment.dev,
+          environment: Environment.mock,
           apiBaseUrl: null,
           certificatePins: <String>[],
           idleTimeout: null,

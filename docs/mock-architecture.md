@@ -8,8 +8,9 @@ The project supports three runtime modes through a single interceptor-based desi
 
 | Mode | Entry Point | Mock Data | Network | Latency |
 | --- | --- | --- | --- | --- |
-| **Development** | `main_local.dart` | Yes (interceptor) | None | 500 ms simulated |
-| **Test** | `Environment.test` | Yes (interceptor) | None | 0 ms |
+| **Mock** | `main_mock.dart` | Yes (interceptor) | None | 500 ms simulated |
+| **Test** | `AppConfig.test()` | Yes (interceptor) | None | 0 ms |
+| **Local** | `main_local.dart` | No | The Lima VM | Real |
 | **Production** | `main_prod.dart` | No | Real API | Real |
 
 Switching between modes requires **zero code changes** in repositories or BLoCs — only the entry point differs.
@@ -19,10 +20,12 @@ Switching between modes requires **zero code changes** in repositories or BLoCs 
 ```mermaid
 flowchart TB
     subgraph Entry["Entry Point"]
-        LOCAL["main_local.dart<br/><i>Environment.dev</i>"]
+        MOCKENTRY["main_mock.dart<br/><i>Environment.mock</i>"]
+        LOCAL["main_local.dart<br/><i>Environment.local</i>"]
         PROD["main_prod.dart<br/><i>Environment.prod</i>"]
     end
 
+    MOCKENTRY --> ENV
     LOCAL --> ENV
     PROD --> ENV
 
@@ -43,10 +46,10 @@ flowchart TB
         CHAIN["1. ConnectivityInterceptor<br/>2. AuthInterceptor<br/>3. TokenRefreshInterceptor<br/>4. IdempotencyInterceptor<br/>5. ResilienceInterceptor<br/>6. CacheInterceptor<br/>7. DevConsoleInterceptor<br/>8. LoggingInterceptor<br/><i>Added in every mode</i>"]
         CHAIN --> DECISION
 
-        DECISION{isProduction?}
+        DECISION{isMock?}
 
-        DECISION -- "No (dev / test)" --> MOCK_INT
-        DECISION -- "Yes (prod)" --> NETWORK
+        DECISION -- "Yes (mock / test)" --> MOCK_INT
+        DECISION -- "No (local / prod)" --> NETWORK
 
         MOCK_INT["9. MockInterceptor<br/><i>Intercepts request</i>"]
         MOCK_INT --> RESOLVE
@@ -130,7 +133,7 @@ dio.interceptors.addAll([
   CacheInterceptor(),                             // GET response caching with TTL
   DevConsoleInterceptor(),                        // records requests in debug builds
   LoggingInterceptor(),                           // request/response logging
-  if (!_appConfig.isProduction) MockInterceptor(appConfig: _appConfig), // dev + test only
+  if (_appConfig.isMock) MockInterceptor(appConfig: _appConfig),        // the mock environment only
 ]);
 ```
 
@@ -204,7 +207,7 @@ Always runs, in every mode.
 ### Token refresh
 
 `TokenRefreshInterceptor` refreshes through the `TokenRotation` it is given, a `refresh_token` grant at the identity provider's token endpoint, never through the API, so a 401 on the refresh cannot come back into the chain.
-In mock mode the provider is `LocalOidcClient`, the debug-only double of `main_local.dart` ([oidc.md](oidc.md)), which answers the refresh with new tokens; the request that got the 401 is sent again with the new token, and the session continues, as it does against the server.
+In mock mode the provider is `MockOidcClient`, the debug-only double of `main_mock.dart` ([oidc.md](oidc.md)), which answers the refresh with new tokens; the request that got the 401 is sent again with the new token, and the session continues, as it does against the server.
 
 `AuthInterceptor` records on each request the session generation it goes out under, before it reads the token (`SessionGeneration` in `lib/infrastructure/storage/session_generation.dart`).
 A logout or the end of the session wipes the stored session inside `SessionGeneration.wipe`.
@@ -288,7 +291,7 @@ Each file contains the exact JSON the real API would return.
 }
 ```
 
-There is no token file: the sign-in and the token refresh go to the identity provider, which `LocalOidcClient` stands in for in mock mode.
+There is no token file: the sign-in and the token refresh go to the identity provider, which `MockOidcClient` stands in for in mock mode.
 
 ## Public vs. Private Endpoints
 
@@ -358,7 +361,7 @@ They replace a layer with a test double instead:
 Two common setups do run the mock interceptor.
 `TestEnv.apiClient()`, which repository tests use, builds an `ApiClient` with `AppConfig.test()`, so `MockInterceptor` serves `assets/mock/*.json` without the simulated latency.
 Passing a stub `dio` to it replaces the whole chain, `MockInterceptor` included.
-A test that pumps the whole `App` with `LocalSignInDependencies()`, such as `test/integration/app_smoke_test.dart`, runs with `AppConfig.dev()` and the local sign-in, as `main_local.dart` does.
+A test that pumps the whole `App` with `MockSignInDependencies()`, such as `test/integration/app_smoke_test.dart`, runs with `AppConfig.mock()` and the mock sign-in, as `main_mock.dart` does.
 
 ### Use Case Tests
 

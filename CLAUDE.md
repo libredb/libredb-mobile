@@ -19,7 +19,10 @@ The Dart package is `libredb_mobile`.
 # Dependencies
 fvm flutter pub get
 
-# Run locally (mock API)
+# Run against the fixtures in assets/mock/ (no backend, no Keycloak)
+fvm flutter run --target lib/main/main_mock.dart
+
+# Run against the LibreDB stack in the Lima VM libredb-lab (limactl start libredb-lab)
 fvm flutter run --target lib/main/main_local.dart
 
 # Run production (real API)
@@ -78,7 +81,7 @@ lib/
 │   └── widgets/            # Reusable components (buttons, forms, etc.)
 ├── generated/              # Auto-generated localization (do not edit)
 ├── l10n/                   # ARB translation files
-└── main/                   # Entry points (main_local.dart, main_prod.dart)
+└── main/                   # Entry points (main_mock.dart, main_local.dart, main_prod.dart)
 ```
 
 ### Developing a Feature
@@ -157,10 +160,11 @@ When in doubt, prefer sealed and split the BLoC instead of growing the single st
 
 ## Environments
 
-- **dev/test** → mock data from `assets/mock/*.json`
-- **prod** → real API (configured in `lib/infrastructure/config/environment.dart`)
+- **mock** (`main_mock.dart`) → fixtures from `assets/mock/*.json`, no server
+- **local** (`main_local.dart`) → the LibreDB stack in the Lima VM `libredb-lab`
+- **prod** (`main_prod.dart`) → this deployment's Studio on Railway (configured in `lib/infrastructure/config/environment.dart`)
 - **Sign-in** is only through Keycloak, the OpenID Connect provider the `OIDC_*` defines name (`lib/infrastructure/config/auth_config.dart`, [`docs/oidc.md`](docs/oidc.md)); there is no password, OTP or registration path and no backend token endpoint, and a build without the defines fails closed on the login page.
-  `main_prod.dart` signs in through the provider; `main_local.dart` passes `LocalSignInDependencies`, a debug-only provider double that `main_prod.dart` never imports (`test/architecture/local_sign_in_test.dart`).
+  `main_prod.dart` and `main_local.dart` sign in through the provider, each defaulting to its own deployment's `OIDC_*` values; `main_mock.dart` passes `MockSignInDependencies`, a debug-only provider double that neither of the other two imports (`test/architecture/mock_sign_in_test.dart`).
 - **Backend:** the app's backend is LibreDB Studio, called with the Keycloak access token as bearer; `PROD_API_URL` is Studio's `/api` ([`docs/studio.md`](docs/studio.md)).
 
 ## Studio API Layer

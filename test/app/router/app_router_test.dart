@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
@@ -118,7 +118,7 @@ void main() {
   group('AppRouterFactory', () {
     testWidgets('redirects unauthenticated users to login', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final router = routerFromApp(tester);
@@ -131,7 +131,7 @@ void main() {
     testWidgets('allows authenticated users to open settings', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final router = routerFromApp(tester);
@@ -144,7 +144,7 @@ void main() {
     testWidgets('sends an authenticated user on the login page home when its returnUrl leaves the app', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final returnUrl = Uri.encodeQueryComponent('https://evil.example/settings');
@@ -157,7 +157,7 @@ void main() {
     testWidgets('signed in, / opens the connection list', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       routerFromApp(tester).go(ApplicationRoutesConstants.settings);
       await tester.pumpAndSettle();
@@ -173,7 +173,7 @@ void main() {
       tester,
     ) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       expect(find.byType(LoginScreen), findsOneWidget);
 
@@ -192,7 +192,7 @@ void main() {
     testWidgets('signed out, / opens the login page with no returnUrl', (tester) async {
       setDesktopViewport(tester);
       startOn(tester, '/');
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -203,7 +203,7 @@ void main() {
       setDesktopViewport(tester);
       TestEnv.authenticate();
       final analytics = MockAnalyticsService();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en', analytics: analytics));
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(loginFrames, isEmpty, reason: 'frames that built the login page');
@@ -221,7 +221,7 @@ void main() {
       setDesktopViewport(tester);
       startOn(tester, ApplicationRoutesConstants.settings);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.settings);
@@ -232,7 +232,7 @@ void main() {
     testWidgets('keeps a deep link as the login returnUrl on an unauthenticated cold start', (tester) async {
       setDesktopViewport(tester);
       startOn(tester, ApplicationRoutesConstants.settings);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -244,7 +244,7 @@ void main() {
       final secureStorage = MockISecureStorage();
       final storedToken = storedTokenPending(secureStorage);
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump();
 
@@ -265,7 +265,7 @@ void main() {
       final secureStorage = MockISecureStorage();
       final storedToken = storedTokenPending(secureStorage);
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump();
 
@@ -284,7 +284,7 @@ void main() {
     Future<GoRouter> startSignedIn(WidgetTester tester, SessionTarget target) async {
       setDesktopViewport(tester);
       TestEnv.authenticate(target: target);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       return routerFromApp(tester);
     }
@@ -294,7 +294,7 @@ void main() {
     ) async {
       setDesktopViewport(tester);
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       final loginFrames = await pumpShellRecordingLogin(tester);
 
       expect(loginFrames, isEmpty, reason: 'frames that built the login page');
@@ -393,7 +393,7 @@ void main() {
       setDesktopViewport(tester);
       startOn(tester, ApplicationRoutesConstants.sql);
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.platformHome);
@@ -442,7 +442,7 @@ void main() {
 
     testWidgets('signed out, /platform/settings goes to the login page with it as the returnUrl', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).go(ApplicationRoutesConstants.platformSettings);
@@ -453,7 +453,7 @@ void main() {
 
     testWidgets('signed out, /platform goes to the login page with no returnUrl', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).go(ApplicationRoutesConstants.platformHome);
@@ -504,7 +504,7 @@ void main() {
       testWidgets('signed in, $location shows the not-found page', (tester) async {
         setDesktopViewport(tester);
         TestEnv.authenticate();
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
 
         routerFromApp(tester).go(location);
@@ -517,7 +517,7 @@ void main() {
     for (final location in removed) {
       testWidgets('signed out, $location is not public and leads to the login page', (tester) async {
         setDesktopViewport(tester);
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
 
         routerFromApp(tester).go(location);

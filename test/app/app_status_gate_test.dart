@@ -76,7 +76,7 @@ void main() {
     await tester.pumpWidget(
       RepositoryProvider<AppConfig>.value(
         value: AppConfig(
-          environment: Environment.test,
+          environment: Environment.mock,
           apiBaseUrl: 'https://studio.example.test/api',
           certificatePins: const [],
           idleTimeout: null,

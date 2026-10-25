@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -132,7 +132,7 @@ class _Connection extends StudioConnection {
   const _Connection(String id) : super(id: id, name: id, type: 'postgres');
 }
 
-class _Dependencies extends LocalSignInDependencies {
+class _Dependencies extends MockSignInDependencies {
   @override
   CachedObjectBrowserRepository createObjectBrowserRepository(ApiClient apiClient) =>
       _CountingObjectBrowserRepository(ObjectBrowserRepository(apiClient));

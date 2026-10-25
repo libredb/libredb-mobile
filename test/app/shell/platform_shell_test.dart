@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
@@ -168,7 +168,7 @@ void main() {
       tester.view.physicalSize = const Size(412, 915);
       tester.view.devicePixelRatio = 1.0;
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
       // The mock answers the identity after its latency.
       await tester.pump(const Duration(seconds: 1));

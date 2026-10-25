@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
@@ -214,7 +214,7 @@ class _RefusingStudio extends Interceptor {
 }
 
 /// The mock-backed app, with [studio] answering before the mock does.
-class _RefusingStudioDependencies extends LocalSignInDependencies {
+class _RefusingStudioDependencies extends MockSignInDependencies {
   _RefusingStudioDependencies(this.studio);
 
   final _RefusingStudio studio;

@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
@@ -31,7 +31,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
+    await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: language));
     await tester.pumpAndSettle();
     routerOf(tester).go(location);
     await tester.pumpAndSettle();
@@ -123,7 +123,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       TestEnv.authenticate(target: SessionTarget.platform);
 
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       final labels = tester
@@ -141,7 +141,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       TestEnv.authenticate(target: SessionTarget.platform);
 
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'tr'));
       await tester.pumpAndSettle();
 
       expect(inBottomNav('Bağlantılar'), findsOneWidget);

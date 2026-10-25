@@ -12,8 +12,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
-import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
+import 'package:libredb_mobile/infrastructure/auth/oidc/mock_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
@@ -97,7 +97,7 @@ const _prodPlatformConfig = AppConfig(
 
 /// The test config without a Platform target, as a Studio-only build has.
 const _testConfigWithoutPlatform = AppConfig(
-  environment: Environment.test,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: null,
@@ -178,7 +178,7 @@ class _CountingSessionRepository implements IAuthSessionRepository {
 }
 
 /// The test config with [sessionRepository] in place of the one AppDependencies creates.
-class _SessionRepositoryDependencies extends LocalSignInDependencies {
+class _SessionRepositoryDependencies extends MockSignInDependencies {
   _SessionRepositoryDependencies(this.sessionRepository) : super(appConfig: const AppConfig.test());
 
   final IAuthSessionRepository sessionRepository;
@@ -188,7 +188,7 @@ class _SessionRepositoryDependencies extends LocalSignInDependencies {
 }
 
 /// The test config, recording the query timeouts each statement route's repository was given.
-class _QueryTimeoutsDependencies extends LocalSignInDependencies {
+class _QueryTimeoutsDependencies extends MockSignInDependencies {
   _QueryTimeoutsDependencies() : super(appConfig: const AppConfig.test());
 
   final given = <String, ConnectionQueryTimeouts>{};
@@ -599,7 +599,7 @@ void main() {
       // The mock answers a protected request without a token with 401, as the server does. That happens when the
       // stored token is gone while the session is open. No refresh token is stored, so the refresh fails.
       TestEnv.authenticate();
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
       final session = scope.read<SessionCubit>();
       expect(session.state, isA<SessionAuthenticated>());
 
@@ -622,7 +622,7 @@ void main() {
       await secure.write(SecureStorageKeys.refreshToken.key, 'LOCAL_REFRESH_TOKEN');
       await secure.write(SecureStorageKeys.oidcIdToken.key, 'LOCAL_ID_TOKEN');
       await secure.write(SecureStorageKeys.accessTokenExpiresAt.key, encodeAccessTokenExpiry(DateTime.utc(2100)));
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
       final session = scope.read<SessionCubit>();
       expect(session.state, isA<SessionAuthenticated>());
 
@@ -634,7 +634,7 @@ void main() {
 
       expect(response.statusCode, 200);
       expect(session.state, isA<SessionAuthenticated>());
-      expect(await secure.read(SecureStorageKeys.jwtToken.key), LocalOidcClient.accessToken);
+      expect(await secure.read(SecureStorageKeys.jwtToken.key), MockOidcClient.accessToken);
     });
 
     // A build with a Platform target restores a stored Platform session as one.
@@ -642,7 +642,7 @@ void main() {
       final secure = FlutterSecureStorageAdapter();
       await secure.write(SecureStorageKeys.sessionTarget.key, 'platform');
       await secure.write(SecureStorageKeys.jwtToken.key, 'MOCK_TOKEN');
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<SessionCubit>().state, const SessionAuthenticated(target: SessionTarget.platform));
     });
@@ -652,7 +652,7 @@ void main() {
       final secure = FlutterSecureStorageAdapter();
       await secure.write(SecureStorageKeys.sessionTarget.key, 'platform');
       await secure.write(SecureStorageKeys.jwtToken.key, 'MOCK_TOKEN');
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: _testConfigWithoutPlatform));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: _testConfigWithoutPlatform));
 
       expect(
         scope.read<SessionCubit>().state,
@@ -1423,7 +1423,7 @@ void main() {
         authMode: OidcAuthMode(_oidcSettings),
         client: _FakeOidcClient(platformSignIn()),
         appConfig: const AppConfig(
-          environment: Environment.test,
+          environment: Environment.mock,
           apiBaseUrl: null,
           certificatePins: <String>[],
           idleTimeout: null,
@@ -1498,13 +1498,13 @@ void main() {
     });
 
     testWidgets('provides the provider meta repository that several features read', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IProviderMetaRepository>(), isA<IProviderMetaRepository>());
     });
 
     testWidgets('provides the shared statement runner that the browser and the SQL editor run through', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IStatementRepository>(), isA<IStatementRepository>());
       expect(scope.read<ISqlEditorRepository>(), isA<ISqlEditorRepository>());
@@ -1527,13 +1527,13 @@ void main() {
     testWidgets('provides the statement text store that the editor drafts and the history keep text in', (
       tester,
     ) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IStatementTextStore>(), isA<IStatementTextStore>());
     });
 
     testWidgets('provides one active database, which a switch of the active connection clears', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
       final catalog = scope.read<ActiveCatalogCubit>();
 
       catalog.choose('seed:server', 'archive');
@@ -1544,7 +1544,7 @@ void main() {
     });
 
     testWidgets('provides one screen capture protection, off as the test build is', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<ScreenCaptureProtection>().isEnabled, isFalse);
       expect(scope.read<ScreenCaptureProtection>(), same(scope.read<ScreenCaptureProtection>()));
@@ -1553,20 +1553,20 @@ void main() {
     testWidgets('provides a switched-on screen capture protection when the build turns it on', (tester) async {
       final scope = await _pumpScope(
         tester,
-        LocalSignInDependencies(appConfig: const AppConfig.test(screenCaptureProtection: true)),
+        MockSignInDependencies(appConfig: const AppConfig.test(screenCaptureProtection: true)),
       );
 
       expect(scope.read<ScreenCaptureProtection>().isEnabled, isTrue);
     });
 
     testWidgets('provides the statement history over the one statement text store', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IStatementHistoryRepository>(), isA<IStatementHistoryRepository>());
     });
 
     testWidgets("provides the app's lifecycle and the platform's background run time", (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IAppLifecycleSource>(), isA<BindingAppLifecycleSource>());
       expect(scope.read<IBackgroundRunTime>(), isA<NoBackgroundRunTime>(), reason: 'tests run as Android');
@@ -1574,7 +1574,7 @@ void main() {
 
     testWidgets('provides the result view mode, restored from the device', (tester) async {
       await AppLocalStorage().save(StorageKeys.resultViewMode.key, 'table');
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       final cubit = scope.read<ResultViewModeCubit>();
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
@@ -1582,7 +1582,7 @@ void main() {
     });
 
     testWidgets('features get the one cached object browser and provider-meta that the app clears', (tester) async {
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
 
       expect(scope.read<IObjectBrowserRepository>(), same(scope.read<CachedObjectBrowserRepository>()));
       expect(scope.read<IContainersRepository>(), same(scope.read<CachedObjectBrowserRepository>()));
@@ -1593,7 +1593,7 @@ void main() {
       tester,
     ) async {
       TestEnv.authenticate();
-      final scope = await _pumpScope(tester, LocalSignInDependencies(appConfig: const AppConfig.test()));
+      final scope = await _pumpScope(tester, MockSignInDependencies(appConfig: const AppConfig.test()));
       final browser = scope.read<CachedObjectBrowserRepository>();
       await tester.runAsync(() => browser.containers('seed:sales-db'));
       expect(browser.entryCount, 1);
