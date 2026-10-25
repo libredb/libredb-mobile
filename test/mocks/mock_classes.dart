@@ -32,6 +32,7 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_re
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
@@ -70,6 +71,8 @@ class MockIStudioIdentityRepository extends Mock implements IStudioIdentityRepos
 class MockPlatformIdentityRepository extends Mock implements IPlatformIdentityRepository {}
 
 class MockIConnectionRepository extends Mock implements IConnectionRepository {}
+
+class MockIPlatformConnectionRepository extends Mock implements IPlatformConnectionRepository {}
 
 class MockICollapsedSectionsRepository extends Mock implements ICollapsedSectionsRepository {}
 

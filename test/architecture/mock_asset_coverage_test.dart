@@ -5,6 +5,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
@@ -77,6 +78,7 @@ void main() {
   // Keyed like [requests]; later Platform repositories append their rows here.
   final platformRequests = <String, Future<Result<Object?>> Function(PlatformApiClient client)>{
     'IPlatformIdentityRepository.fetch': (client) => PlatformIdentityRepository(client).fetch(),
+    'IPlatformConnectionRepository.list': (client) => PlatformConnectionRepository(client).list(),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {

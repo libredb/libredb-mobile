@@ -6,6 +6,7 @@ import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
+import 'package:libredb_mobile/app/shell/app_platform_identity_scope.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
 import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
@@ -104,7 +105,7 @@ class _PlatformShellState extends State<PlatformShell> {
                         subject: null,
                         signOut: () => signOutAndOpenLogin(context),
                         reloadStoredData: _reloadStoredData,
-                        child: widget.child,
+                        child: AppPlatformIdentityScope(child: widget.child),
                       ),
                     ),
                   ),

@@ -10,7 +10,6 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
-import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -18,6 +17,7 @@ import 'package:libredb_mobile/features/auth/application/platform_identity_cubit
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
+import 'package:libredb_mobile/features/platform_home/presentation/pages/platform_home_page.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -127,7 +127,7 @@ void main() {
     expect(find.byType(StudioAccountRefusalPage), findsNothing);
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
     expect(tester.element(find.byType(ResponsiveScaffold)), same(scaffold), reason: 'the screens kept their state');
-    expect(find.byType(PlatformPlaceholderPage), findsOneWidget);
+    expect(find.byType(PlatformHomePage), findsOneWidget);
     expect(appContext(tester).read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
     expect(appContext(tester).read<PlatformIdentityCubit>().state, isA<PlatformIdentityLoaded>());
   });

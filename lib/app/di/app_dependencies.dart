@@ -27,6 +27,8 @@ import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
@@ -236,6 +238,10 @@ class AppDependencies {
   /// Platform's identity endpoint: who the signed-in admin is.
   IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) =>
       PlatformIdentityRepository(apiClient);
+
+  /// Platform's connection list: every connection of the install, read only.
+  IPlatformConnectionRepository createPlatformConnectionRepository(PlatformApiClient client) =>
+      PlatformConnectionRepository(client);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

@@ -615,10 +615,30 @@ class MessageLookup extends MessageLookupByLibrary {
       "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
     ),
     "platform_account_refusal_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform hesabınızı reddetti"),
-    "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
-      "Platform bağlantıları ve erişim izinleri bu ekrana sonraki bir sürümde gelecek.",
+    "platform_connections_empty_description": MessageLookupByLibrary.simpleMessage(
+      "Bağlantılar Platform web konsolunda eklenir.",
     ),
-    "platform_placeholder_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform"),
+    "platform_connections_empty_title": MessageLookupByLibrary.simpleMessage("Bu kurulumda henüz bağlantı yok"),
+    "platform_connections_filter_hint": MessageLookupByLibrary.simpleMessage("Ada veya motora göre filtrele"),
+    "platform_connections_load_failed": MessageLookupByLibrary.simpleMessage("Bağlantılar yüklenemedi"),
+    "platform_connections_read_grants_only": MessageLookupByLibrary.simpleMessage("Yalnızca okuma yetkisi verilebilir"),
+    "platform_connections_read_grants_only_semantics": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantının yazma kimlik bilgisi yok, bu yüzden yalnızca okuma erişimi verilebilir.",
+    ),
+    "platform_connections_refresh_failed": MessageLookupByLibrary.simpleMessage("Bağlantılar yenilenemedi"),
+    "platform_connections_search_empty_description": MessageLookupByLibrary.simpleMessage(
+      "Başka bir ad veya motor deneyin.",
+    ),
+    "platform_connections_search_empty_title": MessageLookupByLibrary.simpleMessage("Filtreyle eşleşen bağlantı yok"),
+    "platform_connections_status_unknown": MessageLookupByLibrary.simpleMessage("Bilinmeyen durum"),
+    "platform_home_admin_label": MessageLookupByLibrary.simpleMessage("Platform yöneticisi"),
+    "platform_home_connections_shortcut": MessageLookupByLibrary.simpleMessage("Bağlantılar"),
+    "platform_home_connections_shortcut_description": MessageLookupByLibrary.simpleMessage(
+      "Bu kurulumun tüm bağlantılarını görün.",
+    ),
+    "platform_home_identity_load_failed": MessageLookupByLibrary.simpleMessage("Platform hesabınız yüklenemedi"),
+    "platform_home_signed_in_as": MessageLookupByLibrary.simpleMessage("Oturum açan"),
+    "platform_home_tenant_label": MessageLookupByLibrary.simpleMessage("Kuruluş"),
     "previous": MessageLookupByLibrary.simpleMessage("Önceki"),
     "profile": MessageLookupByLibrary.simpleMessage("Profil"),
     "profile_governed_by_platform": MessageLookupByLibrary.simpleMessage("LibreDB Platform tarafından yönetiliyor"),

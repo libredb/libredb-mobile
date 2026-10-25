@@ -1,0 +1,8 @@
+{
+  "connections": [
+    { "id": "cm0conn0000000000000000004", "name": "İstanbul Önbellek", "engine": "redis", "status": "active", "hasWriteCredential": true },
+    { "id": "cm0conn0000000000000000003", "name": "Event Store", "engine": "mongodb", "status": "active", "hasWriteCredential": false },
+    { "id": "cm0conn0000000000000000002", "name": "Legacy Billing", "engine": "mysql", "status": "inactive", "hasWriteCredential": false },
+    { "id": "cm0conn0000000000000000001", "name": "Orders", "engine": "postgres", "status": "active", "hasWriteCredential": true }
+  ]
+}
