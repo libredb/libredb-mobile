@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/app/dev_console/tabs/environment_tab.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
@@ -32,7 +32,7 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
+    await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: language));
     await tester.pumpAndSettle();
     extraEntries.forEach(DevConsoleStore.instance.addNetworkEntry);
     DevConsoleOverlay.show(tester.element(find.byType(TopBarWidget)));

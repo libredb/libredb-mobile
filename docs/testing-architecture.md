@@ -281,7 +281,7 @@ expect(response, isNotNull, reason: 'the mock request never completed');
 ```
 
 `pumpAndSettle()` completes such a request as well, because its first pump advances 100 ms, but it stops as soon as no frame is scheduled.
-So it does not wait out the 500 ms that `MockInterceptor` adds under `AppConfig.dev()`, which `App` uses unless the test passes other dependencies: pump at least that long before settling, as `pumpAppOnSettings` in `test/features/settings/presentation/pages/settings_screen_test.dart` does.
+So it does not wait out the 500 ms that `MockInterceptor` adds under `AppConfig.mock()`, which `App` uses unless the test passes other dependencies: pump at least that long before settling, as `pumpAppOnSettings` in `test/features/settings/presentation/pages/settings_screen_test.dart` does.
 Every test that pumps `App` sends at least one request: the Studio status check reads `GET /health` when the app starts, unless the test replaces the Studio status repository.
 Do not use `tester.runAsync` to let a mock request finish: it runs the request in real time, and it is meant for real I/O.
 `test/support/test_env_test.dart` shows the pattern.
@@ -314,7 +314,7 @@ singleton or `setTestInstance`.
 ### End-to-end smoke
 
 `test/integration/app_smoke_test.dart` boots the **whole app** in mock mode
-(`LocalSignInDependencies()`, as `main_local.dart` passes it: `AppConfig.dev()`, which serves
+(`MockSignInDependencies()`, as `main_mock.dart` passes it: `AppConfig.mock()`, which serves
 `assets/mock/*.json`, and the local sign-in in place of Keycloak) and drives cold-start → single sign-on → connection list, exercising
 routing + DI + BLoCs + the mock HTTP layer together. It is a full-app widget test
 (`TestWidgetsFlutterBinding`), so it runs headless under the normal
@@ -410,7 +410,8 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 The single sign-on has more guards next to the code they guard:
 
 - `test/app/di/app_scope_test.dart` fails if a misconfigured build creates or provides an OIDC client.
-- `test/architecture/local_sign_in_test.dart` fails if `main_prod.dart` imports the debug-only local sign-in of `main_local.dart`, directly or not.
+- `test/architecture/mock_sign_in_test.dart` fails if `main_prod.dart` or `main_local.dart` imports the debug-only mock sign-in of `main_mock.dart`, directly or not.
+- `test/architecture/main_entry_points_test.dart` pins what each entry point defaults to, and that `main_prod.dart` gives `PLATFORM_API_URL` no default.
 - `test/features/auth/data/repositories/auth_session_repository_impl_test.dart` fails if the session clear leaves the OIDC ID token or the access token expiry behind, since the clear deletes keys one by one and is not exhaustive.
 - `test/app/router/app_router_test.dart` fails if a callback URL such as `/oauth2redirect?code=...&state=...` becomes a router location or a `returnUrl`, since the router logs locations.
 - `test/features/auth/sso_log_hygiene_test.dart` drives a full sign-in, refresh, logout and pushed callback route against the fake provider of `test/infrastructure/auth/oidc/support/fake_provider.dart`, and fails if AppLogger, `printedLines` or a `package:logging` record shows a token, the code, the verifier, `state` or the nonce.

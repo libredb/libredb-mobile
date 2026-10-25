@@ -40,7 +40,7 @@ import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 /// `{METHOD}{path}_{action}.json`, as Studio's route answers each action with its own shape. A request to such a path
 /// without a string `action` made of word characters finds no file and gets the 501.
 class MockInterceptor extends Interceptor {
-  MockInterceptor({this.appConfig = const AppConfig.dev()});
+  MockInterceptor({this.appConfig = const AppConfig.mock()});
 
   final AppConfig appConfig;
 
@@ -53,8 +53,8 @@ class MockInterceptor extends Interceptor {
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     _log.debug('Mock request: {} {}', [options.method, options.path]);
 
-    // Simulate network latency in dev (not in tests)
-    if (!appConfig.isTest) {
+    // Simulate network latency in a mock run; a test turns it off through AppConfig.test().
+    if (appConfig.simulateLatency) {
       await Future.delayed(const Duration(milliseconds: 500));
     }
 

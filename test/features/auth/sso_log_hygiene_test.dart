@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/session_target_switch_bloc.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
@@ -355,7 +355,7 @@ void main() {
 
 /// The local sign-in in a build with a Platform target, counting the Studio logout records and the provider
 /// end-sessions it is asked for.
-class _SwitchDependencies extends LocalSignInDependencies {
+class _SwitchDependencies extends MockSignInDependencies {
   _SwitchDependencies() : super(appConfig: const AppConfig.test());
 
   int signOutRecords = 0;

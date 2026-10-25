@@ -21,7 +21,7 @@ A 3xx from the token endpoint is refused the same way, so no code, PKCE verifier
 An unset `OIDC_ISSUER` still starts and fails closed on the login page ([oidc.md](oidc.md)), and an unset `SENTRY_DSN` leaves Sentry off.
 The release stops before the build on the same rule (`tool/release/check_defines.sh`, [release.md](release.md)).
 `AppConfig.httpsOnlyDefines` lists the three, and `test/architecture/android_release_setup_test.dart` fails when the release passes a URL define that is not in it, or when the script or `NativeSentry.kt` does not carry the pattern verbatim.
-Dev and test builds, `main_local.dart` among them, check none of them; tool/studio-dev serves Studio and Keycloak over https through Caddy, so its `studio-dev.env` passes.
+Mock and local builds, `main_mock.dart` and `main_local.dart`, check none of them; tool/studio-dev serves Studio and Keycloak over https through Caddy, so its `studio-dev.env` passes.
 
 ## Token storage
 
@@ -377,7 +377,9 @@ The sheet answers confirmed or cancelled and keeps no statement after it closes;
 
 `IdleTimeoutObserver` (`lib/core/security/idle_timeout_observer.dart`) signs the user out after a period without input.
 
-- `AppConfig.idleTimeout` sets the period: `AppConfig.prod()` sets 15 minutes, and `AppConfig.dev()` and `AppConfig.test()` set `null`, which turns it off, so a hot reload or a mocked session is never signed out.
+- `AppConfig.idleTimeout` sets the period: `AppConfig.prod()` sets 15 minutes, and `AppConfig.mock()`, `AppConfig.local()` and `AppConfig.test()` set `null`, which turns it off, so a hot reload, a mocked session or a run against a development stack is never signed out.
+- `main_local.dart` is the weakest profile on purpose: no certificate pinning, no screen-capture protection and no idle timeout. It exists for hand testing against a development stack on a developer's own machine, never for a build anyone else installs; only `main_prod.dart` is shipped.
+- Every entry point shares one `applicationId`, `org.libredb.mobile`, so installing the local build replaces the prod build **and inherits its secure storage**. A session stored by a `main_prod.dart` build is therefore reachable from a build that never times out idle and allows screenshots, screen recordings and the recent-apps preview of every data screen. Sign out before switching between the two, or clear the app's data.
 - On iOS a Dart `Timer` pauses while the app is suspended, so the observer also records the wall-clock time on each lifecycle change; a resume past the period signs out at once.
 - When the period ends, the user sees a translated snackbar ("You were signed out due to inactivity.") and the router goes to the sign-in page.
   The session ends with `SessionExpiredReason.idleTimeout`, so the log and the UI can tell it from a sign-out the user chose.

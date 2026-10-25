@@ -69,7 +69,7 @@ A widget that more than one feature shows lives in `lib/shared/widgets/`.
 Each repository returns a `Result`: the entity, or an `AppError` with a translated `AppErrorCode`.
 The readers in each feature's `data/models/` (and in `lib/infrastructure/studio/` for a shared model) turn Studio's JSON into entities, throw a `FormatException` when a required field is missing, and leave out an optional field of an unexpected type, so a newer Studio that adds fields reads as before.
 
-In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oidc.md](oidc.md#mock-mode-without-keycloak)) and `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
+In mock mode (`main_mock.dart`) a debug-only double stands in for Keycloak ([oidc.md](oidc.md#mock-mode-without-keycloak)) and `MockInterceptor` answers every request from `assets/mock/`, and `test/architecture/mock_asset_coverage_test.dart` fails when a repository method has no recorded answer.
 
 ### Studio reachability
 

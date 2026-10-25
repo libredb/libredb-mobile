@@ -304,7 +304,7 @@ void main() {
       withConfig(const AppConfig.prod(apiBaseUrl: 'https://x.test/api')).createScreenCaptureProtection().isEnabled,
       isTrue,
     );
-    expect(withConfig(const AppConfig.dev()).createScreenCaptureProtection().isEnabled, isFalse);
+    expect(withConfig(const AppConfig.mock()).createScreenCaptureProtection().isEnabled, isFalse);
     expect(withConfig(const AppConfig.test()).createScreenCaptureProtection().isEnabled, isFalse);
     expect(
       withConfig(const AppConfig.prod(apiBaseUrl: 'https://x.test/api', screenCaptureProtection: false))

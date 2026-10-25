@@ -22,12 +22,12 @@ import 'package:libredb_mobile/shared/utils/app_constants.dart';
 typedef AppDependenciesFactory = AppDependencies Function(AppConfig appConfig);
 
 class AppBootstrap {
-  /// Starts the app as [config] says. [dependencies] builds what the app runs on, [definedDependencies] unless
-  /// `main_local.dart` passes its local sign-in. [sentry] decides whether Sentry starts and starts it; a test passes
-  /// its own.
+  /// Starts the app as [config] says. [dependencies] builds what the app runs on, [definedDependencies] with the
+  /// config's own `OIDC_*` values unless an entry point passes its own, as `main_mock.dart` does for the debug
+  /// sign-in. [sentry] decides whether Sentry starts and starts it; a test passes its own.
   static Future<void> run(
     AppBootstrapConfig config, {
-    AppDependenciesFactory dependencies = definedDependencies,
+    AppDependenciesFactory? dependencies,
     @visibleForTesting SentryStart sentry = const SentryStart(),
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -40,8 +40,16 @@ class AppBootstrap {
 
     // Decided before anything reads the config: when Sentry may not start (a release build whose Android host did not
     // start the native SDK), the config loses its DSN, so the app runs exactly as without one.
-    final appConfig = await sentry.gate(AppConfig.fromEnvironment(config.environment));
-    final appDependencies = dependencies(appConfig);
+    final appConfig = await sentry.gate(
+      AppConfig.fromEnvironment(
+        config.environment,
+        prodApiUrlDefine: config.apiBaseUrl,
+        oidcIssuerDefine: config.authDefines.issuerDefine,
+        platformApiUrlDefine: config.platformApiUrl,
+      ),
+    );
+    final buildDependencies = dependencies ?? (built) => definedDependencies(built, config.authDefines);
+    final appDependencies = buildDependencies(appConfig);
     final secureStorage = appDependencies.createSecureStorage();
 
     final existingPalette = await AppLocalStorage().read(StorageKeys.theme.key);
@@ -103,11 +111,11 @@ class AppBootstrap {
     );
   }
 
-  /// The [AppDependencies] of a build that signs in through the identity provider its `OIDC_*` defines name. An
-  /// invalid OpenID Connect configuration does not stop the app: it starts, and the login page says that single
-  /// sign-on is not configured correctly.
-  static AppDependencies definedDependencies(AppConfig appConfig) {
-    final authMode = AuthMode.fromDefines(const AuthDefines());
+  /// The [AppDependencies] of a build that signs in through the identity provider [defines] names — the build's
+  /// `OIDC_*` defines unless an entry point supplied its own. An invalid OpenID Connect configuration does not stop
+  /// the app: it starts, and the login page says that single sign-on is not configured correctly.
+  static AppDependencies definedDependencies(AppConfig appConfig, [AuthDefines defines = const AuthDefines()]) {
+    final authMode = AuthMode.fromDefines(defines);
     if (authMode case OidcMisconfiguredAuthMode(:final reason)) {
       AppLogger.getLogger('AppBootstrap').error('OIDC configuration is invalid: {}', [reason]);
     }

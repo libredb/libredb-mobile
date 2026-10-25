@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/services.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
@@ -48,7 +48,7 @@ void main() {
 
 /// The device went offline after Studio answered its liveness check; offline at start, the unreachable page would show
 /// in place of the shell.
-class _StudioAnsweredDependencies extends LocalSignInDependencies {
+class _StudioAnsweredDependencies extends MockSignInDependencies {
   @override
   IStudioStatusRepository createStudioStatusRepository(ApiClient apiClient) => const AnsweringStudioStatusRepository();
 }

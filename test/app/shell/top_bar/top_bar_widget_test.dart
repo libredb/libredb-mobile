@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -62,7 +62,7 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     TestEnv.authenticate();
 
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
+    await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: language));
     await tester.pumpAndSettle();
   }
 
@@ -217,7 +217,7 @@ void main() {
 
     testWidgets('to Studio asks nothing and lands on the Studio home', (tester) async {
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await settle(tester);
       expect(find.byType(PlatformShell), findsOneWidget);
 
@@ -257,9 +257,9 @@ void main() {
       TestEnv.authenticate();
       await tester.pumpWidget(
         App(
-          dependencies: LocalSignInDependencies(
+          dependencies: MockSignInDependencies(
             appConfig: const AppConfig(
-              environment: Environment.dev,
+              environment: Environment.mock,
               apiBaseUrl: null,
               certificatePins: <String>[],
               idleTimeout: null,
@@ -499,7 +499,7 @@ class _OnceRefusingStudio implements IStudioIdentityRepository {
   Future<Result<void>> recordSignOut() async => const Success(null);
 }
 
-class _StudioIdentityDependencies extends LocalSignInDependencies {
+class _StudioIdentityDependencies extends MockSignInDependencies {
   _StudioIdentityDependencies(this.studio);
 
   final IStudioIdentityRepository studio;
@@ -519,7 +519,7 @@ class _RefusingPlatformIdentity implements IPlatformIdentityRepository {
       Failure(platformError(UnauthorizedException('Platform answered 403', statusCode: 403, errorCode: code)));
 }
 
-class _RefusingPlatformDependencies extends LocalSignInDependencies {
+class _RefusingPlatformDependencies extends MockSignInDependencies {
   _RefusingPlatformDependencies(this.code);
 
   final String code;

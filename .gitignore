@@ -66,11 +66,13 @@ test/**/failures/
 .widget_preview/
 
 # coding agent team orchectration
-.team/ledger.log
-.team/decisions.md
+.team/
 
 
 
 
 # A local LibreDB Platform license for tool/studio-dev (docs/studio.md); never commit it
 /tool/studio-dev/platform-license.local
+
+# Design and plan
+/docs/superpowers/

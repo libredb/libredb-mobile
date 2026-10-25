@@ -15,6 +15,12 @@ final class AuthDefines {
     this._oidcRedirectScheme = const String.fromEnvironment('OIDC_REDIRECT_SCHEME'),
   });
 
+  /// The raw `OIDC_ISSUER` value of this build, before [OidcSettings.parse] reads it.
+  ///
+  /// `AppConfig.fromEnvironment` checks it for https in a prod build. It is the same string the sign-in uses, so a
+  /// build can never validate one issuer and then sign in through another.
+  String get issuerDefine => _oidcIssuer;
+
   final String _oidcIssuer;
   final String _oidcClientId;
   final String _oidcScope;

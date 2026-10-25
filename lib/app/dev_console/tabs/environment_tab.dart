@@ -47,7 +47,11 @@ class EnvironmentTab extends StatelessWidget {
 
   Map<String, String> _buildEnvironmentInfo(AppConfig appConfig) {
     return {
-      'Environment': appConfig.isProduction ? 'Production' : (appConfig.isTest ? 'Test' : 'Development'),
+      'Environment': switch (appConfig.environment) {
+        Environment.mock => 'Mock',
+        Environment.local => 'Local',
+        Environment.prod => 'Production',
+      },
       'API Endpoint': appConfig.apiBaseUrl ?? 'Mock',
       'App Version': AppConstants.appVersion.isNotEmpty ? AppConstants.appVersion : 'N/A',
       'Build Number': AppConstants.appBuildNumber.isNotEmpty ? AppConstants.appBuildNumber : 'N/A',

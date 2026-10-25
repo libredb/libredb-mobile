@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -51,7 +51,7 @@ class TestEnv {
   /// repo layer reads; the token refresh of `main_local.dart`'s local sign-in.
   /// Pass [dio] to inject a stub.
   static ApiClient apiClient({Dio? dio}) {
-    final dependencies = LocalSignInDependencies(appConfig: const AppConfig.test());
+    final dependencies = MockSignInDependencies(appConfig: const AppConfig.test());
     final secureStorage = FlutterSecureStorageAdapter();
     final settings = (dependencies.authMode as OidcAuthMode).settings;
     return ApiClient(
@@ -65,7 +65,7 @@ class TestEnv {
   /// The mock-backed LibreDB Platform client, built like [apiClient]: the test AppConfig's Platform target has no base
   /// URL, so MockInterceptor serves `assets/mock/*_v1_*.json`. Pass [dio] to inject a stub.
   static PlatformApiClient platformApiClient({Dio? dio}) {
-    final dependencies = LocalSignInDependencies(appConfig: const AppConfig.test());
+    final dependencies = MockSignInDependencies(appConfig: const AppConfig.test());
     final secureStorage = FlutterSecureStorageAdapter();
     final settings = (dependencies.authMode as OidcAuthMode).settings;
     return PlatformApiClient(
