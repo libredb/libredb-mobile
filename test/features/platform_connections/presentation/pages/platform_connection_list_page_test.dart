@@ -201,6 +201,29 @@ void main() {
     verify(() => repository.list()).called(3);
   });
 
+  testWidgets('keeps the empty install under a banner when a refresh fails, and its retry asks again', (tester) async {
+    answer(const Success([]));
+    await pumpPage(tester);
+    await tester.pumpAndSettle();
+    answer(Failure(ServerError('Platform text', code: AppErrorCode.platformInternalError.key)));
+
+    await tester.fling(find.byType(AppEmptyState), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not refresh the connections'), findsOneWidget);
+    expect(find.text('Platform could not complete the request. Try again later.'), findsOneWidget);
+    expect(find.text('This install has no connections yet'), findsOneWidget);
+    expect(find.text('Platform text'), findsNothing);
+
+    answer(const Success([_orders]));
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not refresh the connections'), findsNothing);
+    expect(find.text('Orders'), findsOneWidget);
+    verify(() => repository.list()).called(3);
+  });
+
   testWidgets('shows a failure with its message and a retry that loads again', (tester) async {
     answer(Failure(ServerError('Platform text', code: AppErrorCode.platformApiDisabled.key)));
     await pumpPage(tester);

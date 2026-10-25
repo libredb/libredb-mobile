@@ -31,14 +31,21 @@ class PlatformConnectionListPage extends StatelessWidget {
     return BlocBuilder<PlatformConnectionListBloc, PlatformConnectionListState>(
       builder: (context, state) => switch (state) {
         PlatformConnectionListInitial() || PlatformConnectionListLoading() => const _Skeleton(),
-        PlatformConnectionListLoaded(connections: []) => _Refreshable(
-          child: _centered(
-            AppEmptyState(
-              icon: Icons.storage_outlined,
-              title: S.of(context).platform_connections_empty_title,
-              description: S.of(context).platform_connections_empty_description,
+        PlatformConnectionListLoaded(connections: [], :final refreshError) => Column(
+          children: [
+            if (refreshError != null) _RefreshBanner(errorCode: refreshError),
+            Expanded(
+              child: _Refreshable(
+                child: _centered(
+                  AppEmptyState(
+                    icon: Icons.storage_outlined,
+                    title: S.of(context).platform_connections_empty_title,
+                    description: S.of(context).platform_connections_empty_description,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
         final PlatformConnectionListLoaded loaded => _LoadedList(state: loaded),
         PlatformConnectionListFailure(:final errorCode) => _Refreshable(
@@ -151,7 +158,7 @@ class _LoadedList extends StatelessWidget {
   }
 }
 
-/// Why the last refresh failed, above the list it kept, with a retry.
+/// Why the last refresh failed, above the list it kept (an empty install's too), with a retry.
 class _RefreshBanner extends StatelessWidget {
   const _RefreshBanner({required this.errorCode});
 

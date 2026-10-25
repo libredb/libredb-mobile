@@ -261,6 +261,8 @@ void main() {
     });
 
     final text = lines.join('\n');
+    expect(text, contains('END: onLoad connections: ${all.length}'));
+    expect(text, contains('END: onLoad failed: ${AppErrorCode.platformInternalError.key}'));
     expect(text, isNot(contains('Orders')));
     expect(text, isNot(contains('İstanbul')));
     expect(text, isNot(contains('jane.doe')));
