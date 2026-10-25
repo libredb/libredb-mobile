@@ -1,0 +1,43 @@
+LibreDB Mobile, LibreDB Studio'nun ve Platform yöneticileri için LibreDB Platform'un Android istemcisidir. Studio'nun size sunduğu veritabanlarıyla telefonunuzdan çalışmanızı, bir Platform yöneticisinin de kurulumun bağlantılarını kimin kullanabileceğini yönetmesini sağlar.
+
+Uygulama, derlenirken belirlenen LibreDB Studio ve Keycloak kurulumunda, bir Platform yöneticisi için de aynı Keycloak oturum açma işlemiyle o kurulumun LibreDB Platform'unda oturum açar; bu yüzden o kurulumu işleten kuruluştan alınmış bir hesabınız olmalıdır. Uygulama hiçbir veritabanına kendisi bağlanmaz ve hiçbir veritabanı parolası tutmaz: her veritabanı kimlik bilgisini Studio saklar, her bağlantıyı Studio açar ve hangi bağlantıları kullanabileceğinize Studio karar verir.
+
+Bağlantılar
+• Studio'nun size sunduğu bağlantıları ortamlarına göre gruplanmış olarak görün ve aralarında arayın.
+• Sık kullandıklarınızı yıldızlayın, son açtıklarınızı bulun.
+• Bir bağlantının yanıt verip vermediğini sınayın, açık bağlantıyı üst çubuktan değiştirin.
+
+Gözat
+• Bir bağlantının içine hiçbir şeyi değiştirmeden bakın: veritabanları ve şemaları, nesne türleri ve sayıları, her türün nesneleri.
+• Bir nesnenin sütunlarını, dizinlerini, yabancı anahtarlarını ve kaynağını açın, nesneleri adlarıyla arayın.
+• Bir Redis veritabanının anahtarlarına göz atın ve bir anahtarın değerini açın.
+
+Satırlar
+• Bir tablonun satırlarını kartlar ya da sıkışık bir tablo olarak önizleyin, daha fazlasını yükleyin, bir satırın ayrıntısını açın.
+• Adı hassas görünen sütunlar, örneğin e-posta, parola ya da kart numarası, ekranda Studio'nun web tablosundaki varsayılan kurallarla maskelenir.
+
+SQL düzenleyici
+• Seçtiğiniz veritabanında bir deyimi, bir betiği ya da bir seçimi yazıp çalıştırın, çalışan bir deyimi iptal edin.
+• Taslağınız ve deyim geçmişiniz telefonda kalır; geçmişteki ya da Gözat'taki bir deyim düzenleyicide açılır.
+• Veriyi değiştirebilecek bir deyim çalışmadan önce uygulama onu eksiksiz gösterir ve onayınızı ister; üretim bağlantısında önce bağlantının adını yazarsınız.
+
+Platform yöneticisi
+• Kurulumun bir Platform yöneticisi olarak Platform'a giriş yapın; ilk Platform girişi lisansın bir yönetici koltuğunu kullanır.
+• Kurulumun etkin ve devre dışı bağlantılarını listeleyin ve aralarında arayın.
+• Bir bağlantıya kimlerin erişimi olduğunu görün.
+• Platform'un kullanıcı dizininden bir kullanıcı seçerek ona isteğe bağlı bir bitiş tarihiyle okuma ya da yazma erişimi verin.
+• Bir erişimin düzeyini ya da bitiş tarihini değiştirin veya erişimi kaldırın.
+• Bir bağlantıyı tüm kullanıcılar için tek seferde etkinleştirin ya da devre dışı bırakın.
+• Yönetilen sorguların denetim kaydını okuyun, filtreleyin ve bir olayı açın.
+• Profilinizden Studio ile Platform arasında yerinde geçiş yapın.
+• Bağlantılar telefonda hiçbir zaman oluşturulmaz, düzenlenmez ya da silinmez, kullanıcılar Keycloak'ta yönetilir ve uygulama yine hiçbir veritabanı parolası tutmaz.
+• Platform modu, mobil uygulama için kurulmuş bir LibreDB Platform kurulumu gerektirir.
+
+Gizlilik ve güvenlik
+• Kuruluşunuzun Keycloak'u üzerinden tek oturum açma; belirteçler cihazın güvenli depolamasında tutulur.
+• Taslaklar ve geçmiş cihazda, her hesap için ayrı şifrelenir.
+• Sonuç gösteren ekranlar ekran görüntülerinin ve son uygulamalar görünümünün dışında tutulur.
+• Uygulama 15 dakika işlem yapılmadığında oturumu kapatır.
+• Ayarlar'daki Verilerimi sil, uygulamanın Studio hesabınız için tuttuklarını siler.
+
+Uygulama İngilizce ve Türkçe kullanılabilir.

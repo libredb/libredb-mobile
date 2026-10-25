@@ -1,0 +1,1 @@
+LibreDB Studio üzerinden veritabanlarınıza göz atın, telefondan SQL çalıştırın.

@@ -12,6 +12,11 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// The English and the Turkish listing must hold the same files, so a text added to one locale is not forgotten in the
 /// other.
+///
+/// The listing for an upcoming feature is drafted under `android/fastlane/drafts/<feature>/`, in the same layout, until
+/// the pull request that ships the feature moves it into the live listing (issue #301). Each draft passes the same
+/// checks and holds the same files as the live `en-US`, so it can replace the live directories whole. No listing text,
+/// live or draft, holds an en dash or an em dash.
 void main() {
   test('each locale has the three listing texts within Play\'s lengths', () {
     final problems = [for (final locale in _locales) ...listingProblems(Directory('$_metadataRoot/$locale'))];
@@ -30,6 +35,39 @@ void main() {
     final turkish = relativeFiles(Directory('$_metadataRoot/tr-TR'));
     expect(english, isNotEmpty);
     expect(turkish, english, reason: 'en-US and tr-TR must hold the same files');
+  });
+
+  test('each draft has exactly the en-US and tr-TR locales, within Play\'s lengths and with the live files', () {
+    final root = Directory(_draftsRoot);
+    expect(root.existsSync(), isTrue, reason: '$_draftsRoot does not exist');
+
+    final live = relativeFiles(Directory('$_metadataRoot/en-US'));
+    final drafts = root.listSync().whereType<Directory>().toList();
+    expect(drafts, isNotEmpty, reason: '$_draftsRoot holds no draft');
+
+    final problems = <String>[];
+    for (final draft in drafts) {
+      final locales = [for (final entry in draft.listSync().whereType<Directory>()) _name(entry.path)]..sort();
+      if (!_listEquals(locales, _locales)) problems.add('${draft.path} has the locales $locales, expected $_locales');
+      for (final locale in _locales) {
+        final directory = Directory('${draft.path}/$locale');
+        problems.addAll(listingProblems(directory));
+        final files = relativeFiles(directory);
+        if (!_listEquals(files, live)) problems.add('${directory.path} holds $files, the live en-US holds $live');
+      }
+    }
+
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
+  test('no listing text, live or draft, holds an en dash or an em dash', () {
+    final offending = [
+      for (final root in [_metadataRoot, _draftsRoot])
+        for (final file in Directory(root).listSync(recursive: true).whereType<File>())
+          if (file.readAsStringSync().contains(RegExp('[\u2013\u2014]'))) file.path,
+    ];
+
+    expect(offending, isEmpty, reason: 'U+2013 or U+2014 in ${offending.join(', ')}');
   });
 
   group('listingProblems', () {
@@ -81,6 +119,7 @@ void main() {
 }
 
 const _metadataRoot = 'android/fastlane/metadata/android';
+const _draftsRoot = 'android/fastlane/drafts';
 const _locales = ['en-US', 'tr-TR'];
 
 /// Play's limit for each listing text, in characters.
@@ -111,5 +150,7 @@ List<String> relativeFiles(Directory locale) {
       file.path.replaceAll('\\', '/').substring(prefix.length),
   ]..sort();
 }
+
+bool _listEquals(List<String> a, List<String> b) => a.length == b.length && a.indexed.every((e) => e.$2 == b[e.$1]);
 
 String _name(String path) => path.replaceAll('\\', '/').split('/').last;
