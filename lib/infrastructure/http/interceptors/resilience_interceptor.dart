@@ -6,9 +6,11 @@ import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:libredb_mobile/infrastructure/http/api_target.dart';
 import 'package:libredb_mobile/infrastructure/http/circuit_breaker.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/cache_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/connectivity_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 
 /// Dio interceptor that combines **smart retry** with a **circuit breaker**
 /// to improve resilience against transient failures.
@@ -36,6 +38,11 @@ import 'package:libredb_mobile/infrastructure/http/transport_errors.dart';
 /// - Respects the `Retry-After` header when present.
 /// - Retries go through the adapter of the Dio given to [forDio], so they keep its certificate
 ///   pinning. An instance not made by [forDio] rejects a retry instead of sending it.
+/// - A retry skips the interceptors before this one, `AuthInterceptor` included, and carries the headers of the first
+///   request, its bearer too. So a retry of a request sent under a session ([AuthInterceptor.sessionGenerationOf]) is
+///   not sent, and fails with a [NoSessionException], once that session has ended ([SessionGeneration.hasEnded]) or
+///   while a sign-out it is not part of runs ([SessionGeneration.signingOut]), as `AuthInterceptor` refuses a first
+///   request (#277).
 ///
 /// **Circuit breaker logic:**
 /// - Each endpoint (path prefix) gets its own [CircuitBreaker] instance.
@@ -339,6 +346,15 @@ class ResilienceInterceptor extends Interceptor {
       return;
     }
 
+    // The session the request was sent under may have ended, or a sign-out started, during the backoff.
+    if (_sessionEndingReason(options) case final reason?) {
+      _log.warn('Retry {}/{} for {} {} not sent: {}', [nextAttempt, maxRetries, options.method, options.path, reason]);
+      handler.next(
+        DioException(requestOptions: options, type: DioExceptionType.cancel, error: NoSessionException(reason)),
+      );
+      return;
+    }
+
     // Clone the request with the updated retry attempt counter.
     options.extra['_retryAttempt'] = nextAttempt;
 
@@ -389,6 +405,16 @@ class ResilienceInterceptor extends Interceptor {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  /// Why a retry of [options] must not be sent because its session ended or is ending, or null when it may be sent. A
+  /// request sent under no session (a public endpoint, another origin) has nothing to end.
+  static String? _sessionEndingReason(RequestOptions options) {
+    final sentUnder = AuthInterceptor.sessionGenerationOf(options);
+    if (sentUnder == null) return null;
+    if (SessionGeneration.hasEnded(sentUnder)) return 'the session it was sent under has ended';
+    if (SessionGeneration.signingOut && !AuthInterceptor.isSignOutRequest(options)) return 'a sign-out is running';
+    return null;
+  }
 
   /// Extract a stable endpoint key from a request path.
   ///

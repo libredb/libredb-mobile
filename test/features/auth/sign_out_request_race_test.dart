@@ -112,6 +112,46 @@ void main() {
       isA<ConnectionListFailure>().having((s) => s.errorCode, 'errorCode', AppErrorCode.authInvalidAccessToken),
     );
   });
+
+  test('a GET retry due while the sign-out waits for Studio\'s record is not sent', () async {
+    studio.firstListOutage = true;
+    studio.holdLogout = Completer<void>();
+    final failed = list.stream.firstWhere(_settled);
+    list.add(const ConnectionListRefreshed());
+    await studio.outageSent.future;
+
+    final signedOut = signOut.signOut();
+    await studio.logoutArrived.future;
+    final state = await failed;
+    studio.holdLogout!.complete();
+    final result = await signedOut;
+
+    expect(result.cleared, isA<Success<void>>());
+    expect(studio.requests, ['GET /connections/managed (bearer)', 'POST /auth/logout (bearer)']);
+    expect(
+      state,
+      isA<ConnectionListFailure>().having((s) => s.errorCode, 'errorCode', AppErrorCode.authInvalidAccessToken),
+    );
+    expect(sessionExpiredCalls, 0);
+  });
+
+  test('a GET retry due after the sign-out wiped the session is not sent', () async {
+    studio.firstListOutage = true;
+    final failed = list.stream.firstWhere(_settled);
+    list.add(const ConnectionListRefreshed());
+    await studio.outageSent.future;
+
+    final result = await signOut.signOut();
+    expect(result.cleared, isA<Success<void>>());
+    final state = await failed;
+
+    expect(studio.requests, ['GET /connections/managed (bearer)', 'POST /auth/logout (bearer)']);
+    expect(
+      state,
+      isA<ConnectionListFailure>().having((s) => s.errorCode, 'errorCode', AppErrorCode.authInvalidAccessToken),
+    );
+    expect(sessionExpiredCalls, 0);
+  });
 }
 
 /// Whether the list load ended, with a list or a failure.
@@ -126,11 +166,14 @@ const _prodConfig = AppConfig(
 
 /// Studio as the phone met it: a request without a bearer gets 401 `AUTH_REQUIRED`, the sign-out record is accepted
 /// (once [holdLogout] completes, when set), and the connection list answers one connection. Each request is noted in
-/// [requests] with whether it carried a bearer.
+/// [requests] with whether it carried a bearer. With [firstListOutage], the first connection list request gets a 503
+/// without a Studio code and `retry-after: 1`, which the app retries after a second ([outageSent] completes on it).
 class _StudioAdapter implements HttpClientAdapter {
   final requests = <String>[];
   final logoutArrived = Completer<void>();
+  final outageSent = Completer<void>();
   Completer<void>? holdLogout;
+  bool firstListOutage = false;
 
   @override
   Future<ResponseBody> fetch(
@@ -148,16 +191,21 @@ class _StudioAdapter implements HttpClientAdapter {
       return _json(200, '{"success":true}');
     }
     if (path == '/connections/managed') {
+      if (firstListOutage && !outageSent.isCompleted) {
+        outageSent.complete();
+        return _json(503, '{"error":"Service Unavailable"}', retryAfter: '1');
+      }
       return _json(200, '{"connections":[{"id":"seed:sales-postgres","name":"Sales","type":"postgres"}]}');
     }
     return _json(404, '{"error":"Not found"}');
   }
 
-  static ResponseBody _json(int status, String body) => ResponseBody.fromString(
+  static ResponseBody _json(int status, String body, {String? retryAfter}) => ResponseBody.fromString(
     body,
     status,
     headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],
+      if (retryAfter != null) 'retry-after': [retryAfter],
     },
   );
 

@@ -182,6 +182,7 @@ A request that needs the session is refused before it leaves, with a `NoSessionE
 The refusal skips the error interceptors, so no 401 handling, refresh or end of the session follows it, and writes one warn line.
 A refusal for a missing token outside a sign-out or a wipe tells `onTokenMissing`, which ends the session only while the app still holds it as signed in.
 Only a failed secure read still sends the request without a token, so the 401 that follows ends the session.
+`ResilienceInterceptor` sends a GET retry past this interceptor with the first request's headers, so it checks the same way before each retry: a retry of a request sent under a session is not sent, and fails with a `NoSessionException`, once that session has ended or while a sign-out runs.
 
 This runs **before** MockInterceptor so that mock auth checks see the token.
 
