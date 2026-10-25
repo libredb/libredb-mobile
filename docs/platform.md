@@ -203,8 +203,10 @@ A switch to Platform first asks for confirmation, because Platform's first answe
 Either switch first asks once about the unsaved changes of any open form (`UnsavedChangesRegistry.confirmLeavingAll`).
 Only a 200 switches: the stored session target is rewritten alone (`IAuthSessionRepository.persistTarget`), the new mode's identity is filled from the gate's answer, the in-memory state of the mode left is cleared, and the router opens the new mode's home (`SessionTargetSwitchBloc`, `AppSessionListeners`).
 A refusal keeps the session, its target, its pages and its cubits, and a snackbar says why, such as an account that is not a Platform admin or a license without a free admin seat.
+The refusal names the mode the user stays in: a 401 from the other target does not end the session, so it never asks the user to sign in, unlike the login page's text for a refused sign-in.
 A switch is no sign-out: it sends no Studio logout record, writes no warn line, starts no provider end-session, sends the app lock no event and removes no stored data.
 A sign-out or an idle timeout while a switch runs ends the session and leaves no target stored.
+Such a switch is dropped (`SessionTargetSwitchAbandoned`): its answer shows nothing, in the next session or anywhere else, and it writes one info line and no warn or error line.
 
 A tap on a connection opens its grants (`/platform/connections/<id>`), with the tapped connection handed over as go_router `extra`, since go_router logs every location and Platform has no route that reads one connection.
 The location carries only the connection id; a location reached without that `extra`, such as a `returnUrl` after sign-in or a typed location, opens the connections list instead.

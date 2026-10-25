@@ -155,7 +155,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
                 _completeSwitch(context, result);
               case SessionTargetSwitchRefusedState(:final errorCode):
                 _tellSwitchRefused(context, errorCode);
-              case SessionTargetSwitchIdle() || SessionTargetSwitchInProgress():
+              case SessionTargetSwitchIdle() || SessionTargetSwitchInProgress() || SessionTargetSwitchAbandonedState():
                 break;
             }
           },
@@ -297,6 +297,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
       SwitchedToStudio() => (SessionTarget.platform, SessionTarget.studio),
       SwitchedToPlatform() => (SessionTarget.studio, SessionTarget.platform),
       SessionTargetSwitchRefused() => throw StateError('A refused switch has no mode to open'),
+      SessionTargetSwitchAbandoned() => throw StateError('An abandoned switch has no mode to open'),
     };
     final session = context.read<SessionCubit>();
     if (session.state != SessionAuthenticated(target: from)) {
@@ -317,14 +318,15 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
         context.read<PlatformIdentityCubit>().clear();
         context.read<PlatformAccountRefusalCubit>().clear();
         context.read<StudioIdentityCubit>().signedIn(identity);
-      case SessionTargetSwitchRefused():
+      case SessionTargetSwitchRefused() || SessionTargetSwitchAbandoned():
         break;
     }
     session.markAuthenticated(to);
   }
 
   /// Tells the user, in the mode they stayed in, why the other target's gate refused the switch. A session that ended
-  /// while the gate was asked has its own notice.
+  /// while the gate was asked has its own notice. The other target's 401 does not end the session, so its refusal names
+  /// the mode the user stays in instead of the login page's text, which asks for a sign-in.
   void _tellSwitchRefused(BuildContext context, AppErrorCode errorCode) {
     if (context.read<SessionCubit>().state is! SessionAuthenticated) return;
     final messenger = widget.scaffoldMessengerKey.currentState;
@@ -333,6 +335,8 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
     }
     final message = switch (errorCode) {
       AppErrorCode.platformAdminRoleRequired => S.of(messenger.context).profile_switch_admin_role_required,
+      AppErrorCode.platformAccountRefused => S.of(messenger.context).profile_switch_platform_refused,
+      AppErrorCode.studioAccountRefused => S.of(messenger.context).profile_switch_studio_refused,
       _ => errorCode.resolve(messenger.context),
     };
     messenger.showSnackBar(SnackBar(content: Text(message)));

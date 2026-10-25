@@ -890,7 +890,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_switch_platform_message": MessageLookupByLibrary.simpleMessage(
       "Platform modu Platform yöneticileri içindir. Bu hesap Platform\'u ilk kez açtığında lisansın bir yönetici koltuğunu kullanır.",
     ),
+    "profile_switch_platform_refused": MessageLookupByLibrary.simpleMessage(
+      "Platform bu hesabı kabul etmedi, bu yüzden Studio\'da kalıyor. Bu uygulamanın Platform için ayarlandığını yöneticinize kontrol ettirin.",
+    ),
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Platform\'a geçilsin mi?"),
+    "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
+      "Studio bu hesabı kabul etmedi, bu yüzden Platform\'da kalıyor. Erişim için bir yöneticiye başvurun.",
+    ),
     "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Platform\'a geç"),
     "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Studio\'ya geç"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Bilinmeyen kullanıcı"),
