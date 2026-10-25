@@ -6,6 +6,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
@@ -13,6 +14,7 @@ import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -50,6 +52,15 @@ const _config = AppConfig(
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 15),
+);
+
+/// [_config] in a build that serves Platform mode too.
+const _platformConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: null,
+  certificatePins: <String>[],
+  idleTimeout: Duration(minutes: 15),
+  platform: PlatformConfigured(),
 );
 
 Future<void> _turnLockOn() async {
@@ -126,6 +137,42 @@ void main() {
     expect(find.byKey(appLockScreenKey), findsNothing);
     expect(find.byType(ResponsiveScaffold), findsOneWidget);
     semantics.dispose();
+  });
+
+  // The lock looks at no session target.
+  testWidgets('a cold start that restores a Platform session shows only the lock screen, and Unlock opens it', (
+    tester,
+  ) async {
+    await _turnLockOn();
+    TestEnv.authenticate(target: SessionTarget.platform);
+    await tester.pumpWidget(app(config: _platformConfig));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(appLockScreenKey), findsOneWidget);
+    expect(find.byType(PlatformShell), findsNothing, reason: 'the pages stay mounted offstage, unseen');
+    expect(find.byType(PlatformShell, skipOffstage: false), findsOneWidget);
+
+    await tester.tap(find.byKey(appLockUnlockKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(appLockScreenKey), findsNothing);
+    expect(find.byType(PlatformShell), findsOneWidget);
+  });
+
+  testWidgets('a Platform session back after six minutes asks, back after one minute does not', (tester) async {
+    await _turnLockOn();
+    TestEnv.authenticate(target: SessionTarget.platform);
+    await tester.pumpWidget(app(config: _platformConfig));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(appLockUnlockKey));
+    await tester.pumpAndSettle();
+
+    await _leaveFor(tester, const Duration(minutes: 1));
+    expect(find.byKey(appLockScreenKey), findsNothing);
+
+    await _leaveFor(tester, const Duration(minutes: 6));
+    expect(find.byKey(appLockScreenKey), findsOneWidget);
+    await _answerPendingRequests(tester);
   });
 
   testWidgets('the system back does nothing while locked', (tester) async {

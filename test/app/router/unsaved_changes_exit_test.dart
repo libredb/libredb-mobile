@@ -157,6 +157,25 @@ void main() {
       expect(factory.isExitForced(leaving(_formPath)), isTrue);
     });
 
+    test('forces a Studio page to close under a Platform session', () {
+      when(() => sessionCubit.state).thenReturn(const SessionAuthenticated(target: SessionTarget.platform));
+
+      expect(factory.isExitForced(leaving(_formPath)), isTrue);
+      expect(factory.isExitForced(leaving(ApplicationRoutesConstants.settings)), isTrue);
+    });
+
+    test('forces a Platform page to close under a Studio session', () {
+      when(() => sessionCubit.state).thenReturn(const SessionAuthenticated(target: SessionTarget.studio));
+
+      expect(factory.isExitForced(leaving(ApplicationRoutesConstants.platformSettings)), isTrue);
+    });
+
+    test('lets a Platform page ask under a Platform session', () {
+      when(() => sessionCubit.state).thenReturn(const SessionAuthenticated(target: SessionTarget.platform));
+
+      expect(factory.isExitForced(leaving(ApplicationRoutesConstants.platformSettings)), isFalse);
+    });
+
     test('lets the login page ask without a session', () {
       when(() => sessionCubit.state).thenReturn(const SessionUnauthenticated());
 

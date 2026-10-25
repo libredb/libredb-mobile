@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 
@@ -69,6 +70,7 @@ class _AppShellState extends State<AppShell> {
                 StudioAccountRefused(:final errorCode) => BlocSelector<StudioIdentityCubit, StudioIdentityState, bool>(
                   selector: (state) => state is StudioIdentityLoading,
                   builder: (context, retrying) => StudioAccountRefusalPage(
+                    title: S.of(context).account_refusal_title,
                     errorCode: errorCode,
                     retrying: retrying,
                     onRetry: () => context.read<StudioIdentityCubit>().load(),
@@ -112,6 +114,7 @@ class _AppShellState extends State<AppShell> {
                     removeTop: isOffline,
                     child: _accountRefusalOr(
                       ResponsiveScaffold(
+                        target: SessionTarget.studio,
                         activeRoute: widget.state.uri.path,
                         child: AppStudioRoleScope(
                           child: AppStudioSubjectScope(

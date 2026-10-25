@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
@@ -269,6 +270,20 @@ void main() {
       expect(find.byType(SettingsScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
       expect(session.state, isA<SessionAuthenticated>());
+    });
+
+    // M10-P: a signed-in Platform session does not need Studio, so the unreachable page does not cover it.
+    testWidgets('shows a restored Platform session while Studio is unreachable', (tester) async {
+      when(() => secureStorage.read(SecureStorageKeys.jwtToken.key)).thenAnswer((_) async => 'MOCK_TOKEN');
+      when(() => secureStorage.read(SecureStorageKeys.sessionTarget.key)).thenAnswer((_) async => 'platform');
+      when(() => repository.liveness()).thenAnswer((_) async => const Failure(offline));
+
+      await pumpApp(tester);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+      expect(find.byType(PlatformShell), findsOneWidget);
     });
 
     testWidgets('names the configured Studio host on the unreachable page', (tester) async {

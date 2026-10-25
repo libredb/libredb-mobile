@@ -299,6 +299,19 @@ void main() {
     expect(registry.stores.map((store) => store.name), containsAll(_directoryUsers.values));
   });
 
+  // Platform mode keeps no data of an account: a Platform file that starts to reach a device store fails here first.
+  test('no Platform file reaches the secure store, the device preferences or the device directories', () {
+    bool isPlatform(String path) =>
+        path.startsWith('lib/features/platform_') ||
+        path == 'lib/app/shell/platform_shell.dart' ||
+        path == 'lib/app/shell/platform_placeholder_page.dart';
+
+    expect([..._storageUsers.keys, ..._directoryUsers.keys].where(isPlatform), isEmpty);
+    for (final path in ['lib/app/shell/platform_shell.dart', 'lib/app/shell/platform_placeholder_page.dart']) {
+      expect(File(path).existsSync(), isTrue, reason: '$path is the file this guard names');
+    }
+  });
+
   test('every file that reaches the secure store or the device preferences is named with what it keeps', () {
     final importer = RegExp(
       r'''^import\s+['"](?:package:shared_preferences/|[^'"]*(?:/|^)(?:secure_storage|local_storage)\.dart['"])''',

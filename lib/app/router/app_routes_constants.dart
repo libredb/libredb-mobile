@@ -1,15 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/shared/models/editor_open_request.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// Routes for the application
 ///
 /// This class contains all the routes used in the application.
 class ApplicationRoutesConstants {
-  /// The root of the app, which opens [home].
+  /// The root of the app, which opens the home of the signed-in session's target ([homeFor]).
   static const root = '/';
 
-  /// Where the app opens after sign-in: the connection list.
+  /// Where a Studio session opens: the connection list. New code reads [homeFor].
   static const home = connectionList;
 
   // Auth routes
@@ -55,7 +56,7 @@ class ApplicationRoutesConstants {
   // The root of the SQL tab
   static const sql = '/sql';
 
-  /// The tabs of the shell, in the order of its bottom navigation bar.
+  /// The tabs of the Studio shell, in the order of its bottom navigation bar. New code reads [tabsFor].
   static const tabs = [connectionList, browse, sql];
 
   // Settings routes
@@ -63,6 +64,59 @@ class ApplicationRoutesConstants {
 
   // Error routes
   static const notFound = '/not-found';
+
+  // Platform routes: every route of a Platform session is under platformHome, and no Studio route is.
+
+  /// Where a Platform session opens.
+  static const platformHome = '/platform';
+
+  /// The connections of the Platform tenant.
+  static const platformConnections = '$platformHome/connections';
+
+  /// The grants of one connection.
+  static const platformConnectionGrants = '$platformConnections/:id';
+
+  /// The editor of one grant of a connection.
+  static const platformGrantEditor = '$platformConnectionGrants/grant';
+
+  /// The settings of a Platform session, opened from the profile sheet like the Studio settings.
+  static const platformSettings = '$platformHome/settings';
+
+  /// The tabs of the Platform shell, in the order of its bottom navigation bar.
+  static const platformTabs = [platformHome, platformConnections];
+
+  /// The routes a Studio session owns, each with the paths under it.
+  static const _studioRoots = [connectionList, browse, sql, settings];
+
+  /// Where a session of [target] opens.
+  static String homeFor(SessionTarget target) => switch (target) {
+    SessionTarget.studio => connectionList,
+    SessionTarget.platform => platformHome,
+  };
+
+  /// The tabs of the shell of [target], in the order of its bottom navigation bar.
+  static List<String> tabsFor(SessionTarget target) => switch (target) {
+    SessionTarget.studio => tabs,
+    SessionTarget.platform => platformTabs,
+  };
+
+  /// The settings route of [target].
+  static String settingsFor(SessionTarget target) => switch (target) {
+    SessionTarget.studio => settings,
+    SessionTarget.platform => platformSettings,
+  };
+
+  /// Whether a session of [target] may stay on [location], a path with or without a query: Platform owns
+  /// [platformHome] and every path under it, Studio owns its tabs and settings and the paths under them. The root, the
+  /// login page, the not-found page and an unknown path belong to neither.
+  static bool belongsTo(SessionTarget target, String location) {
+    final path = Uri.tryParse(location)?.path ?? location;
+    bool under(String root) => path == root || path.startsWith('$root/');
+    return switch (target) {
+      SessionTarget.studio => _studioRoots.any(under),
+      SessionTarget.platform => under(platformHome),
+    };
+  }
 }
 
 /// Opens the SQL tab on [request]: its connection, its database and its text, which the editor puts in the field

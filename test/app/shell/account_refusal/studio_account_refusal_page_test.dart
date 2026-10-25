@@ -35,11 +35,14 @@ void main() {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: S.delegate.supportedLocales,
-        home: StudioAccountRefusalPage(
-          errorCode: errorCode,
-          retrying: retrying,
-          onRetry: () => retries++,
-          onSignOut: () => signOuts++,
+        home: Builder(
+          builder: (context) => StudioAccountRefusalPage(
+            title: S.of(context).account_refusal_title,
+            errorCode: errorCode,
+            retrying: retrying,
+            onRetry: () => retries++,
+            onSignOut: () => signOuts++,
+          ),
         ),
       ),
     );

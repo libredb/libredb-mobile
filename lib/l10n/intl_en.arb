@@ -313,6 +313,10 @@
   "@profile_role_user": {},
   "profile_governed_by_platform": "Governed by LibreDB Platform",
   "@profile_governed_by_platform": {},
+  "profile_mode_studio": "Studio",
+  "@profile_mode_studio": {},
+  "profile_mode_platform": "Platform admin",
+  "@profile_mode_platform": {},
   "tab_browse": "Browse",
   "@tab_browse": {},
   "tab_sql": "SQL",
@@ -493,6 +497,12 @@
   },
   "account_refusal_title": "Your account has no access to Studio",
   "@account_refusal_title": {},
+  "platform_account_refusal_title": "LibreDB Platform refused your account",
+  "@platform_account_refusal_title": {},
+  "platform_placeholder_title": "LibreDB Platform",
+  "@platform_placeholder_title": {},
+  "platform_placeholder_note": "The Platform connections and their grants come to this screen in a later version.",
+  "@platform_placeholder_note": {},
   "connection_vanished": "{name} is no longer available",
   "@connection_vanished": {
     "placeholders": {

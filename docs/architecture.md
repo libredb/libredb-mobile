@@ -57,6 +57,8 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | `lib/shared/security/result_masking/` | The port of Studio's default result masking: the patterns, the mask functions, the role rules, `MaskingPolicy` and `maskResult` ([security.md](security.md#result-masking)) |
 | `lib/shared/widgets/studio_role_scope.dart` | `StudioRoleScope`, the role Studio named for the user, or null before it has, which `AppShell` provides from `StudioIdentityCubit` so a feature builds its `MaskingPolicy` without importing the auth feature |
 | `lib/shared/widgets/result_view/` | The result view of a statement (milestone M4), shared by the SQL editor and the object browser: `ResultViewBloc` holds a result its caller masked and the policy it was masked with, and fetches, masks and appends the next page through the caller's `loadPage` when Studio's grid would offer it; `ResultView` draws a card per row or a lazy table under a stats strip, or an empty state, with Load more under the rows; the card or table choice is a device setting, `ResultViewModeCubit` over `IResultViewModeStore` (`lib/infrastructure/storage/result_view_mode_preferences.dart`) |
+| `lib/app/router/` | One `GoRouter` with two `ShellRoute`s: `AppShell` around the Studio routes and `PlatformShell` around the routes under `/platform`; `ApplicationRoutesConstants.homeFor`, `tabsFor` and `belongsTo` give each session target its home, its tabs and its routes, and the redirect sends a session away from the other target's routes to its own home |
+| `lib/app/shell/platform_shell.dart` | `PlatformShell`, the shell of a Platform session: Platform's tabs in the same `ResponsiveScaffold`, the offline banner, the sign-out barrier and the refusal page while Platform refuses the admin; it reads nothing of Studio, provides none of the Studio scopes and names no subject in `SignedInAccountScope` ([platform.md](platform.md#the-platform-shell)) |
 | `lib/infrastructure/studio/` | What every Studio request shares: the error mapping, the session rule, `ProviderMetaRepository` with its reader, and `StatementRepository` with its reader `query_result_json.dart` |
 | `lib/infrastructure/http/` | `ApiClient` and its interceptor chain (auth, token refresh, retry, cache, logging, mock), described in [http-client.md](http-client.md) |
 
@@ -72,6 +74,7 @@ In mock mode (`main_local.dart`) a debug-only double stands in for Keycloak ([oi
 ### Studio reachability
 
 `StudioStatusGate` (`lib/features/studio_status/`) sits in the `MaterialApp` builder and tells an unreachable Studio apart from a failed sign-in or an expired session.
+It covers the session restore, the login page and a Studio session, but lets a signed-in Platform session through, since that session calls Platform and not Studio: `AppStudioStatusGate` (`lib/app/app_studio_status_gate.dart`) reads `SessionCubit` and sets the gate's `passThrough`, because a feature cannot read the session.
 
 - `StudioStatusBloc` checks `GET /api/health` when the app starts, without waiting for the session restore, when the user retries, when the app comes back after more than 5 minutes in the background (`StudioStatusBloc.defaultRecheckAfter`), and when the device comes back online.
 - A failed check shows the full-screen "Can't reach Studio" page, with the host of `PROD_API_URL` and a Retry, over the session restore and the router.

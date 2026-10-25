@@ -85,6 +85,17 @@ The grant rows stay out of `platformError`, because `GET /api/v1/audit` also has
 
 A deployment whose `libredb-mobile` access token lacks Platform's audience answers `BEARER_INVALID` to every call, so a Platform session there ends after its one refresh.
 
+## The Platform shell
+
+A Platform session lives in its own shell under `/platform` (`PlatformShell`), with the tabs Home and Connections and the settings opened from the profile sheet.
+The router sends a Platform session away from every Studio route, and a Studio session away from every `/platform` route, to the home of its own target (`ApplicationRoutesConstants.belongsTo` and `homeFor`).
+The Platform shell reads nothing of Studio and provides none of the Studio scopes, and it keeps no data of an account on the device, so Settings shows no "Remove my data".
+While Platform refuses the admin, a refusal page covers the screens; Retry asks `GET /api/v1/me` again and uncovers them on a 200, and Logout signs out.
+The Studio unreachable page does not cover a signed-in Platform session; it still covers the restore and the login page.
+Switching mode is a sign-out followed by a sign-in through the other entry.
+
+A Platform sign-out sends no request to Studio and writes no warn line about a missing Studio record, since Platform v1 has no logout route and there is no Studio session to record; it still wipes the session and starts the Keycloak end-session with the ID token hint.
+
 ## Where Platform mode works
 
 Only Docker or VM installer installs with `mobile.enabled`, and Railway platform-dev, serve Platform mode today.

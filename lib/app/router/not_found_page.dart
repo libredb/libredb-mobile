@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:go_router/go_router.dart';
@@ -18,10 +20,16 @@ class NotFoundPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SelectableText(S.of(context).not_found_message),
-            TextButton(onPressed: () => context.go(ApplicationRoutesConstants.home), child: Text(S.of(context).home)),
+            TextButton(onPressed: () => context.go(_homeOf(context)), child: Text(S.of(context).home)),
           ],
         ),
       ),
     );
   }
+
+  /// The home of the signed-in session's target, or the login page without a session.
+  static String _homeOf(BuildContext context) => switch (context.read<SessionCubit>().state) {
+    SessionAuthenticated(:final target) => ApplicationRoutesConstants.homeFor(target),
+    SessionUnknown() || SessionUnauthenticated() => ApplicationRoutesConstants.login,
+  };
 }

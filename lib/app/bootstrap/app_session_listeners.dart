@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/idle_timeout_observer.dart';
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
@@ -248,12 +250,18 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
   /// The app-scoped blocs and caches outlive the session, so the next user to sign in would see what they hold about
   /// the one who signed out: the sign-in form state, a password shown in plain text among it, who Studio said the user
   /// was, with the role, what it allowed them, whether it refused their account, the connection and database they had
-  /// open, and the provider-meta and object browser answers kept in memory.
+  /// open, and the provider-meta and object browser answers kept in memory; and who Platform said the admin was and
+  /// whether it refused them.
+  ///
+  /// Every Platform feature BLoC is created in its route or page, so it is disposed with the Platform shell; a later
+  /// app-scoped Platform BLoC or cubit must be cleared here.
   void _forgetSignedOutUser(BuildContext context) {
     context.read<LoginBloc>().add(const LoginReset());
     context.read<StudioIdentityCubit>().clear();
     context.read<ConnectionPolicyCubit>().clear();
     context.read<StudioAccountRefusalCubit>().clear();
+    context.read<PlatformIdentityCubit>().clear();
+    context.read<PlatformAccountRefusalCubit>().clear();
     context.read<ActiveConnectionCubit>().clear();
     context.read<ActiveCatalogCubit>().clear();
     context.read<CachedObjectBrowserRepository>().clear();

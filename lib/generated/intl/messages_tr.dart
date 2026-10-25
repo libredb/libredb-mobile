@@ -603,9 +603,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",
     ),
+    "platform_account_refusal_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform hesabınızı reddetti"),
+    "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
+      "Platform bağlantıları ve erişim izinleri bu ekrana sonraki bir sürümde gelecek.",
+    ),
+    "platform_placeholder_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform"),
     "previous": MessageLookupByLibrary.simpleMessage("Önceki"),
     "profile": MessageLookupByLibrary.simpleMessage("Profil"),
     "profile_governed_by_platform": MessageLookupByLibrary.simpleMessage("LibreDB Platform tarafından yönetiliyor"),
+    "profile_mode_platform": MessageLookupByLibrary.simpleMessage("Platform yöneticisi"),
+    "profile_mode_studio": MessageLookupByLibrary.simpleMessage("Studio"),
     "profile_role_admin": MessageLookupByLibrary.simpleMessage("Yönetici"),
     "profile_role_user": MessageLookupByLibrary.simpleMessage("Kullanıcı"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Bilinmeyen kullanıcı"),

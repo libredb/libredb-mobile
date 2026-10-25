@@ -50,6 +50,26 @@ class _RecordingSecureStorage implements ISecureStorage {
   Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }
 
+/// Thrown by [_TargetReadFailingStorage]; its text must never reach a log.
+class _TargetReadError implements Exception {
+  @override
+  String toString() => 'target-secret-detail';
+}
+
+/// [_RecordingSecureStorage] whose read of the session target throws.
+class _TargetReadFailingStorage extends _RecordingSecureStorage {
+  _TargetReadFailingStorage(super.calls);
+
+  @override
+  Future<String?> read(String key) async {
+    if (key == SecureStorageKeys.sessionTarget.key) {
+      calls.add('read $key');
+      throw _TargetReadError();
+    }
+    return super.read(key);
+  }
+}
+
 /// The local logout, which records itself in [calls], wipes [storage] and answers [logoutResult].
 class _RecordingAuthRepository implements IAuthRepository {
   _RecordingAuthRepository(this.calls, this.storage);
@@ -139,6 +159,9 @@ final _now = DateTime.utc(2026, 10, 22, 12);
 /// The read of the stored ID token, with which every sign-out starts: a refresh that ends the session deletes it.
 final _readIdToken = 'read ${SecureStorageKeys.oidcIdToken.key}';
 
+/// The read of the stored session target, next to the ID token read: a Platform session has no Studio record to send.
+final _readTarget = 'read ${SecureStorageKeys.sessionTarget.key}';
+
 /// The read of the stored access token expiry, with which the refresh before the record starts, and which the record
 /// reads again so that it never sends a bearer the refresh left expired.
 final _readExpiry = 'read ${SecureStorageKeys.accessTokenExpiresAt.key}';
@@ -194,7 +217,15 @@ void main() {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
+      expect(calls, [
+        _readIdToken,
+        _readTarget,
+        _readExpiry,
+        _readExpiry,
+        'recordSignOut',
+        'wipe',
+        'endProviderSession',
+      ]);
       expect(client.hints, ['stored-id-token']);
     });
 
@@ -213,7 +244,15 @@ void main() {
           final result = await repository().logout();
 
           expect(result, const Success<void>(null));
-          expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
+          expect(calls, [
+            _readIdToken,
+            _readTarget,
+            _readExpiry,
+            _readExpiry,
+            'recordSignOut',
+            'wipe',
+            'endProviderSession',
+          ]);
           expect(storage.values, isEmpty);
         });
       }
@@ -346,7 +385,7 @@ void main() {
       final result = await repository().logout();
 
       expect(result, const Success<void>(null));
-      expect(calls, [_readIdToken, _readExpiry, 'clear session', 'wipe', 'endProviderSession']);
+      expect(calls, [_readIdToken, _readTarget, _readExpiry, 'clear session', 'wipe', 'endProviderSession']);
       expect(client.hints, [null]);
     });
 
@@ -485,6 +524,117 @@ void main() {
       });
     });
 
+    // Platform v1 has no logout route and a Platform session has no Studio session to record (.team decision
+    // '2026-10-25: #18 amendment for Platform sign-out').
+    group('with a stored Platform target', () {
+      setUp(() {
+        storage.values
+          ..[SecureStorageKeys.sessionTarget.key] = 'platform'
+          ..[SecureStorageKeys.jwtToken.key] = 'expired-access-token'
+          ..[SecureStorageKeys.refreshToken.key] = 'stored-refresh-token'
+          ..[SecureStorageKeys.accessTokenExpiresAt.key] = encodeAccessTokenExpiry(
+            _now.subtract(const Duration(minutes: 5)),
+          );
+      });
+
+      test('sends nothing to Studio, wipes, and ends the provider session with the ID token as the hint', () async {
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls, [_readIdToken, _readTarget, 'wipe', 'endProviderSession']);
+        expect(client.hints, ['stored-id-token']);
+        expect(storage.values, isEmpty);
+        verifyNever(() => rotation.rotate(any()));
+      });
+
+      test('writes no warn line', () async {
+        final lines = await printedLines(() => repository().logout());
+
+        expect(lines.where((line) => line.contains('SsoSignOutAuthRepository') && line.contains('[W]')), isEmpty);
+        expect(calls, contains('endProviderSession'), reason: 'the sign-out ran inside the capture');
+      });
+    });
+
+    group('with a stored Studio target', () {
+      setUp(() => storage.values[SecureStorageKeys.sessionTarget.key] = 'studio');
+
+      test('records the sign-out at Studio as without a target', () async {
+        final result = await repository().logout();
+
+        expect(result, const Success<void>(null));
+        expect(calls, [
+          _readIdToken,
+          _readTarget,
+          _readExpiry,
+          _readExpiry,
+          'recordSignOut',
+          'wipe',
+          'endProviderSession',
+        ]);
+      });
+    });
+
+    // A target that cannot be read must not stop the sign-out; it goes on as a Studio sign-out.
+    group('with a stored target that cannot be read', () {
+      List<String> targetLines(List<String> lines) => [
+        for (final line in lines)
+          if (line.contains('SsoSignOutAuthRepository') && line.contains('session target')) line,
+      ];
+
+      test('an unknown value takes the Studio path and writes one warn line without the value', () async {
+        storage.values[SecureStorageKeys.sessionTarget.key] = 'unknown-target-value';
+
+        final lines = await printedLines(() => repository().logout());
+
+        expect(calls, [
+          _readIdToken,
+          _readTarget,
+          _readExpiry,
+          _readExpiry,
+          'recordSignOut',
+          'wipe',
+          'endProviderSession',
+        ]);
+        expect(targetLines(lines), [allOf(contains('[W]'), contains('unknown'))]);
+        expect(lines.where((line) => line.contains('unknown-target-value')), isEmpty);
+      });
+
+      test('a failing read takes the Studio path and writes one warn line naming the error type', () async {
+        final failing = _TargetReadFailingStorage(calls)..values.addAll(storage.values);
+        final inner = _RecordingAuthRepository(calls, failing);
+        final repository = SsoSignOutAuthRepository(
+          inner: inner,
+          client: client,
+          secureStorage: failing,
+          settings: _settings(),
+          studioIdentity: studioIdentity,
+          sessionRefresh: SsoSessionStartup(
+            rotation: rotation,
+            secureStorage: failing,
+            sessionRepository: sessionRepository,
+            gate: SsoAutoRedirectGate(),
+            now: () => _now,
+          ),
+          studioSignOutTimeout: const Duration(milliseconds: 50),
+          now: () => _now,
+        );
+
+        final lines = await printedLines(() => repository.logout());
+
+        expect(calls, [
+          _readIdToken,
+          _readTarget,
+          _readExpiry,
+          _readExpiry,
+          'recordSignOut',
+          'wipe',
+          'endProviderSession',
+        ]);
+        expect(targetLines(lines), [allOf(contains('[W]'), endsWith('_TargetReadError'))]);
+        expect(lines.where((line) => line.contains('target-secret-detail')), isEmpty);
+      });
+    });
+
     group('answers', () {
       const wipeFailure = Failure<void>(UnknownError('Session clear failed: jwtToken'));
 
@@ -548,7 +698,15 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(signedOut.cleared, const Success<void>(null));
-      expect(calls, [_readIdToken, _readExpiry, _readExpiry, 'recordSignOut', 'wipe', 'endProviderSession']);
+      expect(calls, [
+        _readIdToken,
+        _readTarget,
+        _readExpiry,
+        _readExpiry,
+        'recordSignOut',
+        'wipe',
+        'endProviderSession',
+      ]);
       expect(pending.hints, ['stored-id-token']);
       expect(providerLogoutEnded, isFalse);
 

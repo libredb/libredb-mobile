@@ -1080,6 +1080,16 @@ class S {
     return Intl.message('Governed by LibreDB Platform', name: 'profile_governed_by_platform', desc: '', args: []);
   }
 
+  /// `Studio`
+  String get profile_mode_studio {
+    return Intl.message('Studio', name: 'profile_mode_studio', desc: '', args: []);
+  }
+
+  /// `Platform admin`
+  String get profile_mode_platform {
+    return Intl.message('Platform admin', name: 'profile_mode_platform', desc: '', args: []);
+  }
+
   /// `Browse`
   String get tab_browse {
     return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);
@@ -1463,6 +1473,31 @@ class S {
   /// `Your account has no access to Studio`
   String get account_refusal_title {
     return Intl.message('Your account has no access to Studio', name: 'account_refusal_title', desc: '', args: []);
+  }
+
+  /// `LibreDB Platform refused your account`
+  String get platform_account_refusal_title {
+    return Intl.message(
+      'LibreDB Platform refused your account',
+      name: 'platform_account_refusal_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `LibreDB Platform`
+  String get platform_placeholder_title {
+    return Intl.message('LibreDB Platform', name: 'platform_placeholder_title', desc: '', args: []);
+  }
+
+  /// `The Platform connections and their grants come to this screen in a later version.`
+  String get platform_placeholder_note {
+    return Intl.message(
+      'The Platform connections and their grants come to this screen in a later version.',
+      name: 'platform_placeholder_note',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `{name} is no longer available`

@@ -14,8 +14,14 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 /// `App` places it in the `MaterialApp` builder, around the session restore and the router, so the page has no
 /// Navigator above it. It tells [StudioStatusBloc] when the app goes to the background and comes back; the bloc
 /// decides whether to check again.
+///
+/// With [passThrough] it shows [child] whatever Studio answers, keeping it in the same place in the tree: a signed-in
+/// session that does not need Studio, which the app layer decides, since a feature cannot read the session.
 class StudioStatusGate extends StatefulWidget {
-  const StudioStatusGate({super.key, required this.child});
+  const StudioStatusGate({super.key, this.passThrough = false, required this.child});
+
+  /// Whether [child] is shown even while Studio does not answer.
+  final bool passThrough;
 
   final Widget child;
 
@@ -53,6 +59,7 @@ class _StudioStatusGateState extends State<StudioStatusGate> with WidgetsBinding
     return BlocBuilder<StudioStatusBloc, StudioStatusState>(
       builder: (context, state) {
         final unreachable = switch (state) {
+          StudioUnreachable() when widget.passThrough => null,
           StudioUnreachable(:final error, :final retrying) => StudioUnreachablePage(
             host: _hostOf(context.read<AppConfig>().apiBaseUrl),
             error: error,

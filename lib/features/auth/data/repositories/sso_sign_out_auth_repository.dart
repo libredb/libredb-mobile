@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// The [IAuthRepository] whose logout also ends the user's session at the identity provider.
 ///
@@ -46,8 +47,14 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   final Duration _studioSignOutTimeout;
   final DateTime Function() _now;
 
-  /// Reads the stored ID token, records the sign-out at Studio, clears the local session through [_inner], starts the
-  /// provider logout, and answers [_inner]'s result as [SsoSignOut.cleared] without waiting for the provider.
+  /// Reads the stored ID token and session target, records the sign-out at Studio, clears the local session through
+  /// [_inner], starts the provider logout, and answers [_inner]'s result as [SsoSignOut.cleared] without waiting for
+  /// the provider.
+  ///
+  /// A Platform session records nothing at Studio: it has no Studio session to record, and Platform v1 has no logout
+  /// route, so it sends no request before the wipe and writes no warn line about a missing record. A Studio session, a
+  /// session stored without a target (stored before targets existed, all Studio), and a target that cannot be read
+  /// take the Studio path.
   ///
   /// Studio's record needs a valid access token, so it is sent before the wipe, and an expired stored access token is
   /// refreshed first: Studio writes no audit line for an expired token and still answers 200. The sign-out waits for
@@ -72,9 +79,38 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
         error.runtimeType,
       ]);
     }
-    await _recordSignOutAtStudio();
+    switch (await _readTarget()) {
+      case SessionTarget.studio:
+        await _recordSignOutAtStudio();
+      case SessionTarget.platform:
+        break;
+    }
     final cleared = await _inner.logout();
     return SsoSignOut(cleared: cleared, providerLogout: _endProviderSession(_settings.logoutHint ? idToken : null));
+  }
+
+  /// The stored session's target, read before anything that could delete it. A session stored without a target is a
+  /// Studio session (app version 1.0.0 and earlier stored none). A target that cannot be read, or holds a value this
+  /// app does not know, is taken as Studio, so the sign-out goes on, with one warn line naming only the cause.
+  Future<SessionTarget> _readTarget() async {
+    final String? stored;
+    try {
+      stored = await _secureStorage.read(SecureStorageKeys.sessionTarget.key);
+    } catch (error) {
+      // Only the type: the error of a secure store may carry what it holds.
+      _log.warn('logout: the stored session target could not be read, so the sign-out goes on as Studio: {}', [
+        error.runtimeType,
+      ]);
+      return SessionTarget.studio;
+    }
+    if (stored == null) return SessionTarget.studio;
+    final target = SessionTarget.fromStoredValue(stored);
+    if (target == null) {
+      // Never the value: it is unknown, so it is not printed.
+      _log.warn('logout: the stored session target is unknown, so the sign-out goes on as Studio');
+      return SessionTarget.studio;
+    }
+    return target;
   }
 
   /// Refreshes an expired stored access token, then asks Studio once to record the sign-out in its audit trail, and

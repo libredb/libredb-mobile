@@ -7,10 +7,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/models/platform_identity.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -19,6 +22,7 @@ import '../../../mocks/mock_classes.dart';
 void main() {
   late MockStudioIdentityCubit identity;
   late MockConnectionPolicyCubit policy;
+  late MockPlatformIdentityCubit platformIdentity;
 
   const admin = StudioIdentity(username: 'admin@example.com', role: StudioAdminRole());
   const user = StudioIdentity(username: 'user@example.com', role: StudioUserRole());
@@ -28,6 +32,8 @@ void main() {
   setUp(() {
     identity = MockStudioIdentityCubit();
     policy = MockConnectionPolicyCubit();
+    platformIdentity = MockPlatformIdentityCubit();
+    when(() => platformIdentity.load()).thenAnswer((_) async {});
     when(() => identity.load()).thenAnswer((_) async {});
     when(() => policy.load()).thenAnswer((_) async {});
   });
@@ -38,8 +44,11 @@ void main() {
     required StudioIdentityState identityState,
     ConnectionPolicyState policyState = const ConnectionPolicyLoaded(ungoverned),
     String language = 'en',
+    SessionTarget target = SessionTarget.studio,
+    PlatformIdentityState platformState = const PlatformIdentityInitial(),
   }) async {
     when(() => identity.state).thenReturn(identityState);
+    when(() => platformIdentity.state).thenReturn(platformState);
     when(() => policy.state).thenReturn(policyState);
     final answers = <ProfileSheetAction?>[];
     await tester.pumpWidget(
@@ -47,6 +56,7 @@ void main() {
         providers: [
           BlocProvider<StudioIdentityCubit>.value(value: identity),
           BlocProvider<ConnectionPolicyCubit>.value(value: policy),
+          BlocProvider<PlatformIdentityCubit>.value(value: platformIdentity),
         ],
         child: MaterialApp(
           locale: Locale(language),
@@ -60,7 +70,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => TextButton(
-                onPressed: () async => answers.add(await ProfileSheet.show(context)),
+                onPressed: () async => answers.add(await ProfileSheet.show(context, target: target)),
                 child: const Text('open'),
               ),
             ),
@@ -135,6 +145,105 @@ void main() {
       await tester.pump();
 
       verify(() => identity.load()).called(1);
+    });
+  });
+
+  group('ProfileSheet - mode', () {
+    testWidgets('a Studio session shows the mode Studio with the Studio identity', (tester) async {
+      await pumpSheet(tester, identityState: const StudioIdentityLoaded(admin));
+
+      expect(inSheet(find.text('Studio')), findsOneWidget);
+      expect(inSheet(find.text('Platform admin')), findsNothing);
+      expect(inSheet(find.text('admin@example.com')), findsOneWidget);
+    });
+
+    const platformAdmin = PlatformIdentity(
+      id: 'cm0platformadmin0000000001',
+      email: 'platform.admin@example.org',
+      name: 'Platform Admin',
+      roles: ['PLATFORM_ADMIN'],
+      permissions: [],
+      tenant: PlatformTenant(id: 't', name: 'Example Org', slug: 'example-org'),
+    );
+
+    testWidgets('a Platform session shows Platform admin, the name and the tenant, and nothing of Studio', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(admin),
+        policyState: const ConnectionPolicyFailure(AppErrorCode.generic),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityLoaded(platformAdmin),
+      );
+
+      expect(inSheet(find.text('Platform admin')), findsOneWidget);
+      expect(inSheet(find.text('Platform Admin')), findsOneWidget);
+      expect(inSheet(find.text('Example Org')), findsOneWidget);
+      expect(inSheet(find.text('admin@example.com')), findsNothing);
+      expect(inSheet(find.byType(Chip)), findsNothing);
+      expect(inSheet(find.widgetWithText(ListTile, 'Settings')), findsOneWidget);
+      expect(inSheet(find.widgetWithText(ListTile, 'Logout')), findsOneWidget);
+      verifyNever(() => policy.load());
+    });
+
+    testWidgets('a Platform session shows the email when Platform has no name', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityLoaded(
+          PlatformIdentity(
+            id: 'id',
+            email: 'platform.admin@example.org',
+            roles: [],
+            permissions: [],
+            tenant: PlatformTenant(id: 't', name: 'Example Org', slug: 'example-org'),
+          ),
+        ),
+      );
+
+      expect(inSheet(find.text('platform.admin@example.org')), findsOneWidget);
+    });
+
+    testWidgets('a Platform session shows the mode in Turkish', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityLoaded(platformAdmin),
+        language: 'tr',
+      );
+
+      expect(inSheet(find.text('Platform yöneticisi')), findsOneWidget);
+    });
+
+    testWidgets('a Platform identity that failed shows the reason and a Retry that asks Platform again', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityFailure(AppErrorCode.platformInternalError),
+      );
+
+      await tester.tap(inSheet(find.widgetWithText(TextButton, 'Retry')));
+      await tester.pump();
+
+      verify(() => platformIdentity.load()).called(1);
+      verifyNever(() => identity.load());
+    });
+
+    testWidgets('a Platform identity still loading shows a progress indicator', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        platformState: const PlatformIdentityLoading(),
+      );
+
+      expect(inSheet(find.byType(CircularProgressIndicator)), findsOneWidget);
     });
   });
 
