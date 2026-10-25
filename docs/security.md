@@ -117,6 +117,7 @@ fvm flutter build apk --release --target lib/main/main_prod.dart \
 - A set define needs at least two distinct pins: the key the server uses now and a backup key that is not deployed yet.
 - Each pin must be exactly what the command below prints: 44 characters of standard base64 ending in `=`, 32 bytes once decoded.
 - A define that breaks either rule stops a prod build at start with `CertificatePinsConfigError`, as `ProdApiUrlConfigError` does; it never falls back to an unpinned connection.
+- `tool/release/check_defines.sh` stops a release on the same rules before the build, naming the define and never a pin ([release.md](release.md)).
 
 ### What is checked
 

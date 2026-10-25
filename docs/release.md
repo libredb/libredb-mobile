@@ -83,7 +83,7 @@ Repository secret:
 | --- | --- |
 | `SENTRY_DSN` | Optional; the build reports crashes only with it ([crash-reporting.md](crash-reporting.md)) |
 
-Repository variables, the deployment the build signs in to ([studio.md](studio.md), [oidc.md](oidc.md), [security.md](security.md)):
+Variables of the repository, or of the build job's environment, which override the repository's, name the deployment the build signs in to ([studio.md](studio.md), [oidc.md](oidc.md), [security.md](security.md)):
 
 | Name | Required |
 | --- | --- |
@@ -92,13 +92,17 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 | `OIDC_CLIENT_ID` | Yes |
 | `OIDC_SCOPE`, `OIDC_AUDIENCE`, `OIDC_PROMPT`, `OIDC_AUTO_REDIRECT`, `OIDC_LOGOUT_HINT` | No |
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
+| `PLATFORM_API_URL`, `PLATFORM_CERT_PINS` | No; Platform mode only, set by the owner after approval (#302's checklist) |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
 | `PLAY_RELEASE_STATUS` | No; `completed` by default; set it to `draft` until the app's first publication on Play, then remove it |
 
+A variable set only on the `release-dry-run` environment reaches dry runs only.
 An empty variable is left out of the build, and the build stops when a required one is missing.
-The release workflow does not pass the Platform defines `PLATFORM_API_URL` and `PLATFORM_CERT_PINS` ([platform.md](platform.md)), so the store build stays Studio-only until M12-P adds them.
+The release workflow passes the Platform defines `PLATFORM_API_URL` and `PLATFORM_CERT_PINS` ([platform.md](platform.md)) when they are set.
+While `PLATFORM_API_URL` is unset, the store build stays Studio-only.
 The app stops at start when `PROD_API_URL`, `OIDC_ISSUER`, `SENTRY_DSN` or `PLATFORM_API_URL` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
 Before the build, `tool/release/check_defines.sh` stops the release on the same rule, naming the variable and never its value, so nothing is signed or uploaded with an http value.
+It also stops the release on a pin define that breaks a rule of a prod start, or a `PLATFORM_CERT_PINS` without `PLATFORM_API_URL`, naming the define and never a pin ([security.md](security.md), "Certificate pinning").
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).
 `APP_LOCK_REQUIRED` is not read, so the store build leaves the app lock to the user ([security.md](security.md), "App lock").

@@ -177,6 +177,25 @@ void main() {
       expect('${signature['env']}', contains('vars.ANDROID_UPLOAD_CERT_SHA256'));
     });
 
+    // Platform mode reaches a store build only from the owner's variables (#299): unset, they leave the defines file
+    // as it was, so the build stays Studio-only.
+    test('passes the Platform defines only from optional variables, and prints no value', () {
+      final step = _steps(jobs, 'build').singleWhere((step) => step['name'] == "Write the deployment's dart-defines");
+      final run = '${step['run']}';
+      final env = step['env'] as YamlMap;
+      final required = RegExp(r'for name in ([^;]*); do').firstMatch(run);
+      expect(required, isNotNull, reason: 'the step has no loop over the required variables');
+      for (final name in _platformDefines) {
+        expect(_releaseDefines(), contains(name), reason: '$name is not in the IN(...) list');
+        expect(required![1]!.split(RegExp(r'\s+')), isNot(contains(name)), reason: '$name must stay optional');
+        expect('${env[name]}', contains('vars.$name'), reason: '$name must come from the variables');
+        expect('${env[name]}', isNot(contains('secrets.')), reason: '$name must never come from a secret');
+        expect(run, isNot(matches(RegExp('echo[^\\n]*\\\$\\{?$name'))), reason: 'the step prints $name');
+      }
+      expect(run, contains('select(.value != ""'), reason: 'an unset variable must be left out of the defines file');
+      expect(run, contains(r"jq -r 'keys | join"), reason: 'the step must log only the names it sets');
+    });
+
     test('no run script expands a secret', () {
       for (final entry in jobs.entries) {
         for (final step in _steps(jobs, entry.key as String)) {
@@ -229,6 +248,10 @@ void main() {
       );
     });
 
+    test('no define is both one the release passes and one it never sets', () {
+      expect(releaseDefines.intersection(_definesNeverSetByTheRelease), isEmpty);
+    });
+
     test('the build job runs the check before the build and passes defines only from the checked file', () {
       final steps = _steps(_loadYaml(_releasePath)['jobs'] as YamlMap, 'build');
       final check = steps.indexWhere((step) => '${step['run']}'.contains(_checkScriptPath));
@@ -271,8 +294,11 @@ void main() {
       setUp(() => dir = Directory.systemTemp.createTempSync('check_defines'));
       tearDown(() => dir.deleteSync(recursive: true));
 
-      Future<ProcessResult> check(Map<String, String> defines, {String vars = '{}'}) {
-        final file = File('${dir.path}/dart-defines.json')..writeAsStringSync(jsonEncode(defines));
+      var files = 0;
+
+      // Each call writes its own file, so the pin tests can run their cases at the same time.
+      Future<ProcessResult> check(Map<String, Object?> defines, {String vars = '{}'}) {
+        final file = File('${dir.path}/dart-defines-${files++}.json')..writeAsStringSync(jsonEncode(defines));
         return Process.run('bash', [_checkScriptPath, file.path], environment: {'RELEASE_VARS': vars});
       }
 
@@ -377,6 +403,100 @@ void main() {
         final file = File('${dir.path}/dart-defines.json')..writeAsStringSync('{}');
         final result = await Process.run('bash', [_checkScriptPath, file.path], environment: {'RELEASE_VARS': ''});
         expect(result.exitCode, isNot(0));
+      });
+
+      test('passes a store build with PLATFORM_API_URL and without it', () async {
+        for (final platform in [<String, String>{}, _platformUrl]) {
+          final result = await check({..._studio, ...platform});
+          expect(result.exitCode, 0, reason: '$platform: ${result.stdout}${result.stderr}');
+        }
+      });
+
+      test('fails on PLATFORM_CERT_PINS without PLATFORM_API_URL, naming both', () async {
+        for (final platform in [
+          <String, String>{},
+          const {'PLATFORM_API_URL': ''},
+        ]) {
+          final result = await check({..._studio, ...platform, 'PLATFORM_CERT_PINS': '$_pinA,$_pinB'});
+          expect(result.exitCode, 1, reason: '$platform: ${result.stdout}${result.stderr}');
+          expect(result.stdout, allOf(contains('PLATFORM_CERT_PINS'), contains('PLATFORM_API_URL')));
+          expect('${result.stdout}${result.stderr}', isNot(anyOf(contains(_pinA), contains(_pinB))));
+        }
+      });
+
+      test('passes a pin define that is only whitespace, as a prod start does', () async {
+        for (final defines in [
+          {..._studio, 'PLATFORM_CERT_PINS': '  '},
+          {..._studio, 'STUDIO_CERT_PINS': ' \t'},
+        ]) {
+          final result = await check(defines);
+          expect(result.exitCode, 0, reason: '$defines: ${result.stdout}${result.stderr}');
+        }
+      });
+
+      test('fails on each pin define that breaks a rule of a prod start, naming it and never an entry', () async {
+        final cases = [
+          for (final name in _pinDefines)
+            for (final MapEntry(key: label, value: value) in {
+              ..._refusedPins,
+              'not a string': [_pinA, _pinB],
+            }.entries)
+              (name: name, label: label, run: check({..._studio, ..._platformUrl, name: value})),
+        ];
+        for (final (:name, :label, :run) in cases) {
+          final result = await run;
+          final output = '${result.stdout}${result.stderr}';
+          expect(result.exitCode, 1, reason: '$name, $label: $output');
+          expect(result.stdout, contains(name), reason: '$name, $label');
+          expect(output, isNot(anyOf(contains('secretvalue'), contains(_pinA), contains(_pinB))), reason: label);
+          expect(output, isNot(contains(_pinA.substring(0, 20))), reason: '$name, $label');
+        }
+      });
+
+      test('passes two distinct valid pins with spaces around the comma, for each pin define', () async {
+        for (final name in _pinDefines) {
+          final result = await check({..._studio, ..._platformUrl, name: ' $_pinA , $_pinB '});
+          expect(result.exitCode, 0, reason: '$name: ${result.stdout}${result.stderr}');
+        }
+      });
+
+      // The script and a prod start must agree on every pin value, or a release passes the check and then the app
+      // throws at its first start.
+      test('refuses exactly the pin values a prod start refuses', () async {
+        bool startRefuses(String name, String value, {required bool platformUrl}) {
+          try {
+            AppConfig.fromEnvironment(
+              Environment.prod,
+              prodApiUrlDefine: _studio['PROD_API_URL']!,
+              oidcIssuerDefine: '',
+              sentryDsnDefine: '',
+              screenCaptureProtectionDefine: '',
+              appLockRequiredDefine: '',
+              platformApiUrlDefine: platformUrl ? _platformUrl['PLATFORM_API_URL']! : '',
+              studioCertPinsDefine: name == 'STUDIO_CERT_PINS' ? value : '',
+              oidcCertPinsDefine: name == 'OIDC_CERT_PINS' ? value : '',
+              platformCertPinsDefine: name == 'PLATFORM_CERT_PINS' ? value : '',
+            );
+            return false;
+          } on CertificatePinsConfigError {
+            return true;
+          }
+        }
+
+        final cases = [
+          for (final name in _pinDefines)
+            for (final platformUrl in [true, if (name == 'PLATFORM_CERT_PINS') false])
+              for (final MapEntry(key: label, value: value) in {..._refusedPins, ..._acceptedPins}.entries)
+                (
+                  where: '$name, $label, PLATFORM_API_URL ${platformUrl ? 'set' : 'unset'}',
+                  refused: startRefuses(name, value, platformUrl: platformUrl),
+                  run: check({..._studio, if (platformUrl) ..._platformUrl, name: value}),
+                ),
+        ];
+        for (final (:where, :refused, :run) in cases) {
+          final result = await run;
+          expect(result.exitCode, refused ? 1 : 0, reason: '$where: ${result.stdout}${result.stderr}');
+        }
       });
     });
   });
@@ -489,14 +609,43 @@ const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/Native
 /// - `OIDC_REDIRECT_SCHEME`: an Android build receives its redirect only on the scheme of the manifest placeholder.
 /// - `SCREEN_CAPTURE_PROTECTION`: the store build keeps screen capture protection on, its prod default (#192).
 /// - `APP_LOCK_REQUIRED`: the store build leaves the app lock to the user, its default (#195).
-/// - `PLATFORM_API_URL` and `PLATFORM_CERT_PINS`: the store build stays Studio-only until the Platform walkthrough
-///   (#251) passes; M13-P moves them into the release workflow.
-const _definesNeverSetByTheRelease = {
-  'OIDC_REDIRECT_SCHEME',
-  'SCREEN_CAPTURE_PROTECTION',
-  'APP_LOCK_REQUIRED',
-  'PLATFORM_API_URL',
-  'PLATFORM_CERT_PINS',
+const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME', 'SCREEN_CAPTURE_PROTECTION', 'APP_LOCK_REQUIRED'};
+
+/// The defines that turn on Platform mode, which the release passes only from the owner's variables (#299).
+const _platformDefines = ['PLATFORM_API_URL', 'PLATFORM_CERT_PINS'];
+
+/// The pin defines a prod start checks with `AppConfig._pins`, and `tool/release/check_defines.sh` with the same rule.
+const _pinDefines = ['STUDIO_CERT_PINS', 'OIDC_CERT_PINS', 'PLATFORM_CERT_PINS'];
+
+const _studio = {'PROD_API_URL': 'https://studio.example/api'};
+const _platformUrl = {'PLATFORM_API_URL': 'https://platform.example/api'};
+
+/// Two distinct pins in the canonical form; [_pinB] holds a `+` and a `/`, so its URL-safe form differs from it.
+final _pinA = base64.encode(List.filled(32, 0x01));
+final _pinB = base64.encode(List.filled(32, 0xFB));
+
+/// Pin values a prod start refuses, by what is wrong with them.
+final _refusedPins = {
+  'one pin': _pinA,
+  'two equal pins': '$_pinA,$_pinA',
+  'two equal pins with other spaces': ' $_pinA,$_pinA  ',
+  'a 43-character entry': '${_pinA.substring(0, 43)},$_pinB',
+  'a non-canonical last character': '${_pinA.substring(0, 42)}F=,$_pinB',
+  'a URL-safe entry': '${_pinB.replaceAll('+', '-').replaceAll('/', '_')},$_pinA',
+  'a 44-character entry of 33 bytes': '${base64.encode(List.filled(33, 0x01))},$_pinB',
+  'a 48-character entry of 34 bytes': '${base64.encode(List.filled(34, 0x01))},$_pinB',
+  'a trailing comma': '$_pinA,$_pinB,',
+  'an empty entry': '$_pinA,,$_pinB',
+  'an entry that is no pin': 'secretvalue,$_pinA,$_pinB',
+};
+
+/// Pin values a prod start accepts when the define's host is set.
+final _acceptedPins = {
+  'empty': '',
+  'only whitespace': ' \t ',
+  'two distinct pins': '$_pinA,$_pinB',
+  'two distinct pins with spaces': ' $_pinA , $_pinB ',
+  'three entries, two distinct': '$_pinA,$_pinB,$_pinA',
 };
 
 /// The names in [_checkOnlyPath], one per line, without `#` comments.
