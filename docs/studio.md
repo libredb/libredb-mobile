@@ -84,17 +84,17 @@ The script changes nothing on the image: it mounts a copy of the store over the 
 
 #### The development AVDs and their screen lock
 
-The checks against this stack use two AVDs, both on a Google APIs x86_64 image with Chrome 109 as the browser that opens the Keycloak sign-in in a Custom Tab:
+The checks against this stack use two AVDs on a Google APIs x86_64 image; Chrome opens the Keycloak sign-in in a Custom Tab on both, but the two differ in their Chrome and their screen lock:
 
-| AVD | Image |
-| --- | --- |
-| `libredb-dev-api30` | `system-images;android-30;google_apis;x86_64`, Android 11 |
-| `libredb-dev-api33` | `system-images;android-33;google_apis;x86_64`, Android 13 |
+| AVD | Image | Chrome | Screen lock |
+| --- | --- | --- | --- |
+| `libredb-dev-api30` | `system-images;android-30;google_apis;x86_64`, Android 11 | 83, the system app under `/product/app/Chrome` | None |
+| `libredb-dev-api33` | `system-images;android-33;google_apis;x86_64`, Android 13 | 109, an update under `/data/app` over the system Chrome-Stub | PIN `1111` |
 
-Both carry the screen lock PIN `1111`, which the app lock checks of [#195](https://github.com/libredb/libredb-mobile/issues/195) need, since the app lock asks for the device's screen lock.
-After a boot the user stays `RUNNING_LOCKED` until that PIN is entered, and while it is locked the credential-encrypted storage is closed.
-Chrome is installed under `/data/app` and is not aware of direct boot, so until the unlock Android resolves no activity for a web link: `am start -a android.intent.action.VIEW -d https://example.com` opens nothing, the app's "Sign in with SSO" finds no browser for the Custom Tab, and `am start` of the app itself can answer "Activity class does not exist".
-The browser is not missing; unlock the user once after every boot, before the trust script or the app:
+`libredb-dev-api33` carries the PIN because the app lock checks of [#195](https://github.com/libredb/libredb-mobile/issues/195) run on it, and the app lock asks for the device's screen lock.
+After a boot its user stays `RUNNING_LOCKED` until the PIN is entered, and while it is locked the credential-encrypted storage is closed.
+The Chrome update under `/data/app` is not aware of direct boot, so until the unlock Android resolves no activity for a web link: `am start -a android.intent.action.VIEW -d https://example.com` opens nothing, the app's "Sign in with SSO" finds no browser for the Custom Tab, and `am start` of the app itself can answer "Activity class does not exist".
+The browser is not missing; unlock the user once after every boot of `libredb-dev-api33`, before the trust script or the app:
 
 ```shell
 adb -s emulator-5554 shell am get-started-user-state 0   # RUNNING_LOCKED until the PIN is entered
@@ -108,7 +108,11 @@ adb -s emulator-5554 shell cmd package resolve-activity --brief -a android.inten
 The last command names `com.android.chrome/com.google.android.apps.chrome.IntentDispatcher` once the user is unlocked.
 To remove the PIN from an unlocked AVD for good, run `adb -s emulator-5554 shell locksettings clear --old 1111`; `locksettings set-pin 1111` sets it again before an app lock check.
 
-Checked on 2026-10-25 (#258) with the stack on the pinned Studio 1.1.0 image and a debug APK of `main_prod.dart` with `studio-dev.env`: after the unlock and the trust script, `https://example.com` opens in Chrome on both AVDs, and "Sign in with SSO" opens the Keycloak page `https://localhost:8443` in a Custom Tab on both; on `libredb-dev-api33` the sign-in as `user` / `user` lands on the connection list.
+`libredb-dev-api30` boots `RUNNING_UNLOCKED` and resolves Chrome for a web link with no unlock, so it needs none of these steps.
+An app lock check on it, such as the recents check below Android 13 in #195, first sets a PIN with `locksettings set-pin 1111`, and from then on its user stays `RUNNING_LOCKED` after each boot until the PIN is entered, as on `libredb-dev-api33`, until `locksettings clear --old 1111` removes it.
+
+Checked on 2026-10-25 (#258) with the stack on the pinned Studio 1.1.0 image and a debug APK of `main_prod.dart` with `studio-dev.env`: on `libredb-dev-api33` the steps above unlock the user, `https://example.com` then opens in Chrome, and after the trust script "Sign in with SSO" opens the Keycloak page `https://localhost:8443` in a Custom Tab and the sign-in as `user` / `user` lands on the connection list.
+On `libredb-dev-api30`, `https://example.com` opens in Chrome right after the boot, and "Sign in with SSO" opens the same Keycloak page.
 
 ### iOS simulator
 
