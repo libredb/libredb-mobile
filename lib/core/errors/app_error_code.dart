@@ -91,6 +91,9 @@ enum AppErrorCode {
   /// A Platform call in a build without a Platform target, or a stored Platform session such a build cannot serve.
   platformNotConfigured('platform.not_configured'),
   platformAdminRoleRequired('platform.admin_role_required'),
+
+  /// A 401 at the Platform sign-in gate that names no Platform code (`SignInUseCase`).
+  platformAccountRefused('platform.account_refused'),
   platformLicenseAdminSeats('platform.license_admin_seats'),
   platformLicenseUserSeats('platform.license_user_seats'),
   platformLicenseExpired('platform.license_expired'),

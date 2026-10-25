@@ -8,9 +8,11 @@ import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 
 import '../../application/login_bloc.dart';
@@ -36,9 +38,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>(debugLabel: '__loginScaffoldKey__');
   late AnimationController _animController;
 
-  /// Whether the user has tapped the single sign-on button on this visit of the page, which hides
+  /// Whether the user has tapped a sign-in button on this visit of the page, which hides
   /// [LoginScreen.startupSignInError].
   bool _ssoTapped = false;
+
+  /// The entries the page offers in an [OidcAuthMode], in their order: Studio alone, or Studio and Platform in a build
+  /// with a Platform target.
+  List<SessionTarget> get _entries => switch (context.read<AppConfig>().platform) {
+    PlatformConfigured() => const [SessionTarget.studio, SessionTarget.platform],
+    PlatformNotConfigured() => const [SessionTarget.studio],
+  };
 
   @override
   void initState() {
@@ -85,15 +94,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   /// Sends the user to the identity provider without a tap, at most once per run: only in an [OidcAuthMode] with
-  /// `autoRedirect` on, while [SsoAutoRedirectGate] is open and no error shows on the page. The gate closes first.
+  /// `autoRedirect` on and a single entry, while [SsoAutoRedirectGate] is open and no error shows on the page. The gate
+  /// closes first. With two entries the user has to choose one, so the page never launches the provider and leaves
+  /// the gate as it is.
   void _redirectAutomatically() {
     if (!mounted) return;
     final mode = context.read<AuthMode>();
     if (mode is! OidcAuthMode || !mode.settings.autoRedirect) return;
-    final gate = context.read<SsoAutoRedirectGate>();
-    if (!gate.isOpen || _ssoErrorCode(mode, context.read<LoginBloc>().state) != null) return;
-    gate.close();
-    _requestSso(context);
+    if (_entries case [final target]) {
+      final gate = context.read<SsoAutoRedirectGate>();
+      if (!gate.isOpen || _ssoErrorCode(mode, context.read<LoginBloc>().state) != null) return;
+      gate.close();
+      _requestSso(context, target);
+    }
   }
 
   Widget _desktopLayout(BuildContext context, bool isDark) {
@@ -375,16 +388,42 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return _ssoFormBody(context, context.read<AuthMode>(), showCommunity: showCommunity);
   }
 
-  /// The sign-in: the error line and the single sign-on button, which a misconfigured build leaves out.
+  /// The sign-in: the error line and the sign-in buttons, which a misconfigured build leaves out. A build without a
+  /// Platform target shows the single sign-on button; one with a Platform target shows a Studio and a Platform button
+  /// of equal weight, each with its helper text.
   Widget _ssoFormBody(BuildContext context, AuthMode mode, {required bool showCommunity}) {
+    final l10n = S.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ssoErrorLine(mode),
-        if (mode is OidcAuthMode) ...[
-          const SizedBox(height: 24),
-          SizedBox(width: double.infinity, child: _ssoButton(context)),
-        ],
+        if (mode is OidcAuthMode)
+          switch (_entries) {
+            [_] => Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: SizedBox(
+                width: double.infinity,
+                child: _entryButton(context, SessionTarget.studio, loginButtonSsoKey, l10n.login_sso_button),
+              ),
+            ),
+            _ => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                _entry(
+                  context,
+                  _entryButton(context, SessionTarget.studio, loginButtonSsoKey, l10n.login_studio_button),
+                  l10n.login_studio_helper,
+                ),
+                const SizedBox(height: 20),
+                _entry(
+                  context,
+                  _entryButton(context, SessionTarget.platform, loginButtonPlatformKey, l10n.login_platform_button),
+                  l10n.login_platform_helper,
+                ),
+              ],
+            ),
+          },
         const SizedBox(height: 28),
         if (showCommunity) ...[
           const SizedBox(height: 4),
@@ -422,36 +461,53 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _ssoButton(BuildContext context) {
+  /// A full-width sign-in [button] with its [helper] text below it.
+  Widget _entry(BuildContext context, Widget button, String helper) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: double.infinity, child: button),
+        const SizedBox(height: 8),
+        Text(helper, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
+      ],
+    );
+  }
+
+  /// The sign-in button of [target]: every button is disabled while a sign-in runs, and only the one of the running
+  /// sign-in's target shows the spinner.
+  Widget _entryButton(BuildContext context, SessionTarget target, Key key, String label) {
     return BlocBuilder<LoginBloc, LoginState>(
       buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
       builder: (context, state) {
         final isLoading = state is LoginLoadingState;
+        final showsSpinner = state is LoginLoadingState && state.target == target;
         return FilledButton(
-          key: loginButtonSsoKey,
-          onPressed: isLoading ? null : () => _onSsoTapped(context),
+          key: key,
+          onPressed: isLoading ? null : () => _onSsoTapped(context, target),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: isLoading
+            child: showsSpinner
                 ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
                   )
-                : Text(S.of(context).login_sso_button),
+                : Text(label),
           ),
         );
       },
     );
   }
 
-  void _onSsoTapped(BuildContext context) {
+  void _onSsoTapped(BuildContext context, SessionTarget target) {
     setState(() => _ssoTapped = true);
-    _requestSso(context);
+    _requestSso(context, target);
   }
 
-  /// Starts the single sign-on. The page reads the route's `returnUrl` on the way out.
-  void _requestSso(BuildContext context) => context.read<LoginBloc>().add(const SsoSignInRequested());
+  /// Starts the single sign-on for [target]. The page reads the route's `returnUrl` on the way out.
+  void _requestSso(BuildContext context, SessionTarget target) =>
+      context.read<LoginBloc>().add(SsoSignInRequested(target: target));
 
   /// The links of the community section.
   CommunityUrls _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
@@ -506,10 +562,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       // Honor `?returnUrl=` from the redirect-to-login flow so deep
       // links survive the auth bounce. Open-redirect guard rejects
       // off-origin candidates, a returnUrl that is too long, holds a
-      // control character or is the login page; falls back to home.
+      // control character or is the login page, and a returnUrl that
+      // belongs to the other target's shell; falls back to the home of
+      // the signed-in target.
+      final target = state.target;
       final returnUrl = GoRouterState.of(context).uri.queryParameters['returnUrl'];
-      final destination =
-          safeReturnPath(returnUrl, loginPath: ApplicationRoutesConstants.login) ?? ApplicationRoutesConstants.home;
+      final safePath = safeReturnPath(returnUrl, loginPath: ApplicationRoutesConstants.login);
+      final destination = safePath != null && ApplicationRoutesConstants.belongsTo(target, safePath)
+          ? safePath
+          : ApplicationRoutesConstants.homeFor(target);
       context.go(destination);
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).hideCurrentSnackBar();
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(

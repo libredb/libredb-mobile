@@ -615,6 +615,36 @@ class S {
     return Intl.message('Sign in with your organization account.', name: 'login_sso_subtitle', desc: '', args: []);
   }
 
+  /// `Sign in to Studio`
+  String get login_studio_button {
+    return Intl.message('Sign in to Studio', name: 'login_studio_button', desc: '', args: []);
+  }
+
+  /// `Browse and query the databases Studio grants you.`
+  String get login_studio_helper {
+    return Intl.message(
+      'Browse and query the databases Studio grants you.',
+      name: 'login_studio_helper',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign in to Platform`
+  String get login_platform_button {
+    return Intl.message('Sign in to Platform', name: 'login_platform_button', desc: '', args: []);
+  }
+
+  /// `For Platform admins. Your first Platform sign-in takes one admin seat of the license.`
+  String get login_platform_helper {
+    return Intl.message(
+      'For Platform admins. Your first Platform sign-in takes one admin seat of the license.',
+      name: 'login_platform_helper',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Connections`
   String get connections {
     return Intl.message('Connections', name: 'connections', desc: '', args: []);
@@ -2576,6 +2606,16 @@ class S {
     return Intl.message(
       'This account is not a Platform admin. Sign in through Studio instead.',
       name: 'error_platform_admin_role_required',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform did not accept this sign-in. Ask an administrator to check that this app is set up for Platform, or sign in to Studio.`
+  String get error_platform_account_refused {
+    return Intl.message(
+      'Platform did not accept this sign-in. Ask an administrator to check that this app is set up for Platform, or sign in to Studio.',
+      name: 'error_platform_account_refused',
       desc: '',
       args: [],
     );

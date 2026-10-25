@@ -50,6 +50,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.browseRowsInterrupted => s.error_browse_rows_interrupted,
       AppErrorCode.platformNotConfigured => s.error_platform_not_configured,
       AppErrorCode.platformAdminRoleRequired => s.error_platform_admin_role_required,
+      AppErrorCode.platformAccountRefused => s.error_platform_account_refused,
       AppErrorCode.platformLicenseAdminSeats => s.error_platform_license_admin_seats,
       AppErrorCode.platformLicenseUserSeats => s.error_platform_license_user_seats,
       AppErrorCode.platformLicenseExpired => s.error_platform_license_expired,

@@ -29,6 +29,7 @@ const _appConfig = AppConfig(
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 5),
+  platform: PlatformNotConfigured(),
 );
 
 const _providerSessionLeft =

@@ -9,7 +9,16 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
+import 'package:libredb_mobile/shared/models/platform_identity.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
+
+import '../../../../support/test_env.dart';
+
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -69,19 +78,32 @@ class _ScriptedOidcClient implements IOidcClient {
   Future<OidcLogoutOutcome> endProviderSession({String? idTokenHint}) async => const ProviderSessionEnded();
 }
 
-/// The test config over [client]: the mocked Studio answers `GET /api/auth/me`, unless [studio] answers it.
+/// The test config over [client]: the mocked Studio answers `GET /api/auth/me`, unless [studio] answers it, and the
+/// mocked Platform answers `GET /api/v1/me` in a build with a [platform] target, unless [platformIdentity] answers it.
 class _OidcDependencies extends AppDependencies {
-  _OidcDependencies(this.client, {bool autoRedirect = false, this.rotation, this.studio})
-    : super(
-        appConfig: const AppConfig.test(),
-        authMode: OidcAuthMode(
-          OidcSettings(
-            issuer: Uri.parse('https://id.example.com/realms/demo'),
-            clientId: 'app',
-            autoRedirect: autoRedirect,
-          ),
-        ),
-      );
+  _OidcDependencies(
+    this.client, {
+    bool autoRedirect = false,
+    this.rotation,
+    this.studio,
+    PlatformTargetConfig platform = const PlatformNotConfigured(),
+    this.platformIdentity,
+  }) : super(
+         appConfig: AppConfig(
+           environment: Environment.test,
+           apiBaseUrl: null,
+           certificatePins: const <String>[],
+           idleTimeout: null,
+           platform: platform,
+         ),
+         authMode: OidcAuthMode(
+           OidcSettings(
+             issuer: Uri.parse('https://id.example.com/realms/demo'),
+             clientId: 'app',
+             autoRedirect: autoRedirect,
+           ),
+         ),
+       );
 
   final IOidcClient client;
 
@@ -94,6 +116,13 @@ class _OidcDependencies extends AppDependencies {
   @override
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) =>
       studio ?? super.createStudioIdentityRepository(apiClient);
+
+  /// Platform's answer to `GET /api/v1/me` in place of the mocked one, when given.
+  final IPlatformIdentityRepository? platformIdentity;
+
+  @override
+  IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) =>
+      platformIdentity ?? super.createPlatformIdentityRepository(apiClient);
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) => client;
@@ -114,6 +143,20 @@ class _RefusingStudio implements IStudioIdentityRepository {
 
   @override
   Future<Result<void>> recordSignOut() => throw UnimplementedError('these tests never sign out');
+}
+
+/// Platform's `GET /api/v1/me`, failing with [error]; [fetches] counts the calls.
+class _RefusingPlatform implements IPlatformIdentityRepository {
+  _RefusingPlatform(this.error);
+
+  final AppError error;
+  int fetches = 0;
+
+  @override
+  Future<Result<PlatformIdentity>> fetch() async {
+    fetches++;
+    return Failure(error);
+  }
 }
 
 /// A token refresh that fails with an error no rotation expects, so the startup step throws.
@@ -139,6 +182,12 @@ const _noRoleMessage = 'This account has no role in Studio. Ask an administrator
 const _insecureConnectionMessage =
     'The connection could not be verified as secure, so it was blocked. Try again later or on another network.';
 const _configMessage = 'Single sign-on is not configured correctly in this app. Contact your administrator.';
+const _adminRoleRequiredMessage = 'This account is not a Platform admin. Sign in through Studio instead.';
+const _platformNotConfiguredMessage =
+    'Platform mode is not available in this build of the app. Sign in through Studio.';
+const _studioHelper = 'Browse and query the databases Studio grants you.';
+const _platformHelper = 'For Platform admins. Your first Platform sign-in takes one admin seat of the license.';
+const _withPlatform = PlatformConfigured();
 
 void main() {
   void setViewport(WidgetTester tester, Size size) {
@@ -234,6 +283,17 @@ void main() {
 
     String location(WidgetTester tester) => routerFromApp(tester).state.uri.toString();
 
+    // Records every location asked of the router from now on, before its redirect runs, so a test sees where the login
+    // page sends a sign-in even when the router then sends it elsewhere.
+    List<String> recordRequestedLocations(WidgetTester tester) {
+      final provider = routerFromApp(tester).routeInformationProvider;
+      final requested = <String>[];
+      void record() => requested.add(provider.value.uri.toString());
+      provider.addListener(record);
+      addTearDown(() => provider.removeListener(record));
+      return requested;
+    }
+
     SsoAutoRedirectGate gate(WidgetTester tester) =>
         tester.element(find.byType(MaterialApp)).read<SsoAutoRedirectGate>();
 
@@ -258,6 +318,9 @@ void main() {
       expect(find.text('Sign in with your organization account.'), findsOneWidget);
       expect(find.byType(TextField), findsNothing, reason: 'no password or code field');
       expect(find.byType(CommunitySectionWidget), findsOneWidget);
+      expect(find.byKey(loginButtonPlatformKey), findsNothing);
+      expect(find.text(_studioHelper), findsNothing);
+      expect(find.text(_platformHelper), findsNothing);
     });
 
     for (final (rejection, outcome, message) in [
@@ -356,6 +419,21 @@ void main() {
       expect(find.byType(TextField), findsNothing, reason: 'no password sign-in to fall back to');
     });
 
+    testWidgets('a misconfigured build with a Platform target shows no button either', (tester) async {
+      await pumpOidcApp(
+        tester,
+        const AppDependencies(
+          appConfig: AppConfig.test(),
+          authMode: OidcMisconfiguredAuthMode('OIDC_ISSUER is required'),
+        ),
+      );
+
+      expect(tester.element(find.byType(LoginScreen)).read<AppConfig>().platform, isA<PlatformConfigured>());
+      expect(find.text(_configMessage), findsOneWidget);
+      expect(ssoButton, findsNothing);
+      expect(find.byKey(loginButtonPlatformKey), findsNothing);
+    });
+
     testWidgets('shows the button in Turkish', (tester) async {
       await pumpOidcApp(tester, _OidcDependencies(_ScriptedOidcClient()), language: 'tr');
 
@@ -398,6 +476,166 @@ void main() {
         expect(location(tester), ApplicationRoutesConstants.home, reason: returnUrl);
         await logOut(tester);
       }
+    });
+
+    group('two entries', () {
+      final platformButton = find.byKey(loginButtonPlatformKey);
+
+      testWidgets('a build with a Platform target shows Studio, then Platform, each with its helper text', (
+        tester,
+      ) async {
+        await pumpOidcApp(tester, _OidcDependencies(_ScriptedOidcClient(), platform: _withPlatform));
+
+        expect(find.widgetWithText(FilledButton, 'Sign in to Studio'), findsOneWidget);
+        expect(find.widgetWithText(FilledButton, 'Sign in to Platform'), findsOneWidget);
+        expect(find.text('Sign in with SSO'), findsNothing);
+        expect(find.text(_studioHelper), findsOneWidget);
+        expect(find.text(_platformHelper), findsOneWidget);
+        expect(tester.getTopLeft(ssoButton).dy, lessThan(tester.getTopLeft(platformButton).dy));
+        expect(tester.getSize(ssoButton).width, tester.getSize(platformButton).width);
+      });
+
+      testWidgets('shows both entries in Turkish', (tester) async {
+        await pumpOidcApp(tester, _OidcDependencies(_ScriptedOidcClient(), platform: _withPlatform), language: 'tr');
+
+        expect(find.widgetWithText(FilledButton, "Studio'ya giriş yap"), findsOneWidget);
+        expect(find.widgetWithText(FilledButton, "Platform'a giriş yap"), findsOneWidget);
+        expect(
+          find.text('Platform yöneticileri için. İlk Platform girişiniz lisansın bir yönetici koltuğunu kullanır.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('the Platform entry signs in to Platform and opens the Platform home', (tester) async {
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, platform: _withPlatform));
+
+        final requested = recordRequestedLocations(tester);
+
+        await tester.tap(platformButton);
+        await tester.pumpAndSettle();
+
+        expect(client.signIns, 1);
+        expect(find.byType(PlatformShell), findsOneWidget);
+        expect(location(tester), ApplicationRoutesConstants.platformHome);
+        expect(requested, isNot(contains(ApplicationRoutesConstants.home)));
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
+      });
+
+      testWidgets('the Studio entry signs in to Studio and opens the connection list', (tester) async {
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, platform: _withPlatform));
+
+        await tester.tap(ssoButton);
+        await tester.pumpAndSettle();
+
+        expect(client.signIns, 1);
+        expect(find.byType(ResponsiveScaffold), findsOneWidget);
+        expect(location(tester), ApplicationRoutesConstants.home);
+        expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'studio');
+      });
+
+      testWidgets('while a sign-in runs both buttons are disabled and only the tapped one spins', (tester) async {
+        final answer = Completer<OidcSignInOutcome>();
+        final client = _ScriptedOidcClient(outcomes: [answer.future]);
+        await pumpOidcApp(tester, _OidcDependencies(client, platform: _withPlatform));
+
+        await tester.tap(platformButton);
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.descendant(of: platformButton, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+        expect(find.descendant(of: ssoButton, matching: find.byType(CircularProgressIndicator)), findsNothing);
+        expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
+        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
+
+        answer.complete(const OidcSignInCancelled());
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
+        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(client.signIns, 1);
+      });
+
+      testWidgets('a Platform refusal stays on the login page, says why, stores nothing and opens no refusal page', (
+        tester,
+      ) async {
+        final platform = _RefusingPlatform(AuthError('refused', code: AppErrorCode.platformAdminRoleRequired.key));
+        await pumpOidcApp(
+          tester,
+          _OidcDependencies(_ScriptedOidcClient(), platform: _withPlatform, platformIdentity: platform),
+        );
+
+        await tester.tap(platformButton);
+        await tester.pumpAndSettle();
+        await waitForSnackBarToGo(tester);
+
+        expect(platform.fetches, 1);
+        expect(find.text(_adminRoleRequiredMessage), findsOneWidget);
+        expect(location(tester), ApplicationRoutesConstants.login);
+        expect(find.byType(PlatformShell), findsNothing);
+        expect(
+          tester.element(find.byType(LoginScreen)).read<PlatformAccountRefusalCubit>().state,
+          const PlatformAccountAccepted(),
+        );
+        for (final key in [
+          SecureStorageKeys.jwtToken,
+          SecureStorageKeys.refreshToken,
+          SecureStorageKeys.sessionTarget,
+        ]) {
+          expect(await FlutterSecureStorageAdapter().read(key.key), isNull, reason: key.key);
+        }
+        expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
+        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+      });
+
+      for (final (signIn, returnUrl, landing) in [
+        ('Platform', '%2Fsettings', ApplicationRoutesConstants.platformHome),
+        ('Platform', '%2Fplatform%2Fconnections', ApplicationRoutesConstants.platformConnections),
+        ('Studio', '%2Fplatform%2Fconnections', ApplicationRoutesConstants.home),
+        ('Studio', '%2Fsettings', ApplicationRoutesConstants.settings),
+      ]) {
+        testWidgets('a $signIn sign-in with returnUrl $returnUrl lands on $landing', (tester) async {
+          await pumpOidcApp(tester, _OidcDependencies(_ScriptedOidcClient(), platform: _withPlatform));
+          routerFromApp(tester).go('${ApplicationRoutesConstants.login}?returnUrl=$returnUrl');
+          await tester.pumpAndSettle();
+
+          final requested = recordRequestedLocations(tester);
+
+          await tester.tap(signIn == 'Platform' ? platformButton : ssoButton);
+          await tester.pumpAndSettle();
+
+          expect(location(tester), landing);
+          // The page itself never asks for the other target's route, so the router's own guard is not what keeps it.
+          final other = signIn == 'Platform' ? SessionTarget.studio : SessionTarget.platform;
+          expect(requested, contains(landing));
+          expect(requested.where((path) => ApplicationRoutesConstants.belongsTo(other, path)), isEmpty);
+        });
+      }
+
+      testWidgets('with the automatic redirect on, two entries never launch the provider and leave the gate open', (
+        tester,
+      ) async {
+        final client = _ScriptedOidcClient();
+        await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true, platform: _withPlatform));
+
+        expect(client.signIns, 0);
+        expect(gate(tester).isOpen, isTrue);
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(platformButton, findsOneWidget);
+      });
+    });
+
+    testWidgets('a restored Platform session in a build without Platform says so and does not redirect', (
+      tester,
+    ) async {
+      TestEnv.authenticate(target: SessionTarget.platform);
+      final client = _ScriptedOidcClient();
+      await pumpOidcApp(tester, _OidcDependencies(client, autoRedirect: true));
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text(_platformNotConfiguredMessage), findsOneWidget);
+      expect(client.signIns, 0);
+      expect(find.byKey(loginButtonPlatformKey), findsNothing);
     });
 
     group('automatic redirect', () {

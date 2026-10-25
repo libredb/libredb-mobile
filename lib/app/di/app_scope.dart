@@ -29,7 +29,7 @@ import 'package:libredb_mobile/features/platform_connections/domain/repositories
 import 'package:libredb_mobile/features/platform_grants/domain/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
-import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/sign_in_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sso_sign_out_usecase.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
@@ -327,14 +327,20 @@ class AppScope extends StatelessWidget {
         providers: [
           BlocProvider<ConnectivityCubit>(create: (_) => ConnectivityCubit()..monitor()),
           BlocProvider<LoginBloc>(
-            // A misconfigured build has no sign-in: its login page shows why and offers none. A sign-in succeeds only
-            // once Studio's GET /api/auth/me accepts the account.
+            // A misconfigured build has no sign-in: its login page shows why and offers none. A Studio sign-in
+            // succeeds only once Studio's GET /api/auth/me accepts the account, and a Platform sign-in only once
+            // Platform's GET /api/v1/me does; a build without a Platform target gets no Platform gate and offers no
+            // Platform entry.
             create: (context) => LoginBloc(
-              signInWithSsoUseCase: oidcSettings == null
+              signInUseCase: oidcSettings == null
                   ? null
-                  : SignInWithSsoUseCase(
+                  : SignInUseCase(
                       context.read<ISsoAuthRepository>(),
                       context.read<IStudioIdentityRepository>(),
+                      switch (dependencies.appConfig.platform) {
+                        PlatformConfigured() => context.read<IPlatformIdentityRepository>(),
+                        PlatformNotConfigured() => null,
+                      },
                       context.read<IAuthSessionRepository>(),
                     ),
             ),

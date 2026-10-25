@@ -405,6 +405,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "No internet connection. Check your network and try again.",
     ),
+    "error_platform_account_refused": MessageLookupByLibrary.simpleMessage(
+      "Platform did not accept this sign-in. Ask an administrator to check that this app is set up for Platform, or sign in to Studio.",
+    ),
     "error_platform_admin_role_required": MessageLookupByLibrary.simpleMessage(
       "This account is not a Platform admin. Sign in through Studio instead.",
     ),
@@ -584,8 +587,14 @@ class MessageLookup extends MessageLookupByLibrary {
       "Look through schemas and run queries on the connections you are given.",
     ),
     "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Browse and query"),
+    "login_platform_button": MessageLookupByLibrary.simpleMessage("Sign in to Platform"),
+    "login_platform_helper": MessageLookupByLibrary.simpleMessage(
+      "For Platform admins. Your first Platform sign-in takes one admin seat of the license.",
+    ),
     "login_sso_button": MessageLookupByLibrary.simpleMessage("Sign in with SSO"),
     "login_sso_subtitle": MessageLookupByLibrary.simpleMessage("Sign in with your organization account."),
+    "login_studio_button": MessageLookupByLibrary.simpleMessage("Sign in to Studio"),
+    "login_studio_helper": MessageLookupByLibrary.simpleMessage("Browse and query the databases Studio grants you."),
     "login_switch_to_dark_mode": MessageLookupByLibrary.simpleMessage("Switch to dark mode"),
     "login_switch_to_light_mode": MessageLookupByLibrary.simpleMessage("Switch to light mode"),
     "login_welcome_title": MessageLookupByLibrary.simpleMessage("Welcome back"),
