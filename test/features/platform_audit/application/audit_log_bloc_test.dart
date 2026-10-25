@@ -192,7 +192,7 @@ void main() {
     });
   });
 
-  test('a filter change drops a search still waiting for its pause', () {
+  test('a filter change sends a search still waiting for its pause with it, once', () {
     fakeAsync((async) {
       answerWith((filter, offset) => Success(_page(_events(0, 1), total: 1)));
       final bloc = build()..add(const AuditLogRefreshed());
@@ -200,11 +200,54 @@ void main() {
       sent();
 
       bloc
-        ..add(const AuditLogSearchChanged('orders'))
+        ..add(const AuditLogSearchChanged(' orders '))
         ..add(AuditLogFilterChanged(AuditFilter(status: 'error')));
+      async.flushMicrotasks();
+
+      expect(sent(), ['AuditFilter(status, search)@0']);
+      expect(bloc.state.filter, AuditFilter(status: 'error', search: 'orders'));
       async.elapse(const Duration(seconds: 1));
+      expect(() => sent(), throwsA(isA<TestFailure>()), reason: 'the pause sends the search no second time');
+      bloc.close();
+    });
+  });
+
+  test('the search chip delete wins over a search still waiting for its pause', () {
+    fakeAsync((async) {
+      answerWith((filter, offset) => Success(_page(_events(0, 1), total: 1)));
+      final bloc = build()..add(AuditLogFilterChanged(AuditFilter(search: 'orders', status: 'error')));
+      async.flushMicrotasks();
+      sent();
+
+      bloc
+        ..add(const AuditLogSearchChanged('billing'))
+        ..add(AuditLogFilterChanged(AuditFilter(status: 'error')));
+      async.flushMicrotasks();
 
       expect(sent(), ['AuditFilter(status)@0']);
+      async.elapse(const Duration(seconds: 1));
+      expect(() => sent(), throwsA(isA<TestFailure>()));
+      expect(bloc.state.filter, AuditFilter(status: 'error'));
+      bloc.close();
+    });
+  });
+
+  test('AuditLogFiltersCleared drops a search still waiting for its pause and reads without filters', () {
+    fakeAsync((async) {
+      answerWith((filter, offset) => Success(_page(_events(0, 1), total: 1)));
+      final bloc = build()..add(AuditLogFilterChanged(AuditFilter(status: 'error')));
+      async.flushMicrotasks();
+      sent();
+
+      bloc
+        ..add(const AuditLogSearchChanged('orders'))
+        ..add(const AuditLogFiltersCleared());
+      async.flushMicrotasks();
+
+      expect(sent(), ['AuditFilter()@0']);
+      async.elapse(const Duration(seconds: 1));
+      expect(() => sent(), throwsA(isA<TestFailure>()));
+      expect(bloc.state.filter, const AuditFilter());
       bloc.close();
     });
   });

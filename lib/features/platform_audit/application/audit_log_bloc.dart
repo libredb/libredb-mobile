@@ -17,7 +17,9 @@ part 'audit_log_state.dart';
 /// The audit log of the install in Platform mode: governed query events, newest first, with filters and paging.
 ///
 /// A refresh or a filter change reads the first page and replaces one still running. The typed search text is sent
-/// once the typing pauses for [debounce], trimmed, and never when it equals the current search. Load more reads the
+/// once the typing pauses for [debounce], trimmed, and never when it equals the current search. A filter set while the
+/// text waits for its pause is sent together with that text, in one request, unless it changes the search itself (the
+/// search chip's delete) or clears every filter, which drop the waiting text. Load more reads the
 /// next page from the end of the rows Platform answered so far, is dropped while one runs, and its answer is used only
 /// while the list it was asked for is still on screen: a refresh or a filter change in between discards it. An event
 /// already listed is not listed again, since a new event moves every older one a place down between two pages. A
@@ -42,6 +44,9 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
   /// The wait of the last typed search text.
   Timer? _wait;
 
+  /// The trimmed search text [_wait] sends, held while it waits.
+  String? _pendingSearch;
+
   /// Counts every first page asked for, so a Load more answer for an older list is dropped.
   int _generation = 0;
 
@@ -49,12 +54,19 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
   AuditFilter? _listedFilter;
 
   Future<void> _onQuery(AuditLogQueryEvent event, Emitter<AuditLogState> emit) async {
+    final waiting = _wait != null;
+    final pendingSearch = _pendingSearch;
     final filter = switch (event) {
+      // Another filter set while the typed text waits for its pause is sent with that text, so the request carries
+      // both; a change of the search itself wins over the waiting text.
+      AuditLogFilterChanged(:final filter) when waiting && filter.search == state.filter.search => filter.copyWith(
+        search: () => pendingSearch,
+      ),
       AuditLogFilterChanged(:final filter) => filter,
       AuditLogRefreshed() => state.filter,
+      AuditLogFiltersCleared() => const AuditFilter(),
     };
-    // A filter set any other way wins over a search text still waiting for its pause.
-    if (event is AuditLogFilterChanged) _cancelWait();
+    if (event is! AuditLogRefreshed) _cancelWait();
     _generation++;
 
     final current = state;
@@ -108,8 +120,10 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
     final search = AuditFilter(search: event.text).search;
     _cancelWait();
     if (search == state.filter.search) return;
+    _pendingSearch = search;
     _wait = Timer(debounce, () {
       _wait = null;
+      _pendingSearch = null;
       if (!isClosed) add(AuditLogFilterChanged(state.filter.copyWith(search: () => search)));
     });
   }
@@ -169,6 +183,7 @@ class AuditLogBloc extends Bloc<AuditLogEvent, AuditLogState> {
   void _cancelWait() {
     _wait?.cancel();
     _wait = null;
+    _pendingSearch = null;
   }
 
   @override
