@@ -37,7 +37,7 @@ final class GrantEditorSubmitted extends GrantEditorSaveRequested {
   const GrantEditorSubmitted();
 }
 
-/// Retry after Platform could not read Keycloak: the same `PUT` is sent again.
+/// Retry after Platform could not read Keycloak: the form is checked and sent again as it shows now.
 final class GrantEditorRetryRequested extends GrantEditorSaveRequested {
   const GrantEditorRetryRequested();
 }

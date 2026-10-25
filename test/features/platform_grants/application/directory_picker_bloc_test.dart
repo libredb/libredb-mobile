@@ -270,6 +270,49 @@ void main() {
     });
   });
 
+  test('load more on a new query is sent while a page of the older query still waits', () {
+    fakeAsync((async) {
+      final stalePage2 = Completer<Result<DirectoryPage>>();
+      final xPage2 = Completer<Result<DirectoryPage>>();
+      when(
+        () => repository.search(
+          query: any(named: 'query'),
+          page: any(named: 'page'),
+        ),
+      ).thenAnswer((call) {
+        final query = call.namedArguments[#query] as String;
+        if (call.namedArguments[#page] == 2) return query.isEmpty ? stalePage2.future : xPage2.future;
+        return Future.value(Success(_page(1, query.isEmpty ? _users(0, 20) : _users(100, 20), total: 43)));
+      });
+      final bloc = build()..add(const DirectoryPickerOpened());
+      async.flushMicrotasks();
+      bloc.add(const DirectoryPickerLoadMoreRequested());
+      async.flushMicrotasks();
+      typeKeys(async, bloc, ['x']);
+      async.elapse(DirectoryPickerBloc.debounce);
+      expect(bloc.state.query, 'x');
+      expect(bloc.state.canLoadMore, isTrue);
+
+      bloc.add(const DirectoryPickerLoadMoreRequested());
+      async.flushMicrotasks();
+
+      expect(sent(), ['@1', '@2', 'x@1', 'x@2']);
+      expect(bloc.state.loadingMore, isTrue);
+
+      stalePage2.complete(Success(_page(2, _users(20, 20), total: 43)));
+      async.flushMicrotasks();
+      expect(bloc.state.loadingMore, isTrue);
+      expect(bloc.state.page, 1);
+
+      xPage2.complete(Success(_page(2, _users(120, 20), total: 43)));
+      async.flushMicrotasks();
+      expect(bloc.state.loadingMore, isFalse);
+      expect(bloc.state.page, 2);
+      expect(bloc.state.users.map((user) => user.id), [for (var i = 100; i < 140; i++) 'u$i']);
+      bloc.close();
+    });
+  });
+
   group('load more', () {
     test('sends page 2 with the same query, and a double tap sends one request', () {
       fakeAsync((async) {

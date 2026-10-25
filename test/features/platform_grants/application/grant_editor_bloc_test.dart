@@ -344,7 +344,7 @@ void main() {
   });
 
   group('retry', () {
-    test('a 503 sends no second PUT until Retry, which sends the same PUT again', () async {
+    test('a 503 sends no second PUT until Retry, which sends the form again', () async {
       var answers = <Result<String>>[Failure(_error(AppErrorCode.platformDirectoryUnavailable)), const Success('g1')];
       when(
         () => repository.put(
@@ -373,6 +373,73 @@ void main() {
 
       verify(() => repository.put('c1', 'f:ldap-1:alice', level: 'read', expiresAt: DateTime(2027, 9, 1, 8))).called(1);
       expect(bloc.state.status, GrantEditorStatus.saved);
+      await bloc.close();
+    });
+
+    void answerInOrder(List<Result<String>> answers) {
+      var left = answers;
+      when(
+        () => repository.put(
+          any(),
+          any(),
+          level: any(named: 'level'),
+          expiresAt: any(named: 'expiresAt'),
+        ),
+      ).thenAnswer((_) async {
+        final next = left.first;
+        left = left.sublist(1);
+        return next;
+      });
+    }
+
+    test('Retry after a field changed sends the level the form shows', () async {
+      answerInOrder([Failure(_error(AppErrorCode.platformDirectoryUnavailable)), const Success('g1')]);
+      final bloc = build()..add(const GrantEditorSubmitted());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(bloc.state.banner, GrantEditorBanner.retry);
+
+      bloc
+        ..add(const GrantEditorLevelChanged('write'))
+        ..add(const GrantEditorRetryRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      verify(() => repository.put('c1', 'f:ldap-1:alice', level: 'read', expiresAt: null)).called(1);
+      verify(() => repository.put('c1', 'f:ldap-1:alice', level: 'write', expiresAt: null)).called(1);
+      expect(bloc.state.level, 'write');
+      expect(bloc.state.status, GrantEditorStatus.saved);
+      await bloc.close();
+    });
+
+    test('Retry after the expiry changed from never sends the expiry the form shows', () async {
+      answerInOrder([Failure(_error(AppErrorCode.platformKeycloakUnavailable)), const Success('g1')]);
+      final bloc = build()..add(const GrantEditorSubmitted());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(bloc.state.banner, GrantEditorBanner.retry);
+
+      bloc
+        ..add(GrantEditorExpiryChanged(DateTime(2027, 9, 1, 8)))
+        ..add(const GrantEditorRetryRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      verify(() => repository.put('c1', 'f:ldap-1:alice', level: 'read', expiresAt: DateTime(2027, 9, 1, 8))).called(1);
+      expect(bloc.state.status, GrantEditorStatus.saved);
+      await bloc.close();
+    });
+
+    test('Retry checks the form first and sends nothing for an expiry in the past', () async {
+      answerInOrder([Failure(_error(AppErrorCode.platformDirectoryUnavailable))]);
+      final bloc = build()..add(const GrantEditorSubmitted());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      verify(() => repository.put('c1', 'f:ldap-1:alice', level: 'read', expiresAt: null)).called(1);
+
+      bloc
+        ..add(GrantEditorExpiryChanged(DateTime(2027, 5, 1, 8)))
+        ..add(const GrantEditorRetryRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      verifyNoPut();
+      expect(bloc.state.expiryIssue, GrantExpiryIssue.notInFuture);
+      expect(bloc.state.status, GrantEditorStatus.editing);
       await bloc.close();
     });
 

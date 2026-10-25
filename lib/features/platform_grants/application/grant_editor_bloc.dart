@@ -22,7 +22,7 @@ part 'grant_editor_state.dart';
 /// The form is checked before sending: a level must be picked, `write` only on a connection with a write credential,
 /// and an expiry must be after now; Platform's clock still decides in the end. A save while one runs is dropped, so a
 /// double tap sends one `PUT`, and nothing is ever sent again on its own: after Keycloak did not answer, only Retry
-/// sends the same `PUT` again. Every refusal keeps the form and its values.
+/// sends the `PUT` again, checked and built from what the form shows then. Every refusal keeps the form and its values.
 ///
 /// No log line carries the subject, a username or an e-mail address.
 class GrantEditorBloc extends Bloc<GrantEditorEvent, GrantEditorState> {
@@ -45,9 +45,6 @@ class GrantEditorBloc extends Bloc<GrantEditorEvent, GrantEditorState> {
 
   final PutGrantUseCase _putGrantUseCase;
   final Clock _clock;
-
-  /// The level and expiry of the last `PUT` sent, which Retry sends again.
-  ({String level, DateTime? expiresAt})? _lastSent;
 
   /// The form for a new grant to [user], or for changing [grant], prefilled from it; [user] may come with [grant] when
   /// the admin picked a user who already holds one.
@@ -90,29 +87,22 @@ class GrantEditorBloc extends Bloc<GrantEditorEvent, GrantEditorState> {
   }
 
   Future<void> _onSave(GrantEditorSaveRequested event, Emitter<GrantEditorState> emit) async {
-    final ({String level, DateTime? expiresAt}) request;
-    switch (event) {
-      case GrantEditorRetryRequested():
-        final last = _lastSent;
-        if (last == null || state.banner != GrantEditorBanner.retry) return;
-        request = last;
-      case GrantEditorSubmitted():
-        final level = state.level;
-        final expiresAt = state.expiresAt;
-        final levelIssue = level == null
-            ? GrantLevelIssue.missing
-            : level == 'write' && !state.target.hasWriteCredential
-            ? GrantLevelIssue.writeUnavailable
-            : null;
-        final expiryIssue = expiresAt != null && !expiresAt.isAfter(_clock.now()) ? GrantExpiryIssue.notInFuture : null;
-        if (levelIssue != null || expiryIssue != null || level == null) {
-          emit(state._copyWith(levelIssue: () => levelIssue, expiryIssue: () => expiryIssue));
-          return;
-        }
-        request = (level: level, expiresAt: expiresAt);
+    // Retry sends what the form shows now, not what was sent before: a field may have changed since the 503.
+    if (event is GrantEditorRetryRequested && state.banner != GrantEditorBanner.retry) return;
+    final level = state.level;
+    final expiresAt = state.expiresAt;
+    final levelIssue = level == null
+        ? GrantLevelIssue.missing
+        : level == 'write' && !state.target.hasWriteCredential
+        ? GrantLevelIssue.writeUnavailable
+        : null;
+    final expiryIssue = expiresAt != null && !expiresAt.isAfter(_clock.now()) ? GrantExpiryIssue.notInFuture : null;
+    if (levelIssue != null || expiryIssue != null || level == null) {
+      emit(state._copyWith(levelIssue: () => levelIssue, expiryIssue: () => expiryIssue));
+      return;
     }
+    final request = (level: level, expiresAt: expiresAt);
 
-    _lastSent = request;
     emit(
       state._copyWith(
         status: GrantEditorStatus.submitting,

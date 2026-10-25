@@ -22,16 +22,18 @@ part 'directory_picker_state.dart';
 /// A query longer than [maxQueryLength] is never sent and shows a hint. A newer query wins: the answer to an older one,
 /// or to a page of it, is dropped.
 ///
-/// "Load more" keeps the query on screen, is dropped while one runs, and adds only users not already listed, because
-/// Keycloak's pages can shift between requests. The results live in this bloc only and are never cached or stored, and
-/// no log line carries the query or a user.
+/// "Load more" keeps the query on screen, is dropped while one for it runs, and adds only users not already listed,
+/// because Keycloak's pages can shift between requests. The results live in this bloc only and are never cached or
+/// stored, and no log line carries the query or a user.
 class DirectoryPickerBloc extends Bloc<DirectoryPickerEvent, DirectoryPickerState> {
   DirectoryPickerBloc({required this._searchDirectoryUseCase})
     : super(const DirectoryPickerState(status: DirectoryPickerStatus.loading, query: '')) {
     on<DirectoryPickerOpened>(_onOpened);
     on<DirectoryPickerQueryChanged>(_onQueryChanged);
     on<DirectoryPickerRetryRequested>(_onRetry);
-    on<DirectoryPickerLoadMoreRequested>(_onLoadMore, transformer: EventTransformers.dropConcurrent());
+    // Concurrent on purpose: a tap while a page of the shown query runs is dropped by canLoadMore (loadingMore), while
+    // a page of an older query still waiting must not hold back "Load more" on the new one.
+    on<DirectoryPickerLoadMoreRequested>(_onLoadMore);
     on<_DirectoryPickerSearchSent>(_onSearchSent, transformer: EventTransformers.restart());
   }
 

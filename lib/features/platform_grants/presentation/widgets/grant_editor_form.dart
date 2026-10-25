@@ -247,11 +247,13 @@ class _ExpiryField extends StatelessWidget {
     final now = DateTime.now();
     final current = state.expiresAt?.toLocal();
     final initial = current != null && current.isAfter(now) ? current : now.add(const Duration(days: 30));
+    // Platform sets no upper bound on an expiry, so a grant can already end later than the ten years offered.
+    final tenYears = DateTime(now.year + 10, 12, 31);
     final date = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: DateTime(now.year + 10, 12, 31),
+      lastDate: initial.isAfter(tenYears) ? DateTime(initial.year, initial.month, initial.day) : tenYears,
     );
     if (date == null || !context.mounted) return;
     final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));

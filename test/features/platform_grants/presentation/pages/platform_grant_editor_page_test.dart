@@ -53,13 +53,13 @@ final _nora = _user('nora', role: null);
 final _seat = _user('sam', needsSeat: true);
 final _bob = _user('kc-bob');
 
-PlatformGrant _grant({String subject = 'kc-bob', String level = 'read'}) => PlatformGrant(
+PlatformGrant _grant({String subject = 'kc-bob', String level = 'read', DateTime? expiresAt}) => PlatformGrant(
   id: 'g-$subject',
   subject: subject,
   subjectUsername: subject,
   subjectEmail: null,
   level: level,
-  expiresAt: null,
+  expiresAt: expiresAt,
   grantedBy: const PlatformGrantGranter(id: 'u1', name: 'Admin', email: 'admin@example.com'),
   grantedAt: DateTime.utc(2027),
 );
@@ -339,6 +339,21 @@ void main() {
       await save(tester);
 
       verify(() => grants.put('c 1', 'kc-bob', level: 'read', expiresAt: null)).called(1);
+    });
+
+    testWidgets('Pick opens the date picker on a grant that expires more than ten years out', (tester) async {
+      final farOut = DateTime(DateTime.now().year + 25, 3, 14, 9, 30);
+      when(() => grants.list(any())).thenAnswer((_) async => Success([_grant(expiresAt: farOut.toUtc())]));
+      await openEdit(tester, connection: _orders, subject: 'kc-bob');
+
+      await tester.ensureVisible(find.byKey(const ValueKey('platform-grant-expiry-pick')));
+      await tester.tap(find.byKey(const ValueKey('platform-grant-expiry-pick')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final picker = tester.widget<DatePickerDialog>(find.byType(DatePickerDialog));
+      expect(picker.initialDate, DateTime(farOut.year, farOut.month, farOut.day));
+      expect(picker.lastDate, DateTime(farOut.year, farOut.month, farOut.day));
     });
 
     testWidgets('on success the page pops with the saved note and the grant list is read again', (tester) async {
