@@ -28,12 +28,17 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | Method and path | Answer | Read by |
 | --- | --- | --- |
 | `GET /api/v1/me` | `{id, email, name, roles, permissions, tenant: {id, name, slug}}` | `PlatformIdentityRepository`, `PlatformIdentityModel` |
+| `GET /api/v1/connections` | `{connections: [{id, name, engine, status, hasWriteCredential}]}` | `IPlatformConnectionRepository.list`, `PlatformConnectionsModel` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
   The app keeps roles and permissions as opaque strings, holds the identity in memory only (`PlatformIdentityCubit`) and never stores it.
   `id` is Platform's user id, not the identity provider's `sub`, so it never keys a store.
 - The first call of an account provisions its Platform user and takes an admin seat, so the license can refuse it (`docs/api/v1.md`).
+- `GET /api/v1/connections` answers every connection of the install tenant, active and inactive, newest first, with no host, credential or sealed value (libredb-platform `src/features/connections/lib/grant-service.ts`).
+  All five fields are always present; `status` is `active` or `inactive` today, and the app keeps `engine` and `status` as opaque strings, an unknown value included, and keeps Platform's order.
+  The connections tab (`lib/features/platform_connections/`) shows the list read only: no connection is created, edited or deleted on the phone, and enabling or disabling one comes in M11-P with `PATCH /api/v1/connections/{id}`.
+  It loads when the tab opens, on a pull to refresh and on a retry, never on a timer; a tap opens the connection's grants at `/platform/connections/:id`.
 - `/api/v1` is a public path of Platform's proxy, so it never answers with a redirect to `/login` (`src/shared/lib/public-paths.ts`); the client follows no redirect.
 
 ## Errors

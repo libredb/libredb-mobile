@@ -31,6 +31,8 @@ import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
+import 'package:libredb_mobile/features/platform_connections/domain/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -1045,6 +1047,12 @@ void main() {
 
       expect(scope.read<IPlatformIdentityRepository>(), isNotNull);
       expect(scope.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+    });
+
+    testWidgets('provides the Platform connection repository over the Platform client', (tester) async {
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+
+      expect(scope.read<IPlatformConnectionRepository>(), isA<PlatformConnectionRepository>());
     });
 
     testWidgets('a build without a Platform target still provides a client that sends nothing', (tester) async {

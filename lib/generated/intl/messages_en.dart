@@ -600,6 +600,30 @@ class MessageLookup extends MessageLookupByLibrary {
       "Open a connection from the Connections tab to use this tab.",
     ),
     "platform_account_refusal_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform refused your account"),
+    "platform_connections_empty_description": MessageLookupByLibrary.simpleMessage(
+      "Connections are added in the Platform web console.",
+    ),
+    "platform_connections_empty_title": MessageLookupByLibrary.simpleMessage("This install has no connections yet"),
+    "platform_connections_filter_hint": MessageLookupByLibrary.simpleMessage("Filter by name or engine"),
+    "platform_connections_load_failed": MessageLookupByLibrary.simpleMessage("Could not load the connections"),
+    "platform_connections_read_grants_only": MessageLookupByLibrary.simpleMessage("Read grants only"),
+    "platform_connections_read_grants_only_semantics": MessageLookupByLibrary.simpleMessage(
+      "This connection has no write credential, so only read access can be granted.",
+    ),
+    "platform_connections_refresh_failed": MessageLookupByLibrary.simpleMessage("Could not refresh the connections"),
+    "platform_connections_search_empty_description": MessageLookupByLibrary.simpleMessage(
+      "Try another name or engine.",
+    ),
+    "platform_connections_search_empty_title": MessageLookupByLibrary.simpleMessage("No connection matches the filter"),
+    "platform_connections_status_unknown": MessageLookupByLibrary.simpleMessage("Unknown status"),
+    "platform_home_admin_label": MessageLookupByLibrary.simpleMessage("Platform admin"),
+    "platform_home_connections_shortcut": MessageLookupByLibrary.simpleMessage("Connections"),
+    "platform_home_connections_shortcut_description": MessageLookupByLibrary.simpleMessage(
+      "See every connection of this install.",
+    ),
+    "platform_home_identity_load_failed": MessageLookupByLibrary.simpleMessage("Could not load your Platform account"),
+    "platform_home_signed_in_as": MessageLookupByLibrary.simpleMessage("Signed in as"),
+    "platform_home_tenant_label": MessageLookupByLibrary.simpleMessage("Organization"),
     "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
       "The Platform connections and their grants come to this screen in a later version.",
     ),

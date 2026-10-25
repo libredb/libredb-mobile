@@ -6,7 +6,7 @@ import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/platform_connections/application/platform_connection_list_bloc.dart';
-import 'package:libredb_mobile/features/platform_connections/application/usecases/list_platform_connections_usecase.dart';
+import 'package:libredb_mobile/features/platform_connections/application/usecases/list_connections_usecase.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
 import 'package:mocktail/mocktail.dart';
 
