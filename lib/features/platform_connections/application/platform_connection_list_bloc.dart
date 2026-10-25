@@ -13,10 +13,11 @@ import 'package:libredb_mobile/shared/utils/search_fold.dart';
 part 'platform_connection_list_event.dart';
 part 'platform_connection_list_state.dart';
 
-/// The read-only list of the install's connections in Platform mode, and its search.
+/// The list of the install's connections in Platform mode, and its search.
 ///
 /// It loads when the tab opens, on a pull to refresh and on a retry; there is no timed refresh. A newer load replaces
-/// one still running, so a late answer never overwrites a newer one.
+/// one still running, so a late answer never overwrites a newer one. A connection that was enabled or disabled takes
+/// the place of its item without a reload.
 class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, PlatformConnectionListState> {
   PlatformConnectionListBloc({required this._listPlatformConnectionsUseCase})
     : super(const PlatformConnectionListInitial()) {
@@ -25,6 +26,7 @@ class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, Platf
       _onSearchChanged,
       transformer: EventTransformers.debounceRestartable(searchDebounce),
     );
+    on<PlatformConnectionReplaced>(_onReplaced);
   }
 
   /// How long the search waits after a keystroke before it narrows the list.
@@ -70,6 +72,24 @@ class PlatformConnectionListBloc extends Bloc<PlatformConnectionListEvent, Platf
     switch (state) {
       case final PlatformConnectionListLoaded loaded:
         emit(loaded._with(query: event.query));
+      case PlatformConnectionListInitial() || PlatformConnectionListLoading() || PlatformConnectionListFailure():
+        break;
+    }
+  }
+
+  void _onReplaced(PlatformConnectionReplaced event, Emitter<PlatformConnectionListState> emit) {
+    switch (state) {
+      case final PlatformConnectionListLoaded loaded:
+        final id = event.connection.id;
+        if (!loaded.connections.any((c) => c.id == id)) {
+          _log.debug('onReplaced: {} is not in the list', [id]);
+          return;
+        }
+        emit(
+          loaded._with(
+            connections: List.unmodifiable([for (final c in loaded.connections) c.id == id ? event.connection : c]),
+          ),
+        );
       case PlatformConnectionListInitial() || PlatformConnectionListLoading() || PlatformConnectionListFailure():
         break;
     }

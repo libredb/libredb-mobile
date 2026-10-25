@@ -76,6 +76,49 @@ void main() {
     }
   });
 
+  group('readOne', () {
+    test('reads the five fields of one connection', () {
+      expect(
+        PlatformConnectionsModel.readOne(jsonEncode(item(status: 'inactive', hasWriteCredential: false))),
+        const PlatformConnection(
+          id: 'c1',
+          name: 'Orders',
+          engine: 'postgres',
+          status: 'inactive',
+          hasWriteCredential: false,
+        ),
+      );
+    });
+
+    test('keeps an unknown status as Platform sent it', () {
+      expect(PlatformConnectionsModel.readOne(jsonEncode(item(status: 'archived'))).status, 'archived');
+    });
+
+    test('reads the mock answer of a PATCH', () {
+      final connection = PlatformConnectionsModel.readOne(
+        File('assets/mock/PATCH_v1_connections_pathParams.json').readAsStringSync(),
+      );
+
+      expect((connection.id, connection.name, connection.status), ('cm0conn0000000000000000001', 'Orders', 'inactive'));
+    });
+
+    test('throws a FormatException naming the field for a missing hasWriteCredential', () {
+      expect(
+        () => PlatformConnectionsModel.readOne(jsonEncode(item(name: 'Payroll Secret')..remove('hasWriteCredential'))),
+        throwsA(
+          isA<FormatException>()
+              .having((e) => e.message, 'message', contains('hasWriteCredential'))
+              .having((e) => e.toString(), 'text', isNot(contains('Payroll'))),
+        ),
+      );
+    });
+
+    test('throws a FormatException for a body that is not an object', () {
+      expect(() => PlatformConnectionsModel.readOne('[]'), throwsA(isA<FormatException>()));
+      expect(() => PlatformConnectionsModel.readOne(body([item()])), throwsA(isA<FormatException>()));
+    });
+  });
+
   test('never puts a connection name into its error text', () {
     expect(
       () => PlatformConnectionsModel.read(body([item(name: 'Payroll Secret', hasWriteCredential: 'yes')])),

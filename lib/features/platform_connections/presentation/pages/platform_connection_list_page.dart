@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/features/platform_connections/application/platform_connection_active_bloc.dart';
 import 'package:libredb_mobile/features/platform_connections/application/platform_connection_list_bloc.dart';
+import 'package:libredb_mobile/features/platform_connections/presentation/widgets/connection_active_dialog.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_empty_state.dart';
@@ -20,14 +22,21 @@ import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
 
 /// Every connection of the install in Platform mode, active and inactive, newest first, with a local search.
 ///
-/// The list is read only: connections are added, edited and deleted in the Platform web console, and enabling or
-/// disabling one comes in a later milestone, so the page offers none of these. A tap on a row, an inactive one too,
-/// opens the connection's grants.
+/// A row's menu disables an active connection or enables an inactive one after a confirmation, and the row then shows
+/// the status Platform answered. Connections are still added, edited and deleted only in the Platform web console, so
+/// the page offers none of these. A tap on a row, an inactive one too, opens the connection's grants.
 class PlatformConnectionListPage extends StatelessWidget {
   const PlatformConnectionListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<PlatformConnectionActiveBloc, PlatformConnectionActiveState>(
+      listener: _onActiveChange,
+      child: _buildList(),
+    );
+  }
+
+  Widget _buildList() {
     return BlocBuilder<PlatformConnectionListBloc, PlatformConnectionListState>(
       builder: (context, state) => switch (state) {
         PlatformConnectionListInitial() || PlatformConnectionListLoading() => const _Skeleton(),
@@ -60,6 +69,29 @@ class PlatformConnectionListPage extends StatelessWidget {
         ),
       },
     );
+  }
+
+  void _onActiveChange(BuildContext context, PlatformConnectionActiveState state) {
+    final s = S.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    switch (state) {
+      case PlatformConnectionActiveSucceeded(:final connection):
+        context.read<PlatformConnectionListBloc>().add(PlatformConnectionReplaced(connection));
+        // Named by the status Platform answered, which another admin may have set meanwhile.
+        final text = connection.isActive
+            ? s.platform_connections_active_enabled
+            : s.platform_connections_active_disabled;
+        messenger.showSnackBar(SnackBar(content: Text(text)));
+      case PlatformConnectionActiveGone():
+        context.read<PlatformConnectionListBloc>().add(const PlatformConnectionListRefreshed());
+        messenger.showSnackBar(SnackBar(content: Text(s.platform_connections_active_gone)));
+      case PlatformConnectionActiveFailed(errorCode: AppErrorCode.platformLicenseUserSeats):
+        showConnectionUserSeatsDialog(context);
+      case PlatformConnectionActiveFailed(:final errorCode):
+        messenger.showSnackBar(SnackBar(content: Text(errorCode.resolve(context))));
+      case PlatformConnectionActiveIdle() || PlatformConnectionActiveInProgress():
+        break;
+    }
   }
 
   /// [child] centred on a page that a pull refreshes.
@@ -144,12 +176,18 @@ class _LoadedList extends StatelessWidget {
                       description: s.platform_connections_search_empty_description,
                     ),
                   )
-                : ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: visible.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) => _ConnectionRow(connection: visible[index]),
+                : BlocSelector<PlatformConnectionActiveBloc, PlatformConnectionActiveState, String?>(
+                    selector: (state) => switch (state) {
+                      PlatformConnectionActiveInProgress(:final id) => id,
+                      _ => null,
+                    },
+                    builder: (context, busyId) => ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      itemCount: visible.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, index) => _ConnectionRow(connection: visible[index], busyId: busyId),
+                    ),
                   ),
           ),
         ),
@@ -212,10 +250,15 @@ class _RefreshBanner extends StatelessWidget {
   }
 }
 
+enum _ConnectionAction { toggleActive }
+
 class _ConnectionRow extends StatelessWidget {
-  const _ConnectionRow({required this.connection});
+  const _ConnectionRow({required this.connection, required this.busyId});
 
   final PlatformConnection connection;
+
+  /// The connection whose enabling or disabling is out, which disables every row's menu; null when none is.
+  final String? busyId;
 
   @override
   Widget build(BuildContext context) {
@@ -264,9 +307,48 @@ class _ConnectionRow extends StatelessWidget {
               ],
             ),
           ),
+          if (busyId == connection.id)
+            const SizedBox.square(
+              dimension: 48,
+              child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            )
+          // A status the app does not know gets no menu: it cannot say what a change would do.
+          else if (connection.isActive || connection.isInactive)
+            PopupMenuButton<_ConnectionAction>(
+              key: ValueKey('platform-connection-actions-${connection.id}'),
+              enabled: busyId == null,
+              tooltip: s.platform_connections_active_actions,
+              onSelected: (action) => switch (action) {
+                _ConnectionAction.toggleActive => _confirmToggle(context),
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: _ConnectionAction.toggleActive,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: connection.isActive
+                        ? Icon(Icons.block, color: colorScheme.error)
+                        : const Icon(Icons.check_circle_outline),
+                    title: Text(
+                      connection.isActive
+                          ? s.platform_connections_active_disable
+                          : s.platform_connections_active_enable,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
         ],
       ),
+    );
+  }
+
+  Future<void> _confirmToggle(BuildContext context) async {
+    final confirmed = await showConnectionActiveDialog(context, connection: connection);
+    if (confirmed != true || !context.mounted) return;
+    context.read<PlatformConnectionActiveBloc>().add(
+      PlatformConnectionActiveRequested(connection.id, active: connection.isInactive),
     );
   }
 }

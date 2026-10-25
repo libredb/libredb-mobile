@@ -3972,6 +3972,91 @@ class S {
     );
   }
 
+  /// `Connection actions`
+  String get platform_connections_active_actions {
+    return Intl.message('Connection actions', name: 'platform_connections_active_actions', desc: '', args: []);
+  }
+
+  /// `Disable connection`
+  String get platform_connections_active_disable {
+    return Intl.message('Disable connection', name: 'platform_connections_active_disable', desc: '', args: []);
+  }
+
+  /// `Enable connection`
+  String get platform_connections_active_enable {
+    return Intl.message('Enable connection', name: 'platform_connections_active_enable', desc: '', args: []);
+  }
+
+  /// `{connection} closes for every Studio user within about 30 seconds. Queries already running are not stopped. Its grants are kept.`
+  String platform_connections_active_disable_message(String connection) {
+    return Intl.message(
+      '$connection closes for every Studio user within about 30 seconds. Queries already running are not stopped. Its grants are kept.',
+      name: 'platform_connections_active_disable_message',
+      desc: '',
+      args: [connection],
+    );
+  }
+
+  /// `{connection} opens again for everyone who holds a grant on it. Those grants can take user seats of the license.`
+  String platform_connections_active_enable_message(String connection) {
+    return Intl.message(
+      '$connection opens again for everyone who holds a grant on it. Those grants can take user seats of the license.',
+      name: 'platform_connections_active_enable_message',
+      desc: '',
+      args: [connection],
+    );
+  }
+
+  /// `Disable`
+  String get platform_connections_active_disable_confirm {
+    return Intl.message('Disable', name: 'platform_connections_active_disable_confirm', desc: '', args: []);
+  }
+
+  /// `Enable`
+  String get platform_connections_active_enable_confirm {
+    return Intl.message('Enable', name: 'platform_connections_active_enable_confirm', desc: '', args: []);
+  }
+
+  /// `Connection disabled`
+  String get platform_connections_active_disabled {
+    return Intl.message('Connection disabled', name: 'platform_connections_active_disabled', desc: '', args: []);
+  }
+
+  /// `Connection enabled`
+  String get platform_connections_active_enabled {
+    return Intl.message('Connection enabled', name: 'platform_connections_active_enabled', desc: '', args: []);
+  }
+
+  /// `This connection no longer exists`
+  String get platform_connections_active_gone {
+    return Intl.message(
+      'This connection no longer exists',
+      name: 'platform_connections_active_gone',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not enough user seats`
+  String get platform_connections_active_user_seats_title {
+    return Intl.message(
+      'Not enough user seats',
+      name: 'platform_connections_active_user_seats_title',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The Platform license does not have enough user seats for the grants of this connection.`
+  String get platform_connections_active_user_seats {
+    return Intl.message(
+      'The Platform license does not have enough user seats for the grants of this connection.',
+      name: 'platform_connections_active_user_seats',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Could not load your Platform account`
   String get platform_home_identity_load_failed {
     return Intl.message(

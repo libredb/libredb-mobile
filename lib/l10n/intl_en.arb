@@ -1273,6 +1273,42 @@
   "@platform_connections_read_grants_only_semantics": {},
   "platform_connections_refresh_failed": "Could not refresh the connections",
   "@platform_connections_refresh_failed": {},
+  "platform_connections_active_actions": "Connection actions",
+  "@platform_connections_active_actions": {},
+  "platform_connections_active_disable": "Disable connection",
+  "@platform_connections_active_disable": {},
+  "platform_connections_active_enable": "Enable connection",
+  "@platform_connections_active_enable": {},
+  "platform_connections_active_disable_message": "{connection} closes for every Studio user within about 30 seconds. Queries already running are not stopped. Its grants are kept.",
+  "@platform_connections_active_disable_message": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_connections_active_enable_message": "{connection} opens again for everyone who holds a grant on it. Those grants can take user seats of the license.",
+  "@platform_connections_active_enable_message": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_connections_active_disable_confirm": "Disable",
+  "@platform_connections_active_disable_confirm": {},
+  "platform_connections_active_enable_confirm": "Enable",
+  "@platform_connections_active_enable_confirm": {},
+  "platform_connections_active_disabled": "Connection disabled",
+  "@platform_connections_active_disabled": {},
+  "platform_connections_active_enabled": "Connection enabled",
+  "@platform_connections_active_enabled": {},
+  "platform_connections_active_gone": "This connection no longer exists",
+  "@platform_connections_active_gone": {},
+  "platform_connections_active_user_seats_title": "Not enough user seats",
+  "@platform_connections_active_user_seats_title": {},
+  "platform_connections_active_user_seats": "The Platform license does not have enough user seats for the grants of this connection.",
+  "@platform_connections_active_user_seats": {},
   "platform_home_identity_load_failed": "Could not load your Platform account",
   "@platform_home_identity_load_failed": {},
   "platform_home_tenant_label": "Organization",

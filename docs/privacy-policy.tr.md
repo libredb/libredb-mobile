@@ -25,6 +25,7 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Bunları sayfa açıkken bellekte tutar ve cihazda hiç saklamaz; Platform'a da kaldırmak istediğiniz erişimleri gönderir.
   Birine erişim vermek için dizinde arama yaptığınızda arama metni Platform'a gider, Platform da Keycloak'ta arar; uygulama bulunan kullanıcıların kullanıcı adlarını, adlarını, e-posta adreslerini, etkin olup olmadıklarını ve Studio rollerini gösterir.
   Bunları yalnızca ekran açıkken bellekte tutar, arama geçmişi tutmaz ve hiçbirini saklamaz; Platform'a da verdiğiniz ya da değiştirdiğiniz erişimi gönderir: kullanıcıyı, düzeyi ve bitiş zamanını.
+  Platform modunda uygulama Platform'a istediğiniz bir bağlantının etkinleştirilmesini ya da devre dışı bırakılmasını da gönderir; o bağlantı hakkında başka bir şey göndermez.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
   Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 

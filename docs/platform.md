@@ -33,6 +33,7 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `DELETE /api/v1/connections/{id}/grants/{grantId}` | 204, no body | `PlatformGrantRepository.revoke` |
 | `GET /api/v1/directory/users?q=&page=` | `{users: [{id, username, email, firstName, lastName, enabled, studioRole, needsSeat}], page, total}` | `IPlatformDirectoryRepository.search`, `DirectoryPageJson` |
 | `PUT /api/v1/connections/{id}/grants/{subject}` | `{id}` | `PlatformGrantRepository.put`, `GrantPutBody`, `GrantPutAnswerJson` |
+| `PATCH /api/v1/connections/{id}`, body `{active}` | one connection: `{id, name, engine, status, hasWriteCredential}` | `IPlatformConnectionRepository.setActive`, `PlatformConnectionsModel.readOne` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -41,7 +42,14 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 - The first call of an account provisions its Platform user and takes an admin seat, so the license can refuse it (`docs/api/v1.md`).
 - `GET /api/v1/connections` answers every connection of the install tenant, active and inactive, newest first, with no host, credential or sealed value (libredb-platform `src/features/connections/lib/grant-service.ts`).
   All five fields are always present; `status` is `active` or `inactive` today, and the app keeps `engine` and `status` as opaque strings, an unknown value included, and keeps Platform's order.
-  The connections tab (`lib/features/platform_connections/`) shows the list read only: no connection is created, edited or deleted on the phone, and enabling or disabling one comes in M11-P with `PATCH /api/v1/connections/{id}`.
+  The connections tab (`lib/features/platform_connections/`) shows the list; no connection is created, edited or deleted on the phone.
+- `PATCH /api/v1/connections/{id}` disables an active connection or enables an inactive one from the row's menu on the connections tab (libredb-platform `docs/api/v1.md`, `src/features/connections/lib/connection-service.ts`, Platform 1.3.0).
+  The body is exactly `{"active": true}` or `{"active": false}`; the app never sends a name, a definition or a credential.
+  Each action first shows a confirmation: a disable closes the connection for every Studio user within about 30 seconds (Studio's governance reload), does not stop a query already running and keeps its grants; an enable opens it again for every grant holder, and those grants can take user seats of the license.
+  Platform answers 200 with the connection as it now holds it, also when it already had the asked value (a no-op that records no admin action), and the row shows that answered status in place, without a list reload, keeping the search.
+  A 404 `NOT_FOUND` says the connection no longer exists and refreshes the list; a 403 `LICENSE_USER_SEATS` (on enable only) opens a dialog worded for the connection's grants and never the account refusal page; a 400, `LICENSE_EXPIRED`, `LICENSE_INVALID`, a 5xx and a transport failure each show their message, and the row keeps its status.
+  The request is never retried, and a second confirm while one is out is dropped; every row's menu is disabled until the answer arrives.
+  The log carries the id and the answered status, never the connection name.
   It loads when the tab opens, on a pull to refresh and on a retry, never on a timer; a tap opens the connection's grants at `/platform/connections/:id`.
 - `GET /api/v1/connections/{id}/grants` lists a connection's grants by username, then id, expired grants included (libredb-platform `src/features/connections/lib/grant-service.ts`, `grant.repository.ts`).
   The app keeps that order and never sorts.

@@ -69,6 +69,10 @@ final class PlatformApiClient {
   Future<Response<String>> put<T>(String path, T data, {String? pathParams}) async =>
       _configured.put(path, data, pathParams: pathParams);
 
+  /// `PATCH` [data] to [path]; never sent twice.
+  Future<Response<String>> patch<T>(String path, T data, {String? pathParams}) async =>
+      _configured.patch(path, data, pathParams: pathParams);
+
   /// `DELETE` [path]; never sent twice.
   Future<Response<String>> delete(String path, {String? pathParams, Map<String, dynamic>? queryParams}) async =>
       _configured.delete(path, pathParams: pathParams, queryParams: queryParams);

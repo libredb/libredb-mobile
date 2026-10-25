@@ -31,3 +31,14 @@ final class PlatformConnectionListSearchChanged extends PlatformConnectionListEv
   @override
   List<Object?> get props => [query];
 }
+
+/// The connection Platform answered after enabling or disabling it, which takes the place of the item with its id.
+final class PlatformConnectionReplaced extends PlatformConnectionListEvent {
+  const PlatformConnectionReplaced(this.connection);
+
+  /// Its text never carries the name.
+  final PlatformConnection connection;
+
+  @override
+  List<Object?> get props => [connection];
+}

@@ -1263,6 +1263,42 @@
   "@platform_connections_read_grants_only_semantics": {},
   "platform_connections_refresh_failed": "Bağlantılar yenilenemedi",
   "@platform_connections_refresh_failed": {},
+  "platform_connections_active_actions": "Bağlantı işlemleri",
+  "@platform_connections_active_actions": {},
+  "platform_connections_active_disable": "Bağlantıyı devre dışı bırak",
+  "@platform_connections_active_disable": {},
+  "platform_connections_active_enable": "Bağlantıyı etkinleştir",
+  "@platform_connections_active_enable": {},
+  "platform_connections_active_disable_message": "{connection} bağlantısı yaklaşık 30 saniye içinde tüm Studio kullanıcılarına kapanır. Çalışmakta olan sorgular durdurulmaz. Erişimleri korunur.",
+  "@platform_connections_active_disable_message": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_connections_active_enable_message": "{connection} bağlantısı, üzerinde erişimi olan herkese yeniden açılır. Bu erişimler lisansın kullanıcı koltuklarını kullanabilir.",
+  "@platform_connections_active_enable_message": {
+    "placeholders": {
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "platform_connections_active_disable_confirm": "Devre dışı bırak",
+  "@platform_connections_active_disable_confirm": {},
+  "platform_connections_active_enable_confirm": "Etkinleştir",
+  "@platform_connections_active_enable_confirm": {},
+  "platform_connections_active_disabled": "Bağlantı devre dışı bırakıldı",
+  "@platform_connections_active_disabled": {},
+  "platform_connections_active_enabled": "Bağlantı etkinleştirildi",
+  "@platform_connections_active_enabled": {},
+  "platform_connections_active_gone": "Bu bağlantı artık yok",
+  "@platform_connections_active_gone": {},
+  "platform_connections_active_user_seats_title": "Yeterli kullanıcı koltuğu yok",
+  "@platform_connections_active_user_seats_title": {},
+  "platform_connections_active_user_seats": "Platform lisansında bu bağlantının erişimleri için yeterli kullanıcı koltuğu yok.",
+  "@platform_connections_active_user_seats": {},
   "platform_home_identity_load_failed": "Platform hesabınız yüklenemedi",
   "@platform_home_identity_load_failed": {},
   "platform_home_tenant_label": "Kuruluş",

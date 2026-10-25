@@ -88,6 +88,8 @@ void main() {
     'IPlatformGrantRepository.put': (client) =>
         PlatformGrantRepository(client)
             .put('cm0connection000000000001', 'f:ldap-1:ken.ldap', level: 'read', expiresAt: null),
+    'IPlatformConnectionRepository.setActive': (client) =>
+        PlatformConnectionRepository(client).setActive('cm0conn0000000000000000001', active: false),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {

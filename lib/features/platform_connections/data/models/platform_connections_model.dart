@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
 
 /// Reads LibreDB Platform's `GET /api/v1/connections`: `{"connections": [{id, name, engine, status,
-/// hasWriteCredential}]}`, newest first (libredb-platform `src/features/connections/lib/grant-service.ts`).
+/// hasWriteCredential}]}`, newest first (libredb-platform `src/features/connections/lib/grant-service.ts`), and the
+/// one connection that `PATCH /api/v1/connections/{id}` answers in the same item shape.
 final class PlatformConnectionsModel {
   const PlatformConnectionsModel._();
 
@@ -17,6 +18,11 @@ final class PlatformConnectionsModel {
     if (connections is! List) throw const FormatException('The Platform connections body has no connections list');
     return List.unmodifiable([for (final item in connections) _connection(item)]);
   }
+
+  /// The one connection of a `PATCH /api/v1/connections/{id}` answer.
+  ///
+  /// Throws a [FormatException] when the body is not an object, or lacks a field as [read] describes.
+  static PlatformConnection readOne(String body) => _connection(jsonDecode(body));
 
   static PlatformConnection _connection(Object? item) {
     if (item is! Map<String, dynamic>) throw const FormatException('A Platform connection is not an object');
