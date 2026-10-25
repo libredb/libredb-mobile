@@ -70,6 +70,9 @@ class InterceptorChainEntry {
 /// [post] takes `cancelSignal`: once it is cancelled the client stops waiting, and the request fails with
 /// [RequestCancelledException], which a caller reports as no error; a request is never sent again after it.
 ///
+/// [post] takes `partOfSignOut`, for a request of the sign-out the user started, such as Studio's sign-out record: it
+/// still leaves while the sign-out runs, when `AuthInterceptor` refuses every other request of the session.
+///
 /// [post] sends no header or content type of its own: every request carries the `Content-Type: application/json` of
 /// the client's base options, which LibreDB Studio requires of a POST that has no `Origin` header.
 ///
@@ -77,6 +80,9 @@ class InterceptorChainEntry {
 /// decides which 401 starts that refresh, and `isSessionRefused` which 401 after it ends the session
 /// ([isUnauthorized], every 401, when either is null). `onSessionRefused` is told that refusal after a refresh, and
 /// `onSessionExpired` a refresh that failed; without `onSessionRefused` the refusal goes to `onSessionExpired`.
+///
+/// `onTokenMissing` is told when a request is refused, unsent, because no access token is stored while no sign-out or
+/// wipe of the stored session runs (`AuthInterceptor`).
 ///
 /// `onAccountRefused` is told the code of every answer that `accountRefusal` reads as a refusal of the signed-in
 /// account, whichever request met it; without `onAccountRefused` no request reports one.
@@ -96,6 +102,7 @@ class ApiClient {
     this._isSessionRefused,
     this._onAccountRefused,
     this._accountRefusal,
+    this._onTokenMissing,
     ApiTarget? target,
   }) : _givenTarget = target,
        assert(_onAccountRefused == null || _accountRefusal != null, 'onAccountRefused needs an accountRefusal');
@@ -113,6 +120,7 @@ class ApiClient {
   final SessionRefusedPredicate? _isSessionRefused;
   final OnAccountRefused? _onAccountRefused;
   final AccountRefusal? _accountRefusal;
+  final OnTokenMissing? _onTokenMissing;
   final ApiTarget? _givenTarget;
   late final ApiTarget _target = _givenTarget ?? ApiTarget.studio(_appConfig);
   Dio? _dio;
@@ -182,7 +190,7 @@ class ApiClient {
         meta: const InterceptorChainEntry(name: 'ConnectivityInterceptor', detail: 'Rejects requests when offline'),
       ),
       (
-        interceptor: AuthInterceptor(secureStorage: _secureStorage),
+        interceptor: AuthInterceptor(secureStorage: _secureStorage, onTokenMissing: _onTokenMissing),
         meta: const InterceptorChainEntry(name: 'AuthInterceptor', detail: 'Attaches JWT token to requests'),
       ),
       (
@@ -307,6 +315,7 @@ class ApiClient {
     Set<String> sensitiveKeys = const {},
     Duration? receiveTimeout,
     CancelSignal? cancelSignal,
+    bool partOfSignOut = false,
   }) async {
     final fullPath = pathParams != null ? '$path/$pathParams' : path;
     final serialized = _serializeData(data);
@@ -318,6 +327,7 @@ class ApiClient {
         '_pathParams': pathParams,
         if (idempotent) IdempotencyInterceptor.optInExtraKey: true,
         if (sensitiveKeys.isNotEmpty) sensitiveKeysExtra: sensitiveKeys,
+        if (partOfSignOut) AuthInterceptor.signOutRequestKey: true,
       },
     );
     try {

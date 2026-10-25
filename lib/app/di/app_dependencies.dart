@@ -56,6 +56,7 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
@@ -128,12 +129,14 @@ class AppDependencies {
   /// The [ApiClient], which refreshes the session through [tokenRotation] at the identity provider. [onSessionExpired]
   /// runs when the token refresh fails; the caller ends the session there. [onSessionRefused] runs when Studio refuses
   /// the token a refresh has just issued ([sessionRefusedPredicate]), and [onSessionExpired] does when it is null.
-  /// [onAccountRefused] is told every answer that refuses the signed-in account ([accountRefusal]).
+  /// [onAccountRefused] is told every answer that refuses the signed-in account ([accountRefusal]), and
+  /// [onTokenMissing] every request refused unsent because no access token is stored.
   ApiClient createApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) => ApiClient(
     appConfig: appConfig,
@@ -144,6 +147,7 @@ class AppDependencies {
     isSessionExpired: sessionExpiredPredicate,
     isSessionRefused: sessionRefusedPredicate,
     onAccountRefused: onAccountRefused,
+    onTokenMissing: onTokenMissing,
     accountRefusal: accountRefusal,
   );
 
@@ -163,13 +167,15 @@ class AppDependencies {
   /// The [PlatformApiClient], built from [AppConfig.platform], which refreshes the session through [tokenRotation], the
   /// same rotation as the Studio [ApiClient]. [onSessionExpired] runs when the token refresh fails, and
   /// [onSessionRefused] when a 401 `BEARER_INVALID` survives the refresh ([onSessionExpired] when it is null);
-  /// [onAccountRefused] is told every answer that refuses the signed-in admin ([platformAccountRefusalOf]). In a build
-  /// without a Platform target every call fails without a request.
+  /// [onAccountRefused] is told every answer that refuses the signed-in admin ([platformAccountRefusalOf]), and
+  /// [onTokenMissing] every request refused unsent because no access token is stored. In a build without a Platform
+  /// target every call fails without a request.
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) => PlatformApiClient(
     appConfig: appConfig,
@@ -180,6 +186,7 @@ class AppDependencies {
     isSessionExpired: platformSessionExpiredPredicate,
     isSessionRefused: platformSessionRefusedPredicate,
     onAccountRefused: onAccountRefused,
+    onTokenMissing: onTokenMissing,
     accountRefusal: platformAccountRefusalOf,
   );
 

@@ -5,6 +5,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/api_target.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_session_policy.dart';
@@ -29,6 +30,7 @@ final class PlatformApiClient {
     OnSessionExpired? onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     SessionExpiredPredicate isSessionExpired = isPlatformSessionExpired,
     SessionRefusedPredicate isSessionRefused = isPlatformSessionRefused,
     AccountRefusal accountRefusal = platformAccountRefusal,
@@ -45,6 +47,7 @@ final class PlatformApiClient {
            isSessionRefused: isSessionRefused,
            onAccountRefused: onAccountRefused,
            accountRefusal: accountRefusal,
+           onTokenMissing: onTokenMissing,
            target: ApiTarget(
              baseUrl: baseUrl,
              certificatePins: certificatePins,

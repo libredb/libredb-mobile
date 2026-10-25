@@ -131,6 +131,16 @@ class TokenRefreshInterceptor extends Interceptor {
   /// or failure) so the next refresh window can start a fresh attempt.
   Future<_RefreshOutcome>? _inFlightRefresh;
 
+  /// The last failed refresh whose end of the session was told, so the requests that waited for it end it once.
+  Future<_RefreshOutcome>? _failedRefreshTold;
+
+  /// The last token whose refusal after a refresh was told, so requests sent again with it and refused end it once.
+  String? _refusedTokenTold;
+
+  /// Leaves out [_refusedTokenTold], a bearer token.
+  @override
+  String toString() => 'TokenRefreshInterceptor(refusedTokenTold: [REDACTED])';
+
   TokenRefreshInterceptor({
     required Dio dio,
     OnSessionExpired? onSessionExpired,
@@ -232,6 +242,13 @@ class TokenRefreshInterceptor extends Interceptor {
       handler.next(err);
       return;
     }
+    // A sign-out the user started ends the session itself, so a 401 of any other request met meanwhile starts no
+    // refresh, which would spend the refresh token the sign-out may still use, and no second end of the session.
+    if (SessionGeneration.signingOut && !AuthInterceptor.isSignOutRequest(err.requestOptions)) {
+      _log.warn('401 for {} while a sign-out runs: no retry and no token refresh', [requestPath]);
+      handler.next(err);
+      return;
+    }
 
     // Second 401 on the same request after a refresh+retry round
     // already happened: refusing to refresh again, since another refresh
@@ -242,7 +259,7 @@ class TokenRefreshInterceptor extends Interceptor {
     if (_retriedAfterRefresh[err.requestOptions] == true) {
       if (_isSessionRefused(err)) {
         _log.warn('401 again after refresh+retry for {}: the token was refused', [requestPath]);
-        _triggerRefused();
+        _triggerRefused(_bearerOf(err.requestOptions));
       } else {
         _log.warn('401 again after refresh+retry for {}: not a refusal of the session, which is kept', [requestPath]);
       }
@@ -274,26 +291,23 @@ class TokenRefreshInterceptor extends Interceptor {
       handler.next(err);
       return;
     }
-    // Dio headers are Map<String, dynamic>; defensive narrowing to
-    // avoid a runtime crash if a non-String value ever lands on
-    // [_AuthHeader.name] (interceptor would otherwise break the entire
-    // request pipeline for one malformed header).
-    final rawAuth = err.requestOptions.headers[_AuthHeader.name];
-    final requestAuth = rawAuth is String ? rawAuth : null;
-    final requestToken = (requestAuth != null && requestAuth.startsWith(_AuthHeader.bearerPrefix))
-        ? requestAuth.substring(_AuthHeader.bearerPrefix.length)
-        : null;
+    final requestToken = _bearerOf(err.requestOptions);
     if (currentToken != null && currentToken.isNotEmpty && requestToken != null && requestToken != currentToken) {
       _log.debug('JWT already rotated since {} was sent — retrying with current token', [requestPath]);
       await _retryWithToken(err, currentToken, handler);
       return;
     }
 
-    switch (await _refreshOnce(sentUnder)) {
+    final refresh = _refreshOnce(sentUnder);
+    switch (await refresh) {
       case _Refreshed(:final idToken):
         await _retryWithToken(err, idToken, handler);
       case _RefreshFailed():
-        _triggerLogout();
+        // Every request that waited for this refresh fails with its 401, and the session ends once.
+        if (!identical(refresh, _failedRefreshTold)) {
+          _failedRefreshTold = refresh;
+          _triggerLogout();
+        }
         handler.next(err);
       case _RefreshUnavailable():
         // The session is kept, and the request fails as a network error. Rejected, as [_retryWithToken] does, so the
@@ -532,8 +546,35 @@ class TokenRefreshInterceptor extends Interceptor {
     }
   }
 
-  /// Tells [OnSessionRefused], or [OnSessionExpired] for a client given no [OnSessionRefused].
-  void _triggerRefused() {
+  /// The bearer token [options] was sent with, or null when it carried none.
+  ///
+  /// Dio headers are `Map<String, dynamic>`; defensive narrowing to avoid a runtime crash if a non-String value ever
+  /// lands on [_AuthHeader.name] (interceptor would otherwise break the entire request pipeline for one malformed
+  /// header).
+  static String? _bearerOf(RequestOptions options) {
+    final rawAuth = options.headers[_AuthHeader.name];
+    final requestAuth = rawAuth is String ? rawAuth : null;
+    return (requestAuth != null && requestAuth.startsWith(_AuthHeader.bearerPrefix))
+        ? requestAuth.substring(_AuthHeader.bearerPrefix.length)
+        : null;
+  }
+
+  /// Whether a sign-out the user started is running, which ends the session itself, so no callback ends it as well.
+  bool _signOutEndsSession() {
+    if (!SessionGeneration.signingOut) return false;
+    _log.info('A sign-out is running and ends the session: no session callback');
+    return true;
+  }
+
+  /// Tells [OnSessionRefused], or [OnSessionExpired] for a client given no [OnSessionRefused], that the server refused
+  /// [token], once per token.
+  void _triggerRefused(String? token) {
+    if (_signOutEndsSession()) return;
+    if (token != null && token == _refusedTokenTold) {
+      _log.debug('The refusal of this token was already told: no second session callback');
+      return;
+    }
+    _refusedTokenTold = token;
     final onSessionRefused = _onSessionRefused;
     if (onSessionRefused == null) {
       _triggerLogout();
@@ -544,6 +585,7 @@ class TokenRefreshInterceptor extends Interceptor {
   }
 
   void _triggerLogout() {
+    if (_signOutEndsSession()) return;
     if (_onSessionExpired != null) {
       _log.info('Triggering session expired callback');
       _onSessionExpired();

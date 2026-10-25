@@ -135,6 +135,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
+      TestEnv.authenticate();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = ObjectBrowserRepository(client);
@@ -175,6 +176,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter()..answer = (200, '{"keys":[],"cursor":"0","types":{},"total":0}');
+      TestEnv.authenticate();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = ObjectBrowserRepository(client);

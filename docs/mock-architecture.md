@@ -178,6 +178,12 @@ if (hasAuth) {
 }
 ```
 
+A request that needs the session is refused before it leaves, with a `NoSessionException`, when no access token is stored, while a sign-out runs (`SessionGeneration.signOut`, except for the sign-out's own requests such as Studio's sign-out record), or while the stored session is wiped (#277).
+The refusal skips the error interceptors, so no 401 handling, refresh or end of the session follows it, and writes one warn line.
+A refusal for a missing token outside a sign-out or a wipe tells `onTokenMissing`, which ends the session only while the app still holds it as signed in.
+Only a failed secure read still sends the request without a token, so the 401 that follows ends the session.
+`ResilienceInterceptor` sends a GET retry past this interceptor with the first request's headers, so it checks the same way before each retry: a retry of a request sent under a session is not sent, and fails with a `NoSessionException`, once that session has ended or while a sign-out runs.
+
 This runs **before** MockInterceptor so that mock auth checks see the token.
 
 ### MockInterceptor
@@ -188,7 +194,7 @@ In dev/test mode it answers every request that reaches the end of the chain with
 **Step-by-step flow:**
 
 1. **Simulated latency** — 500 ms delay in dev mode, skipped in test mode
-2. **Auth check**: for a request to an endpoint that is not public, rejects with 401 if no `Authorization` header; on a LibreDB Platform path (under `/v1/`) the body is Platform's envelope `{"error":{"code":"BEARER_INVALID",...}}`, elsewhere Studio's plain text
+2. **Auth check**: for a request to an endpoint that is not public, rejects with 401 if no `Authorization` header (only a failed secure read lets such a request through `AuthInterceptor`) or an expired JWT bearer; on a LibreDB Platform path (under `/v1/`) the body is Platform's envelope `{"error":{"code":"BEARER_INVALID",...}}`, elsewhere Studio's plain text
 3. **Status code** — POST → 201, DELETE → 204 (early return), everything else → 200
 4. **File resolution** — Builds a file name from the request metadata (see next section)
 5. **Asset loading** — Reads the JSON file via `rootBundle.loadString()`
@@ -212,6 +218,8 @@ In mock mode the provider is `MockOidcClient`, the debug-only double of `main_mo
 `AuthInterceptor` records on each request the session generation it goes out under, before it reads the token (`SessionGeneration` in `lib/infrastructure/storage/session_generation.dart`).
 A logout or the end of the session wipes the stored session inside `SessionGeneration.wipe`.
 So a 401 for a request whose session has been wiped since, or is being wiped, is neither sent again nor refreshed: the token stored now may be that of another user who signed in since.
+The sign-out the user starts runs inside `SessionGeneration.signOut` until its wipe has ended, so a 401 of any other request met meanwhile starts no refresh and does not end the session as well, and no session callback runs while it does.
+The requests that waited for one failed refresh end the session once, and requests sent again with the same token and refused end it once.
 A refresh still on its way drops the rotated tokens instead of storing a session that a relaunch would restore.
 The startup step refreshes through the same rotation and goes on after its time limit, so before it acts on the answer of a refresh, success or failure, `TokenRefreshInterceptor` also reads the stored refresh token again.
 When the session is no longer stored, the answer is dropped; when another refresh has rotated the session, its tokens stay and the request is sent again with its JWT.

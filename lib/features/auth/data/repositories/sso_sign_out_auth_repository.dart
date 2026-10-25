@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/auth/domain/services/sso_session_startup
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
+import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 
 /// The [IAuthRepository] whose logout also ends the user's session at the identity provider.
@@ -68,8 +69,17 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
   ///
   /// [SsoSignOut.providerLogout] fails with an [AuthError] of [AppErrorCode.authOidcLogoutIncomplete] when the
   /// provider logout failed.
+  ///
+  /// From its start until the wipe has ended it runs as a sign-out ([SessionGeneration.signOut]), so no other request
+  /// of the session leaves meanwhile, such as a connection list reload, and none ends the session a second time.
   @override
   Future<SsoSignOut> signOut() async {
+    final (:idToken, :cleared) = await SessionGeneration.signOut(_recordAndWipe);
+    return SsoSignOut(cleared: cleared, providerLogout: _endProviderSession(_settings.logoutHint ? idToken : null));
+  }
+
+  /// Reads the ID token hint, records the sign-out at Studio for a Studio session, and wipes the local session.
+  Future<({String? idToken, Result<void> cleared})> _recordAndWipe() async {
     String? idToken;
     try {
       idToken = await _secureStorage.read(SecureStorageKeys.oidcIdToken.key);
@@ -86,7 +96,7 @@ class SsoSignOutAuthRepository implements IAuthRepository, ISsoSignOutRepository
         break;
     }
     final cleared = await _inner.logout();
-    return SsoSignOut(cleared: cleared, providerLogout: _endProviderSession(_settings.logoutHint ? idToken : null));
+    return (idToken: idToken, cleared: cleared);
   }
 
   /// The stored session's target, read before anything that could delete it. A session stored without a target is a

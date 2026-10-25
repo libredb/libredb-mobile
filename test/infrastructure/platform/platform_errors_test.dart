@@ -98,6 +98,10 @@ void main() {
         isA<NetworkError>().having((e) => e.code, 'code', AppErrorCode.networkCertInvalid.key),
       );
       expect(platformError(RequestCancelledException()), isA<RequestCancelledError>());
+      expect(
+        platformError(NoSessionException('a sign-out is running')),
+        isA<AuthError>().having((e) => e.code, 'code', AppErrorCode.authInvalidAccessToken.key),
+      );
       expect(platformError(TimeoutBeforeSentException()), isA<TimeoutError>().having((e) => e.sent, 'sent', isFalse));
       expect(platformError(FetchDataException('TimeoutException')), isA<TimeoutError>());
       expect(platformError(FetchDataException('No Internet connection')), isA<NetworkError>());

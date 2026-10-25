@@ -169,6 +169,12 @@ class AppScope extends StatelessWidget {
             final refusal = context.read<StudioAccountRefusalCubit>();
             // A refresh token the identity provider refused is dead for Studio and Platform alike.
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
+            // No access token while the app holds the session as signed in: the session cannot be used, so it ends. A
+            // session that has already ended, such as right after a sign-out, does not end again (#277).
+            void onTokenMissing() {
+              if (session.state is SessionAuthenticated) session.endSession(reason: SessionExpiredReason.expired);
+            }
+
             // Studio refusing a token just refreshed is Studio's answer about Studio, such as during a switch from a
             // Platform session, so it ends only a Studio session, or one that is not signed in yet.
             void onSessionRefused() {
@@ -187,6 +193,7 @@ class AppScope extends StatelessWidget {
               onSessionExpired: onSessionExpired,
               onSessionRefused: onSessionRefused,
               onAccountRefused: onAccountRefused,
+              onTokenMissing: onTokenMissing,
               tokenRotation: switch (dependencies.authMode) {
                 OidcAuthMode() => context.read<TokenRotation>(),
                 // A misconfigured build cannot reach the provider, so a stored session is never refreshed.
@@ -204,6 +211,11 @@ class AppScope extends StatelessWidget {
             final refusal = context.read<PlatformAccountRefusalCubit>();
             // A refresh token the identity provider refused is dead for Studio and Platform alike.
             void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
+            // As for the Studio client: only a session still held as signed in ends (#277).
+            void onTokenMissing() {
+              if (session.state is SessionAuthenticated) session.endSession(reason: SessionExpiredReason.expired);
+            }
+
             // Platform refusing a token just refreshed is Platform's answer about Platform, such as during a switch
             // from a Studio session, so it ends only a Platform session, or one that is not signed in yet.
             void onSessionRefused() {
@@ -222,6 +234,7 @@ class AppScope extends StatelessWidget {
               onSessionExpired: onSessionExpired,
               onSessionRefused: onSessionRefused,
               onAccountRefused: onAccountRefused,
+              onTokenMissing: onTokenMissing,
               // The one rotation the Studio client and the startup step share, so a refresh token is never spent twice.
               tokenRotation: switch (dependencies.authMode) {
                 OidcAuthMode() => context.read<TokenRotation>(),

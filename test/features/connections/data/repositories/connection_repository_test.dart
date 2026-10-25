@@ -197,6 +197,7 @@ void main() {
         ],
         'cacheHint': 60000,
       });
+    TestEnv.authenticate();
     final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
 
@@ -221,6 +222,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
+      TestEnv.authenticate();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       queryTimeouts = ConnectionQueryTimeouts();
@@ -267,6 +269,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
+      TestEnv.authenticate();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       repository = ConnectionRepository(client, ConnectionQueryTimeouts());
