@@ -21,7 +21,6 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/active_connection/active_catalog_cubit.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
-import 'package:libredb_mobile/shared/models/session_target.dart';
 
 class AppSessionListeners extends StatefulWidget {
   const AppSessionListeners({
@@ -109,15 +108,14 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
         BlocListener<LoginBloc, LoginState>(
           listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
           listener: (context, state) {
-            if (state is LoginLoadedState) {
+            if (state case LoginLoadedState(:final target)) {
               // Mark the session authenticated SYNCHRONOUSLY. As an ancestor
               // of the login page this listener fires before the page's
               // success listener, so the session is already authenticated
               // when that listener navigates to the `returnUrl` deep link.
               // Awaiting a storage read here would let navigation win the
               // race and bounce the deep link back to /login → home.
-              // #247 replaces the constant with the target of the entry the user chose.
-              context.read<SessionCubit>().markAuthenticated(SessionTarget.studio);
+              context.read<SessionCubit>().markAuthenticated(target);
             }
           },
         ),

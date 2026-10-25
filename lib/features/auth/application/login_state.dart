@@ -11,21 +11,25 @@ final class LoginInitialState extends LoginState {
   List<Object?> get props => [];
 }
 
-/// A sign-in is running.
+/// A sign-in for [target] is running.
 final class LoginLoadingState extends LoginState {
-  const LoginLoadingState();
+  const LoginLoadingState({required this.target});
+
+  final SessionTarget target;
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [target];
 }
 
-/// Signed in, and Studio accepted the account. It carries no role: the role comes only from Studio's
-/// `GET /api/auth/me`, which the shell reads.
+/// Signed in, and the gate of [target] accepted the account. It carries neither a role nor an identity: the shell of
+/// [target] loads the identity when it opens, from Studio's `GET /api/auth/me` or Platform's `GET /api/v1/me`.
 final class LoginLoadedState extends LoginState {
-  const LoginLoadedState();
+  const LoginLoadedState({required this.target});
+
+  final SessionTarget target;
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [target];
 }
 
 final class LoginErrorState extends LoginState {

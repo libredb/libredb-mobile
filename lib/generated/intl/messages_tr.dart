@@ -403,6 +403,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
+    "error_platform_account_refused": MessageLookupByLibrary.simpleMessage(
+      "Platform bu girişi kabul etmedi. Bu uygulamanın Platform için ayarlandığını yöneticinize kontrol ettirin ya da Studio\'ya giriş yapın.",
+    ),
     "error_platform_admin_role_required": MessageLookupByLibrary.simpleMessage(
       "Bu hesap bir Platform yöneticisi değil. Bunun yerine Studio ile oturum açın.",
     ),
@@ -580,8 +583,16 @@ class MessageLookup extends MessageLookupByLibrary {
       "Size verilen bağlantılarda şemalara göz atın ve sorgu çalıştırın.",
     ),
     "login_feature_query_title": MessageLookupByLibrary.simpleMessage("Göz atın ve sorgulayın"),
+    "login_platform_button": MessageLookupByLibrary.simpleMessage("Platform\'a giriş yap"),
+    "login_platform_helper": MessageLookupByLibrary.simpleMessage(
+      "Platform yöneticileri için. İlk Platform girişiniz lisansın bir yönetici koltuğunu kullanır.",
+    ),
     "login_sso_button": MessageLookupByLibrary.simpleMessage("SSO ile giriş yap"),
     "login_sso_subtitle": MessageLookupByLibrary.simpleMessage("Kurumsal hesabınızla giriş yapın."),
+    "login_studio_button": MessageLookupByLibrary.simpleMessage("Studio\'ya giriş yap"),
+    "login_studio_helper": MessageLookupByLibrary.simpleMessage(
+      "Studio\'nun size açtığı veritabanlarına göz atın ve sorgu çalıştırın.",
+    ),
     "login_switch_to_dark_mode": MessageLookupByLibrary.simpleMessage("Koyu temaya geç"),
     "login_switch_to_light_mode": MessageLookupByLibrary.simpleMessage("Açık temaya geç"),
     "login_welcome_title": MessageLookupByLibrary.simpleMessage("Tekrar hoş geldiniz"),
