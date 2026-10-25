@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
@@ -9,6 +10,7 @@ import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
@@ -26,8 +28,11 @@ import '../support/test_env.dart';
 /// The methods sent before sign-in also run without a stored token: the mock answers a public endpoint without one, as
 /// the server does, and rejects any other request without one with 401.
 ///
-/// The last test fails when a repository that sends requests through [ApiClient] gains a method the table does not
-/// drive.
+/// LibreDB Platform's repositories send through their own [PlatformApiClient], so they have their own table, driven
+/// with [TestEnv.platformApiClient].
+///
+/// The last test fails when a repository that sends requests through [ApiClient] or [PlatformApiClient] gains a method
+/// neither table drives.
 void main() {
   // Keyed by test name; the part before the first space is the repository method.
   final requests = <String, Future<Result<Object?>> Function(ApiClient client)>{
@@ -69,6 +74,21 @@ void main() {
     'IStudioStatusRepository.readiness': (client) => StudioStatusRepository(client).readiness(),
   };
 
+  // Keyed like [requests]; later Platform repositories append their rows here.
+  final platformRequests = <String, Future<Result<Object?>> Function(PlatformApiClient client)>{
+    'IPlatformIdentityRepository.fetch': (client) => PlatformIdentityRepository(client).fetch(),
+  };
+
+  for (final MapEntry(key: name, value: send) in platformRequests.entries) {
+    test('$name succeeds through the mock-backed Platform client', () async {
+      TestEnv.authenticate();
+
+      final result = await send(TestEnv.platformApiClient());
+
+      expect(result, isA<Success<Object?>>(), reason: '$result');
+    });
+  }
+
   for (final MapEntry(key: name, value: send) in requests.entries) {
     test('$name succeeds through the mock-backed client', () async {
       TestEnv.authenticate();
@@ -96,6 +116,12 @@ void main() {
     for (final send in requests.values) {
       TestEnv.authenticate();
       final client = TestEnv.apiClient();
+      client.instance.interceptors.insert(0, _PathRecordingInterceptor(sentPaths));
+      await send(client);
+    }
+    for (final send in platformRequests.values) {
+      TestEnv.authenticate();
+      final client = TestEnv.platformApiClient();
       client.instance.interceptors.insert(0, _PathRecordingInterceptor(sentPaths));
       await send(client);
     }
@@ -129,8 +155,8 @@ void main() {
     }
   });
 
-  test('every method of a repository that sends requests through ApiClient is driven above', () {
-    final driven = requests.keys.map((name) => name.split(' ').first).toSet();
+  test('every method of a repository that sends requests through ApiClient or PlatformApiClient is driven above', () {
+    final driven = [...requests.keys, ...platformRequests.keys].map((name) => name.split(' ').first).toSet();
     final methods = _apiClientRepositoryMethods();
 
     expect(methods.difference(driven), isEmpty, reason: 'Drive these methods above and add the mock files they need');
@@ -143,7 +169,8 @@ SqlEditorRepository _sqlEditor(ApiClient client) {
   return SqlEditorRepository(client, StatementRepository(client, queryTimeouts), queryTimeouts);
 }
 
-/// `Interface.method` for every method of a repository interface that a class importing [ApiClient] implements.
+/// `Interface.method` for every method of a repository interface that a class importing [ApiClient] or
+/// [PlatformApiClient] implements.
 Set<String> _apiClientRepositoryMethods() {
   final sources = [
     for (final file in Directory('lib').listSync(recursive: true).whereType<File>())
@@ -151,7 +178,8 @@ Set<String> _apiClientRepositoryMethods() {
   ];
   final implemented = {
     for (final source in sources)
-      if (source.contains("import 'package:libredb_mobile/infrastructure/http/api_client.dart';"))
+      if (source.contains("import 'package:libredb_mobile/infrastructure/http/api_client.dart';") ||
+          source.contains("import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';"))
         for (final match in RegExp(r'class \w+ implements (I\w+Repository)\b').allMatches(source)) match[1]!,
   };
   final declared = {

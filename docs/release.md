@@ -96,7 +96,8 @@ Repository variables, the deployment the build signs in to ([studio.md](studio.m
 | `PLAY_RELEASE_STATUS` | No; `completed` by default; set it to `draft` until the app's first publication on Play, then remove it |
 
 An empty variable is left out of the build, and the build stops when a required one is missing.
-The app stops at start when `PROD_API_URL`, `OIDC_ISSUER` or `SENTRY_DSN` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
+The release workflow does not pass the Platform defines `PLATFORM_API_URL` and `PLATFORM_CERT_PINS` ([platform.md](platform.md)), so the store build stays Studio-only until M13-P adds them.
+The app stops at start when `PROD_API_URL`, `OIDC_ISSUER`, `SENTRY_DSN` or `PLATFORM_API_URL` is set but is not an https URL, so the store build only talks to them over https ([security.md](security.md), "Encryption in transit").
 Before the build, `tool/release/check_defines.sh` stops the release on the same rule, naming the variable and never its value, so nothing is signed or uploaded with an http value.
 `OIDC_REDIRECT_SCHEME` is not read, because an Android build only receives its redirect on the scheme of the manifest placeholder.
 `SCREEN_CAPTURE_PROTECTION` is not read either, so the store build keeps screen capture protection on, its default in a prod build ([security.md](security.md)).

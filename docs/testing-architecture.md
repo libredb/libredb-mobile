@@ -122,6 +122,7 @@ A static helper — the single test-support entry point:
 | `TestEnv.reset()` | Re-installs the secure-storage mock and clears all storage. No language is stored, so an `App` starts in the language passed to it, as on a first launch. Called automatically by the bootstrap. |
 | `TestEnv.authenticate({SessionTarget target})` | Seeds a mock JWT and the session target, Studio unless `target` says otherwise, as a sign-in of this build stores them. Call in `setUp` or a test body, **never** in `setUpAll`. |
 | `TestEnv.apiClient({Dio? dio})` | Builds a mock-backed `ApiClient` (test `AppConfig`, shared secure adapter). Pass a stub `dio` to control responses. |
+| `TestEnv.platformApiClient({Dio? dio})` | Builds the mock-backed LibreDB Platform client, `PlatformApiClient`, the same way. |
 | `TestEnv.autoReset` | Set `false` in a file's `setUpAll` to opt that file out of the global reset. |
 
 > **Key facts that make this safe**
@@ -381,6 +382,7 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 - **`mock_asset_naming_test.dart`** fails if a file under `assets/mock/` has a `-` in its name.
   `MockInterceptor` maps `-` in request paths to `_`, so such a file is never served and the request fails with 501.
 - **`mock_asset_coverage_test.dart`** drives every method of every repository that uses `ApiClient` through `TestEnv.apiClient()`; it fails when one of them does not succeed.
+  Platform repositories, which use `PlatformApiClient`, have their own table in the same file, driven through `TestEnv.platformApiClient()`, and the last test compares the methods it finds with both tables.
   `MockInterceptor` fails a GET, POST, PUT or PATCH whose mock file is missing with 501, so a missing file fails the test and the failure names it.
   A last test reads the repository interfaces under `lib/` and fails when a method is not driven, so a new repository method needs an entry in the test, and its mock file, before the build passes.
 - **`feature_generator_test.dart`** runs `tool/generate_feature.dart` in a temporary copy of the project and fails if the generated feature is not formatted, does not analyze cleanly or fails its own tests.
@@ -500,7 +502,7 @@ cd android && ./gradlew :app:testDebugUnitTest -Ptarget=lib/main/main_prod.dart
    variants; mock the use case or repository.
 4. **Repository tests** (`data/repositories/`): `TestEnv.apiClient()` or a stub
    Dio.
-   Add each repository method that sends requests through `ApiClient` to the table in `test/architecture/mock_asset_coverage_test.dart`.
+   Add each repository method that sends requests through `ApiClient` to the table in `test/architecture/mock_asset_coverage_test.dart`, or, for `PlatformApiClient`, to its Platform table.
 5. **Widget tests** (`presentation/`): `MockBloc` for state; `TestEnv.authenticate()`
    in `setUp`/body for auth-gated screens.
 6. Add any new mocks/fakes to `test/mocks/mock_classes.dart` (and register

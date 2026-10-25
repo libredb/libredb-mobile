@@ -87,9 +87,29 @@ enum AppErrorCode {
   /// cancelled its run.
   browseRowsInterrupted('browse.rows_interrupted'),
 
-  // --- LibreDB Platform ---
-  /// The stored session belongs to LibreDB Platform, which this build of the app has no target for, so it was cleared.
+  // --- LibreDB Platform (lib/infrastructure/platform/platform_errors.dart maps Platform's codes to these) ---
+  /// A Platform call in a build without a Platform target, or a stored Platform session such a build cannot serve.
   platformNotConfigured('platform.not_configured'),
+  platformAdminRoleRequired('platform.admin_role_required'),
+  platformLicenseAdminSeats('platform.license_admin_seats'),
+  platformLicenseUserSeats('platform.license_user_seats'),
+  platformLicenseExpired('platform.license_expired'),
+  platformLicenseInvalid('platform.license_invalid'),
+  platformApiDisabled('platform.api_disabled'),
+  platformNotFound('platform.not_found'),
+
+  /// A grant `PUT` refused only on `level`, `subject` or `expiresAt` (`platformGrantWriteError`).
+  platformGrantLevelRefused('platform.grant_level_refused'),
+  platformGrantSubjectRefused('platform.grant_subject_refused'),
+  platformGrantExpiryRefused('platform.grant_expiry_refused'),
+  platformValidationFailed('platform.validation_failed'),
+  platformIdentityProviderUnavailable('platform.identity_provider_unavailable'),
+  platformDirectoryUnavailable('platform.directory_unavailable'),
+  platformKeycloakUnavailable('platform.keycloak_unavailable'),
+  platformPlanFeatureRequired('platform.plan_feature_required'),
+  platformPermissionDenied('platform.permission_denied'),
+  platformInternalError('platform.internal_error'),
+  platformUnreadableAnswer('platform.unreadable_answer'),
 
   // --- generic fallback ---
   generic('error.generic');

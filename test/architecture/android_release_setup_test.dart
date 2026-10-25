@@ -319,6 +319,7 @@ void main() {
           'PROD_API_URL': 'https://studio.example/api',
           'OIDC_ISSUER': 'https://keycloak.example/realms/libredb',
           'SENTRY_DSN': 'https://publickey@o1.ingest.sentry.example/1',
+          'PLATFORM_API_URL': 'https://platform.example/api',
         };
         expect(store.keys.toSet(), AppConfig.httpsOnlyDefines);
         for (final name in AppConfig.httpsOnlyDefines) {
@@ -353,8 +354,8 @@ void main() {
         expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
       });
 
-      test('fails on surrounding whitespace in PROD_API_URL or SENTRY_DSN, saying so', () async {
-        for (final name in ['PROD_API_URL', 'SENTRY_DSN']) {
+      test('fails on surrounding whitespace in PROD_API_URL, SENTRY_DSN or PLATFORM_API_URL, saying so', () async {
+        for (final name in ['PROD_API_URL', 'SENTRY_DSN', 'PLATFORM_API_URL']) {
           final result = await check({
             'PROD_API_URL': 'https://studio.example/api',
             name: ' https://secretvalue.example/x',
@@ -488,7 +489,15 @@ const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/Native
 /// - `OIDC_REDIRECT_SCHEME`: an Android build receives its redirect only on the scheme of the manifest placeholder.
 /// - `SCREEN_CAPTURE_PROTECTION`: the store build keeps screen capture protection on, its prod default (#192).
 /// - `APP_LOCK_REQUIRED`: the store build leaves the app lock to the user, its default (#195).
-const _definesNeverSetByTheRelease = {'OIDC_REDIRECT_SCHEME', 'SCREEN_CAPTURE_PROTECTION', 'APP_LOCK_REQUIRED'};
+/// - `PLATFORM_API_URL` and `PLATFORM_CERT_PINS`: the store build stays Studio-only until the Platform walkthrough
+///   (#251) passes; M13-P moves them into the release workflow.
+const _definesNeverSetByTheRelease = {
+  'OIDC_REDIRECT_SCHEME',
+  'SCREEN_CAPTURE_PROTECTION',
+  'APP_LOCK_REQUIRED',
+  'PLATFORM_API_URL',
+  'PLATFORM_CERT_PINS',
+};
 
 /// The names in [_checkOnlyPath], one per line, without `#` comments.
 Set<String> _checkOnlyDefines() => {

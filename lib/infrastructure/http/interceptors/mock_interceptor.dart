@@ -1,3 +1,4 @@
+import 'dart:convert' show jsonEncode;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -18,7 +19,8 @@ import 'package:libredb_mobile/infrastructure/http/public_endpoint.dart';
 /// that flag the response short-circuits and those handlers never fire,
 /// leaving the dev console Network tab empty in mock mode.
 ///
-/// It answers a protected path sent without a token with 401 and rejects
+/// It answers a protected path sent without a token with 401 (LibreDB Platform's `BEARER_INVALID` envelope on a path
+/// under `/v1/`, Studio's plain text elsewhere) and rejects
 /// with `callFollowingErrorInterceptor: true` for the same reason: a server
 /// 401 runs every onError handler, so [TokenRefreshInterceptor] ends the
 /// session when the token cannot be refreshed, and the dev console and
@@ -66,7 +68,7 @@ class MockInterceptor extends Interceptor {
           DioException(
             requestOptions: options,
             type: DioExceptionType.badResponse,
-            response: Response(requestOptions: options, statusCode: 401, data: 'Unauthorized Access'),
+            response: Response(requestOptions: options, statusCode: 401, data: _unauthorizedBody(basePath)),
           ),
           true,
         );
@@ -120,6 +122,14 @@ class MockInterceptor extends Interceptor {
     _log.debug('Mock data loaded: {} {} (body length: {})', [options.method, basePath, responseBody.length]);
     handler.resolve(Response(requestOptions: options, data: responseBody, statusCode: statusCode), true);
   }
+
+  /// The body of the 401 for an unauthenticated request to [basePath]: LibreDB Platform's envelope with
+  /// `BEARER_INVALID` for a path under `/v1/`, as Platform answers it, else Studio's plain text.
+  static String _unauthorizedBody(String basePath) => basePath.startsWith('/v1/')
+      ? jsonEncode({
+          'error': {'code': 'BEARER_INVALID', 'message': 'The request carries no valid bearer token'},
+        })
+      : 'Unauthorized Access';
 
   /// `_{action}` for a request to one of [_actionPaths] whose body names its action, else empty.
   static String _actionSuffix(RequestOptions options, String basePath) {

@@ -8,6 +8,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
@@ -23,6 +24,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/logout_usecase.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
@@ -52,8 +54,10 @@ import 'package:libredb_mobile/features/studio_status/domain/repositories/studio
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
@@ -170,6 +174,35 @@ class AppScope extends StatelessWidget {
               },
             );
           },
+        ),
+        // --- LibreDB Platform (Platform mode). Later Platform repositories are appended to this block. ---
+        // Provided above PlatformApiClient, which tells it when Platform refuses the signed-in admin.
+        BlocProvider<PlatformAccountRefusalCubit>(create: (_) => PlatformAccountRefusalCubit()),
+        RepositoryProvider<PlatformApiClient>(
+          create: (context) {
+            final session = context.read<SessionCubit>();
+            final refusal = context.read<PlatformAccountRefusalCubit>();
+            void onSessionExpired() => session.endSession(reason: SessionExpiredReason.expired);
+            // A refusal during the sign-in is the login page's to tell, so only a signed-in account is refused here.
+            void onAccountRefused(AppErrorCode code) {
+              if (session.state is SessionAuthenticated) refusal.refuse(code);
+            }
+
+            return dependencies.createPlatformApiClient(
+              context.read<ISecureStorage>(),
+              onSessionExpired: onSessionExpired,
+              onAccountRefused: onAccountRefused,
+              // The one rotation the Studio client and the startup step share, so a refresh token is never spent twice.
+              tokenRotation: switch (dependencies.authMode) {
+                OidcAuthMode() => context.read<TokenRotation>(),
+                // A misconfigured build cannot reach the provider, so a stored session is never refreshed.
+                OidcMisconfiguredAuthMode() => const RefusingTokenRotation(),
+              },
+            );
+          },
+        ),
+        RepositoryProvider<IPlatformIdentityRepository>(
+          create: (context) => dependencies.createPlatformIdentityRepository(context.read<PlatformApiClient>()),
         ),
         // One set for the app: the managed list fills it, and the statement routes wait for what it holds.
         RepositoryProvider<ConnectionQueryTimeouts>(create: (_) => ConnectionQueryTimeouts()),
@@ -312,6 +345,9 @@ class AppScope extends StatelessWidget {
           // when it opens and AppSessionListeners clears them at the session's end.
           BlocProvider<StudioIdentityCubit>(
             create: (context) => StudioIdentityCubit(repository: context.read<IStudioIdentityRepository>()),
+          ),
+          BlocProvider<PlatformIdentityCubit>(
+            create: (context) => PlatformIdentityCubit(repository: context.read<IPlatformIdentityRepository>()),
           ),
           BlocProvider<ConnectionPolicyCubit>(
             create: (context) => ConnectionPolicyCubit(repository: context.read<IConnectionRepository>()),

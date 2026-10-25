@@ -403,9 +403,53 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
+    "error_platform_admin_role_required": MessageLookupByLibrary.simpleMessage(
+      "Bu hesap bir Platform yöneticisi değil. Bunun yerine Studio ile oturum açın.",
+    ),
+    "error_platform_api_disabled": MessageLookupByLibrary.simpleMessage(
+      "Bu Platform kurulumu mobil uygulamayı kabul etmiyor.",
+    ),
+    "error_platform_directory_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform şu anda kullanıcı dizinini okuyamıyor. Biraz sonra tekrar deneyin.",
+    ),
+    "error_platform_grant_expiry_refused": MessageLookupByLibrary.simpleMessage("Bitiş zamanı gelecekte olmalı."),
+    "error_platform_grant_level_refused": MessageLookupByLibrary.simpleMessage(
+      "Yazma erişimi, yazma kimlik bilgisi olan bir bağlantı gerektirir.",
+    ),
+    "error_platform_grant_subject_refused": MessageLookupByLibrary.simpleMessage(
+      "Keycloak bu kullanıcıyı tanımıyor ya da devre dışı bırakmış.",
+    ),
+    "error_platform_identity_provider_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform şu anda kimlik sağlayıcıya ulaşamıyor. Biraz sonra tekrar deneyin.",
+    ),
+    "error_platform_internal_error": MessageLookupByLibrary.simpleMessage(
+      "Platform isteği tamamlayamadı. Daha sonra tekrar deneyin.",
+    ),
+    "error_platform_keycloak_unavailable": MessageLookupByLibrary.simpleMessage(
+      "Platform şu anda Keycloak\'a ulaşamıyor. Biraz sonra tekrar deneyin.",
+    ),
+    "error_platform_license_admin_seats": MessageLookupByLibrary.simpleMessage(
+      "Platform lisansında bu hesap için boş yönetici koltuğu yok.",
+    ),
+    "error_platform_license_expired": MessageLookupByLibrary.simpleMessage("Platform lisansının süresi doldu."),
+    "error_platform_license_invalid": MessageLookupByLibrary.simpleMessage("Platform lisansı geçerli değil."),
+    "error_platform_license_user_seats": MessageLookupByLibrary.simpleMessage(
+      "Platform lisansında bu yetki için boş kullanıcı koltuğu yok.",
+    ),
     "error_platform_not_configured": MessageLookupByLibrary.simpleMessage(
       "Platform modu uygulamanın bu sürümünde yok. Studio ile oturum açın.",
     ),
+    "error_platform_not_found": MessageLookupByLibrary.simpleMessage("Bu öğe Platform\'da artık yok."),
+    "error_platform_permission_denied": MessageLookupByLibrary.simpleMessage(
+      "Platform bu hesabın bunu yapmasına izin vermiyor.",
+    ),
+    "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
+      "Bu Platform kurulumunun planı bu özelliği içermiyor.",
+    ),
+    "error_platform_unreadable_answer": MessageLookupByLibrary.simpleMessage(
+      "Platform bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın güncellenmesi gerekebilir.",
+    ),
+    "error_platform_validation_failed": MessageLookupByLibrary.simpleMessage("Platform isteği kabul etmedi."),
     "error_settings_app_lock_not_saved": MessageLookupByLibrary.simpleMessage("Uygulama kilidi ayarı kaydedilemedi."),
     "error_settings_change_language_failed": MessageLookupByLibrary.simpleMessage("Dil değiştirilemedi"),
     "error_settings_user_data_not_removed": MessageLookupByLibrary.simpleMessage(

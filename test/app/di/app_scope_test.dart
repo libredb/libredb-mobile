@@ -14,6 +14,7 @@ import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/local_oidc_client.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
@@ -22,12 +23,14 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/services/sso_session_startup_impl.dart';
 import 'package:libredb_mobile/features/auth/domain/entities/auth_session.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -42,6 +45,7 @@ import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
@@ -72,6 +76,15 @@ const _prodConfig = AppConfig(
   apiBaseUrl: 'https://api.example.test',
   certificatePins: <String>[],
   idleTimeout: null,
+);
+
+/// [_prodConfig] with a Platform target.
+const _prodPlatformConfig = AppConfig(
+  environment: Environment.prod,
+  apiBaseUrl: 'https://api.example.test',
+  certificatePins: <String>[],
+  idleTimeout: null,
+  platform: PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
 );
 
 /// A JWT whose `exp` lies far in the future, so a production [SessionCubit] restores it as authenticated.
@@ -194,10 +207,10 @@ class _FakeRotation implements TokenRotation {
 /// The production dependencies with [rotation] as the token refresh and [client] as the identity provider, counting
 /// how often the client reports a 401 that a token refresh could not fix.
 class _CountingDependencies extends AppDependencies {
-  _CountingDependencies({TokenRotation? rotation, IOidcClient? client})
+  _CountingDependencies({TokenRotation? rotation, IOidcClient? client, super.appConfig = _prodConfig})
     : rotation = rotation ?? _FakeRotation(),
       client = client ?? _FakeOidcClient(const OidcSignInCancelled()),
-      super(appConfig: _prodConfig, authMode: OidcAuthMode(_oidcSettings));
+      super(authMode: OidcAuthMode(_oidcSettings));
 
   final TokenRotation rotation;
   final IOidcClient client;
@@ -876,6 +889,126 @@ void main() {
 
       expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
       expect(scope.read<SessionCubit>().state, isA<SessionAuthenticated>());
+    });
+  });
+
+  // Platform refuses an admin whose token lacks the admin role, or for whom the license has no admin seat, on every
+  // route. Only a signed-in Platform session is refused here; the login page tells a refusal during the sign-in.
+  group('AppScope Platform client', () {
+    Future<Object?> platformGet(WidgetTester tester, PlatformApiClient client, String path) async {
+      Object? outcome;
+      client.get(path).then<void>((response) => outcome = response, onError: (Object error) => outcome = error);
+      await _pumpUntil(tester, () => outcome != null);
+      return outcome;
+    }
+
+    for (final (code, expected) in [
+      ('ADMIN_ROLE_REQUIRED', AppErrorCode.platformAdminRoleRequired),
+      ('LICENSE_ADMIN_SEATS', AppErrorCode.platformLicenseAdminSeats),
+    ]) {
+      testWidgets('a 403 $code under a signed-in session refuses the Platform account and keeps the session', (
+        tester,
+      ) async {
+        await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+        final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+        final dependencies = _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig);
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        expect(session.state, isA<SessionAuthenticated>());
+        final client = scope.read<PlatformApiClient>();
+        final server = _ServerAdapter({
+          'GET /v1/me': (
+            403,
+            {
+              'error': {'code': code, 'message': 'refused'},
+            },
+          ),
+        });
+        client.instance.httpClientAdapter = server;
+
+        expect(await platformGet(tester, client, '/v1/me'), isA<AppException>());
+
+        expect(scope.read<PlatformAccountRefusalCubit>().state, PlatformAccountRefused(expected));
+        expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+        expect(server.requests, hasLength(1));
+        expect(rotation.rotations, 0);
+        expect(session.state, isA<SessionAuthenticated>());
+      });
+    }
+
+    testWidgets('a 403 LICENSE_EXPIRED refuses nothing', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          403,
+          {
+            'error': {'code': 'LICENSE_EXPIRED', 'message': 'expired'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<AppException>());
+
+      expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
+      expect(scope.read<SessionCubit>().state, isA<SessionAuthenticated>());
+    });
+
+    testWidgets('a 403 ADMIN_ROLE_REQUIRED during the sign-in refuses nothing', (tester) async {
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      await _pumpUntil(tester, () => scope.read<SessionCubit>().state is SessionUnauthenticated);
+      // The sign-in stores the tokens before its Platform gate asks GET /v1/me.
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          403,
+          {
+            'error': {'code': 'ADMIN_ROLE_REQUIRED', 'message': 'refused'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<AppException>());
+
+      expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
+    });
+
+    testWidgets('a 401 BEARER_INVALID that survives the refresh ends the session as expired', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+      final scope = await _pumpScope(tester, _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig));
+      final session = scope.read<SessionCubit>();
+      final client = scope.read<PlatformApiClient>();
+      client.instance.httpClientAdapter = _ServerAdapter({
+        'GET /v1/me': (
+          401,
+          {
+            'error': {'code': 'BEARER_INVALID', 'message': 'invalid'},
+          },
+        ),
+      });
+
+      expect(await platformGet(tester, client, '/v1/me'), isA<UnauthorizedException>());
+      await _pumpUntil(tester, () => session.state is SessionUnauthenticated);
+
+      expect(rotation.rotations, 1);
+      expect(session.state, const SessionUnauthenticated(reason: SessionExpiredReason.expired));
+    });
+
+    testWidgets('provides the Platform identity repository and cubit', (tester) async {
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+
+      expect(scope.read<IPlatformIdentityRepository>(), isNotNull);
+      expect(scope.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+    });
+
+    testWidgets('a build without a Platform target still provides a client that sends nothing', (tester) async {
+      final scope = await _pumpScope(tester, _CountingDependencies());
+
+      await expectLater(scope.read<PlatformApiClient>().get('/v1/me'), throwsA(isA<PlatformNotConfiguredException>()));
     });
   });
 

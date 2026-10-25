@@ -75,6 +75,94 @@ void main() {
     });
   });
 
+  group('PLATFORM_API_URL and PLATFORM_CERT_PINS', () {
+    const platformUrl = 'https://platform.example.test/api';
+
+    AppConfig prod({String url = '', String pins = ''}) => AppConfig.fromEnvironment(
+      Environment.prod,
+      prodApiUrlDefine: _studioUrl,
+      platformApiUrlDefine: url,
+      platformCertPinsDefine: pins,
+    );
+
+    test('are empty unless the build gives them', () {
+      const url = String.fromEnvironment('PLATFORM_API_URL');
+      const pins = String.fromEnvironment('PLATFORM_CERT_PINS');
+      expect(AppConfig.platformApiUrl, url);
+      expect(AppConfig.platformCertPins, pins);
+    });
+
+    test('an empty PLATFORM_API_URL gives a prod build without Platform mode', () {
+      expect(prod().platform, isA<PlatformNotConfigured>());
+      expect(const AppConfig.prod().platform, isA<PlatformNotConfigured>());
+    });
+
+    test('an https PLATFORM_API_URL gives that base URL, on the system trust store without pins', () {
+      final platform = prod(url: platformUrl).platform;
+
+      expect(platform, isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', platformUrl));
+      expect((platform as PlatformConfigured).certificatePins, isEmpty);
+    });
+
+    test('PLATFORM_CERT_PINS pin the Platform host only', () {
+      final config = prod(url: platformUrl, pins: '$ecCertificatePin, $rsaCertificatePin');
+
+      expect((config.platform as PlatformConfigured).certificatePins, [ecCertificatePin, rsaCertificatePin]);
+      expect(config.certificatePins, isEmpty);
+      expect(config.oidcCertificatePins, isEmpty);
+    });
+
+    test(
+      'a PLATFORM_API_URL that is not https, or has surrounding whitespace, stops the start naming only the define',
+      () {
+        for (final value in ['http://platform.example.test/api', 'platform.example.test/api', ' $platformUrl']) {
+          expect(
+            () => prod(url: value),
+            throwsA(
+              isA<ProdHttpsConfigError>()
+                  .having((error) => error.define, 'define', 'PLATFORM_API_URL')
+                  .having((error) => '$error', 'message', isNot(contains('platform.example.test'))),
+            ),
+            reason: value,
+          );
+        }
+      },
+    );
+
+    test('PLATFORM_CERT_PINS are checked like the other pins', () {
+      expect(
+        () => prod(url: platformUrl, pins: ecCertificatePin),
+        throwsA(isA<CertificatePinsConfigError>().having((e) => e.define, 'define', 'PLATFORM_CERT_PINS')),
+      );
+      expect(
+        () => prod(url: platformUrl, pins: 'not-a-pin,$ecCertificatePin'),
+        throwsA(isA<CertificatePinsConfigError>().having((e) => e.define, 'define', 'PLATFORM_CERT_PINS')),
+      );
+    });
+
+    test('PLATFORM_CERT_PINS without PLATFORM_API_URL stops the start', () {
+      expect(
+        () => prod(pins: '$ecCertificatePin,$rsaCertificatePin'),
+        throwsA(isA<CertificatePinsConfigError>().having((e) => e.define, 'define', 'PLATFORM_CERT_PINS')),
+      );
+    });
+
+    test('dev and test call the mock as their Platform, whatever the defines', () {
+      for (final environment in [Environment.dev, Environment.test]) {
+        final platform = AppConfig.fromEnvironment(environment, platformApiUrlDefine: 'http://x').platform;
+        expect(platform, isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', isNull), reason: '$environment');
+      }
+      expect(const AppConfig.dev().platform, isA<PlatformConfigured>());
+      expect(const AppConfig.test().platform, isA<PlatformConfigured>());
+    });
+
+    test('withoutSentry keeps the Platform target', () {
+      final config = prod(url: platformUrl).withoutSentry();
+
+      expect(config.platform, isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', platformUrl));
+    });
+  });
+
   group('STUDIO_CERT_PINS and OIDC_CERT_PINS', () {
     AppConfig prod({String studio = '', String oidc = ''}) => AppConfig.fromEnvironment(
       Environment.prod,
@@ -335,8 +423,8 @@ void main() {
           .having((error) => '$error', 'message', allOf(contains(define), contains('https'), isNot(contains(value)))),
     );
 
-    test('checks PROD_API_URL, OIDC_ISSUER and SENTRY_DSN', () {
-      expect(AppConfig.httpsOnlyDefines, {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN'});
+    test('checks PROD_API_URL, OIDC_ISSUER, SENTRY_DSN and PLATFORM_API_URL', () {
+      expect(AppConfig.httpsOnlyDefines, {'PROD_API_URL', 'OIDC_ISSUER', 'SENTRY_DSN', 'PLATFORM_API_URL'});
     });
 
     test('a PROD_API_URL that is not https stops the start with an error that names only the define', () {

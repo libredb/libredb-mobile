@@ -175,6 +175,16 @@ The contract, the endpoint table and the error mapping are in `docs/architecture
 - The role comes only from Studio's `GET /api/auth/me` (`StudioIdentity.role`), never from a token, and is never stored; a sign-in succeeds only when that call answers 200.
 - Each new method needs a recorded answer in `assets/mock/`, an entry in `test/architecture/mock_asset_coverage_test.dart`, and, once it can be recorded against `tool/studio-dev`, a fixture in `test/fixtures/studio/` read by `test/infrastructure/studio/recorded_studio_answers_test.dart`.
 
+## Platform API Layer
+
+Platform mode calls LibreDB Platform's bearer API through `PlatformApiClient`; the contract, the defines and the error table are in `docs/platform.md`.
+
+- A repository catches everything and returns `Failure(platformError(e))` (`lib/infrastructure/platform/platform_errors.dart`), or `Failure(platformGrantWriteError(e))` for a grant `PUT`; it never maps Platform's statuses itself.
+- A Platform repository takes `PlatformApiClient`, never the Studio `ApiClient`, and no feature file imports both `infrastructure/studio/` and `infrastructure/platform/` (`test/architecture/import_guard_test.dart`).
+- Never retry a write, and never log Platform's `message`, an e-mail or a name.
+- Read answers in the feature's `data/models/`: throw a `FormatException` for a missing or mistyped required field, and treat Platform's roles, permissions and codes as opaque strings.
+- Each new method needs a recorded answer in `assets/mock/` and an entry in the Platform table of `test/architecture/mock_asset_coverage_test.dart`.
+
 ## Adding a New Feature
 
 1. Create a new directory under `lib/features/<feature_name>/`.

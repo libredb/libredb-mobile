@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Stops a store build that would carry a define meant for checks only (tool/release/check_only_defines.txt): one in
 # the dart-defines file the build reads, or one set as a variable of the repository or of the job's GitHub environment.
-# It also stops one whose PROD_API_URL, OIDC_ISSUER or SENTRY_DSN is set but is not an https URL, the rule a prod start
-# applies (AppConfig.httpsOnlyDefines, docs/security.md "Encryption in transit"); it names the define, never its value.
+# It also stops one whose PROD_API_URL, OIDC_ISSUER, SENTRY_DSN or PLATFORM_API_URL is set but is not an https URL, the
+# rule a prod start applies (AppConfig.httpsOnlyDefines, docs/security.md "Encryption in transit"); it names the define,
+# never its value. The release does not pass PLATFORM_API_URL until M13-P, but a defines file that carries it is checked.
 # Usage: RELEASE_VARS='<the variables as a JSON object>' tool/release/check_defines.sh <dart-defines.json>
 set -euo pipefail
 
@@ -56,10 +57,10 @@ for name in $names; do
 done
 
 # An absolute https URL with a host, verbatim the pattern of AppConfig.isHttpsUrl and NativeSentry.requireHttpsDsn.
-# OIDC_ISSUER is trimmed first, as the sign-in reads it; PROD_API_URL and SENTRY_DSN are refused with surrounding
-# whitespace, as a prod start refuses them.
+# OIDC_ISSUER is trimmed first, as the sign-in reads it; PROD_API_URL, SENTRY_DSN and PLATFORM_API_URL are refused with
+# surrounding whitespace, as a prod start refuses them.
 https_url='^[Hh][Tt][Tt][Pp][Ss]://([^/?#@\x00-\x20\x7F]*@)?(\[[0-9A-Fa-f:.]+\]|[^/?#@:\[\]\x00-\x20\x7F]+)(:[0-9]*)?([/?#]|$)'
-for name in PROD_API_URL OIDC_ISSUER SENTRY_DSN; do
+for name in PROD_API_URL OIDC_ISSUER SENTRY_DSN PLATFORM_API_URL; do
   status=0
   verdict=$(jq -r --arg name "$name" --arg pattern "$https_url" '
     if has($name) | not then "ok"

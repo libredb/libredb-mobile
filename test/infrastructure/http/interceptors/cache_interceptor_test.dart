@@ -867,6 +867,52 @@ void main() {
       }
     });
 
+    // LibreDB Platform's answers (every path under /v1/) are never stored or served from the cache, whatever the
+    // request names: a grant or a directory answer must always be Platform's current one.
+    group('Platform paths', () {
+      for (final path in ['/v1/me', '/v1/connections', '/v1/connections/c1/grants', '/v1/directory/users?q=jane']) {
+        test('does not store the answer of GET $path', () async {
+          final options = RequestOptions(path: path, method: 'GET', baseUrl: 'https://platform.example.test/api');
+
+          await interceptor.onResponse(
+            Response(requestOptions: options, statusCode: 200, data: '{}'),
+            _TestResponseHandler(),
+          );
+
+          verifyNever(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl')));
+        });
+      }
+
+      test('does not store a Platform answer even when the request names a caching policy', () async {
+        final options = RequestOptions(
+          path: '/v1/me',
+          method: 'GET',
+          baseUrl: 'https://platform.example.test/api',
+          extra: {'cachePolicy': CachePolicy.networkFirst},
+        );
+
+        await interceptor.onResponse(
+          Response(requestOptions: options, statusCode: 200, data: '{}'),
+          _TestResponseHandler(),
+        );
+
+        verifyNever(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl')));
+      });
+
+      test('does not answer a Platform GET from the cache when the server cannot be reached', () async {
+        final options = RequestOptions(path: '/v1/me', method: 'GET', baseUrl: 'https://platform.example.test/api');
+
+        final handler = _TestErrorHandler();
+        await interceptor.onError(
+          DioException(requestOptions: options, type: DioExceptionType.connectionError),
+          handler,
+        );
+
+        expect(handler.resolveCalled, isFalse);
+        verifyNever(() => mockStorage.read(any()));
+      });
+    });
+
     group('default TTL', () {
       test('should use 5 minutes as default TTL', () async {
         when(() => mockStorage.write(any(), any(), ttl: any(named: 'ttl'))).thenAnswer((_) async {});

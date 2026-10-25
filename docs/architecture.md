@@ -31,7 +31,8 @@ The contract was read from Studio's code at `dbfea263` (main, with the bearer ch
 - **Studio** accepts that access token as `Authorization: Bearer` when `OIDC_BEARER_AUDIENCE` is set.
   It checks the signature, the issuer, the audience, the client (`OIDC_BEARER_CLIENT_IDS`), the identity (`email` or `preferred_username`) and the role on every request, and refuses an ID token.
 - **Platform**, when present, governs Studio: Studio's connections become the user's grants, every statement is recorded, and Platform can revoke a session.
-  The app does not talk to Platform until milestone M9 ([roadmap.md](roadmap.md)).
+  From M10-P the app talks to Platform's bearer API (`/api/v1`) in Platform mode, the sign-in entry for Platform admins ([platform.md](platform.md)).
+  Granting a connection is M10-P; enabling and disabling a connection use Platform's `PATCH /api/v1/connections/{id}` (body `{active}` only) and come in M11-P.
 
 Settings for each party are in [studio.md](studio.md).
 
@@ -367,7 +368,7 @@ The app therefore applies the same masking rules before it shows a row (M4-03, i
   Measured on the Android emulator (AVD `libredb-dev-api30`, Android 11, debug build) against `tool/studio-dev` (Studio `c9989a6b5`): with 60 seconds in another app, Android kept the socket, so `SELECT pg_sleep(20)` and an `UPDATE` that sleeps 20 seconds both finished in the background and showed their results on return; with the connection dropped 3 seconds into the background (a restart of the Caddy proxy), the `UPDATE` showed 'Outcome unknown' with no Run again while Studio logged the query as cancelled, and the `SELECT` showed the interrupted message with Run again.
   iOS was not measured here, since no macOS was available; it goes to the macOS run of [#91](https://github.com/libredb/libredb-mobile/issues/91).
   Measured in [#116](https://github.com/libredb/libredb-mobile/issues/116) on `tool/studio-dev` (Studio `c9989a6b5`, through its Caddy TLS proxy): a `SELECT pg_sleep(30)` on `seed:dev-postgres` whose request the client dropped after one second was gone from `pg_stat_activity` within 0.1 seconds, so a dropped request is passed through the proxy and stops the run.
-- Granting a connection needs an API in Platform that does not exist yet (milestone M9).
+- Granting a connection goes through Platform's bearer API in Platform mode (M10-P, [platform.md](platform.md)); enabling and disabling a connection use Platform's `PATCH /api/v1/connections/{id}` (body `{active}` only), which landed on libredb-platform main after the commit M10-P pins (`d6ad8f5`, libredb-platform#51), so M11-P pins its own Platform commit.
 - Native Sentry events and breadcrumbs on iOS are not scrubbed ([crash-reporting.md](crash-reporting.md)).
 - Studio offers no maintenance mode and no minimum app version, so the app has no maintenance or forced update gate; milestone M7 brings the gate back when Studio offers one.
 

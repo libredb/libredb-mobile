@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview
 import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_auth_repository_impl.dart';
+import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/collapsed_sections_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
@@ -25,6 +26,7 @@ import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_session_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/sso_auth_repository.dart';
+import 'package:libredb_mobile/features/auth/domain/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/domain/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/studio_status/data/repositories/studio_status_repository.dart';
 import 'package:libredb_mobile/features/studio_status/domain/repositories/studio_status_repository.dart';
@@ -45,6 +47,8 @@ import 'package:libredb_mobile/infrastructure/http/certificate_pinning_adapter.d
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
+import 'package:libredb_mobile/infrastructure/platform/platform_session_policy.dart';
 import 'package:libredb_mobile/infrastructure/studio/cached_provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/provider_meta_repository.dart';
 import 'package:libredb_mobile/infrastructure/studio/statement_repository.dart';
@@ -128,6 +132,39 @@ class AppDependencies {
     accountRefusal: accountRefusal,
   );
 
+  // --- LibreDB Platform (Platform mode) ---
+
+  /// Which 401 of LibreDB Platform starts a token refresh: a 401 `BEARER_INVALID`. A 401 without Platform's envelope,
+  /// or any 502 or 503, reaches the caller and keeps the session.
+  SessionExpiredPredicate get platformSessionExpiredPredicate => isPlatformSessionExpired;
+
+  /// Which 401 of LibreDB Platform for a request sent again after a refresh ends the session: a 401 `BEARER_INVALID`.
+  SessionRefusedPredicate get platformSessionRefusedPredicate => isPlatformSessionRefused;
+
+  /// Which answer of LibreDB Platform refuses the signed-in admin itself: a 403 `ADMIN_ROLE_REQUIRED` or
+  /// `LICENSE_ADMIN_SEATS`. No refresh fixes it, so the session stays and the Platform shell shows the refusal page.
+  AccountRefusal get platformAccountRefusalOf => platformAccountRefusal;
+
+  /// The [PlatformApiClient], built from [AppConfig.platform], which refreshes the session through [tokenRotation], the
+  /// same rotation as the Studio [ApiClient]. [onSessionExpired] runs when a 401 `BEARER_INVALID` survives the refresh;
+  /// [onAccountRefused] is told every answer that refuses the signed-in admin ([platformAccountRefusalOf]). In a build
+  /// without a Platform target every call fails without a request.
+  PlatformApiClient createPlatformApiClient(
+    ISecureStorage secureStorage, {
+    required OnSessionExpired onSessionExpired,
+    OnAccountRefused? onAccountRefused,
+    required TokenRotation tokenRotation,
+  }) => PlatformApiClient(
+    appConfig: appConfig,
+    secureStorage: secureStorage,
+    onSessionExpired: onSessionExpired,
+    tokenRotation: tokenRotation,
+    isSessionExpired: platformSessionExpiredPredicate,
+    isSessionRefused: platformSessionRefusedPredicate,
+    onAccountRefused: onAccountRefused,
+    accountRefusal: platformAccountRefusalOf,
+  );
+
   /// The app's one screen capture protection, which every `ScreenCaptureGuard` holds a lease of, switched by
   /// [AppConfig.screenCaptureProtection]: switched off, a guard takes no lease and every screen can be captured.
   ScreenCaptureProtection createScreenCaptureProtection() =>
@@ -195,6 +232,10 @@ class AppDependencies {
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);
+
+  /// Platform's identity endpoint: who the signed-in admin is.
+  IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) =>
+      PlatformIdentityRepository(apiClient);
 
   /// What the engine of a connection can do, which several features read, kept in memory for the session.
   CachedProviderMetaRepository createProviderMetaRepository(ApiClient apiClient) =>

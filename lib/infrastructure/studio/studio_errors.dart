@@ -1,6 +1,7 @@
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/infrastructure/http/transport_error_mapping.dart';
 
 /// The [AppError] for what a request to LibreDB Studio threw: an [AppException] from `ApiClient`, a [FormatException]
 /// from reading an answer whose shape is not the documented one, or anything else.
@@ -68,20 +69,7 @@ AppError studioError(Object error) {
     401 || 403 => AuthError(message),
     404 => NotFoundError(message),
     final int s when s >= 500 => ServerError(message),
-    null => _transportError(error),
+    null => transportError(error),
     _ => UnknownError(message),
   };
-}
-
-/// A failure before any response arrived, as the other repositories report it.
-AppError _transportError(AppException error) {
-  if (error is UntrustedCertificateException) {
-    return NetworkError(error.toString(), code: AppErrorCode.networkCertInvalid.key);
-  }
-  if (error is RequestCancelledException) return RequestCancelledError(error.toString());
-  if (error is OfflineException) return NetworkError(error.toString(), code: AppErrorCode.networkOffline.key);
-  final message = error.toString();
-  if (error is TimeoutBeforeSentException) return TimeoutError(message, sent: false);
-  if (message.toLowerCase().contains('timeout')) return TimeoutError(message);
-  return NetworkError(message);
 }

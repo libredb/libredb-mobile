@@ -65,6 +65,48 @@ void main() {
     });
   });
 
+  group('MockInterceptor bearer check on a Platform path', () {
+    Future<Response<dynamic>> getPlatformMe({String? authorization}) => mockDio().get(
+      '/v1/me',
+      options: Options(headers: {'Authorization': ?authorization}, extra: {'_basePath': '/v1/me'}),
+    );
+
+    test("a request without a bearer gets Platform's 401 BEARER_INVALID envelope", () async {
+      await expectLater(
+        getPlatformMe(),
+        throwsA(
+          isA<DioException>()
+              .having((e) => e.response?.statusCode, 'statusCode', 401)
+              .having(
+                (e) => (jsonDecode(e.response?.data as String) as Map<String, dynamic>)['error']['code'],
+                'error.code',
+                'BEARER_INVALID',
+              ),
+        ),
+      );
+    });
+
+    test('an expired JWT bearer gets the same envelope', () async {
+      final expired = _jwt(DateTime.now().subtract(const Duration(minutes: 1)));
+
+      await expectLater(
+        getPlatformMe(authorization: 'Bearer $expired'),
+        throwsA(isA<DioException>().having((e) => e.response?.data, 'data', contains('BEARER_INVALID'))),
+      );
+    });
+
+    test('a Studio path keeps the plain-text 401', () async {
+      await expectLater(getAccount(), throwsA(_unauthorized));
+    });
+
+    test('a bearer reaches the Platform mock file', () async {
+      final response = await getPlatformMe(authorization: 'Bearer MOCK_TOKEN');
+
+      expect(response.statusCode, 200);
+      expect((jsonDecode(response.data as String) as Map<String, dynamic>)['roles'], ['PLATFORM_ADMIN']);
+    });
+  });
+
   group('MockInterceptor transaction actions', () {
     Future<Response<dynamic>> transaction(Object? data) => mockDio().post(
       '/db/transaction',

@@ -1,6 +1,6 @@
 # LibreDB Mobile privacy policy
 
-Last updated: October 24, 2026.
+Last updated: October 25, 2026.
 
 This policy describes what LibreDB Mobile for Android does with your data.
 LibreDB Mobile is a client of LibreDB Studio: it signs you in through Keycloak and shows the databases that Studio offers you.
@@ -8,7 +8,7 @@ Questions about this policy go to [info@libredb.org](mailto:info@libredb.org).
 
 ## The servers the app talks to
 
-The app talks to three kinds of servers, and to no others on its own:
+The app talks to four kinds of servers, and to no others on its own:
 
 - **Keycloak**, the sign-in server of the LibreDB deployment the app was built for.
   You sign in on Keycloak's own page, in the device's browser, so the app never sees your password.
@@ -17,14 +17,18 @@ The app talks to three kinds of servers, and to no others on its own:
   The app sends Studio your Keycloak access token with its requests, so Studio knows who you are and what you may use.
   The access token carries what Keycloak puts into it, such as your username, your e-mail address and your name.
   The app also sends Studio what you ask it to do: the connection you open, the objects you look at and the statements you run.
+- **LibreDB Platform** of the same deployment, but only in a build that includes Platform mode, and only after you pick the Platform entry on the sign-in page.
+  The app sends Platform your Keycloak access token with its requests and receives your Platform identity: your Platform user id, e-mail address, name and organisation.
+  The app holds that identity in memory while you are signed in and never stores it on the device.
+  Platform's first answer to your account creates your Platform user record and takes one of the license's admin seats.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
   See the Crash reports section below.
 
-The organisation that runs the deployment operates Keycloak and Studio, and decides what they record.
+The organisation that runs the deployment operates Keycloak, Studio and Platform, and decides what they record.
 For example, Studio can keep an audit log of sign-ins and sign-outs and, depending on its settings, a record of the statements you run.
 That organisation's own privacy terms cover what those servers keep.
 
-The app reaches Keycloak, Studio and Sentry over HTTPS, which encrypts the traffic.
+The app reaches Keycloak, Studio, Platform and Sentry over HTTPS, which encrypts the traffic.
 
 ## What the app does not do
 
