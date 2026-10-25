@@ -31,9 +31,12 @@ class AppBadge extends StatelessWidget {
         spacing: AppSpacing.xs,
         children: [
           if (icon != null) Icon(icon, size: 12, color: fg),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w600),
+          // Flexible, so a label longer than the row wraps instead of overflowing it.
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
