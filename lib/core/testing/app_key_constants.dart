@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 const Key loginButtonSsoKey = Key("loginButtonSsoKey");
+const Key loginButtonPlatformKey = Key("loginButtonPlatformKey");
 
 // the progress over the shell while a sign-out runs
 const Key signOutProgressIndicatorKey = Key("signOutProgressIndicatorKey");

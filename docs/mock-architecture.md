@@ -94,7 +94,7 @@ flowchart LR
     end
 
     UC_TEST -- "mocktail" --> MOCK_REPO["MockIConnectionRepository<br/>MockIAuthRepository<br/>MockIAuthSessionRepository"]
-    BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockSignInWithSsoUseCase"]
+    BLOC_TEST -- "mocktail" --> MOCK_REPO_C["MockSignInUseCase"]
     API_TEST -- "StubInterceptor" --> STUB_DIO["Test Dio Instance<br/><i>No network, no assets</i>"]
     WIDGET_TEST -- "bloc_test" --> MOCK_BLOC["MockLoginBloc"]
 
@@ -349,7 +349,7 @@ They replace a layer with a test double instead:
 │                        Test Layer                                 │
 │                                                                   │
 │  Use Case Tests:   MockIConnectionRepository (interface mock)    │
-│  BLoC Tests:       MockSignInWithSsoUseCase (use case mock)      │
+│  BLoC Tests:       MockSignInUseCase (use case mock)             │
 │  ApiClient Tests:  _StubInterceptor (Dio-level stub)             │
 │  Widget Tests:     MockBloc (bloc_test)                          │
 └──────────────────────────────────────────────────────────────────┘

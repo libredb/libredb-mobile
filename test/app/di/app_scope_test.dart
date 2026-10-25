@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -59,6 +60,7 @@ import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/shared/models/platform_identity.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -420,15 +422,39 @@ class _FakeOidcClient implements IOidcClient {
 
 /// The test config in [authMode], counting the OIDC clients it creates; each one is [client].
 class _OidcClientDependencies extends AppDependencies {
-  _OidcClientDependencies({required super.authMode, required this.client}) : super(appConfig: const AppConfig.test());
+  _OidcClientDependencies({required super.authMode, required this.client, super.appConfig = const AppConfig.test()});
 
   final IOidcClient client;
   int oidcClientsCreated = 0;
+
+  /// Every Platform identity repository the scope was given, which count their calls of `GET /api/v1/me`.
+  final platformIdentities = <_CountingPlatformIdentity>[];
+
+  @override
+  IPlatformIdentityRepository createPlatformIdentityRepository(PlatformApiClient apiClient) {
+    final repository = _CountingPlatformIdentity(super.createPlatformIdentityRepository(apiClient));
+    platformIdentities.add(repository);
+    return repository;
+  }
 
   @override
   IOidcClient createOidcClient(OidcSettings settings) {
     oidcClientsCreated++;
     return client;
+  }
+}
+
+/// Counts the calls of `GET /api/v1/me` through [inner].
+class _CountingPlatformIdentity implements IPlatformIdentityRepository {
+  _CountingPlatformIdentity(this.inner);
+
+  final IPlatformIdentityRepository inner;
+  int fetches = 0;
+
+  @override
+  Future<Result<PlatformIdentity>> fetch() {
+    fetches++;
+    return inner.fetch();
   }
 }
 
@@ -777,7 +803,7 @@ void main() {
       signOut.add(const SignOutRequested());
       await _pumpUntil(tester, () => signOut.state is SignOutDone);
       final login = scope.read<LoginBloc>();
-      login.add(const SsoSignInRequested());
+      login.add(const SsoSignInRequested(target: SessionTarget.studio));
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
       // The token of the first user expired on the way, so the server rejects the statement.
       server.releaseSave.complete();
@@ -1111,7 +1137,7 @@ void main() {
         scope.read<ApiClient>().instance.httpClientAdapter = server;
 
         final login = scope.read<LoginBloc>();
-        login.add(const SsoSignInRequested());
+        login.add(const SsoSignInRequested(target: SessionTarget.studio));
         await _pumpUntil(tester, () => login.state is LoginErrorState);
 
         expect(login.state, LoginErrorState(errorCode: code));
@@ -1134,7 +1160,134 @@ void main() {
     }
   });
 
+  // Platform decides at sign-in whether it accepts the account, through GET /api/v1/me. Each answer below is a body
+  // recorded from a real Platform (test/fixtures/platform, see recorded_platform_answers_test.dart), sent through the
+  // real PlatformApiClient of the scope, its refresh and its refusal handling included.
+  group('AppScope sign-in that Platform refuses', () {
+    final signedIn = OidcSignedIn(
+      tokens: OidcTokens(
+        accessToken: 'signed-in-access-token',
+        idToken: 'signed-in-id-token',
+        refreshToken: 'signed-in-refresh-token',
+        accessTokenExpiresAt: DateTime.utc(2100),
+      ),
+      claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'user'},
+    );
+
+    Object recorded(String name) => jsonDecode(File('test/fixtures/platform/$name.json').readAsStringSync()) as Object;
+
+    for (final (fixture, status, code, refreshes) in <(String, int, AppErrorCode, int)>[
+      ('me_no_token', 401, AppErrorCode.platformAccountRefused, 1),
+      ('me_expired', 401, AppErrorCode.platformAccountRefused, 1),
+      ('me_not_admin', 403, AppErrorCode.platformAdminRoleRequired, 0),
+      ('me_norole', 403, AppErrorCode.platformAdminRoleRequired, 0),
+      ('me_license_invalid', 403, AppErrorCode.platformLicenseInvalid, 0),
+      ('me_api_disabled', 404, AppErrorCode.platformApiDisabled, 0),
+      ('me_idp_unavailable', 503, AppErrorCode.platformIdentityProviderUnavailable, 0),
+    ]) {
+      testWidgets('rejects the recorded $fixture ($status) with ${code.key}, stores nothing and ends no session', (
+        tester,
+      ) async {
+        final rotation = _FakeRotation(const TokensRotated(accessToken: 'refreshed-access-token'));
+        final dependencies = _CountingDependencies(
+          rotation: rotation,
+          client: _FakeOidcClient(signedIn),
+          appConfig: _prodPlatformConfig,
+        );
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        final sessionStates = <SessionState>[];
+        final subscription = session.stream.listen(sessionStates.add);
+        addTearDown(subscription.cancel);
+        final studio = _ServerAdapter({});
+        scope.read<ApiClient>().instance.httpClientAdapter = studio;
+        final platform = _ServerAdapter({'GET /v1/me': (status, recorded(fixture))});
+        scope.read<PlatformApiClient>().instance.httpClientAdapter = platform;
+
+        final login = scope.read<LoginBloc>();
+        login.add(const SsoSignInRequested(target: SessionTarget.platform));
+        await _pumpUntil(tester, () => login.state is LoginErrorState);
+
+        expect(login.state, LoginErrorState(errorCode: code));
+        expect(platform.requests.map((request) => request.split(' ').take(2).join(' ')), [
+          for (var i = 0; i <= refreshes; i++) 'GET /v1/me',
+        ]);
+        expect(studio.requests, isEmpty, reason: 'the Studio gate is never asked for a Platform sign-in');
+        expect(rotation.rotations, refreshes, reason: 'only a 401 BEARER_INVALID starts a refresh');
+        final secure = FlutterSecureStorageAdapter();
+        for (final key in SecureStorageKeys.values) {
+          expect(await secure.read(key.key), isNull, reason: '${key.name} stays stored');
+        }
+        expect(sessionStates, isEmpty, reason: 'a refused sign-in signs nobody in and ends no session');
+        expect(session.state, isA<SessionUnauthenticated>());
+        expect(
+          scope.read<PlatformAccountRefusalCubit>().state,
+          const PlatformAccountAccepted(),
+          reason: 'the login page tells a refused sign-in, so no refusal page waits for the next sign-in',
+        );
+      });
+    }
+  });
+
   group('AppScope single sign-on', () {
+    OidcSignedIn platformSignIn() => OidcSignedIn(
+      tokens: OidcTokens(
+        accessToken: 'sso-access-token',
+        idToken: 'sso-id-token',
+        refreshToken: 'sso-refresh-token',
+        accessTokenExpiresAt: DateTime.utc(2100),
+      ),
+      claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'subject-1'},
+    );
+
+    testWidgets('a build with a Platform target wires the Platform gate into the sign-in', (tester) async {
+      final dependencies = _OidcClientDependencies(
+        authMode: OidcAuthMode(_oidcSettings),
+        client: _FakeOidcClient(platformSignIn()),
+      );
+      final scope = await _pumpScope(tester, dependencies);
+      expect(scope.read<AppConfig>().platform, isA<PlatformConfigured>());
+
+      final login = scope.read<LoginBloc>();
+      login.add(const SsoSignInRequested(target: SessionTarget.platform));
+      await _pumpUntil(tester, () => login.state is LoginLoadedState);
+
+      expect(login.state, const LoginLoadedState(target: SessionTarget.platform));
+      expect(dependencies.platformIdentities.fold<int>(0, (sum, repository) => sum + repository.fetches), 1);
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
+    });
+
+    testWidgets('a build without a Platform target wires no Platform gate, so a Platform sign-in throws', (
+      tester,
+    ) async {
+      final dependencies = _OidcClientDependencies(
+        authMode: OidcAuthMode(_oidcSettings),
+        client: _FakeOidcClient(platformSignIn()),
+        appConfig: const AppConfig(
+          environment: Environment.test,
+          apiBaseUrl: null,
+          certificatePins: <String>[],
+          idleTimeout: null,
+          platform: PlatformNotConfigured(),
+        ),
+      );
+      final scope = await _pumpScope(tester, dependencies);
+
+      // The bloc is created on its first read, so its handler runs in this zone, which catches what it throws.
+      final errors = <Object>[];
+      late LoginBloc login;
+      runZonedGuarded(() {
+        login = scope.read<LoginBloc>();
+        login.add(const SsoSignInRequested(target: SessionTarget.platform));
+      }, (error, _) => errors.add(error));
+      await tester.pump();
+
+      expect(errors, [isA<StateError>()]);
+      expect(login.state, isNot(isA<LoginLoadedState>()));
+      expect(dependencies.platformIdentities.every((repository) => repository.fetches == 0), isTrue);
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
+    });
+
     testWidgets('signs in through the OIDC client and stores the whole session', (tester) async {
       final expiresAt = DateTime.utc(2100);
       final dependencies = _OidcClientDependencies(
@@ -1158,10 +1311,10 @@ void main() {
       final scope = await _pumpScope(tester, dependencies);
 
       final login = scope.read<LoginBloc>();
-      login.add(const SsoSignInRequested());
+      login.add(const SsoSignInRequested(target: SessionTarget.studio));
       await _pumpUntil(tester, () => login.state is LoginLoadedState);
 
-      expect(login.state, const LoginLoadedState());
+      expect(login.state, const LoginLoadedState(target: SessionTarget.studio));
       expect(dependencies.oidcClientsCreated, 1);
       final secure = FlutterSecureStorageAdapter();
       expect(await secure.read(SecureStorageKeys.jwtToken.key), 'sso-access-token');

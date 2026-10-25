@@ -23,7 +23,8 @@ import 'package:libredb_mobile/features/connections/application/connection_polic
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
-import 'package:libredb_mobile/features/auth/application/usecases/sign_in_with_sso_usecase.dart';
+import 'package:libredb_mobile/features/auth/application/usecases/sign_in_usecase.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 
 // Repository imports (interfaces)
 import 'package:libredb_mobile/features/auth/domain/repositories/auth_repository.dart';
@@ -108,7 +109,7 @@ class MockIRecentsPreview extends Mock implements IRecentsPreview {}
 class MockTemporaryShareFiles extends Mock implements TemporaryShareFiles {}
 
 // Use case mocks (for BLoC tests)
-class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}
+class MockSignInUseCase extends Mock implements SignInUseCase {}
 
 // BLoC mocks (using MockBloc from bloc_test)
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
@@ -154,6 +155,7 @@ class FakeUri extends Fake implements Uri {}
 void registerAllFallbackValues() {
   registerFallbackValue(FakeLoginEvent());
   registerFallbackValue(FakeUri());
+  registerFallbackValue(SessionTarget.studio);
   registerFallbackValue(<String>{});
   registerFallbackValue(ConnectionFavorites.empty);
   registerFallbackValue(QueryPage.first);
