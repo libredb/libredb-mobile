@@ -14,6 +14,7 @@ import 'package:libredb_mobile/features/platform_connections/data/models/platfor
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
+import 'package:libredb_mobile/features/platform_status/data/repositories/platform_status_repository.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_target.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
@@ -49,7 +50,7 @@ import '../../support/test_env.dart';
 /// are the statements `user` ran through a Studio 1.1.0 governed by that Platform (`libredb-studio-platform`), with
 /// statement capture switched between `full`, `redacted` and `none` on Platform's Studio settings page; the plan was
 /// set to FREE for `audit_plan_feature_required.json` only. docs/studio.md ("Audit, liveness and enable or disable
-/// answers") has every step.
+/// answers") has every step. `health_live.json` is `GET /api/health/live`, fetched without a token.
 ///
 /// Each body is answered to a [PlatformApiClient], so it goes through the client's envelope reader and exception path,
 /// then through [platformError]; the session predicates read a [DioException] built from the status and the raw body.
@@ -471,6 +472,15 @@ void main() {
     test('PERMISSION_DENIED has no fixture: a bearer caller is always a Platform admin', () {
       expect(File('test/fixtures/platform/audit_permission_denied.json').existsSync(), isFalse);
     });
+  });
+
+  test('GET /api/health/live health_live: Platform answers live, read by PlatformStatusRepository', () async {
+    adapter.answer(200, fixture('health_live'));
+
+    final result = await PlatformStatusRepository(client).liveness();
+
+    expect(result, isA<Success<void>>());
+    expect(adapter.requests, ['GET /health/live'], reason: 'outside /api/v1, sent once');
   });
 
   // IPlatformConnectionRepository.setActive sends it and reads the 200 through PlatformConnectionsModel.readOne: one

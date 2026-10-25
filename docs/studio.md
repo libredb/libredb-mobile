@@ -850,5 +850,5 @@ token=$(tool/studio-dev/access-token.sh admin) && record_platform connection_pat
 At the end `admin2`'s and `norole`'s grants on `T` were revoked before `T` was enabled again, every other grant made here was revoked by its id (each `DELETE` answered 204), and `GET /api/v1/connections/{id}/grants` answered `{"grants":[]}` for all three connections.
 `T` was left active, `mobile_audit_fixture` was dropped from the database `app`, the plan was `ENTERPRISE` and statement capture `redacted`.
 
-`recorded_platform_answers_test.dart` reads the audit answers through `PlatformAuditRepository.list` and `platformError`, and the enable and disable answers through `PlatformConnectionRepository.setActive`, which must send the body it was recorded with.
+`recorded_platform_answers_test.dart` reads the audit answers through `PlatformAuditRepository.list` and `platformError`, the enable and disable answers through `PlatformConnectionRepository.setActive`, which must send the body it was recorded with, and `health_live.json` through `PlatformStatusRepository.liveness`.
 The audit events carry `user@example.com`, the realm's test address, as `username`, and only test statements.
