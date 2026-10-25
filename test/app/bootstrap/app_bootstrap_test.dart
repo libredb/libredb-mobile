@@ -77,13 +77,13 @@ void main() {
       final observer = Bloc.observer;
 
       await tester.runAsync(
-        () => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test), sentry: sentry),
+        () => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock), sentry: sentry),
       );
       FlutterError.onError = flutterErrorHandler;
       PlatformDispatcher.instance.onError = platformErrorHandler;
       Bloc.observer = observer;
 
-      expect(sentry.gatedConfigs.map((config) => config.environment), [Environment.test]);
+      expect(sentry.gatedConfigs.map((config) => config.environment), [Environment.mock]);
       expect(sentry.runDsns, ['https://public@example.invalid/1']);
     });
 
@@ -109,7 +109,7 @@ void main() {
       final platformErrorHandler = PlatformDispatcher.instance.onError;
       final observer = Bloc.observer;
 
-      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test)));
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock)));
       // The crash reporter and the bloc observer are global; the test binding needs its own error handler back.
       FlutterError.onError = flutterErrorHandler;
       PlatformDispatcher.instance.onError = platformErrorHandler;
@@ -121,7 +121,7 @@ void main() {
     // Phones rotate (#127): portrait and both landscape sides, not the upside-down portrait, which phones do not offer
     // by default either.
     test('defaults to portrait up and both landscape orientations', () {
-      expect(const AppBootstrapConfig(environment: Environment.test).preferredOrientations, const [
+      expect(const AppBootstrapConfig(environment: Environment.mock).preferredOrientations, const [
         DeviceOrientation.portraitUp,
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
@@ -147,7 +147,7 @@ void main() {
       final platformErrorHandler = PlatformDispatcher.instance.onError;
       final observer = Bloc.observer;
 
-      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test)));
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock)));
       FlutterError.onError = flutterErrorHandler;
       PlatformDispatcher.instance.onError = platformErrorHandler;
       Bloc.observer = observer;
@@ -172,7 +172,7 @@ void main() {
       final platformErrorHandler = PlatformDispatcher.instance.onError;
       final observer = Bloc.observer;
 
-      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.test)));
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock)));
       FlutterError.onError = flutterErrorHandler;
       PlatformDispatcher.instance.onError = platformErrorHandler;
       Bloc.observer = observer;

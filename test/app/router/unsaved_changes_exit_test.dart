@@ -73,7 +73,7 @@ final _app = App(
   language: 'en',
   dependencies: LocalSignInDependencies(
     appConfig: const AppConfig(
-      environment: Environment.dev,
+      environment: Environment.mock,
       apiBaseUrl: null,
       certificatePins: <String>[],
       idleTimeout: Duration(minutes: 5),

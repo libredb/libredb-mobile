@@ -97,7 +97,7 @@ const _prodPlatformConfig = AppConfig(
 
 /// The test config without a Platform target, as a Studio-only build has.
 const _testConfigWithoutPlatform = AppConfig(
-  environment: Environment.test,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: null,
@@ -1290,7 +1290,7 @@ void main() {
         authMode: OidcAuthMode(_oidcSettings),
         client: _FakeOidcClient(platformSignIn()),
         appConfig: const AppConfig(
-          environment: Environment.test,
+          environment: Environment.mock,
           apiBaseUrl: null,
           certificatePins: <String>[],
           idleTimeout: null,

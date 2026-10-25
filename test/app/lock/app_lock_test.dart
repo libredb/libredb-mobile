@@ -48,7 +48,7 @@ class _RecordingRecentsPreview implements IRecentsPreview {
 
 /// The idle timeout of production, which the app lock's idle rule reads.
 const _config = AppConfig(
-  environment: Environment.dev,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 15),
@@ -56,7 +56,7 @@ const _config = AppConfig(
 
 /// [_config] in a build that serves Platform mode too.
 const _platformConfig = AppConfig(
-  environment: Environment.dev,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 15),
@@ -254,7 +254,7 @@ void main() {
     await tester.pumpWidget(
       app(
         config: const AppConfig(
-          environment: Environment.dev,
+          environment: Environment.mock,
           apiBaseUrl: null,
           certificatePins: <String>[],
           idleTimeout: null,

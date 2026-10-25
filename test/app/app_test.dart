@@ -235,7 +235,7 @@ void main() {
       when(() => secureStorage.read(any())).thenAnswer((_) async => null);
     });
 
-    Future<void> pumpApp(WidgetTester tester, {AppConfig appConfig = const AppConfig.dev()}) async {
+    Future<void> pumpApp(WidgetTester tester, {AppConfig appConfig = const AppConfig.mock()}) async {
       await tester.pumpWidget(
         App(
           language: 'en',
@@ -292,7 +292,7 @@ void main() {
       await pumpApp(
         tester,
         appConfig: const AppConfig(
-          environment: Environment.test,
+          environment: Environment.mock,
           apiBaseUrl: 'https://studio.example.test:9443/api',
           certificatePins: [],
           idleTimeout: null,
@@ -304,7 +304,7 @@ void main() {
 
     // A build without a Platform target, where the Studio gate covers the restore and the login page.
     const withoutPlatform = AppConfig(
-      environment: Environment.test,
+      environment: Environment.mock,
       apiBaseUrl: null,
       certificatePins: [],
       idleTimeout: null,

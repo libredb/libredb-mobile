@@ -10,7 +10,7 @@ import 'package:libredb_mobile/app/app.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// End-to-end smoke: boots the full app as `main_local.dart` does, the mocked API of `assets/mock/*.json`
-/// (`AppConfig.dev()`) and the local sign-in in place of Keycloak, and drives cold-start → single sign-on → connection
+/// (`AppConfig.mock()`) and the local sign-in in place of Keycloak, and drives cold-start → single sign-on → connection
 /// list. Exercises routing + DI + BLoCs + the mock HTTP layer together.
 ///
 /// Runs headless under the normal `flutter test` (no device/emulator). The

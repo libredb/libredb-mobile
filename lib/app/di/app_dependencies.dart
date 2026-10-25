@@ -85,7 +85,7 @@ import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 class AppDependencies {
   const AppDependencies({
     required this.authMode,
-    this.appConfig = const AppConfig.dev(),
+    this.appConfig = const AppConfig.mock(),
     this.projectLinks = const ProjectLinks(),
   });
 

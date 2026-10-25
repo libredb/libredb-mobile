@@ -8,7 +8,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 void main() async {
   await AppBootstrap.run(
     const AppBootstrapConfig(
-      environment: Environment.dev,
+      environment: Environment.mock,
       defaultLanguage: 'en',
       defaultPalette: 'classic',
       defaultBrightness: 'light',

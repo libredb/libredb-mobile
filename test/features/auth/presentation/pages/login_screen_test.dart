@@ -97,7 +97,7 @@ class _OidcDependencies extends AppDependencies {
     this.platformStatus,
   }) : super(
          appConfig: AppConfig(
-           environment: Environment.test,
+           environment: Environment.mock,
            apiBaseUrl: null,
            certificatePins: const <String>[],
            idleTimeout: null,

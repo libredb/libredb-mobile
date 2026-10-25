@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 /// This file is used to set the environment
-enum Environment { dev, prod, test }
+enum Environment { mock, local, prod }
 
 final class AppConfig {
   const AppConfig({
@@ -14,27 +14,48 @@ final class AppConfig {
     this.oidcCertificatePins = const <String>[],
     this.screenCaptureProtection = false,
     this.appLockRequired = false,
+    this.simulateLatency = false,
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
     this.platform = const PlatformNotConfigured(),
   });
 
-  const AppConfig.dev({this.screenCaptureProtection = false, this.appLockRequired = false})
-    : environment = Environment.dev,
-      apiBaseUrl = null,
-      certificatePins = const <String>[],
-      oidcCertificatePins = const <String>[],
-      idleTimeout = null,
-      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
-      platform = const PlatformConfigured(baseUrl: null);
+  /// The config of `main_mock.dart`: no base URL, so `MockInterceptor` answers from `assets/mock/`, and the 500 ms
+  /// it waits first, which [AppConfig.test] turns off.
+  const AppConfig.mock({
+    this.screenCaptureProtection = false,
+    this.appLockRequired = false,
+    this.simulateLatency = true,
+  }) : environment = Environment.mock,
+       apiBaseUrl = null,
+       certificatePins = const <String>[],
+       oidcCertificatePins = const <String>[],
+       idleTimeout = null,
+       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
+       platform = const PlatformConfigured(baseUrl: null);
 
-  const AppConfig.test({this.screenCaptureProtection = false, this.appLockRequired = false})
-    : environment = Environment.test,
-      apiBaseUrl = null,
-      certificatePins = const <String>[],
-      oidcCertificatePins = const <String>[],
-      idleTimeout = null,
-      sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
-      platform = const PlatformConfigured(baseUrl: null);
+  /// The mock config a test runs on: the same fixtures without the simulated latency, so a suite of mocked requests
+  /// does not wait 500 ms each.
+  const AppConfig.test({bool screenCaptureProtection = false, bool appLockRequired = false})
+    : this.mock(
+        screenCaptureProtection: screenCaptureProtection,
+        appLockRequired: appLockRequired,
+        simulateLatency: false,
+      );
+
+  /// The config of `main_local.dart`: a real server on the developer's own machine. It reads the same defines a prod
+  /// build does, but enforces none of prod's rules — no https requirement, no pin validation, no screen-capture
+  /// protection and no idle timeout — because the build exists for hand testing against a development stack.
+  const AppConfig.local({
+    this.apiBaseUrl,
+    this.certificatePins = const <String>[],
+    this.oidcCertificatePins = const <String>[],
+    this.screenCaptureProtection = false,
+    this.appLockRequired = false,
+    this.platform = const PlatformNotConfigured(),
+  }) : environment = Environment.local,
+       idleTimeout = null,
+       simulateLatency = false,
+       sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN');
 
   const AppConfig.prod({
     String this.apiBaseUrl = prodApiUrl,
@@ -45,6 +66,7 @@ final class AppConfig {
     this.sentryDsnDefine = const String.fromEnvironment('SENTRY_DSN'),
     this.platform = const PlatformNotConfigured(),
   }) : environment = Environment.prod,
+       simulateLatency = false,
        idleTimeout = const Duration(minutes: 15);
 
   /// The config the app starts with in [environment].
@@ -57,18 +79,19 @@ final class AppConfig {
   /// `OIDC_ISSUER`, `SENTRY_DSN` and `PLATFORM_API_URL` defines unless a test passes its own. The store build declares
   /// that its traffic is encrypted in transit, so it never starts with a plain http server. An unset `OIDC_ISSUER`
   /// still starts and fails closed on the login page, an unset `SENTRY_DSN` leaves Sentry off, and an unset
-  /// `PLATFORM_API_URL` gives a build without Platform mode ([PlatformNotConfigured]). Dev and test check none of them,
-  /// and both get a [PlatformConfigured] without a base URL, which `MockInterceptor` answers.
+  /// `PLATFORM_API_URL` gives a build without Platform mode ([PlatformNotConfigured]). Mock and local check none of
+  /// them; mock gets a [PlatformConfigured] without a base URL, which `MockInterceptor` answers, and local reads
+  /// `PLATFORM_API_URL` as it is, so an empty one leaves it without Platform mode.
   ///
   /// Throws [CertificatePinsConfigError] in the prod environment when [studioCertPinsDefine], [oidcCertPinsDefine] or
   /// [platformCertPinsDefine], the `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` and `PLATFORM_CERT_PINS` defines unless a test
   /// passes its own, is set but breaks a pin rule: such a build never falls back to an unpinned connection. A set
   /// `PLATFORM_CERT_PINS` with an empty `PLATFORM_API_URL` throws too, because a pin without a host is a build mistake.
-  /// Dev and test read none of them.
+  /// Mock and local read none of them.
   ///
   /// [screenCaptureProtectionDefine], the `SCREEN_CAPTURE_PROTECTION` define unless a test passes its own, sets
-  /// [screenCaptureProtection]: `true` or `false`, or empty for the environment's default, on in prod and off in dev
-  /// and test. Any other value throws [ScreenCaptureProtectionConfigError] in every environment, so a typo never
+  /// [screenCaptureProtection]: `true` or `false`, or empty for the environment's default, on in prod and off in
+  /// mock and local. Any other value throws [ScreenCaptureProtectionConfigError] in every environment, so a typo never
   /// decides it.
   ///
   /// [appLockRequiredDefine], the `APP_LOCK_REQUIRED` define unless a test passes its own, sets [appLockRequired]:
@@ -96,7 +119,15 @@ final class AppConfig {
     final protection = _screenCaptureProtectionOf(screenCaptureProtectionDefine);
     final lockRequired = _appLockRequiredOf(appLockRequiredDefine);
     return switch (environment) {
-      Environment.dev => AppConfig.dev(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
+      Environment.mock => AppConfig.mock(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
+      Environment.local => AppConfig.local(
+        apiBaseUrl: prodApiUrlDefine.isEmpty ? null : prodApiUrlDefine,
+        screenCaptureProtection: protection ?? false,
+        appLockRequired: lockRequired,
+        platform: platformApiUrlDefine.isEmpty
+            ? const PlatformNotConfigured()
+            : PlatformConfigured(baseUrl: platformApiUrlDefine),
+      ),
       Environment.prod => AppConfig.prod(
         apiBaseUrl: prodApiUrlDefine,
         sentryDsnDefine: sentryDsnDefine,
@@ -106,7 +137,6 @@ final class AppConfig {
         appLockRequired: lockRequired,
         platform: _platformOf(platformApiUrlDefine, platformCertPinsDefine),
       ),
-      Environment.test => AppConfig.test(screenCaptureProtection: protection ?? false, appLockRequired: lockRequired),
     };
   }
 
@@ -249,9 +279,13 @@ final class AppConfig {
   final Duration? idleTimeout;
 
   /// Whether the screens that show data (results, a row's detail, a key's value, an object's source) keep out of
-  /// screenshots, screen recordings and the recent-apps preview while they are on screen: on in prod, off in dev and
-  /// test, and set by `SCREEN_CAPTURE_PROTECTION` ([AppConfig.fromEnvironment]).
+  /// screenshots, screen recordings and the recent-apps preview while they are on screen: on in prod, off in mock and
+  /// local, and set by `SCREEN_CAPTURE_PROTECTION` ([AppConfig.fromEnvironment]).
   final bool screenCaptureProtection;
+
+  /// Whether `MockInterceptor` waits 500 ms before answering, so a run against the fixtures feels like a network.
+  /// On in [AppConfig.mock] and off everywhere else, [AppConfig.test] included.
+  final bool simulateLatency;
 
   /// Whether the build forces the app lock on, from `APP_LOCK_REQUIRED` ([AppConfig.fromEnvironment]): the settings
   /// show the switch on and disabled, and a device without a screen lock offers only Sign out while signed in.
@@ -261,13 +295,15 @@ final class AppConfig {
   /// [sentryDsn] reads it in the prod environment only.
   final String sentryDsnDefine;
 
-  /// LibreDB Platform, which Platform mode calls: [PlatformConfigured] in dev and test and in a prod build with
+  /// LibreDB Platform, which Platform mode calls: [PlatformConfigured] in mock and in a prod or local build with
   /// `PLATFORM_API_URL`, else [PlatformNotConfigured].
   final PlatformTargetConfig platform;
 
   bool get isProduction => environment == Environment.prod;
-  bool get isDevelopment => environment == Environment.dev;
-  bool get isTest => environment == Environment.test;
+
+  /// Whether the build serves `assets/mock/` instead of a server. `ApiClient` installs `MockInterceptor` on this
+  /// alone, so `local` and `prod` always reach their real backend.
+  bool get isMock => environment == Environment.mock;
 
   /// Production-only DSN passed via `--dart-define=SENTRY_DSN=...`.
   /// Returns null in non-prod, or when the define is absent / empty.
@@ -288,6 +324,7 @@ final class AppConfig {
     idleTimeout: idleTimeout,
     screenCaptureProtection: screenCaptureProtection,
     appLockRequired: appLockRequired,
+    simulateLatency: simulateLatency,
     sentryDsnDefine: '',
     platform: platform,
   );

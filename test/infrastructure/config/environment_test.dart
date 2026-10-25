@@ -10,17 +10,42 @@ const _studioUrl = 'https://studio.example.test/api';
 
 void main() {
   group('AppConfig', () {
-    test('dev config sets development environment', () {
-      const config = AppConfig.dev();
-      expect(config.isDevelopment, true);
+    test('mock serves fixtures and simulates latency', () {
+      const config = AppConfig.mock();
+      expect(config.isMock, true);
+      expect(config.apiBaseUrl, isNull);
+      expect(config.simulateLatency, true);
+    });
+    test('test is mock without the latency', () {
+      const config = AppConfig.test();
+      expect(config.isMock, true);
+      expect(config.isProduction, false);
+      expect(config.simulateLatency, false);
       expect(config.apiBaseUrl, isNull);
     });
-    test('test config sets test environment', () {
-      const config = AppConfig.test();
-      expect(config.isDevelopment, false);
+    test('local carries a base URL, no pins and no idle timeout', () {
+      const config = AppConfig.local(apiBaseUrl: 'https://studio.lab.test/api');
+      expect(config.environment, Environment.local);
+      expect(config.isMock, false);
       expect(config.isProduction, false);
-      expect(config.isTest, true);
-      expect(config.apiBaseUrl, isNull);
+      expect(config.apiBaseUrl, 'https://studio.lab.test/api');
+      expect(config.certificatePins, isEmpty);
+      expect(config.oidcCertificatePins, isEmpty);
+      expect(config.idleTimeout, isNull);
+      expect(config.screenCaptureProtection, false);
+    });
+    test('local reads its Platform target from the define', () {
+      final configured = AppConfig.fromEnvironment(
+        Environment.local,
+        prodApiUrlDefine: _studioUrl,
+        platformApiUrlDefine: 'https://libredb.lab.test/api',
+      );
+      expect(
+        configured.platform,
+        isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', 'https://libredb.lab.test/api'),
+      );
+      final none = AppConfig.fromEnvironment(Environment.local, prodApiUrlDefine: _studioUrl);
+      expect(none.platform, isA<PlatformNotConfigured>());
     });
     test('prod config sets production environment', () {
       const config = AppConfig.prod(apiBaseUrl: 'https://studio.example.test/api');
@@ -31,8 +56,8 @@ void main() {
       expect(config.oidcCertificatePins, isEmpty);
     });
     test('fromEnvironment maps each enum value', () {
-      expect(AppConfig.fromEnvironment(Environment.dev).isDevelopment, true);
-      expect(AppConfig.fromEnvironment(Environment.test).isTest, true);
+      expect(AppConfig.fromEnvironment(Environment.mock).isMock, true);
+      expect(AppConfig.fromEnvironment(Environment.local, prodApiUrlDefine: _studioUrl).environment, Environment.local);
       expect(
         AppConfig.fromEnvironment(Environment.prod, prodApiUrlDefine: 'https://studio.example.test/api').isProduction,
         true,
@@ -69,9 +94,9 @@ void main() {
       }
     });
 
-    test('dev and test need no API URL', () {
-      expect(AppConfig.fromEnvironment(Environment.dev, prodApiUrlDefine: '').apiBaseUrl, isNull);
-      expect(AppConfig.fromEnvironment(Environment.test, prodApiUrlDefine: '').apiBaseUrl, isNull);
+    test('mock needs no API URL', () {
+      expect(AppConfig.fromEnvironment(Environment.mock, prodApiUrlDefine: '').apiBaseUrl, isNull);
+      expect(const AppConfig.test().apiBaseUrl, isNull);
     });
   });
 
@@ -147,12 +172,10 @@ void main() {
       );
     });
 
-    test('dev and test call the mock as their Platform, whatever the defines', () {
-      for (final environment in [Environment.dev, Environment.test]) {
-        final platform = AppConfig.fromEnvironment(environment, platformApiUrlDefine: 'http://x').platform;
-        expect(platform, isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', isNull), reason: '$environment');
-      }
-      expect(const AppConfig.dev().platform, isA<PlatformConfigured>());
+    test('mock calls the mock as its Platform, whatever the defines', () {
+      final platform = AppConfig.fromEnvironment(Environment.mock, platformApiUrlDefine: 'http://x').platform;
+      expect(platform, isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', isNull));
+      expect(const AppConfig.mock().platform, isA<PlatformConfigured>());
       expect(const AppConfig.test().platform, isA<PlatformConfigured>());
     });
 
@@ -235,8 +258,8 @@ void main() {
       });
     }
 
-    test('dev and test read neither define', () {
-      for (final environment in [Environment.dev, Environment.test]) {
+    test('mock and local read neither define', () {
+      for (final environment in [Environment.mock, Environment.local]) {
         final config = AppConfig.fromEnvironment(environment, studioCertPinsDefine: 'bad', oidcCertPinsDefine: 'bad');
         expect(config.certificatePins, isEmpty);
         expect(config.oidcCertificatePins, isEmpty);
@@ -266,14 +289,14 @@ void main() {
     });
 
     test('dev and test builds leave every screen capturable by default', () {
-      expect(const AppConfig.dev().screenCaptureProtection, isFalse);
+      expect(const AppConfig.mock().screenCaptureProtection, isFalse);
       expect(const AppConfig.test().screenCaptureProtection, isFalse);
       expect(
-        AppConfig.fromEnvironment(Environment.dev, screenCaptureProtectionDefine: '').screenCaptureProtection,
+        AppConfig.fromEnvironment(Environment.mock, screenCaptureProtectionDefine: '').screenCaptureProtection,
         isFalse,
       );
       expect(
-        AppConfig.fromEnvironment(Environment.test, screenCaptureProtectionDefine: '').screenCaptureProtection,
+        AppConfig.fromEnvironment(Environment.local, screenCaptureProtectionDefine: '').screenCaptureProtection,
         isFalse,
       );
     });
@@ -289,7 +312,7 @@ void main() {
 
     test('true turns it on in a dev build', () {
       expect(
-        AppConfig.fromEnvironment(Environment.dev, screenCaptureProtectionDefine: 'true').screenCaptureProtection,
+        AppConfig.fromEnvironment(Environment.mock, screenCaptureProtectionDefine: 'true').screenCaptureProtection,
         isTrue,
       );
     });
@@ -321,7 +344,7 @@ void main() {
 
     test('a config without Sentry keeps the switch', () {
       expect(const AppConfig.prod().withoutSentry().screenCaptureProtection, isTrue);
-      expect(const AppConfig.dev().withoutSentry().screenCaptureProtection, isFalse);
+      expect(const AppConfig.mock().withoutSentry().screenCaptureProtection, isFalse);
     });
   });
 
@@ -329,7 +352,7 @@ void main() {
   group('APP_LOCK_REQUIRED', () {
     test('no build requires the app lock by default', () {
       expect(const AppConfig.prod().appLockRequired, isFalse);
-      expect(const AppConfig.dev().appLockRequired, isFalse);
+      expect(const AppConfig.mock().appLockRequired, isFalse);
       expect(const AppConfig.test().appLockRequired, isFalse);
       for (final environment in Environment.values) {
         expect(
@@ -520,8 +543,8 @@ void main() {
       );
     });
 
-    test('dev and test check none of them, so main_local.dart keeps working', () {
-      for (final environment in [Environment.dev, Environment.test]) {
+    test('mock and local check none of them, so those entry points keep working', () {
+      for (final environment in [Environment.mock, Environment.local]) {
         final config = AppConfig.fromEnvironment(
           environment,
           prodApiUrlDefine: 'http://studio.example.test/api',

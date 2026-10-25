@@ -25,7 +25,7 @@ import '../../support/test_env.dart';
 import '../../support/user_menu.dart';
 
 const _appConfig = AppConfig(
-  environment: Environment.dev,
+  environment: Environment.mock,
   apiBaseUrl: null,
   certificatePins: <String>[],
   idleTimeout: Duration(minutes: 5),
