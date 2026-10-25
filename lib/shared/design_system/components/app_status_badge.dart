@@ -1,3 +1,4 @@
+import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 
 /// A subtle status badge with transparent background derived from the given color.
@@ -17,7 +18,7 @@ class AppStatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(100),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(color: color.withAlpha(51), width: 0.5),
       ),
       child: Text(

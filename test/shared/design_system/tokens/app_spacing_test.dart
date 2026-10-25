@@ -1,7 +1,6 @@
 @Tags(['widget'])
 library;
 
-import 'package:flutter/material.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,27 +24,6 @@ void main() {
         expect(AppSpacing.formMaxWidthMd, 400.0);
         expect(AppSpacing.formMaxWidthLg, 600.0);
         expect(AppSpacing.formMaxWidthXl, 800.0);
-      });
-    });
-
-    group('Percentage calculations', () {
-      testWidgets('Given context When percentage methods called Then should calculate correct values', (
-        WidgetTester tester,
-      ) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Builder(
-              builder: (context) {
-                final height = MediaQuery.of(context).size.height;
-                final width = MediaQuery.of(context).size.width;
-
-                expect(AppSpacing.heightPercent(context, 0.5), height * 0.5);
-                expect(AppSpacing.widthPercent(context, 0.5), width * 0.5);
-                return Container();
-              },
-            ),
-          ),
-        );
       });
     });
   });

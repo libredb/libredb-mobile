@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
-
-/// 4/8-based spacing scale for consistent paddings and gaps.
+/// The spacing scale, 4/8-based, and **closed**: {4, 8, 12, 16, 24, 32, 40, 48, 64}.
+///
+/// Closed means a layout rounds to a step rather than adding one. The two login files between them use nine values
+/// that are on no scale at all — 3, 6, 7, 10, 14, 20, 28, 36, 56 — which is what happens when a screen reaches for a
+/// number instead of a token. Filling those gaps would make every one of them correct and the scale meaningless.
 class AppSpacing {
   AppSpacing._();
 
@@ -19,8 +21,4 @@ class AppSpacing {
   static const double formMaxWidthMd = 400.0;
   static const double formMaxWidthLg = 600.0;
   static const double formMaxWidthXl = 800.0;
-
-  /// Percentage-based sizing helpers.
-  static double heightPercent(BuildContext context, double fraction) => MediaQuery.of(context).size.height * fraction;
-  static double widthPercent(BuildContext context, double fraction) => MediaQuery.of(context).size.width * fraction;
 }

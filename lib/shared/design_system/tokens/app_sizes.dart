@@ -21,4 +21,12 @@ class AppSizes {
   static const double inputSm = 32.0;
   static const double inputMd = 36.0;
   static const double inputLg = 40.0;
+
+  /// The smallest a tappable may be, in either direction.
+  ///
+  /// It is a touch floor, not a visual height: iOS asks for 44 and Android for 48, so one number satisfies both.
+  /// Every button token above is smaller on purpose — a button is allowed to look smaller than it is tappable, and
+  /// the theme's `minimumSize` of `Size(0, 36)` leaves the rest to padding. A bare tappable has no padding to lean
+  /// on, so it sets this explicitly.
+  static const double minTapTarget = 48.0;
 }

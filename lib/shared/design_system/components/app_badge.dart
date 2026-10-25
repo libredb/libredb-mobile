@@ -1,7 +1,7 @@
+import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/semantic_colors.dart';
-import '../tokens/app_spacing.dart';
 
 /// Badge variants.
 enum AppBadgeVariant { filled, secondary, destructive, outline, success, warning }
@@ -23,7 +23,7 @@ class AppBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color: variant == AppBadgeVariant.outline ? Colors.transparent : bg,
-        borderRadius: BorderRadius.circular(100),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
         border: variant == AppBadgeVariant.outline ? Border.all(color: colorScheme.outline, width: 1) : null,
       ),
       child: Row(
