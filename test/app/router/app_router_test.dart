@@ -13,6 +13,8 @@ import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
@@ -272,6 +274,157 @@ void main() {
       expect(routerFromApp(tester).state.uri.toString(), '/login?returnUrl=%2Fsettings');
       expect(find.byType(LoginScreen), findsOneWidget);
     });
+  });
+
+  // A Platform session lives under /platform, a Studio session never reaches it, and neither reaches the other's routes.
+  group('AppRouterFactory - session targets', () {
+    Future<GoRouter> startSignedIn(WidgetTester tester, SessionTarget target) async {
+      setDesktopViewport(tester);
+      TestEnv.authenticate(target: target);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+      return routerFromApp(tester);
+    }
+
+    testWidgets('a Platform cold start opens the Platform shell on /platform and never builds the login page', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      final loginFrames = await pumpShellRecordingLogin(tester);
+
+      expect(loginFrames, isEmpty, reason: 'frames that built the login page');
+      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.platformHome);
+      expect(find.byType(PlatformShell), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+      expect(find.byType(PlatformPlaceholderPage), findsOneWidget);
+    });
+
+    testWidgets('a Platform session at / goes to /platform', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+      router.go(ApplicationRoutesConstants.platformSettings);
+      await tester.pumpAndSettle();
+
+      router.go(ApplicationRoutesConstants.root);
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.platformHome);
+    });
+
+    for (final location in ['/connections', '/browse', '/browse/seed:pg/kinds', '/sql', '/settings']) {
+      testWidgets('a Platform session at $location goes to /platform', (tester) async {
+        final router = await startSignedIn(tester, SessionTarget.platform);
+        router.go(ApplicationRoutesConstants.platformSettings);
+        await tester.pumpAndSettle();
+
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), ApplicationRoutesConstants.platformHome);
+        expect(find.byType(AppShell), findsNothing);
+      });
+    }
+
+    testWidgets('a Platform deep link at a Studio route opens /platform on a cold start', (tester) async {
+      setDesktopViewport(tester);
+      startOn(tester, ApplicationRoutesConstants.sql);
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.platformHome);
+      expect(find.byType(AppShell), findsNothing);
+    });
+
+    for (final location in ['/platform', '/platform/connections', '/platform/settings']) {
+      testWidgets('a Studio session at $location goes to /connections', (tester) async {
+        final router = await startSignedIn(tester, SessionTarget.studio);
+
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), ApplicationRoutesConstants.connectionList);
+        expect(find.byType(PlatformShell), findsNothing);
+      });
+    }
+
+    testWidgets('a Platform session on /login with a Studio returnUrl goes to /platform', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+
+      router.go('${ApplicationRoutesConstants.login}?returnUrl=${Uri.encodeQueryComponent('/sql')}');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ApplicationRoutesConstants.platformHome);
+    });
+
+    testWidgets('a Platform session on /login with a Platform returnUrl goes there', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+
+      router.go('${ApplicationRoutesConstants.login}?returnUrl=${Uri.encodeQueryComponent('/platform/settings')}');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ApplicationRoutesConstants.platformSettings);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    });
+
+    testWidgets('a Studio session on /login with a Platform returnUrl goes to /connections', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.studio);
+
+      router.go('${ApplicationRoutesConstants.login}?returnUrl=${Uri.encodeQueryComponent('/platform/settings')}');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ApplicationRoutesConstants.connectionList);
+    });
+
+    testWidgets('signed out, /platform/settings goes to the login page with it as the returnUrl', (tester) async {
+      setDesktopViewport(tester);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      routerFromApp(tester).go(ApplicationRoutesConstants.platformSettings);
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.toString(), '/login?returnUrl=%2Fplatform%2Fsettings');
+    });
+
+    testWidgets('signed out, /platform goes to the login page with no returnUrl', (tester) async {
+      setDesktopViewport(tester);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      routerFromApp(tester).go(ApplicationRoutesConstants.platformHome);
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.login);
+    });
+
+    testWidgets('a Platform session opens settings in the Platform shell', (tester) async {
+      final router = await startSignedIn(tester, SessionTarget.platform);
+
+      router.go(ApplicationRoutesConstants.platformSettings);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(PlatformShell), findsOneWidget);
+    });
+
+    for (final (target, home) in [
+      (SessionTarget.platform, ApplicationRoutesConstants.platformHome),
+      (SessionTarget.studio, ApplicationRoutesConstants.connectionList),
+    ]) {
+      testWidgets('the not-found home button of a ${target.name} session goes to $home', (tester) async {
+        final router = await startSignedIn(tester, target);
+        router.go('/does-not-exist');
+        await tester.pumpAndSettle();
+        expect(find.byType(NotFoundPage), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(TextButton, 'Home'));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, home);
+      });
+    }
   });
 
   // The password sign-in is gone: its pages resolve to nothing.

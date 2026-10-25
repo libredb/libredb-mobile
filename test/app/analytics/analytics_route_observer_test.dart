@@ -6,6 +6,7 @@ import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -167,6 +168,28 @@ void main() {
         expect(loggedScreens(), [screenName]);
       });
     }
+
+    testWidgets('logs the Platform home once when a Platform session starts', (tester) async {
+      setDesktopViewport(tester);
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpAndSettle();
+
+      expect(loggedScreens(), ['platformHome']);
+    });
+
+    testWidgets('logs the Platform settings once as platformSettings', (tester) async {
+      setDesktopViewport(tester);
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en', analytics: analytics));
+      await tester.pumpAndSettle();
+      clearInteractions(analytics);
+
+      routerFromApp(tester).go(ApplicationRoutesConstants.platformSettings);
+      await tester.pumpAndSettle();
+
+      expect(loggedScreens(), ['platformSettings']);
+    });
 
     testWidgets('logs the revealed shell route once when a pushed route pops', (tester) async {
       final router = await startAuthenticated(tester);

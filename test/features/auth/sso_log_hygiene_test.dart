@@ -210,6 +210,74 @@ void main() {
     );
   });
 
+  // .team decision '2026-10-25: #18 amendment for Platform sign-out': a Platform sign-out writes no Studio record and
+  // no warn line about it, and a Studio sign-out that misses its record still writes exactly one.
+  test('a Platform sign-out writes no warn line, and a Studio sign-out without a record writes exactly one', () async {
+    final provider = FakeProvider();
+    installFakePlatform(provider);
+    provider.codeAnswer = () => provider.tokenAnswer(nonce: provider.nonce);
+
+    final dependencies = _OidcDependencies(provider);
+    final secureStorage = FlutterSecureStorageAdapter();
+    final client = dependencies.createOidcClient(_settings);
+    final sessions = dependencies.createAuthSessionRepository(secureStorage);
+    final rotation = dependencies.createOidcTokenRotation(client, secureStorage);
+    final apiClient = dependencies.createApiClient(
+      secureStorage,
+      onSessionExpired: () async => sessions.clear(),
+      tokenRotation: rotation,
+    );
+    final server = _ServerStub();
+    final dio = apiClient.instance;
+    final studioRequests = <String>[];
+    dio.interceptors.insert(
+      dio.interceptors.length - 1,
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          studioRequests.add(options.path);
+          handler.next(options);
+        },
+      ),
+    );
+    dio.interceptors.insert(dio.interceptors.length - 1, server);
+    final ssoRepository = dependencies.createSsoAuthRepository(client, sessions);
+    final signOutRepository = SsoSignOutAuthRepository(
+      inner: dependencies.createAuthRepository(sessions),
+      client: client,
+      secureStorage: secureStorage,
+      settings: _settings,
+      studioIdentity: StudioIdentityRepository(apiClient),
+      sessionRefresh: SsoSessionStartup(
+        rotation: rotation,
+        secureStorage: secureStorage,
+        sessionRepository: sessions,
+        gate: SsoAutoRedirectGate(),
+      ),
+    );
+    List<String> warnLines(List<String> lines) => [
+      for (final line in lines)
+        if (line.contains('SsoSignOutAuthRepository') && line.contains('[W]')) line,
+    ];
+
+    expect(await ssoRepository.signIn(target: SessionTarget.platform), isA<SsoProviderSignedIn>());
+    final platformLines = await _capturedLogs(() async {
+      expect(await signOutRepository.logout(), isA<Success<void>>());
+    });
+
+    expect(warnLines(platformLines), isEmpty);
+    expect(studioRequests, isEmpty, reason: 'a Platform sign-out sends nothing to Studio');
+    expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), isNull);
+
+    // The stub answers the logout record with `{}`, which Studio's record refuses.
+    expect(await ssoRepository.signIn(target: SessionTarget.studio), isA<SsoProviderSignedIn>());
+    final studioLines = await _capturedLogs(() async {
+      expect(await signOutRepository.logout(), isA<Success<void>>());
+    });
+
+    expect(warnLines(studioLines), [contains('Studio has no record of this sign-out')]);
+    expect(studioRequests, isNotEmpty);
+  });
+
   testWidgets('a callback URL the platform pushes logs neither its code nor its state', (tester) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(1600, 1600);

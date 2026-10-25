@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/profile/profile_sheet.dart';
@@ -9,6 +10,8 @@ import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
@@ -203,6 +206,144 @@ void main() {
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 400);
       await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+  });
+
+  // The Platform shell's frame: Home and Connections are its tabs, and settings is no tab though it is under /platform.
+  group('ResponsiveScaffold - Platform', () {
+    Future<GoRouter> pumpPlatformFrame(WidgetTester tester, String location, {Size size = const Size(390, 844)}) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      Widget page(String name) => Center(child: Text('page $name'));
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) =>
+                ResponsiveScaffold(target: SessionTarget.platform, activeRoute: state.uri.path, child: child),
+            routes: [
+              GoRoute(path: ApplicationRoutesConstants.platformHome, builder: (_, _) => page('home')),
+              GoRoute(path: ApplicationRoutesConstants.platformConnections, builder: (_, _) => page('connections')),
+              GoRoute(
+                path: ApplicationRoutesConstants.platformConnectionGrants,
+                builder: (_, state) => page('grants ${state.pathParameters['id']}'),
+              ),
+              GoRoute(path: ApplicationRoutesConstants.platformSettings, builder: (_, _) => page('settings')),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+        ),
+      );
+      await tester.pumpAndSettle();
+      return router;
+    }
+
+    List<String?> bottomLabels(WidgetTester tester) => tester
+        .widget<NavigationBar>(find.byType(NavigationBar))
+        .destinations
+        .map((destination) => (destination as NavigationDestination).label)
+        .toList();
+
+    testWidgets('/platform shows exactly the tabs Home and Connections, with Home selected and no back arrow', (
+      tester,
+    ) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformHome);
+
+      expect(bottomLabels(tester), ['Home', 'Connections']);
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
+      expect(find.byType(BackButton), findsNothing);
+      expect(titleInTopBar('Home'), findsOneWidget);
+    });
+
+    testWidgets('/platform/connections shows the bar with Connections selected', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformConnections);
+
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
+      expect(find.byType(BackButton), findsNothing);
+      expect(titleInTopBar('Connections'), findsOneWidget);
+    });
+
+    testWidgets('/platform/settings shows the back arrow and no bottom bar', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformSettings);
+
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(titleInTopBar('Settings'), findsOneWidget);
+    });
+
+    testWidgets('the back arrow of /platform/settings opened by a link goes to /platform', (tester) async {
+      final router = await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformSettings);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.platformHome);
+    });
+
+    testWidgets('a page under the Connections tab keeps the bar and a back arrow that goes to the tab root', (
+      tester,
+    ) async {
+      final router = await pumpPlatformFrame(tester, '/platform/connections/c1');
+
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(titleInTopBar('Connections'), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.platformConnections);
+    });
+
+    testWidgets('a page pushed under the Connections tab pops back to the page under it', (tester) async {
+      final router = await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformConnections);
+      router.push('/platform/connections/c1');
+      await tester.pumpAndSettle();
+      expect(find.text('page grants c1'), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page connections'), findsOneWidget);
+    });
+
+    testWidgets('a tap on Connections opens it in place of Home', (tester) async {
+      final router = await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformHome);
+
+      await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Connections')));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ApplicationRoutesConstants.platformConnections);
+      expect(router.canPop(), isFalse);
+    });
+
+    testWidgets('a compact height shows exactly the two tabs in the rail', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformConnections, size: const Size(829, 393));
+
+      expect(find.byType(NavigationBar), findsNothing);
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.destinations.map((destination) => (destination.label as Text).data), ['Home', 'Connections']);
+      expect(rail.selectedIndex, 1);
+    });
+
+    testWidgets('settings at a compact height shows no rail', (tester) async {
+      await pumpPlatformFrame(tester, ApplicationRoutesConstants.platformSettings, size: const Size(829, 393));
 
       expect(find.byType(NavigationRail), findsNothing);
     });

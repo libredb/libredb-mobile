@@ -13,13 +13,16 @@ import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/sso_sign_out_auth_repository.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/application/favorite_connections_bloc.dart';
@@ -69,6 +72,14 @@ Future<void> _logOut(WidgetTester tester) async {
   await tester.pumpAndSettle();
   // The app waits for Studio to record the sign-out, which the mock answers after its simulated latency.
   await tester.pump(SsoSignOutAuthRepository.defaultStudioSignOutTimeout);
+  await tester.pumpAndSettle();
+}
+
+/// Signs out from the account refusal page: Logout, then Yes in the confirmation dialog.
+Future<void> _logOutFromRefusalPage(WidgetTester tester) async {
+  await tester.tap(find.byKey(accountRefusalSignOutKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
   await tester.pumpAndSettle();
 }
 
@@ -430,6 +441,48 @@ void main() {
 
         expect(find.byType(LoginScreen), findsOneWidget);
         expect(tester.element(find.byType(MaterialApp)).read<LoginBloc>().state, const LoginInitialState());
+      });
+    }
+
+    // The idle timeout looks at no session target.
+    testWidgets('an idle timeout ends a Platform session and tells the user on the login screen', (tester) async {
+      TestEnv.authenticate(target: SessionTarget.platform);
+      await tester.pumpWidget(_app);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlatformShell), findsOneWidget);
+
+      await tester.pump(const Duration(minutes: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(loginButtonSsoKey), findsOneWidget);
+      expect(find.text('You were signed out due to inactivity.').hitTestable(), findsOneWidget);
+      expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
+    });
+
+    // The Platform refusal page covers the profile sheet, so its own Logout is the logout here.
+    for (final (ending, endSession) in <(String, Future<void> Function(WidgetTester))>[
+      ('a logout from the refusal page', _logOutFromRefusalPage),
+      ('an idle timeout', _idle),
+    ]) {
+      testWidgets('after $ending of a Platform session, its identity and refusal are forgotten', (tester) async {
+        TestEnv.authenticate(target: SessionTarget.platform);
+        await tester.pumpWidget(_app);
+        await tester.pumpAndSettle();
+        // The mock answers the identity after its latency.
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        final app = tester.element(find.byType(MaterialApp));
+        final identity = app.read<PlatformIdentityCubit>();
+        final refusal = app.read<PlatformAccountRefusalCubit>();
+        expect(identity.state, isA<PlatformIdentityLoaded>());
+        refusal.refuse(AppErrorCode.platformLicenseAdminSeats);
+        await tester.pumpAndSettle();
+
+        await endSession(tester);
+
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(identity.state, const PlatformIdentityInitial());
+        expect(refusal.state, const PlatformAccountAccepted());
       });
     }
 

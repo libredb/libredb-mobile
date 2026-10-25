@@ -15,6 +15,7 @@ import 'package:libredb_mobile/infrastructure/storage/temporary_share_files.dart
 
 // BLoC imports
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
+import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
@@ -108,6 +109,8 @@ class MockSignInWithSsoUseCase extends Mock implements SignInWithSsoUseCase {}
 
 // BLoC mocks (using MockBloc from bloc_test)
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState> implements LoginBloc {}
+
+class MockSignOutBloc extends MockBloc<SignOutEvent, SignOutState> implements SignOutBloc {}
 
 class MockAppLockBloc extends MockBloc<AppLockEvent, AppLockState> implements AppLockBloc {}
 

@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/connections/presentation/pages/connectio
 import 'package:libredb_mobile/features/object_browser/presentation/pages/browse_page.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/pages/sql_page.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -112,6 +113,39 @@ void main() {
       await pumpSignedInOnPhone(tester, location: ApplicationRoutesConstants.settings);
 
       expect(find.byType(NavigationBar), findsNothing);
+    });
+  });
+
+  group('BottomNavWidget - Platform', () {
+    testWidgets('the Platform shell on a phone shows exactly the tabs Home and Connections', (tester) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      TestEnv.authenticate(target: SessionTarget.platform);
+
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      final labels = tester
+          .widget<NavigationBar>(find.byType(NavigationBar))
+          .destinations
+          .map((destination) => (destination as NavigationDestination).label)
+          .toList();
+      expect(labels, ['Home', 'Connections']);
+      expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
+    });
+
+    testWidgets('the Platform tabs in Turkish', (tester) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      TestEnv.authenticate(target: SessionTarget.platform);
+
+      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
+      await tester.pumpAndSettle();
+
+      expect(inBottomNav('Bağlantılar'), findsOneWidget);
+      expect(inBottomNav('Gözat'), findsNothing);
     });
   });
 }
