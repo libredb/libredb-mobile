@@ -12,6 +12,10 @@
     "expected": "session [REDACTED_JWT] expired"
   },
   {
+    "input": "{\"subjectEmail\":\"not-an-address\",\"level\":\"read\"}",
+    "expected": "{\"subjectEmail\":\"[REDACTED]\",\"level\":\"read\"}"
+  },
+  {
     "input": "{\"password\":\"hunter2\",\"n\":1}",
     "expected": "{\"password\":\"[REDACTED]\",\"n\":1}"
   },
