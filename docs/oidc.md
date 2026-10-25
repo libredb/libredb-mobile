@@ -390,9 +390,13 @@ The refresh goes through `OidcTokenRotation`:
 
 A logout the user starts goes through `SsoSignOutUseCase` and `SsoSignOutAuthRepository.signOut`:
 1. It reads the stored ID token, before anything that could delete it: a refresh that ends the session clears the OIDC keys as well.
-2. It refreshes an expired access token and records the sign-out at Studio, for at most three seconds, whatever they answer.
+   It then reads the stored session target (`SecureStorageKeys.sessionTarget`).
+   A session stored without a target is a Studio session, since app version 1.0.0 and earlier stored none.
+   A target that cannot be read, or holds a value this app does not know, is taken as Studio, with one `warn` line that names only the error type, or says the target is unknown without printing it.
+2. A Studio session refreshes an expired access token and records the sign-out at Studio, for at most three seconds, whatever they answer.
+   A Platform session skips this step: it sends no request to Studio and writes no `warn` line about a missing record, since there is no Studio session to record and Platform v1 has no logout route.
    It never sends an access token it knows has expired, such as when the provider could not be reached, and a refresh that answers after the three seconds sends nothing.
-   A sign-out that leaves Studio without a record writes one `warn` line naming the reason: budget passed, refresh refused, no refresh token, provider unreachable, store unreadable, or Studio's error code; the user sees nothing for it.
+   A Studio sign-out that leaves Studio without a record writes one `warn` line naming the reason: budget passed, refresh refused, no refresh token, provider unreachable, store unreadable, or Studio's error code; the user sees nothing for it.
 3. It clears the local session, including the OIDC keys, and answers at once with that result and the provider logout started (`SsoSignOut`).
 4. `SignOutBloc` signs the app out on that answer, so the login page shows while the provider logout goes on.
 5. `OidcClient.endProviderSession` uses the discovered `end_session_endpoint`, else Auth0's `/v2/logout` for an issuer on `auth0.com`, else no provider logout.
