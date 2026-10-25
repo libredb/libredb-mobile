@@ -499,10 +499,6 @@
   "@account_refusal_title": {},
   "platform_account_refusal_title": "LibreDB Platform refused your account",
   "@platform_account_refusal_title": {},
-  "platform_placeholder_title": "LibreDB Platform",
-  "@platform_placeholder_title": {},
-  "platform_placeholder_note": "The Platform connections and their grants come to this screen in a later version.",
-  "@platform_placeholder_note": {},
   "connection_vanished": "{name} is no longer available",
   "@connection_vanished": {
     "placeholders": {

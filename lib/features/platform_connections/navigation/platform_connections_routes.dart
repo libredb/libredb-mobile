@@ -7,7 +7,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_page_transiti
 class PlatformConnectionsFeatureRoutes {
   static final List<GoRoute> routes = <GoRoute>[
     GoRoute(
-      name: 'platformConnectionList',
+      name: 'platformConnections',
       path: ApplicationRoutesConstants.platformConnections,
       pageBuilder: (context, state) => appTransitionPage(
         state: state,

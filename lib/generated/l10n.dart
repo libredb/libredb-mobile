@@ -1485,21 +1485,6 @@ class S {
     );
   }
 
-  /// `LibreDB Platform`
-  String get platform_placeholder_title {
-    return Intl.message('LibreDB Platform', name: 'platform_placeholder_title', desc: '', args: []);
-  }
-
-  /// `The Platform connections and their grants come to this screen in a later version.`
-  String get platform_placeholder_note {
-    return Intl.message(
-      'The Platform connections and their grants come to this screen in a later version.',
-      name: 'platform_placeholder_note',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `{name} is no longer available`
   String connection_vanished(String name) {
     return Intl.message('$name is no longer available', name: 'connection_vanished', desc: '', args: [name]);

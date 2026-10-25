@@ -628,10 +628,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "platform_home_identity_load_failed": MessageLookupByLibrary.simpleMessage("Platform hesabınız yüklenemedi"),
     "platform_home_signed_in_as": MessageLookupByLibrary.simpleMessage("Oturum açan"),
     "platform_home_tenant_label": MessageLookupByLibrary.simpleMessage("Kuruluş"),
-    "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
-      "Platform bağlantıları ve erişim izinleri bu ekrana sonraki bir sürümde gelecek.",
-    ),
-    "platform_placeholder_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform"),
     "previous": MessageLookupByLibrary.simpleMessage("Önceki"),
     "profile": MessageLookupByLibrary.simpleMessage("Profil"),
     "profile_governed_by_platform": MessageLookupByLibrary.simpleMessage("LibreDB Platform tarafından yönetiliyor"),

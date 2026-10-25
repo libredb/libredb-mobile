@@ -624,10 +624,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "platform_home_identity_load_failed": MessageLookupByLibrary.simpleMessage("Could not load your Platform account"),
     "platform_home_signed_in_as": MessageLookupByLibrary.simpleMessage("Signed in as"),
     "platform_home_tenant_label": MessageLookupByLibrary.simpleMessage("Organization"),
-    "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
-      "The Platform connections and their grants come to this screen in a later version.",
-    ),
-    "platform_placeholder_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform"),
     "previous": MessageLookupByLibrary.simpleMessage("Previous"),
     "profile": MessageLookupByLibrary.simpleMessage("Profile"),
     "profile_governed_by_platform": MessageLookupByLibrary.simpleMessage("Governed by LibreDB Platform"),

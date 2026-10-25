@@ -497,10 +497,6 @@
   "@account_refusal_title": {},
   "platform_account_refusal_title": "LibreDB Platform hesabınızı reddetti",
   "@platform_account_refusal_title": {},
-  "platform_placeholder_title": "LibreDB Platform",
-  "@platform_placeholder_title": {},
-  "platform_placeholder_note": "Platform bağlantıları ve erişim izinleri bu ekrana sonraki bir sürümde gelecek.",
-  "@platform_placeholder_note": {},
   "connection_vanished": "{name} artık kullanılamıyor",
   "@connection_vanished": {
     "placeholders": {

@@ -6,7 +6,6 @@ import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
-import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
@@ -16,6 +15,8 @@ import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart'
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
+import 'package:libredb_mobile/features/platform_connections/navigation/platform_connections_routes.dart';
+import 'package:libredb_mobile/features/platform_home/navigation/platform_home_routes.dart';
 import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -83,25 +84,8 @@ class AppRouterFactory {
             child: PlatformShell(state: state, child: child),
           ),
           routes: [
-            // Both tabs show the placeholder until the Platform home and connection list replace it.
-            GoRoute(
-              name: 'platformHome',
-              path: ApplicationRoutesConstants.platformHome,
-              pageBuilder: (context, state) => appTransitionPage(
-                state: state,
-                type: AppPageTransitionType.fade,
-                child: const PlatformPlaceholderPage(),
-              ),
-            ),
-            GoRoute(
-              name: 'platformConnections',
-              path: ApplicationRoutesConstants.platformConnections,
-              pageBuilder: (context, state) => appTransitionPage(
-                state: state,
-                type: AppPageTransitionType.fade,
-                child: const PlatformPlaceholderPage(),
-              ),
-            ),
+            ...PlatformHomeFeatureRoutes.routes,
+            ...PlatformConnectionsFeatureRoutes.routes,
             ...SettingsFeatureRoutes.routes(
               path: ApplicationRoutesConstants.platformSettings,
               name: 'platformSettings',
