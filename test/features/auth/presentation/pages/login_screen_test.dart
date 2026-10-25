@@ -283,6 +283,17 @@ void main() {
 
     String location(WidgetTester tester) => routerFromApp(tester).state.uri.toString();
 
+    // Records every location asked of the router from now on, before its redirect runs, so a test sees where the login
+    // page sends a sign-in even when the router then sends it elsewhere.
+    List<String> recordRequestedLocations(WidgetTester tester) {
+      final provider = routerFromApp(tester).routeInformationProvider;
+      final requested = <String>[];
+      void record() => requested.add(provider.value.uri.toString());
+      provider.addListener(record);
+      addTearDown(() => provider.removeListener(record));
+      return requested;
+    }
+
     SsoAutoRedirectGate gate(WidgetTester tester) =>
         tester.element(find.byType(MaterialApp)).read<SsoAutoRedirectGate>();
 
@@ -499,12 +510,15 @@ void main() {
         final client = _ScriptedOidcClient();
         await pumpOidcApp(tester, _OidcDependencies(client, platform: _withPlatform));
 
+        final requested = recordRequestedLocations(tester);
+
         await tester.tap(platformButton);
         await tester.pumpAndSettle();
 
         expect(client.signIns, 1);
         expect(find.byType(PlatformShell), findsOneWidget);
         expect(location(tester), ApplicationRoutesConstants.platformHome);
+        expect(requested, isNot(contains(ApplicationRoutesConstants.home)));
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.sessionTarget.key), 'platform');
       });
 
@@ -585,10 +599,16 @@ void main() {
           routerFromApp(tester).go('${ApplicationRoutesConstants.login}?returnUrl=$returnUrl');
           await tester.pumpAndSettle();
 
+          final requested = recordRequestedLocations(tester);
+
           await tester.tap(signIn == 'Platform' ? platformButton : ssoButton);
           await tester.pumpAndSettle();
 
           expect(location(tester), landing);
+          // The page itself never asks for the other target's route, so the router's own guard is not what keeps it.
+          final other = signIn == 'Platform' ? SessionTarget.studio : SessionTarget.platform;
+          expect(requested, contains(landing));
+          expect(requested.where((path) => ApplicationRoutesConstants.belongsTo(other, path)), isEmpty);
         });
       }
 

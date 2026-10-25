@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -1146,6 +1147,75 @@ void main() {
           scope.read<StudioAccountRefusalCubit>().state,
           const StudioAccountAccepted(),
           reason: 'the login page tells a refused sign-in, so no refusal waits for the next user to sign in',
+        );
+      });
+    }
+  });
+
+  // Platform decides at sign-in whether it accepts the account, through GET /api/v1/me. Each answer below is a body
+  // recorded from a real Platform (test/fixtures/platform, see recorded_platform_answers_test.dart), sent through the
+  // real PlatformApiClient of the scope, its refresh and its refusal handling included.
+  group('AppScope sign-in that Platform refuses', () {
+    final signedIn = OidcSignedIn(
+      tokens: OidcTokens(
+        accessToken: 'signed-in-access-token',
+        idToken: 'signed-in-id-token',
+        refreshToken: 'signed-in-refresh-token',
+        accessTokenExpiresAt: DateTime.utc(2100),
+      ),
+      claims: const {'iss': 'https://id.example.com/realms/demo', 'sub': 'user'},
+    );
+
+    Object recorded(String name) => jsonDecode(File('test/fixtures/platform/$name.json').readAsStringSync()) as Object;
+
+    for (final (fixture, status, code, refreshes) in <(String, int, AppErrorCode, int)>[
+      ('me_no_token', 401, AppErrorCode.platformAccountRefused, 1),
+      ('me_expired', 401, AppErrorCode.platformAccountRefused, 1),
+      ('me_not_admin', 403, AppErrorCode.platformAdminRoleRequired, 0),
+      ('me_norole', 403, AppErrorCode.platformAdminRoleRequired, 0),
+      ('me_license_invalid', 403, AppErrorCode.platformLicenseInvalid, 0),
+      ('me_api_disabled', 404, AppErrorCode.platformApiDisabled, 0),
+      ('me_idp_unavailable', 503, AppErrorCode.platformIdentityProviderUnavailable, 0),
+    ]) {
+      testWidgets('rejects the recorded $fixture ($status) with ${code.key}, stores nothing and ends no session', (
+        tester,
+      ) async {
+        final rotation = _FakeRotation(const TokensRotated(accessToken: 'refreshed-access-token'));
+        final dependencies = _CountingDependencies(
+          rotation: rotation,
+          client: _FakeOidcClient(signedIn),
+          appConfig: _prodPlatformConfig,
+        );
+        final scope = await _pumpScope(tester, dependencies);
+        final session = scope.read<SessionCubit>();
+        final sessionStates = <SessionState>[];
+        final subscription = session.stream.listen(sessionStates.add);
+        addTearDown(subscription.cancel);
+        final studio = _ServerAdapter({});
+        scope.read<ApiClient>().instance.httpClientAdapter = studio;
+        final platform = _ServerAdapter({'GET /v1/me': (status, recorded(fixture))});
+        scope.read<PlatformApiClient>().instance.httpClientAdapter = platform;
+
+        final login = scope.read<LoginBloc>();
+        login.add(const SsoSignInRequested(target: SessionTarget.platform));
+        await _pumpUntil(tester, () => login.state is LoginErrorState);
+
+        expect(login.state, LoginErrorState(errorCode: code));
+        expect(platform.requests.map((request) => request.split(' ').take(2).join(' ')), [
+          for (var i = 0; i <= refreshes; i++) 'GET /v1/me',
+        ]);
+        expect(studio.requests, isEmpty, reason: 'the Studio gate is never asked for a Platform sign-in');
+        expect(rotation.rotations, refreshes, reason: 'only a 401 BEARER_INVALID starts a refresh');
+        final secure = FlutterSecureStorageAdapter();
+        for (final key in SecureStorageKeys.values) {
+          expect(await secure.read(key.key), isNull, reason: '${key.name} stays stored');
+        }
+        expect(sessionStates, isEmpty, reason: 'a refused sign-in signs nobody in and ends no session');
+        expect(session.state, isA<SessionUnauthenticated>());
+        expect(
+          scope.read<PlatformAccountRefusalCubit>().state,
+          const PlatformAccountAccepted(),
+          reason: 'the login page tells a refused sign-in, so no refusal page waits for the next sign-in',
         );
       });
     }
