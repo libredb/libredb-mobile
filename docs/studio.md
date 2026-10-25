@@ -48,9 +48,13 @@ In a Platform install Studio's role claim is `libredb_roles` instead of `realm_a
 | --- | --- |
 | `https://localhost:8443` | Keycloak, realm `libredb`; admin console at `/admin/` with `kcadmin` / `kcadmin` |
 | `https://localhost:9443` | Studio; the app's API is `https://localhost:9443/api` |
+| `https://localhost:9444` | The governed Studio, with `--profile governed` only ([Governed Studio](#governed-studio)) |
+| `https://localhost:9445` | LibreDB Platform, with `--profile platform` only; its bearer API is `https://localhost:9445/api/v1` ([Platform](#platform)) |
 
-The realm has the users `admin` / `admin` (realm role `admin`) and `user` / `user` (realm role `user`), and gives access tokens a 60 second life, so a walkthrough also exercises the refresh.
-`norole` / `norole` holds no realm role, so Studio refuses it: the sign-in stays on the login page with the refusal, and nothing is stored.
+The realm has the users `admin` / `admin` (realm role `admin`, client role `libredb:admin`) and `user` / `user` (realm role `user`, client role `libredb:user`), and gives access tokens a 60 second life, so a walkthrough also exercises the refresh.
+`norole` / `norole` holds no role at all, so Studio refuses it: the sign-in stays on the login page with the refusal, and nothing is stored.
+`admin2` / `admin2` and the disabled account `disabled` are there for Platform ([Platform](#platform)).
+The stack needs Docker Compose v2.24.0 or newer.
 The stack is unfit for production on purpose: `start-dev` with the embedded H2 store, a self-signed CA, and committed passwords and client secret.
 
 Studio runs the 1.1.0 release image, `ghcr.io/libredb/libredb-studio:1.1.0`, pinned by its digest in the compose file, so no local build is needed.
@@ -69,7 +73,7 @@ A first start on an empty volume runs the database seeds, which on a loaded host
 ### Android emulator
 
 The app's own requests trust only the system CA store, so the stack's CA has to go there.
-`tool/studio-dev/trust-android-emulator.sh` does that and forwards ports 8443 and 9443 with `adb reverse`, so the emulator's `localhost` reaches the stack and the issuer stays `https://localhost:8443/...`:
+`tool/studio-dev/trust-android-emulator.sh` does that and forwards ports 8443, 9443, 9444 and 9445 with `adb reverse`, so the emulator's `localhost` reaches the stack and the issuer stays `https://localhost:8443/...`:
 
 ```shell
 tool/studio-dev/trust-android-emulator.sh            # or pass the adb serial, such as emulator-5554
@@ -395,6 +399,72 @@ The seed in `tool/studio-dev/governed/` was generated from Studio `02dc26057`, a
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads them.
 The app was also walked through on the Android emulator (API 30 Google APIs image) against the governed Studio: the SSO sign-in as `user` and the connection list with both granted connections.
 
+## Platform
+
+The compose profile `platform` adds LibreDB Platform 1.3.0 in self-hosted mode beside Studio and Keycloak, so the Platform answers the app depends on can be recorded from a real Platform.
+Platform's `docs/api/v1.md` is the contract of its bearer API, and `docs/deploy/platform-runtime.md` the one of its variables.
+
+| Address or service | What it is |
+| --- | --- |
+| `https://localhost:9445` | Platform's web console; the app's Platform API is `https://localhost:9445/api` and the bearer routes are under `/api/v1` |
+| `platform-db` | PostgreSQL 18 holding Platform's database `libredb`, bootstrapped by `tool/studio-dev/platform/postgres/` |
+| `platform-migrate` | The image's `migrate` command, run once before Platform starts: preflight, migrations and seed |
+| `libredb-platform` | The image's `serve` command, in Caddy's network namespace on port 3002, healthy once `/api/health/ready` answers 200 |
+
+Platform runs the 1.3.0 release image, `ghcr.io/libredb/libredb-platform:1.3.0`, pinned by its digest in the compose file; `PLATFORM_IMAGE` overrides it for both Platform services.
+The image is published for `linux/amd64` only, so an arm64 host runs it under emulation.
+`tool/studio-dev/platform/postgres/bootstrap.psql` and `init/01-bootstrap.sh` are byte-identical copies of `docker/postgres/` of libredb-platform `v1.3.0` (`0a84fa7`), unchanged since `v1.1.0`; copy them again from the tag of a new Platform release, never edit them.
+`platform-db` has no named volume, so `down -v` starts it empty.
+
+Start the stack with the profile and build the app against it:
+
+```shell
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait
+fvm flutter run --target lib/main/main_prod.dart --dart-define-from-file=tool/studio-dev/studio-dev-platform.env
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform down -v
+```
+
+Pass `--profile platform` to `down` as well, or the profile's containers stay behind.
+`postgres:18` comes from Docker Hub, so on this machine use the `DOCKER_CONFIG` workaround of [Docker Hub on this machine](#docker-hub-on-this-machine).
+`tool/studio-dev/studio-dev-platform.env` holds the defines of `studio-dev.env` plus `PLATFORM_API_URL=https://localhost:9445/api`; `studio-dev.env` itself has no `PLATFORM_API_URL`, so a default dev build offers no Platform entry for a Platform that is not running.
+On the Android emulator, `tool/studio-dev/trust-android-emulator.sh` also forwards port 9445.
+
+### The license
+
+Platform in self-hosted mode needs a license, and verifies it against the keys built into the image and, when the license lists hosts, against the host of `AUTH_URL`, here `localhost`.
+`libredb-platform` reads `PLATFORM_LICENSE` from two env files: the committed `tool/studio-dev/platform-license.placeholder.env` first, then the gitignored `tool/studio-dev/platform-license.local`, which wins when it exists.
+The placeholder `no-license-in-tool-studio-dev` verifies as `LICENSE_MALFORMED`: Platform still starts, in state `invalid`, and logs one warn line "License invalid, no seat can be added" with `state` `invalid` and `code` `LICENSE_MALFORMED`.
+Without a license no account can take an admin seat, so an admin's first call of any `/api/v1` route answers 403 `LICENSE_INVALID`, and the web console refuses the sign-in too; only the refusals of [Platform answers](#platform-answers) can be recorded.
+
+A license that lists the host `localhost`, or no host, goes into the local file with a command that never prints it, such as:
+
+```shell
+printf 'PLATFORM_LICENSE=%s\n' "$(tr -d '\n' < ~/libredb-licenses/free-mobile-dev-localhost.license)" > tool/studio-dev/platform-license.local
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait --force-recreate libredb-platform
+```
+
+Platform reads it when `serve` starts, and then logs "License active".
+Never commit the local file, and never paste a license into an issue, a pull request, a log or a fixture; never run `docker compose config` while the local file exists, because it prints the merged environment.
+A license that names another host, such as a hosted Platform's, fails here with `LICENSE_HOST_MISMATCH`.
+
+### Realm additions
+
+The realm import carries what Platform's installer would create (`installer/src/keycloak/desired.ts`), and keeps every role, client and mapper both Studios use:
+
+- Client `libredb`, with every flow off, holds the client roles `admin` and `user`, declared under `roles.client.libredb`.
+- The flat claim `libredb_roles` carries a user's `libredb` client roles, through a client role mapper on `libredb-mobile` and on `libredb-platform`, in the ID token, the access token and userinfo.
+  The mapper sits on each client rather than in a `libredb-roles` client scope, because a realm import that names any client scope gets none of Keycloak's built-in scopes, which put `sub`, `email` and `preferred_username` into every token.
+- `libredb-mobile` gains a second audience mapper, so its access token carries `libredb-platform-api` beside `libredb-studio-api`.
+- Client `libredb-platform` is confidential, with the standard flow, PKCE S256, the redirect `https://localhost:9445/api/auth/callback/keycloak`, the post-logout redirect `https://localhost:9445/login`, refresh tokens on and a service account.
+  The service account `service-account-libredb-platform` holds the `realm-management` roles `view-users` and `view-clients`, which Platform reads the directory with.
+- `admin` holds `libredb:admin` and `user` holds `libredb:user`; `norole` holds no LibreDB role.
+- `admin2` / `admin2` (id `a0000000-0000-4000-8000-000000000004`) holds the realm role `admin` and `libredb:admin`, a second admin for Platform's admin seat limit.
+- `disabled` (id `a0000000-0000-4000-8000-000000000005`) holds `libredb:user` and is disabled, so it cannot sign in, for the directory's `enabled` flag.
+
+Every client keeps Full Scope Allowed on, so neither the `libredb` roles nor the service account's roles need scope mappings.
+The decoded access token of `tool/studio-dev/access-token.sh admin` carries `aud` with `libredb-studio-api` and `libredb-platform-api`, `azp` `libredb-mobile`, `libredb_roles: ["admin"]`, `sub`, `email` and `preferred_username`; the token of `norole` has no `libredb_roles`.
+Studio still reads `realm_access.roles`, so it signs in `admin`, `user` and `norole` as before.
+
 ## Recording Studio answers
 
 The answers under `test/fixtures/studio/` are recorded with curl against the running stack, with an access token of the `libredb-mobile` client that `tool/studio-dev/access-token.sh` gets the way the app does, through Keycloak's login form with PKCE.
@@ -601,3 +671,40 @@ record me_idp_unavailable /auth/me                                              
 `me_idp_unavailable.json` is the 503 `IDENTITY_PROVIDER_UNAVAILABLE` of a Studio restarted while Keycloak is stopped, so it has no signing keys cached to check the token with.
 
 `test/infrastructure/studio/recorded_studio_answers_test.dart` reads every one of them.
+
+### Platform answers
+
+The answers under `test/fixtures/platform/` are recorded the same way from the `platform` profile, with `record_platform`, which sends the token only when `token` is set and passes any further arguments to curl:
+
+```shell
+record_platform() { # record_platform <fixture> <route under /api/v1> [more curl arguments, such as -X PUT --data ...]
+  local fixture=$1 route=$2 args=()
+  shift 2
+  if [ -n "${token:-}" ]; then args=(-H "Authorization: Bearer $token"); fi
+  curl -sk -o "test/fixtures/platform/$fixture.json" -w "$fixture %{http_code}\n" "https://localhost:9445/api/v1$route" \
+    "${args[@]}" "$@"
+}
+```
+
+The refusals of `GET /api/v1/me` were recorded on 2026-10-25 from Platform 1.3.0, the image the compose file pins, from a fresh volume with the placeholder license, in this order:
+
+```shell
+token= && record_platform me_no_token /me                                                  # 401 BEARER_INVALID
+token=$(tool/studio-dev/access-token.sh user) && record_platform me_not_admin /me        # 403 ADMIN_ROLE_REQUIRED
+token=$(tool/studio-dev/access-token.sh norole) && record_platform me_norole /me         # 403 ADMIN_ROLE_REQUIRED
+token=$(tool/studio-dev/access-token.sh admin) && record_platform me_license_invalid /me  # 403 LICENSE_INVALID
+token=$(tool/studio-dev/access-token.sh admin) && sleep 95 && record_platform me_expired /me  # 401 BEARER_INVALID
+PLATFORM_API_AUDIENCE= docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait libredb-platform
+token=$(tool/studio-dev/access-token.sh admin) && record_platform me_api_disabled /me     # 404 API_DISABLED
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait libredb-platform
+token=$(tool/studio-dev/access-token.sh admin)
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform stop keycloak
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform restart libredb-platform
+record_platform me_idp_unavailable /me      # 503 IDENTITY_PROVIDER_UNAVAILABLE, with the token fetched before the stop
+docker compose -f tool/studio-dev/docker-compose.yml --profile platform up -d --wait
+```
+
+`me_expired.json` is the answer to a token past its 60 seconds and Platform's 30 second clock tolerance.
+`me_api_disabled.json` comes from Platform recreated with `PLATFORM_API_AUDIENCE` empty, which turns the bearer API off; the plain `up` after it turns it on again.
+`me_idp_unavailable.json` comes from Platform restarted while Keycloak is stopped, so it has no signing keys cached and Caddy answers its discovery read with 502.
+`test/infrastructure/platform/recorded_platform_answers_test.dart` reads every one of them.

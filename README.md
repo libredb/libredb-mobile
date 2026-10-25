@@ -51,7 +51,7 @@ Studio accepts the token through its bearer channel for native clients (`OIDC_BE
 
 ## Quick start
 
-You need [FVM](https://fvm.app/), Docker with Compose v2.23.1 or newer, and an Android emulator or an iOS simulator.
+You need [FVM](https://fvm.app/), Docker with Compose v2.24.0 or newer, and an Android emulator or an iOS simulator.
 
 ```shell
 fvm install && fvm flutter pub get

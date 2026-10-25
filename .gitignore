@@ -71,3 +71,6 @@ test/**/failures/
 
 
 
+
+# A local LibreDB Platform license for tool/studio-dev (docs/studio.md); never commit it
+/tool/studio-dev/platform-license.local
