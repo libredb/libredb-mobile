@@ -146,6 +146,7 @@ void main() {
 
     setUp(() {
       adapter = _RecordingAdapter();
+      TestEnv.authenticate();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;
       queryTimeouts = ConnectionQueryTimeouts();

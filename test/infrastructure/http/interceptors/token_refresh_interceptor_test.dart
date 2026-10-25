@@ -1587,6 +1587,74 @@ void main() {
       expect(second.resolveCalled, isTrue);
     });
 
+    // Every request that waited for one refused refresh fails, but the session it was asked for ends once (#277).
+    test('two concurrent 401s whose shared refresh is refused end the session once', () async {
+      final release = Completer<void>();
+      final rotation = _FakeRotation(const RotationRefused(), whileRotating: () => release.future);
+      final interceptor = interceptorWith(rotation);
+      final first = _TestErrorHandler();
+      final second = _TestErrorHandler();
+
+      final both = Future.wait([
+        interceptor.onError(unauthorized('/api/users'), first),
+        interceptor.onError(unauthorized('/api/authorities'), second),
+      ]);
+      await pumpEventQueue();
+      release.complete();
+      await both;
+
+      expect(rotation.sent, hasLength(1));
+      expect(first.nextCalled, isTrue);
+      expect(second.nextCalled, isTrue);
+      expect(sessionExpiredCalls, 1);
+    });
+
+    test('a later refused refresh ends the session again', () async {
+      final interceptor = interceptorWith(_FakeRotation(const RotationRefused()));
+
+      await interceptor.onError(unauthorized('/api/users'), _TestErrorHandler());
+      await interceptor.onError(unauthorized('/api/users'), _TestErrorHandler());
+
+      expect(sessionExpiredCalls, 2, reason: 'each refused refresh is its own answer about the stored session');
+    });
+
+    // The sign-out ends the session itself, so a 401 met while it runs starts no refresh and no second end (#277).
+    test('a 401 for a request sent while a sign-out runs is neither refreshed nor ends the session', () async {
+      final release = Completer<void>();
+      final signOut = SessionGeneration.signOut(() => release.future);
+      final rotation = _FakeRotation(rotatedWithOidcKeys);
+      final error = unauthorized();
+      final handler = _TestErrorHandler();
+
+      await interceptorWith(rotation).onError(error, handler);
+      release.complete();
+      await signOut;
+
+      expect(rotation.sent, isEmpty);
+      expect(sessionExpiredCalls, 0);
+      expect(handler.nextError, same(error));
+    });
+
+    test(
+      'the sign-out\'s own request is still refreshed, and its refused refresh leaves the end to the sign-out',
+      () async {
+        final release = Completer<void>();
+        final signOut = SessionGeneration.signOut(() => release.future);
+        final rotation = _FakeRotation(const RotationRefused());
+        final error = unauthorized('/auth/logout');
+        error.requestOptions.extra[AuthInterceptor.signOutRequestKey] = true;
+        final handler = _TestErrorHandler();
+
+        await interceptorWith(rotation).onError(error, handler);
+        release.complete();
+        await signOut;
+
+        expect(rotation.sent, ['valid-refresh']);
+        expect(sessionExpiredCalls, 0);
+        expect(handler.nextError, same(error));
+      },
+    );
+
     test('with no stored refresh token a 401 ends the session and never calls rotate', () async {
       await storage.delete(SecureStorageKeys.refreshToken.key);
       final rotation = _FakeRotation(rotatedWithOidcKeys);
@@ -1711,6 +1779,15 @@ void main() {
       expect(sessionExpiredCalls, 0);
       expect(await secureStorage.read(SecureStorageKeys.jwtToken.key), 'new-access');
       expect(await secureStorage.read(SecureStorageKeys.refreshToken.key), 'valid-refresh');
+    });
+
+    // Two requests sent again with the same new token and both refused are one refusal of one session (#277).
+    test('ends the session once when two requests sent again with the same token are both refused', () async {
+      studioClient('{"error":"Invalid access token","code":"AUTH_REQUIRED"}');
+
+      await Future.wait([expectUnauthorized('/connections/managed'), expectUnauthorized('/connections/policy')]);
+
+      expect(sessionExpiredCalls, 1);
     });
 
     test('ends the session when the retry gets 401 AUTH_REQUIRED again', () async {

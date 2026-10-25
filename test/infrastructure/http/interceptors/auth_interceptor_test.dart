@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 import 'package:libredb_mobile/infrastructure/storage/session_generation.dart';
@@ -7,7 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// Covers the four behaviors of [AuthInterceptor] that every outgoing
 /// HTTP request depends on:
 /// 1. JWT present → `Authorization: Bearer <token>` is attached.
-/// 2. JWT absent or empty → no `Authorization` header is written.
+/// 2. JWT absent or empty → the request is refused before it is sent
+///    ([NoSessionException]), and so is any request while a sign-out or a
+///    wipe of the stored session runs, except the sign-out's own.
 /// 3. Public endpoint (Studio's `GET /health` and `GET /ready`) → no
 ///    `Authorization` header, whatever is stored. Any other method on the
 ///    same path, and any path that is not a public API endpoint, gets the
@@ -38,26 +43,29 @@ void main() {
       expect(handler.passedOptions!.headers['Authorization'], 'Bearer jwt-value');
     });
 
-    test('omits Authorization header when secure storage returns null', () async {
+    // Without a stored token no session exists, such as right after a sign-out wiped it, so the request is refused
+    // before it leaves: sent without a token, its 401 would run the end of a session that has already ended (#277).
+    for (final (name, token) in [('null', null), ('an empty string', '')]) {
+      test('refuses the request without sending it when secure storage returns $name', () async {
+        final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage(token));
+        final handler = _CapturingRequestHandler();
+
+        await interceptor.onRequest(RequestOptions(path: '/connections/managed'), handler);
+
+        expect(handler.passedOptions, isNull, reason: 'the request must not be sent');
+        expect(handler.rejected?.error, isA<NoSessionException>());
+        expect(handler.rejectedCallsErrorInterceptors, isFalse, reason: 'no 401 handling, so no end of the session');
+      });
+    }
+
+    test('still sends a public endpoint without a stored token', () async {
       final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage(null));
-
-      final options = RequestOptions(path: '/api/public/health');
       final handler = _CapturingRequestHandler();
 
-      await interceptor.onRequest(options, handler);
+      await interceptor.onRequest(RequestOptions(path: '/health', extra: {'_basePath': '/health'}), handler);
 
-      expect(handler.passedOptions!.headers.containsKey('Authorization'), isFalse);
-    });
-
-    test('omits Authorization header when secure storage returns empty string', () async {
-      final interceptor = AuthInterceptor(secureStorage: _FixedSecureStorage(''));
-
-      final options = RequestOptions(path: '/api/account');
-      final handler = _CapturingRequestHandler();
-
-      await interceptor.onRequest(options, handler);
-
-      expect(handler.passedOptions!.headers.containsKey('Authorization'), isFalse);
+      expect(handler.passedOptions, isNotNull);
+      expect(handler.rejected, isNull);
     });
 
     test('does not attach the stored token to a public endpoint', () async {
@@ -124,6 +132,82 @@ void main() {
       final sentUnder = AuthInterceptor.sessionGenerationOf(handler.passedOptions!);
       expect(sentUnder, isNotNull);
       expect(SessionGeneration.hasEnded(sentUnder!), isTrue);
+    });
+  });
+
+  // Once a sign-out has started, or while the stored session is wiped, no request of the session leaves: a list reload
+  // at that moment would go out with a token about to end or with none (#277).
+  group('AuthInterceptor.onRequest, while the session ends', () {
+    test('refuses a request while a sign-out runs, without reading the token', () async {
+      final storage = _CountingSecureStorage('jwt-value');
+      final release = Completer<void>();
+      final signOut = SessionGeneration.signOut(() => release.future);
+      final handler = _CapturingRequestHandler();
+
+      await AuthInterceptor(secureStorage: storage).onRequest(RequestOptions(path: '/connections/managed'), handler);
+      release.complete();
+      await signOut;
+
+      expect(handler.passedOptions, isNull);
+      expect(handler.rejected?.error, isA<NoSessionException>());
+      expect(handler.rejectedCallsErrorInterceptors, isFalse);
+      expect(storage.reads, 0);
+    });
+
+    test('sends the sign-out\'s own request with the token while the sign-out runs', () async {
+      final release = Completer<void>();
+      final signOut = SessionGeneration.signOut(() => release.future);
+      final handler = _CapturingRequestHandler();
+
+      await AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value')).onRequest(
+        RequestOptions(path: '/auth/logout', method: 'POST', extra: {AuthInterceptor.signOutRequestKey: true}),
+        handler,
+      );
+      release.complete();
+      await signOut;
+
+      expect(handler.passedOptions!.headers['Authorization'], 'Bearer jwt-value');
+    });
+
+    test('refuses a request while the stored session is wiped', () async {
+      final release = Completer<void>();
+      final wipe = SessionGeneration.wipe(() => release.future);
+      final handler = _CapturingRequestHandler();
+
+      await AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value'))
+          .onRequest(RequestOptions(path: '/connections/managed'), handler);
+      release.complete();
+      await wipe;
+
+      expect(handler.passedOptions, isNull);
+      expect(handler.rejected?.error, isA<NoSessionException>());
+    });
+
+    test('refuses a request when a sign-out starts while the token is read', () async {
+      final release = Completer<void>();
+      Future<void>? signOut;
+      final storage = _CountingSecureStorage(
+        'jwt-value',
+        whileReading: () => signOut = SessionGeneration.signOut(() => release.future),
+      );
+      final handler = _CapturingRequestHandler();
+
+      await AuthInterceptor(secureStorage: storage).onRequest(RequestOptions(path: '/connections/managed'), handler);
+      release.complete();
+      await signOut;
+
+      expect(handler.passedOptions, isNull);
+      expect(handler.rejected?.error, isA<NoSessionException>());
+    });
+
+    test('sends requests again once the sign-out has ended and a session is stored', () async {
+      await SessionGeneration.signOut(() async {});
+      final handler = _CapturingRequestHandler();
+
+      await AuthInterceptor(secureStorage: _FixedSecureStorage('jwt-value'))
+          .onRequest(RequestOptions(path: '/connections/managed'), handler);
+
+      expect(handler.passedOptions!.headers['Authorization'], 'Bearer jwt-value');
     });
   });
 
@@ -247,9 +331,41 @@ class _ThrowingSecureStorage implements ISecureStorage {
 
 class _CapturingRequestHandler extends RequestInterceptorHandler {
   RequestOptions? passedOptions;
+  DioException? rejected;
+  bool? rejectedCallsErrorInterceptors;
   @override
   void next(RequestOptions requestOptions) {
     passedOptions = requestOptions;
     super.next(requestOptions);
   }
+
+  @override
+  void reject(DioException error, [bool callFollowingErrorInterceptor = false]) {
+    rejected = error;
+    rejectedCallsErrorInterceptors = callFollowingErrorInterceptor;
+  }
+}
+
+/// Answers every read with [_token], counting the reads in [reads] and running [whileReading] during each.
+class _CountingSecureStorage implements ISecureStorage {
+  _CountingSecureStorage(this._token, {this.whileReading});
+  final String _token;
+  final void Function()? whileReading;
+  int reads = 0;
+  @override
+  Future<String?> read(String key) async {
+    reads++;
+    whileReading?.call();
+    return _token;
+  }
+
+  @override
+  Future<void> write(String key, String value) async {}
+  @override
+  Future<void> delete(String key) async {}
+  @override
+  Future<void> deleteAll() async {}
+
+  @override
+  Future<Set<String>> keys() => throw UnimplementedError('not used by this test');
 }

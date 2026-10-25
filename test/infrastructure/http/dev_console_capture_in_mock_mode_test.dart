@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/infrastructure/http/dev_console_store.dart';
@@ -60,7 +62,10 @@ void main() {
       expect(entries.first.statusCode, isNotNull);
     });
 
-    test('a mock 401 for a request without a token is marked complete with its status', () async {
+    // A request without a stored token is not sent at all (#277), so the mock 401 here is for an expired bearer.
+    test('a mock 401 for a request with an expired token is marked complete with its status', () async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _expiredJwt());
+
       await expectLater(TestEnv.apiClient().get('/test'), throwsA(isA<UnauthorizedException>()));
 
       final entry = DevConsoleStore.instance.networkEntries.single;
@@ -113,4 +118,11 @@ void main() {
       expect(entry.error, contains('assets/mock/GET_test.json'));
     });
   });
+}
+
+/// A JWT signed nowhere whose `exp` has passed, which MockInterceptor answers with 401 as an expired bearer.
+String _expiredJwt() {
+  String part(Map<String, Object> json) => base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+  final exp = DateTime.now().subtract(const Duration(minutes: 1)).millisecondsSinceEpoch ~/ 1000;
+  return '${part({'alg': 'RS256', 'typ': 'JWT'})}.${part({'sub': 'admin', 'exp': exp})}.c2lnbmF0dXJl';
 }
