@@ -42,9 +42,14 @@ AppConfig _prodWith(PlatformTargetConfig platform) => AppConfig(
 /// Answers each request with the next queued status code and body, and records what was sent.
 class _FakeAdapter implements HttpClientAdapter {
   final requests = <String>[];
+  final bodies = <String>[];
   final _replies = <(int, String)>[];
+  var _transportFailures = 0;
 
   void reply(int statusCode, [String body = '']) => _replies.add((statusCode, body));
+
+  /// Fails the next request before any answer, as a dropped connection does.
+  void failTransport() => _transportFailures++;
 
   @override
   Future<ResponseBody> fetch(
@@ -52,8 +57,13 @@ class _FakeAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    await requestStream?.drain<void>();
+    final sent = requestStream == null ? <int>[] : await requestStream.expand((chunk) => chunk).toList();
+    bodies.add(utf8.decode(sent));
     requests.add('${options.method} ${options.uri} ${options.headers['Authorization']}');
+    if (_transportFailures > 0) {
+      _transportFailures--;
+      throw DioException.connectionError(requestOptions: options, reason: 'connection reset');
+    }
     if (_replies.isEmpty) throw StateError('No reply queued for ${options.method} ${options.path}');
     final (statusCode, body) = _replies.removeAt(0);
     return ResponseBody.fromString(
@@ -272,6 +282,36 @@ void main() {
 
       expect(adapter.requests, hasLength(2));
     });
+
+    test('a PATCH sends its JSON body to the path with the path params appended', () async {
+      adapter.reply(200, '{}');
+
+      await client.patch('/v1/connections', {'active': false}, pathParams: 'c%2F1');
+
+      expect(adapter.requests, ['PATCH $_platformUrl/v1/connections/c%2F1 Bearer MOCK_TOKEN']);
+      expect(adapter.bodies, ['{"active":false}']);
+    });
+
+    test('a PATCH answering 503 with a code, 503 without one, or a transport error is sent once', () async {
+      adapter
+        ..reply(503, _envelope('INTERNAL_ERROR'))
+        ..reply(503);
+
+      for (var call = 0; call < 2; call++) {
+        await expectLater(
+          client.patch('/v1/connections', const {'active': true}, pathParams: 'c1'),
+          throwsA(isA<AppException>()),
+        );
+      }
+      expect(adapter.requests, hasLength(2));
+
+      adapter.failTransport();
+      await expectLater(
+        client.patch('/v1/connections', const {'active': true}, pathParams: 'c1'),
+        throwsA(isA<AppException>()),
+      );
+      expect(adapter.requests, hasLength(3), reason: 'a PATCH is never retried');
+    });
   });
 
   group('PlatformApiClient in a build without a Platform target', () {
@@ -286,6 +326,7 @@ void main() {
       await expectLater(client.get('/v1/me'), throwsA(isA<PlatformNotConfiguredException>()));
       await expectLater(client.put('/v1/x', const {}), throwsA(isA<PlatformNotConfiguredException>()));
       await expectLater(client.delete('/v1/x'), throwsA(isA<PlatformNotConfiguredException>()));
+      await expectLater(client.patch('/v1/x', const {}), throwsA(isA<PlatformNotConfiguredException>()));
       expect(() => client.instance, throwsA(isA<PlatformNotConfiguredException>()));
       expect(platformError(PlatformNotConfiguredException()).code, AppErrorCode.platformNotConfigured.key);
     });

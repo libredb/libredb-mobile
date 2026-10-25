@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
@@ -141,5 +144,105 @@ void main() {
     ]);
     expect(lines, everyElement(isNot(contains('Payroll'))));
     expect(lines, everyElement(isNot(contains('jane.doe'))));
+  });
+
+  group('setActive', () {
+    String fixture(String name) => File('test/fixtures/platform/$name.json').readAsStringSync();
+
+    Future<Result<PlatformConnection>> setActiveAnswering(int statusCode, String body, {bool active = false}) =>
+        repositoryWith(_StubInterceptor(statusCode, body)).setActive('c1', active: active);
+
+    test('sends PATCH /v1/connections/<encoded id> with exactly {"active": false} or {"active": true}', () async {
+      final stub = _StubInterceptor(200, fixture('connection_patch'));
+
+      await repositoryWith(stub).setActive('tenant/c 3', active: false);
+      await repositoryWith(stub).setActive('tenant/c 3', active: true);
+
+      expect(stub.requests.map((r) => (r.method, r.path)), [
+        ('PATCH', '/v1/connections/tenant%2Fc%203'),
+        ('PATCH', '/v1/connections/tenant%2Fc%203'),
+      ]);
+      expect(stub.requests.map((r) => jsonEncode(r.data)), ['{"active":false}', '{"active":true}']);
+      expect(stub.requests.map((r) => r.queryParameters), everyElement(isEmpty));
+    });
+
+    test('reads the connection Platform answered', () async {
+      final result = await setActiveAnswering(200, fixture('connection_patch'));
+
+      expect(
+        result,
+        isA<Success<PlatformConnection>>().having(
+          (s) => s.data,
+          'data',
+          const PlatformConnection(
+            id: 'c1cbf89a-ef31-4bf5-a026-522e39e08b58',
+            name: 'Dev app (read-only)',
+            engine: 'postgres',
+            status: 'active',
+            hasWriteCredential: false,
+          ),
+        ),
+      );
+    });
+
+    test('answers the disabled Orders through the mock', () async {
+      TestEnv.authenticate();
+
+      final result = await PlatformConnectionRepository(TestEnv.platformApiClient())
+          .setActive('cm0conn0000000000000000001', active: false);
+
+      expect(result, isA<Success<PlatformConnection>>().having((s) => s.data.status, 'status', 'inactive'));
+    });
+
+    final refusals = <String, (int, String, AppErrorCode)>{
+      'connection_patch_unknown (404 NOT_FOUND)': (404, 'connection_patch_unknown', AppErrorCode.platformNotFound),
+      'connection_patch_body (400 VALIDATION_FAILED)': (
+        400,
+        'connection_patch_body',
+        AppErrorCode.platformValidationFailed,
+      ),
+      '403 LICENSE_USER_SEATS': (403, 'grant_put_user_seats', AppErrorCode.platformLicenseUserSeats),
+    };
+    for (final MapEntry(key: name, value: (status, file, code)) in refusals.entries) {
+      test('maps $name', () async {
+        final result = await setActiveAnswering(status, fixture(file), active: true);
+
+        expect(result, isA<Failure<PlatformConnection>>().having((f) => f.error.code, 'code', code.key));
+      });
+    }
+
+    test('maps a 200 without hasWriteCredential to an unreadable answer', () async {
+      final result = await setActiveAnswering(200, '{"id":"c1","name":"Orders","engine":"postgres","status":"active"}');
+
+      expect(
+        result,
+        isA<Failure<PlatformConnection>>().having(
+          (f) => f.error.code,
+          'code',
+          AppErrorCode.platformUnreadableAnswer.key,
+        ),
+      );
+    });
+
+    test('logs the id and the answered status, and the code of a refusal, never a connection name', () async {
+      const success =
+          '{"id":"c1","name":"Payroll Secret","engine":"postgres","status":"inactive","hasWriteCredential":true}';
+
+      final lines = await printedLines(() async {
+        expect(await setActiveAnswering(200, success), isA<Success<PlatformConnection>>());
+        expect(
+          await setActiveAnswering(403, _envelope('LICENSE_USER_SEATS', 'Payroll Secret needs seats for jane.doe')),
+          isA<Failure<PlatformConnection>>(),
+        );
+      });
+
+      final repositoryLines = lines.where((line) => line.contains('PlatformConnectionRepository')).toList();
+      expect(repositoryLines, [
+        allOf(contains('setActive: c1 is inactive')),
+        allOf(contains('[W]'), contains('setActive failed: platform.license_user_seats')),
+      ]);
+      expect(lines, everyElement(isNot(contains('Payroll'))));
+      expect(lines, everyElement(isNot(contains('jane.doe'))));
+    });
   });
 }

@@ -316,11 +316,11 @@ void main() {
     });
   });
 
-  // PATCH /api/v1/connections/{id} is M11-P's, which has no client method or reader yet; until then these hold the
-  // recorded shape: the 200 is the connection as GET /api/v1/connections lists it.
-  group('PATCH /api/v1/connections/{id}, recorded for M11-P', () {
+  // IPlatformConnectionRepository.setActive sends it and reads the 200 through PlatformConnectionsModel.readOne: one
+  // connection in the item shape of GET /api/v1/connections.
+  group('PATCH /api/v1/connections/{id}', () {
     test('connection_patch: a no-op 200 answers the connection', () {
-      final connection = PlatformConnectionsModel.read('{"connections":[${fixture('connection_patch')}]}').single;
+      final connection = PlatformConnectionsModel.readOne(fixture('connection_patch'));
 
       expect(
         (connection.name, connection.status, connection.hasWriteCredential),

@@ -6,9 +6,10 @@ import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart'
 import 'package:libredb_mobile/infrastructure/platform/platform_errors.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
 
-/// LibreDB Platform's connection list. The path is relative to `PLATFORM_API_URL`, which ends in Platform's `/api`.
+/// LibreDB Platform's connection list, and the enabling or disabling of one connection. The paths are relative to
+/// `PLATFORM_API_URL`, which ends in Platform's `/api`.
 ///
-/// It reads only; the answer is never cached, since every `/v1/` path is networkOnly.
+/// No answer is cached, since every `/v1/` path is networkOnly, and the `PATCH` is never sent twice.
 class PlatformConnectionRepository implements IPlatformConnectionRepository {
   PlatformConnectionRepository(this._apiClient);
 
@@ -26,6 +27,22 @@ class PlatformConnectionRepository implements IPlatformConnectionRepository {
       return Success(connections);
     } catch (e) {
       return _failure('list', e);
+    }
+  }
+
+  @override
+  Future<Result<PlatformConnection>> setActive(String id, {required bool active}) async {
+    try {
+      // `active` is the only field Platform accepts; the app never sends a name, a definition or a credential.
+      final response = await _apiClient.patch('/v1/connections', {
+        'active': active,
+      }, pathParams: Uri.encodeComponent(id));
+      final connection = PlatformConnectionsModel.readOne(response.data!);
+      // The id and the answered status only: a connection name stays out of the log.
+      _log.debug('setActive: {} is {}', [connection.id, connection.status]);
+      return Success(connection);
+    } catch (e) {
+      return _failure('setActive', e);
     }
   }
 

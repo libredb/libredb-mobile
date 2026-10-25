@@ -249,6 +249,62 @@ void main() {
     });
   });
 
+  group('PlatformConnectionReplaced', () {
+    const disabledOrders = PlatformConnection(
+      id: 'c1',
+      name: 'Orders',
+      engine: 'postgres',
+      status: 'inactive',
+      hasWriteCredential: true,
+    );
+
+    test('replaces the item with the same id in its position, keeping the query and the refresh error', () async {
+      final bloc = await loaded();
+      answer(Failure(serverError));
+      bloc.add(const PlatformConnectionListRefreshed());
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.refreshError != null);
+      bloc.add(const PlatformConnectionListSearchChanged('orders'));
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListLoaded && s.query == 'orders');
+
+      bloc.add(const PlatformConnectionReplaced(disabledOrders));
+      final state = await bloc.stream.first as PlatformConnectionListLoaded;
+
+      expect(state.connections, [disabledOrders, cache, billing]);
+      expect(state.query, 'orders');
+      expect(state.visible, [disabledOrders]);
+      expect(state.refreshError, AppErrorCode.platformInternalError);
+      verify(() => repository.list()).called(2);
+      await bloc.close();
+    });
+
+    test('is ignored for an id the list does not hold', () async {
+      final bloc = await loaded();
+      final before = bloc.state;
+
+      bloc.add(
+        const PlatformConnectionReplaced(
+          PlatformConnection(id: 'c9', name: 'Other', engine: 'redis', status: 'inactive', hasWriteCredential: true),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bloc.state, before);
+      await bloc.close();
+    });
+
+    test('is ignored outside Loaded', () async {
+      answer(Failure(serverError));
+      final bloc = build()..add(const PlatformConnectionListRequested());
+      await bloc.stream.firstWhere((s) => s is PlatformConnectionListFailure);
+
+      bloc.add(const PlatformConnectionReplaced(disabledOrders));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(bloc.state, const PlatformConnectionListFailure(errorCode: AppErrorCode.platformInternalError));
+      await bloc.close();
+    });
+  });
+
   test('logs no connection name and no Platform message', () async {
     answer(const Success(all));
     final lines = await printedLines(() async {

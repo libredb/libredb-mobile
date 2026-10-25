@@ -42,13 +42,17 @@ final class PlatformConnectionListLoaded extends PlatformConnectionListState {
   List<PlatformConnection> get visible =>
       connections.where((c) => matchesSearch(query, [c.name, c.engine])).toList(growable: false);
 
-  PlatformConnectionListLoaded _with({String? query, bool? isRefreshing, AppErrorCode? Function()? refreshError}) =>
-      PlatformConnectionListLoaded(
-        connections: connections,
-        query: query ?? this.query,
-        isRefreshing: isRefreshing ?? this.isRefreshing,
-        refreshError: refreshError == null ? this.refreshError : refreshError(),
-      );
+  PlatformConnectionListLoaded _with({
+    List<PlatformConnection>? connections,
+    String? query,
+    bool? isRefreshing,
+    AppErrorCode? Function()? refreshError,
+  }) => PlatformConnectionListLoaded(
+    connections: connections ?? this.connections,
+    query: query ?? this.query,
+    isRefreshing: isRefreshing ?? this.isRefreshing,
+    refreshError: refreshError == null ? this.refreshError : refreshError(),
+  );
 
   @override
   List<Object?> get props => [connections, query, isRefreshing, refreshError];
