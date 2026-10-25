@@ -1,0 +1,1 @@
+{"connections":[{"id":"c1cbf89a-ef31-4bf5-a026-522e39e08b58","name":"Dev app (read-only)","engine":"postgres","status":"active","hasWriteCredential":false},{"id":"641ed0ff-6669-41eb-9976-557025a3eb80","name":"Dev app (write)","engine":"postgres","status":"active","hasWriteCredential":true}]}

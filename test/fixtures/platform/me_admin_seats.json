@@ -1,0 +1,1 @@
+{"error":{"code":"LICENSE_ADMIN_SEATS","message":"Not enough admin seats. Free a seat by removing the admin role from an account in Keycloak, or install a license with more admin seats."}}
