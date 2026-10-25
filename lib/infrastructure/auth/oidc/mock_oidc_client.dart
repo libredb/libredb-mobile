@@ -12,16 +12,16 @@ import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 ///
 /// Debug builds only: the constructor throws in a profile or release build, and `main_prod.dart` never imports it
 /// (`test/architecture/local_sign_in_test.dart`).
-final class LocalOidcClient implements IOidcClient {
-  LocalOidcClient({required Uri issuer, DateTime Function() now = DateTime.now})
+final class MockOidcClient implements IOidcClient {
+  MockOidcClient({required Uri issuer, DateTime Function() now = DateTime.now})
     // ignore: prefer_initializing_formals
     : _issuer = issuer,
       // ignore: prefer_initializing_formals
       _now = now {
-    if (!kDebugMode) throw StateError('The local sign-in double runs only in a debug build');
+    if (!kDebugMode) throw StateError('The mock sign-in double runs only in a debug build');
   }
 
-  static final _log = AppLogger.getLogger('LocalOidcClient');
+  static final _log = AppLogger.getLogger('MockOidcClient');
 
   /// How long the tokens of a sign-in or a refresh are valid.
   static const tokenLifetime = Duration(hours: 1);
@@ -29,7 +29,7 @@ final class LocalOidcClient implements IOidcClient {
   /// The access token the mock API accepts: it is not shaped like a JWT, so `MockInterceptor` never finds it expired.
   static const accessToken = 'MOCK_TOKEN';
 
-  /// The claims of the local account.
+  /// The claims of the mock account.
   static const subject = 'local-user';
   static const email = 'admin@example.com';
 
@@ -38,7 +38,7 @@ final class LocalOidcClient implements IOidcClient {
 
   @override
   Future<OidcSignInOutcome> signIn() async {
-    _log.warn('Signed in through the local sign-in double, not an identity provider');
+    _log.warn('Signed in through the mock sign-in double, not an identity provider');
     return OidcSignedIn(
       tokens: OidcTokens(
         accessToken: accessToken,
@@ -57,7 +57,7 @@ final class LocalOidcClient implements IOidcClient {
     required String accessToken,
     required DateTime accessTokenExpiresAt,
   }) async => TokensRotated(
-    accessToken: LocalOidcClient.accessToken,
+    accessToken: MockOidcClient.accessToken,
     refreshToken: 'LOCAL_REFRESH_TOKEN',
     oidcIdToken: 'LOCAL_ID_TOKEN',
     accessTokenExpiresAt: _now().toUtc().add(tokenLifetime),

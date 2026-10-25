@@ -10,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
@@ -47,7 +47,7 @@ import '../../support/user_menu.dart';
 /// The app on the mock-backed development config, with the idle timeout turned on as production has it.
 final _app = App(
   language: 'en',
-  dependencies: LocalSignInDependencies(
+  dependencies: MockSignInDependencies(
     appConfig: const AppConfig(
       environment: Environment.mock,
       apiBaseUrl: null,
@@ -60,7 +60,7 @@ final _app = App(
 /// [_app] in a build that serves Platform mode too.
 final _platformApp = App(
   language: 'en',
-  dependencies: LocalSignInDependencies(
+  dependencies: MockSignInDependencies(
     appConfig: const AppConfig(
       environment: Environment.mock,
       apiBaseUrl: null,

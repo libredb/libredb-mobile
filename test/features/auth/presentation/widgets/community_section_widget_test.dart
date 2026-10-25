@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/widgets/community_section_widget.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -62,7 +62,7 @@ void main() {
     await tester.pumpWidget(
       App(
         language: 'en',
-        dependencies: LocalSignInDependencies(projectLinks: links),
+        dependencies: MockSignInDependencies(projectLinks: links),
       ),
     );
     await tester.pumpAndSettle();

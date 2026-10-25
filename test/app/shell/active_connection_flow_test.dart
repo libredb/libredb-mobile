@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:libredb_mobile/core/result/result.dart';
@@ -136,7 +136,7 @@ void main() {
   });
 }
 
-class _Dependencies extends LocalSignInDependencies {
+class _Dependencies extends MockSignInDependencies {
   _Dependencies(this._connections);
 
   final _RevocableConnections _connections;

@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The debug-only stand-in for the identity provider, which `main_local.dart` signs in through.
+/// The debug-only stand-in for the identity provider, which the mock entry point signs in through.
 const _localSignIn = [
-  'lib/app/di/local_sign_in_dependencies.dart',
-  'lib/infrastructure/auth/oidc/local_oidc_client.dart',
+  'lib/app/di/mock_sign_in_dependencies.dart',
+  'lib/infrastructure/auth/oidc/mock_oidc_client.dart',
 ];
 
 /// Guards that the local sign-in of `main_local.dart` is never compiled into `main_prod.dart`: the compiler leaves out

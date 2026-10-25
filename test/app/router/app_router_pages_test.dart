@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
@@ -35,7 +35,7 @@ void main() {
   group('AppRouterFactory pages', () {
     testWidgets('builds public routes as Material pages', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -44,7 +44,7 @@ void main() {
 
     testWidgets('animates pushed public routes', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       // The login page is the only public route, so it is pushed over itself.
@@ -62,7 +62,7 @@ void main() {
 
     testWidgets('pops a pushed public route with the iOS back swipe', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).push(ApplicationRoutesConstants.login);
@@ -80,7 +80,7 @@ void main() {
     testWidgets('builds the authenticated shell as a Material page', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.home);
@@ -90,7 +90,7 @@ void main() {
     testWidgets('renders a Material not-found page for unknown locations', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).go('/does-not-exist');
@@ -108,7 +108,7 @@ void main() {
     testWidgets('shows the not-found page in Turkish', (tester) async {
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'tr'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).go('/does-not-exist');
@@ -130,7 +130,7 @@ void main() {
       addTearDown(() => Logger.removeOutputListener(record));
       setDesktopViewport(tester);
       TestEnv.authenticate();
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'tr'));
       await tester.pumpAndSettle();
 
       routerFromApp(tester).go('/does-not-exist');
@@ -150,7 +150,7 @@ void main() {
       testWidgets('returns to the shell 16 ms after leaving it for $label', (tester) async {
         setDesktopViewport(tester);
         TestEnv.authenticate();
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
         final router = routerFromApp(tester);
 
@@ -167,7 +167,7 @@ void main() {
       testWidgets('returns to the shell after $label has settled', (tester) async {
         setDesktopViewport(tester);
         TestEnv.authenticate();
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
         final router = routerFromApp(tester);
 
@@ -184,7 +184,7 @@ void main() {
       testWidgets('shows $label without an entering transition', (tester) async {
         setDesktopViewport(tester);
         TestEnv.authenticate();
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
         await tester.pumpAndSettle();
 
         routerFromApp(tester).go(location);
@@ -202,7 +202,7 @@ void main() {
 
     testWidgets('declares every route with a pageBuilder', (tester) async {
       setDesktopViewport(tester);
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       void expectPageBuilder(RouteBase route) {

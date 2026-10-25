@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/widgets.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -19,7 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// starts unauthenticated and lands on login.
 void main() {
   testWidgets('cold start → single sign-on → connection list (mock mode)', (tester) async {
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+    await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
     await tester.pumpAndSettle();
 
     // Cold start lands on the login screen (no token after the reset), which offers only single sign-on.

@@ -81,7 +81,7 @@ import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
 import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 
 /// What the app is built from. The app signs in only through the OpenID Connect provider; `main_local.dart` swaps the
-/// provider for a debug-only double (`LocalSignInDependencies`), which `main_prod.dart` never imports.
+/// provider for a debug-only double (`MockSignInDependencies`), which `main_prod.dart` never imports.
 class AppDependencies {
   const AppDependencies({
     required this.authMode,

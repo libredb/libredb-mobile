@@ -8,7 +8,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/app.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -71,7 +71,7 @@ final _formRoute = GoRoute(
 /// The app on the mock-backed development config, with the idle timeout production has.
 final _app = App(
   language: 'en',
-  dependencies: LocalSignInDependencies(
+  dependencies: MockSignInDependencies(
     appConfig: const AppConfig(
       environment: Environment.mock,
       apiBaseUrl: null,

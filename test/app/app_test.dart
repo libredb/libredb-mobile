@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
@@ -49,7 +49,7 @@ class _HeldLanguageStorage implements AppLocalStorage {
   void setPreferencesInstance(SharedPreferences prefs) => AppLocalStorage().setPreferencesInstance(prefs);
 }
 
-class _LocalStorageDependencies extends LocalSignInDependencies {
+class _LocalStorageDependencies extends MockSignInDependencies {
   _LocalStorageDependencies(this.localStorage);
 
   final AppLocalStorage localStorage;
@@ -68,12 +68,7 @@ void main() {
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
       final analytics = MockAnalyticsService();
       await tester.pumpWidget(
-        App(
-          dependencies: LocalSignInDependencies(),
-          language: 'en',
-          secureStorage: secureStorage,
-          analytics: analytics,
-        ),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage, analytics: analytics),
       );
       await tester.pump(const Duration(seconds: 1));
 
@@ -99,7 +94,7 @@ void main() {
       final secureStorage = MockISecureStorage();
       when(() => secureStorage.read(any())).thenAnswer((_) => Completer<String?>().future);
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump(SessionCubit.defaultRestoreTimeLimit - const Duration(milliseconds: 1));
 
@@ -120,7 +115,7 @@ void main() {
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
       when(() => secureStorage.read(SecureStorageKeys.sessionTarget.key)).thenAnswer((_) async => 'studio');
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump(SessionCubit.defaultRestoreTimeLimit);
       await tester.pumpAndSettle();
@@ -145,7 +140,7 @@ void main() {
       when(() => secureStorage.read(any())).thenAnswer((_) => storedToken.future);
       when(() => secureStorage.read(SecureStorageKeys.sessionTarget.key)).thenAnswer((_) async => 'studio');
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump(SessionCubit.defaultRestoreTimeLimit);
       await tester.pumpAndSettle();
@@ -179,7 +174,7 @@ void main() {
     testWidgets('starts in the language that an earlier run stored', (tester) async {
       await AppLocalStorage().save(StorageKeys.language.key, 'tr');
 
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'en'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.text("Studio'ya giriş yap"), findsOneWidget);
@@ -191,7 +186,7 @@ void main() {
     testWidgets('starts in the configured language when no language is stored', (tester) async {
       await AppLocalStorage().remove(StorageKeys.language.key);
 
-      await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: 'tr'));
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'tr'));
       await tester.pumpAndSettle();
 
       expect(find.text("Studio'ya giriş yap"), findsOneWidget);
@@ -201,7 +196,7 @@ void main() {
     // The task switcher shows this title.
     for (final (language, title) in [('en', 'LibreDB'), ('tr', 'LibreDB')]) {
       testWidgets('names the app in the task switcher in the app language ($language)', (tester) async {
-        await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
+        await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: language));
         await tester.pumpAndSettle();
 
         expect(tester.widget<Title>(find.byType(Title)).title, title);
@@ -213,7 +208,7 @@ void main() {
       final secureStorage = MockISecureStorage();
       when(() => secureStorage.read(any())).thenAnswer((_) async => null);
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pumpAndSettle();
 
@@ -370,7 +365,7 @@ void main() {
     // GET /health is a public endpoint, so the mock answers it before sign-in.
     testWidgets('reads the liveness answer from the mock before sign-in', (tester) async {
       await tester.pumpWidget(
-        App(dependencies: LocalSignInDependencies(), language: 'en', secureStorage: secureStorage),
+        App(dependencies: MockSignInDependencies(), language: 'en', secureStorage: secureStorage),
       );
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
@@ -381,7 +376,7 @@ void main() {
 }
 
 /// The app's dependencies with [repository] in place of the Studio status repository that AppDependencies creates.
-class _StudioStatusDependencies extends LocalSignInDependencies {
+class _StudioStatusDependencies extends MockSignInDependencies {
   _StudioStatusDependencies(this.repository, {super.appConfig});
 
   final IStudioStatusRepository repository;

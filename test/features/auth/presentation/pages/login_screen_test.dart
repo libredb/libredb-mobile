@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:libredb_mobile/app/di/local_sign_in_dependencies.dart';
+import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
@@ -240,7 +240,7 @@ void main() {
 
   // The real app starts unauthenticated after the global reset, so it lands on /login.
   Future<void> pumpLogin(WidgetTester tester, {String language = 'en'}) async {
-    await tester.pumpWidget(App(dependencies: LocalSignInDependencies(), language: language));
+    await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: language));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
   }
