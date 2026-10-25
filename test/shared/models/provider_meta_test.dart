@@ -17,4 +17,17 @@ void main() {
 
     test('is false for an engine that declares no kind', () => expect(meta(const []).searchesObjects, isFalse));
   });
+
+  test('toString leaves out the statementTerminator and the props', () {
+    final meta = ProviderMeta(
+      queryLanguage: 'sql',
+      queryDialect: 'postgres',
+      schemaRefreshPattern: 'x',
+      containerLevels: const [],
+      objectKinds: const [],
+      statementTerminator: ';-- terminator',
+    );
+
+    expect('$meta', 'ProviderMeta(queryLanguage: sql, queryDialect: postgres)');
+  });
 }

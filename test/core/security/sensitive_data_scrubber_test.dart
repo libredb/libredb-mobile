@@ -50,6 +50,17 @@ void main() {
       );
     });
 
+    test('masks the statement, errorMessage and statementType of an audit event in a log line', () {
+      expect(
+        maskSecrets('{"statement":"SELECT 1","errorMessage":"boom","statementType":"SELECT","status":"error"}'),
+        '{"statement":"[REDACTED]","errorMessage":"[REDACTED]","statementType":"[REDACTED]","status":"error"}',
+      );
+      expect(
+        maskSecrets('statement=select&errorMessage=boom&status=error'),
+        'statement=[REDACTED]&errorMessage=[REDACTED]&status=error',
+      );
+    });
+
     test('keeps a value that is already masked', () {
       const masked = 'access_token=[REDACTED_JWT] {"id_token":"[REDACTED_JWT]"} Bearer [REDACTED_JWT]';
 
@@ -214,6 +225,24 @@ void main() {
       });
     });
 
+    // A Platform audit event holds the statement and the database's error text, which can carry a database's data.
+    test('masks statement and errorMessage, and every key that contains statement, such as statementType', () {
+      final result = scrubBodyKeys({
+        'eventId': '7',
+        'statement': 'SELECT salary FROM payroll',
+        'errorMessage': 'permission denied for payroll',
+        'statementType': 'SELECT',
+        'errorCode': '42501',
+      });
+      expect(result, {
+        'eventId': '7',
+        'statement': '[REDACTED]',
+        'errorMessage': '[REDACTED]',
+        'statementType': '[REDACTED]',
+        'errorCode': '42501',
+      });
+    });
+
     test('non-Map body is returned untouched', () {
       expect(scrubBodyKeys('plain string'), 'plain string');
       expect(scrubBodyKeys(null), isNull);
@@ -240,6 +269,27 @@ void main() {
       );
 
       expect(text, '{"status":401,"detail":"OTP [REDACTED] expired","hint":{"lastCode":"[REDACTED]"}}');
+    });
+
+    test('masks fixStatement, and keeps it with every other rule when statement is an excepted key substring', () {
+      const body = '{"kind":"AUTH_FAILED","fixStatement":"GRANT SELECT ON t TO app","statement":"SELECT 1","otp":12}';
+
+      expect(scrubErrorBody(body), contains('"fixStatement":"[REDACTED]"'));
+      expect(
+        scrubErrorBody(body, exceptKeySubstrings: const {'statement'}),
+        '{"kind":"AUTH_FAILED","fixStatement":"GRANT SELECT ON t TO app","statement":"SELECT 1","otp":"[REDACTED]"}',
+      );
+    });
+
+    test('masks a value the request sent inside a key kept by an excepted key substring', () {
+      expect(
+        scrubErrorBody(
+          '{"fixStatement":"ALTER USER app PASSWORD \'S3cret!pw\'"}',
+          requestBody: {'password': 'S3cret!pw'},
+          exceptKeySubstrings: const {'statement'},
+        ),
+        '{"fixStatement":"ALTER USER app PASSWORD \'[REDACTED]\'"}',
+      );
     });
 
     test('masks a credential of the request in a body that is not JSON', () {

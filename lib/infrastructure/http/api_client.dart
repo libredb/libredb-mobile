@@ -459,7 +459,16 @@ class ApiClient {
     );
     final code = envelope.codeOf(e.response?.data);
     final serverMessage = envelope.serverMessageOf(body);
-    final fixStatement = envelope.fixStatementOf(body);
+    // The statement Studio offers to fix a refused credential, which a screen shows for the user to copy: the
+    // `statement` key rule, which keeps the statements of Platform's audit log out of every exit, would mask it.
+    final fixStatement = envelope.fixStatementOf(
+      scrubErrorBody(
+        e.response?.data,
+        requestBody: e.requestOptions.data,
+        sensitiveKeys: sensitiveKeysOf(e.requestOptions),
+        exceptKeySubstrings: const {'statement'},
+      ),
+    );
     final retryAfter = _retryAfterOf(e.response?.headers);
     final text = envelope.exceptionText(status: statusCode, data: e.response?.data, scrubbedBody: body);
     switch (statusCode) {

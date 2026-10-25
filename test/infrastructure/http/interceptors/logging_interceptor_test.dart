@@ -406,6 +406,59 @@ void main() {
       });
     });
 
+    // The directory search text and the audit filters of LibreDB Platform can name a person or quote a statement.
+    group('query of a Platform request', () {
+      test('keeps the keys of a /v1/ request line and masks every value', () {
+        final options = RequestOptions(
+          baseUrl: 'https://platform.example.test/api',
+          path: '/v1/audit',
+          queryParameters: {'search': 'secret', 'subject': 'kc-1', 'limit': 50},
+        );
+
+        final line = LoggingInterceptor.formatRequest(options);
+
+        expect(
+          line,
+          'GET https://platform.example.test/api/v1/audit?search=[REDACTED]&subject=[REDACTED]&limit=[REDACTED] '
+          '(headers: )',
+        );
+        expect(line, isNot(contains('secret')));
+        expect(line, isNot(contains('kc-1')));
+      });
+
+      test('masks a value of each repeated key', () {
+        final options = RequestOptions(
+          baseUrl: 'https://platform.example.test/api/',
+          path: 'v1/directory/users',
+          queryParameters: {
+            'q': ['alice', 'bob'],
+          },
+        );
+
+        expect(
+          LoggingInterceptor.formatRequest(options),
+          'GET https://platform.example.test/api/v1/directory/users?q=[REDACTED]&q=[REDACTED] (headers: )',
+        );
+      });
+
+      test('keeps a /v1/ request line without a query as it is', () {
+        final options = RequestOptions(baseUrl: 'https://platform.example.test/api', path: '/v1/me');
+
+        expect(LoggingInterceptor.formatRequest(options), 'GET https://platform.example.test/api/v1/me (headers: )');
+      });
+
+      test('keeps a Studio request line with a query byte for byte', () {
+        final options = RequestOptions(
+          baseUrl: 'https://studio.example.test/api',
+          path: '/db/schema',
+          queryParameters: {'connectionId': 'seed:sales', 'search': 'orders'},
+        );
+
+        expect(LoggingInterceptor.formatRequest(options), 'GET ${options.uri} (headers: )');
+        expect(LoggingInterceptor.formatRequest(options), contains('connectionId=seed%3Asales&search=orders'));
+      });
+    });
+
     // Regression: onRequest and onResponse built their line before AppLogger's filter ran, so a production build,
     // which prints no debug line, still built both lines of every request, and the response line turned the whole
     // response body into text to give its length.

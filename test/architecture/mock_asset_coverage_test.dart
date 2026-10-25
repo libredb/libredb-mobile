@@ -7,6 +7,8 @@ import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_r
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/platform_connections/data/repositories/platform_connection_repository.dart';
 import 'package:libredb_mobile/features/object_browser/data/repositories/object_browser_repository.dart';
+import 'package:libredb_mobile/features/platform_audit/data/repositories/platform_audit_repository.dart';
+import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_filter.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_directory_repository.dart';
 import 'package:libredb_mobile/features/platform_grants/data/repositories/platform_grant_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/data/repositories/sql_editor_repository.dart';
@@ -90,6 +92,8 @@ void main() {
             .put('cm0connection000000000001', 'f:ldap-1:ken.ldap', level: 'read', expiresAt: null),
     'IPlatformConnectionRepository.setActive': (client) =>
         PlatformConnectionRepository(client).setActive('cm0conn0000000000000000001', active: false),
+    'IPlatformAuditRepository.list': (client) =>
+        PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {

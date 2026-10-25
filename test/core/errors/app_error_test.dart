@@ -280,4 +280,18 @@ void main() {
       });
     });
   });
+
+  // The `statement` scrubber key makes fixStatement a credential field, so its text must leave it out.
+  group('AuthError text', () {
+    test('is the type and the code, as every AppError prints, without the fixStatement', () {
+      const error = AuthError('refused', code: 'studio.credential_refused', fixStatement: 'GRANT SELECT ON t TO app');
+
+      expect('$error', 'AuthError(code: studio.credential_refused)');
+      expect('$error', isNot(contains('GRANT')));
+    });
+
+    test('is the type alone without a code', () {
+      expect('${const AuthError('refused', fixStatement: 'GRANT SELECT ON t TO app')}', 'AuthError');
+    });
+  });
 }

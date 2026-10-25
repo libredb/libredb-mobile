@@ -39,6 +39,39 @@ void main() {
         expect(entries.first.requestHeaders, containsPair('Authorization', '[REDACTED]'));
       });
 
+      test('should keep the query keys of a Platform /v1/ request and mask every value in the url and the id', () {
+        final options = RequestOptions(
+          path: '/v1/audit',
+          method: 'GET',
+          baseUrl: 'https://platform.example.test/api',
+          queryParameters: {'search': 'secret', 'subject': 'kc-1'},
+        );
+
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.url, 'https://platform.example.test/api/v1/audit?search=[REDACTED]&subject=[REDACTED]');
+        for (final text in [entry.url, entry.id, options.extra['_devConsoleId'] as String]) {
+          expect(text, isNot(contains('secret')));
+          expect(text, isNot(contains('kc-1')));
+        }
+      });
+
+      test('should keep the url of a Studio request with a query as it is', () {
+        final options = RequestOptions(
+          path: '/db/schema',
+          method: 'GET',
+          baseUrl: 'https://studio.example.test/api',
+          queryParameters: {'connectionId': 'seed:sales', 'search': 'orders'},
+        );
+
+        interceptor.onRequest(options, _TestRequestHandler());
+
+        final entry = DevConsoleStore.instance.networkEntries.single;
+        expect(entry.url, options.uri.toString());
+        expect(entry.id, startsWith('GET_${options.uri}_'));
+      });
+
       test('should set _devConsoleId in options.extra', () {
         final options = RequestOptions(path: '/api/test', method: 'POST');
 

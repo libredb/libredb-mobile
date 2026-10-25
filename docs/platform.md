@@ -14,7 +14,7 @@ This page is the contract the app relies on; paths in libredb-platform are given
 `AppConfig.platform` (`lib/infrastructure/config/environment.dart`) is `PlatformConfigured` with that base URL and its pins, or `PlatformNotConfigured` when `PLATFORM_API_URL` is empty.
 A prod build refuses a `PLATFORM_API_URL` that is not an https URL, or has surrounding whitespace, with `ProdHttpsConfigError`, and a `PLATFORM_CERT_PINS` without `PLATFORM_API_URL` with `CertificatePinsConfigError`.
 Dev and test builds carry `PlatformConfigured` without a base URL, which `MockInterceptor` answers from `assets/mock/`.
-The release workflow does not pass either define until M13-P, so the store build stays Studio-only ([release.md](release.md)).
+The release workflow does not pass either define until M12-P, so the store build stays Studio-only ([release.md](release.md)).
 
 `OIDC_SCOPE`, `OIDC_AUDIENCE` and `PROD_API_URL` do not change: one Keycloak access token of the client `libredb-mobile` carries both audiences, Studio's and Platform's (libredb-platform `docs/api/v1.md`, "One token serves Studio and Platform").
 
@@ -34,6 +34,7 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `GET /api/v1/directory/users?q=&page=` | `{users: [{id, username, email, firstName, lastName, enabled, studioRole, needsSeat}], page, total}` | `IPlatformDirectoryRepository.search`, `DirectoryPageJson` |
 | `PUT /api/v1/connections/{id}/grants/{subject}` | `{id}` | `PlatformGrantRepository.put`, `GrantPutBody`, `GrantPutAnswerJson` |
 | `PATCH /api/v1/connections/{id}`, body `{active}` | one connection: `{id, name, engine, status, hasWriteCredential}` | `IPlatformConnectionRepository.setActive`, `PlatformConnectionsModel.readOne` |
+| `GET /api/v1/audit?subject=&connectionId=&source=&statementType=&status=&from=&to=&search=&limit=&offset=` | `{events: [{eventId, startedAt, finishedAt, subject, username, sessionRole, connectionId, connectionKnown, connectionName, engine, accessLevel, source, statementType, explain, statementCapture, statement, statementTruncated, rowCount, durationMs, status, errorCode, errorMessage, transactionOutcome}], total}` | `IPlatformAuditRepository.list`, `AuditPageJson` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -85,6 +86,24 @@ The route needs `GrantEditorArgs` as `extra`, built by the grants page from the 
   A timeout, a lost connection, a 500 or an unreadable 200 may have saved the grant, so the grants list is read again.
 - The search text, the users found, the subject and the grant's values are held in memory only, never stored, and never logged; the logs carry page numbers, counts and codes.
   `MockInterceptor` answers the directory from `assets/mock/GET_v1_directory_users_queryParams.json` for every query and page, and the `PUT` from `assets/mock/PUT_v1_connections_pathParams.json`.
+
+## Audit log
+
+`IPlatformAuditRepository.list` (`lib/features/platform_audit/`) reads the governed query events of the install, the statements that a Studio governed by Platform ran, refused or cancelled, through `GET /api/v1/audit` (libredb-platform `src/features/audit/lib/audit-read.ts`, `src/shared/lib/bridge/query-events.ts`).
+
+- `AuditFilter` holds the optional filters under Platform's names: `subject` (the Keycloak `sub`, at most 512 characters) and `connectionId` (at most 64), matched exactly; `source` (`^[a-z][a-z-]{0,31}$`, an open vocabulary); `statementType` (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `DDL`, `OTHER`); `status` (`success`, `error`, `cancelled`, `refused`); `from` and `to`, inclusive bounds on `startedAt`; and `search`, matched literally in the statement ignoring case.
+  Every value is trimmed and an empty one is unset, since Platform ignores an empty filter; `search` is cut to its first 200 UTF-16 code units without splitting a surrogate pair.
+  `from` and `to` are sent in UTC with `Z`, and `limit` (1 to 200, 50 by default) and `offset` are always sent.
+- The answer is `{events, total}`, newest first by `startedAt`, then `eventId`; `total` counts every event the filters select, and `AuditPage.hasMore` is true while `offset` plus the events on the page is below it.
+  Offset paging over a newest-first list repeats an event when a new one arrives between two pages, so a screen that appends a page drops an event whose `eventId` it already shows.
+- `AuditPageJson` throws a `FormatException` naming the field for a missing `events` list or integer `total`, and for an event without its string `eventId`, `subject`, `connectionId`, `connectionName`, `source`, `statementType`, `status` and `statementCapture`, an ISO time `startedAt`, a bool `statementTruncated` or an integer `durationMs`.
+  Every other field reads as null when it is missing or of another type, and the vocabularies are kept as opaque strings, an unknown value verbatim.
+  An event whose connection Platform no longer knows has `connectionKnown: false` and the `connectionName` `unknown connection`.
+- Platform checks the plan first, 403 `PLAN_FEATURE_REQUIRED` (`platform.plan_feature_required`), then the permission, 403 `PERMISSION_DENIED` (`platform.permission_denied`), then the filters, 400 `VALIDATION_FAILED` (`platform.validation_failed`) whose field keys name the refused filters.
+  Neither 403 is reachable through the bearer API of Platform 1.3.0: the install tenant is on the `ENTERPRISE` plan and every bearer caller is a Platform admin with every permission; the app still maps both.
+- The events are held in memory only, never stored, and never cached, since every `/v1/` path is networkOnly.
+  No filter value, statement, error text, subject, username or connection name is logged: the repository logs counts, the offset and the names of the set filters, `AuditEvent` and `AuditFilter` print no such value, and the request line masks every query value of a `/v1/` request.
+  `MockInterceptor` answers every filter and offset from `assets/mock/GET_v1_audit_queryParams.json`.
 
 ## Errors
 

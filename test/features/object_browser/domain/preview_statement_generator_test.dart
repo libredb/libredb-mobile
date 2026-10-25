@@ -430,4 +430,11 @@ void main() {
       expect(_generator.count(meta, _table, ['s', 't']), isA<PreviewUnavailable>());
     });
   });
+
+  test('a PreviewStatement prints its catalog and never its statement', () {
+    expect(
+      '${const PreviewStatement(statement: 'SELECT * FROM "payroll"', catalog: 'sales')}',
+      'PreviewStatement(catalog: sales)',
+    );
+  });
 }
