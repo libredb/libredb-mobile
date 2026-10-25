@@ -16,6 +16,7 @@ import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -225,6 +226,7 @@ class _RefusingStudioDependencies extends MockSignInDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     final client = super.createApiClient(
@@ -232,6 +234,7 @@ class _RefusingStudioDependencies extends MockSignInDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
     // Sits first, so every other interceptor sees its refusal on the way back as a real answer.

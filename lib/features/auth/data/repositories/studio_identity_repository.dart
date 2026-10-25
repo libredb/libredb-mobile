@@ -39,7 +39,8 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
   Future<Result<void>> recordSignOut() async {
     try {
       // Sent with the client's Content-Type: application/json, which Studio requires of a POST without an Origin.
-      final response = await _apiClient.post('/auth/logout', const <String, Object?>{});
+      // Part of the sign-out, so it leaves while the sign-out holds back every other request of the session.
+      final response = await _apiClient.post('/auth/logout', const <String, Object?>{}, partOfSignOut: true);
       StudioIdentityModel.readSignOutAccepted(ApiClient.decodeUTF8(response.data!));
       return const Success(null);
     } catch (e) {

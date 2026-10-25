@@ -13,6 +13,8 @@ import 'package:libredb_mobile/infrastructure/studio/studio_timeouts.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/resilience_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 
+import '../../../support/test_env.dart';
+
 /// The connection list through the production interceptor chain, fed the answers recorded from the governed profile of
 /// tool/studio-dev: the granted list, the 503 while its governance source was stopped, and the list again once it was
 /// back (docs/studio.md).
@@ -25,6 +27,7 @@ void main() {
   setUp(() {
     ResilienceInterceptor.instance.resetAll();
     adapter = _QueuedAdapter();
+    TestEnv.authenticate();
     final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
     client.instance.httpClientAdapter = adapter;
     bloc = ConnectionListBloc(

@@ -716,8 +716,8 @@ void main() {
 
     // The refresh token stored after a logout belongs to the session the user signed in to since, not to the request.
     test('does not refresh the next session for a request sent before the logout', () async {
+      await secure.write(SecureStorageKeys.jwtToken.key, 'old-jwt');
       await secure.write(SecureStorageKeys.refreshToken.key, 'old-refresh');
-      // No token is stored, so the request goes out without one.
       final sent = await _send(AuthInterceptor(secureStorage: secure), RequestOptions(path: '/account'));
       await AuthSessionRepository(secureStorage: secure, storage: storage).clear();
       await secure.write(SecureStorageKeys.jwtToken.key, 'signed-in-jwt');

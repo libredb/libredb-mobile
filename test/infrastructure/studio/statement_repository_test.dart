@@ -48,6 +48,7 @@ void main() {
     late StatementRepository repository;
 
     setUp(() {
+      TestEnv.authenticate();
       adapter = _RecordingAdapter();
       final client = ApiClient(tokenRotation: const RefusingTokenRotation(), appConfig: _prodConfig);
       client.instance.httpClientAdapter = adapter;

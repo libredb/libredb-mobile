@@ -5,6 +5,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SessionGeneration', () {
+    test('a sign-out counts as running from its start until its body ends, and ends no generation itself', () async {
+      final before = SessionGeneration.current;
+      final release = Completer<void>();
+
+      final signOut = SessionGeneration.signOut(() => release.future);
+
+      expect(SessionGeneration.signingOut, isTrue);
+      expect(SessionGeneration.hasEnded(before), isFalse, reason: 'only the wipe inside a sign-out ends the session');
+      release.complete();
+      await signOut;
+      expect(SessionGeneration.signingOut, isFalse);
+    });
+
+    test('a sign-out that throws stops running, and its error reaches the caller', () async {
+      await expectLater(
+        SessionGeneration.signOut<void>(() async => throw StateError('sign-out failed')),
+        throwsStateError,
+      );
+
+      expect(SessionGeneration.signingOut, isFalse);
+    });
+
     test('a generation read before a wipe has ended once the wipe starts', () async {
       final before = SessionGeneration.current;
       final releaseWipe = Completer<void>();

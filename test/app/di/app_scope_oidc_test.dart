@@ -10,6 +10,7 @@ import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/http/api_client.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/account_refusal_interceptor.dart';
+import 'package:libredb_mobile/infrastructure/http/interceptors/auth_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/interceptors/token_refresh_interceptor.dart';
 import 'package:libredb_mobile/infrastructure/http/token_rotation.dart';
 import 'package:libredb_mobile/infrastructure/platform/platform_api_client.dart';
@@ -50,6 +51,7 @@ class _OidcDependencies extends AppDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     platformApiClientRotations.add(tokenRotation);
@@ -58,6 +60,7 @@ class _OidcDependencies extends AppDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
   }
@@ -71,6 +74,7 @@ class _OidcDependencies extends AppDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
@@ -79,6 +83,7 @@ class _OidcDependencies extends AppDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
   }
@@ -101,6 +106,7 @@ class _MisconfiguredDependencies extends AppDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     platformApiClientRotations.add(tokenRotation);
@@ -109,6 +115,7 @@ class _MisconfiguredDependencies extends AppDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
   }
@@ -119,6 +126,7 @@ class _MisconfiguredDependencies extends AppDependencies {
     required OnSessionExpired onSessionExpired,
     OnSessionRefused? onSessionRefused,
     OnAccountRefused? onAccountRefused,
+    OnTokenMissing? onTokenMissing,
     required TokenRotation tokenRotation,
   }) {
     apiClientRotations.add(tokenRotation);
@@ -127,6 +135,7 @@ class _MisconfiguredDependencies extends AppDependencies {
       onSessionExpired: onSessionExpired,
       onSessionRefused: onSessionRefused,
       onAccountRefused: onAccountRefused,
+      onTokenMissing: onTokenMissing,
       tokenRotation: tokenRotation,
     );
   }
