@@ -30,7 +30,7 @@ void main() {
   for (final target in SessionTarget.values) {
     final other = SessionTarget.values.firstWhere((value) => value != target);
 
-    group('${target.name}', () {
+    group(target.name, () {
       test('its home, tabs and settings are routes the router builds', () {
         final routes = [
           ApplicationRoutesConstants.homeFor(target),

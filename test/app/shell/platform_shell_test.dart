@@ -134,26 +134,30 @@ void main() {
       verifyNever(() => policy.load());
     });
 
-    testWidgets('the placeholder shows the email when Platform has no name, and a failure with Retry', (tester) async {
-      const unnamed = PlatformIdentity(
-        id: 'cm0platformadmin0000000001',
-        email: 'platform.admin@example.org',
-        roles: [],
-        permissions: [],
-        tenant: PlatformTenant(id: 't', name: 'Example Org', slug: 'example-org'),
-      );
-      whenListen(
-        platformIdentity,
-        Stream<PlatformIdentityState>.fromIterable(const [PlatformIdentityFailure(AppErrorCode.platformInternalError)]),
-        initialState: const PlatformIdentityLoaded(unnamed),
+    testWidgets('the placeholder shows the email when Platform has no name', (tester) async {
+      when(() => platformIdentity.state).thenReturn(
+        const PlatformIdentityLoaded(
+          PlatformIdentity(
+            id: 'cm0platformadmin0000000001',
+            email: 'platform.admin@example.org',
+            roles: [],
+            permissions: [],
+            tenant: PlatformTenant(id: 't', name: 'Example Org', slug: 'example-org'),
+          ),
+        ),
       );
 
       await pumpShell(tester);
-      expect(find.text('platform.admin@example.org'), findsOneWidget);
 
-      await tester.pump();
-      expect(find.text('Retry'), findsOneWidget);
-      await tester.tap(find.text('Retry'));
+      expect(find.text('platform.admin@example.org'), findsOneWidget);
+    });
+
+    testWidgets('the placeholder shows a failed identity with a Retry that asks Platform again', (tester) async {
+      when(() => platformIdentity.state).thenReturn(const PlatformIdentityFailure(AppErrorCode.platformInternalError));
+
+      await pumpShell(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+
       verify(() => platformIdentity.load()).called(1);
     });
   });

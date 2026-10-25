@@ -252,7 +252,7 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           home: Scaffold(
-            body: TopBarWidget(title: title, onBack: () {}),
+            body: TopBarWidget(target: SessionTarget.studio, title: title, onBack: () {}),
           ),
         ),
       );

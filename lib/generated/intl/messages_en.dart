@@ -599,9 +599,16 @@ class MessageLookup extends MessageLookupByLibrary {
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",
     ),
+    "platform_account_refusal_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform refused your account"),
+    "platform_placeholder_note": MessageLookupByLibrary.simpleMessage(
+      "The Platform connections and their grants come to this screen in a later version.",
+    ),
+    "platform_placeholder_title": MessageLookupByLibrary.simpleMessage("LibreDB Platform"),
     "previous": MessageLookupByLibrary.simpleMessage("Previous"),
     "profile": MessageLookupByLibrary.simpleMessage("Profile"),
     "profile_governed_by_platform": MessageLookupByLibrary.simpleMessage("Governed by LibreDB Platform"),
+    "profile_mode_platform": MessageLookupByLibrary.simpleMessage("Platform admin"),
+    "profile_mode_studio": MessageLookupByLibrary.simpleMessage("Studio"),
     "profile_role_admin": MessageLookupByLibrary.simpleMessage("Administrator"),
     "profile_role_user": MessageLookupByLibrary.simpleMessage("User"),
     "profile_unknown_user": MessageLookupByLibrary.simpleMessage("Unknown user"),

@@ -1,34 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 /// What the user picked in the [ProfileSheet]; the caller acts on it once the sheet has closed.
 enum ProfileSheetAction { settings, signOut }
 
-/// Who the user is signed in as, by Studio's `GET /api/auth/me`, with the way to the settings and to sign out.
+/// Who the user is signed in as and in which mode, with the way to the settings and to sign out.
 ///
-/// Studio sends no display name, so the sheet shows the username Studio keys the user by.
+/// In Studio mode the identity is Studio's `GET /api/auth/me`; Studio sends no display name, so the sheet shows the
+/// username Studio keys the user by. In Platform mode it is Platform's `GET /api/v1/me`: the admin's name, or the
+/// e-mail when Platform has none, and the tenant; nothing of Studio is read.
 class ProfileSheet extends StatelessWidget {
-  const ProfileSheet({super.key});
+  const ProfileSheet({super.key, required this.target});
 
-  /// Opens the sheet and answers what the user picked, or null when the sheet was dismissed.
+  /// The target of the signed-in session, which decides what the sheet shows.
+  final SessionTarget target;
+
+  /// Opens the sheet for a session of [target] and answers what the user picked, or null when the sheet was dismissed.
   ///
-  /// The shell asks for the connection policy only once, so a request that failed is asked again here, where the
-  /// governance chip it decides is shown.
-  static Future<ProfileSheetAction?> show(BuildContext context) {
-    final policy = context.read<ConnectionPolicyCubit>();
-    if (policy.state is ConnectionPolicyFailure) policy.load();
+  /// The Studio shell asks for the connection policy only once, so a request that failed is asked again here, where
+  /// the governance chip it decides is shown.
+  static Future<ProfileSheetAction?> show(BuildContext context, {required SessionTarget target}) {
+    switch (target) {
+      case SessionTarget.studio:
+        final policy = context.read<ConnectionPolicyCubit>();
+        if (policy.state is ConnectionPolicyFailure) policy.load();
+      case SessionTarget.platform:
+        break;
+    }
     return showModalBottomSheet<ProfileSheetAction>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => const ProfileSheet(),
+      builder: (_) => ProfileSheet(target: target),
     );
   }
 
@@ -42,8 +54,14 @@ class ProfileSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _Identity(),
-            const _GovernanceChip(),
+            ...switch (target) {
+              SessionTarget.studio => [
+                _ModeLabel(l10n.profile_mode_studio),
+                const _Identity(),
+                const _GovernanceChip(),
+              ],
+              SessionTarget.platform => [_ModeLabel(l10n.profile_mode_platform), const _PlatformIdentity()],
+            },
             const Divider(height: AppSpacing.xl),
             ListTile(
               key: profileSettingsKey,
@@ -64,6 +82,94 @@ class ProfileSheet extends StatelessWidget {
   }
 }
 
+/// The mode the user is signed in to, above the identity.
+class _ModeLabel extends StatelessWidget {
+  const _ModeLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.lg, right: AppSpacing.lg, bottom: AppSpacing.sm),
+      child: Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
+    );
+  }
+}
+
+/// The signed-in account's icon beside its [title], an optional [subtitle] and an optional [retry].
+class _IdentityRow extends StatelessWidget {
+  const _IdentityRow({required this.title, this.subtitle, this.retry});
+
+  final Widget title;
+  final Widget? subtitle;
+  final Widget? retry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final subtitle = this.subtitle;
+    final retry = this.retry;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.account_circle_outlined, size: 40, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                title,
+                if (subtitle != null) ...[const SizedBox(height: AppSpacing.xs), subtitle],
+                if (retry != null) Align(alignment: AlignmentDirectional.centerStart, child: retry),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _identityProgress = Align(
+  alignment: AlignmentDirectional.centerStart,
+  child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+);
+
+/// Who Platform says the signed-in admin is: the name, or the e-mail when Platform has none, and the tenant.
+class _PlatformIdentity extends StatelessWidget {
+  const _PlatformIdentity();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return BlocBuilder<PlatformIdentityCubit, PlatformIdentityState>(
+      builder: (context, state) => switch (state) {
+        PlatformIdentityInitial() || PlatformIdentityLoading() => const _IdentityRow(title: _identityProgress),
+        PlatformIdentityLoaded(:final identity) => _IdentityRow(
+          title: Text(identity.name ?? identity.email, style: textTheme.titleMedium),
+          subtitle: Text(identity.tenant.name),
+        ),
+        PlatformIdentityFailure(:final errorCode) => _IdentityRow(
+          title: Text(l10n.profile_unknown_user, style: textTheme.titleMedium),
+          subtitle: Text(errorCode.resolve(context), style: textTheme.bodySmall?.copyWith(color: colorScheme.error)),
+          retry: TextButton(
+            key: profileIdentityRetryKey,
+            onPressed: () => context.read<PlatformIdentityCubit>().load(),
+            child: Text(l10n.retry),
+          ),
+        ),
+      },
+    );
+  }
+}
+
 class _Identity extends StatelessWidget {
   const _Identity();
 
@@ -75,14 +181,7 @@ class _Identity extends StatelessWidget {
     return BlocBuilder<StudioIdentityCubit, StudioIdentityState>(
       builder: (context, state) {
         final (Widget title, Widget? subtitle, Widget? retry) = switch (state) {
-          StudioIdentityInitial() || StudioIdentityLoading() => (
-            const Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            null,
-            null,
-          ),
+          StudioIdentityInitial() || StudioIdentityLoading() => (_identityProgress, null, null),
           StudioIdentityLoaded(:final identity) => (
             Text(identity.username, style: textTheme.titleMedium),
             Text(_roleLabel(identity.role, l10n)),
@@ -98,27 +197,7 @@ class _Identity extends StatelessWidget {
             ),
           ),
         };
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.account_circle_outlined, size: 40, color: colorScheme.onSurfaceVariant),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    title,
-                    if (subtitle != null) ...[const SizedBox(height: AppSpacing.xs), subtitle],
-                    if (retry != null) Align(alignment: AlignmentDirectional.centerStart, child: retry),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
+        return _IdentityRow(title: title, subtitle: subtitle, retry: retry);
       },
     );
   }

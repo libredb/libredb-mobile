@@ -8,8 +8,9 @@ typedef SignOutAction = Future<void> Function();
 /// The signed-in account, as a page that removes its data needs it: the identity provider's subject Studio's
 /// `GET /api/auth/me` named, and the app's sign-out.
 ///
-/// `AppShell` in `lib/app/shell/` provides it, so a feature reads it without importing the app layer or the auth
-/// feature.
+/// `AppShell` (Studio) and `PlatformShell` (Platform) in `lib/app/shell/` provide it, so a feature reads it without
+/// importing the app layer or the auth feature. `PlatformShell` names no subject, since Platform mode keeps no data of
+/// an account on the device, and its [reloadStoredData] throws.
 class SignedInAccountScope extends InheritedWidget {
   const SignedInAccountScope({
     super.key,
@@ -19,7 +20,7 @@ class SignedInAccountScope extends InheritedWidget {
     required super.child,
   });
 
-  /// The subject, null while Studio has named none.
+  /// The subject, null while Studio has named none, and always null in Platform mode.
   final String? subject;
 
   final SignOutAction signOut;
@@ -42,7 +43,8 @@ class SignedInAccountScope extends InheritedWidget {
     if (scope == null) {
       throw FlutterError(
         'SignedInAccountScope was looked up with a context that has no SignedInAccountScope above it.\n'
-        'AppShell provides one above every signed-in screen; a test wraps the widget in a SignedInAccountScope.',
+        'AppShell and PlatformShell provide one above every signed-in screen; a test wraps the widget in a '
+        'SignedInAccountScope.',
       );
     }
     return scope;

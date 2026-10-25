@@ -276,7 +276,8 @@ void main() {
     });
   });
 
-  // A Platform session lives under /platform, a Studio session never reaches it, and neither reaches the other's routes.
+  // A Platform session lives under /platform, a Studio session never reaches it, and neither reaches the other's
+  // routes.
   group('AppRouterFactory - session targets', () {
     Future<GoRouter> startSignedIn(WidgetTester tester, SessionTarget target) async {
       setDesktopViewport(tester);

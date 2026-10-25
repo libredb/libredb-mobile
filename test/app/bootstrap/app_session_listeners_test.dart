@@ -57,6 +57,20 @@ final _app = App(
   ),
 );
 
+/// [_app] in a build that serves Platform mode too.
+final _platformApp = App(
+  language: 'en',
+  dependencies: LocalSignInDependencies(
+    appConfig: const AppConfig(
+      environment: Environment.dev,
+      apiBaseUrl: null,
+      certificatePins: <String>[],
+      idleTimeout: Duration(minutes: 5),
+      platform: PlatformConfigured(),
+    ),
+  ),
+);
+
 /// Stores the language, theme and brightness a user chose on this device earlier.
 Future<void> _choosePreferences() async {
   await AppLocalStorage().save(StorageKeys.language.key, 'tr');
@@ -447,7 +461,7 @@ void main() {
     // The idle timeout looks at no session target.
     testWidgets('an idle timeout ends a Platform session and tells the user on the login screen', (tester) async {
       TestEnv.authenticate(target: SessionTarget.platform);
-      await tester.pumpWidget(_app);
+      await tester.pumpWidget(_platformApp);
       await tester.pumpAndSettle();
       expect(find.byType(PlatformShell), findsOneWidget);
 
@@ -466,7 +480,7 @@ void main() {
     ]) {
       testWidgets('after $ending of a Platform session, its identity and refusal are forgotten', (tester) async {
         TestEnv.authenticate(target: SessionTarget.platform);
-        await tester.pumpWidget(_app);
+        await tester.pumpWidget(_platformApp);
         await tester.pumpAndSettle();
         // The mock answers the identity after its latency.
         await tester.pump(const Duration(seconds: 1));

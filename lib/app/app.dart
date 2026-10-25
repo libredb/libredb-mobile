@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
+import 'package:libredb_mobile/app/app_studio_status_gate.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
@@ -12,7 +13,6 @@ import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
-import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_status_gate.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -142,14 +142,15 @@ class _AppViewState extends State<_AppView> {
             // to its redirect. It also waits for the stored language, so the first page shows in it.
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
             // StudioStatusGate shows the unreachable page over it while Studio does not answer and keeps it mounted
-            // underneath, so the open pages and the session are as they were once Studio answers.
+            // underneath, so the open pages and the session are as they were once Studio answers; a signed-in Platform
+            // session passes through it (AppStudioStatusGate).
             // AppLockGate covers all of it, the unreachable page included, with the lock screen while the app is
             // locked.
             builder: (context, router) => AppLockGate(
               router: _router!,
               child: RepositoryProvider<UnsavedChangesRegistry>.value(
                 value: _unsavedChanges!,
-                child: StudioStatusGate(
+                child: AppStudioStatusGate(
                   child: BlocBuilder<SessionCubit, SessionState>(
                     buildWhen: (previous, current) => previous is SessionUnknown,
                     builder: (context, session) => switch (session) {

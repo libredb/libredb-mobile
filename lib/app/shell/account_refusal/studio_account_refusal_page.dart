@@ -5,18 +5,23 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 
-/// The full-screen page the shell shows in place of every screen while Studio refuses the signed-in account.
+/// The full-screen page a shell shows in place of every screen while its backend refuses the signed-in account: Studio
+/// for the Studio shell, Platform for the Platform shell, each with its own [title].
 ///
-/// It says why, from [errorCode], and offers Retry, which asks Studio again ([retrying] while it does), and Logout.
-/// It never retries or signs out by itself.
+/// It says why, from [errorCode], and offers Retry, which asks the backend again ([retrying] while it does), and
+/// Logout. It never retries or signs out by itself.
 class StudioAccountRefusalPage extends StatelessWidget {
   const StudioAccountRefusalPage({
     super.key,
+    required this.title,
     required this.errorCode,
     required this.retrying,
     required this.onRetry,
     required this.onSignOut,
   });
+
+  /// Which backend refused the account, such as `account_refusal_title` for Studio.
+  final String title;
 
   final AppErrorCode errorCode;
   final bool retrying;
@@ -40,7 +45,7 @@ class StudioAccountRefusalPage extends StatelessWidget {
                 Icon(Icons.no_accounts_outlined, size: 64, color: colorScheme.error.withAlpha(179)),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  l10n.account_refusal_title,
+                  title,
                   style: textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
                   textAlign: TextAlign.center,
                 ),

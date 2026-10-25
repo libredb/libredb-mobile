@@ -313,6 +313,10 @@
   "@profile_role_user": {},
   "profile_governed_by_platform": "LibreDB Platform tarafından yönetiliyor",
   "@profile_governed_by_platform": {},
+  "profile_mode_studio": "Studio",
+  "@profile_mode_studio": {},
+  "profile_mode_platform": "Platform yöneticisi",
+  "@profile_mode_platform": {},
   "tab_browse": "Gözat",
   "@tab_browse": {},
   "tab_sql": "SQL",
@@ -491,6 +495,12 @@
   },
   "account_refusal_title": "Hesabınızın Studio'ya erişimi yok",
   "@account_refusal_title": {},
+  "platform_account_refusal_title": "LibreDB Platform hesabınızı reddetti",
+  "@platform_account_refusal_title": {},
+  "platform_placeholder_title": "LibreDB Platform",
+  "@platform_placeholder_title": {},
+  "platform_placeholder_note": "Platform bağlantıları ve erişim izinleri bu ekrana sonraki bir sürümde gelecek.",
+  "@platform_placeholder_note": {},
   "connection_vanished": "{name} artık kullanılamıyor",
   "@connection_vanished": {
     "placeholders": {

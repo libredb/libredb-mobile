@@ -54,6 +54,15 @@ const _config = AppConfig(
   idleTimeout: Duration(minutes: 15),
 );
 
+/// [_config] in a build that serves Platform mode too.
+const _platformConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: null,
+  certificatePins: <String>[],
+  idleTimeout: Duration(minutes: 15),
+  platform: PlatformConfigured(),
+);
+
 Future<void> _turnLockOn() async {
   await AppLocalStorage().save(StorageKeys.appLockEnabled.key, true);
   await AppLocalStorage().save(StorageKeys.appLockTimeout.key, 'fiveMinutes');
@@ -136,7 +145,7 @@ void main() {
   ) async {
     await _turnLockOn();
     TestEnv.authenticate(target: SessionTarget.platform);
-    await tester.pumpWidget(app());
+    await tester.pumpWidget(app(config: _platformConfig));
     await tester.pumpAndSettle();
 
     expect(find.byKey(appLockScreenKey), findsOneWidget);
@@ -153,7 +162,7 @@ void main() {
   testWidgets('a Platform session back after six minutes asks, back after one minute does not', (tester) async {
     await _turnLockOn();
     TestEnv.authenticate(target: SessionTarget.platform);
-    await tester.pumpWidget(app());
+    await tester.pumpWidget(app(config: _platformConfig));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(appLockUnlockKey));
     await tester.pumpAndSettle();

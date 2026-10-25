@@ -260,7 +260,8 @@ void main() {
     ];
 
     expect(await ssoRepository.signIn(target: SessionTarget.platform), isA<SsoProviderSignedIn>());
-    final platformLines = await _capturedLogs(() async {
+    // The printed lines only: _capturedLogs also gives each AppLogger line again through package:logger's listener.
+    final platformLines = await printedLines(() async {
       expect(await signOutRepository.logout(), isA<Success<void>>());
     });
 
@@ -270,7 +271,7 @@ void main() {
 
     // The stub answers the logout record with `{}`, which Studio's record refuses.
     expect(await ssoRepository.signIn(target: SessionTarget.studio), isA<SsoProviderSignedIn>());
-    final studioLines = await _capturedLogs(() async {
+    final studioLines = await printedLines(() async {
       expect(await signOutRepository.logout(), isA<Success<void>>());
     });
 

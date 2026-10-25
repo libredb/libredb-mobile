@@ -6,6 +6,8 @@ import 'package:libredb_mobile/app/router/not_found_page.dart';
 import 'package:libredb_mobile/core/security/safe_redirect.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/app_shell.dart';
+import 'package:libredb_mobile/app/shell/platform_placeholder_page.dart';
+import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/features/app_lock/presentation/widgets/app_lock_settings_section.dart';
@@ -18,6 +20,7 @@ import 'package:libredb_mobile/features/sql_editor/navigation/sql_editor_routes.
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
+import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -33,7 +36,7 @@ class AppRouterFactory {
     final refreshNotifier = AppRouterRefreshNotifier(_sessionCubit.stream);
 
     return GoRouter(
-      initialLocation: ApplicationRoutesConstants.home,
+      initialLocation: ApplicationRoutesConstants.root,
       debugLogDiagnostics: true,
       refreshListenable: refreshNotifier,
       observers: _observers,
@@ -48,8 +51,15 @@ class AppRouterFactory {
         );
       },
       routes: [
-        // The root has no page of its own: it opens the connection list.
-        GoRoute(path: ApplicationRoutesConstants.root, redirect: (context, state) => ApplicationRoutesConstants.home),
+        // The root has no page of its own: it opens the home of the signed-in session's target, or the login page.
+        GoRoute(
+          path: ApplicationRoutesConstants.root,
+          redirect: (context, state) => switch (_sessionCubit.state) {
+            SessionAuthenticated(:final target) => ApplicationRoutesConstants.homeFor(target),
+            SessionUnknown() || SessionUnauthenticated() => ApplicationRoutesConstants.login,
+          },
+        ),
+        // The Studio shell.
         ShellRoute(
           pageBuilder: (context, state, child) => appPlatformPage(
             state: state,
@@ -59,7 +69,44 @@ class AppRouterFactory {
             ...ConnectionsFeatureRoutes.routes,
             ...ObjectBrowserFeatureRoutes.routes,
             ...SqlEditorFeatureRoutes.routes,
-            ...SettingsFeatureRoutes.routes(securitySection: (context) => const AppLockSettingsSection()),
+            ...SettingsFeatureRoutes.routes(
+              path: ApplicationRoutesConstants.settings,
+              name: 'settings',
+              securitySection: (context) => const AppLockSettingsSection(),
+            ),
+          ],
+        ),
+        // The Platform shell. Every route has a name, since analytics logs no unnamed page.
+        ShellRoute(
+          pageBuilder: (context, state, child) => appPlatformPage(
+            state: state,
+            child: PlatformShell(state: state, child: child),
+          ),
+          routes: [
+            // Both tabs show the placeholder until the Platform home and connection list replace it.
+            GoRoute(
+              name: 'platformHome',
+              path: ApplicationRoutesConstants.platformHome,
+              pageBuilder: (context, state) => appTransitionPage(
+                state: state,
+                type: AppPageTransitionType.fade,
+                child: const PlatformPlaceholderPage(),
+              ),
+            ),
+            GoRoute(
+              name: 'platformConnections',
+              path: ApplicationRoutesConstants.platformConnections,
+              pageBuilder: (context, state) => appTransitionPage(
+                state: state,
+                type: AppPageTransitionType.fade,
+                child: const PlatformPlaceholderPage(),
+              ),
+            ),
+            ...SettingsFeatureRoutes.routes(
+              path: ApplicationRoutesConstants.platformSettings,
+              name: 'platformSettings',
+              securitySection: (context) => const AppLockSettingsSection(),
+            ),
           ],
         ),
         ...AuthFeatureRoutes.publicRoutes(
@@ -75,7 +122,6 @@ class AppRouterFactory {
       redirect: (context, state) {
         final location = state.uri.path;
         final sessionState = _sessionCubit.state;
-        final isAuthenticated = sessionState is SessionAuthenticated;
         final isPublic = _isPublicRoute(location);
 
         _log.debug('redirect - location: {}, session: {}', [location, sessionState.runtimeType]);
@@ -84,15 +130,21 @@ class AppRouterFactory {
         // router location or a returnUrl: its query holds the authorization code and state.
         if (location == OidcSettings.redirectPath) return ApplicationRoutesConstants.login;
 
-        // Authenticated user landing on the public route (login), for
-        // example by opening /login while signed in, should be sent to
-        // the home shell, or to the returnUrl
-        // that the redirect below gives the login page, as the sign-in on
-        // that page does: SessionCubit signs the user in on that page when
-        // the stored session answers only after its restore time limit.
-        // Like the login screen, it honors only a local path.
-        if (isAuthenticated && isPublic) {
-          return safeRedirectTarget(state.uri.queryParameters['returnUrl'], fallback: ApplicationRoutesConstants.home);
+        if (sessionState case SessionAuthenticated(:final target)) {
+          // An authenticated user on the login page, for example by opening /login while signed in, goes to the home
+          // of the session's target, or to the returnUrl that the redirect below gives the login page, as the sign-in
+          // on that page does: SessionCubit signs the user in on that page when the stored session answers only after
+          // its restore time limit. Like the login screen, it honors only a local path, and only one of the target's
+          // own routes.
+          if (isPublic) {
+            final home = ApplicationRoutesConstants.homeFor(target);
+            final returnUrl = safeRedirectTarget(state.uri.queryParameters['returnUrl'], fallback: home);
+            return ApplicationRoutesConstants.belongsTo(target, returnUrl) ? returnUrl : home;
+          }
+          // A session never reaches the other target's routes, and gets no returnUrl to them.
+          final other = _otherTarget(target);
+          if (ApplicationRoutesConstants.belongsTo(other, location)) return ApplicationRoutesConstants.homeFor(target);
+          return null;
         }
 
         // The router never sees SessionUnknown at startup: App mounts it
@@ -102,7 +154,7 @@ class AppRouterFactory {
         // protected pages without proof of session. Token validity
         // (presence + `exp`) is owned by SessionCubit, which flips state
         // to SessionUnauthenticated when the JWT is missing or expired.
-        if (!isAuthenticated && !isPublic) {
+        if (!isPublic) {
           // Preserve the intended destination as `returnUrl` so login
           // success can land the user where they were going. The
           // home fallback handles the "user typed /login directly"
@@ -112,6 +164,7 @@ class AppRouterFactory {
           final fullPath = state.uri.toString();
           if (fullPath == ApplicationRoutesConstants.root ||
               fullPath == ApplicationRoutesConstants.home ||
+              fullPath == ApplicationRoutesConstants.platformHome ||
               fullPath == ApplicationRoutesConstants.login) {
             return ApplicationRoutesConstants.login;
           }
@@ -125,9 +178,20 @@ class AppRouterFactory {
   }
 
   /// Whether [leaving] must close without asking about unsaved changes: a page that needs a session cannot stay once
-  /// the session has ended, so logout, an idle timeout or a 401 always reach the login page.
-  bool isExitForced(GoRouterState leaving) =>
-      _sessionCubit.state is! SessionAuthenticated && !_isPublicRoute(leaving.matchedLocation);
+  /// the session has ended, so logout, an idle timeout or a 401 always reach the login page; and a page of the other
+  /// target than the signed-in session's cannot stay either.
+  bool isExitForced(GoRouterState leaving) => switch (_sessionCubit.state) {
+    SessionAuthenticated(:final target) => ApplicationRoutesConstants.belongsTo(
+      _otherTarget(target),
+      leaving.matchedLocation,
+    ),
+    SessionUnknown() || SessionUnauthenticated() => !_isPublicRoute(leaving.matchedLocation),
+  };
+
+  static SessionTarget _otherTarget(SessionTarget target) => switch (target) {
+    SessionTarget.studio => SessionTarget.platform,
+    SessionTarget.platform => SessionTarget.studio,
+  };
 
   bool _isPublicRoute(String path) => path == ApplicationRoutesConstants.login;
 }
