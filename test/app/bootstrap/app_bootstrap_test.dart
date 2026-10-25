@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
 import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
+import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,6 +86,41 @@ void main() {
 
       expect(sentry.gatedConfigs.map((config) => config.environment), [Environment.mock]);
       expect(sentry.runDsns, ['https://public@example.invalid/1']);
+    });
+
+    testWidgets('builds the config from the entry point\'s own values, not the build-time defines', (tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'app',
+        packageName: 'app',
+        version: '1.0.0',
+        buildNumber: '1',
+        buildSignature: '',
+      );
+      final sentry = _RecordingSentryStart(const AppConfig.local(apiBaseUrl: 'https://studio.lab.test/api'));
+      final flutterErrorHandler = FlutterError.onError;
+      final platformErrorHandler = PlatformDispatcher.instance.onError;
+      final observer = Bloc.observer;
+
+      await tester.runAsync(
+        () => AppBootstrap.run(
+          const AppBootstrapConfig(
+            environment: Environment.local,
+            authDefines: AuthDefines(oidcIssuer: 'https://sso.lab.test/realms/libredb', oidcClientId: 'libredb-mobile'),
+            apiBaseUrl: 'https://studio.lab.test/api',
+            platformApiUrl: 'https://libredb.lab.test/api',
+          ),
+          sentry: sentry,
+        ),
+      );
+      FlutterError.onError = flutterErrorHandler;
+      PlatformDispatcher.instance.onError = platformErrorHandler;
+      Bloc.observer = observer;
+
+      expect(sentry.gatedConfigs.single.apiBaseUrl, 'https://studio.lab.test/api');
+      expect(
+        sentry.gatedConfigs.single.platform,
+        isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', 'https://libredb.lab.test/api'),
+      );
     });
 
     testWidgets('leaves the language unstored on a first start, so the app follows the configured default', (

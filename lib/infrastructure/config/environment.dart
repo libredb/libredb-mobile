@@ -71,6 +71,11 @@ final class AppConfig {
 
   /// The config the app starts with in [environment].
   ///
+  /// [prodApiUrlDefine], [oidcIssuerDefine] and [platformApiUrlDefine] default to the build's `--dart-define`s;
+  /// `AppBootstrapConfig` passes an entry point's own values instead, so `main_local.dart` and `main_prod.dart` start
+  /// without flags. The checks below run on whatever the build ends up with, so a default never removes a guarantee.
+  /// The remaining parameters stay test-only.
+  ///
   /// Throws [ProdApiUrlConfigError] in the prod environment when [prodApiUrlDefine], the `PROD_API_URL` define unless
   /// a test passes its own, is empty: such a build has no server to call.
   ///
@@ -98,14 +103,14 @@ final class AppConfig {
   /// `true` or `false`, or empty for false, in every environment. Any other value throws [AppLockRequiredConfigError].
   factory AppConfig.fromEnvironment(
     Environment environment, {
-    @visibleForTesting String prodApiUrlDefine = prodApiUrl,
-    @visibleForTesting String oidcIssuerDefine = oidcIssuer,
+    String prodApiUrlDefine = prodApiUrl,
+    String oidcIssuerDefine = oidcIssuer,
     @visibleForTesting String sentryDsnDefine = sentryDsnOfTheBuild,
     @visibleForTesting String studioCertPinsDefine = studioCertPins,
     @visibleForTesting String oidcCertPinsDefine = oidcCertPins,
     @visibleForTesting String screenCaptureProtectionDefine = screenCaptureProtectionSwitch,
     @visibleForTesting String appLockRequiredDefine = appLockRequiredSwitch,
-    @visibleForTesting String platformApiUrlDefine = platformApiUrl,
+    String platformApiUrlDefine = platformApiUrl,
     @visibleForTesting String platformCertPinsDefine = platformCertPins,
   }) {
     if (environment == Environment.prod) {
