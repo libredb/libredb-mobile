@@ -8,6 +8,7 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The translated message of a Studio [error], from its code.
 ///
@@ -150,7 +151,7 @@ class _StudioErrorBannerState extends State<StudioErrorBanner> {
                   Expanded(
                     child: SelectableText(
                       fixStatement,
-                      style: textTheme.bodySmall?.copyWith(color: foreground, fontFamily: 'monospace'),
+                      style: textTheme.bodySmall?.copyWith(color: foreground, fontFamily: AppTypography.mono),
                     ),
                   ),
                   IconButton(

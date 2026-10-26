@@ -25,6 +25,8 @@ import 'package:mocktail/mocktail.dart';
 import '../../browse_answers.dart';
 import '../../browse_harness.dart';
 
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
+
 /// A server-level connection, whose Browse root lists its databases and opens none by itself.
 const _postgres = StudioConnection(id: 'seed:dev-postgres-server', name: 'Dev server', type: 'postgres');
 const _documents = 'seed:documents';
@@ -326,7 +328,7 @@ void main() {
     expect(find.text('Exclusion constraints'), findsOneWidget);
     final definition = find.text(constraint.definition);
     expect(definition, findsOneWidget);
-    expect(tester.widget<Text>(definition).style?.fontFamily, 'monospace');
+    expect(tester.widget<Text>(definition).style?.fontFamily, AppTypography.mono);
     expect(find.text(constraint.name), findsWidgets, reason: 'the constraint and its backing index share the name');
     expect(
       tester.getTopLeft(find.text('reservations_pkey')).dy,

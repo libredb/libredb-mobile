@@ -6,6 +6,7 @@ import 'package:libredb_mobile/shared/models/vector_column.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/compact_cell.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_fields.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// One row of a result as Studio's card (`src/components/results-grid/ResultCard.tsx`): the [primary] field as its
 /// title, `Row n` when that value is NULL or the row lacks it, the [id] field under it when there is one, then the
@@ -133,7 +134,10 @@ class ResultCard extends StatelessWidget {
                                     s.result_card_id(_cell(id).compactText),
                                     style: _isMasked(id)
                                         ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                                        : theme.textTheme.bodySmall?.copyWith(color: muted, fontFamily: 'monospace'),
+                                        : theme.textTheme.bodySmall?.copyWith(
+                                            color: muted,
+                                            fontFamily: AppTypography.mono,
+                                          ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -178,7 +182,7 @@ class ResultCard extends StatelessWidget {
                             cell: _cell(field),
                             style: _isMasked(field)
                                 ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                                : theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                                : theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
                           ),
                         ),
                       ),

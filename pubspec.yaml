@@ -72,7 +72,28 @@ flutter:
   uses-material-design: true
   generate: true
 
+  fonts:
+    # The faces libredb.org is set in, so the app and the site read as one product. Both SIL OFL-1.1; the licence
+    # ships beside them in assets/fonts/OFL.txt. Only the weights AppTypography asks for are bundled — a weight that
+    # is not here is synthesised by the engine, which passes for the real face until the two are seen side by side.
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+    # Code surfaces only, and only one weight: no code surface in this app sets a weight.
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+
   assets:
     - assets/mock/
+    - assets/fonts/OFL.txt
     - assets/adoption.json
     - NOTICE

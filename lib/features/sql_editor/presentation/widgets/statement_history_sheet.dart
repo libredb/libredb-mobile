@@ -14,6 +14,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_error_state.d
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// Shows the History sheet of [subjectHash] over the editor of [activeConnectionId], and answers the entry the user
 /// tapped to put in the editor, or null when the sheet closed without one. Only an entry whose text was kept can be
@@ -261,7 +262,7 @@ class _EntryTile extends StatelessWidget {
               text,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: const TextStyle(fontFamily: AppTypography.mono),
             ),
             null => Text(s.sql_history_too_long, style: const TextStyle(fontStyle: FontStyle.italic)),
           },

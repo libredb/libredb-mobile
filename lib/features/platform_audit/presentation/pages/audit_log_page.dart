@@ -20,6 +20,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The audit log of the install in Platform mode: governed query events, newest first, with the filters set shown as
 /// removable chips above them, a filter sheet, Load more while Platform holds more, and the detail of one event.
@@ -447,7 +448,7 @@ class _EventRow extends StatelessWidget {
               auditFirstLine(statement),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+              style: textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
             )
           else
             Text(s.platform_audit_statement_not_captured, style: secondary?.copyWith(fontStyle: FontStyle.italic)),

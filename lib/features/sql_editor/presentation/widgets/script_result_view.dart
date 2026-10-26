@@ -11,6 +11,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_notices.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_bloc.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The answer of a script: the rolled-back notice when Studio ended a transaction the script left open, a card per
 /// statement Studio ran, one line for the statements it did not run, and under them the rows of one statement in
@@ -182,7 +183,7 @@ class _StatementCard extends StatelessWidget {
                   _start(statement.sql),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  style: theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
                 ),
                 Text(
                   failed

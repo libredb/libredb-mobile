@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// [value] with [text] put in place of its selection, or at its cursor, and the cursor after it; a value without a
 /// cursor gets [text] at its end.
@@ -38,7 +39,7 @@ class EditorAccessoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final mono = Theme.of(context).textTheme.titleMedium?.copyWith(fontFamily: 'monospace');
+    final mono = Theme.of(context).textTheme.titleMedium?.copyWith(fontFamily: AppTypography.mono);
     return TextFieldTapRegion(
       child: Material(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,

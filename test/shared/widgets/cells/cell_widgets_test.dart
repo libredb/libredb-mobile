@@ -9,6 +9,7 @@ import 'package:libredb_mobile/shared/models/vector_column.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/compact_cell.dart';
 import 'package:libredb_mobile/shared/widgets/cells/detail_cell.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 Widget _app(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(
   locale: locale,
@@ -110,14 +111,14 @@ void main() {
       await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell('9007199254740993'))));
 
       expect(find.text('9007199254740993'), findsOneWidget);
-      expect(styleOf(tester)?.fontFamily, isNot('monospace'));
+      expect(styleOf(tester)?.fontFamily, isNot(AppTypography.mono));
     });
 
     testWidgets('JSON is the pretty text in monospace', (tester) async {
       await tester.pumpWidget(_app(DetailCell(onCopy: (_) {}, cell: classifyCell({'a': 1}))));
 
       expect(find.text('{\n  "a": 1\n}'), findsOneWidget);
-      expect(styleOf(tester)?.fontFamily, 'monospace');
+      expect(styleOf(tester)?.fontFamily, AppTypography.mono);
     });
 
     testWidgets('binary is the whole hex in monospace', (tester) async {
@@ -126,7 +127,7 @@ void main() {
       );
 
       expect(find.text('\\x${'ab' * 33}'), findsOneWidget);
-      expect(styleOf(tester)?.fontFamily, 'monospace');
+      expect(styleOf(tester)?.fontFamily, AppTypography.mono);
     });
 
     testWidgets('a vector is its header over its whole value in monospace', (tester) async {
@@ -140,7 +141,7 @@ void main() {
       );
 
       expect(find.text('dense float32, 3 dims\n[1.0,0.5,0.0]'), findsOneWidget);
-      expect(styleOf(tester)?.fontFamily, 'monospace');
+      expect(styleOf(tester)?.fontFamily, AppTypography.mono);
     });
   });
 }

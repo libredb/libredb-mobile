@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
 import 'package:libredb_mobile/features/object_browser/presentation/widgets/source_share.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The definition of an object, without page chrome, so the source page shows it under its heading and the detail
 /// page can show it as its Source tab. It fills the height it is given, which must be bounded.
@@ -245,7 +246,7 @@ class _SourceLinesState extends State<_SourceLines> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final style = theme.textTheme.bodySmall!.copyWith(fontFamily: 'monospace', fontSize: 13, height: 1.4);
+    final style = theme.textTheme.bodySmall!.copyWith(fontFamily: AppTypography.mono, fontSize: 13, height: 1.4);
     final numberStyle = style.copyWith(color: scheme.onSurfaceVariant);
     final kindStyles = {
       SourceTokenKind.plain: style,

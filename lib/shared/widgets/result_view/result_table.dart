@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/compact_cell.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/column_sizing.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The rows of a result as a table (Studio's phone table, `src/components/ResultsGrid.tsx:1429-1491`): a header row
 /// pinned above the rows, each column named with its declared type under it when `columnTypes` names one, and the
@@ -170,12 +171,12 @@ double _measuredWidth(BuildContext context, String text, TextStyle? style) {
 }
 
 TextStyle? _nameStyle(ThemeData theme) =>
-    theme.textTheme.labelMedium?.copyWith(fontFamily: 'monospace', color: theme.colorScheme.onSurfaceVariant);
+    theme.textTheme.labelMedium?.copyWith(fontFamily: AppTypography.mono, color: theme.colorScheme.onSurfaceVariant);
 
 TextStyle? _typeStyle(ThemeData theme) =>
     theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8));
 
-TextStyle? _cellStyle(ThemeData theme) => theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
+TextStyle? _cellStyle(ThemeData theme) => theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono);
 
 TextStyle? _maskedStyle(ThemeData theme) =>
     theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: theme.colorScheme.onSurfaceVariant);

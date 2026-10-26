@@ -16,6 +16,8 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 
 import '../../support/printed_lines.dart';
 
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
+
 Widget _app(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(
   localizationsDelegates: const [
     S.delegate,
@@ -163,7 +165,7 @@ void main() {
         findsOneWidget,
       );
       final statement = tester.widget<SelectableText>(find.widgetWithText(SelectableText, 'GRANT ROLE R TO USER U'));
-      expect(statement.style?.fontFamily, 'monospace');
+      expect(statement.style?.fontFamily, AppTypography.mono);
 
       await tester.tap(find.byTooltip('Copy statement'));
       await tester.pump();
