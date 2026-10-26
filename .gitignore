@@ -79,3 +79,7 @@ test/**/failures/
 
 # An agent skill's working files: a plan's ledger, a command's output, a page read once and dumped to disk
 /.superpowers/
+
+# The isolated checkouts a subagent is given. Not /.claude/ whole: settings.json and skills/ are files a
+# project may deliberately commit, and ignoring the parent would swallow them without saying so.
+/.claude/worktrees/
