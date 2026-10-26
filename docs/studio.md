@@ -501,6 +501,223 @@ Every client keeps Full Scope Allowed on, so neither the `libredb` roles nor the
 The decoded access token of `tool/studio-dev/access-token.sh admin` carries `aud` with `libredb-studio-api` and `libredb-platform-api`, `azp` `libredb-mobile`, `libredb_roles: ["admin"]`, `sub`, `email` and `preferred_username`; the token of `norole` has no `libredb_roles`.
 Studio still reads `realm_access.roles`, so it signs in `admin`, `user` and `norole` as before.
 
+## Platform installer environment
+
+The full-system check (#304 for Platform, #196 for Studio) runs against a disposable install made by Platform's own installer, not against tool/studio-dev or Railway platform-dev.
+It runs installer 1.3.0 (Platform 1.3.0, Studio 1.1.0, Keycloak, PostgreSQL and the Caddy edge, with `mobile.enabled: true`) in the LXD VM `libredb-installer-lab` on the Linux host, so nothing of it touches the host's own Docker.
+A release build on the test phone trusts only the system store, so the edge serves a publicly trusted certificate with `tls.mode: provided` on three host names in a zone the owner controls.
+Platform's `docs/deploy/install-docker.md` and `installer/README.md` are the contract; this section is the command list for this host, and no shell script wraps it.
+
+`<platform host>`, `<studio host>` and `<auth host>` stand for the owner's three host names, `<host LAN address>` for the address of the Linux host on the phone's network, and `<phone serial>` for the test phone's adb serial.
+The committed configuration `tool/installer-lab/libredb.yaml.example` holds the placeholders `libredb.example.invalid`, `studio.example.invalid` and `sso.example.invalid` in their place, and `test/architecture/installer_lab_config_test.dart` keeps it free of real hosts, license tokens and keys.
+No command below prints a license token, a password, a key or a file of `/opt/libredb/secrets/`, and none runs `docker compose config` inside the VM, because it prints the merged environment.
+
+### What the owner provides
+
+- Three host names, with DNS A records that point to `<host LAN address>`; reserve that address in the router's DHCP, because the records break when the lease changes.
+- A publicly trusted certificate for the three names, for example from a DNS-01 challenge: per host a chain (leaf first, then the intermediates) and an unencrypted key, and the issuing CA bundle, as files outside every repository.
+  `tls.mode: provided` never renews a certificate (`installer/README.md:150`), so the check must finish before it expires.
+- Outbound HTTPS from the VM (below).
+
+The license is a FREE license (1 admin seat, 3 user seats, 12 months) for `<platform host>`, signed by the maintainers' license tool under the ruling of `.team/decisions.md` "2026-10-26: M12-P and M13-P owner answers", and kept at `~/libredb-licenses/free-installer-lab.license` with mode 600.
+A free license names exactly one host, so it is signed only once the Platform host name is known.
+Its one admin seat means one admin account at a time can use Platform mode.
+
+### Outbound HTTPS from the VM
+
+Docker on the host sets the iptables `FORWARD` policy to `DROP`, so a VM on `lxdbr0` resolves names through LXD's DNS but opens no outbound connection, and the LAN cannot reach it through the proxy device either.
+The first check after the VM starts shows it:
+
+```shell
+lxc exec libredb-installer-lab -- curl -fsSI https://ghcr.io
+```
+
+When that times out, the owner allows forwarding for `lxdbr0` in Docker's `DOCKER-USER` chain for the length of the check, and removes the rules with `iptables -D` and the same arguments at teardown:
+
+```shell
+sudo iptables -I DOCKER-USER -i lxdbr0 -j ACCEPT
+sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -I DOCKER-USER -o lxdbr0 -d 10.207.27.50 -p tcp --dport 443 -j ACCEPT
+```
+
+These rules are the only host change besides the LXD proxy device, and they do not survive a reboot.
+
+### Phone reachability
+
+The phone's network resolves every name, even `studio.invalid`, to its router (`docs/platform.md`), and a router with DNS rebinding protection drops public answers that point to a private address.
+After the DNS records exist and before the install, check each host from the host and from the phone, the phone under `.team/phone.lock` and named with `-s`:
+
+```shell
+getent hosts <platform host> <studio host> <auth host>
+flock .team/phone.lock sh -c 'for h in <platform host> <studio host> <auth host>; do adb -s <phone serial> shell ping -c 1 "$h"; done'
+```
+
+Each line must name `<host LAN address>`, not the router; when the phone gets the router or no answer, the owner chooses another route, such as a public address or a tunnel, before anything is installed.
+
+### Set up
+
+Create the VM (Ubuntu 24.04, 4 vCPU, 8 GiB, 40 GiB root disk) with a static address on `lxdbr0`, which the proxy device in NAT mode needs:
+
+```shell
+lxc init ubuntu:24.04 libredb-installer-lab --vm -c limits.cpu=4 -c limits.memory=8GiB -d root,size=40GiB
+lxc config device override libredb-installer-lab eth0 ipv4.address=10.207.27.50
+lxc start libredb-installer-lab
+lxc exec libredb-installer-lab -- cloud-init status --wait
+lxc exec libredb-installer-lab -- curl -fsSI https://ghcr.io
+```
+
+`10.207.27.50` lies in this host's `lxdbr0` range `10.207.27.0/24`; on another host pick a free address of `lxc network get lxdbr0 ipv4.address`.
+
+Install Docker Engine and the Compose plugin from Docker's apt repository; `preflight` refuses an engine from 28.2.0 through 28.3.2, and the repository's current release is newer:
+
+```shell
+lxc exec libredb-installer-lab -- sh -euc '
+apt-get update && apt-get install -y ca-certificates curl jq
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
+apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+docker version --format "{{.Server.Version}}"; docker compose version --short; command -v ss systemctl'
+```
+
+The VM has no stored Docker Hub credentials, so it pulls the images anonymously, unlike the host (see [Docker Hub on this machine](#docker-hub-on-this-machine)).
+
+Download installer 1.3.0 and check it as `docs/deploy/install-docker.md` "Download and verify the installer" says:
+
+```shell
+lxc exec libredb-installer-lab -- sh -euc '
+V=1.3.0; B=https://github.com/libredb/libredb-platform/releases/download/installer-v$V
+mkdir -p /root/libredb-$V && cd /root/libredb-$V
+curl -fL -O "$B/libredb-installer-linux-x64" -O "$B/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS
+chmod 0755 libredb-installer-linux-x64 && ./libredb-installer-linux-x64 version'
+```
+
+`sha256sum` must print `libredb-installer-linux-x64: OK` and `version` `release 1.3.0`.
+For the attestation, download the same file on the host, compare its `sha256sum` with the VM's, and run `gh attestation verify libredb-installer-linux-x64 --repo libredb/libredb-platform` there.
+
+Copy the license, the chains, the keys and the CA bundle into the VM from their paths outside every repository, the license and the keys with mode 0600; `<certificate dir>` stands for the directory that holds the owner's files, named as `tool/installer-lab/libredb.yaml.example` names them:
+
+```shell
+lxc exec libredb-installer-lab -- install -d -m 0700 -o root -g root /etc/libredb /etc/libredb/tls
+lxc file push --uid 0 --gid 0 --mode 0600 ~/libredb-licenses/free-installer-lab.license libredb-installer-lab/etc/libredb/platform.license
+for e in platform studio auth; do
+  lxc file push --uid 0 --gid 0 --mode 0644 "<certificate dir>/$e.chain.pem" "libredb-installer-lab/etc/libredb/tls/$e.chain.pem"
+  lxc file push --uid 0 --gid 0 --mode 0600 "<certificate dir>/$e.key.pem" "libredb-installer-lab/etc/libredb/tls/$e.key.pem"
+done
+lxc file push --uid 0 --gid 0 --mode 0644 "<certificate dir>/ca-bundle.pem" libredb-installer-lab/etc/libredb/tls/ca-bundle.pem
+```
+
+Fill in the configuration with the three host names and check it before `preflight`:
+
+```shell
+sed -e 's/libredb\.example\.invalid/<platform host>/' -e 's/studio\.example\.invalid/<studio host>/' \
+  -e 's/sso\.example\.invalid/<auth host>/' tool/installer-lab/libredb.yaml.example > /tmp/libredb.yaml
+lxc file push --uid 0 --gid 0 --mode 0600 /tmp/libredb.yaml libredb-installer-lab/etc/libredb/libredb.yaml && rm /tmp/libredb.yaml
+lxc exec libredb-installer-lab -- sh -euc 'cd /root/libredb-1.3.0 && ./libredb-installer-linux-x64 validate -c /etc/libredb/libredb.yaml'
+```
+
+`validate` prints the normalized configuration, which holds the license's path and never its token.
+
+Install, then check the result; `apply` copies the installer to `/opt/libredb/bin/libredb-installer`, which the later commands run:
+
+```shell
+lxc exec libredb-installer-lab -- sh -euc 'cd /root/libredb-1.3.0 && ./libredb-installer-linux-x64 preflight -c /etc/libredb/libredb.yaml'
+lxc exec libredb-installer-lab -- sh -euc 'cd /root/libredb-1.3.0 && ./libredb-installer-linux-x64 apply -c /etc/libredb/libredb.yaml --yes'
+lxc exec libredb-installer-lab -- sh -euc 's=0; /opt/libredb/bin/libredb-installer verify -c /etc/libredb/libredb.yaml --output json > /root/verify.json || s=$?; jq -r ".checks[] | \"\(.id) \(.result)\"" /root/verify.json; exit $s'
+lxc exec libredb-installer-lab -- /opt/libredb/bin/libredb-installer status
+lxc exec libredb-installer-lab -- /opt/libredb/bin/libredb-installer images list -c /etc/libredb/libredb.yaml
+```
+
+`verify` exits 4 when a check fails; the `|| s=$?` keeps `sh -e` from stopping there, so the `jq` summary still prints and the command still exits 4.
+The `jq` filter prints only each check's id and result, since a `detail` names the license's host.
+`status` must show every container healthy.
+
+Expose the VM's port 443 on the host's LAN address with an LXD proxy device in NAT mode, which a VM needs, with the static NIC address and a concrete listen address:
+
+```shell
+lxc config device add libredb-installer-lab https proxy listen=tcp:<host LAN address>:443 connect=tcp:10.207.27.50:443 nat=true
+```
+
+The first admin `libredb-admin`, whose temporary password is in `/opt/libredb/secrets/first-admin.txt` inside the VM, and the user manager `libredb-user-manager` are the owner's: the owner signs in, sets a new password and TOTP, and creates the test user with the client role `libredb:user` in the realm console that `keycloak console` opens through an SSH tunnel to `127.0.0.1:18080` of the VM.
+No agent reads that file.
+
+### Sample data
+
+A PostgreSQL in the VM, outside the Compose project `libredb`, holds the seed of [Postgres seeds](#postgres-seeds), and joins the network `libredb_edge` so that Studio reaches it by name.
+Its role passwords are random and stay in a 0600 file inside the VM:
+
+```shell
+lxc exec libredb-installer-lab -- install -d -m 0700 /root/lab-sample
+lxc file push --mode 0644 tool/studio-dev/postgres/seed.sql libredb-installer-lab/root/lab-sample/10-seed.sql
+lxc file push --mode 0755 tool/studio-dev/postgres/role-passwords.sh libredb-installer-lab/root/lab-sample/20-role-passwords.sh
+lxc exec libredb-installer-lab -- sh -euc '
+cd /root/lab-sample
+umask 077
+printf "POSTGRES_PASSWORD=%s\nAPP_OWNER_PASSWORD=%s\nSTUDIO_READER_PASSWORD=%s\n" \
+  "$(openssl rand -hex 16)" "$(openssl rand -hex 16)" "$(openssl rand -hex 16)" > sample.env
+docker run -d --name lab-sample-postgres --restart unless-stopped --network libredb_edge --env-file sample.env \
+  -v /root/lab-sample/10-seed.sql:/docker-entrypoint-initdb.d/10-seed.sql:ro \
+  -v /root/lab-sample/20-role-passwords.sh:/docker-entrypoint-initdb.d/20-role-passwords.sh:ro \
+  postgres:17.6-alpine
+until docker exec lab-sample-postgres pg_isready -h 127.0.0.1 -U postgres -d app; do sleep 2; done'
+```
+
+The connection is created in Platform's web console at `https://<platform host>`, never in the app: host `lab-sample-postgres`, port 5432, database `app`, user `app_owner`, and the `APP_OWNER_PASSWORD` of `/root/lab-sample/sample.env`.
+Who creates it is the owner's decision: the owner, or an agent once the owner rules this environment a demo environment like Railway platform-dev.
+
+### Acceptance checks
+
+From the host, without `-k`, so the public chain validates against the system store:
+
+```shell
+curl -fsS https://<platform host>/api/health/live
+curl -fsS https://<studio host>/api/ready
+```
+
+Both answer 200, the second with `"status":"ok"`.
+
+The authorization endpoint serves the login page for the app's client with an S256 challenge, and refuses the same request without one; Keycloak sends that refusal to the redirect URI as a 302 whose `Location` carries `error=invalid_request`:
+
+```shell
+A='https://<auth host>/realms/libredb/protocol/openid-connect/auth?client_id=libredb-mobile&redirect_uri=org.libredb.mobile%3A%2Foauth2redirect&response_type=code&scope=openid'
+C=$(head -c 32 /dev/urandom | basenc --base64url | tr -d '=')
+curl -sS -o /dev/null -w '%{http_code}\n' "$A&code_challenge=$C&code_challenge_method=S256"
+curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' "$A"
+```
+
+The owner confirms in the realm console that `libredb-mobile` is a public client with the two audience mappers `libredb-studio-api` and `libredb-platform-api` (`installer/README.md:222`).
+
+### Tear down
+
+```shell
+lxc delete --force libredb-installer-lab
+lxc list
+ss -Htln 'sport = :443'
+```
+
+Deleting the VM removes its proxy device too; `lxc list` must be empty and nothing may listen on port 443.
+The owner then removes the `DOCKER-USER` rules of [Outbound HTTPS from the VM](#outbound-https-from-the-vm) with `iptables -D`.
+
+### Recorded install
+
+| Item | Value |
+| --- | --- |
+| Date | 2026-10-26 (configuration and images); the install waits for the owner's host names and certificate |
+| Installer | 1.3.0, `release 1.3.0`, checked with `SHA256SUMS` |
+| `validate` of `tool/installer-lab/libredb.yaml.example` | Passes, exit 0 |
+| Platform | `ghcr.io/libredb/libredb-platform@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9` |
+| Studio | `ghcr.io/libredb/libredb-studio@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c` |
+| Keycloak | `quay.io/keycloak/keycloak@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244` |
+| PostgreSQL | `docker.io/library/postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
+| Edge | `docker.io/library/caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af` |
+| Outbound HTTPS from the VM | Works with the owner's `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
+| `preflight`, `apply`, `verify`, `status` | Not run yet: they need the owner's host names and certificate files |
+
+The digests are what `images list` printed for the example configuration, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
+Once the install runs, this table records the result of each `verify` check id (`edge-tls`, `components-healthy`, `studio-ready`, `platform-license`, `admin-mfa` and the rest) with the date, and keeps the placeholders instead of the owner's host names.
+
 ## Recording Studio answers
 
 The answers under `test/fixtures/studio/` are recorded with curl against the running stack, with an access token of the `libredb-mobile` client that `tool/studio-dev/access-token.sh` gets the way the app does, through Keycloak's login form with PKCE.
