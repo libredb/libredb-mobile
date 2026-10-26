@@ -1,3 +1,5 @@
+import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -74,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 1024;
+            final isDesktop = AppBreakpoints.isDesktop(constraints.maxWidth);
             return isDesktop ? _desktopLayout(context, isDark) : _mobileLayout(context, isDark);
           },
         ),
@@ -373,8 +375,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   /// The heading above the sign-in entries.
   ///
   /// With [carriesIdentity] it names the product and says what it does, which is what a phone needs: the brand panel
-  /// that carries both renders only at [_desktopBreakpoint], and the app has no onboarding flow, so this screen is a
-  /// first-time user's whole introduction. Without it the heading stays as it was, because the brand panel beside it
+  /// that carries both renders only above [AppBreakpoints.tablet], and the app has no onboarding flow, so this
+  /// screen is a first-time user's whole introduction. Without it the heading stays as it was, because the panel
   /// already says the same two things and a form panel should not repeat them.
   Widget _formHeading(BuildContext context, {bool carriesIdentity = false}) {
     final cs = Theme.of(context).colorScheme;
