@@ -44,6 +44,7 @@ import 'package:libredb_mobile/features/app_lock/domain/services/device_authenti
 import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview.dart';
 // Entity/model imports for fallback values
 import 'package:libredb_mobile/features/connections/domain/repositories/collapsed_sections_repository.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/connection_repository.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_favorites.dart';
 import 'package:libredb_mobile/features/connections/domain/repositories/favorite_connections_repository.dart';
@@ -82,6 +83,8 @@ class MockIPlatformGrantRepository extends Mock implements IPlatformGrantReposit
 class MockPlatformDirectoryRepository extends Mock implements IPlatformDirectoryRepository {}
 
 class MockIPlatformAuditRepository extends Mock implements IPlatformAuditRepository {}
+
+class MockIOnboardingSeenStore extends Mock implements IOnboardingSeenStore {}
 
 class MockPlatformIdentityRepository extends Mock implements IPlatformIdentityRepository {}
 

@@ -59,18 +59,6 @@ class _LocalStorageDependencies extends MockSignInDependencies {
   AppLocalStorage createLocalStorage() => localStorage;
 }
 
-/// Whether the introduction has been shown, answered only when [seen] completes, like a slow device.
-class _HeldOnboardingStore implements IOnboardingSeenStore {
-  _HeldOnboardingStore(this.seen);
-
-  final Future<bool> seen;
-
-  @override
-  Future<bool> read() => seen;
-  @override
-  Future<void> write() async {}
-}
-
 class _OnboardingDependencies extends MockSignInDependencies {
   _OnboardingDependencies(this.store);
 
@@ -78,20 +66,6 @@ class _OnboardingDependencies extends MockSignInDependencies {
 
   @override
   IOnboardingSeenStore createOnboardingSeenStore() => store;
-}
-
-/// Counts the reads, to show when the flag is asked for rather than only what it answers.
-class _RecordingOnboardingStore implements IOnboardingSeenStore {
-  int reads = 0;
-
-  @override
-  Future<bool> read() async {
-    reads++;
-    return true;
-  }
-
-  @override
-  Future<void> write() async {}
 }
 
 void main() {
@@ -211,9 +185,9 @@ void main() {
     // route reads the flag, a first run that does not wait paints the login page and then jumps off it.
     testWidgets('shows a loading indicator in place of the router until the introduction flag is read', (tester) async {
       final flag = Completer<bool>();
-      await tester.pumpWidget(
-        App(language: 'en', dependencies: _OnboardingDependencies(_HeldOnboardingStore(flag.future))),
-      );
+      final store = MockIOnboardingSeenStore();
+      when(() => store.read()).thenAnswer((_) => flag.future);
+      await tester.pumpWidget(App(language: 'en', dependencies: _OnboardingDependencies(store)));
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.bySemanticsLabel('Loading...'), findsOneWidget);
@@ -234,7 +208,8 @@ void main() {
       final secureStorage = MockISecureStorage();
       final heldSession = Completer<String?>();
       when(() => secureStorage.read(any())).thenAnswer((_) => heldSession.future);
-      final store = _RecordingOnboardingStore();
+      final store = MockIOnboardingSeenStore();
+      when(() => store.read()).thenAnswer((_) async => true);
 
       await tester.pumpWidget(
         App(language: 'en', dependencies: _OnboardingDependencies(store), secureStorage: secureStorage),
@@ -242,7 +217,7 @@ void main() {
       await tester.pump();
 
       expect(find.bySemanticsLabel('Loading...'), findsOneWidget, reason: 'the session has not answered yet');
-      expect(store.reads, 1, reason: 'the flag was not read until the session had settled');
+      verify(() => store.read()).called(1);
 
       heldSession.complete(null);
       await tester.pumpAndSettle();

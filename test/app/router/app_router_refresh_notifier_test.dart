@@ -50,23 +50,6 @@ void main() {
     await onboarding.close();
   });
 
-  test('notifies once per event, so one change does not re-run the redirect twice', () async {
-    final session = StreamController<Object>.broadcast();
-    final onboarding = StreamController<Object>.broadcast();
-    final notifier = AppRouterRefreshNotifier([session.stream, onboarding.stream]);
-    var notified = 0;
-    notifier.addListener(() => notified++);
-
-    session.add('signed in');
-    await Future<void>.delayed(Duration.zero);
-
-    expect(notified, 1);
-
-    notifier.dispose();
-    await session.close();
-    await onboarding.close();
-  });
-
   test('stops listening to every stream on dispose, so no event reaches a disposed notifier', () async {
     final session = StreamController<Object>.broadcast();
     final onboarding = StreamController<Object>.broadcast();

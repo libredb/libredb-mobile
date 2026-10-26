@@ -25,9 +25,13 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   /// **A read it cannot answer means seen.** A storage hiccup must never trap a returning user in the introduction on
   /// every launch, which is the mirror of the session's rule that unauthenticated is the safe default.
   ///
-  /// The failure is a log line and not an error report: falling back is the correct behaviour rather than a
-  /// degradation, and a device whose preferences cannot be read has already lost its language, its theme and its
-  /// lock, each of which says so itself.
+  /// The failure is a log line and not an error report, because falling back is the behaviour this feature wants
+  /// rather than a degradation of it: the user reaches the app they expected, one screen earlier than a first-time
+  /// user would. What it costs is that a device whose preferences cannot be read is invisible from here. That is a
+  /// real cost and it is accepted, because onboarding is the wrong place to learn it — every other reader of the
+  /// same store meets the same failure, and they disagree with each other about reporting it
+  /// (`locale_cubit.dart:34` reports, `theme_bloc.dart:71` swallows it silently). Whoever settles that question
+  /// settles it for all of them, not here.
   Future<void> restore() async {
     final bool seen;
     try {
