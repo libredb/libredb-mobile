@@ -102,6 +102,14 @@ void main() {
         ServerError,
       ),
       '500 INTERNAL_ERROR': (500, _envelope('INTERNAL_ERROR'), AppErrorCode.platformInternalError, ServerError),
+      // Platform codes every 5xx of its own, so one without a code is the edge in front of a stopped Platform.
+      '502 from the edge without a code': (
+        502,
+        '<html>Bad Gateway</html>',
+        AppErrorCode.platformUnreachable,
+        ServerError,
+      ),
+      '503 from the edge without a code': (503, '', AppErrorCode.platformUnreachable, ServerError),
       'an unreadable body': (200, '{"connections":[{"id":"c1"}]}', AppErrorCode.platformUnreadableAnswer, ServerError),
     };
     for (final MapEntry(key: name, value: (status, body, code, type)) in cases.entries) {

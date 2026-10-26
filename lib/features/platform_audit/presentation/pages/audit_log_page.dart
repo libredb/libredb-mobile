@@ -19,6 +19,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_status_badge.
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 
 /// The audit log of the install in Platform mode: governed query events, newest first, with the filters set shown as
 /// removable chips above them, a filter sheet, Load more while Platform holds more, and the detail of one event.
@@ -30,30 +31,40 @@ class AuditLogPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuditLogBloc, AuditLogState>(
-      builder: (context, state) => switch (state) {
-        AuditLogPlanRefused() => _centered(
-          AppErrorState(
-            icon: Icons.workspace_premium_outlined,
-            title: S.of(context).platform_audit_plan_refused_title,
-            description: S.of(context).platform_audit_plan_refused_description,
+    return OnPlatformReachable(
+      onReachable: () => _reloadFailed(context),
+      child: BlocBuilder<AuditLogBloc, AuditLogState>(
+        builder: (context, state) => switch (state) {
+          AuditLogPlanRefused() => _centered(
+            AppErrorState(
+              icon: Icons.workspace_premium_outlined,
+              title: S.of(context).platform_audit_plan_refused_title,
+              description: S.of(context).platform_audit_plan_refused_description,
+            ),
           ),
-        ),
-        AuditLogPermissionRefused() => _centered(
-          AppErrorState(
-            icon: Icons.lock_outline,
-            title: S.of(context).platform_audit_permission_refused_title,
-            description: S.of(context).platform_audit_permission_refused_description,
+          AuditLogPermissionRefused() => _centered(
+            AppErrorState(
+              icon: Icons.lock_outline,
+              title: S.of(context).platform_audit_permission_refused_title,
+              description: S.of(context).platform_audit_permission_refused_description,
+            ),
           ),
-        ),
-        AuditLogInitial() || AuditLogLoading() || AuditLogLoaded() || AuditLogFailure() => Column(
-          children: [
-            _FilterBar(state: state),
-            Expanded(child: _body(context, state)),
-          ],
-        ),
-      },
+          AuditLogInitial() || AuditLogLoading() || AuditLogLoaded() || AuditLogFailure() => Column(
+            children: [
+              _FilterBar(state: state),
+              Expanded(child: _body(context, state)),
+            ],
+          ),
+        },
+      ),
     );
+  }
+
+  /// Reads the first page again once Platform answers again under its unreachable page, when it failed meanwhile; a
+  /// loaded log keeps its rows, and a plan or permission refusal is Platform's answer, not a failure.
+  static void _reloadFailed(BuildContext context) {
+    final bloc = context.read<AuditLogBloc>();
+    if (bloc.state is AuditLogFailure) bloc.add(const AuditLogRefreshed());
   }
 
   Widget _body(BuildContext context, AuditLogState state) => switch (state) {

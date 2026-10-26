@@ -52,6 +52,7 @@ void main() {
       AppErrorCode.studioUnreadableAnswer:
           "Studio sent an answer this app cannot read. The app or Studio may need an update.",
       AppErrorCode.studioUnreachable: 'Studio does not answer. Try again in a moment.',
+      AppErrorCode.platformUnreachable: 'Platform does not answer. Try again in a moment.',
     };
 
     for (final MapEntry(key: code, value: sentence) in sentences.entries) {

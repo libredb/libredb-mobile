@@ -51,7 +51,7 @@ void main() {
       when(() => studioIdentity.fetch(probe: true)).thenAnswer((_) async => answer);
 
   void platformAnswers(Result<PlatformIdentity> answer) =>
-      when(() => platformIdentity.fetch()).thenAnswer((_) async => answer);
+      when(() => platformIdentity.fetch(probe: true)).thenAnswer((_) async => answer);
 
   group('SwitchSessionTargetUseCase to Platform', () {
     test('a 200 from Platform stores the target under the current generation and answers the identity', () async {
@@ -61,7 +61,7 @@ void main() {
       final result = await switchTarget(SessionTarget.platform);
 
       expect(result, isA<SwitchedToPlatform>().having((r) => r.identity, 'identity', _admin));
-      verify(() => platformIdentity.fetch()).called(1);
+      verify(() => platformIdentity.fetch(probe: true)).called(1);
       verifyNever(() => studioIdentity.fetch(probe: any(named: 'probe')));
       verify(() => sessionRepository.persistTarget(SessionTarget.platform, generation: generation)).called(1);
       verifyNoMoreInteractions(sessionRepository);
@@ -80,8 +80,14 @@ void main() {
         _platformAnswer(503, 'IDENTITY_PROVIDER_UNAVAILABLE'),
         AppErrorCode.platformIdentityProviderUnavailable,
       ),
-      ('a 503 without a code', _platformAnswer(503, null), AppErrorCode.platformInternalError),
+      ('500 INTERNAL_ERROR', _platformAnswer(500, 'INTERNAL_ERROR'), AppErrorCode.platformInternalError),
+      // The edge in front of a stopped Platform, a failed connection and a timeout: Platform does not answer (#343).
+      ('a 503 without a code', _platformAnswer(503, null), AppErrorCode.platformUnreachable),
+      ('a 502 without a code', _platformAnswer(502, null), AppErrorCode.platformUnreachable),
+      ('a connection that failed', FetchDataException('Connection refused'), AppErrorCode.platformUnreachable),
+      ('a timeout', FetchDataException('Receive timeout'), AppErrorCode.platformUnreachable),
       ('no network', OfflineException(), AppErrorCode.networkOffline),
+      ('an untrusted certificate', UntrustedCertificateException('untrusted'), AppErrorCode.networkCertInvalid),
     ];
     for (final (name, thrown, code) in refusals) {
       test('$name refuses with ${code.key}, stores nothing and clears nothing', () async {
@@ -122,7 +128,7 @@ void main() {
       final result = await switchTarget(SessionTarget.studio);
 
       expect(result, isA<SwitchedToStudio>().having((r) => r.identity, 'identity', _user));
-      verifyNever(() => platformIdentity.fetch());
+      verifyNever(() => platformIdentity.fetch(probe: any(named: 'probe')));
       verify(() => sessionRepository.persistTarget(SessionTarget.studio, generation: generation)).called(1);
       verifyNoMoreInteractions(sessionRepository);
     });
@@ -155,7 +161,7 @@ void main() {
 
         expect(result, isA<SessionTargetSwitchRefused>().having((r) => r.errorCode, 'errorCode', code));
         verifyZeroInteractions(sessionRepository);
-        verifyNever(() => platformIdentity.fetch());
+        verifyNever(() => platformIdentity.fetch(probe: any(named: 'probe')));
       });
     }
 
@@ -183,7 +189,7 @@ void main() {
     }
 
     test('a 200 from Platform is abandoned and stores nothing', () async {
-      when(() => platformIdentity.fetch()).thenAnswer((_) => afterWipe(const Success(_admin)));
+      when(() => platformIdentity.fetch(probe: true)).thenAnswer((_) => afterWipe(const Success(_admin)));
 
       late SessionTargetSwitchResult result;
       final lines = await printedLines(() async => result = await switchTarget(SessionTarget.platform));
@@ -205,7 +211,7 @@ void main() {
     });
 
     test('a Platform refusal is abandoned', () async {
-      when(() => platformIdentity.fetch())
+      when(() => platformIdentity.fetch(probe: true))
           .thenAnswer((_) => afterWipe(Failure(platformError(_platformAnswer(401, 'BEARER_INVALID')))));
 
       late SessionTargetSwitchResult result;

@@ -338,6 +338,7 @@ class _AppSessionListenersState extends State<AppSessionListeners> {
       AppErrorCode.platformAccountRefused => S.of(messenger.context).profile_switch_platform_refused,
       AppErrorCode.studioAccountRefused => S.of(messenger.context).profile_switch_studio_refused,
       AppErrorCode.studioUnreachable => S.of(messenger.context).profile_switch_studio_unreachable,
+      AppErrorCode.platformUnreachable => S.of(messenger.context).profile_switch_platform_unreachable,
       _ => errorCode.resolve(messenger.context),
     };
     messenger.showSnackBar(SnackBar(content: Text(message)));

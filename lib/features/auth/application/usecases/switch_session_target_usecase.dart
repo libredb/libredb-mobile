@@ -15,10 +15,11 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 ///
 /// Only the gate of the target switched to is asked, with the live session's token: Studio's `GET /api/auth/me`, sent
 /// as a probe ([IStudioIdentityRepository.fetch]) so a refused switch never opens the circuit for it, or Platform's
-/// `GET /api/v1/me`. Only its 200 rewrites the stored target ([IAuthSessionRepository.persistTarget]), under
-/// the session generation the switch started under, so a sign-out during the switch leaves no target stored. A
-/// refusal keeps the session, its target and its stored data: unlike a refused sign-in nothing is cleared, and a switch
-/// is no sign-out, so it never reaches the identity provider and writes no warn line.
+/// `GET /api/v1/me`, sent as a probe the same way ([IPlatformIdentityRepository.fetch]). Only its 200 rewrites the
+/// stored target ([IAuthSessionRepository.persistTarget]), under the session generation the switch started under, so a
+/// sign-out during the switch leaves no target stored. A refusal keeps the session, its target and its stored data:
+/// unlike a refused sign-in nothing is cleared, and a switch is no sign-out, so it never reaches the identity provider
+/// and writes no warn line.
 ///
 /// The generation read when the switch starts decides its outcome: once that session has ended, the gate's answer,
 /// a success or a refusal alike, and a target that could not be stored are [SessionTargetSwitchAbandoned], so no answer
@@ -52,12 +53,12 @@ class SwitchSessionTargetUseCase {
             return _refused(to, _studioSwitchRefusal(error));
         }
       case SessionTarget.platform:
-        switch (await platformIdentity!.fetch()) {
+        switch (await platformIdentity!.fetch(probe: true)) {
           case Success(:final data):
             switched = SwitchedToPlatform(data);
           case Failure(:final error):
             if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
-            return _refused(to, platformGateRefusal(error));
+            return _refused(to, _platformSwitchRefusal(error));
         }
     }
     if (SessionGeneration.hasEnded(generation)) return _abandoned(to);
@@ -77,6 +78,15 @@ class SwitchSessionTargetUseCase {
   static AppErrorCode _studioSwitchRefusal(AppError error) => switch (error) {
     ServerError(code: null) || NetworkError(code: null) || TimeoutError(code: null) => AppErrorCode.studioUnreachable,
     _ => studioGateRefusal(error),
+  };
+
+  /// The code of a Platform gate failure: [AppErrorCode.platformUnreachable] when Platform does not answer, that is a
+  /// connection that failed or a timeout, besides the 5xx without Platform's code that `platformError` already gives
+  /// it, and [platformGateRefusal] for any other failure. The login page shows its own notice for an unreachable
+  /// Platform, so only the switch maps a failed connection here.
+  static AppErrorCode _platformSwitchRefusal(AppError error) => switch (error) {
+    NetworkError(code: null) || TimeoutError(code: null) => AppErrorCode.platformUnreachable,
+    _ => platformGateRefusal(error),
   };
 
   /// A sign-out or an idle timeout during a switch is an expected path, so it is told at info.

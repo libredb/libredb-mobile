@@ -5,12 +5,15 @@ import 'package:libredb_mobile/features/platform_status/application/platform_sta
 import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/features/platform_status/presentation/pages/platform_unreachable_page.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 
 /// Shows [PlatformUnreachablePage] over [child] while Platform does not answer its liveness check, and [child]
 /// otherwise, also before the first answer arrives: the mirror of `StudioStatusGate`.
 ///
 /// [child] stays mounted under the page, offstage and without tickers, focus or semantics, so the open pages keep
-/// their state, unsaved input included, and show again as they were once Platform answers. It tells
+/// their state, unsaved input included, and show again as they were once Platform answers.
+/// [PlatformUnreachableStatus] tells them whether the page covers them, so one that loaded and failed while covered
+/// loads again once uncovered. It tells
 /// [PlatformStatusBloc] when the app goes to the background and comes back; the bloc decides whether to check again.
 ///
 /// With [passThrough] it shows [child] whatever Platform answers, keeping it in the same place in the tree: anything
@@ -76,7 +79,10 @@ class _PlatformStatusGateState extends State<PlatformStatusGate> with WidgetsBin
                 enabled: !hidden,
                 child: ExcludeFocus(
                   excluding: hidden,
-                  child: ExcludeSemantics(excluding: hidden, child: widget.child),
+                  child: ExcludeSemantics(
+                    excluding: hidden,
+                    child: PlatformUnreachableStatus(isUnreachable: hidden, child: widget.child),
+                  ),
                 ),
               ),
             ),

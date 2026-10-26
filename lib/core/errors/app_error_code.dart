@@ -116,6 +116,11 @@ enum AppErrorCode {
   platformPlanFeatureRequired('platform.plan_feature_required'),
   platformPermissionDenied('platform.permission_denied'),
   platformInternalError('platform.internal_error'),
+
+  /// Platform does not answer: a 5xx without Platform's error code, which only the edge in front of a stopped Platform
+  /// sends, since Platform codes every 5xx of its own (`platformError`), or, for the mode switch only, a connection
+  /// that failed or a timeout (`SwitchSessionTargetUseCase`).
+  platformUnreachable('platform.unreachable'),
   platformUnreadableAnswer('platform.unreadable_answer'),
 
   // --- generic fallback ---

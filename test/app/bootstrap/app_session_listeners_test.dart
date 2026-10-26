@@ -819,6 +819,21 @@ void main() {
           AppErrorCode.studioUnreachable,
           "Studio yanıt vermiyor, bu yüzden hesap Platform'da kalıyor. Biraz sonra tekrar deneyin.",
         ),
+        // The edge in front of a stopped Platform answers 502 without Platform's code (#343).
+        (
+          'en',
+          SessionTarget.studio,
+          SessionTarget.platform,
+          AppErrorCode.platformUnreachable,
+          'Platform does not answer, so this account stays in Studio. Try again in a moment.',
+        ),
+        (
+          'tr',
+          SessionTarget.studio,
+          SessionTarget.platform,
+          AppErrorCode.platformUnreachable,
+          "Platform yanıt vermiyor, bu yüzden hesap Studio'da kalıyor. Biraz sonra tekrar deneyin.",
+        ),
       ]) {
         testWidgets('to ${to.name} refused with ${code.key} says in $language that the account stays in ${from.name}', (
           tester,

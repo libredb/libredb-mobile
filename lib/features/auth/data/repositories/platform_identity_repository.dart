@@ -15,9 +15,9 @@ class PlatformIdentityRepository implements IPlatformIdentityRepository {
   static final _log = AppLogger.getLogger('PlatformIdentityRepository');
 
   @override
-  Future<Result<PlatformIdentity>> fetch() async {
+  Future<Result<PlatformIdentity>> fetch({bool probe = false}) async {
     try {
-      final response = await _apiClient.get('/v1/me');
+      final response = await _apiClient.get('/v1/me', bypassResilience: probe);
       final identity = PlatformIdentityModel.fromJsonString(response.data!);
       // Only the roles: the e-mail and the name stay out of the log.
       _log.debug('fetch: roles {}', [identity.roles]);

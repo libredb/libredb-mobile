@@ -489,6 +489,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
       "The plan of this Platform install does not include this feature.",
     ),
+    "error_platform_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Platform does not answer. Try again in a moment.",
+    ),
     "error_platform_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Platform sent an answer this app cannot read. The app may need an update.",
     ),
@@ -884,6 +887,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Platform did not accept this account, so it stays in Studio. Ask an administrator to check that this app is set up for Platform.",
     ),
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Switch to Platform?"),
+    "profile_switch_platform_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Platform does not answer, so this account stays in Studio. Try again in a moment.",
+    ),
     "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
       "Studio did not accept this account, so it stays in Platform. Ask an administrator for access.",
     ),

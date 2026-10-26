@@ -19,6 +19,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
 import 'package:libredb_mobile/shared/widgets/local_filter_field.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 
 /// Every connection of the install in Platform mode, active and inactive, newest first, with a local search.
 ///
@@ -30,10 +31,20 @@ class PlatformConnectionListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<PlatformConnectionActiveBloc, PlatformConnectionActiveState>(
-      listener: _onActiveChange,
-      child: _buildList(),
+    return OnPlatformReachable(
+      onReachable: () => _reloadFailed(context),
+      child: BlocListener<PlatformConnectionActiveBloc, PlatformConnectionActiveState>(
+        listener: _onActiveChange,
+        child: _buildList(),
+      ),
     );
+  }
+
+  /// Asks Platform again once it answers again under its unreachable page, when the list failed meanwhile; a loaded
+  /// list keeps its rows.
+  static void _reloadFailed(BuildContext context) {
+    final bloc = context.read<PlatformConnectionListBloc>();
+    if (bloc.state is PlatformConnectionListFailure) bloc.add(const PlatformConnectionListRefreshed());
   }
 
   Widget _buildList() {

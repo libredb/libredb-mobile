@@ -23,6 +23,7 @@ import 'package:libredb_mobile/features/platform_grants/presentation/pages/platf
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -68,7 +69,12 @@ void main() {
   late MockIPlatformGrantRepository grants;
   late MockPlatformDirectoryRepository directory;
 
+  /// Whether the Platform unreachable page covers the pages.
+  late ValueNotifier<bool> platformUnreachable;
+
   setUp(() {
+    platformUnreachable = ValueNotifier(false);
+    addTearDown(platformUnreachable.dispose);
     grants = MockIPlatformGrantRepository();
     directory = MockPlatformDirectoryRepository();
     when(() => grants.list(any())).thenAnswer((_) async => Success([_grant()]));
@@ -132,7 +138,14 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           routerConfig: router,
-          builder: (context, child) => Scaffold(body: child),
+          // Under the Platform gate, as in the app.
+          builder: (context, child) => ValueListenableBuilder(
+            valueListenable: platformUnreachable,
+            builder: (context, isUnreachable, _) => PlatformUnreachableStatus(
+              isUnreachable: isUnreachable,
+              child: Scaffold(body: child),
+            ),
+          ),
         ),
       ),
     );
@@ -278,6 +291,51 @@ void main() {
       await tester.tap(find.text(S.current.retry));
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const ValueKey('platform-directory-user-alice')), findsOneWidget);
+    });
+
+    testWidgets('a search that failed under the Platform unreachable page is sent again once uncovered', (
+      tester,
+    ) async {
+      var fail = true;
+      when(
+        () => directory.search(
+          query: any(named: 'query'),
+          page: any(named: 'page'),
+        ),
+      ).thenAnswer(
+        (_) async => fail
+            ? const Failure(NetworkError('Connection refused'))
+            : Success(DirectoryPage(users: [_alice], page: 1, total: 1)),
+      );
+      await openPicker(tester);
+      platformUnreachable.value = true;
+      await tester.pump();
+      clearInteractions(directory);
+      fail = false;
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verify(() => directory.search(query: '', page: 1)).called(1);
+      expect(find.byKey(const ValueKey('platform-directory-user-alice')), findsOneWidget);
+    });
+
+    testWidgets('a loaded search asks nothing once the Platform unreachable page uncovers it', (tester) async {
+      await openPicker(tester);
+      platformUnreachable.value = true;
+      await tester.pump();
+      clearInteractions(directory);
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verifyNever(
+        () => directory.search(
+          query: any(named: 'query'),
+          page: any(named: 'page'),
+        ),
+      );
       expect(find.byKey(const ValueKey('platform-directory-user-alice')), findsOneWidget);
     });
 

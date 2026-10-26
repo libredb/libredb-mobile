@@ -39,6 +39,7 @@ import 'package:libredb_mobile/shared/utils/app_lifecycle_source.dart';
 import 'package:libredb_mobile/shared/utils/background_run_time.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/result_view_mode_cubit.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -197,6 +198,8 @@ class BrowseHarness {
                 GlobalCupertinoLocalizations.delegate,
               ],
               supportedLocales: S.delegate.supportedLocales,
+              // Studio answers, so its gate, which provides the status in the app, covers nothing.
+              builder: (context, child) => StudioUnreachableStatus(isUnreachable: false, child: child!),
             ),
           ),
         ),

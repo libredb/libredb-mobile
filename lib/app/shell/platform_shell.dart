@@ -11,6 +11,8 @@ import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/app/shell/sign_out_flow.dart';
 import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
@@ -39,6 +41,14 @@ class _PlatformShellState extends State<PlatformShell> {
     // has already filled the cubit from its gate, and the sign-out clears it, so the next admin is asked again.
     final identity = context.read<PlatformIdentityCubit>();
     if (identity.state is PlatformIdentityInitial) identity.load();
+  }
+
+  /// Asks Platform again who the admin is when that answer failed while Platform's unreachable page covered the shell,
+  /// as on a restore while Platform is down, once a check finds Platform answering and the page uncovers the shell; an
+  /// identity that loaded, or that is still awaited, is left as it is.
+  void _reloadFailedOnPlatformReachable(BuildContext context, PlatformStatusState state) {
+    final identity = context.read<PlatformIdentityCubit>();
+    if (identity.state is PlatformIdentityFailure) identity.load();
   }
 
   /// [screen], covered by the refusal page while Platform refuses the signed-in admin, decided here only and never by
@@ -83,36 +93,41 @@ class _PlatformShellState extends State<PlatformShell> {
 
   @override
   Widget build(BuildContext context) {
-    return DevConsoleShortcut(
-      child: SignOutProgressBarrier(
-        child: Column(
-          children: [
-            const ConnectivityBanner(),
-            Expanded(
-              // The offline banner already pads itself below the status bar, so the shell must not add that inset
-              // again.
-              child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
-                selector: (state) => state.isOffline,
-                builder: (context, isOffline) => MediaQuery.removePadding(
-                  context: context,
-                  removeTop: isOffline,
-                  child: _accountRefusalOr(
-                    ResponsiveScaffold(
-                      target: SessionTarget.platform,
-                      activeRoute: widget.state.uri.path,
-                      // The shell's context, which stays mounted until the login page opens.
-                      child: SignedInAccountScope(
-                        subject: null,
-                        signOut: () => signOutAndOpenLogin(context),
-                        reloadStoredData: _reloadStoredData,
-                        child: AppPlatformIdentityScope(child: widget.child),
+    // The shell is mounted for a Platform session only, which the unreachable page covers while Platform is down.
+    return BlocListener<PlatformStatusBloc, PlatformStatusState>(
+      listenWhen: (previous, current) => previous is PlatformUnreachable && current is! PlatformUnreachable,
+      listener: _reloadFailedOnPlatformReachable,
+      child: DevConsoleShortcut(
+        child: SignOutProgressBarrier(
+          child: Column(
+            children: [
+              const ConnectivityBanner(),
+              Expanded(
+                // The offline banner already pads itself below the status bar, so the shell must not add that inset
+                // again.
+                child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
+                  selector: (state) => state.isOffline,
+                  builder: (context, isOffline) => MediaQuery.removePadding(
+                    context: context,
+                    removeTop: isOffline,
+                    child: _accountRefusalOr(
+                      ResponsiveScaffold(
+                        target: SessionTarget.platform,
+                        activeRoute: widget.state.uri.path,
+                        // The shell's context, which stays mounted until the login page opens.
+                        child: SignedInAccountScope(
+                          subject: null,
+                          signOut: () => signOutAndOpenLogin(context),
+                          reloadStoredData: _reloadStoredData,
+                          child: AppPlatformIdentityScope(child: widget.child),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

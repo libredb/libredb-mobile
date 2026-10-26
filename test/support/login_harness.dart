@@ -175,7 +175,7 @@ class RefusingPlatform implements IPlatformIdentityRepository {
   int fetches = 0;
 
   @override
-  Future<Result<PlatformIdentity>> fetch() async {
+  Future<Result<PlatformIdentity>> fetch({bool probe = false}) async {
     fetches++;
     return Failure(error);
   }

@@ -14,6 +14,7 @@ import 'package:libredb_mobile/features/platform_grants/presentation/pages/platf
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../mocks/mock_classes.dart';
@@ -59,7 +60,8 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           routerConfig: router,
-          builder: (context, child) => Scaffold(body: child),
+          // Under the Platform gate, which provides the status, as in the app.
+          builder: (context, child) => PlatformUnreachableStatus(isUnreachable: false, child: Scaffold(body: child)),
         ),
       ),
     );

@@ -15,6 +15,7 @@ import 'package:libredb_mobile/features/platform_status/presentation/pages/platf
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -128,6 +129,48 @@ void main() {
     expect(TickerMode.valuesOf(tester.element(content)).enabled, isFalse);
     expect(find.bySemanticsLabel('app content'), findsNothing);
     semantics.dispose();
+  });
+
+  // A screen that failed while covered loads again once uncovered (#343), so it must know when it is covered.
+  testWidgets('tells the screens below it whether the unreachable page covers them', (tester) async {
+    final covered = <bool>[];
+    await pumpGate(
+      tester,
+      Builder(
+        builder: (context) {
+          covered.add(PlatformUnreachableStatus.isUnreachableOf(context));
+          return const SizedBox();
+        },
+      ),
+    );
+    expect(covered.last, isFalse);
+
+    when(() => repository.liveness()).thenAnswer((_) async => const Failure(NetworkError('No Internet connection')));
+    await checkLiveness(tester);
+    expect(covered.last, isTrue);
+
+    when(() => repository.liveness()).thenAnswer((_) async => const Success(null));
+    await checkLiveness(tester);
+    expect(covered.last, isFalse);
+  });
+
+  testWidgets('tells a passed-through screen that nothing covers it', (tester) async {
+    final covered = <bool>[];
+    await pumpGate(
+      tester,
+      Builder(
+        builder: (context) {
+          covered.add(PlatformUnreachableStatus.isUnreachableOf(context));
+          return const SizedBox();
+        },
+      ),
+      passThrough: true,
+    );
+
+    when(() => repository.liveness()).thenAnswer((_) async => const Failure(NetworkError('No Internet connection')));
+    await checkLiveness(tester);
+
+    expect(covered, everyElement(isFalse));
   });
 
   testWidgets('passes its child through, with no unreachable page, when told to', (tester) async {

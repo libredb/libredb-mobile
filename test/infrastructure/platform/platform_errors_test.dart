@@ -66,10 +66,12 @@ void main() {
 
   group('platformError without a known code', () {
     final cases = <(int, String?, Type, AppErrorCode?)>[
-      (500, null, ServerError, AppErrorCode.platformInternalError),
-      (502, null, ServerError, AppErrorCode.platformInternalError),
+      // Platform answers every 5xx of its own with a code (libredb-platform api-v1-response.ts), so a 5xx without one
+      // comes from the edge in front of a stopped Platform (#343).
+      (500, null, ServerError, AppErrorCode.platformUnreachable),
+      (502, null, ServerError, AppErrorCode.platformUnreachable),
       (503, 'SOMETHING_NEW', ServerError, AppErrorCode.platformInternalError),
-      (504, null, ServerError, AppErrorCode.platformInternalError),
+      (504, null, ServerError, AppErrorCode.platformUnreachable),
       (400, null, ValidationError, null),
       (400, 'SOMETHING_NEW', ValidationError, null),
       (401, null, AuthError, null),
