@@ -201,6 +201,8 @@ They pass in this order, and each one holds before the steps that name it:
 2. Gate 2: the M10-P and M11-P walkthroughs passed (#251 and #271).
 3. Gate 3: the full-system check inside a Platform installer environment passed (#304).
 4. Gate 4: the dry run of a Platform-mode bundle passed (#305), steps 1 and 2 below.
+   A dry run whose checks all passed ran on 2026-10-26 ahead of gate 1, on the owner's word, from `main` at `de0b6ad` before the 1.0.0 release ([platform.md](platform.md#release-dry-run)).
+   Whether it counts for this gate once gate 1 passes, or a new dry run is needed then, is the owner's call, so this gate is not passed yet.
 5. Gate 5: the owner's approval to ship Platform mode is recorded in `.team/decisions.md`.
 
 ### Steps

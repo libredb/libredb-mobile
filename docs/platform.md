@@ -399,3 +399,34 @@ Notes:
 - The phone part of #304 (steps 2, 3, 5, 6 and 7) was not run, because the `.libredb.test` names resolve only inside the cluster and on the development machine, and the internal CA is not one the phone trusts; so the app itself, the browser sign-in on a device and the Platform and Studio screens were not checked on a Helm install.
 - The token check used a script that sends the requests the app sends, not the app, and trusted the install's internal CA.
 - The realm's first admin starts with the required actions `UPDATE_PASSWORD` and `CONFIGURE_TOTP`, as an installer install does; for this throwaway cluster the check removed `CONFIGURE_TOTP` through the Admin API and set a new password, and Keycloak then asked for the first name, last name and e-mail the account lacked, so a first sign-in from the app on a new Helm install meets those Keycloak pages in the browser before the app gets its token.
+
+## Release dry run
+
+The release dry run of a Platform-mode bundle (#305, gate 4 of [release.md](release.md#gates)) was run on 2026-10-26 as run 40301869691 of `release.yml`, a `workflow_dispatch` run on `main` at `de0b6ad`.
+The orchestrator did the owner's steps 2 and 3 on the owner's word: `PLATFORM_API_URL` was set to Railway platform-dev's Platform on the `release-dry-run` environment only, and `PLATFORM_CERT_PINS` was left unset.
+The run came ahead of gate 1, on the owner's word, while release pull request #212 was still open, so the bundle is a build of `main` from before the 1.0.0 Studio-only release, and the owner's step 1 of [release.md](release.md#steps) ran before gates 1 to 3 had all passed.
+Whether this run counts for gate 4 once gate 1 passes, or a new dry run of `main` is needed then, is the owner's call and is not settled yet; until then gate 4 stays open.
+The repository variables `PROD_API_URL`, `OIDC_ISSUER` and `OIDC_CLIENT_ID` name Railway platform-dev's Studio, its Keycloak realm and the client `libredb-mobile`, so one sign-in carries both audiences.
+The run log was read with `gh run view --log`, and the `release-bundle` artifact was turned into a universal APK with bundletool 1.18.3 (`bundletool-all-1.18.3.jar`, SHA-256 `a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29`, equal to the digest GitHub lists for that release asset), signed with the debug key.
+The artifact holds `bundle/release/app-release.aab` (version 1.0.0, version code 1) and `mapping/release/mapping.txt`.
+The device was the test phone, a Samsung Galaxy M51 (SM-M515F) on Android 12, reached over wireless debugging.
+An agent typed every Keycloak sign-in on the phone, as the Play review demo Platform admin for Platform and as the play-review account for Studio.
+
+| Step | Result |
+| --- | --- |
+| 1. Variables | Passed: the repository's Studio and Keycloak variables name Railway platform-dev; nothing was set on `release-signing` or the repository for this check |
+| 4. Run log | Passed: Verify and Build signed App Bundle succeeded and Upload to Play internal testing was skipped; `Defines set:` lists `OIDC_CLIENT_ID, OIDC_ISSUER, PLATFORM_API_URL, PROD_API_URL, SENTRY_DSN`, without `PLATFORM_CERT_PINS`; "Refuse check-only defines" ends with `No check-only define, no non-https URL and no pin define that breaks a rule in the store build.`; the Sentry step logs `Dry run: the Dart symbols and the R8 mapping are not uploaded to Sentry; a dry run never reaches Sentry.`; the build log says the bundle was signed with the environment's throwaway key and its fingerprint check passed |
+| 4. URL and DSN in the log | Passed: the Platform URL appears only in the env blocks GitHub prints at the head of two steps, the defines step's env and the `RELEASE_VARS` of "Refuse check-only defines", and in no line a script printed; `SENTRY_DSN` shows only as `***` |
+| 5. Obfuscation | Passed: `strings` of `lib/arm64-v8a/libapp.so` finds no `_PlatformShellState` and finds the logger name `PlatformConnectionListBloc` |
+| 5. Login page | Passed: after `install -r` and a cleared app, a cold start shows the Studio entry and the Platform entry |
+| 5. Platform sign-in | Passed: the Platform entry lands in the Platform shell with Home, Connections and Audit; Home shows the organization and the admin as Platform admin, the connection list loads the sample connections as active, and the Audit tab opens under screen capture protection, so its content was not captured |
+| 5. Studio sign-in | Passed: after the Platform sign-out the Studio entry showed the Keycloak form and landed in the Studio shell, whose connection list loads the play-review account's 4 read-only sample connections |
+| 5. Logs | Passed: the logcat of the run, 19121 lines, holds no JWT, no `Bearer` value, no password and no e-mail address (the only matches were object hashes of system services); the app logged 14 lines, none with a URL, token or account name |
+| 5. Phone | Passed: the app is signed out and installed, and the phone is on its home screen |
+| 6. Variable | Done: the owner chose to keep `PLATFORM_API_URL` on `release-dry-run`, so later dry runs build Platform-mode bundles; it is set nowhere else |
+| 7. Files | Passed: the bundle, the mapping, the APKs, the saved run log and logcat, and the screenshots were deleted from the agent's scratch directory |
+
+Notes:
+
+- `SENTRY_DSN` is a repository secret, so the dry-run bundle carries the DSN and its app starts Sentry; the bundle was never shared beyond the workflow artifact and the scratch directory.
+- The images that Railway platform-dev ran that day were not read.
