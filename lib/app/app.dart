@@ -168,15 +168,16 @@ class _AppViewState extends State<_AppView> {
                         SessionUnknown() => const _RestoreView(),
                         SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
                           LocaleRestoring() => const _RestoreView(),
-                          LocaleReady() || LocaleChanging() || LocaleChangeFailure() =>
-                            BlocBuilder<OnboardingCubit, OnboardingState>(
-                              // The end of restore, which lets the router in. Nothing later changes what it shows.
-                              buildWhen: (previous, current) => previous is OnboardingRestoring,
-                              builder: (context, onboarding) => switch (onboarding) {
-                                OnboardingRestoring() => const _RestoreView(),
-                                OnboardingRequired() || OnboardingSeen() => router!,
-                              },
-                            ),
+                          LocaleReady() ||
+                          LocaleChanging() ||
+                          LocaleChangeFailure() => BlocBuilder<OnboardingCubit, OnboardingState>(
+                            // The end of restore, which lets the router in. Nothing later changes what it shows.
+                            buildWhen: (previous, current) => previous is OnboardingRestoring,
+                            builder: (context, onboarding) => switch (onboarding) {
+                              OnboardingRestoring() => const _RestoreView(),
+                              OnboardingRequired() || OnboardingSeen() => router!,
+                            },
+                          ),
                         },
                       },
                     ),
