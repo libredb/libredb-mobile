@@ -253,6 +253,7 @@ A build without a Platform target keeps the Studio gate over the restore, the lo
 Only Docker or VM installer installs with `mobile.enabled`, and Railway platform-dev, serve Platform mode today.
 The Helm chart does not create the mobile client yet (libredb-platform `charts/libredb-platform/Chart.yaml`, the `mobile.enabled` change note).
 The audit log is empty unless a Studio governed by that Platform has run statements: Platform lists the query events such a Studio writes into its `bridge` schema, and nothing else.
+The full-system check of 2026-10-26 ran Platform mode against installer 1.3.0 (Platform 1.3.0, Studio 1.1.0) with `mobile.enabled`, on a public certificate; see [Full-system check](#full-system-check).
 
 ## M10-P walkthrough
 
@@ -324,3 +325,49 @@ Notes:
 - The reload latency itself (at most `GOVERNANCE_REFRESH_MS`) was not timed in steps 7 and 8: one phone holds one session and no desktop browser watched Studio web, so each check is the first load after a sign-in; it is Studio's behaviour, not the app's.
 - `docs/security.md` says the recent-apps preview is black under `FLAG_SECURE`; on this Samsung phone the card keeps the last snapshot taken while the window was not secure.
 - One Studio sign-out logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared, as in the M10-P walkthrough (#277).
+
+## Full-system check
+
+The full-system check of milestone M12-P (#304) was run on 2026-10-26 on the test phone against the Platform installer environment of [studio.md](studio.md) "Platform installer environment" (#303), whose Studio is governed by that Platform at the default governance refresh.
+The install was `libredb-installer version` `release 1.3.0`, with `mobile.enabled: true` and `tls.mode: provided` on a Let's Encrypt certificate for `<platform host>`, `<studio host>` and `<auth host>`.
+`libredb-installer images list` printed these digests:
+
+| Image | Digest |
+| --- | --- |
+| Platform | `ghcr.io/libredb/libredb-platform@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9` |
+| Studio | `ghcr.io/libredb/libredb-studio@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c` |
+| Keycloak | `quay.io/keycloak/keycloak@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244` |
+| PostgreSQL | `docker.io/library/postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
+| Edge | `docker.io/library/caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af` |
+
+Builds F, F-pin and F-badpin were built from `main` at `f056028` with Flutter 3.47.7 as release APKs of `main_prod.dart` signed with the debug key and without `SENTRY_DSN`, from defines files kept outside every repository and deleted after the check.
+Each had the environment's `PROD_API_URL`, `OIDC_ISSUER` and `PLATFORM_API_URL`, `OIDC_CLIENT_ID=libredb-mobile`, `OIDC_PROMPT=omit` and `SCREEN_CAPTURE_PROTECTION=false`.
+F-pin added `PLATFORM_CERT_PINS` with the pin of the key the Platform host served and a backup pin of a new key, and F-badpin two pins of new keys that match no key of the host.
+`RELEASE_VARS='{}' tool/release/check_defines.sh` exited 0 on each of the three defines files.
+The device was the test phone, a Samsung Galaxy M51 (SM-M515F) on Android 12, reached over wireless debugging.
+The owner ruled the environment a demo environment, so an agent typed every Keycloak sign-in on the phone, as the test user `lab-user` with the client role `user` and no grant, or as the realm's admin account `libredb-admin`.
+The check connection was `Lab sample PostgreSQL`, the environment's only connection, with a write credential, over the sample data of [studio.md](studio.md) "Sample data".
+The install's `queryLog.statementCapture` is `redacted`, the value the event page shows as "Statement capture".
+The license is a FREE license with 1 admin seat and 3 user seats, and the tenant's plan carries the audit log.
+
+| Step | Result |
+| --- | --- |
+| 1. Platform down at the login page | Passed: a cold start shows both entries; with Platform stopped, the first liveness check runs when the login page first needs Platform, so the app was started again to make it fail; the Platform entry is then disabled with "Platform does not answer." and Retry, a Retry keeps it so, and the test user's Studio sign-in works and was signed out; with Platform started again, Retry enables the entry |
+| 2. Admin sign-in | Passed: the Platform home shows the tenant name "LibreDB Mobile Lab", the slug "default" and the admin's name, and the navigation shows Home, Connections and Audit; the license page read 1 of 1 admin seats and 0 of 3 user seats before and after, since the admin account had already taken its seat in the web console during the install |
+| 3. Connections | Passed: the check connection is listed as active; the filter narrows by name, shows "No connection matches the filter" for a name that matches none, and pull to refresh reloads |
+| 4. Studio before the grant | Passed: the test user's Studio list shows no connection; observed in step 1's Studio session, which ran in the same state, without a grant, so the sign-in was not repeated |
+| 5. Grant and statements | Passed: the directory search finds the test user with "Takes a user seat", and read with an expiry the next day saves, granted by the admin; the test user's Studio list shows the check connection with the read-only marker after a pull, and `SELECT 1` and a `SELECT` on `customers` return 1 and 3 rows |
+| 6. Audit | Passed: after a pull the Audit tab lists both statements of step 5 first, by the test user on the check connection, with the redacted statement; the event page shows "Statement capture" "Redacted" and the statement with its literals replaced; "Only this user" and "Only this connection" each add a chip, and status Success in the filter sheet keeps both events; every event of the install was the test user's on the check connection, so the user and connection filters had nothing else to remove |
+| 7. Governance loop | Passed: the change to write saves; the test user's Studio list then shows the check connection without the read-only marker; the disable confirmation says it closes for every Studio user within about 30 seconds, the admin's list shows it Inactive with "Connection disabled", and the test user's first load, 60 seconds after the disable, shows no connection; after Enable the badge reads Active with "Connection enabled", and the test user's first load after it lists the check connection again with write, no read-only marker |
+| 8. Mode switch | Passed: in the admin's Platform session "Switch to Studio" opens the Studio home with no confirmation, no sign-out and no Keycloak form; "Switch to Platform" asks "Switch to Platform?", and Switch opens the Platform home with no Keycloak form |
+| 9. Studio down | Passed with a finding: with Studio stopped, Connections and Audit of the Platform session load after a pull; "Switch to Studio" is refused with the snackbar "Something went wrong" (#338) and the app stays in the Platform shell, signed in, as a refused switch must ("Session and refusals"), so the Studio unreachable page cannot cover a Studio session reached that way; after a refused switch the circuit breaker of `GET /auth/me` stayed open for its 30 second cooldown, and the switch worked once Studio answered and the cooldown ended; a Studio session started again with Studio stopped is covered by "Can't reach Studio", and with Studio started again its Retry uncovers the Studio screens, though the connection list and the profile's identity keep the failure they met while covered until their own Refresh and Retry (#339); the switch back to Platform asks for confirmation and works |
+| 10. Pins | Passed with a finding: F-pin over F restores the Platform session and loads Connections, the grant list and Audit; F-badpin over it covers the session with "Can't reach Platform" and "The connection could not be verified as secure, so it was blocked.", and the log shows `CertificatePinningAdapter` "Pin mismatch: rejecting connection" for the Platform host on `GET /health/live` and `GET /v1/me`, mapped to `network.cert_invalid`; the unreachable page offers no sign-out, so the app's data was cleared to reach the login page, where the Platform entry is disabled with "Platform does not answer." and Studio sign-in works; F was installed over it again |
+| 11. Revoke and logs | Passed: the revoke dialog names the test user, write access and the check connection; after Remove the test user's Studio list shows no connection after a pull; the admin signed out of Platform; the logcat capture of the whole run, 111150 lines, holds no JWT, no `Bearer` value, no password, no e-mail address (the only matches were object hashes of the keyboard service), no `subjectEmail`, no statement text, no database error text and no Platform error message text, and was deleted |
+| 12. Teardown | Passed for the app: the test user holds no grant on any connection, the check connection is active, the license page reads 1 of 1 admin seats and 0 of 3 user seats, the app is signed out, build F is installed and the phone is on its home screen; the environment stays up, because #196 still runs in it, and its teardown moves to #196 |
+
+Notes:
+
+- Step 9 found two defects, filed as #338 and #339: a switch to Studio that Studio answers with a 5xx without a code says only "Something went wrong" instead of naming Studio as not answering (#338), and the screens behind a Studio unreachable page keep the failure they met while covered after its Retry uncovers them (#339).
+- The issue expected the Studio unreachable page after "Switch to Studio" with Studio stopped; the M11-P ruling that a refused switch keeps the current session makes that unreachable, so step 9 covered the Studio gate through a restored Studio session instead.
+- Neither unreachable page offers a sign-out, by design, so step 10 reached the login page by clearing the app's data; that keeps the Keycloak session in the browser, so the Studio sign-in after it showed no Keycloak form.
+- A cold start while Platform answers runs the login page's first liveness check at once, so a Platform stopped later shows the notice only after a new start, a Retry, a return online or a return after more than 5 minutes in the background.
