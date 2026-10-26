@@ -407,6 +407,30 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   It fails if `android/app/build.gradle.kts` passes `SENTRY_DSN` to the native SDK other than through the check on the target file name, or if that file is not the only entry point that selects the prod environment, and if `MainActivity.kt` stops answering the channel `nativeSdkReady` asks.
   The logic of the two copies is held equal by `test/fixtures/native_scrub_cases.json` and `test/fixtures/native_scrub_map_cases.json`, which the Dart tests and the Android JVM tests (`android/app/src/test/kotlin`) both run; see "Running tests" for the JVM command.
 
+The twelve below guard the build, the release and the repository rather than a line of app code. They are named here
+because a contributor who has not read them cannot tell a fixture gap from a real regression when one fails —
+`user_data_registry_test.dart` in particular fails any pull request that files a new storage key in the wrong scope.
+
+- **`user_data_registry_test.dart`** fails if a `StorageKeys` value is neither registered in `createUserDataRegistry`
+  nor classified as a device preference, or if a repository that writes one is not listed. Exactly one of the two,
+  never both: "remove my data" must clear what belongs to the account and keep what belongs to the device.
+- **`design_token_test.dart`** fails on an off-token colour, radius or spacing literal under `lib/features/`, against
+  a per-file budget measured when the guard landed. It is a ratchet: a new offence fails, and so does a budget that
+  outlives the debt it was written for.
+- **`line_length_test.dart`** fails on a Dart line over 120 columns in `lib/`, `test/` or `tool/`. The formatter never
+  rewraps a comment and cannot split a string literal, and no analyzer lint takes a width.
+- **`agent_scratch_test.dart`** fails if a coding agent's working directory holds a tracked file, or is not
+  git-ignored. Ignore rules do not apply to a path git already follows, so both halves are checked.
+- **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
+  shapes the tree is generated and navigated by.
+- **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
+  **`play_listing_metadata_test.dart`** and **`release_docs_test.dart`** guard the release: the signing config, the
+  obfuscation and symbol upload, the store listing, and the labels `docs/release.md` quotes.
+- **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
+  settings the lock and the orientation policy need.
+- **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
+- **`installer_lab_config_test.dart`** guards the Platform installer environment used for the full-system check.
+
 The single sign-on has more guards next to the code they guard:
 
 - `test/app/di/app_scope_test.dart` fails if a misconfigured build creates or provides an OIDC client.
@@ -435,12 +459,22 @@ The single sign-on has more guards next to the code they guard:
   `test/shared/design_system/components/app_button_golden_test.dart`,
   `test/features/auth/presentation/pages/login_screen_golden_test.dart`. The
   bootstrap sets a default `AlchemistConfig` (light theme) and **disables platform
-  goldens**, so only the CI (Ahem-rendered) variant runs — identical on
-  macOS/Linux/CI, no font flake. Golden files set `setUpAll(() => TestEnv.autoReset
-  = false)` and use `pumpBeforeTest: pumpOnce` for animated widgets. Regenerate with
-  `flutter test --tags golden --update-goldens`. Coverage: all design-system
-  components, shared widgets, and key screens (rendered with mocked BLoCs via the
-  `test/support/golden_app.dart` `goldenScreen` helper) — 60 goldens, light + dark.
+  goldens**, so only the CI (Ahem-rendered) variant runs, which removes font flake.
+  It does **not** make the rasterisation the same everywhere: measured on this
+  repository, the component goldens deviate by 0.09–0.15% (23–39 pixels) between a
+  maintainer's macOS machine and the Linux CI runner, symmetrically and
+  independently of the fonts, so eleven component golden files fail locally and
+  pass on CI. **Produce a baseline on the runner that verifies it** — push a
+  temporary job that runs `flutter test --tags golden --update-goldens` and uploads
+  `**/goldens/ci/*.png`, download the artifact, commit the images that differ, and
+  delete the job in the same pull request. Regenerating locally is what sent #349
+  through two red CI rounds. Golden files set `setUpAll(() => TestEnv.autoReset
+  = false)` and use `pumpBeforeTest: pumpOnce` for animated widgets. Coverage: all
+  design-system components, shared widgets, and key screens (rendered with mocked
+  BLoCs via the `test/support/golden_app.dart` `goldenScreen` helper):
+  **34 golden images** across **40 scenarios** in 17 files, counted by
+  `test/architecture/testing_doc_test.dart`, which fails when this paragraph and the
+  tree disagree. Only the login and settings screens have a dark variant today.
   The responsive **shell / home screen is intentionally not goldened** (it boots
   via real DI in
   `App()` rather than mockable to a single deterministic frame; its
