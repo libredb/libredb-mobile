@@ -14,6 +14,7 @@ import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
@@ -56,6 +57,15 @@ class _LocalStorageDependencies extends MockSignInDependencies {
 
   @override
   AppLocalStorage createLocalStorage() => localStorage;
+}
+
+class _OnboardingDependencies extends MockSignInDependencies {
+  _OnboardingDependencies(this.store);
+
+  final IOnboardingSeenStore store;
+
+  @override
+  IOnboardingSeenStore createOnboardingSeenStore() => store;
 }
 
 void main() {
@@ -169,6 +179,48 @@ void main() {
 
       expect(find.bySemanticsLabel('Loading...'), findsNothing);
       expect(find.text("Studio'ya giriş yap"), findsOneWidget);
+    });
+
+    // The mirror of the stored-language wait above, and it ships with the cubit rather than with the route: once a
+    // route reads the flag, a first run that does not wait paints the login page and then jumps off it.
+    testWidgets('shows a loading indicator in place of the router until the introduction flag is read', (tester) async {
+      final flag = Completer<bool>();
+      final store = MockIOnboardingSeenStore();
+      when(() => store.read()).thenAnswer((_) => flag.future);
+      await tester.pumpWidget(App(language: 'en', dependencies: _OnboardingDependencies(store)));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.bySemanticsLabel('Loading...'), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+
+      flag.complete(true);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Loading...'), findsNothing);
+      expect(find.byType(LoginScreen), findsOneWidget);
+    });
+
+    // The three stored values the first frame waits on are read side by side, not one after another. Read in turn,
+    // every one of them adds its own wait to the spinner, and the app takes a frame longer to show anything than it
+    // has any reason to — which a widget test sees as "the router is not mounted yet" and a user sees on a slow
+    // device.
+    testWidgets('reads the introduction flag beside the stored session, not after it', (tester) async {
+      final secureStorage = MockISecureStorage();
+      final heldSession = Completer<String?>();
+      when(() => secureStorage.read(any())).thenAnswer((_) => heldSession.future);
+      final store = MockIOnboardingSeenStore();
+      when(() => store.read()).thenAnswer((_) async => true);
+
+      await tester.pumpWidget(
+        App(language: 'en', dependencies: _OnboardingDependencies(store), secureStorage: secureStorage),
+      );
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Loading...'), findsOneWidget, reason: 'the session has not answered yet');
+      verify(() => store.read()).called(1);
+
+      heldSession.complete(null);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('starts in the language that an earlier run stored', (tester) async {
