@@ -1,3 +1,7 @@
+import 'package:libredb_mobile/features/onboarding/data/repositories/adoption_figures_asset.dart';
+import 'package:libredb_mobile/features/onboarding/data/repositories/onboarding_seen_preferences.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/features/app_lock/data/repositories/app_lock_settings_preferences.dart';
 import 'package:libredb_mobile/features/app_lock/data/services/channel_recents_preview.dart';
 import 'package:libredb_mobile/features/app_lock/data/services/local_auth_device_authenticator.dart';
@@ -254,6 +258,15 @@ class AppDependencies {
 
   /// Whether results show cards or a table on this device.
   IResultViewModeStore createResultViewModeStore() => ResultViewModePreferences();
+
+  /// Whether this device has shown the introduction. It belongs to the device, not to an account: the introduction
+  /// runs before anyone signs in. Deliberately absent from [createUserDataRegistry] — "remove my data" must not make
+  /// the app re-introduce itself to someone who has used it for months.
+  IOnboardingSeenStore createOnboardingSeenStore() => OnboardingSeenPreferences();
+
+  /// The adoption figures the introduction shows, read from the asset `scripts/generate_adoption.sh` committed. It
+  /// opens no connection.
+  IAdoptionFiguresSource createAdoptionFiguresSource() => const AdoptionFiguresAsset();
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);

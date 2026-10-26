@@ -14,6 +14,8 @@ import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
@@ -144,7 +146,8 @@ class _AppViewState extends State<_AppView> {
             // The router's first redirect must see the restored session: while the session is unknown it treats a
             // signed-in user as signed out, shows the login page and loses a deep link. So the router is mounted, and
             // its first route parsed, only once restore has settled the session. Later sign-ins and sign-outs are left
-            // to its redirect. It also waits for the stored language, so the first page shows in it.
+            // to its redirect. It also waits for the stored language, so the first page shows in it, and for whether
+            // this device has shown the introduction, so a first run does not paint the login page and then jump.
             // The registry sits above the router, so the routes' onExit and the pages' UnsavedChangesScope find it.
             // AppStatusGate shows Studio's or Platform's unreachable page over it while that server does not answer
             // and keeps it mounted underneath, so the open pages and the session are as they were once it answers. In
@@ -165,7 +168,15 @@ class _AppViewState extends State<_AppView> {
                         SessionUnknown() => const _RestoreView(),
                         SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
                           LocaleRestoring() => const _RestoreView(),
-                          LocaleReady() || LocaleChanging() || LocaleChangeFailure() => router!,
+                          LocaleReady() || LocaleChanging() || LocaleChangeFailure() =>
+                            BlocBuilder<OnboardingCubit, OnboardingState>(
+                              // The end of restore, which lets the router in. Nothing later changes what it shows.
+                              buildWhen: (previous, current) => previous is OnboardingRestoring,
+                              builder: (context, onboarding) => switch (onboarding) {
+                                OnboardingRestoring() => const _RestoreView(),
+                                OnboardingRequired() || OnboardingSeen() => router!,
+                              },
+                            ),
                         },
                       },
                     ),
@@ -180,8 +191,9 @@ class _AppViewState extends State<_AppView> {
   }
 }
 
-/// Shown while [SessionCubit.restore] reads the stored session and [LocaleCubit.restore] the stored language: a 56 px
-/// ring spinner with a 4 px stroke, centered on the theme background.
+/// Shown while [SessionCubit.restore] reads the stored session, [LocaleCubit.restore] the stored language and
+/// [OnboardingCubit.restore] whether this device has shown the introduction: a 56 px ring spinner with a 4 px stroke,
+/// centered on the theme background.
 class _RestoreView extends StatelessWidget {
   const _RestoreView();
 

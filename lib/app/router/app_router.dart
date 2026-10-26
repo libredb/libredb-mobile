@@ -36,7 +36,7 @@ class AppRouterFactory {
   final List<NavigatorObserver> _observers;
 
   GoRouter create() {
-    final refreshNotifier = AppRouterRefreshNotifier(_sessionCubit.stream);
+    final refreshNotifier = AppRouterRefreshNotifier([_sessionCubit.stream]);
 
     return GoRouter(
       initialLocation: ApplicationRoutesConstants.root,

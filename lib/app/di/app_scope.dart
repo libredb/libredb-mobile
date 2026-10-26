@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
@@ -116,6 +119,9 @@ class AppScope extends StatelessWidget {
         // One for the app, so the leases of every guarded value area on screen are counted together.
         RepositoryProvider<ScreenCaptureProtection>(create: (_) => dependencies.createScreenCaptureProtection()),
         RepositoryProvider<ProjectLinks>.value(value: dependencies.projectLinks),
+        // Device preferences the introduction stands on, beside the other values that belong to no session.
+        RepositoryProvider<IOnboardingSeenStore>(create: (_) => dependencies.createOnboardingSeenStore()),
+        RepositoryProvider<IAdoptionFiguresSource>(create: (_) => dependencies.createAdoptionFiguresSource()),
         RepositoryProvider<AuthMode>.value(value: dependencies.authMode),
         // Provided above SessionCubit and IAuthRepository, which clear the stored session when they end one.
         RepositoryProvider<IAuthSessionRepository>(
@@ -412,6 +418,15 @@ class AppScope extends StatelessWidget {
           BlocProvider<LocaleCubit>(
             create: (_) =>
                 LocaleCubit(storage: dependencies.createLocalStorage(), defaultLocale: defaultLocale)..restore(),
+          ),
+          // Beside the language, and started the same way: both are device preferences the first frame waits on,
+          // and App holds the router back until each has answered (see app.dart).
+          // Not lazy, because App reads this one inside the branch that the session and the language have already
+          // settled: left lazy, the cubit is not even built until they answer, so its read runs after theirs instead
+          // of beside them and the spinner lasts a storage read longer than it has to.
+          BlocProvider<OnboardingCubit>(
+            lazy: false,
+            create: (context) => OnboardingCubit(store: context.read<IOnboardingSeenStore>())..restore(),
           ),
           // Above the router, so the shell, every feature and a route guard read the same answer; the shell loads them
           // when it opens and AppSessionListeners clears them at the session's end.
