@@ -761,9 +761,10 @@ From the host, without `-k`, on 2026-10-26:
 From the test phone, on its own network:
 
 - `ping` of each of the three hosts resolves to `<host LAN address>` and answers, so the router does not block the private answers.
-- The phone reaches TCP ports that the host itself serves, but its connection to port 443 through the proxy device times out, because the forwarded traffic needs the third `DOCKER-USER` rule of [Outbound HTTPS from the VM](#outbound-https-from-the-vm), which the owner has not added yet.
+- Port 443 through the proxy device timed out until the owner added the third `DOCKER-USER` rule of [Outbound HTTPS from the VM](#outbound-https-from-the-vm); the first two rules let the VM out but drop the forwarded traffic from the LAN.
+- With the third rule, the phone's `curl` gets 200 with `ssl_verify_result` 0 from `https://<platform host>/api/health/live`, `https://<studio host>/api/ready` and the issuer's discovery document, and Chrome on the phone opens the Platform sign-in page and the Keycloak login page with no certificate warning.
 
-Still open: that third rule and the phone's https check after it, the owner's password and TOTP step and test user, the owner's look at the `libredb-mobile` client in the realm console, and the sample connection in Platform's web console.
+Still open: the owner's password and TOTP step and test user, the owner's look at the `libredb-mobile` client in the realm console, and the sample connection in Platform's web console.
 
 ## Recording Studio answers
 
