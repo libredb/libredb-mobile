@@ -180,6 +180,56 @@ Start `release.yml` by hand (Actions, Release, Run workflow) on any branch, or r
 A dry run checks, tests and builds an obfuscated bundle signed with the throwaway key of the `release-dry-run` environment, keeps it as the `release-bundle` artifact, and never uploads, neither to Play nor to Sentry.
 It never reaches the upload key, so its bundle cannot go to Play.
 
+## Platform mode
+
+This is the ordered checklist that takes the store build from Studio-only to Platform mode (epic #298).
+Every step says who does it, the owner or an agent, and the gate that has to pass before it.
+An agent never sets a variable, starts a workflow, approves an environment, signs, tags, merges a release pull request, uploads, installs from Play or fills a store form; those steps are the owner's.
+
+### What the store build needs
+
+It needs Platform 1.3.0 or later, the first release with `PATCH /api/v1/connections/{id}`, which enabling and disabling a connection uses.
+It belongs to the same deployment as `PROD_API_URL` and `OIDC_ISSUER`, because one access token of the client `libredb-mobile` carries both audiences, Studio's and Platform's (libredb-platform `docs/api/v1.md`, "One token serves Studio and Platform").
+It is a deployment that serves Platform mode: a Docker or VM installer install with `mobile.enabled: true`, which creates that client with its audience mappers (libredb-platform `installer/README.md`, "Mobile app"), or Railway platform-dev; the Helm chart does not create the client ([platform.md](platform.md#where-platform-mode-works), "Where Platform mode works").
+`PLATFORM_API_URL` is that Platform's origin plus `/api` ([platform.md](platform.md#the-defines)), and the release workflow passes it, with `PLATFORM_CERT_PINS`, only when the owner sets it as a variable ([Secrets and variables](#secrets-and-variables)).
+
+### Gates
+
+They pass in this order, and each one holds before the steps that name it:
+
+1. Gate 1: 1.0.0 is released Studio-only through release pull request #212, and `release-as` is gone from `release-please-config.json` ([One-time steps in outside accounts](#one-time-steps-in-outside-accounts), steps 10 and 11).
+2. Gate 2: the M10-P and M11-P walkthroughs passed (#251 and #271).
+3. Gate 3: the full-system check inside a Platform installer environment passed (#304).
+4. Gate 4: the dry run of a Platform-mode bundle passed (#305), steps 1 and 2 below.
+5. Gate 5: the owner's approval to ship Platform mode is recorded in `.team/decisions.md`.
+
+### Steps
+
+1. Owner, after gates 1 to 3: set `PLATFORM_API_URL` as a variable of the `release-dry-run` environment only, and start a dry run ([Dry run](#dry-run)).
+   A variable of that environment reaches dry runs only, and a dry run signs with the throwaway key and never uploads.
+2. Agent, after the owner's dry run of step 1 has finished: read its run log and check the `release-bundle` artifact on the test phone, as #305 describes; this passes gate 4.
+3. Agent, after gates 4 and 5: open the turn-on pull request (#306), which moves the Platform-mode listing drafts into the live listing and makes the Platform-mode Data safety and App access answers the current ones.
+4. Owner, after step 3's checks are green: review the turn-on pull request and merge it.
+5. Owner, after step 4: move `PLATFORM_API_URL` from `release-dry-run` to the `release-signing` environment or to the repository.
+   Leave `PLATFORM_CERT_PINS` unset, as the owner ruled on 2026-10-26, so a certificate renewal cannot break the app; a pin of a default Caddy site breaks at its next renewal ([security.md](security.md#keys-that-outlive-renewals), "Keys that outlive renewals").
+6. Owner, after step 4: publish the privacy policy again ([Privacy policy](#privacy-policy)), fill the Data safety form and the App access entry from this page ([Data safety](#data-safety), [App access](#app-access)), enter the demo Platform admin account in the Play Console only, and paste the listing texts from `android/fastlane/metadata/android/`.
+7. Owner, after steps 5 and 6: merge the release pull request that release-please opens, then approve the build job and, once it has passed, the upload job.
+8. Owner, after step 7's upload job has finished: install the build from internal testing on the test phone, because that install uses the phone's Google account, which agents never touch.
+9. Agent, after step 8: run the short smoke check of #306 on the test phone, the Studio entry and the Platform entry each signing in to their shell.
+
+### Rolling back Platform mode
+
+1. Owner: halt the release in the Play Console, as [Rolling back](#rolling-back) says.
+2. Owner: remove `PLATFORM_API_URL`, and `PLATFORM_CERT_PINS` if it was ever set, from every place it was set: the repository, `release-signing` and `release-dry-run`.
+3. Agent, after step 1: open the rollback pull request, which restores the Studio-only listing texts in `android/fastlane/metadata/android/` from the parent of the turn-on pull request's commit, removes the Platform-mode screenshots from `images/phoneScreenshots/` and keeps the Studio ones, and makes the answers for a build without `PLATFORM_API_URL` the current Data safety and App access answers again.
+   Its squash commit is a Conventional Commit that release-please lists, such as `fix(release): ship the store build without Platform mode`, so release-please has a commit to release from in step 6.
+4. Owner, after step 3's checks are green: review the rollback pull request and merge it.
+5. Owner, after step 4: fill the Data safety form and the App access entry with the answers for a build without Platform mode, paste the listing texts from `android/fastlane/metadata/android/` and replace the Play screenshots with the Studio-only ones from its `images/phoneScreenshots/`.
+6. Owner, after steps 2 and 5: merge the release pull request that release-please opens, then approve the build job and, once it has passed, the upload job; the release has a higher build number and is Studio-only.
+
+On a device that updates to that build, a stored Platform session is cleared, and the login page shows only the Studio entry with the `platform.not_configured` message (`lib/app/session/session_cubit.dart`; [platform.md](platform.md), M10-P walkthrough step 10).
+A stored Studio session is kept.
+
 ## Rolling back
 
 Play never accepts a version code lower than one it has, so a bad build is replaced, not taken back.
@@ -258,7 +308,7 @@ Object search terms go only to the deployment's Studio, as part of the request, 
 
 The answers below are for a store build with `PLATFORM_API_URL` set as well as `SENTRY_DSN`; they replace the answers above only for such a build, and the owner decides whether the store build carries Platform mode (`lib/main/main_prod.dart`).
 LibreDB Platform runs in the same deployment the maintainer operates, beside its Keycloak and Studio ([privacy-policy.md](privacy-policy.md)), so the data this page declares as collected in Platform mode counts as collected by the developer and not as shared, for the same reason as Studio above.
-That data is what the access token carries: the admin's name, e-mail address, subject and username.
+What Platform mode adds is the access token sent to Platform, which carries the admin's name, e-mail address, subject and username; the statements sent to Studio and the Sentry rows stay Yes, as in the answers above.
 The search text, the grants, changes and removals of access and the enabling or disabling of a connection are sent to the admin's own Platform to carry out the admin's request and are recorded there; by the owner's ruling of 2026-10-26 they are not collected by the publisher, so they are not declared.
 Each Why cell reads the Play Console Help definitions of collection (data transmitted off the user's device) and of the data type in that row ([Data safety help](https://support.google.com/googleplay/android-developer/answer/10787469), "Data types").
 What Platform mode sends and shows is listed in [privacy-policy.md](privacy-policy.md); nothing of a Platform session is stored on the device ([security.md](security.md), "Removing the app's data").
@@ -289,7 +339,7 @@ Data types, Platform mode (none is shared, none is processed ephemerally, and no
 | Location | Approximate location | Yes (Sentry), until the setting above is on | Analytics | Unchanged |
 
 Every other data type is No in Platform mode as well: the audit log, the grant list and the directory results are received from Platform and held in memory only ([security.md](security.md)), which is not collection from the device.
-Whether the store build carries Platform mode at all stays the owner's decision, made before #306 fills the form.
+Whether the store build carries Platform mode at all stays the owner's decision, made before the owner fills the form in step 6 of [Platform mode](#platform-mode).
 
 ### Content rating
 

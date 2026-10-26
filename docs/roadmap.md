@@ -11,7 +11,8 @@ How the app talks to Studio is in [architecture.md](architecture.md).
 ## Status
 
 Each milestone from M2 on is a GitHub milestone with an epic issue that lists its children.
-The children of a milestone are filed as issues when it starts: M2 to M6 in full, M7 to M9 not yet, except the two M5 children that moved to M7 ([#122][i122], [#123][i123]).
+The children of a milestone are filed as issues when it starts: M2 to M6 and M10-P to M13-P in full, M7 and M8 not yet, except the two M5 children that moved to M7 ([#122][i122], [#123][i123]).
+M9 filed no children: M10-P and M11-P replaced it.
 
 | Milestone | Status | Epic |
 | --- | --- | --- |
@@ -24,7 +25,11 @@ The children of a milestone are filed as issues when it starts: M2 to M6 in full
 | M6 Release | In progress | [#34][e34] |
 | M7 Editor power tools | Planned | [#35][e35] |
 | M8 Admin on the go | Planned | [#36][e36] |
-| M9 Grant a connection | Planned, needs Platform v1 | [#37][e37] |
+| M9 Grant a connection | Superseded by M10-P and M11-P | [#37][e37] |
+| M10-P Platform admin: sign-in and grants | Done | [#252][e252] |
+| M11-P Platform connections and audit | Done | [#272][e272] |
+| M12-P Platform release and full-system check | In progress | [#298][e298] |
+| M13-P Connection request workflow | Planned, blocked upstream | [#310][e310] |
 
 The first store release (M6) comes before the admin and Platform work, so a Studio or Platform change that has not shipped does not hold it back.
 No Studio prerequisite blocks M2 to M6.
@@ -151,16 +156,41 @@ Epic [#36][e36], end-to-end walkthrough M8-99 (listed in the epic).
 ## M9 Grant a connection
 
 An admin gives a user read or write access to a connection from the phone, and reads the governed audit.
-Epic [#37][e37], end-to-end walkthrough M9-99 (listed in the epic).
+Epic [#37][e37] was closed as not planned: M10-P and M11-P built it on Platform's bearer API, as Platform mode.
 
-Grants live in LibreDB Platform, and Platform changes them only through server actions behind its web session today.
-This milestone waits for Platform v1 to offer an API that accepts the Keycloak access token:
+## M10-P Platform admin: sign-in and grants
 
-- List, set and revoke the grants of a connection, with a level and an expiry.
-- Read the governed query audit log.
-- The same checks, license seats and audit as the web console, under its own audience, such as `libredb-platform-api`, so a token meant for Studio cannot change grants.
+A second sign-in entry for Platform admins, and the grants of a connection, on LibreDB Platform's bearer API ([platform.md](platform.md)).
+Epic [#252][e252], end-to-end walkthrough [#251][i251].
+Done: every child is merged, and the walkthrough passed on the test phone against Railway platform-dev.
 
-Studio alone cannot do this: without Platform it gives connections to roles from an operator's seed file, not to people.
+- The login page offers Studio and Platform; sign-in stays Keycloak, and one access token carries both audiences.
+- A Platform shell, a session that remembers its target, and Platform's error codes with English and Turkish messages.
+- List the connections and a connection's grants, grant a user access through the directory picker, change a grant's level or expiry, and remove a grant.
+- No connection is created, edited or deleted on the phone, so the app still holds no database credential.
+
+## M11-P Platform connections and audit
+
+Close a connection for every user at once, and read Platform's audit log.
+Epic [#272][e272], end-to-end walkthrough [#271][i271].
+Done: every child is merged, and the walkthrough passed on the test phone against Railway platform-dev.
+
+- Enable and disable a connection, which needs Platform 1.3.0 or later.
+- The audit log on a third tab of the Platform shell, with filters and search.
+- A Platform unreachable page while Platform's liveness check fails, and a switch between Studio and Platform without signing out.
+
+## M12-P Platform release and full-system check
+
+Platform mode reaches the stores, after the owner approves.
+Epic [#298][e298]; its end-to-end check is the full-system check on the test phone inside a Platform installer environment ([#304][i304]), and on iOS ([#307][i307]).
+In progress: the store build stays Studio-only until the gates of the checklist in [release.md](release.md#platform-mode) pass.
+
+- The release workflow passes the Platform defines when the owner sets them, and the Play answers and listing drafts for a build with Platform mode exist.
+- A Platform installer environment for the full-system check, a dry run of a Platform-mode bundle, and the pull request that turns Platform mode on.
+
+## M13-P Connection request workflow
+
+A user asks for access to a connection from the phone, and a Platform admin acts on the request; epic [#310][e310], designed later and blocked until a Platform release ships the request API.
 
 ## Not planned
 
@@ -231,3 +261,11 @@ These stay out of the app; Studio's web UI serves them.
 [e35]: https://github.com/libredb/libredb-mobile/issues/35
 [e36]: https://github.com/libredb/libredb-mobile/issues/36
 [e37]: https://github.com/libredb/libredb-mobile/issues/37
+[e252]: https://github.com/libredb/libredb-mobile/issues/252
+[e272]: https://github.com/libredb/libredb-mobile/issues/272
+[e298]: https://github.com/libredb/libredb-mobile/issues/298
+[e310]: https://github.com/libredb/libredb-mobile/issues/310
+[i251]: https://github.com/libredb/libredb-mobile/issues/251
+[i271]: https://github.com/libredb/libredb-mobile/issues/271
+[i304]: https://github.com/libredb/libredb-mobile/issues/304
+[i307]: https://github.com/libredb/libredb-mobile/issues/307
