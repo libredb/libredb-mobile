@@ -254,12 +254,50 @@ Every other data type is No: precise location, financial info, health and fitnes
 The app keeps its drafts and history on the device, which Play does not count as collection.
 Object search terms go only to the deployment's Studio, as part of the request, and the app keeps no search history.
 
+#### A build with Platform mode
+
+The answers below are for a store build with `PLATFORM_API_URL` set as well as `SENTRY_DSN`; they replace the answers above only for such a build, and the owner decides whether the store build carries Platform mode (`lib/main/main_prod.dart`).
+LibreDB Platform runs in the same deployment the maintainer operates, beside its Keycloak and Studio ([privacy-policy.md](privacy-policy.md)), so the data this page declares as collected in Platform mode counts as collected by the developer and not as shared, for the same reason as Studio above.
+That data is what the access token carries: the admin's name, e-mail address, subject and username.
+The search text, the grants, changes and removals of access and the enabling or disabling of a connection are sent to the admin's own Platform to carry out the admin's request and are recorded there; by the owner's ruling of 2026-10-26 they are not collected by the publisher, so they are not declared.
+Each Why cell reads the Play Console Help definitions of collection (data transmitted off the user's device) and of the data type in that row ([Data safety help](https://support.google.com/googleplay/android-developer/answer/10787469), "Data types").
+What Platform mode sends and shows is listed in [privacy-policy.md](privacy-policy.md); nothing of a Platform session is stored on the device ([security.md](security.md), "Removing the app's data").
+
+Overview, Platform mode:
+
+| Question | Answer | Why |
+| --- | --- | --- |
+| Does the app collect or share any of the required user data types? | Yes | As above, plus the access token sent to Platform, which carries the name, e-mail address and user ids declared below ([privacy-policy.md](privacy-policy.md)) |
+| Is all user data encrypted in transit? | Yes | As above, and a prod build also stops at start when a set `PLATFORM_API_URL` is not https (`lib/infrastructure/config/environment.dart`, [security.md](security.md), "Encryption in transit"), which `tool/release/check_defines.sh` checks before the build |
+| Account creation | The app does not allow users to create an account | Unchanged: Platform's first answer to an account creates its Platform user record from the existing Keycloak account and takes an admin seat (libredb-platform `docs/api/v1.md`), so the user creates no account in the app |
+| Can users request that their data is deleted? | Yes | A Studio session as above; a Platform session keeps nothing on the device, so Settings shows no Remove my data there, and signing out or uninstalling removes the session ([security.md](security.md), "Removing the app's data"); crash reports through info@libredb.org |
+
+Data types, Platform mode (none is shared, none is processed ephemerally, and none is optional):
+
+| Category | Data type | Collected | Purposes | Why and source |
+| --- | --- | --- | --- | --- |
+| Personal info | Name | Yes | App functionality, Account management | Unchanged from the Studio answer, which the same access token already gives; Platform's identity answer returns the admin's own name (`GET /api/v1/me`). The names of other users that the grant list and the directory search show are received from Platform, not sent from the device. |
+| Personal info | Email address | Yes | App functionality, Account management | Unchanged: the access token carries the admin's e-mail address. The app never sends another user's e-mail address; a grant names its user by Keycloak id (libredb-platform `docs/api/v1.md`, `PUT /api/v1/connections/{id}/grants/{subject}`). |
+| Personal info | User IDs | Yes | App functionality, Account management | Unchanged: the access token carries the admin's own subject and username. A grant names the user it gives access to by Keycloak id inside the grant request (libredb-platform `docs/api/v1.md`, `PUT /api/v1/connections/{id}/grants/{subject}`), which by the same ruling as Other actions below goes to the admin's own Platform and is not collected by the publisher. |
+| App activity | In-app search history | No | | Owner's ruling of 2026-10-26: the directory search text and the audit statement search text are a query sent to the admin's own Platform to answer that search, not collected by the publisher, and the app keeps no search history ([privacy-policy.md](privacy-policy.md)) |
+| App activity | Other user-generated content | Yes | App functionality | Unchanged: the statements sent to Studio. Platform mode adds none: a grant holds a user, a level and an expiry chosen from lists, with no free text. |
+| App activity | Other actions | No | | Owner's ruling of 2026-10-26: the grants, changes and removals of access and the enabling or disabling of a connection are sent to the admin's own Platform and recorded there (libredb-platform `src/features/connections/lib/grant.repository.ts`, `database-connection.repository.ts`), not collected by the publisher |
+| App activity | App interactions | Yes (Sentry) | Analytics | Unchanged: Sentry's breadcrumbs and session records, the same in either mode ([crash-reporting.md](crash-reporting.md)) |
+| App info and performance | Crash logs | Yes (Sentry) | Analytics | Unchanged |
+| App info and performance | Diagnostics | Yes (Sentry) | Analytics | Unchanged |
+| Device or other IDs | Device or other IDs | Yes (Sentry) | Analytics | Unchanged |
+| Location | Approximate location | Yes (Sentry), until the setting above is on | Analytics | Unchanged |
+
+Every other data type is No in Platform mode as well: the audit log, the grant list and the directory results are received from Platform and held in memory only ([security.md](security.md)), which is not collection from the device.
+Whether the store build carries Platform mode at all stays the owner's decision, made before #306 fills the form.
+
 ### Content rating
 
 The questionnaire's answers, for the category of utility and productivity apps:
 
 - No violence, fear, sexual content, crude humour, profanity, drugs, alcohol, tobacco or gambling.
 - Users cannot talk to each other or exchange content through the app, and the app shares no user's location with other users.
+- In a build with Platform mode, an admin who gives another user access to a connection, changes it or removes it is not users talking to each other or exchanging content: the grant carries only a user, a level and an expiry, sends the other user no message, and the content of the databases stays in Studio.
 - No digital purchases and no unrestricted web browsing.
 - The app shows the content of the organisation's own databases; it supplies no content of its own, and the review deployment holds sample data only.
 
@@ -280,6 +318,34 @@ This build signs in to the publisher's own LibreDB deployment, which holds sampl
 4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
 5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
 ```
+
+In a build with `PLATFORM_API_URL` set, the login page has two entries instead of the single SSO button, so the entry gets the instructions below in place of the block above; they name no host, no username and no password.
+
+The maintainer creates a second demo account in the review deployment's Keycloak with Platform's admin role, and enters both accounts in the App access entry of the Play Console.
+The admin account takes one admin seat of that deployment's license on its first Platform sign-in, so the license needs a free one.
+A Platform admin sees and can change every connection of the install, so the review deployment must hold sample connections only.
+The Studio demo account and its grants stay as they are.
+
+```text
+LibreDB Mobile is a client of LibreDB Studio and LibreDB Platform, so every screen needs a sign-in.
+This build signs in to the publisher's own LibreDB deployment, which holds sample databases only; no VPN, code or other setup is needed.
+This entry gives two accounts: a Studio account and a Platform admin account.
+Studio:
+1. Open the app and tap "Sign in to Studio".
+2. On the sign-in page that opens in the browser, enter the Studio account's username and password.
+3. The Connections tab lists the sample connections; tap one to open it.
+4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
+5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
+6. Tap the avatar at the top right, tap "Logout" and confirm.
+Platform:
+7. Tap "Sign in to Platform" and enter the Platform admin account's username and password on the sign-in page.
+8. The "Home" tab shows the organization and the signed-in admin.
+9. The "Connections" tab lists every connection of the deployment; tap one to see who holds access to it.
+10. The "Audit" tab lists the queries Studio ran on these connections; "Filters" narrows the list.
+Please do not tap "Add access", "Change access", "Remove access" or "Disable connection": other testers use the same sample connections.
+```
+
+`test/architecture/release_docs_test.dart` fails when a double-quoted string inside a `text` block of this section is not a label of `lib/l10n/intl_en.arb`, so a pull request that renames such a label updates these instructions in the same change.
 
 ## Actions
 
