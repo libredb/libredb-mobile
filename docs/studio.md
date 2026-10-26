@@ -540,7 +540,15 @@ sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHE
 sudo iptables -I DOCKER-USER -o lxdbr0 -d 10.207.27.50 -p tcp --dport 443 -j ACCEPT
 ```
 
-These rules are the only host change besides the LXD proxy device, and they do not survive a reboot.
+The first two let the VM out and its replies back; the third lets the LAN reach the VM's port 443 through the proxy device, which forwards and does not deliver locally.
+They are host steps that only the owner runs, they and the LXD proxy device are the only host changes, and they do not survive a reboot, so the owner adds them again after one.
+At teardown the owner removes them:
+
+```shell
+sudo iptables -D DOCKER-USER -o lxdbr0 -d 10.207.27.50 -p tcp --dport 443 -j ACCEPT
+sudo iptables -D DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -D DOCKER-USER -i lxdbr0 -j ACCEPT
+```
 
 ### Phone reachability
 
@@ -646,6 +654,7 @@ lxc config device add libredb-installer-lab https proxy listen=tcp:<host LAN add
 
 The first admin `libredb-admin`, whose temporary password is in `/opt/libredb/secrets/first-admin.txt` inside the VM, and the user manager `libredb-user-manager` are the owner's: the owner signs in, sets a new password and TOTP, and creates the test user with the client role `libredb:user` in the realm console that `keycloak console` opens through an SSH tunnel to `127.0.0.1:18080` of the VM.
 No agent reads that file.
+The owner ruled this lab a demo environment (`.team/decisions.md` "2026-10-26: installer lab is a demo environment (user ruling)", with its 06:04Z amendment), so agents do these first-run steps there through the realm's admin API inside the VM, set no TOTP, and keep the new passwords in mode-600 files under `~/libredb-installer-lab/` on the host.
 
 ### Sample data
 
@@ -669,7 +678,7 @@ until docker exec lab-sample-postgres pg_isready -h 127.0.0.1 -U postgres -d app
 ```
 
 The connection is created in Platform's web console at `https://<platform host>`, never in the app: host `lab-sample-postgres`, port 5432, database `app`, user `app_owner`, and the `APP_OWNER_PASSWORD` of `/root/lab-sample/sample.env`.
-Who creates it is the owner's decision: the owner, or an agent once the owner rules this environment a demo environment like Railway platform-dev.
+Platform opens the connection with the read credential and asks to confirm that it can only read, so the read credential is the seed's read-only role `studio_reader`, and `app_owner` is the write credential.
 
 ### Acceptance checks
 
@@ -749,7 +758,7 @@ The digests are what `images list` printed, and match `installer/release/release
 | `bridge-notify-roundtrip` | passed |
 | `studio-oidc-chain` | passed |
 | `oidc-discovery-in-network` | passed |
-| `admin-mfa` | warning: `libredb-admin` and `libredb-user-manager` have no OTP credential yet, which the owner's TOTP step clears |
+| `admin-mfa` | warning: `libredb-admin` and `libredb-user-manager` have no OTP credential; accepted, because a demo environment requires no TOTP (`.team/decisions.md` "2026-10-26: installer lab is a demo environment (user ruling)", 06:04Z amendment) |
 
 From the host, without `-k`, on 2026-10-26:
 
@@ -764,7 +773,16 @@ From the test phone, on its own network:
 - Port 443 through the proxy device timed out until the owner added the third `DOCKER-USER` rule of [Outbound HTTPS from the VM](#outbound-https-from-the-vm); the first two rules let the VM out but drop the forwarded traffic from the LAN.
 - With the third rule, the phone's `curl` gets 200 with `ssl_verify_result` 0 from `https://<platform host>/api/health/live`, `https://<studio host>/api/ready` and the issuer's discovery document, and Chrome on the phone opens the Platform sign-in page and the Keycloak login page with no certificate warning.
 
-Still open: the owner's password and TOTP step and test user, the owner's look at the `libredb-mobile` client in the realm console, and the sample connection in Platform's web console.
+First-run steps, done by an agent under the demo environment ruling on 2026-10-26:
+
+- `libredb-admin` (`libredb:admin`) and `libredb-user-manager` (the `realm-management` roles of the table in `installer/README.md`) have new passwords, set as not temporary, and no TOTP; their required actions `UPDATE_PASSWORD` and `CONFIGURE_TOTP` are removed, and their email and names are set, which Keycloak 26 asks for at the first login.
+- `lab-user` exists with the client role `libredb:user` and no grant.
+- `libredb-mobile` is public, has the standard flow only, PKCE S256, no direct access grants and no implicit flow, the redirect URI `org.libredb.mobile:/oauth2redirect`, and the two `oidc-audience-mapper` mappers `libredb-studio-api` and `libredb-platform-api` on the access token only.
+- `libredb-admin` signs in to Platform with no TOTP prompt and created the connection "Lab sample PostgreSQL" in the web console: engine PostgreSQL, environment development, `lab-sample-postgres:5432/app`, SSL mode `disable`, read credential `studio_reader`, write credential `app_owner`; Platform lists it as Active with read and write credentials.
+- `lab-user`'s Platform sign-in returns to `/login`, which is expected for an account without `libredb:admin`; it was not checked further.
+- `verify` run again afterwards exits 0, with 18 checks passed and the accepted `admin-mfa` warning.
+
+The teardown check of [Tear down](#tear-down) runs at the end of the last of #304 and #196, which use this lab, and is recorded there.
 
 ## Recording Studio answers
 
