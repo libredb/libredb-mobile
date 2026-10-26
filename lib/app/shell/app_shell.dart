@@ -15,6 +15,8 @@ import 'package:libredb_mobile/app/shell/sign_out_progress_barrier.dart';
 import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/features/auth/application/studio_identity_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
+import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -43,6 +45,16 @@ class _AppShellState extends State<AppShell> {
     if (identity.state is StudioIdentityInitial) identity.load();
     final policy = context.read<ConnectionPolicyCubit>();
     if (policy.state is ConnectionPolicyInitial) policy.load();
+  }
+
+  /// Asks Studio again who the user is and what it allows when either answer failed while Studio's unreachable page
+  /// covered the shell, as on a restore while Studio is down, once a check finds Studio answering and the page
+  /// uncovers the shell; an answer that loaded, or that is still awaited, is left as it is.
+  void _reloadFailedOnStudioReachable(BuildContext context, StudioStatusState state) {
+    final identity = context.read<StudioIdentityCubit>();
+    if (identity.state is StudioIdentityFailure) identity.load();
+    final policy = context.read<ConnectionPolicyCubit>();
+    if (policy.state is ConnectionPolicyFailure) policy.load();
   }
 
   /// [screen], covered by the refusal page while Studio refuses the signed-in account, decided here only and never by
@@ -89,6 +101,11 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
+        // The shell is mounted for a Studio session only, which the unreachable page covers while Studio is down.
+        BlocListener<StudioStatusBloc, StudioStatusState>(
+          listenWhen: (previous, current) => previous is StudioUnreachable && current is! StudioUnreachable,
+          listener: _reloadFailedOnStudioReachable,
+        ),
         BlocListener<ActiveConnectionCubit, ActiveConnectionState>(
           listenWhen: (previous, current) => current is ActiveConnectionVanished,
           listener: (context, state) => _onVanished(context, (state as ActiveConnectionVanished).vanished),
