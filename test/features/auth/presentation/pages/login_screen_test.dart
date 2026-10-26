@@ -210,12 +210,6 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // Waits until the snack bar that repeats the error has gone, so only the line on the page is left.
-    Future<void> waitForSnackBarToGo(WidgetTester tester) async {
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pumpAndSettle();
-    }
-
     testWidgets('shows only the single sign-on button', (tester) async {
       await pumpOidcApp(tester, OidcDependencies(ScriptedOidcClient()));
 
@@ -249,7 +243,6 @@ void main() {
 
         await tester.tap(ssoButton);
         await tester.pumpAndSettle();
-        await waitForSnackBarToGo(tester);
 
         expect(client.signIns, 1);
         expect(find.text(message), findsOneWidget);
@@ -276,7 +269,6 @@ void main() {
 
         await tester.tap(ssoButton);
         await tester.pumpAndSettle();
-        await waitForSnackBarToGo(tester);
 
         expect(client.signIns, 1);
         expect(find.text(message), findsOneWidget);
@@ -493,7 +485,6 @@ void main() {
 
         await tester.tap(platformButton);
         await tester.pumpAndSettle();
-        await waitForSnackBarToGo(tester);
 
         expect(platform.fetches, 1);
         expect(find.text(_adminRoleRequiredMessage), findsOneWidget);
@@ -767,7 +758,6 @@ void main() {
       testWidgets('after an error, keeps the gate closed and the error on the page', (tester) async {
         final client = ScriptedOidcClient(outcomes: [const OidcSignInFailed(OidcFailure.discovery)]);
         await pumpOidcApp(tester, OidcDependencies(client, autoRedirect: true));
-        await waitForSnackBarToGo(tester);
 
         expect(client.signIns, 1);
         expect(gate(tester).isOpen, isFalse);
