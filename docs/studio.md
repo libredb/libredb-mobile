@@ -609,6 +609,10 @@ done
 lxc file push --uid 0 --gid 0 --mode 0644 "<certificate dir>/ca-bundle.pem" libredb-installer-lab/etc/libredb/tls/ca-bundle.pem
 ```
 
+One certificate whose SAN covers the three names serves all three endpoints: push its `fullchain.pem` as each `$e.chain.pem` and its `privkey.pem` as each `$e.key.pem`.
+`tls.caBundleFile` must hold the self-signed root that the chain ends at, because the installer, like OpenSSL, does not take an intermediate as a trust anchor.
+Certbot's `chain.pem` holds only intermediates, so it is not the bundle; for a Let's Encrypt chain that ends at the cross-signed ISRG Root X2, the bundle is ISRG Root X1 from the host's store, `/etc/ssl/certs/ISRG_Root_X1.pem`.
+
 Fill in the configuration with the three host names and check it before `preflight`:
 
 ```shell
@@ -702,21 +706,64 @@ The owner then removes the `DOCKER-USER` rules of [Outbound HTTPS from the VM](#
 
 ### Recorded install
 
+The install ran on 2026-10-26 with the commands above, on the owner's three host names and a Let's Encrypt certificate for them that expires on 2027-01-24.
+
 | Item | Value |
 | --- | --- |
-| Date | 2026-10-26 (configuration and images); the install waits for the owner's host names and certificate |
-| Installer | 1.3.0, `release 1.3.0`, checked with `SHA256SUMS` |
-| `validate` of `tool/installer-lab/libredb.yaml.example` | Passes, exit 0 |
+| VM | `libredb-installer-lab`, Ubuntu 24.04 (image serial 20261017), 4 vCPU, 8 GiB, 40 GiB, `10.207.27.50` on `lxdbr0` |
+| Docker in the VM | Engine 29.9.2, Compose 5.6.1, containerd.io 2.4.2 |
+| Installer | 1.3.0, `release 1.3.0`, `libredb-installer-linux-x64` SHA-256 `b2dac4470173e87a4b38e75f996578e29599e3bb94b51c5fdcd70312664566b6`, `SHA256SUMS` OK, attestation verified on the host (signer `installer-release.yml` at `refs/tags/installer-v1.3.0`) |
+| License | FREE, 1 admin seat, 3 user seats, `<platform host>`, until 2027-10-26; `apply` reports it active |
+| `validate`, `preflight` | Pass, exit 0 |
+| `apply --yes` | Exit 0, 84 changes |
 | Platform | `ghcr.io/libredb/libredb-platform@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9` |
 | Studio | `ghcr.io/libredb/libredb-studio@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c` |
 | Keycloak | `quay.io/keycloak/keycloak@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244` |
 | PostgreSQL | `docker.io/library/postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
 | Edge | `docker.io/library/caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af` |
-| Outbound HTTPS from the VM | Works with the owner's `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
-| `preflight`, `apply`, `verify`, `status` | Not run yet: they need the owner's host names and certificate files |
+| Sample PostgreSQL | `postgres:17.6-alpine`, `postgres@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94`; `app` holds 7 tables and `archive` 1; Studio resolves `lab-sample-postgres` on `libredb_edge` |
+| `status` | `edge`, `keycloak`, `platform`, `postgres` and `studio` running and healthy; the three provided certificates have 89 days left |
+| Outbound HTTPS from the VM | Works with the owner's first two `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
 
-The digests are what `images list` printed for the example configuration, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
-Once the install runs, this table records the result of each `verify` check id (`edge-tls`, `components-healthy`, `studio-ready`, `platform-license`, `admin-mfa` and the rest) with the date, and keeps the placeholders instead of the owner's host names.
+The digests are what `images list` printed, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
+
+`verify --output json` exited 0 with these results:
+
+| Check | Result |
+| --- | --- |
+| `postgres-privileges` | passed |
+| `components-healthy` | passed |
+| `clock-skew` | passed |
+| `no-proxy` | passed |
+| `edge-tls` | passed |
+| `platform-ready` | passed |
+| `platform-signin-redirect` | passed |
+| `platform-admin-api` | passed |
+| `bridge-contract` | passed |
+| `seal-canary-published` | passed |
+| `bridge-privileges` | passed |
+| `platform-license` | passed |
+| `studio-ready` | passed |
+| `studio-heartbeat` | passed |
+| `studio-canary` | passed |
+| `bridge-notify-roundtrip` | passed |
+| `studio-oidc-chain` | passed |
+| `oidc-discovery-in-network` | passed |
+| `admin-mfa` | warning: `libredb-admin` and `libredb-user-manager` have no OTP credential yet, which the owner's TOTP step clears |
+
+From the host, without `-k`, on 2026-10-26:
+
+- `https://<platform host>/api/health/live` answers 200 `{"status":"live"}`, and `https://<platform host>` answers 307 to `/login`.
+- `https://<studio host>/api/ready` answers 200 with `"status":"ok"`, and `https://<studio host>` answers 307 to `/login`.
+- The discovery document of `https://<auth host>/realms/libredb` names that issuer, and `openssl s_client` reports `Verify return code: 0 (ok)` for the Let's Encrypt chain.
+- The authorization endpoint for `libredb-mobile` answers 200 with the login form for an S256 challenge, 302 with `error=invalid_request` (`Missing parameter: code_challenge_method`) without a challenge, and 302 with `error=invalid_request` for `code_challenge_method=plain`.
+
+From the test phone, on its own network:
+
+- `ping` of each of the three hosts resolves to `<host LAN address>` and answers, so the router does not block the private answers.
+- The phone reaches TCP ports that the host itself serves, but its connection to port 443 through the proxy device times out, because the forwarded traffic needs the third `DOCKER-USER` rule of [Outbound HTTPS from the VM](#outbound-https-from-the-vm), which the owner has not added yet.
+
+Still open: that third rule and the phone's https check after it, the owner's password and TOTP step and test user, the owner's look at the `libredb-mobile` client in the realm console, and the sample connection in Platform's web console.
 
 ## Recording Studio answers
 
