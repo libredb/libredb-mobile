@@ -161,7 +161,7 @@ class RefusingStudio implements IStudioIdentityRepository {
   final AppError error;
 
   @override
-  Future<Result<StudioIdentity>> fetch() async => Failure(error);
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) async => Failure(error);
 
   @override
   Future<Result<void>> recordSignOut() => throw UnimplementedError('these tests never sign out');

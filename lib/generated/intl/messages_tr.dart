@@ -556,6 +556,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_transaction_not_owned": MessageLookupByLibrary.simpleMessage(
       "Bu bağlantıda başka bir oturumun açık bir işlemi var.",
     ),
+    "error_studio_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Studio yanıt vermiyor. Biraz sonra tekrar deneyin.",
+    ),
     "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Studio bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın ya da Studio\'nun güncellenmesi gerekebilir.",
     ),
@@ -896,6 +899,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Platform\'a geçilsin mi?"),
     "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
       "Studio bu hesabı kabul etmedi, bu yüzden Platform\'da kalıyor. Erişim için bir yöneticiye başvurun.",
+    ),
+    "profile_switch_studio_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Studio yanıt vermiyor, bu yüzden hesap Platform\'da kalıyor. Biraz sonra tekrar deneyin.",
     ),
     "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Platform\'a geç"),
     "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Studio\'ya geç"),

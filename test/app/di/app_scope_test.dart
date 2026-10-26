@@ -489,7 +489,8 @@ class _CountingStudioIdentity implements IStudioIdentityRepository {
   }
 
   @override
-  Future<Result<StudioIdentity>> fetch() => throw UnimplementedError('these tests never read the identity');
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) =>
+      throw UnimplementedError('these tests never read the identity');
 }
 
 /// A provider without a logout endpoint, so a logout ends no provider session.

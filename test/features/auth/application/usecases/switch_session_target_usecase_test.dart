@@ -48,7 +48,7 @@ void main() {
   });
 
   void studioAnswers(Result<StudioIdentity> answer) =>
-      when(() => studioIdentity.fetch()).thenAnswer((_) async => answer);
+      when(() => studioIdentity.fetch(probe: true)).thenAnswer((_) async => answer);
 
   void platformAnswers(Result<PlatformIdentity> answer) =>
       when(() => platformIdentity.fetch()).thenAnswer((_) async => answer);
@@ -62,7 +62,7 @@ void main() {
 
       expect(result, isA<SwitchedToPlatform>().having((r) => r.identity, 'identity', _admin));
       verify(() => platformIdentity.fetch()).called(1);
-      verifyNever(() => studioIdentity.fetch());
+      verifyNever(() => studioIdentity.fetch(probe: any(named: 'probe')));
       verify(() => sessionRepository.persistTarget(SessionTarget.platform, generation: generation)).called(1);
       verifyNoMoreInteractions(sessionRepository);
     });
@@ -91,7 +91,7 @@ void main() {
 
         expect(result, isA<SessionTargetSwitchRefused>().having((r) => r.errorCode, 'errorCode', code));
         verifyZeroInteractions(sessionRepository);
-        verifyNever(() => studioIdentity.fetch());
+        verifyNever(() => studioIdentity.fetch(probe: any(named: 'probe')));
       });
     }
 
@@ -139,7 +139,13 @@ void main() {
         ServerError('provider down', code: AppErrorCode.studioIdentityProviderUnavailable.key),
         AppErrorCode.studioIdentityProviderUnavailable,
       ),
-      (const NetworkError('no route to host'), AppErrorCode.generic),
+      (const NetworkError('no route to host'), AppErrorCode.studioUnreachable),
+      (const ServerError('Bad Gateway'), AppErrorCode.studioUnreachable),
+      (const TimeoutError('receive timeout'), AppErrorCode.studioUnreachable),
+      (NetworkError('offline', code: AppErrorCode.networkOffline.key), AppErrorCode.networkOffline),
+      (NetworkError('untrusted', code: AppErrorCode.networkCertInvalid.key), AppErrorCode.networkCertInvalid),
+      (ServerError('unreadable', code: AppErrorCode.studioUnreadableAnswer.key), AppErrorCode.studioUnreadableAnswer),
+      (const UnknownError('boom'), AppErrorCode.generic),
     ];
     for (final (error, code) in refusals) {
       test('${error.runtimeType} ${error.code} refuses with ${code.key} and stores nothing', () async {
@@ -188,7 +194,7 @@ void main() {
     });
 
     test('a 200 from Studio is abandoned and stores nothing', () async {
-      when(() => studioIdentity.fetch()).thenAnswer((_) => afterWipe(const Success(_user)));
+      when(() => studioIdentity.fetch(probe: true)).thenAnswer((_) => afterWipe(const Success(_user)));
 
       late SessionTargetSwitchResult result;
       final lines = await printedLines(() async => result = await switchTarget(SessionTarget.studio));
@@ -211,7 +217,8 @@ void main() {
     });
 
     test('a Studio refusal is abandoned', () async {
-      when(() => studioIdentity.fetch()).thenAnswer((_) => afterWipe<StudioIdentity>(const Failure(AuthError('no'))));
+      when(() => studioIdentity.fetch(probe: true))
+          .thenAnswer((_) => afterWipe<StudioIdentity>(const Failure(AuthError('no'))));
 
       late SessionTargetSwitchResult result;
       final lines = await printedLines(() async => result = await switchTarget(SessionTarget.studio));
