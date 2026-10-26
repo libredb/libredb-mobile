@@ -96,6 +96,13 @@ class TestEnv {
     _secureStore[SecureStorageKeys.jwtToken.key] = 'MOCK_TOKEN';
   }
 
+  /// Marks the introduction as already shown, so a test lands on the screen it is about rather than on `/welcome`.
+  ///
+  /// Every test written before the onboarding flow existed assumes a cold start opens the login page. Rather than
+  /// change each of those assertions, the flow's own tests are the ones that leave this unset. Call it in a test
+  /// body or `setUp`, after the global reset has cleared the store — never in `setUpAll`.
+  static Future<void> onboardingSeen() => AppLocalStorage().save(StorageKeys.onboardingSeen.key, true);
+
   /// Always re-installs the handler. `secure_storage_test.dart` temporarily
   /// overrides the same channel and resets the handler to null in its
   /// tearDown; re-installing here is cheap and idempotent.
