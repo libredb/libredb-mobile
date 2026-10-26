@@ -21,6 +21,7 @@ import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/statement_repository.dart';
 import 'package:libredb_mobile/shared/utils/schema_change_notifier.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The detail of the object at [path] of [connectionId], of [kind]: its name as the heading, then the tabs Columns,
 /// Indexes, Foreign keys, and Source when the kind has source.
@@ -206,7 +207,10 @@ class _DetailTabs extends StatelessWidget {
         for (final constraint in constraints)
           ListTile(
             title: Text(constraint.name),
-            subtitle: Text(constraint.definition, style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
+            subtitle: Text(
+              constraint.definition,
+              style: theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
+            ),
           ),
       ],
     ];

@@ -5,6 +5,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart'
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// Formats a count in the locale's grouping: 1,207 in English, 1.207 in Turkish.
 NumberFormat resultNumberFormat(BuildContext context) =>
@@ -38,7 +39,7 @@ class ResultWarningList extends StatelessWidget {
     final style = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error);
     final codeStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
-      fontFamily: 'monospace',
+      fontFamily: AppTypography.mono,
     );
     return Column(
       key: const ValueKey('result-warnings'),

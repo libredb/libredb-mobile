@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The statement the user types: a multi-line monospace field that fills its space, coloured by its controller, with
 /// every input aid that would change the text turned off, since a smart quote or a corrected word breaks a statement.
@@ -49,7 +50,7 @@ class EditorInput extends StatelessWidget {
         smartDashesType: SmartDashesType.disabled,
         smartQuotesType: SmartQuotesType.disabled,
         spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontFamily: 'monospace'),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontFamily: AppTypography.mono),
         decoration: InputDecoration(
           hintText: s.sql_editor_hint,
           semanticCounterText: '',

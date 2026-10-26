@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// What the user answered on a [WriteConfirmationSheet].
 enum WriteConfirmation { confirmed, cancelled }
@@ -233,7 +234,7 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
         20,
         wide ? 20 : 20 + MediaQuery.textScalerOf(context).scale(2 * _buttonRowHeight),
       ),
-      style: const TextStyle(fontFamily: 'monospace'),
+      style: const TextStyle(fontFamily: AppTypography.mono),
       decoration: InputDecoration(labelText: s.write_confirm_name_label(widget.connection.name)),
       onChanged: (_) => setState(() {}),
     ),
@@ -301,7 +302,7 @@ class _StatementLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final style = theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace');
+    final style = theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono);
     return ColoredBox(
       color: flagged ? scheme.errorContainer : Colors.transparent,
       child: Row(

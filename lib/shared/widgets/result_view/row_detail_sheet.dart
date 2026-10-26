@@ -9,6 +9,7 @@ import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/utils/sensitive_clipboard.dart';
 import 'package:libredb_mobile/shared/widgets/cells/detail_cell.dart';
 import 'package:libredb_mobile/shared/widgets/cells/sensitive_selectable_text.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 // The row detail sheet and the copy of a field or a row, as Studio's `RowDetailSheet`
 // (`src/components/results-grid/RowDetailSheet.tsx`) and the grid's copy menu (`copyCell` and `copyRow`,
@@ -87,7 +88,7 @@ Future<void> showRowCopyMenu(
           ListTile(
             title: Text(
               field,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: const TextStyle(fontFamily: AppTypography.mono),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -255,7 +256,10 @@ class _FieldTile extends StatelessWidget {
                           Flexible(
                             child: Text(
                               field,
-                              style: theme.textTheme.labelMedium?.copyWith(color: muted, fontFamily: 'monospace'),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: muted,
+                                fontFamily: AppTypography.mono,
+                              ),
                             ),
                           ),
                           if (masked)

@@ -7,6 +7,7 @@ import 'package:libredb_mobile/features/platform_audit/presentation/widgets/audi
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// One governed query event of the audit log, every field Platform sent, a missing one shown as not recorded.
 ///
@@ -180,7 +181,7 @@ class _StatementField extends StatelessWidget {
                 color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(AppSpacing.xs),
               ),
-              child: SelectableText(statement, style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
+              child: SelectableText(statement, style: textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono)),
             )
           else
             Text(s.platform_audit_statement_none, style: note),

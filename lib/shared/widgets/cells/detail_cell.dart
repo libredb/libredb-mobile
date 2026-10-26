@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/sensitive_selectable_text.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// One result value in full, as Studio's row detail shows it: selectable, with JSON, binary and vector values in
 /// monospace and their line breaks kept, and NULL as a muted italic `null` that a screen reader reads as a null value.
@@ -36,7 +37,7 @@ class DetailCell extends StatelessWidget {
       JsonCell() || BinaryCell() || VectorCell() => SensitiveSelectableText(
         cell.detailText,
         onCopy: onCopy,
-        style: base?.copyWith(fontFamily: 'monospace'),
+        style: base?.copyWith(fontFamily: AppTypography.mono),
       ),
     };
   }

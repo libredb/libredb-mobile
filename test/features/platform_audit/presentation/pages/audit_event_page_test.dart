@@ -14,6 +14,8 @@ import 'package:libredb_mobile/features/platform_audit/presentation/pages/audit_
 import '../../audit_event_fixture.dart';
 import '../../audit_pages_harness.dart';
 
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
+
 void main() {
   late AuditPagesHarness harness;
 
@@ -72,7 +74,7 @@ void main() {
       find.descendant(of: field('statement'), matching: find.byType(SelectableText)),
     );
     expect(statement.data, 'SELECT id FROM orders\nWHERE id = 1');
-    expect(statement.style?.fontFamily, 'monospace');
+    expect(statement.style?.fontFamily, AppTypography.mono);
   });
 
   testWidgets('a null field shows as not recorded', (tester) async {

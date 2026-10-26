@@ -4,8 +4,17 @@ import 'package:flutter/material.dart';
 class AppTypography {
   AppTypography._();
 
-  /// Returns a text theme tuned for readability with platform-native fonts and tight letter-spacing.
+  /// The face the product is set in, as libredb.org is. Declared in `pubspec.yaml`; a name that does not match a
+  /// declared family silently falls back to the platform's, so the two are kept in step by a test.
+  static const String sans = 'Plus Jakarta Sans';
+
+  /// The face every code surface is set in — a statement, a value, a key, a stack frame. It asked the platform
+  /// for one instead, so the same column of values rendered in a different face on Android and on iOS.
+  static const String mono = 'JetBrains Mono';
+
+  /// Returns a text theme in [sans], tuned for readability with tight letter-spacing.
   static TextTheme textTheme(TextTheme base) {
+    base = base.apply(fontFamily: sans);
     return base.copyWith(
       displayLarge: base.displayLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -1.5),
       displayMedium: base.displayMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -1.0),

@@ -5,6 +5,7 @@ import 'package:libredb_mobile/core/security/screen_capture_guard.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The database's own words of a failed read, such as a permission refused to a read-only role or Redis's
 /// `WRONGTYPE`, for a `studio.query_error`; null for any other error, whose text is never shown.
@@ -43,7 +44,7 @@ class BrowseDatabaseWords extends StatelessWidget {
                     child: SelectableText(
                       words,
                       key: const ValueKey('rows-database-words'),
-                      style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                      style: theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
                     ),
                   ),
                 ),
