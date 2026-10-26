@@ -190,7 +190,7 @@ An agent never sets a variable, starts a workflow, approves an environment, sign
 
 It needs Platform 1.3.0 or later, the first release with `PATCH /api/v1/connections/{id}`, which enabling and disabling a connection uses.
 It belongs to the same deployment as `PROD_API_URL` and `OIDC_ISSUER`, because one access token of the client `libredb-mobile` carries both audiences, Studio's and Platform's (libredb-platform `docs/api/v1.md`, "One token serves Studio and Platform").
-It is a deployment that serves Platform mode: a Docker or VM installer install with `mobile.enabled: true`, which creates that client with its audience mappers (libredb-platform `installer/README.md`, "Mobile app"), or Railway platform-dev; the Helm chart does not create the client ([platform.md](platform.md#where-platform-mode-works), "Where Platform mode works").
+It is a deployment that serves Platform mode: a Docker or VM installer install with `mobile.enabled: true`, which creates that client with its audience mappers (libredb-platform `installer/README.md`, "Mobile app"), a Helm install of chart 1.3.1 or later with `mobile.enabled: true`, or Railway platform-dev ([platform.md](platform.md#where-platform-mode-works), "Where Platform mode works").
 `PLATFORM_API_URL` is that Platform's origin plus `/api` ([platform.md](platform.md#the-defines)), and the release workflow passes it, with `PLATFORM_CERT_PINS`, only when the owner sets it as a variable ([Secrets and variables](#secrets-and-variables)).
 
 ### Gates
