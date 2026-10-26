@@ -625,12 +625,13 @@ Install, then check the result; `apply` copies the installer to `/opt/libredb/bi
 ```shell
 lxc exec libredb-installer-lab -- sh -euc 'cd /root/libredb-1.3.0 && ./libredb-installer-linux-x64 preflight -c /etc/libredb/libredb.yaml'
 lxc exec libredb-installer-lab -- sh -euc 'cd /root/libredb-1.3.0 && ./libredb-installer-linux-x64 apply -c /etc/libredb/libredb.yaml --yes'
-lxc exec libredb-installer-lab -- sh -euc '/opt/libredb/bin/libredb-installer verify -c /etc/libredb/libredb.yaml --output json > /root/verify.json; s=$?; jq -r ".checks[] | \"\(.id) \(.result)\"" /root/verify.json; exit $s'
+lxc exec libredb-installer-lab -- sh -euc 's=0; /opt/libredb/bin/libredb-installer verify -c /etc/libredb/libredb.yaml --output json > /root/verify.json || s=$?; jq -r ".checks[] | \"\(.id) \(.result)\"" /root/verify.json; exit $s'
 lxc exec libredb-installer-lab -- /opt/libredb/bin/libredb-installer status
 lxc exec libredb-installer-lab -- /opt/libredb/bin/libredb-installer images list -c /etc/libredb/libredb.yaml
 ```
 
-`verify` exits 4 when a check fails; the `jq` filter prints only each check's id and result, since a `detail` names the license's host.
+`verify` exits 4 when a check fails; the `|| s=$?` keeps `sh -e` from stopping there, so the `jq` summary still prints and the command still exits 4.
+The `jq` filter prints only each check's id and result, since a `detail` names the license's host.
 `status` must show every container healthy.
 
 Expose the VM's port 443 on the host's LAN address with an LXD proxy device in NAT mode, which a VM needs, with the static NIC address and a concrete listen address:
@@ -711,7 +712,8 @@ The owner then removes the `DOCKER-USER` rules of [Outbound HTTPS from the VM](#
 | Keycloak | `quay.io/keycloak/keycloak@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244` |
 | PostgreSQL | `docker.io/library/postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
 | Edge | `docker.io/library/caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af` |
-| `preflight`, `apply`, `verify`, `status` | Not run yet: they need the certificate files and the VM's outbound HTTPS |
+| Outbound HTTPS from the VM | Works with the owner's `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
+| `preflight`, `apply`, `verify`, `status` | Not run yet: they need the owner's host names and certificate files |
 
 The digests are what `images list` printed for the example configuration, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
 Once the install runs, this table records the result of each `verify` check id (`edge-tls`, `components-healthy`, `studio-ready`, `platform-license`, `admin-mfa` and the rest) with the date, and keeps the placeholders instead of the owner's host names.
