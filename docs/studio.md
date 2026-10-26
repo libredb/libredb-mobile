@@ -540,7 +540,15 @@ sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHE
 sudo iptables -I DOCKER-USER -o lxdbr0 -d 10.207.27.50 -p tcp --dport 443 -j ACCEPT
 ```
 
-These rules are the only host change besides the LXD proxy device, and they do not survive a reboot.
+The first two let the VM out and its replies back; the third lets the LAN reach the VM's port 443 through the proxy device, which forwards and does not deliver locally.
+They are host steps that only the owner runs, they and the LXD proxy device are the only host changes, and they do not survive a reboot, so the owner adds them again after one.
+At teardown the owner removes them:
+
+```shell
+sudo iptables -D DOCKER-USER -o lxdbr0 -d 10.207.27.50 -p tcp --dport 443 -j ACCEPT
+sudo iptables -D DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -D DOCKER-USER -i lxdbr0 -j ACCEPT
+```
 
 ### Phone reachability
 
@@ -609,6 +617,10 @@ done
 lxc file push --uid 0 --gid 0 --mode 0644 "<certificate dir>/ca-bundle.pem" libredb-installer-lab/etc/libredb/tls/ca-bundle.pem
 ```
 
+One certificate whose SAN covers the three names serves all three endpoints: push its `fullchain.pem` as each `$e.chain.pem` and its `privkey.pem` as each `$e.key.pem`.
+`tls.caBundleFile` must hold the self-signed root that the chain ends at, because the installer, like OpenSSL, does not take an intermediate as a trust anchor.
+Certbot's `chain.pem` holds only intermediates, so it is not the bundle; for a Let's Encrypt chain that ends at the cross-signed ISRG Root X2, the bundle is ISRG Root X1 from the host's store, `/etc/ssl/certs/ISRG_Root_X1.pem`.
+
 Fill in the configuration with the three host names and check it before `preflight`:
 
 ```shell
@@ -642,6 +654,7 @@ lxc config device add libredb-installer-lab https proxy listen=tcp:<host LAN add
 
 The first admin `libredb-admin`, whose temporary password is in `/opt/libredb/secrets/first-admin.txt` inside the VM, and the user manager `libredb-user-manager` are the owner's: the owner signs in, sets a new password and TOTP, and creates the test user with the client role `libredb:user` in the realm console that `keycloak console` opens through an SSH tunnel to `127.0.0.1:18080` of the VM.
 No agent reads that file.
+The owner ruled this lab a demo environment (`.team/decisions.md` "2026-10-26: installer lab is a demo environment (user ruling)", with its 06:04Z amendment), so agents do these first-run steps there through the realm's admin API inside the VM, set no TOTP, and keep the new passwords in mode-600 files under `~/libredb-installer-lab/` on the host.
 
 ### Sample data
 
@@ -665,7 +678,7 @@ until docker exec lab-sample-postgres pg_isready -h 127.0.0.1 -U postgres -d app
 ```
 
 The connection is created in Platform's web console at `https://<platform host>`, never in the app: host `lab-sample-postgres`, port 5432, database `app`, user `app_owner`, and the `APP_OWNER_PASSWORD` of `/root/lab-sample/sample.env`.
-Who creates it is the owner's decision: the owner, or an agent once the owner rules this environment a demo environment like Railway platform-dev.
+Platform opens the connection with the read credential and asks to confirm that it can only read, so the read credential is the seed's read-only role `studio_reader`, and `app_owner` is the write credential.
 
 ### Acceptance checks
 
@@ -702,21 +715,74 @@ The owner then removes the `DOCKER-USER` rules of [Outbound HTTPS from the VM](#
 
 ### Recorded install
 
+The install ran on 2026-10-26 with the commands above, on the owner's three host names and a Let's Encrypt certificate for them that expires on 2027-01-24.
+
 | Item | Value |
 | --- | --- |
-| Date | 2026-10-26 (configuration and images); the install waits for the owner's host names and certificate |
-| Installer | 1.3.0, `release 1.3.0`, checked with `SHA256SUMS` |
-| `validate` of `tool/installer-lab/libredb.yaml.example` | Passes, exit 0 |
+| VM | `libredb-installer-lab`, Ubuntu 24.04 (image serial 20261017), 4 vCPU, 8 GiB, 40 GiB, `10.207.27.50` on `lxdbr0` |
+| Docker in the VM | Engine 29.9.2, Compose 5.6.1, containerd.io 2.4.2 |
+| Installer | 1.3.0, `release 1.3.0`, `libredb-installer-linux-x64` SHA-256 `b2dac4470173e87a4b38e75f996578e29599e3bb94b51c5fdcd70312664566b6`, `SHA256SUMS` OK, attestation verified on the host (signer `installer-release.yml` at `refs/tags/installer-v1.3.0`) |
+| License | FREE, 1 admin seat, 3 user seats, `<platform host>`, until 2027-10-26; `apply` reports it active |
+| `validate`, `preflight` | Pass, exit 0 |
+| `apply --yes` | Exit 0, 84 changes |
 | Platform | `ghcr.io/libredb/libredb-platform@sha256:e53ca9b82e337bb995a575ac4082de3da092d33c098a020a13292584fbc49ea9` |
 | Studio | `ghcr.io/libredb/libredb-studio@sha256:e91183def05f4c13703c77363ec51ad68bfa45b1b1d3b92dc53c331b67e53d2c` |
 | Keycloak | `quay.io/keycloak/keycloak@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244` |
 | PostgreSQL | `docker.io/library/postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
 | Edge | `docker.io/library/caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af` |
-| Outbound HTTPS from the VM | Works with the owner's `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
-| `preflight`, `apply`, `verify`, `status` | Not run yet: they need the owner's host names and certificate files |
+| Sample PostgreSQL | `postgres:17.6-alpine`, `postgres@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94`; `app` holds 7 tables and `archive` 1; Studio resolves `lab-sample-postgres` on `libredb_edge` |
+| `status` | `edge`, `keycloak`, `platform`, `postgres` and `studio` running and healthy; the three provided certificates have 89 days left |
+| Outbound HTTPS from the VM | Works with the owner's first two `DOCKER-USER` rules: `https://ghcr.io/v2/` answers 401, the anonymous answer |
 
-The digests are what `images list` printed for the example configuration, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
-Once the install runs, this table records the result of each `verify` check id (`edge-tls`, `components-healthy`, `studio-ready`, `platform-license`, `admin-mfa` and the rest) with the date, and keeps the placeholders instead of the owner's host names.
+The digests are what `images list` printed, and match `installer/release/release.config.json` of libredb-platform `16e6af1`.
+
+`verify --output json` exited 0 with these results:
+
+| Check | Result |
+| --- | --- |
+| `postgres-privileges` | passed |
+| `components-healthy` | passed |
+| `clock-skew` | passed |
+| `no-proxy` | passed |
+| `edge-tls` | passed |
+| `platform-ready` | passed |
+| `platform-signin-redirect` | passed |
+| `platform-admin-api` | passed |
+| `bridge-contract` | passed |
+| `seal-canary-published` | passed |
+| `bridge-privileges` | passed |
+| `platform-license` | passed |
+| `studio-ready` | passed |
+| `studio-heartbeat` | passed |
+| `studio-canary` | passed |
+| `bridge-notify-roundtrip` | passed |
+| `studio-oidc-chain` | passed |
+| `oidc-discovery-in-network` | passed |
+| `admin-mfa` | warning: `libredb-admin` and `libredb-user-manager` have no OTP credential; accepted, because a demo environment requires no TOTP (`.team/decisions.md` "2026-10-26: installer lab is a demo environment (user ruling)", 06:04Z amendment) |
+
+From the host, without `-k`, on 2026-10-26:
+
+- `https://<platform host>/api/health/live` answers 200 `{"status":"live"}`, and `https://<platform host>` answers 307 to `/login`.
+- `https://<studio host>/api/ready` answers 200 with `"status":"ok"`, and `https://<studio host>` answers 307 to `/login`.
+- The discovery document of `https://<auth host>/realms/libredb` names that issuer, and `openssl s_client` reports `Verify return code: 0 (ok)` for the Let's Encrypt chain.
+- The authorization endpoint for `libredb-mobile` answers 200 with the login form for an S256 challenge, 302 with `error=invalid_request` (`Missing parameter: code_challenge_method`) without a challenge, and 302 with `error=invalid_request` for `code_challenge_method=plain`.
+
+From the test phone, on its own network:
+
+- `ping` of each of the three hosts resolves to `<host LAN address>` and answers, so the router does not block the private answers.
+- Port 443 through the proxy device timed out until the owner added the third `DOCKER-USER` rule of [Outbound HTTPS from the VM](#outbound-https-from-the-vm); the first two rules let the VM out but drop the forwarded traffic from the LAN.
+- With the third rule, the phone's `curl` gets 200 with `ssl_verify_result` 0 from `https://<platform host>/api/health/live`, `https://<studio host>/api/ready` and the issuer's discovery document, and Chrome on the phone opens the Platform sign-in page and the Keycloak login page with no certificate warning.
+
+First-run steps, done by an agent under the demo environment ruling on 2026-10-26:
+
+- `libredb-admin` (`libredb:admin`) and `libredb-user-manager` (the `realm-management` roles of the table in `installer/README.md`) have new passwords, set as not temporary, and no TOTP; their required actions `UPDATE_PASSWORD` and `CONFIGURE_TOTP` are removed, and their email and names are set, which Keycloak 26 asks for at the first login.
+- `lab-user` exists with the client role `libredb:user` and no grant.
+- `libredb-mobile` is public, has the standard flow only, PKCE S256, no direct access grants and no implicit flow, the redirect URI `org.libredb.mobile:/oauth2redirect`, and the two `oidc-audience-mapper` mappers `libredb-studio-api` and `libredb-platform-api` on the access token only.
+- `libredb-admin` signs in to Platform with no TOTP prompt and created the connection "Lab sample PostgreSQL" in the web console: engine PostgreSQL, environment development, `lab-sample-postgres:5432/app`, SSL mode `disable`, read credential `studio_reader`, write credential `app_owner`; Platform lists it as Active with read and write credentials.
+- `lab-user`'s Platform sign-in returns to `/login`, which is expected for an account without `libredb:admin`; it was not checked further.
+- `verify` run again afterwards exits 0, with 18 checks passed and the accepted `admin-mfa` warning.
+
+The teardown check of [Tear down](#tear-down) runs at the end of the last of #304 and #196, which use this lab, and is recorded there.
 
 ## Recording Studio answers
 
