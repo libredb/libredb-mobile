@@ -1,0 +1,36 @@
+# Platform installer 1.3.0 configuration of the full-system check environment (docs/studio.md, "Platform installer
+# environment"). Copy it into the VM as /etc/libredb/libredb.yaml, replace the three .invalid hosts with the owner's
+# host names, and check it with `libredb-installer-linux-x64 validate -c /etc/libredb/libredb.yaml` before preflight.
+# It names files only: the license, the chains, the keys and the CA bundle never enter a repository.
+apiVersion: install.libredb.org/v1
+kind: LibreDBInstallation
+metadata:
+  name: lab
+mode: docker
+endpoints:
+  hosts:
+    platform: libredb.example.invalid
+    studio: studio.example.invalid
+    auth: sso.example.invalid
+tls:
+  mode: provided
+  caBundleFile: /etc/libredb/tls/ca-bundle.pem
+  provided:
+    platform:
+      certificateFile: /etc/libredb/tls/platform.chain.pem
+      keyFile: /etc/libredb/tls/platform.key.pem
+    studio:
+      certificateFile: /etc/libredb/tls/studio.chain.pem
+      keyFile: /etc/libredb/tls/studio.key.pem
+    auth:
+      certificateFile: /etc/libredb/tls/auth.chain.pem
+      keyFile: /etc/libredb/tls/auth.key.pem
+platform:
+  organizationName: LibreDB Mobile Lab
+  licenseFile: /etc/libredb/platform.license
+mobile:
+  enabled: true
+  redirectUri: org.libredb.mobile:/oauth2redirect
+  postLogoutRedirectUri: org.libredb.mobile:/oauth2redirect
+docker:
+  systemdUnit: true
