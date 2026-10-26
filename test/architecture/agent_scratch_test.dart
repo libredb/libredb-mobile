@@ -22,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// whether or not it exists, so an entry may be added before the directory is.
 void main() {
   /// The directories the agent tooling in use writes into the checkout, each as a repository-relative path.
-  const scratchDirectories = ['.superpowers/', '.team/', 'docs/superpowers/'];
+  const scratchDirectories = ['.superpowers/', '.team/', 'docs/superpowers/', '.claude/worktrees/'];
 
   group('an agent\'s scratch directory', () {
     test('holds no tracked file, because scratch work is not the product', () async {
