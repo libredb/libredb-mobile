@@ -190,7 +190,7 @@ An agent never sets a variable, starts a workflow, approves an environment, sign
 
 It needs Platform 1.3.0 or later, the first release with `PATCH /api/v1/connections/{id}`, which enabling and disabling a connection uses.
 It belongs to the same deployment as `PROD_API_URL` and `OIDC_ISSUER`, because one access token of the client `libredb-mobile` carries both audiences, Studio's and Platform's (libredb-platform `docs/api/v1.md`, "One token serves Studio and Platform").
-It is installed with the Docker or VM installer and `mobile.enabled: true`, which creates that client with its audience mappers (libredb-platform `installer/README.md`, "Mobile app"); the Helm chart does not create it ([platform.md](platform.md#where-platform-mode-works), "Where Platform mode works").
+It is a deployment that serves Platform mode: a Docker or VM installer install with `mobile.enabled: true`, which creates that client with its audience mappers (libredb-platform `installer/README.md`, "Mobile app"), or Railway platform-dev; the Helm chart does not create the client ([platform.md](platform.md#where-platform-mode-works), "Where Platform mode works").
 `PLATFORM_API_URL` is that Platform's origin plus `/api` ([platform.md](platform.md#the-defines)), and the release workflow passes it, with `PLATFORM_CERT_PINS`, only when the owner sets it as a variable ([Secrets and variables](#secrets-and-variables)).
 
 ### Gates
@@ -221,8 +221,11 @@ They pass in this order, and each one holds before the steps that name it:
 
 1. Owner: halt the release in the Play Console, as [Rolling back](#rolling-back) says.
 2. Owner: remove `PLATFORM_API_URL`, and `PLATFORM_CERT_PINS` if it was ever set, from every place it was set: the repository, `release-signing` and `release-dry-run`.
-3. Owner: fill the Data safety form and the App access entry with the answers for a build without Platform mode again.
-4. Owner: release again; the next release has a higher build number and is Studio-only.
+3. Agent, after step 1: open the rollback pull request, which restores the Studio-only listing texts in `android/fastlane/metadata/android/` from the parent of the turn-on pull request's commit, removes the Platform-mode screenshots from `images/phoneScreenshots/` and keeps the Studio ones, and makes the answers for a build without `PLATFORM_API_URL` the current Data safety and App access answers again.
+   Its squash commit is a Conventional Commit that release-please lists, such as `fix(release): ship the store build without Platform mode`, so release-please has a commit to release from in step 6.
+4. Owner, after step 3's checks are green: review the rollback pull request and merge it.
+5. Owner, after step 4: fill the Data safety form and the App access entry with the answers for a build without Platform mode, paste the listing texts from `android/fastlane/metadata/android/` and replace the Play screenshots with the Studio-only ones from its `images/phoneScreenshots/`.
+6. Owner, after steps 2 and 5: merge the release pull request that release-please opens, then approve the build job and, once it has passed, the upload job; the release has a higher build number and is Studio-only.
 
 On a device that updates to that build, a stored Platform session is cleared, and the login page shows only the Studio entry with the `platform.not_configured` message (`lib/app/session/session_cubit.dart`; [platform.md](platform.md), M10-P walkthrough step 10).
 A stored Studio session is kept.
