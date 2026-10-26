@@ -6,6 +6,7 @@ import '../../../../core/testing/app_key_constants.dart';
 import '../../../../generated/l10n.dart';
 import '../../../../infrastructure/config/project_links.dart';
 import '../../../../shared/utils/external_link.dart';
+import '../../../../shared/design_system/tokens/tokens.dart';
 
 /// The pages the community section links to: the repository and the pages in it, and the sponsor and documentation
 /// pages.
@@ -307,25 +308,47 @@ class _MobileCommunityChip extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = S.of(context);
 
-    return GestureDetector(
-      onTap: () => openExternalLink(context, Uri.parse(action.url)),
-      child: Container(
-        key: action.key,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(action.icon, size: 14, color: action.iconBackground),
-            const SizedBox(width: 6),
-            Text(
-              action.label(l10n),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant),
+    // The pill keeps its drawn height; the tap area around it grows to the minimum. Making the pill itself 48 pt
+    // would turn a row of chips into a row of buttons, which is not what this section is.
+    return Semantics(
+      key: action.key,
+      button: true,
+      link: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => openExternalLink(context, Uri.parse(action.url)),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+            child: Center(
+              widthFactor: 1,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // The brand colour this icon used to carry is written for a background — it sits behind the
+                    // desktop icon at alpha 0.18 above — and at full strength on the page's own surface two of the
+                    // six fell under the 3:1 floor for a graphical object in the light theme: translate #10B981 at
+                    // 2.54:1 and docs #F59E0B at 2.15:1. Measured per WCAG 2.1 relative luminance; #357 has the
+                    // table. The label beside each icon already names the destination, so the colour was carrying
+                    // no meaning the icon had to spend contrast on.
+                    Icon(action.icon, size: 14, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Text(
+                      action.label(l10n),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 const Key loginButtonSsoKey = Key("loginButtonSsoKey");
 const Key loginButtonPlatformKey = Key("loginButtonPlatformKey");
+const Key loginThemeToggleKey = Key("loginThemeToggleKey");
 const Key loginUnreachableRetryStudioKey = Key("loginUnreachableRetryStudioKey");
 const Key loginUnreachableRetryPlatformKey = Key("loginUnreachableRetryPlatformKey");
 

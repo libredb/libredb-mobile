@@ -596,26 +596,37 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final onToggle = widget.onToggleTheme;
     if (onToggle == null) return badge;
 
+    // The 36 pt box stays what is drawn; the tap area around it is the minimum. An InkWell does not pad its hit area
+    // the way a ButtonStyleButton's MaterialTapTargetSize.padded does, so before this the drawn box was the whole
+    // target — a 36 pt corner control, which is the hardest kind to hit.
     return Tooltip(
       message: isDark ? S.of(context).login_switch_to_light_mode : S.of(context).login_switch_to_dark_mode,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(onTap: onToggle, borderRadius: radius, child: badge),
+        child: InkWell(
+          key: loginThemeToggleKey,
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: SizedBox.square(
+            dimension: AppSizes.minTapTarget,
+            child: Center(child: badge),
+          ),
+        ),
       ),
     );
   }
 
+  /// Navigates on a sign-in, and says nothing on the other states.
+  ///
+  /// It used to raise a snack bar for each. Two of them said what the page already said: the loading one named a
+  /// wait the button was already showing, and the error one repeated the line at [_errorText] **word for word**, so
+  /// a screen reader read every refusal twice and the suite waited five seconds for the snack bar to go before it
+  /// could assert the message appeared once (`waitForSnackBarToGo`, now gone with its four callers).
+  ///
+  /// The success one stays. It is the only one that says something this page does not, and it is read on the page
+  /// the user has just been sent to.
   void _onLoginStateChange(BuildContext context, LoginState state) {
-    if (state is LoginLoadingState) {
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(S.of(context).loading),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          width: MediaQuery.of(context).size.width * 0.8,
-        ),
-      );
-    } else if (state is LoginLoadedState) {
+    if (state is LoginLoadedState) {
       // Honor `?returnUrl=` from the redirect-to-login flow so deep
       // links survive the auth bounce. Open-redirect guard rejects
       // off-origin candidates, a returnUrl that is too long, holds a
@@ -635,16 +646,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           behavior: SnackBarBehavior.floating,
           content: Text(S.of(context).success),
           backgroundColor: Theme.of(context).colorScheme.primary,
-          width: MediaQuery.of(context).size.width * 0.8,
-        ),
-      );
-    } else if (state is LoginErrorState) {
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).hideCurrentSnackBar();
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(state.errorCode.resolve(context)),
-          backgroundColor: Theme.of(context).colorScheme.error,
           width: MediaQuery.of(context).size.width * 0.8,
         ),
       );
