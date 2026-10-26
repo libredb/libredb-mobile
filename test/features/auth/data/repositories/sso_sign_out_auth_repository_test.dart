@@ -142,7 +142,8 @@ class _RecordingStudioIdentity implements IStudioIdentityRepository {
   }
 
   @override
-  Future<Result<StudioIdentity>> fetch() => throw UnimplementedError('a logout never reads the identity');
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) =>
+      throw UnimplementedError('a logout never reads the identity');
 }
 
 OidcSettings _settings({bool logoutHint = true}) =>

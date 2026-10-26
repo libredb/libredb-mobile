@@ -1210,6 +1210,16 @@ class S {
     );
   }
 
+  /// `Studio does not answer, so this account stays in Platform. Try again in a moment.`
+  String get profile_switch_studio_unreachable {
+    return Intl.message(
+      'Studio does not answer, so this account stays in Platform. Try again in a moment.',
+      name: 'profile_switch_studio_unreachable',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Browse`
   String get tab_browse {
     return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);
@@ -2922,6 +2932,16 @@ class S {
       'Too many places to search. Pick object kinds to narrow the search.',
       name: 'error_studio_search_pair_limit',
       desc: 'Studio refused an object search that would walk too many container and kind pairs; picking kinds narrows it.',
+      args: [],
+    );
+  }
+
+  /// `Studio does not answer. Try again in a moment.`
+  String get error_studio_unreachable {
+    return Intl.message(
+      'Studio does not answer. Try again in a moment.',
+      name: 'error_studio_unreachable',
+      desc: 'Studio answered a 5xx without its error code, or the connection to it failed.',
       args: [],
     );
   }

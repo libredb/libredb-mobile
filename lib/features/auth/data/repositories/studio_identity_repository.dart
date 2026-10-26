@@ -15,9 +15,9 @@ class StudioIdentityRepository implements IStudioIdentityRepository {
   static final _log = AppLogger.getLogger('StudioIdentityRepository');
 
   @override
-  Future<Result<StudioIdentity>> fetch() async {
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) async {
     try {
-      final response = await _apiClient.get('/auth/me');
+      final response = await _apiClient.get('/auth/me', bypassResilience: probe);
       final identity = StudioIdentityModel.fromJsonString(ApiClient.decodeUTF8(response.data!));
       switch (identity.role) {
         case StudioAdminRole() || StudioUserRole():

@@ -377,7 +377,7 @@ class _CountingStudioIdentity implements IStudioIdentityRepository {
   final void Function() _onRecord;
 
   @override
-  Future<Result<StudioIdentity>> fetch() => _inner.fetch();
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) => _inner.fetch(probe: probe);
 
   @override
   Future<Result<void>> recordSignOut() {

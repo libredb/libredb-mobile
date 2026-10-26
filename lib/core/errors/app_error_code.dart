@@ -67,6 +67,10 @@ enum AppErrorCode {
   /// (`INVENTORY_PAIR_LIMIT`, from Studio 1.1.0); naming fewer kinds narrows it.
   studioSearchPairLimit('studio.search_pair_limit'),
 
+  /// Studio does not answer: a 5xx without Studio's error code, as an edge in front of a stopped Studio sends, or a
+  /// connection that failed. Only the mode switch gives it (`SwitchSessionTargetUseCase`).
+  studioUnreachable('studio.unreachable'),
+
   // --- SQL editor: the statement text kept on the device ---
   /// A saved draft or history cannot be read: its key is gone, the file was changed, or it is of an unknown version.
   editorSavedTextUnreadable('editor.saved_text_unreadable'),
