@@ -76,3 +76,6 @@ test/**/failures/
 
 # Design and plan
 /docs/superpowers/
+
+# An agent skill's working files: a plan's ledger, a command's output, a page read once and dumped to disk
+/.superpowers/
