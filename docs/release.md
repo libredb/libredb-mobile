@@ -257,7 +257,9 @@ Object search terms go only to the deployment's Studio, as part of the request, 
 #### A build with Platform mode
 
 The answers below are for a store build with `PLATFORM_API_URL` set as well as `SENTRY_DSN`; they replace the answers above only for such a build, and the owner decides whether the store build carries Platform mode (`lib/main/main_prod.dart`).
-LibreDB Platform runs in the same deployment the maintainer operates, beside its Keycloak and Studio ([privacy-policy.md](privacy-policy.md)), so what the app sends to Platform counts as collected by the developer and not as shared, for the same reason as Studio above.
+LibreDB Platform runs in the same deployment the maintainer operates, beside its Keycloak and Studio ([privacy-policy.md](privacy-policy.md)), so the data this page declares as collected in Platform mode counts as collected by the developer and not as shared, for the same reason as Studio above.
+That data is what the access token carries: the admin's name, e-mail address, subject and username.
+The search text, the grants, changes and removals of access and the enabling or disabling of a connection are sent to the admin's own Platform to carry out the admin's request and are recorded there; by the owner's ruling of 2026-10-26 they are not collected by the publisher, so they are not declared.
 Each Why cell reads the Play Console Help definitions of collection (data transmitted off the user's device) and of the data type in that row ([Data safety help](https://support.google.com/googleplay/android-developer/answer/10787469), "Data types").
 What Platform mode sends and shows is listed in [privacy-policy.md](privacy-policy.md); nothing of a Platform session is stored on the device ([security.md](security.md), "Removing the app's data").
 
@@ -265,7 +267,7 @@ Overview, Platform mode:
 
 | Question | Answer | Why |
 | --- | --- | --- |
-| Does the app collect or share any of the required user data types? | Yes | As above, plus the requests to Platform: the access token, the grants and removals of access, and the enabling or disabling of a connection ([privacy-policy.md](privacy-policy.md)) |
+| Does the app collect or share any of the required user data types? | Yes | As above, plus the access token sent to Platform, which carries the name, e-mail address and user ids declared below ([privacy-policy.md](privacy-policy.md)) |
 | Is all user data encrypted in transit? | Yes | As above, and a prod build also stops at start when a set `PLATFORM_API_URL` is not https (`lib/infrastructure/config/environment.dart`, [security.md](security.md), "Encryption in transit"), which `tool/release/check_defines.sh` checks before the build |
 | Account creation | The app does not allow users to create an account | Unchanged: Platform's first answer to an account creates its Platform user record from the existing Keycloak account and takes an admin seat (libredb-platform `docs/api/v1.md`), so the user creates no account in the app |
 | Can users request that their data is deleted? | Yes | A Studio session as above; a Platform session keeps nothing on the device, so Settings shows no Remove my data there, and signing out or uninstalling removes the session ([security.md](security.md), "Removing the app's data"); crash reports through info@libredb.org |
@@ -276,7 +278,7 @@ Data types, Platform mode (none is shared, none is processed ephemerally, and no
 | --- | --- | --- | --- | --- |
 | Personal info | Name | Yes | App functionality, Account management | Unchanged from the Studio answer, which the same access token already gives; Platform's identity answer returns the admin's own name (`GET /api/v1/me`). The names of other users that the grant list and the directory search show are received from Platform, not sent from the device. |
 | Personal info | Email address | Yes | App functionality, Account management | Unchanged: the access token carries the admin's e-mail address. The app never sends another user's e-mail address; a grant names its user by Keycloak id (libredb-platform `docs/api/v1.md`, `PUT /api/v1/connections/{id}/grants/{subject}`). |
-| Personal info | User IDs | Yes | App functionality, Account management | Unchanged, and Platform mode adds the Keycloak id of each user the admin gives access to, which Play's definition of User IDs, identifiers that relate to an identifiable person, covers |
+| Personal info | User IDs | Yes | App functionality, Account management | Unchanged: the access token carries the admin's own subject and username. A grant names the user it gives access to by Keycloak id inside the grant request (libredb-platform `docs/api/v1.md`, `PUT /api/v1/connections/{id}/grants/{subject}`), which by the same ruling as Other actions below goes to the admin's own Platform and is not collected by the publisher. |
 | App activity | In-app search history | No | | Owner's ruling of 2026-10-26: the directory search text and the audit statement search text are a query sent to the admin's own Platform to answer that search, not collected by the publisher, and the app keeps no search history ([privacy-policy.md](privacy-policy.md)) |
 | App activity | Other user-generated content | Yes | App functionality | Unchanged: the statements sent to Studio. Platform mode adds none: a grant holds a user, a level and an expiry chosen from lists, with no free text. |
 | App activity | Other actions | No | | Owner's ruling of 2026-10-26: the grants, changes and removals of access and the enabling or disabling of a connection are sent to the admin's own Platform and recorded there (libredb-platform `src/features/connections/lib/grant.repository.ts`, `database-connection.repository.ts`), not collected by the publisher |
