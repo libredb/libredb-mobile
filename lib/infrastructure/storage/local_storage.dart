@@ -57,7 +57,10 @@ enum StorageKeys {
   appLockEnabled('app_lock_enabled'),
 
   /// How long the app may stay in the background before the app lock asks again, by `AppLockTimeout` name.
-  appLockTimeout('app_lock_timeout');
+  appLockTimeout('app_lock_timeout'),
+
+  /// Whether this device has shown the introduction; see `OnboardingSeenPreferences`.
+  onboardingSeen('onboarding_seen');
 
   const StorageKeys(this.key);
 
@@ -81,6 +84,9 @@ enum StorageKeys {
     // The lock protects the device's copy of the app for whoever signs in next, so a sign-out keeps it.
     StorageKeys.appLockEnabled => StorageScope.device,
     StorageKeys.appLockTimeout => StorageScope.device,
+    // The introduction runs before anyone signs in, so it belongs to no account: there is nothing to key it to, the
+    // next person to pick up the phone has seen it too, and a sign-out must not bring it back.
+    StorageKeys.onboardingSeen => StorageScope.device,
   };
 }
 
