@@ -41,6 +41,7 @@ const _devicePreferences = {
   StorageKeys.resultViewMode,
   StorageKeys.appLockEnabled,
   StorageKeys.appLockTimeout,
+  StorageKeys.onboardingSeen,
 };
 
 /// The values of [SecureStorageKeys], each a value of the session (its tokens and its target), which every sign-out
@@ -113,6 +114,8 @@ const _storageUsers = <String, _Keeps>{
   'lib/app/bootstrap/app_bootstrap.dart': _Device(),
   'lib/infrastructure/storage/result_view_mode_preferences.dart': _Device(),
   'lib/features/app_lock/data/repositories/app_lock_settings_preferences.dart': _Device(),
+  // The introduction runs before anyone signs in, so what it stores belongs to no account.
+  'lib/features/onboarding/data/repositories/onboarding_seen_preferences.dart': _Device(),
   'lib/infrastructure/storage/local_storage.dart': _Device(),
   'lib/app/app.dart': _NoneOfItsOwn(),
   'lib/app/di/app_dependencies.dart': _NoneOfItsOwn(),
