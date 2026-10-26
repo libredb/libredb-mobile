@@ -551,6 +551,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_studio_transaction_not_owned": MessageLookupByLibrary.simpleMessage(
       "Another session holds an open transaction on this connection.",
     ),
+    "error_studio_unreachable": MessageLookupByLibrary.simpleMessage("Studio does not answer. Try again in a moment."),
     "error_studio_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Studio sent an answer this app cannot read. The app or Studio may need an update.",
     ),
@@ -885,6 +886,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Switch to Platform?"),
     "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
       "Studio did not accept this account, so it stays in Platform. Ask an administrator for access.",
+    ),
+    "profile_switch_studio_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Studio does not answer, so this account stays in Platform. Try again in a moment.",
     ),
     "profile_switch_to_platform": MessageLookupByLibrary.simpleMessage("Switch to Platform"),
     "profile_switch_to_studio": MessageLookupByLibrary.simpleMessage("Switch to Studio"),

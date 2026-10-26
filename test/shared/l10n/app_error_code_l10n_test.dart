@@ -51,6 +51,7 @@ void main() {
           "Your access to this connection changed, so the transaction was rolled back.",
       AppErrorCode.studioUnreadableAnswer:
           "Studio sent an answer this app cannot read. The app or Studio may need an update.",
+      AppErrorCode.studioUnreachable: 'Studio does not answer. Try again in a moment.',
     };
 
     for (final MapEntry(key: code, value: sentence) in sentences.entries) {

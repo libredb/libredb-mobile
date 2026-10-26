@@ -489,7 +489,7 @@ class _OnceRefusingStudio implements IStudioIdentityRepository {
   int fetches = 0;
 
   @override
-  Future<Result<StudioIdentity>> fetch() async {
+  Future<Result<StudioIdentity>> fetch({bool probe = false}) async {
     fetches++;
     if (fetches == 1) return const Failure(AuthError('The session answer is not signed in'));
     return const Success(StudioIdentity(username: 'admin@example.com', role: StudioAdminRole(), viaBearer: true));

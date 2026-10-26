@@ -43,6 +43,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.studioUnreadableAnswer => s.error_studio_unreadable_answer,
       AppErrorCode.studioStatementTooLarge => s.error_studio_statement_too_large,
       AppErrorCode.studioSearchPairLimit => s.error_studio_search_pair_limit,
+      AppErrorCode.studioUnreachable => s.error_studio_unreachable,
       AppErrorCode.editorSavedTextUnreadable => s.error_editor_saved_text_unreadable,
       AppErrorCode.editorSavedTextNotStored => s.error_editor_saved_text_not_stored,
       AppErrorCode.editorPageInterrupted => s.error_editor_page_interrupted,
