@@ -199,6 +199,9 @@ void main() {
       ('403 LICENSE_EXPIRED', _platformAnswer(403, 'LICENSE_EXPIRED'), AppErrorCode.platformLicenseExpired),
       ('403 LICENSE_ADMIN_SEATS', _platformAnswer(403, 'LICENSE_ADMIN_SEATS'), AppErrorCode.platformLicenseAdminSeats),
       ('500 INTERNAL_ERROR', _platformAnswer(500, 'INTERNAL_ERROR'), AppErrorCode.platformInternalError),
+      // Platform codes every 5xx of its own, so one without a code is the edge in front of a stopped Platform.
+      ('502 without a code', _platformAnswer(502, null), AppErrorCode.platformUnreachable),
+      ('503 without a code', _platformAnswer(503, null), AppErrorCode.platformUnreachable),
       ('an unreadable answer', const FormatException('missing id'), AppErrorCode.platformUnreadableAnswer),
       ('no network', OfflineException(), AppErrorCode.networkOffline),
     ];
