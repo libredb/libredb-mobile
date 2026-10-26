@@ -468,9 +468,9 @@ class _CountingPlatformIdentity implements IPlatformIdentityRepository {
   int fetches = 0;
 
   @override
-  Future<Result<PlatformIdentity>> fetch() {
+  Future<Result<PlatformIdentity>> fetch({bool probe = false}) {
     fetches++;
-    return inner.fetch();
+    return inner.fetch(probe: probe);
   }
 }
 

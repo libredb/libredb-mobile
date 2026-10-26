@@ -23,6 +23,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 
 /// Who holds a grant on one connection in Platform mode, in Platform's order (by username), expired grants flagged,
 /// and the removal of one person's access.
@@ -35,58 +36,75 @@ class PlatformConnectionGrantsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<RevokeGrantBloc, RevokeGrantState>(
-      listener: _onRevoke,
-      child: Column(
-        children: [
-          _ConnectionHeader(connection: connection),
-          _AddGrantButton(connection: connection),
-          Expanded(
-            child: BlocBuilder<GrantListBloc, GrantListState>(
-              builder: (context, state) => switch (state) {
-                GrantListInitial() || GrantListLoading() => const _Skeleton(),
-                GrantListLoaded(grants: [], :final refreshError) => Column(
-                  children: [
-                    if (refreshError != null) _RefreshBanner(errorCode: refreshError),
-                    Expanded(
-                      child: _Refreshable(
-                        child: _centered(
-                          AppEmptyState(
-                            icon: Icons.group_off_outlined,
-                            title: S.of(context).platform_grants_empty_title,
-                            description: S.of(context).platform_grants_empty_description,
+    return OnPlatformReachable(
+      onReachable: () => _reloadFailed(context),
+      child: BlocListener<RevokeGrantBloc, RevokeGrantState>(
+        listener: _onRevoke,
+        child: Column(
+          children: [
+            _ConnectionHeader(connection: connection),
+            _AddGrantButton(connection: connection),
+            Expanded(
+              child: BlocBuilder<GrantListBloc, GrantListState>(
+                builder: (context, state) => switch (state) {
+                  GrantListInitial() || GrantListLoading() => const _Skeleton(),
+                  GrantListLoaded(grants: [], :final refreshError) => Column(
+                    children: [
+                      if (refreshError != null) _RefreshBanner(errorCode: refreshError),
+                      Expanded(
+                        child: _Refreshable(
+                          child: _centered(
+                            AppEmptyState(
+                              icon: Icons.group_off_outlined,
+                              title: S.of(context).platform_grants_empty_title,
+                              description: S.of(context).platform_grants_empty_description,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                final GrantListLoaded loaded => _LoadedList(connection: connection, state: loaded),
-                GrantListFailure(errorCode: AppErrorCode.platformNotFound) => _centered(
-                  AppErrorState(
-                    icon: Icons.link_off,
-                    title: S.of(context).platform_grants_connection_gone_title,
-                    description: S.of(context).platform_grants_connection_gone_description,
-                    retryLabel: S.of(context).platform_grants_back_to_connections,
-                    onRetry: () => context.go(ApplicationRoutesConstants.platformConnections),
+                    ],
                   ),
-                ),
-                GrantListFailure(:final errorCode) => _Refreshable(
-                  child: _centered(
+                  final GrantListLoaded loaded => _LoadedList(connection: connection, state: loaded),
+                  GrantListFailure(errorCode: AppErrorCode.platformNotFound) => _centered(
                     AppErrorState(
-                      title: S.of(context).platform_grants_load_failed,
-                      description: errorCode.resolve(context),
-                      retryLabel: S.of(context).retry,
-                      onRetry: () => context.read<GrantListBloc>().add(GrantListLoadRequested(connection.id)),
+                      icon: Icons.link_off,
+                      title: S.of(context).platform_grants_connection_gone_title,
+                      description: S.of(context).platform_grants_connection_gone_description,
+                      retryLabel: S.of(context).platform_grants_back_to_connections,
+                      onRetry: () => context.go(ApplicationRoutesConstants.platformConnections),
                     ),
                   ),
-                ),
-              },
+                  GrantListFailure(:final errorCode) => _Refreshable(
+                    child: _centered(
+                      AppErrorState(
+                        title: S.of(context).platform_grants_load_failed,
+                        description: errorCode.resolve(context),
+                        retryLabel: S.of(context).retry,
+                        onRetry: () => context.read<GrantListBloc>().add(GrantListLoadRequested(connection.id)),
+                      ),
+                    ),
+                  ),
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  /// Asks Platform again once it answers again under its unreachable page, when the grants failed meanwhile; loaded
+  /// grants stay, and a connection that is gone is not asked again.
+  void _reloadFailed(BuildContext context) {
+    final bloc = context.read<GrantListBloc>();
+    switch (bloc.state) {
+      case GrantListFailure(errorCode: AppErrorCode.platformNotFound):
+        break;
+      case GrantListFailure():
+        bloc.add(GrantListLoadRequested(connection.id));
+      case GrantListInitial() || GrantListLoading() || GrantListLoaded():
+        break;
+    }
   }
 
   void _onRevoke(BuildContext context, RevokeGrantState state) {

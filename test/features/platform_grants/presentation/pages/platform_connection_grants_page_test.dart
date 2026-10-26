@@ -24,6 +24,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_error_state.d
 import 'package:libredb_mobile/shared/design_system/components/app_skeleton.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -66,7 +67,14 @@ String _date(DateTime value) => DateFormat.yMMMd('en').add_Hm().format(value.toL
 void main() {
   late MockIPlatformGrantRepository repository;
 
-  setUp(() => repository = MockIPlatformGrantRepository());
+  /// Whether the Platform unreachable page covers the page.
+  late ValueNotifier<bool> platformUnreachable;
+
+  setUp(() {
+    repository = MockIPlatformGrantRepository();
+    platformUnreachable = ValueNotifier(false);
+    addTearDown(platformUnreachable.dispose);
+  });
 
   void answerList(List<Result<List<PlatformGrant>>> answers) {
     final queue = [...answers];
@@ -109,8 +117,14 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           routerConfig: router,
-          // The Platform shell's ResponsiveScaffold frames the page in the app.
-          builder: (context, child) => Scaffold(body: child),
+          // The Platform shell's ResponsiveScaffold frames the page in the app, under the Platform gate.
+          builder: (context, child) => ValueListenableBuilder(
+            valueListenable: platformUnreachable,
+            builder: (context, isUnreachable, _) => PlatformUnreachableStatus(
+              isUnreachable: isUnreachable,
+              child: Scaffold(body: child),
+            ),
+          ),
         ),
       ),
     );
@@ -177,6 +191,55 @@ void main() {
 
     expect(find.text('bob'), findsOneWidget);
     verify(() => repository.list('c1')).called(2);
+  });
+
+  group('once Platform answers again after its unreachable page covered the grants', () {
+    testWidgets('grants that failed while covered are asked again, once', (tester) async {
+      platformUnreachable.value = true;
+      answerList([
+        const Failure(NetworkError('Connection refused')),
+        Success([_bob]),
+      ]);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      verify(() => repository.list('c1')).called(1);
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verify(() => repository.list('c1')).called(1);
+      expect(find.text('bob'), findsOneWidget);
+    });
+
+    testWidgets('a connection that is gone is not asked again', (tester) async {
+      platformUnreachable.value = true;
+      answerList([Failure(NotFoundError('404', code: AppErrorCode.platformNotFound.key))]);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      verify(() => repository.list('c1')).called(1);
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verifyNever(() => repository.list(any()));
+    });
+
+    testWidgets('loaded grants ask nothing and stay', (tester) async {
+      answerList([
+        Success([_bob]),
+      ]);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      verify(() => repository.list('c1')).called(1);
+      platformUnreachable.value = true;
+      await tester.pump();
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verifyNever(() => repository.list(any()));
+      expect(find.text('bob'), findsOneWidget);
+    });
   });
 
   testWidgets('renders each grant: username, e-mail, level, expiry and who granted it', (tester) async {

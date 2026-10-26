@@ -12,6 +12,7 @@ import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_filter.dart';
 import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_page.dart';
 import 'package:libredb_mobile/features/platform_audit/presentation/pages/audit_event_page.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../audit_event_fixture.dart';
 import '../../audit_pages_harness.dart';
@@ -175,6 +176,41 @@ void main() {
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
+      expect(row('e1'), findsOneWidget);
+    });
+
+    testWidgets('a first load that failed under the Platform unreachable page is asked again once uncovered', (
+      tester,
+    ) async {
+      harness.answerWith((filter, offset) async => const Failure(NetworkError('Connection refused')));
+      await harness.pump(tester, unreachable: true);
+      expect(harness.sentFilters(), hasLength(1));
+      harness.answer([auditEvent('e1')]);
+
+      harness.platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      expect(harness.sentFilters(), hasLength(1));
+      expect(row('e1'), findsOneWidget);
+    });
+
+    testWidgets('a loaded log asks nothing once the Platform unreachable page uncovers it', (tester) async {
+      harness.answer([auditEvent('e1')]);
+      await harness.pump(tester);
+      harness.sentFilters();
+      harness.platformUnreachable.value = true;
+      await tester.pump();
+
+      harness.platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verifyNever(
+        () => harness.repository.list(
+          filter: any(named: 'filter'),
+          offset: any(named: 'offset'),
+          limit: any(named: 'limit'),
+        ),
+      );
       expect(row('e1'), findsOneWidget);
     });
 

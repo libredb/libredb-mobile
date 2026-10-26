@@ -496,6 +496,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
       "Bu Platform kurulumunun planı bu özelliği içermiyor.",
     ),
+    "error_platform_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Platform yanıt vermiyor. Biraz sonra tekrar deneyin.",
+    ),
     "error_platform_unreadable_answer": MessageLookupByLibrary.simpleMessage(
       "Platform bu uygulamanın okuyamadığı bir yanıt gönderdi. Uygulamanın güncellenmesi gerekebilir.",
     ),
@@ -897,6 +900,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Platform bu hesabı kabul etmedi, bu yüzden Studio\'da kalıyor. Bu uygulamanın Platform için ayarlandığını yöneticinize kontrol ettirin.",
     ),
     "profile_switch_platform_title": MessageLookupByLibrary.simpleMessage("Platform\'a geçilsin mi?"),
+    "profile_switch_platform_unreachable": MessageLookupByLibrary.simpleMessage(
+      "Platform yanıt vermiyor, bu yüzden hesap Studio\'da kalıyor. Biraz sonra tekrar deneyin.",
+    ),
     "profile_switch_studio_refused": MessageLookupByLibrary.simpleMessage(
       "Studio bu hesabı kabul etmedi, bu yüzden Platform\'da kalıyor. Erişim için bir yöneticiye başvurun.",
     ),

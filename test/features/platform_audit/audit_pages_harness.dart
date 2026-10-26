@@ -12,6 +12,7 @@ import 'package:libredb_mobile/features/platform_audit/domain/repositories/platf
 import 'package:libredb_mobile/features/platform_audit/navigation/platform_audit_routes.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../mocks/mock_classes.dart';
@@ -26,6 +27,9 @@ final class AuditPagesHarness {
   final repository = MockIPlatformAuditRepository();
   final protection = recordingScreenCaptureProtection();
   late GoRouter router;
+
+  /// Whether the Platform unreachable page covers the pages; a test sets it after [pump].
+  late ValueNotifier<bool> platformUnreachable;
 
   /// Answers every read with [answer] of its filter and offset.
   void answerWith(Future<Result<AuditPage>> Function(AuditFilter filter, int offset) answer) {
@@ -61,12 +65,15 @@ final class AuditPagesHarness {
     Object? extra,
     Locale locale = const Locale('en'),
     Size size = const Size(400, 1400),
+    bool unreachable = false,
   }) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     router = GoRouter(initialLocation: location, initialExtra: extra, routes: PlatformAuditFeatureRoutes.routes);
     addTearDown(router.dispose);
+    platformUnreachable = ValueNotifier(unreachable);
+    addTearDown(platformUnreachable.dispose);
     await tester.pumpWidget(
       withScreenCaptureProtection(
         protection: protection,
@@ -83,7 +90,14 @@ final class AuditPagesHarness {
             ],
             supportedLocales: S.delegate.supportedLocales,
             routerConfig: router,
-            builder: (context, child) => Scaffold(body: child),
+            // Under the Platform gate, as in the app.
+            builder: (context, child) => ValueListenableBuilder(
+              valueListenable: platformUnreachable,
+              builder: (context, isUnreachable, _) => PlatformUnreachableStatus(
+                isUnreachable: isUnreachable,
+                child: Scaffold(body: child),
+              ),
+            ),
           ),
         ),
       ),

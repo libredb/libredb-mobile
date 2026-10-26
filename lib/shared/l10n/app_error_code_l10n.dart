@@ -68,6 +68,7 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.platformPlanFeatureRequired => s.error_platform_plan_feature_required,
       AppErrorCode.platformPermissionDenied => s.error_platform_permission_denied,
       AppErrorCode.platformInternalError => s.error_platform_internal_error,
+      AppErrorCode.platformUnreachable => s.error_platform_unreachable,
       AppErrorCode.platformUnreadableAnswer => s.error_platform_unreadable_answer,
       AppErrorCode.generic => s.error_generic,
     };

@@ -9,24 +9,34 @@ import 'package:libredb_mobile/features/object_browser/presentation/widgets/brow
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 
 void main() {
   late int retries;
 
   setUp(() => retries = 0);
 
-  Widget app(AppError error, {required bool offline, bool refused = false, bool runsStatement = false}) => MaterialApp(
+  Widget app(
+    AppError error, {
+    required bool offline,
+    bool refused = false,
+    bool unreachable = false,
+    bool runsStatement = false,
+  }) => MaterialApp(
     localizationsDelegates: const [S.delegate],
     home: OfflineStatus(
       isOffline: offline,
-      child: AccountRefusalStatus(
-        isRefused: refused,
-        child: Scaffold(
-          body: BrowseFailureView(
-            connectionId: 'seed:dev-postgres',
-            error: error,
-            runsStatement: runsStatement,
-            onRetry: () => retries++,
+      child: StudioUnreachableStatus(
+        isUnreachable: unreachable,
+        child: AccountRefusalStatus(
+          isRefused: refused,
+          child: Scaffold(
+            body: BrowseFailureView(
+              connectionId: 'seed:dev-postgres',
+              error: error,
+              runsStatement: runsStatement,
+              onRetry: () => retries++,
+            ),
           ),
         ),
       ),
@@ -89,6 +99,29 @@ void main() {
   testWidgets('a failure whose retry runs a statement waits for Retry after the account is accepted', (tester) async {
     await tester.pumpWidget(app(refusedAccount, offline: false, refused: true, runsStatement: true));
     await tester.pumpWidget(app(refusedAccount, offline: false, runsStatement: true));
+
+    expect(retries, 0);
+  });
+
+  // The page stayed mounted under the Studio unreachable page and failed there; a check that finds Studio answering
+  // again loads it once (#343), as the connection list does (#339).
+  const refused = NetworkError('Connection refused');
+
+  testWidgets('a failure loads again once, when the Studio unreachable page uncovers it', (tester) async {
+    await tester.pumpWidget(app(refused, offline: false, unreachable: true));
+    expect(retries, 0);
+
+    await tester.pumpWidget(app(refused, offline: false));
+    await tester.pumpWidget(app(refused, offline: false));
+
+    expect(retries, 1);
+  });
+
+  testWidgets('a failure whose retry runs a statement waits for Retry after the Studio unreachable page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(refused, offline: false, unreachable: true, runsStatement: true));
+    await tester.pumpWidget(app(refused, offline: false, runsStatement: true));
 
     expect(retries, 0);
   });

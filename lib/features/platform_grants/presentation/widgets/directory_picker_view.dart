@@ -14,6 +14,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_error_state.d
 import 'package:libredb_mobile/shared/design_system/components/app_skeleton.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/l10n/app_error_code_l10n.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 
 /// The directory search of the grant editor's first step: a search field, the users found, and "load more".
 ///
@@ -48,74 +49,80 @@ class _DirectoryPickerViewState extends State<DirectoryPickerView> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final bloc = context.read<DirectoryPickerBloc>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-          child: Text(s.platform_grants_picker_title, style: Theme.of(context).textTheme.titleMedium),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _controller,
-            builder: (context, value, _) => BlocSelector<DirectoryPickerBloc, DirectoryPickerState, bool>(
-              selector: (state) => state.queryTooLong,
-              builder: (context, tooLong) => TextField(
-                key: const ValueKey('platform-directory-search'),
-                controller: _controller,
-                autocorrect: false,
-                enableSuggestions: false,
-                enableIMEPersonalizedLearning: false,
-                textInputAction: TextInputAction.search,
-                onChanged: (text) => bloc.add(DirectoryPickerQueryChanged(text)),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: s.platform_grants_picker_search_hint,
-                  prefixIcon: const Icon(Icons.search),
-                  errorText: tooLong ? s.platform_grants_picker_query_too_long : null,
-                  errorMaxLines: 2,
-                  suffixIcon: value.text.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          tooltip: s.platform_grants_picker_clear,
-                          onPressed: _clear,
-                        ),
+    return OnPlatformReachable(
+      // A search that failed while Platform's unreachable page covered the picker is sent again once it answers.
+      onReachable: () {
+        if (bloc.state.status == DirectoryPickerStatus.failure) bloc.add(const DirectoryPickerRetryRequested());
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
+            child: Text(s.platform_grants_picker_title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) => BlocSelector<DirectoryPickerBloc, DirectoryPickerState, bool>(
+                selector: (state) => state.queryTooLong,
+                builder: (context, tooLong) => TextField(
+                  key: const ValueKey('platform-directory-search'),
+                  controller: _controller,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  enableIMEPersonalizedLearning: false,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (text) => bloc.add(DirectoryPickerQueryChanged(text)),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: s.platform_grants_picker_search_hint,
+                    prefixIcon: const Icon(Icons.search),
+                    errorText: tooLong ? s.platform_grants_picker_query_too_long : null,
+                    errorMaxLines: 2,
+                    suffixIcon: value.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            tooltip: s.platform_grants_picker_clear,
+                            onPressed: _clear,
+                          ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Expanded(
-          child: BlocBuilder<DirectoryPickerBloc, DirectoryPickerState>(
-            builder: (context, state) => switch (state.status) {
-              DirectoryPickerStatus.loading => const _Skeleton(),
-              DirectoryPickerStatus.failure => _centered(
-                AppErrorState(
-                  title: s.platform_grants_picker_load_failed,
-                  description: state.error?.resolve(context),
-                  retryLabel: s.retry,
-                  onRetry: () => bloc.add(const DirectoryPickerRetryRequested()),
+          Expanded(
+            child: BlocBuilder<DirectoryPickerBloc, DirectoryPickerState>(
+              builder: (context, state) => switch (state.status) {
+                DirectoryPickerStatus.loading => const _Skeleton(),
+                DirectoryPickerStatus.failure => _centered(
+                  AppErrorState(
+                    title: s.platform_grants_picker_load_failed,
+                    description: state.error?.resolve(context),
+                    retryLabel: s.retry,
+                    onRetry: () => bloc.add(const DirectoryPickerRetryRequested()),
+                  ),
                 ),
-              ),
-              DirectoryPickerStatus.loaded when state.users.isEmpty => _centered(
-                AppEmptyState(
-                  icon: Icons.person_search_outlined,
-                  title: s.platform_grants_picker_empty_title,
-                  description: s.platform_grants_picker_empty_description,
+                DirectoryPickerStatus.loaded when state.users.isEmpty => _centered(
+                  AppEmptyState(
+                    icon: Icons.person_search_outlined,
+                    title: s.platform_grants_picker_empty_title,
+                    description: s.platform_grants_picker_empty_description,
+                  ),
                 ),
-              ),
-              DirectoryPickerStatus.loaded => _UserList(
-                state: state,
-                target: widget.target,
-                holders: widget.holders,
-                onPicked: widget.onPicked,
-              ),
-            },
+                DirectoryPickerStatus.loaded => _UserList(
+                  state: state,
+                  target: widget.target,
+                  holders: widget.holders,
+                  onPicked: widget.onPicked,
+                ),
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

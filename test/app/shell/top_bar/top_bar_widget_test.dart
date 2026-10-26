@@ -515,7 +515,7 @@ class _RefusingPlatformIdentity implements IPlatformIdentityRepository {
   final String code;
 
   @override
-  Future<Result<PlatformIdentity>> fetch() async =>
+  Future<Result<PlatformIdentity>> fetch({bool probe = false}) async =>
       Failure(platformError(UnauthorizedException('Platform answered 403', statusCode: 403, errorCode: code)));
 }
 

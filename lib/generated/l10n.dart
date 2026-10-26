@@ -1220,6 +1220,16 @@ class S {
     );
   }
 
+  /// `Platform does not answer, so this account stays in Studio. Try again in a moment.`
+  String get profile_switch_platform_unreachable {
+    return Intl.message(
+      'Platform does not answer, so this account stays in Studio. Try again in a moment.',
+      name: 'profile_switch_platform_unreachable',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Browse`
   String get tab_browse {
     return Intl.message('Browse', name: 'tab_browse', desc: '', args: []);
@@ -3127,6 +3137,16 @@ class S {
       'Platform could not complete the request. Try again later.',
       name: 'error_platform_internal_error',
       desc: '',
+      args: [],
+    );
+  }
+
+  /// `Platform does not answer. Try again in a moment.`
+  String get error_platform_unreachable {
+    return Intl.message(
+      'Platform does not answer. Try again in a moment.',
+      name: 'error_platform_unreachable',
+      desc: 'Platform answered a 5xx without its error code, as the edge in front of a stopped Platform does, or the connection to it failed.',
       args: [],
     );
   }

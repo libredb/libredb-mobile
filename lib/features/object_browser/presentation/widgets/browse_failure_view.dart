@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 
 /// The one failure view of every Browse page: Studio's error in `StudioErrorBanner`, with the page's [onRetry].
 ///
@@ -17,8 +18,9 @@ import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
 /// A request the offline device never sent (`network.offline`) calls [onRetry] by itself once the device is back
 /// online, as the connection list does; any other failure waits for the user's Retry.
 ///
-/// Studio accepting the signed-in account again after the shell's refusal page covered the page calls [onRetry] once
-/// too, unless it [runsStatement]: a statement is never run again on its own.
+/// Studio accepting the signed-in account again after the shell's refusal page covered the page, or answering again
+/// after its unreachable page covered it, calls [onRetry] once too, unless it [runsStatement]: a statement is never run
+/// again on its own.
 class BrowseFailureView extends StatefulWidget {
   const BrowseFailureView({
     super.key,
@@ -74,6 +76,10 @@ class _BrowseFailureViewState extends State<BrowseFailureView> {
     final onRetry = widget.onRetry;
     if (onRetry == null) return banner;
     final view = _curedByConnection ? OnReconnect(onReconnect: onRetry, child: banner) : banner;
-    return widget.runsStatement ? view : OnAccountAccepted(onAccepted: onRetry, child: view);
+    if (widget.runsStatement) return view;
+    return OnAccountAccepted(
+      onAccepted: onRetry,
+      child: OnStudioReachable(onReachable: onRetry, child: view),
+    );
   }
 }

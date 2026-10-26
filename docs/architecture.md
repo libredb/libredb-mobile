@@ -100,6 +100,7 @@ It covers the session restore and the login page only in a build without a Platf
 - `PlatformStatusBloc` checks `GET /api/health/live`, a public endpoint sent without a token, never cached and never retried, with a 10 second timeout.
 - `AppStatusGate` sends the first check once, when the login page or a Platform session first needs Platform; later checks come from a Retry, from the device coming back online while Platform is unreachable (`AppConnectivityScope`), and from the app coming back after more than 5 minutes in the background.
 - A failed check shows the full-screen "Can't reach Platform" page, with the host of `PLATFORM_API_URL` and a Retry, over a Platform session, which stays mounted underneath; on the login page it disables only the Platform entry.
+  A screen that loaded and failed while covered loads again once a check uncovers it: `PlatformShell` reloads a failed identity, and a page reloads a failed answer through `OnPlatformReachable` (`lib/shared/widgets/platform_unreachable_status.dart`), as on the Studio side.
 - A build without a Platform target never sends the check.
 
 ### Offline
@@ -326,6 +327,8 @@ Studio's error body is `{error, code?, ...}`.
 | an answer the app cannot read | `studio.unreadable_answer` |
 
 A sign-in that `GET /api/auth/me` refuses with any other `AuthError`, a 401 that reached the caller, shows `studio.account_refused`.
+A mode switch to Studio that meets a 5xx without Studio's code, a failed connection or a timeout shows `studio.unreachable`, and a switch to Platform that meets the same shows `platform.unreachable`, each worded as the other server not answering while the account stays in its mode (`SwitchSessionTargetUseCase`); the login page shows its own notice for a server that does not answer.
+Platform's errors, `platform.unreachable` for any 5xx without Platform's code included, are mapped by `platformError` ([docs/platform.md](platform.md#errors)).
 A screen shows the translated message of the code.
 The SQL editor and the object browser's rows and key value pages also show the database's own words, the `message` of the error, because a syntax error or a refused read is what the user needs to read there.
 

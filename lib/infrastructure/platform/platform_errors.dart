@@ -61,6 +61,12 @@ AppError platformError(Object error) {
     400 => ValidationError(message),
     401 || 403 => AuthError(message),
     404 => NotFoundError(message),
+    // Platform codes every 5xx of its own (libredb-platform `apiV1ErrorResponse`), so one without a code comes from the
+    // edge in front of a stopped Platform.
+    final int s when s >= 500 && error.errorCode == null => ServerError(
+      message,
+      code: AppErrorCode.platformUnreachable.key,
+    ),
     final int s when s >= 500 => ServerError(message, code: AppErrorCode.platformInternalError.key),
     null => transportError(error),
     _ => UnknownError(message),

@@ -13,6 +13,8 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/features/platform_home/presentation/pages/platform_home_page.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
+import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/application/platform_identity_cubit.dart';
 import 'package:libredb_mobile/features/auth/application/sign_out_bloc.dart';
@@ -45,8 +47,11 @@ void main() {
     late MockPlatformAccountRefusalCubit refusal;
     late MockConnectivityCubit connectivity;
     late MockSignOutBloc signOut;
+    late MockPlatformStatusBloc platformStatus;
 
     setUp(() {
+      platformStatus = MockPlatformStatusBloc();
+      when(() => platformStatus.state).thenReturn(const PlatformReachable());
       studioIdentity = MockStudioIdentityCubit();
       policy = MockConnectionPolicyCubit();
       platformIdentity = MockPlatformIdentityCubit();
@@ -88,6 +93,7 @@ void main() {
             BlocProvider<PlatformAccountRefusalCubit>.value(value: refusal),
             BlocProvider<ConnectivityCubit>.value(value: connectivity),
             BlocProvider<SignOutBloc>.value(value: signOut),
+            BlocProvider<PlatformStatusBloc>.value(value: platformStatus),
           ],
           child: MaterialApp.router(
             routerConfig: router,

@@ -145,7 +145,8 @@ Platform's `message`, and the messages of `fieldErrors`, are never logged, put i
 | 503 `KEYCLOAK_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR`, 502 `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND` | `platformKeycloakUnavailable` | `ServerError` |
 | 403 `PLAN_FEATURE_REQUIRED` | `platformPlanFeatureRequired` | `AuthError` |
 | 403 `PERMISSION_DENIED` | `platformPermissionDenied` | `AuthError` |
-| 500 `INTERNAL_ERROR`, or any 5xx with another code or no envelope | `platformInternalError` | `ServerError` |
+| 500 `INTERNAL_ERROR`, or any 5xx with another code | `platformInternalError` | `ServerError` |
+| Any 5xx without a code, which only the edge in front of a stopped Platform sends, since Platform codes every 5xx of its own | `platformUnreachable` | `ServerError` |
 | Any other status with another code or no envelope | none | 400 `ValidationError`, 401 or 403 `AuthError`, 404 `NotFoundError`, else `UnknownError` |
 | No status (transport failure) | as every other server (`transport_error_mapping.dart`) | as every other server |
 | `FormatException` from a model | `platformUnreadableAnswer` | `ServerError` |
@@ -209,6 +210,7 @@ A refusal keeps the session, its target, its pages and its cubits, and a snackba
 The refusal names the mode the user stays in: a 401 from the other target does not end the session, so it never asks the user to sign in, unlike the login page's text for a refused sign-in.
 A switch to Studio that meets a 5xx without Studio's code, as the edge in front of a stopped Studio answers, a failed connection or a timeout says that Studio does not answer (`studio.unreachable`).
 Studio's gate of a switch is sent once, past an open circuit, and counts toward no circuit, so a refused switch never holds back the next tap once Studio is back.
+A switch to Platform that meets a 5xx without Platform's code, a failed connection or a timeout says that Platform does not answer (`platform.unreachable`), and Platform's gate of a switch is sent as a probe the same way.
 A switch is no sign-out: it sends no Studio logout record, writes no warn line, starts no provider end-session, sends the app lock no event and removes no stored data.
 A sign-out or an idle timeout while a switch runs ends the session and leaves no target stored.
 Such a switch is dropped (`SessionTargetSwitchAbandoned`): its answer shows nothing, in the next session or anywhere else, and it writes one info line and no warn or error line.
@@ -245,6 +247,7 @@ The restore calls neither server, so neither gate covers it.
 On the login page, an entry whose server does not answer stays visible and disabled, with "Studio does not answer" or "Platform does not answer" under its helper text and a Retry that asks only that server again; the other entry is unaffected.
 Studio's governance outage does not disable the Studio entry.
 Both gates stay in the tree in every state and only their pass-through flags change, so the open pages keep their state across an outage, a recovery and a session change.
+A Platform screen that loaded and failed while covered, as on a restore while Platform is down, loads again once a check uncovers it: `PlatformShell` reloads a failed identity, which Home shows, and the connection list, the grants of a connection, the directory picker and the audit log reload a failed answer through `OnPlatformReachable` (`lib/shared/widgets/platform_unreachable_status.dart`), never by sending a write again.
 
 A build without a Platform target keeps the Studio gate over the restore, the login page and a Studio session, and its single entry shows no notice.
 

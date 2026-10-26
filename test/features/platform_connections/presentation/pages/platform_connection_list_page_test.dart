@@ -22,6 +22,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_skeleton.dart
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/engine_icons.dart';
 import 'package:libredb_mobile/shared/models/platform_connection.dart';
+import 'package:libredb_mobile/shared/widgets/platform_unreachable_status.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_classes.dart';
@@ -59,9 +60,14 @@ void main() {
   late MockIPlatformConnectionRepository repository;
   late List<(String, Object?)> pushed;
 
+  /// Whether the Platform unreachable page covers the page.
+  late ValueNotifier<bool> platformUnreachable;
+
   setUp(() {
     repository = MockIPlatformConnectionRepository();
     pushed = [];
+    platformUnreachable = ValueNotifier(false);
+    addTearDown(platformUnreachable.dispose);
   });
 
   void answer(Result<List<PlatformConnection>> result) => when(() => repository.list()).thenAnswer((_) async => result);
@@ -97,8 +103,14 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           routerConfig: router,
-          // The Platform shell's ResponsiveScaffold frames the page in the app.
-          builder: (context, child) => Scaffold(body: child),
+          // The Platform shell's ResponsiveScaffold frames the page in the app, under the Platform gate.
+          builder: (context, child) => ValueListenableBuilder(
+            valueListenable: platformUnreachable,
+            builder: (context, isUnreachable, _) => PlatformUnreachableStatus(
+              isUnreachable: isUnreachable,
+              child: Scaffold(body: child),
+            ),
+          ),
         ),
       ),
     );
@@ -205,6 +217,38 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('once Platform answers again after its unreachable page covered the list', () {
+    testWidgets('a list that failed while covered asks Platform again, once', (tester) async {
+      platformUnreachable.value = true;
+      answer(const Failure(NetworkError('Connection refused')));
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      verify(() => repository.list()).called(1);
+      answer(const Success([_orders]));
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verify(() => repository.list()).called(1);
+      expect(find.text('Orders'), findsOneWidget);
+    });
+
+    testWidgets('a loaded list asks nothing and keeps its rows', (tester) async {
+      answer(const Success([_orders]));
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      verify(() => repository.list()).called(1);
+      platformUnreachable.value = true;
+      await tester.pump();
+
+      platformUnreachable.value = false;
+      await tester.pumpAndSettle();
+
+      verifyNever(() => repository.list());
+      expect(find.text('Orders'), findsOneWidget);
+    });
   });
 
   testWidgets('keeps the list under a banner when a refresh fails, and its retry asks again', (tester) async {
