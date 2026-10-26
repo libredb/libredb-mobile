@@ -1,0 +1,25 @@
+# TEMPORARY, this branch only: renders the goldens where CI renders them and uploads the images.
+# The component goldens do not render identically on macOS and on this runner, so they cannot be
+# regenerated on a maintainer's machine. Deleted before this branch merges.
+name: Regenerate goldens (temporary)
+
+on: push
+
+jobs:
+  goldens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+      - run: flutter pub get
+      - name: Regenerate
+        run: flutter test --tags golden --update-goldens || true
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldens
+          path: '**/goldens/ci/*.png'
