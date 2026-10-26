@@ -23,6 +23,7 @@ import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/offline_status.dart';
 import 'package:libredb_mobile/shared/widgets/statement_capture.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 
 /// The connections Studio offers the signed-in user, in sections by the operator's group, with a search and an
 /// environment filter. It never offers to add a connection: Studio's operator configures them.
@@ -134,8 +135,9 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
     await done;
   }
 
-  /// Asks Studio again once it accepts the account, when the list failed meanwhile, as under the refusal page; a loaded
-  /// list keeps its rows and its live refresh, and an unavailable one keeps retrying by itself.
+  /// Asks Studio again once it accepts the account, or answers again under its unreachable page, when the list failed
+  /// meanwhile, as under either page; a loaded list keeps its rows and its live refresh, and an unavailable one keeps
+  /// retrying by itself.
   void _reloadFailed() {
     final bloc = context.read<ConnectionListBloc>();
     if (bloc.state is ConnectionListFailure) bloc.add(const ConnectionListRefreshed());
@@ -172,34 +174,37 @@ class _ConnectionListPageState extends State<ConnectionListPage> {
         onReconnect: () => context.read<ConnectionListBloc>().add(const ConnectionListRefreshed()),
         child: OnAccountAccepted(
           onAccepted: _reloadFailed,
-          child: MultiBlocListener(
-            listeners: [
-              BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
-              BlocListener<ConnectionListBloc, ConnectionListState>(
-                listenWhen: (previous, current) =>
-                    current is ConnectionListLoaded &&
-                    (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
-                listener: (context, state) {
-                  final policy = context.read<ConnectionPolicyCubit>();
-                  final first = !_listShown;
-                  _listShown = true;
-                  if (first && policy.state is ConnectionPolicyLoaded) return;
-                  if (first && policy.state is ConnectionPolicyLoading) return;
-                  policy.refresh();
-                },
-              ),
-            ],
-            // The keyboard of a phone held sideways can leave less height than the note and the search need: the
-            // note stays on top, scrolling inside the height there is rather than overflow, and the list gives way.
-            child: LayoutBuilder(
-              builder: (context, box) => Column(
-                children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: box.maxHeight),
-                    child: const SingleChildScrollView(primary: false, child: _StatementCaptureNote()),
-                  ),
-                  Expanded(child: _buildState(context)),
-                ],
+          child: OnStudioReachable(
+            onReachable: _reloadFailed,
+            child: MultiBlocListener(
+              listeners: [
+                BlocListener<ConnectionListBloc, ConnectionListState>(listener: _followOutage),
+                BlocListener<ConnectionListBloc, ConnectionListState>(
+                  listenWhen: (previous, current) =>
+                      current is ConnectionListLoaded &&
+                      (previous is! ConnectionListLoaded || previous.loadedAt != current.loadedAt),
+                  listener: (context, state) {
+                    final policy = context.read<ConnectionPolicyCubit>();
+                    final first = !_listShown;
+                    _listShown = true;
+                    if (first && policy.state is ConnectionPolicyLoaded) return;
+                    if (first && policy.state is ConnectionPolicyLoading) return;
+                    policy.refresh();
+                  },
+                ),
+              ],
+              // The keyboard of a phone held sideways can leave less height than the note and the search need: the
+              // note stays on top, scrolling inside the height there is rather than overflow, and the list gives way.
+              child: LayoutBuilder(
+                builder: (context, box) => Column(
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: box.maxHeight),
+                      child: const SingleChildScrollView(primary: false, child: _StatementCaptureNote()),
+                    ),
+                    Expanded(child: _buildState(context)),
+                  ],
+                ),
               ),
             ),
           ),

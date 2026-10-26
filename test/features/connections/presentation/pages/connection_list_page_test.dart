@@ -46,6 +46,7 @@ import 'package:libredb_mobile/shared/models/provider_meta_repository.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/widgets/account_refusal_status.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/widgets/governance_status.dart';
 import 'package:libredb_mobile/shared/widgets/studio_error_banner.dart';
@@ -80,6 +81,7 @@ void main() {
 
   /// Whether the shell covers the page with the refusal page.
   late ValueNotifier<bool> refused;
+  late ValueNotifier<bool> studioUnreachable;
   late MockIActiveConnectionStore activeStore;
   late ActiveConnectionCubit active;
 
@@ -88,6 +90,8 @@ void main() {
     recoveriesReported = 0;
     refused = ValueNotifier(false);
     addTearDown(refused.dispose);
+    studioUnreachable = ValueNotifier(false);
+    addTearDown(studioUnreachable.dispose);
     activeStore = MockIActiveConnectionStore();
     when(() => activeStore.read(any())).thenAnswer((_) async => null);
     when(() => activeStore.write(any(), any())).thenAnswer((_) async {});
@@ -163,11 +167,16 @@ void main() {
                     child: ValueListenableBuilder(
                       valueListenable: refused,
                       builder: (context, isRefused, child) => AccountRefusalStatus(isRefused: isRefused, child: child!),
-                      child: GovernanceStatus(
-                        reportOutage: () => outagesReported++,
-                        reportRecovered: () => recoveriesReported++,
-                        noticeBuilder: (_) => const Text(_outageNotice),
-                        child: const ConnectionListPage(),
+                      child: ValueListenableBuilder(
+                        valueListenable: studioUnreachable,
+                        builder: (context, isUnreachable, child) =>
+                            StudioUnreachableStatus(isUnreachable: isUnreachable, child: child!),
+                        child: GovernanceStatus(
+                          reportOutage: () => outagesReported++,
+                          reportRecovered: () => recoveriesReported++,
+                          noticeBuilder: (_) => const Text(_outageNotice),
+                          child: const ConnectionListPage(),
+                        ),
                       ),
                     ),
                   ),
@@ -571,6 +580,39 @@ void main() {
       await tester.pump();
 
       refused.value = false;
+      await tester.pump();
+      await tester.pump();
+
+      verifyNever(() => repository.listManaged());
+      expect(row('seed:sales-postgres'), findsOneWidget);
+    });
+  });
+
+  group('once Studio answers again after its unreachable page covered the list', () {
+    testWidgets('a list that failed while covered asks Studio again, once', (tester) async {
+      studioUnreachable.value = true;
+      when(() => repository.listManaged()).thenAnswer((_) async => const Failure(NetworkError('Connection refused')));
+      await pumpPage(tester);
+      verify(() => repository.listManaged()).called(1);
+      answer(_mockAnswer());
+
+      studioUnreachable.value = false;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      verify(() => repository.listManaged()).called(1);
+      expect(row('seed:sales-postgres'), findsOneWidget);
+    });
+
+    testWidgets('a loaded list asks nothing and keeps its rows', (tester) async {
+      answer(_mockAnswer());
+      await pumpPage(tester);
+      verify(() => repository.listManaged()).called(1);
+      studioUnreachable.value = true;
+      await tester.pump();
+
+      studioUnreachable.value = false;
       await tester.pump();
       await tester.pump();
 

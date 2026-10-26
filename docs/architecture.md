@@ -84,6 +84,7 @@ It covers the session restore and the login page only in a build without a Platf
   It fails on no connection (an offline device fails at once), a timeout of 10 seconds (`studioProbeTimeout`), an untrusted certificate (the page adds why), or an answer that is not Studio's.
   Both probes bypass the client's retries and circuit breaker (`bypassResilience`): one check sends one request, so 10 seconds is the whole wait, and a Retry reaches Studio as soon as it answers again.
 - The check never touches the session: a Retry that reaches Studio shows the app again where it was, signed in as before.
+  A screen that loaded and failed while covered, as on a restore while Studio is down, loads again once a check uncovers it: `AppShell` reloads a failed identity and policy, and a page reloads a failed answer through `OnStudioReachable` (`lib/shared/widgets/studio_unreachable_status.dart`), never by running a statement again.
   A governance outage shown before Studio stopped answering shows again, until a connection route answers again.
   The app is not held back while the check runs.
 - Both endpoints need no session and spend no rate-limit slot, so the app sends them without a token (`publicEndpoints`).

@@ -5,12 +5,14 @@ import 'package:libredb_mobile/features/studio_status/application/studio_status_
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/features/studio_status/presentation/pages/studio_unreachable_page.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
+import 'package:libredb_mobile/shared/widgets/studio_unreachable_status.dart';
 
 /// Shows [StudioUnreachablePage] over [child] while Studio does not answer its liveness check, and [child] otherwise,
 /// also before the first answer arrives.
 ///
 /// [child] stays mounted under the page, offstage and without tickers, focus or semantics, so the open pages keep
-/// their state, unsaved input included, and show again as they were once Studio answers.
+/// their state, unsaved input included, and show again as they were once Studio answers. [StudioUnreachableStatus]
+/// tells them whether the page covers them, so one that loaded and failed while covered loads again once uncovered.
 /// `App` places it in the `MaterialApp` builder, around the session restore and the router, so the page has no
 /// Navigator above it. It tells [StudioStatusBloc] when the app goes to the background and comes back; the bloc
 /// decides whether to check again.
@@ -78,7 +80,10 @@ class _StudioStatusGateState extends State<StudioStatusGate> with WidgetsBinding
                 enabled: !hidden,
                 child: ExcludeFocus(
                   excluding: hidden,
-                  child: ExcludeSemantics(excluding: hidden, child: widget.child),
+                  child: ExcludeSemantics(
+                    excluding: hidden,
+                    child: StudioUnreachableStatus(isUnreachable: hidden, child: widget.child),
+                  ),
                 ),
               ),
             ),
