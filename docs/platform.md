@@ -253,8 +253,8 @@ A build without a Platform target keeps the Studio gate over the restore, the lo
 
 ## Where Platform mode works
 
-Only Docker or VM installer installs with `mobile.enabled`, and Railway platform-dev, serve Platform mode today.
-The Helm chart does not create the mobile client yet (libredb-platform `charts/libredb-platform/Chart.yaml`, the `mobile.enabled` change note).
+Platform mode needs an install that creates the client `libredb-mobile` and turns on both bearer channels: a Docker or VM installer install with `mobile.enabled: true`, a Helm install of chart 1.3.1 or later with `mobile.enabled: true`, or Railway platform-dev.
+Chart 1.3.0 and earlier do not create the client; chart 1.3.1 does, as the installer does (libredb-platform `charts/libredb-platform/values.yaml`, section `mobile`, and `docs/deploy/install-kubernetes.md`, "The mobile app"), and [Helm chart check](#helm-chart-check) records the check of it.
 The audit log is empty unless a Studio governed by that Platform has run statements: Platform lists the query events such a Studio writes into its `bridge` schema, and nothing else.
 The full-system check of 2026-10-26 ran Platform mode against installer 1.3.0 (Platform 1.3.0, Studio 1.1.0) with `mobile.enabled`, on a public certificate; see [Full-system check](#full-system-check).
 
@@ -374,3 +374,28 @@ Notes:
 - The issue expected the Studio unreachable page after "Switch to Studio" with Studio stopped; the M11-P ruling that a refused switch keeps the current session makes that unreachable, so step 9 covered the Studio gate through a restored Studio session instead.
 - Neither unreachable page offers a sign-out, by design, so step 10 reached the login page by clearing the app's data; that keeps the Keycloak session in the browser, so the Studio sign-in after it showed no Keycloak form.
 - A cold start while Platform answers runs the login page's first liveness check at once, so a Platform stopped later shows the notice only after a new start, a Retry, a return online or a return after more than 5 minutes in the background.
+
+## Helm chart check
+
+The Helm check of #308 was run on 2026-10-26 from the development machine on a kind cluster of its own, with no phone.
+The chart was `libredb-platform` 1.3.1 from the chart repository `https://libredb.org/libredb-platform/`, archive sha256 `ea42e04ff1dd0219f337befecc0bd7e4d67b56f936e230920819bcfe3dc70104`, which pins Platform 1.3.0, Studio 1.1.0 and Keycloak 26.8.1 at the digests of [Full-system check](#full-system-check).
+It was installed with the chart's own kind values (libredb-platform `charts/libredb-platform/tests/e2e/values-kind.yaml`, hosts under `.libredb.test`, a managed PostgreSQL and Keycloak, the internal CA), `mobile.enabled=true` and a temporary FREE license for `platform.libredb.test`, kept outside every repository and deleted after the check.
+The cluster ran Kubernetes 1.37.0 on kind 0.33.0 with Traefik 41.7.1, in a namespace that enforces the restricted Pod Security Standard.
+
+| Check | Result |
+| --- | --- |
+| Install | Passed: every pod ran and every job completed in 170 seconds |
+| Bearer settings | Passed: the running Platform has `PLATFORM_API_AUDIENCE=libredb-platform-api` and `PLATFORM_API_CLIENT_IDS=libredb-mobile`, and the running Studio `OIDC_BEARER_AUDIENCE=libredb-studio-api` and `OIDC_BEARER_CLIENT_IDS=libredb-mobile` |
+| Client `libredb-mobile` | Passed: read through Keycloak's Admin API, it is public, with the standard flow only, PKCE S256, no direct access grants, no implicit flow and no service account; its redirect and post-logout URIs are `org.libredb.mobile:/oauth2redirect`; its default client scopes are `basic`, `profile`, `email` and `libredb-roles` besides the realm's (`acr`, `roles`, `web-origins`); its two `oidc-audience-mapper` mappers add `libredb-studio-api` and `libredb-platform-api` to the access token and not to the ID token, as libredb-platform `installer/README.md` describes the client |
+| Sign-in | Passed: the authorization code flow with PKCE S256 through `libredb-mobile`, with `scope` `openid profile email offline_access` (the app's default `openid profile email` plus `offline_access`), as the realm's first admin `libredb-admin`, ended in a redirect to `org.libredb.mobile:/oauth2redirect` with the request's `state`, and the code exchange without a client secret answered 200 |
+| Token | Passed: the access token has `typ` `Bearer`, the issuer `https://auth.libredb.test/realms/libredb`, `azp` `libredb-mobile`, `libredb_roles` `admin`, and an `aud` that holds `libredb-studio-api` and `libredb-platform-api` (besides `account` and `libredb`); a refresh with the offline refresh token answered 200 with the same audiences and `azp` |
+| Platform mode | Passed: `GET /api/v1/me` with the access token answered 200 with the roles `PLATFORM_ADMIN` |
+| Studio mode | Passed: `GET /api/auth/me` with the same access token answered 200 with the role `admin` |
+| Password grant | Passed: refused with 400 `unauthorized_client` |
+| Teardown | Passed: the cluster was deleted (`kind get clusters` lists none), and the license, the token and the passwords were deleted from the machine |
+
+Notes:
+
+- The phone part of #304 (steps 2, 3, 5, 6 and 7) was not run, because the `.libredb.test` names resolve only inside the cluster and on the development machine, and the internal CA is not one the phone trusts; so the app itself, the browser sign-in on a device and the Platform and Studio screens were not checked on a Helm install.
+- The token check used a script that sends the requests the app sends, not the app, and trusted the install's internal CA.
+- The realm's first admin starts with the required actions `UPDATE_PASSWORD` and `CONFIGURE_TOTP`, as an installer install does; for this throwaway cluster the check removed `CONFIGURE_TOTP` through the Admin API and set a new password, and Keycloak then asked for the first name, last name and e-mail the account lacked, so a first sign-in from the app on a new Helm install meets those Keycloak pages in the browser before the app gets its token.
