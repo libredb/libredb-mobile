@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 
 import '../../../support/pressed_frame.dart';
 
@@ -108,6 +109,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(decoration(), resting, reason: 'the card stayed engaged with nothing left to press');
+  });
+
+  // `outlineVariant` is Material 3's decorative divider, which the non-text contrast rule exempts; `outline` is the
+  // token for the edge of a component, which it does not. A card's border is the second thing, and using the first
+  // left it below the floor even after the palettes were corrected (#369).
+  testWidgets('an outlined card draws its edge with the boundary colour, not the divider one', (tester) async {
+    late ColorScheme scheme;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Builder(
+          builder: (context) {
+            scheme = Theme.of(context).colorScheme;
+            return Scaffold(
+              body: Center(
+                child: SizedBox(width: 300, height: 120, child: card(variant: AppCardVariant.outlined)),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final decoration = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer)).decoration! as BoxDecoration;
+    expect(decoration.border, Border.all(color: scheme.outline));
   });
 
   group('a card the user cannot tap', () {

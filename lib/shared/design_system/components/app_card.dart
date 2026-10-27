@@ -140,7 +140,7 @@ class _AppCardState extends State<AppCard> {
         return BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: _isEngaged ? cs.onSurfaceVariant : cs.outlineVariant),
+          border: Border.all(color: _isEngaged ? cs.onSurfaceVariant : cs.outline),
           boxShadow: _isEngaged
               ? [BoxShadow(color: cs.shadow.withAlpha(10), blurRadius: 4, offset: const Offset(0, 1))]
               : null,
