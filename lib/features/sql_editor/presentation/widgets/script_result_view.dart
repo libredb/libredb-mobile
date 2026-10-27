@@ -145,7 +145,7 @@ class _StatementCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        side: BorderSide(color: open ? scheme.primary : scheme.outlineVariant, width: open ? 2 : 1),
+        side: BorderSide(color: open ? scheme.primary : scheme.outline, width: open ? 2 : 1),
       ),
       elevation: 0,
       child: Semantics(

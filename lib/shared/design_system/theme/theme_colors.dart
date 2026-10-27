@@ -30,7 +30,7 @@ class ThemeColors {
         onSecondary: Color(0xFFFFFFFF),
         secondaryContainer: Color(0xFFF4F4F5), // Zinc 100
         onSecondaryContainer: Color(0xFF27272A), // Zinc 800
-        tertiary: Color(0xFFA1A1AA), // Zinc 400
+        tertiary: Color(0xFF75757E), // 4.56:1 — this app paints text with it (column types, code strings)
         onTertiary: Color(0xFF18181B), // Zinc 900
         tertiaryContainer: Color(0xFFF4F4F5), // Zinc 100
         onTertiaryContainer: Color(0xFF27272A), // Zinc 800
@@ -42,8 +42,8 @@ class ThemeColors {
         onSurface: Color(0xFF09090B), // Zinc 950
         surfaceContainerHighest: Color(0xFFF4F4F5), // Zinc 100
         onSurfaceVariant: Color(0xFF71717A), // Zinc 500
-        outline: Color(0xFFE4E4E7), // Zinc 200
-        outlineVariant: Color(0xFFF4F4F5), // Zinc 100
+        outline: Color(0xFF93939F), // Zinc 500 lightened to 3.04:1 on white — a card or field edge (WCAG 1.4.11)
+        outlineVariant: Color(0xFFBABAC9), // 1.92:1 — a divider that draws something
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFF18181B), // Zinc 900
@@ -61,7 +61,7 @@ class ThemeColors {
         onSecondary: Color(0xFF09090B), // Zinc 950
         secondaryContainer: Color(0xFF27272A), // Zinc 800
         onSecondaryContainer: Color(0xFFF4F4F5), // Zinc 100
-        tertiary: Color(0xFF71717A), // Zinc 500
+        tertiary: Color(0xFF787881), // 4.55:1
         onTertiary: Color(0xFFFAFAFA), // Zinc 50
         tertiaryContainer: Color(0xFF27272A), // Zinc 800
         onTertiaryContainer: Color(0xFFF4F4F5), // Zinc 100
@@ -73,8 +73,8 @@ class ThemeColors {
         onSurface: Color(0xFFFAFAFA), // Zinc 50
         surfaceContainerHighest: Color(0xFF27272A), // Zinc 800
         onSurfaceVariant: Color(0xFFA1A1AA), // Zinc 400
-        outline: Color(0xFF27272A), // Zinc 800
-        outlineVariant: Color(0xFF18181B), // Zinc 900
+        outline: Color(0xFF5D5D64), // 3.05:1 on Zinc 950
+        outlineVariant: Color(0xFF3F3F44), // 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFFFAFAFA), // Zinc 50
@@ -97,7 +97,7 @@ class ThemeColors {
         onSecondary: Color(0xFFFFFFFF),
         secondaryContainer: Color(0xFFE8F0E8), // Sage 50
         onSecondaryContainer: Color(0xFF1A1D1A), // Sage 900
-        tertiary: Color(0xFF8BA68F), // Sage 400
+        tertiary: Color(0xFF68796B), // 4.54:1
         onTertiary: Color(0xFF1A1D1A), // Sage 900
         tertiaryContainer: Color(0xFFF0F4F0), // Sage 100
         onTertiaryContainer: Color(0xFF2A302B), // Sage 800
@@ -108,9 +108,9 @@ class ThemeColors {
         surface: Color(0xFFFCFDFC),
         onSurface: Color(0xFF0D0F0D), // Sage 950
         surfaceContainerHighest: Color(0xFFF0F4F0), // Sage 100
-        onSurfaceVariant: Color(0xFF6B7C6E), // Sage 500
-        outline: Color(0xFFDAE2DB), // Sage 200
-        outlineVariant: Color(0xFFF0F4F0), // Sage 100
+        onSurfaceVariant: Color(0xFF5F7A64), // Sage 600 — 4.62:1, the only palette whose secondary text was under AA
+        outline: Color(0xFF839887), // 3.03:1
+        outlineVariant: Color(0xFFA6C1AB), // 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFF1A1D1A), // Sage 900
@@ -128,7 +128,7 @@ class ThemeColors {
         onSecondary: Color(0xFF0D0F0D), // Sage 950
         secondaryContainer: Color(0xFF2A302B), // Sage 800
         onSecondaryContainer: Color(0xFFF0F4F0), // Sage 100
-        tertiary: Color(0xFF6B7C6E), // Sage 500
+        tertiary: Color(0xFF6E7F71), // 4.52:1
         onTertiary: Color(0xFFF5F8F5), // Sage 50
         tertiaryContainer: Color(0xFF2A302B), // Sage 800
         onTertiaryContainer: Color(0xFFF0F4F0), // Sage 100
@@ -140,8 +140,8 @@ class ThemeColors {
         onSurface: Color(0xFFF5F8F5), // Sage 50
         surfaceContainerHighest: Color(0xFF2A302B), // Sage 800
         onSurfaceVariant: Color(0xFF8BA68F), // Sage 400
-        outline: Color(0xFF2A302B), // Sage 800
-        outlineVariant: Color(0xFF1A1D1A), // Sage 900
+        outline: Color(0xFF556357), // 3.03:1
+        outlineVariant: Color(0xFF3B443D), // 1.91:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFFF5F8F5), // Sage 50
@@ -164,7 +164,7 @@ class ThemeColors {
         onSecondary: Color(0xFFFFFFFF),
         secondaryContainer: Color(0xFFFFF7ED), // Orange 50
         onSecondaryContainer: Color(0xFF7C2D12), // Orange 900
-        tertiary: Color(0xFFA8A29E), // Stone 400
+        tertiary: Color(0xFF79726D), // 4.53:1
         onTertiary: Color(0xFF1C1917), // Stone 900
         tertiaryContainer: Color(0xFFF5F5F4), // Stone 100
         onTertiaryContainer: Color(0xFF292524), // Stone 800
@@ -176,8 +176,8 @@ class ThemeColors {
         onSurface: Color(0xFF0C0A09), // Stone 950
         surfaceContainerHighest: Color(0xFFF5F5F4), // Stone 100
         onSurfaceVariant: Color(0xFF78716C), // Stone 500
-        outline: Color(0xFFE7E5E4), // Stone 200
-        outlineVariant: Color(0xFFF5F5F4), // Stone 100
+        outline: Color(0xFF989089), // 3.01:1
+        outlineVariant: Color(0xFFC1B6AE), // 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFF1C1917), // Stone 900
@@ -195,7 +195,7 @@ class ThemeColors {
         onSecondary: Color(0xFF0C0A09), // Stone 950
         secondaryContainer: Color(0xFF292524), // Stone 800
         onSecondaryContainer: Color(0xFFFED7AA), // Orange 200
-        tertiary: Color(0xFF78716C), // Stone 500
+        tertiary: Color(0xFF7F7772), // 4.50:1
         onTertiary: Color(0xFFFAFAF9), // Stone 50
         tertiaryContainer: Color(0xFF292524), // Stone 800
         onTertiaryContainer: Color(0xFFF5F5F4), // Stone 100
@@ -207,8 +207,8 @@ class ThemeColors {
         onSurface: Color(0xFFFAFAF9), // Stone 50
         surfaceContainerHighest: Color(0xFF292524), // Stone 800
         onSurfaceVariant: Color(0xFFA8A29E), // Stone 400
-        outline: Color(0xFF292524), // Stone 800
-        outlineVariant: Color(0xFF1C1917), // Stone 900
+        outline: Color(0xFF625C58), // 3.00:1
+        outlineVariant: Color(0xFF44403D), // 1.93:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
         inverseSurface: Color(0xFFFAFAF9), // Stone 50
