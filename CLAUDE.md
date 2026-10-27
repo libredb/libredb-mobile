@@ -218,3 +218,24 @@ Platform mode calls LibreDB Platform's bearer API through `PlatformApiClient`; t
   - **Dio handler stub:** a private `_Test*Handler` / `_StubInterceptor` extending Dio's `Interceptor` / `RequestInterceptorHandler` / `ResponseInterceptorHandler` / `ErrorInterceptorHandler`, to test interceptors at the Dio layer (can't be mocked cleanly).
 - **Pumping:** `pumpAndSettle()` only when animations finish; its `Duration` arg is the per-pump interval (not a timeout) — prefer the bare form. For continuous animations (spinner/shimmer) use `pump(Duration)`, never `pumpAndSettle`.
 - Full test structure, per-layer patterns, and guard tests: see `docs/testing-architecture.md`.
+
+## The work table
+
+"tablo", "durum ne", "napıyosun", "ne durumda" — each of these asks for **one** thing: the 56-row
+work table, at its verified state right now. Give it without being asked twice, without asking
+which table, and without a one-sentence substitute.
+
+- **Row inventory and the per-row verification command:**
+  `~/.claude/projects/-Users-yusuf-projects-libredb-libredb-mobile/memory/is-tablosu-tek-tablo.md`
+  That file is the only inventory; it is not duplicated here, because two copies of a 56-row table
+  drift, and a drifted table is the guess the rule exists to forbid.
+- **One table.** Done and remaining are rows of the same table, never two tables.
+- **Numbered 1..56, continuously, and the numbers are fixed.** New work starts at 57; nothing is
+  inserted in the middle and no row is renumbered.
+- **Columns:** `# | Ne | Durum | Kanıt / bekleyen` — four, in that order.
+- **Status:** `✅ bitti` · `🟡 kısmen` · `🔵 elimde` · `⬜ başlamadı/bekliyor` · `⛔ engelli/sende`
+- No sub-sections, no epic breakdown, no verification paragraph. The table, then at most three or
+  four lines of notes.
+- Every row's status comes from a command run now, not from the previous table and not from
+  memory. Run `git fetch` and `gh pr list --state open` first, and say which commit the table
+  reflects. A row with `mergedAt: null` is not delivered.
