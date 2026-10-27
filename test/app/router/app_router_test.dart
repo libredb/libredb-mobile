@@ -20,6 +20,7 @@ import 'package:libredb_mobile/features/platform_home/presentation/pages/platfor
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/presentation/pages/connection_list_page.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -595,5 +596,111 @@ void main() {
         });
       }
     }
+  });
+
+  /// The introduction gates the first run: a device that has never shown it is sent to `/welcome` before anything
+  /// else, and the location it was heading for is carried along so the deep link survives.
+  ///
+  /// These are the only tests in the file that leave the introduction flag unset. Every other test in the repository
+  /// calls `TestEnv.onboardingSeen()`, because it was written when a cold start opened the login page and that is
+  /// still what it is about.
+  group('the introduction gates the first run', () {
+    // Studio's launch liveness check is sent on every start, and on the introduction both gates pass through, so its
+    // answer rebuilds nothing and pumpAndSettle returns while the mocked 500 ms response is still in flight. Running
+    // the clock past it leaves the test with no pending timer, exactly as the login page's own tests get for free
+    // because there the gate is listening.
+    Future<void> settleWithLiveness(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a first run lands on the introduction and never builds the login page', (tester) async {
+      setDesktopViewport(tester);
+      await TestEnv.onboardingUnseen();
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      final loginFrames = await pumpShellRecordingLogin(tester);
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.welcome);
+      expect(find.byType(OnboardingPage), findsOneWidget);
+      expect(loginFrames, isEmpty, reason: 'frames that built the login page');
+    });
+
+    // The top-level redirect runs before the root route's own, and redirects re-run until they settle, so `/` reaches
+    // the introduction in two passes without the root route knowing about it. Nobody had verified that ordering, so
+    // it is pinned here rather than assumed: this test is the pair of 'signed out, / opens the login page'.
+    testWidgets('/ resolves to the introduction, not to the login page the root route names', (tester) async {
+      setDesktopViewport(tester);
+      await TestEnv.onboardingUnseen();
+      startOn(tester, '/');
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await settleWithLiveness(tester);
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.welcome);
+    });
+
+    testWidgets('a deep link survives the introduction and is still waiting after the sign-in', (tester) async {
+      setDesktopViewport(tester);
+      await TestEnv.onboardingUnseen();
+      startOn(tester, ApplicationRoutesConstants.settings);
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await settleWithLiveness(tester);
+
+      final pending = Uri.encodeQueryComponent(ApplicationRoutesConstants.settings);
+      expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.welcome}?returnUrl=$pending');
+
+      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.pumpAndSettle();
+      expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.login}?returnUrl=$pending');
+
+      TestEnv.authenticate();
+      tester.element(find.byType(LoginScreen)).read<SessionCubit>().markAuthenticated(SessionTarget.studio);
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.path, ApplicationRoutesConstants.settings);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    });
+
+    // A returnUrl is forwarded, never nested: the login page's own is handed to the introduction as it stands, so the
+    // page gets back exactly what it would have had.
+    testWidgets('the login page hands its returnUrl to the introduction and gets it back unnested', (tester) async {
+      setDesktopViewport(tester);
+      await TestEnv.onboardingUnseen();
+      final pending = Uri.encodeQueryComponent(ApplicationRoutesConstants.settings);
+      startOn(tester, '${ApplicationRoutesConstants.login}?returnUrl=$pending');
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await settleWithLiveness(tester);
+
+      expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.welcome}?returnUrl=$pending');
+
+      await tester.tap(find.byKey(onboardingSkipKey));
+      await tester.pumpAndSettle();
+      expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.login}?returnUrl=$pending');
+    });
+
+    testWidgets('an authenticated session never reaches the introduction, flag or no flag', (tester) async {
+      setDesktopViewport(tester);
+      await TestEnv.onboardingUnseen();
+      TestEnv.authenticate();
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await settleWithLiveness(tester);
+
+      routerFromApp(tester).go(ApplicationRoutesConstants.welcome);
+      await tester.pumpAndSettle();
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.connectionList);
+      expect(find.byType(OnboardingPage), findsNothing);
+    });
+
+    // The control, and the default every other test in the repository runs under: the bootstrap sets the flag, so
+    // this test sets nothing and is what proves the default still reaches the login page.
+    testWidgets('a returning device goes straight to the login page', (tester) async {
+      setDesktopViewport(tester);
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await settleWithLiveness(tester);
+
+      expect(routerFromApp(tester).state.uri.toString(), ApplicationRoutesConstants.login);
+      expect(find.byType(LoginScreen), findsOneWidget);
+    });
   });
 }

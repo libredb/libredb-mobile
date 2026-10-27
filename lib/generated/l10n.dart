@@ -448,6 +448,31 @@ class S {
     return Intl.message('Switch to dark mode', name: 'login_switch_to_dark_mode', desc: '', args: []);
   }
 
+  /// `Welcome to LibreDB`
+  String get onboarding_title {
+    return Intl.message('Welcome to LibreDB', name: 'onboarding_title', desc: '', args: []);
+  }
+
+  /// `A quick look at what you can do here, before you sign in.`
+  String get onboarding_subtitle {
+    return Intl.message(
+      'A quick look at what you can do here, before you sign in.',
+      name: 'onboarding_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Skip`
+  String get onboarding_skip {
+    return Intl.message('Skip', name: 'onboarding_skip', desc: '', args: []);
+  }
+
+  /// `Get started`
+  String get onboarding_done {
+    return Intl.message('Get started', name: 'onboarding_done', desc: '', args: []);
+  }
+
   /// `Source Available`
   String get community_source_available {
     return Intl.message('Source Available', name: 'community_source_available', desc: '', args: []);

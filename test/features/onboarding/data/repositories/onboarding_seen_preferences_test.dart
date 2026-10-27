@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/data/repositories/onboarding_seen_preferences.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 
+import '../../../../support/test_env.dart';
+
 /// Whether this device has shown the introduction, which decides what a cold start opens on.
 ///
 /// It is a device preference, not a session one. Onboarding runs **before** anyone signs in, so there is no account
@@ -9,7 +11,13 @@ import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 void main() {
   late OnboardingSeenPreferences store;
 
-  setUp(() => store = OnboardingSeenPreferences());
+  // Every test in the repository starts on a device that has already shown the introduction (the bootstrap sets the
+  // flag, so assertions written before the introduction existed stay true). This file is about the store itself, so
+  // it starts where a store starts: on a device that has shown nothing.
+  setUp(() async {
+    await TestEnv.onboardingUnseen();
+    store = OnboardingSeenPreferences();
+  });
 
   group('read', () {
     test('is false on a device that has never shown it', () async {

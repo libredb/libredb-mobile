@@ -91,6 +91,7 @@ class _AppViewState extends State<_AppView> {
     if (_router != null) return;
     final routerFactory = AppRouterFactory(
       sessionCubit: context.read<SessionCubit>(),
+      onboardingCubit: context.read<OnboardingCubit>(),
       observers: [
         AnalyticsRouteObserver(widget.analytics),
         // Sentry breadcrumbs from navigation. Only meaningful when the

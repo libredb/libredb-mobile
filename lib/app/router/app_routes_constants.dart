@@ -16,6 +16,10 @@ class ApplicationRoutesConstants {
   // Auth routes
   static const login = '/login';
 
+  /// The introduction, shown once before the first sign-in. Like [login] it belongs to neither target, so it is left
+  /// out of `_studioRoots` and `platformTabs` and [belongsTo] answers false for both.
+  static const welcome = '/welcome';
+
   // Connection routes
   static const connectionList = '/connections';
 

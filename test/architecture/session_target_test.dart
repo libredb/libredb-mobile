@@ -10,6 +10,8 @@ import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/app/shell/shell_tabs.dart';
 import 'package:libredb_mobile/core/errors/app_error.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:libredb_mobile/features/platform_status/application/platform_status_bloc.dart';
 import 'package:libredb_mobile/features/platform_status/application/platform_status_state.dart';
 import 'package:libredb_mobile/features/platform_status/presentation/pages/platform_unreachable_page.dart';
@@ -37,6 +39,8 @@ Type _unreachablePageOf(SessionTarget target) => switch (target) {
 /// its own target only, so a session of one target never lands in the other's shell. Each target has its own liveness
 /// gate, which covers that target's session and not the other's.
 const _down = NetworkError('No Internet connection');
+
+class _SeenOnboarding extends MockCubit<OnboardingState> implements OnboardingCubit {}
 
 void main() {
   late GoRouter router;
@@ -106,6 +110,8 @@ void main() {
           const Stream<PlatformStatusState>.empty(),
           initialState: const PlatformUnreachable(error: _down),
         );
+        final onboarding = _SeenOnboarding();
+        whenListen(onboarding, const Stream<OnboardingState>.empty(), initialState: const OnboardingSeen());
 
         await tester.pumpWidget(
           RepositoryProvider<AppConfig>.value(
@@ -121,6 +127,8 @@ void main() {
                 BlocProvider<SessionCubit>.value(value: session),
                 BlocProvider<StudioStatusBloc>.value(value: studio),
                 BlocProvider<PlatformStatusBloc>.value(value: platform),
+                // A signed-in session has the introduction behind it, so the gates cover it as this test is about.
+                BlocProvider<OnboardingCubit>.value(value: onboarding),
               ],
               child: MaterialApp(
                 locale: const Locale('en'),
