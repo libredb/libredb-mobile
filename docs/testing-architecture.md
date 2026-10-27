@@ -491,9 +491,11 @@ The single sign-on has more guards next to the code they guard:
   = false)` and use `pumpBeforeTest: pumpOnce` for animated widgets. Coverage: all
   design-system components, shared widgets, and key screens (rendered with mocked
   BLoCs via the `test/support/golden_app.dart` `goldenScreen` helper):
-  **34 golden images** across **40 scenarios** in 17 files, counted by
+  **38 golden images** across **44 scenarios** in 17 files, counted by
   `test/architecture/testing_doc_test.dart`, which fails when this paragraph and the
-  tree disagree. Only the login and settings screens have a dark variant today.
+  tree disagree. The login screen also has images for a misconfigured build and for a
+  Studio that does not answer, which are the two states a user meets that are not the
+  working one. Only the login and settings screens have a dark variant today.
   The responsive **shell / home screen is intentionally not goldened** (it boots
   via real DI in
   `App()` rather than mockable to a single deterministic frame; its
