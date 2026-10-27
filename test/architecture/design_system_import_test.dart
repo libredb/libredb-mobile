@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/animation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
@@ -118,6 +119,32 @@ void main() {
       durationOf('media'),
       reason: 'the one duration that belongs to a picture rather than to a control',
     );
+  });
+
+  /// The four control points of `--ease-<name>` in the vendored motion tokens.
+  List<double> easeOf(String name) {
+    final source = File('tool/design-system/tokens/motion.css').readAsStringSync();
+    final declaration = RegExp('--ease-$name\\s*:\\s*cubic-bezier\\(([^)]*)\\)').firstMatch(source);
+    return declaration!.group(1)!.split(',').map((part) => double.parse(part.trim())).toList();
+  }
+
+  test('the app eases the way the design system eases', () {
+    // `--ease-spring` is deliberately absent: it overshoots (1.56), which `Cubic` can express but nothing in this
+    // app asks for, and an unused curve is a value nobody is holding to anything. It arrives with its first caller.
+    for (final (name, curve) in [
+      ('out', AppDurations.easeOut),
+      ('in', AppDurations.easeIn),
+      ('in-out', AppDurations.easeInOut),
+    ]) {
+      final web = easeOf(name);
+      expect(
+        curve,
+        isA<Cubic>(),
+        reason: "Flutter's own Curves are not the product's: --ease-$name is a cubic-bezier the system picked",
+      );
+      final cubic = curve as Cubic;
+      expect([cubic.a, cubic.b, cubic.c, cubic.d], web, reason: 'the control points of --ease-$name');
+    }
   });
 
   test('the app breaks its layout where the design system does', () {
