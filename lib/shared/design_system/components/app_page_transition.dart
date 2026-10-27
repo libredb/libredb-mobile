@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,14 +25,28 @@ MaterialPage<void> appPlatformPage({required Widget child, required GoRouterStat
   );
 }
 
-/// Creates a CustomTransitionPage with consistent animations.
+/// Creates a page with one of this app's transitions — except on iOS, where it creates the platform's page instead.
 ///
 /// Named like [appPlatformPage], because navigator observers such as analytics identify a screen by its page name.
-CustomTransitionPage<T> appTransitionPage<T>({
+///
+/// The iOS branch is not a style choice. A `CustomTransitionPage` does not carry the Cupertino back gesture, measured:
+/// a route pushed with one does not pop when the user drags in from the left edge, and this builds every sub-page
+/// outside the two shells — settings, the audit log, the object browser seven times over. Edge-swiping back is how
+/// many people navigate on that platform, and on those pages the app bar's button was the only way out (#371).
+Page<T> appTransitionPage<T>({
   required Widget child,
   required GoRouterState state,
   AppPageTransitionType type = AppPageTransitionType.fade,
 }) {
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return MaterialPage<T>(
+      key: state.pageKey,
+      name: state.name ?? state.path,
+      restorationId: state.pageKey.value,
+      child: child,
+    );
+  }
+
   return CustomTransitionPage<T>(
     key: state.pageKey,
     name: state.name ?? state.path,
