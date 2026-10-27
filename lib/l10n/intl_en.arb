@@ -139,6 +139,8 @@
       }
     }
   },
+  "theme_palette_applied": "{palette} theme applied",
+  "@theme_palette_applied": {"description": "Announced to a screen reader when a palette is applied from the theme dialog.", "placeholders": {"palette": {"type": "String", "example": "Classic"}}},
   "theme_dialog_title": "Choose Theme",
   "@theme_dialog_title": {},
   "theme_dialog_subtitle": "Select your preferred theme style",

@@ -535,6 +535,16 @@ class S {
     );
   }
 
+  /// `{palette} theme applied`
+  String theme_palette_applied(String palette) {
+    return Intl.message(
+      '$palette theme applied',
+      name: 'theme_palette_applied',
+      desc: 'Announced to a screen reader when a palette is applied from the theme dialog.',
+      args: [palette],
+    );
+  }
+
   /// `Choose Theme`
   String get theme_dialog_title {
     return Intl.message('Choose Theme', name: 'theme_dialog_title', desc: '', args: []);

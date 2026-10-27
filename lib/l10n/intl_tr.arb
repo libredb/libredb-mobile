@@ -139,6 +139,8 @@
       }
     }
   },
+  "theme_palette_applied": "{palette} teması uygulandı",
+  "@theme_palette_applied": {"description": "Tema penceresinden bir palet uygulanınca ekran okuyucuya duyurulur.", "placeholders": {"palette": {"type": "String", "example": "Klasik"}}},
   "theme_dialog_title": "Tema Seçin",
   "@theme_dialog_title": {},
   "theme_dialog_subtitle": "Tercih ettiğiniz tema stilini seçin",
