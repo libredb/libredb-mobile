@@ -5,11 +5,23 @@ import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
 
+/// Lets the user try the palettes and keep one.
+///
+/// A tapped card applies at once, which is what makes the dialog a preview rather than a form — and which is why
+/// Cancel has to put back the palette the dialog opened on. Both buttons used to do nothing but pop, so a user who
+/// tried one, disliked it and pressed Cancel kept what they had just rejected (#371).
 class ThemeSelectionDialog extends StatelessWidget {
-  const ThemeSelectionDialog({super.key});
+  const ThemeSelectionDialog({super.key, required this.openedOn});
+
+  /// What the app was wearing when the dialog opened, and what Cancel goes back to.
+  final AppThemePalette openedOn;
 
   static Future<void> show(BuildContext context) {
-    return showDialog(context: context, builder: (context) => const ThemeSelectionDialog());
+    final openedOn = context.read<ThemeBloc>().state.palette;
+    return showDialog(
+      context: context,
+      builder: (context) => ThemeSelectionDialog(openedOn: openedOn),
+    );
   }
 
   static String _title(S l10n, AppThemePalette palette) => switch (palette) {
@@ -98,7 +110,7 @@ class ThemeSelectionDialog extends StatelessWidget {
                     spacing: 12,
                     runSpacing: 8,
                     children: [
-                      TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                      TextButton(onPressed: () => _cancel(context), child: Text(l10n.cancel)),
                       FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.apply)),
                     ],
                   ),
@@ -272,5 +284,10 @@ class ThemeSelectionDialog extends StatelessWidget {
 
   void _applyTheme(BuildContext context, AppThemePalette palette) {
     context.read<ThemeBloc>().add(ChangeThemePalette(palette: palette));
+  }
+
+  void _cancel(BuildContext context) {
+    _applyTheme(context, openedOn);
+    Navigator.of(context).pop();
   }
 }

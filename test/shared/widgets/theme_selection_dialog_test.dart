@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
 import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,6 +46,41 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
+
+  /// The palette the app is actually wearing, read from the bloc the dialog writes to.
+  AppThemePalette paletteNow(WidgetTester tester) =>
+      BlocProvider.of<ThemeBloc>(tester.element(find.byType(Scaffold).first), listen: false).state.palette;
+
+  group('choosing a palette', () {
+    // Tapping a card applies it at once (`theme_selection_dialog.dart:274`), which is what makes the dialog a preview.
+    // Both buttons then did the same thing — pop — so a user who tried a palette, disliked it and pressed Cancel kept
+    // the one they had just rejected, with no way back to theirs except remembering which it was (#371).
+    testWidgets('Cancel puts back the palette the dialog opened on', (tester) async {
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      final other = AppThemePalette.values.firstWhere((palette) => palette != opened);
+
+      await tester.tap(find.text(other.name[0].toUpperCase() + other.name.substring(1)));
+      await tester.pumpAndSettle();
+      expect(paletteNow(tester), other, reason: 'the card has to apply at once, or there is nothing to cancel');
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(paletteNow(tester), opened);
+    });
+
+    testWidgets('Apply keeps the palette the user chose', (tester) async {
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      final other = AppThemePalette.values.firstWhere((palette) => palette != opened);
+
+      await tester.tap(find.text(other.name[0].toUpperCase() + other.name.substring(1)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
+      await tester.pumpAndSettle();
+      expect(paletteNow(tester), other);
+    });
+  });
 
   group('ThemeSelectionDialog', () {
     testWidgets('names the close button for screen readers in the app language', (tester) async {

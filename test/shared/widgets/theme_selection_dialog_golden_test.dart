@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
 import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,7 +25,13 @@ void main() {
         // ThemeSelectionDialog renders a Dialog with internal maxWidth:400,
         // maxHeight:600 constraints. We give the host enough room so it does
         // not further constrain the dialog's internal layout.
-        child: Center(child: SizedBox(width: 500, height: 700, child: _withBloc(const ThemeSelectionDialog()))),
+        child: Center(
+          child: SizedBox(
+            width: 500,
+            height: 700,
+            child: _withBloc(const ThemeSelectionDialog(openedOn: AppThemePalette.classic)),
+          ),
+        ),
       ),
     ],
   );
