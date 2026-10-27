@@ -35,7 +35,16 @@ void main() {
 
   Future<bool> isRemembered() async => await AppLocalStorage().read(StorageKeys.onboardingSeen.key) != null;
 
-  Future<String> pumpWelcome(WidgetTester tester, {String? returnUrl}) async {
+  Future<String> pumpWelcome(
+    WidgetTester tester, {
+    String? returnUrl,
+    Size viewport = const Size(390, 844),
+    double textScale = 1.0,
+    Locale locale = const Locale('en'),
+  }) async {
+    addTearDown(tester.view.reset);
+    tester.view.physicalSize = viewport;
+    tester.view.devicePixelRatio = 1.0;
     final initial = returnUrl == null
         ? ApplicationRoutesConstants.welcome
         : '${ApplicationRoutesConstants.welcome}?returnUrl=${Uri.encodeQueryComponent(returnUrl)}';
@@ -55,7 +64,7 @@ void main() {
         value: cubit,
         child: MaterialApp.router(
           theme: AppTheme.light(),
-          locale: const Locale('en'),
+          locale: locale,
           localizationsDelegates: const [
             S.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -64,6 +73,10 @@ void main() {
           ],
           supportedLocales: S.delegate.supportedLocales,
           routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
         ),
       ),
     );
@@ -122,5 +135,52 @@ void main() {
       (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter).state.uri.toString(),
       ApplicationRoutesConstants.login,
     );
+  });
+
+  /// The first screen the app ever shows has to survive the device it is shown on.
+  ///
+  /// It was a plain Column with two Spacers and no scroll view: the Spacers absorb the slack until there is none,
+  /// and then it overflows. Android's accessibility font size goes well past 1.3, so every row below is a setting a
+  /// real user has — what they got was the overflow stripe across their first screen.
+  group('the introduction survives the device it is shown on', () {
+    const cases = <(String, Size, double, Locale)>[
+      ('a phone', Size(390, 844), 1.0, Locale('en')),
+      ('a phone at the largest ordinary text size', Size(390, 844), 1.3, Locale('tr')),
+      ('a phone at an accessibility text size', Size(390, 844), 2.0, Locale('tr')),
+      ('a phone at the largest accessibility text size', Size(390, 844), 3.0, Locale('tr')),
+      ('a phone turned sideways', Size(844, 390), 1.3, Locale('tr')),
+      ('sideways at an accessibility text size', Size(844, 390), 2.0, Locale('tr')),
+      ('sideways at the largest accessibility text size', Size(844, 390), 3.0, Locale('tr')),
+      ('a short viewport, as a keyboard leaves', Size(390, 380), 1.3, Locale('tr')),
+      ('a small phone', Size(320, 568), 1.3, Locale('tr')),
+    ];
+
+    for (final (name, viewport, scale, locale) in cases) {
+      testWidgets('shows no overflow on $name', (tester) async {
+        await pumpWelcome(tester, viewport: viewport, textScale: scale, locale: locale);
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('keeps both controls reachable on $name', (tester) async {
+        await pumpWelcome(tester, viewport: viewport, textScale: scale, locale: locale);
+
+        for (final key in [onboardingDoneKey, onboardingSkipKey]) {
+          await tester.ensureVisible(find.byKey(key));
+          await tester.pumpAndSettle();
+          expect(find.byKey(key), findsOneWidget, reason: '$key on $name');
+        }
+      });
+    }
+
+    // The layout is made to survive, not redesigned: on the surface the app is built for it still fills the screen
+    // rather than sitting in a scrolled strip at the top.
+    testWidgets('still centres its text on a phone at the ordinary text size', (tester) async {
+      await pumpWelcome(tester);
+
+      final title = tester.getCenter(find.text('Welcome to LibreDB'));
+      expect(title.dy, greaterThan(844 * 0.25));
+      expect(title.dy, lessThan(844 * 0.6));
+    });
   });
 }
