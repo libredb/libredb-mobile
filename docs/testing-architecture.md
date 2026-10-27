@@ -447,6 +447,13 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   whose guard was left behind when #379 moved its conditions into `autoRedirectTarget`. The whole suite stayed green
   and no widget test could have caught it: `setState` defers an unmount to the next frame, so a test cannot take a
   page out of the tree inside the frame its own callback runs in. This is the shape of loss only the source shows.
+- **`design_system_import_test.dart`** holds the app's tokens against the design system they came from.
+  `tool/design-system/tokens/` is a verbatim copy of `design-system/tokens/` in `libredb/libredb.github.io`, taken at
+  `857d454`, with `tool/design-system/SOURCE.md` recording the stamp and how to refresh it — a copy rather than a
+  reference because that repository is not checked out on CI, and the copy is what makes a later drift detectable
+  instead of merely lookupable. The file asserts what was measured at the import, not a wish: the app's spacing and
+  radius scales each sit *inside* the web's, so adopting the web scale adds steps and invalidates no layout, and the
+  tap target is pinned at 48 in both directions because the owner ruled against the web's 44 (#283, #373).
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
