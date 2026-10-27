@@ -739,10 +739,19 @@ void main() {
       await pumpPage(tester);
       expect(favoritesHeader, findsNothing);
 
+      // Scrolled first: the sandbox row's star sat with its centre exactly on the bottom edge, so `tap` derived an
+      // offset outside the view and hit nothing — and `ensureVisible` does not move a widget it already counts as
+      // visible. The type scale of #283 is what pushed it there. The test is about what starring does, not about
+      // how many rows happen to fit on one screen.
+      await tester.drag(row('seed:billing-mysql'), const Offset(0, -120));
+      await tester.pump();
       await tester.tap(star('seed:sandbox-sqlite'));
       await tester.pump();
       await tester.tap(star('seed:billing-mysql'));
       await tester.pump();
+      // Back to the top, because the assertions below read the order from the first screen.
+      await tester.drag(row('seed:billing-mysql'), const Offset(0, 400));
+      await tester.pumpAndSettle();
 
       expect(favoritesHeader, findsOneWidget);
       expect(find.descendant(of: favoritesHeader, matching: find.text(S.current.connection_favorites)), findsOneWidget);
