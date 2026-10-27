@@ -6,6 +6,23 @@ Bu politika, Android için LibreDB Mobile'ın verilerinizle ne yaptığını anl
 LibreDB Mobile, LibreDB Studio'nun bir istemcisidir: Keycloak üzerinden oturumunuzu açar ve Studio'nun size sunduğu veritabanlarını gösterir.
 Bu politikayla ilgili sorularınızı [info@libredb.org](mailto:info@libredb.org) adresine yazabilirsiniz.
 
+## Uygulamayı kim yayınlıyor
+
+LibreDB Mobile'ı Google Play'de **Sekoya Tech** yayınlar; bu, Türkiye'de kayıtlı **Sekoya Grup Bilişim ve Teknoloji Ltd. Şti.**'nin ticari adıdır ve burada anlatılan işleme faaliyetinin veri sorumlusudur.
+
+| | |
+| --- | --- |
+| Ticaret unvanı | Sekoya Grup Bilişim ve Teknoloji Ltd. Şti. |
+| Ticari ad | Sekoya Tech |
+| Kayıtlı adres | İnkılap Mah. Haşim İşcan Sok. Kent Sitesi F Blok No: 4/33, 34768 Ümraniye / İstanbul |
+| Vergi kimlik no (VKN) | 7591146987 |
+| MERSİS No | 0759114698700001 |
+| Ticaret sicil no | 1015843 |
+
+Şirketin tüm bilgileri [sekoya.tech](https://sekoya.tech) adresinde yayınlanmıştır.
+
+Bu politika uygulamayı kapsar. Web sitesinin politikası ayrıdır: [libredb.org/privacy-policy](https://libredb.org/privacy-policy).
+
 ## Uygulamanın konuştuğu sunucular
 
 Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla konuşmaz:

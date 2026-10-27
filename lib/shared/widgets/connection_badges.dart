@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
 
@@ -77,7 +78,9 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(4)),
+    // The design system's badges are pills (`AppRadius.pill`), and this draws the same idea beside a connection; at
+    // `circular(4)` the Studio side showed a rounded rectangle where the Platform side showed a pill (#375).
+    decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(AppRadius.pill)),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       child: child,

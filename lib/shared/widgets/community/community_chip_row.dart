@@ -93,9 +93,14 @@ class _CommunityChip extends StatelessWidget {
                     // no meaning the icon had to spend contrast on.
                     Icon(action.icon, size: 14, color: cs.onSurfaceVariant),
                     const SizedBox(width: 6),
-                    Text(
-                      action.label(l10n),
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant),
+                    // Wraps inside the pill rather than running past the line the Wrap gave it. Turkish shows it
+                    // first — its labels are the longest — and one step of Android's accessibility text size was
+                    // enough: 11 px over on a 320 pt phone at 1.3 (#375).
+                    Flexible(
+                      child: Text(
+                        action.label(l10n),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant),
+                      ),
                     ),
                   ],
                 ),

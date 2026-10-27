@@ -234,9 +234,11 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m96(count) => "${Intl.plural(count, other: '${count} satır listelendi.')}";
 
-  static String m97(name) => "Onaylamak için \"${name}\" yazın";
+  static String m97(palette) => "${palette} teması uygulandı";
 
-  static String m98(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
+  static String m98(name) => "Onaylamak için \"${name}\" yazın";
+
+  static String m99(word, line) => "Veriyi değiştirebilir: ${line}. satırda ${word}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1096,6 +1098,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "theme": MessageLookupByLibrary.simpleMessage("Tema"),
     "theme_dialog_subtitle": MessageLookupByLibrary.simpleMessage("Tercih ettiğiniz tema stilini seçin"),
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),
+    "theme_palette_applied": m97,
     "theme_palette_classic": MessageLookupByLibrary.simpleMessage("Klasik"),
     "theme_palette_classic_description": MessageLookupByLibrary.simpleMessage("Nötr çinko, sade ve minimal"),
     "theme_palette_nature": MessageLookupByLibrary.simpleMessage("Doğa"),
@@ -1108,7 +1111,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "warning": MessageLookupByLibrary.simpleMessage("Uyarı"),
     "write_confirm_cancel": MessageLookupByLibrary.simpleMessage("İptal"),
-    "write_confirm_name_label": m97,
+    "write_confirm_name_label": m98,
     "write_confirm_no_name": MessageLookupByLibrary.simpleMessage(
       "Bu üretim bağlantısının yazılacak bir adı yok, bu yüzden deyim burada onaylanamaz.",
     ),
@@ -1124,7 +1127,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "write_confirm_reason_may_write": MessageLookupByLibrary.simpleMessage(
       "Veriyi değiştirebilir: uygulama deyimin nasıl başladığını okuyamıyor",
     ),
-    "write_confirm_reason_may_write_at": m98,
+    "write_confirm_reason_may_write_at": m99,
     "write_confirm_reason_not_sql": MessageLookupByLibrary.simpleMessage(
       "Uygulama bu motorun bir komutunun ne yaptığını okuyamaz",
     ),

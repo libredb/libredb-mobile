@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -79,6 +80,37 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
       await tester.pumpAndSettle();
       expect(paletteNow(tester), other);
+    });
+  });
+
+  // A palette card applies at once and the dialog stays open, so nothing on screen moves enough for a screen reader
+  // to notice. Without an announcement a blind user taps a card and hears nothing at all (#375).
+  group('a screen reader', () {
+    testWidgets('hears that the palette changed', (tester) async {
+      final announcements = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<dynamic>(SystemChannels.accessibility, (
+        message,
+      ) async {
+        final data = (message as Map<Object?, Object?>)['data'] as Map<Object?, Object?>?;
+        final text = data?['message'] as String?;
+        if (text != null) announcements.add(text);
+        return null;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<dynamic>(
+          SystemChannels.accessibility,
+          null,
+        ),
+      );
+
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      final other = AppThemePalette.values.firstWhere((palette) => palette != opened);
+
+      await tester.tap(find.text(other.name[0].toUpperCase() + other.name.substring(1)));
+      await tester.pumpAndSettle();
+
+      expect(announcements, isNotEmpty, reason: 'tapping a palette card says nothing to a screen reader');
     });
   });
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
@@ -284,6 +285,13 @@ class ThemeSelectionDialog extends StatelessWidget {
 
   void _applyTheme(BuildContext context, AppThemePalette palette) {
     context.read<ThemeBloc>().add(ChangeThemePalette(palette: palette));
+    // The dialog stays open and only its colours change, which moves nothing a screen reader reports. Without this a
+    // blind user taps a card and hears nothing at all (#375).
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      S.of(context).theme_palette_applied(_title(S.of(context), palette)),
+      Directionality.of(context),
+    );
   }
 
   void _cancel(BuildContext context) {

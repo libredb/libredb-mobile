@@ -22,8 +22,12 @@ void main() {
     docs: 'https://docs.acme.example',
   );
 
-  Widget buildRow({Locale locale = const Locale('en')}) => MaterialApp(
+  Widget buildRow({Locale locale = const Locale('en'), double textScale = 1.0}) => MaterialApp(
     locale: locale,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: child!,
+    ),
     localizationsDelegates: [
       S.delegate,
       GlobalMaterialLocalizations.delegate,
@@ -72,5 +76,29 @@ void main() {
     expect(find.text('Sponsor'), findsOneWidget);
     expect(find.text('Documentation'), findsOneWidget);
     expect(find.text('Discussions'), findsNothing);
+  });
+
+  // A chip's label is the only thing in it that grows, and nothing let it wrap, so the row inside the pill ran past
+  // the line the Wrap gave it. Turkish is where it shows first — its labels are longer than the English ones — and
+  // 1.3 is a text size Android's accessibility settings reach with one step, not a synthetic case. Measured on the
+  // version before this fix: Turkish overflowed by 11 px at 1.3 on a 320 pt phone and by 93 px at 2.0 on a 390 pt
+  // one, and English overflowed at 2.0 as well (#375).
+  group('the chips fit the phone they are given', () {
+    for (final locale in ['en', 'tr']) {
+      for (final scale in [1.0, 1.3, 2.0, 3.0]) {
+        for (final width in [320.0, 390.0]) {
+          testWidgets('$locale at text scale $scale on a $width pt phone', (tester) async {
+            tester.view.physicalSize = Size(width, 900);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+
+            await tester.pumpWidget(buildRow(locale: Locale(locale), textScale: scale));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
   });
 }
