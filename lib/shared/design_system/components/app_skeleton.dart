@@ -47,8 +47,8 @@ class AppSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final baseColor = colorScheme.surfaceContainerHighest;
-    final highlightColor = colorScheme.surface;
+    final baseColor = skeletonBase(colorScheme);
+    final highlightColor = skeletonHighlight(colorScheme);
 
     if (shape == AppSkeletonShape.listTile) {
       return Shimmer.fromColors(
@@ -103,3 +103,13 @@ class AppSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// What the placeholder is filled with.
+Color skeletonBase(ColorScheme scheme) => scheme.surfaceContainerHighest;
+
+/// The light that sweeps over [skeletonBase].
+///
+/// Lifted off the base rather than taken from a token, because no single token is lighter than the base in both
+/// brightnesses: this used to be `surface`, which is lighter than the base in a light scheme and the darkest colour
+/// there is in a dark one, so in dark mode the sweep was a shadow rather than a shimmer (#373).
+Color skeletonHighlight(ColorScheme scheme) => Color.lerp(skeletonBase(scheme), Colors.white, 0.35)!;

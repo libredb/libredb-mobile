@@ -30,7 +30,9 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: colorScheme.onSurfaceVariant.withAlpha(128)),
+            // Not a transparency of the muted colour: half of 4.5:1 is 1.98:1, and this is the largest thing on
+            // the screen and was the hardest to see (#373).
+            Icon(icon, size: 64, color: colorScheme.onSurfaceVariant),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,

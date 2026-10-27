@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_sizes.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/vector_column.dart';
@@ -89,113 +90,121 @@ class ResultCard extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: AppSpacing.sm,
-            children: [
-              Row(
+      // As with the table's row: named, announced as something that can be opened, and never under the dense floor.
+      child: Semantics(
+        button: onTap != null,
+        label: s.result_row_title(index + 1),
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSizes.minDenseTarget),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: AppSpacing.sm,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _titleRow(
-                          hasTitle ? primary : null,
-                          Row(
-                            children: [
-                              Flexible(
-                                child: hasTitle
-                                    ? CompactCell(
-                                        cell: _cell(primary),
-                                        style: _isMasked(primary) ? titleStyle?.merge(maskedStyle) : titleStyle,
-                                      )
-                                    : Text(
-                                        s.result_row_title(index + 1),
-                                        style: titleStyle,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _titleRow(
+                              hasTitle ? primary : null,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: hasTitle
+                                        ? CompactCell(
+                                            cell: _cell(primary),
+                                            style: _isMasked(primary) ? titleStyle?.merge(maskedStyle) : titleStyle,
+                                          )
+                                        : Text(
+                                            s.result_row_title(index + 1),
+                                            style: titleStyle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                  ),
+                                  if (hasTitle && _isMasked(primary)) _Lock(label: s.result_masked_semantics),
+                                ],
+                              ),
+                            ),
+                            if (id != null && id != primary && row[id] != null)
+                              _field(
+                                id,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        s.result_card_id(_cell(id).compactText),
+                                        style: _isMasked(id)
+                                            ? theme.textTheme.bodySmall?.merge(maskedStyle)
+                                            : theme.textTheme.bodySmall?.copyWith(
+                                                color: muted,
+                                                fontFamily: AppTypography.mono,
+                                              ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
+                                    ),
+                                    if (_isMasked(id)) _Lock(label: s.result_masked_semantics),
+                                  ],
+                                ),
                               ),
-                              if (hasTitle && _isMasked(primary)) _Lock(label: s.result_masked_semantics),
-                            ],
-                          ),
+                          ],
                         ),
-                        if (id != null && id != primary && row[id] != null)
-                          _field(
-                            id,
-                            Row(
+                      ),
+                      if (onTap != null) Icon(Icons.chevron_right, color: muted),
+                    ],
+                  ),
+                  for (final field in preview)
+                    _field(
+                      field,
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Row(
                               children: [
                                 Flexible(
                                   child: Text(
-                                    s.result_card_id(_cell(id).compactText),
-                                    style: _isMasked(id)
-                                        ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                                        : theme.textTheme.bodySmall?.copyWith(
-                                            color: muted,
-                                            fontFamily: AppTypography.mono,
-                                          ),
+                                    field,
+                                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (_isMasked(id)) _Lock(label: s.result_masked_semantics),
+                                if (_isMasked(field)) _Lock(label: s.result_masked_semantics),
                               ],
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  if (onTap != null) Icon(Icons.chevron_right, color: muted),
-                ],
-              ),
-              for (final field in preview)
-                _field(
-                  field,
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                field,
-                                style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            flex: 3,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: CompactCell(
+                                cell: _cell(field),
+                                style: _isMasked(field)
+                                    ? theme.textTheme.bodySmall?.merge(maskedStyle)
+                                    : theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
                               ),
                             ),
-                            if (_isMasked(field)) _Lock(label: s.result_masked_semantics),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        flex: 3,
-                        child: Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: CompactCell(
-                            cell: _cell(field),
-                            style: _isMasked(field)
-                                ? theme.textTheme.bodySmall?.merge(maskedStyle)
-                                : theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              if (hidden > 0)
-                Text(
-                  s.result_more_fields(hidden),
-                  style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                  textAlign: TextAlign.center,
-                ),
-            ],
+                    ),
+                  if (hidden > 0)
+                    Text(
+                      s.result_more_fields(hidden),
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                      textAlign: TextAlign.center,
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
