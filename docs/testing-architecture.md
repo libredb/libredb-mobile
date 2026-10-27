@@ -440,6 +440,13 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   turned a real failure green, because the warnings chip's own `onTap` collapses the list inside the measured area.
   And the bar is a share of the control's own area rather than a single byte, because the chip's defect leaked 50
   corner pixels while the ripple that mattered stayed hidden.
+- **`post_frame_context_test.dart`** fails when an `addPostFrameCallback` in `lib/` reaches a `BuildContext` without
+  checking `mounted` first, following one level of indirection so `(_) => _method()` is read together with the body of
+  `_method`. The callback runs at the end of a frame its widget may already have left, and a read from a `State` that
+  is gone throws. Eight of the nine call sites were already right; the ninth was the login page's automatic redirect,
+  whose guard was left behind when #379 moved its conditions into `autoRedirectTarget`. The whole suite stayed green
+  and no widget test could have caught it: `setState` defers an unmount to the next frame, so a test cannot take a
+  page out of the tree inside the frame its own callback runs in. This is the shape of loss only the source shows.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
