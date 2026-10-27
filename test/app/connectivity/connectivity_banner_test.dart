@@ -10,6 +10,7 @@ import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -95,24 +96,19 @@ void main() {
         expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
       });
 
-      testWidgets('should have full opacity when offline', (tester) async {
+      // What the user gets, rather than which animation widget is in the tree: the banner is fully arrived when it has
+      // settled at the top of the screen at its own height, with its message readable.
+      testWidgets('arrives in full at the top of the screen', (tester) async {
         await tester.pumpWidget(
           buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.offline)),
         );
-        await tester.pump();
+        await tester.pumpAndSettle();
 
-        final animatedOpacity = tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity));
-        expect(animatedOpacity.opacity, 1.0);
-      });
-
-      testWidgets('should have zero offset when offline (visible)', (tester) async {
-        await tester.pumpWidget(
-          buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.offline)),
-        );
-        await tester.pump();
-
-        final animatedSlide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(animatedSlide.offset, Offset.zero);
+        final banner = tester.getRect(find.byType(ConnectivityBanner));
+        expect(banner.height, greaterThan(0));
+        expect(banner.top, 0);
+        expect(tester.getRect(find.text('No internet connection')).top, greaterThanOrEqualTo(banner.top));
+        expect(tester.getRect(find.text('No internet connection')).bottom, lessThanOrEqualTo(banner.bottom));
       });
 
       testWidgets('should use error color scheme for background', (tester) async {
@@ -147,20 +143,12 @@ void main() {
         expect(find.byIcon(Icons.cloud_off_rounded), findsNothing);
       });
 
-      testWidgets('should have zero opacity when online', (tester) async {
+      // A banner nobody can see must also cost nothing: an online device gives its whole screen to the app.
+      testWidgets('takes no room at all', (tester) async {
         await tester.pumpWidget(buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.online)));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
-        final animatedOpacity = tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity));
-        expect(animatedOpacity.opacity, 0.0);
-      });
-
-      testWidgets('should have negative y offset when online (hidden above)', (tester) async {
-        await tester.pumpWidget(buildTestableWidget(state: const ConnectivityState(status: ConnectivityStatus.online)));
-        await tester.pump();
-
-        final animatedSlide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(animatedSlide.offset, const Offset(0, -1));
+        expect(tester.getSize(find.byType(ConnectivityBanner)).height, 0);
       });
     });
 
@@ -296,6 +284,112 @@ void main() {
       final now = DateTime.now();
       final state = ConnectivityState(status: ConnectivityStatus.online, lastOnline: now);
       expect(state.props, [ConnectivityStatus.online, now]);
+    });
+  });
+
+  group('coming back online', () {
+    const offline = ConnectivityState(status: ConnectivityStatus.offline);
+    const online = ConnectivityState(status: ConnectivityStatus.online);
+
+    /// Pumps the banner offline, then hands back the controller that puts it back online.
+    Future<StreamController<ConnectivityState>> pumpGoingOnline(WidgetTester tester) async {
+      final states = StreamController<ConnectivityState>();
+      addTearDown(states.close);
+      when(() => mockCubit.state).thenReturn(offline);
+      whenListen(mockCubit, states.stream, initialState: offline);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          // No Scaffold above the banner: both shells sit it directly under the app, where the status-bar inset is
+          // still in the MediaQuery. A Scaffold would have taken that inset first and hidden what this group checks.
+          home: BlocProvider<ConnectivityCubit>.value(
+            value: mockCubit,
+            child: const Column(
+              children: [
+                ConnectivityBanner(),
+                Expanded(child: SizedBox()),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No internet connection'), findsOneWidget, reason: 'the banner has to be up before it leaves');
+
+      when(() => mockCubit.state).thenReturn(online);
+      states.add(online);
+      await tester.pump();
+      return states;
+    }
+
+    // The banner is wrapped in an AnimatedSlide and an AnimatedOpacity, so it is meant to leave the way it arrived.
+    // It did not: the child was swapped for an empty box in the same frame the state changed, and both animations
+    // then ran on nothing while the user saw the banner vanish (#367).
+    testWidgets('the banner is still on screen while it animates away', (tester) async {
+      await pumpGoingOnline(tester);
+      await tester.pump(AppDurations.normal ~/ 2);
+
+      expect(find.text('No internet connection'), findsOneWidget);
+    });
+
+    // SizeTransition clips the banner to its top band while SlideTransition moves the content up inside it. Together
+    // they reveal the banner's *bottom* at the top of the screen, so the message rides over the status bar for the
+    // length of the animation instead of staying where it was (#367).
+    testWidgets('the message does not drift upward while the banner leaves', (tester) async {
+      await pumpGoingOnline(tester);
+      final message = find.text('No internet connection');
+      final restingTop = tester.getRect(message).top;
+
+      // Each pump advances from the last one, so a quarter at a time walks the animation a quarter, a half, and
+      // three quarters of the way out.
+      for (final part in [1, 2, 3]) {
+        await tester.pump(AppDurations.normal ~/ 4);
+        expect(
+          tester.getRect(message).top,
+          greaterThanOrEqualTo(restingTop - 0.5),
+          reason: 'the message climbed above where it sat, $part quarter(s) of the way out',
+        );
+      }
+      await tester.pumpAndSettle();
+    });
+
+    // Both shells hand the status-bar inset to the banner (`removePadding(removeTop: true)`), because the banner pads
+    // itself below it. That hand-over used to be flipped on `isOffline`, in the same frame as the state, which was
+    // only safe while the banner appeared and vanished in that frame too. Now that its height animates, the banner
+    // has to hold the inset at all times or the body jumps by the height of the status bar at both ends (#367).
+    testWidgets('the banner holds the status bar inset throughout', (tester) async {
+      // FakeViewPadding is in physical pixels, so the ratio is pinned to read 40 logical ones.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(top: 40);
+      addTearDown(tester.view.reset);
+
+      await pumpGoingOnline(tester);
+      final banner = find.byType(ConnectivityBanner);
+
+      for (final part in [1, 2, 3, 4]) {
+        await tester.pump(AppDurations.normal ~/ 4);
+        expect(
+          tester.getSize(banner).height,
+          greaterThanOrEqualTo(40),
+          reason: 'the banner gave the inset back $part quarter(s) of the way out, and the body jumped',
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(tester.getSize(banner).height, 40, reason: 'an online banner still owes the body the inset');
+    });
+
+    testWidgets('and is gone once the animation has run', (tester) async {
+      await pumpGoingOnline(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('No internet connection'), findsNothing);
     });
   });
 }

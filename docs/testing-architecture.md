@@ -429,6 +429,17 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   stores a key. The first version of the rule read every key and the bootstrap writes the default palette, so no new
   user would have seen the introduction — with the suite green, because every other test starts on a device that has
   already seen it.
+- **`touch_feedback_test.dart`** guards that a control answers a finger. Every other guard reads the code or one
+  resting frame, so an app whose whole interaction state came from `MouseRegion` — a callback that never fires on a
+  phone — stayed green while a card used on eight screens was inert under a finger. One half fails on a widget that
+  writes state from a hover without offering ink; the other fails when a shared widget declares an `onTap` and no test
+  has ever held a finger on it, which is the only way to find a control whose ripple is drawn correctly and then
+  covered by its own opaque background. The press itself is measured by `test/support/pressed_frame.dart`, which
+  compares the pixels a widget draws at rest and while held — two frames of the same widget in one test, never a
+  stored image, so it says the same thing here as on CI. Only the held frame counts: letting the released one count
+  turned a real failure green, because the warnings chip's own `onTap` collapses the list inside the measured area.
+  And the bar is a share of the control's own area rather than a single byte, because the chip's defect leaked 50
+  corner pixels while the ripple that mattered stayed hidden.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,

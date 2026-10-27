@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
-import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/dev_console/dev_console_overlay.dart';
 import 'package:libredb_mobile/app/session/platform_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
@@ -103,24 +102,21 @@ class _PlatformShellState extends State<PlatformShell> {
             children: [
               const ConnectivityBanner(),
               Expanded(
-                // The offline banner already pads itself below the status bar, so the shell must not add that inset
-                // again.
-                child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
-                  selector: (state) => state.isOffline,
-                  builder: (context, isOffline) => MediaQuery.removePadding(
-                    context: context,
-                    removeTop: isOffline,
-                    child: _accountRefusalOr(
-                      ResponsiveScaffold(
-                        target: SessionTarget.platform,
-                        activeRoute: widget.state.uri.path,
-                        // The shell's context, which stays mounted until the login page opens.
-                        child: SignedInAccountScope(
-                          subject: null,
-                          signOut: () => signOutAndOpenLogin(context),
-                          reloadStoredData: _reloadStoredData,
-                          child: AppPlatformIdentityScope(child: widget.child),
-                        ),
+                // The banner above holds the status-bar inset at all times, online or not, so the body never adds it
+                // again — and never gains or loses it in the middle of the banner's animation.
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _accountRefusalOr(
+                    ResponsiveScaffold(
+                      target: SessionTarget.platform,
+                      activeRoute: widget.state.uri.path,
+                      // The shell's context, which stays mounted until the login page opens.
+                      child: SignedInAccountScope(
+                        subject: null,
+                        signOut: () => signOutAndOpenLogin(context),
+                        reloadStoredData: _reloadStoredData,
+                        child: AppPlatformIdentityScope(child: widget.child),
                       ),
                     ),
                   ),

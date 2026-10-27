@@ -112,6 +112,10 @@ class _CommunityCard extends StatefulWidget {
 
 class _CommunityCardState extends State<_CommunityCard> {
   bool _isHovered = false;
+  bool _isPressed = false;
+
+  /// Pointed at or held. The card used to read the hover alone, which this layout's tablet users do not have (#367).
+  bool get _isEngaged => _isHovered || _isPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -130,40 +134,50 @@ class _CommunityCardState extends State<_CommunityCard> {
             cursor: SystemMouseCursors.click,
             onEnter: (_) => setState(() => _isHovered = true),
             onExit: (_) => setState(() => _isHovered = false),
-            child: GestureDetector(
-              onTap: () => openExternalLink(context, Uri.parse(action.url)),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: _isHovered ? 0.10 : 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: _isHovered ? 0.15 : 0.08)),
-                ),
-                child: Row(
-                  key: action.key,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: tint.background.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(action.icon, size: 16, color: tint.foreground),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: _isEngaged ? 0.10 : 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: _isEngaged ? 0.15 : 0.08)),
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                // The splash belongs inside the card's corners, and the padding moved in with it so the whole card
+                // takes the press rather than only the text.
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => openExternalLink(context, Uri.parse(action.url)),
+                  onHighlightChanged: (pressed) => setState(() => _isPressed = pressed),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      key: action.key,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: tint.background.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(action.icon, size: 16, color: tint.foreground),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          action.label(l10n),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: _isEngaged ? 0.95 : 0.85),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      action.label(l10n),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: _isHovered ? 0.95 : 0.85),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
