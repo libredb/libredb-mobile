@@ -23,6 +23,7 @@ void main() {
     final pressed = await rendersPressedState(
       tester,
       ResultTableRow(
+        index: 0,
         row: row,
         fields: fields,
         widths: const [80, 160],

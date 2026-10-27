@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_sizes.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/models/vector_column.dart';
@@ -106,6 +107,7 @@ class _ResultTableState extends State<ResultTable> {
                     itemCount: result.rows.length,
                     itemBuilder: (context, index) => ResultTableRow(
                       key: ValueKey('result-row-$index'),
+                      index: index,
                       row: result.rows[index],
                       fields: result.fields,
                       widths: widths,
@@ -257,6 +259,7 @@ class _Header extends StatelessWidget {
 class ResultTableRow extends StatelessWidget {
   const ResultTableRow({
     super.key,
+    required this.index,
     required this.row,
     required this.fields,
     required this.widths,
@@ -265,6 +268,9 @@ class ResultTableRow extends StatelessWidget {
     this.onTap,
     this.onCellLongPress,
   });
+
+  /// The row's place in the result, from 0. It is what a screen reader is told the row is.
+  final int index;
 
   final Map<String, Object?> row;
   final List<String> fields;
@@ -283,29 +289,41 @@ class ResultTableRow extends StatelessWidget {
     final theme = Theme.of(context);
     final style = _cellStyle(theme);
     final maskedStyle = _maskedStyle(theme);
-    return InkWell(
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            for (final (index, field) in fields.indexed)
-              GestureDetector(
-                key: ValueKey('result-cell-$field'),
-                behavior: HitTestBehavior.opaque,
-                onLongPress: onCellLongPress == null ? null : () => onCellLongPress!(field),
-                child: Container(
-                  width: widths[index],
-                  padding: _cellPadding,
-                  child: CompactCell(
-                    cell: _cellOf(row, field, vectorColumns),
-                    style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+    // A row carried no semantics of its own, so a screen reader read its cells as loose text with no row and no sign
+    // it could be opened (#373). Its height is held at [AppSizes.minDenseTarget] rather than [AppSizes.minTapTarget]:
+    // the 48 pt one is this repository's house rule for buttons and chips, and applying it here leaves room for two
+    // rows where #177 guarantees three on a phone held sideways. WCAG asks 24 pt at AA, which this clears.
+    return Semantics(
+      button: onTap != null,
+      label: S.of(context).result_row_title(index + 1),
+      child: InkWell(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5)),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSizes.minDenseTarget),
+            child: Row(
+              children: [
+                for (final (index, field) in fields.indexed)
+                  GestureDetector(
+                    key: ValueKey('result-cell-$field'),
+                    behavior: HitTestBehavior.opaque,
+                    onLongPress: onCellLongPress == null ? null : () => onCellLongPress!(field),
+                    child: Container(
+                      width: widths[index],
+                      padding: _cellPadding,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: CompactCell(
+                        cell: _cellOf(row, field, vectorColumns),
+                        style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

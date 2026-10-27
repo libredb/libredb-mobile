@@ -29,4 +29,11 @@ class AppSizes {
   /// the theme's `minimumSize` of `Size(0, 36)` leaves the rest to padding. A bare tappable has no padding to lean
   /// on, so it sets this explicitly.
   static const double minTapTarget = 48.0;
+
+  /// The floor for a target in a dense list, where [minTapTarget] would cost more than it buys.
+  ///
+  /// WCAG 2.2 asks 24x24 at AA (2.5.8 Target Size (Minimum)); the 44 pt of 2.5.5 is AAA, and this repository's own
+  /// [minTapTarget] is a house rule set for buttons and chips. A result row is a dense row: #177 guarantees that a
+  /// phone held sideways shows at least three of them at open, and 48 pt leaves room for two (#373).
+  static const double minDenseTarget = 24.0;
 }
