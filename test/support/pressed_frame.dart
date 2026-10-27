@@ -169,4 +169,3 @@ Future<Uint8List> _frame(WidgetTester tester, Key key) async {
   });
   return data!.buffer.asUint8List();
 }
-
