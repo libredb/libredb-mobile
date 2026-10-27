@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_banner.dart';
-import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/app/shell/account_refusal/studio_account_refusal_page.dart';
 import 'package:libredb_mobile/app/shell/app_statement_capture_scope.dart';
@@ -122,22 +121,19 @@ class _AppShellState extends State<AppShell> {
             children: [
               const ConnectivityBanner(),
               Expanded(
-                // The offline banner already pads itself below the status bar, so the shell must not add that inset
-                // again.
-                child: BlocSelector<ConnectivityCubit, ConnectivityState, bool>(
-                  selector: (state) => state.isOffline,
-                  builder: (context, isOffline) => MediaQuery.removePadding(
-                    context: context,
-                    removeTop: isOffline,
-                    child: _accountRefusalOr(
-                      ResponsiveScaffold(
-                        target: SessionTarget.studio,
-                        activeRoute: widget.state.uri.path,
-                        child: AppStudioRoleScope(
-                          child: AppStudioSubjectScope(
-                            child: AppSignedInAccountScope(
-                              child: AppStatementCaptureScope(child: GovernanceStatusScope(child: widget.child)),
-                            ),
+                // The banner above holds the status-bar inset at all times, online or not, so the body never adds it
+                // again — and never gains or loses it in the middle of the banner's animation.
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _accountRefusalOr(
+                    ResponsiveScaffold(
+                      target: SessionTarget.studio,
+                      activeRoute: widget.state.uri.path,
+                      child: AppStudioRoleScope(
+                        child: AppStudioSubjectScope(
+                          child: AppSignedInAccountScope(
+                            child: AppStatementCaptureScope(child: GovernanceStatusScope(child: widget.child)),
                           ),
                         ),
                       ),

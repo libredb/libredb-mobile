@@ -188,29 +188,26 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
                 Semantics(
                   button: true,
                   expanded: _warningsOpen,
-                  child: InkWell(
+                  child: _Chip(
                     key: const ValueKey('result-warnings-chip'),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    background: scheme.errorContainer,
                     onTap: () => setState(() => _warningsOpen = !_warningsOpen),
-                    child: _Chip(
-                      background: scheme.errorContainer,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Wraps at a large text size rather than run past the screen's edge.
-                          Flexible(
-                            child: Text(
-                              s.result_warnings(warnings.length),
-                              style: chipStyle?.copyWith(color: scheme.onErrorContainer),
-                            ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Wraps at a large text size rather than run past the screen's edge.
+                        Flexible(
+                          child: Text(
+                            s.result_warnings(warnings.length),
+                            style: chipStyle?.copyWith(color: scheme.onErrorContainer),
                           ),
-                          Icon(
-                            _warningsOpen ? Icons.expand_less : Icons.expand_more,
-                            size: MediaQuery.textScalerOf(context).scale(14),
-                            color: scheme.onErrorContainer,
-                          ),
-                        ],
-                      ),
+                        ),
+                        Icon(
+                          _warningsOpen ? Icons.expand_less : Icons.expand_more,
+                          size: MediaQuery.textScalerOf(context).scale(14),
+                          color: scheme.onErrorContainer,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -250,15 +247,29 @@ class _ResultStatsStripState extends State<ResultStatsStrip> {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({super.key, required this.background, required this.child});
+  const _Chip({super.key, required this.background, required this.child, this.onTap});
 
   final Color background;
   final Widget child;
 
+  /// Set when the chip is a control rather than a label.
+  ///
+  /// The ink has to be painted by the chip's own [Material]. A splash from an [InkWell] placed above the chip lands on
+  /// whatever `Material` is behind it, and the chip's opaque background then covers it, so the chip answered a finger
+  /// with nothing at all (#367).
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-    decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(AppRadius.sm)),
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    const padding = EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2);
+    final radius = BorderRadius.circular(AppRadius.sm);
+    final body = Padding(padding: padding, child: child);
+    return Material(
+      color: background,
+      borderRadius: radius,
+      // The splash is kept inside the chip by the InkWell's own radius. A clip here would do the same to the paint
+      // and also refuse every tap outside the rounded shape, which is not what a chip's tap target should be.
+      child: onTap == null ? body : InkWell(onTap: onTap, borderRadius: radius, child: body),
+    );
+  }
 }
