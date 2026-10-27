@@ -77,9 +77,12 @@ void main() {
   test('a screen takes its text size from the theme, not a number', () {
     // A raw fontSize cannot follow the type scale, so it cannot follow a design system either.
     expectWithin('fontSize', countOf(RegExp(r'\bfontSize\s*:\s*[0-9]')), const {
-      // M15 rewrites both of these; the budgets go with it. login_page.dart's remaining 13 pt sizes round to the
-      // theme's 14, and the three inside the wide-only brand panel are frozen by the owner's iPad ruling.
-      'lib/features/auth/presentation/pages/login_page.dart': 8,
+      // M15 rewrites these; the budgets go with it. The 13 pt sizes round to the theme's 14, and the five inside
+      // the wide-only brand panel are frozen by the owner's iPad ruling. #379 split login_page.dart's 8 across
+      // three files without adding one: 5 + 2 + 1, and the page itself now has none.
+      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 5,
+      'lib/features/auth/presentation/widgets/sign_in_entry.dart': 2,
+      'lib/features/auth/presentation/widgets/sign_in_error_line.dart': 1,
       'lib/features/auth/presentation/widgets/community_card_grid.dart': 4,
       'lib/shared/widgets/community/community_chip_row.dart': 3,
       'lib/shared/widgets/app_version_label.dart': 1,
@@ -91,8 +94,9 @@ void main() {
   test('a screen takes its colours from the scheme, not a literal', () {
     expectWithin('Color(0x…)', countOf(RegExp(r'\bColor\(0x[0-9A-Fa-f]{6,8}\)')), const {
       // All 29 are in the wide-only brand chrome, which M14's handover re-colours and the owner's iPad ruling
-      // freezes until then.
-      'lib/features/auth/presentation/pages/login_page.dart': 13,
+      // freezes until then. #379 moved all 13 of login_page.dart's into the brand panel, which is that chrome and
+      // nothing else — the ruling is enforceable now that no other change has to open the file holding them.
+      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 13,
       'lib/features/auth/presentation/widgets/community_card_grid.dart': 16,
     });
   });
@@ -105,7 +109,11 @@ void main() {
       r'[^)]*?([0-9]+(?:\.[0-9]+)?)',
     );
     expectWithin('off-scale spacing', countOf(pattern, offends: (m) => offScale(m, spacingScale)), const {
-      'lib/features/auth/presentation/pages/login_page.dart': 12,
+      // #379 split login_page.dart's 12: 6 to the brand panel, 2 to the entry, 3 left on the page. The twelfth was
+      // a duplicate the split removed, so the total went down — which is what a ratchet is for.
+      'lib/features/auth/presentation/pages/login_page.dart': 3,
+      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 6,
+      'lib/features/auth/presentation/widgets/sign_in_entry.dart': 2,
       'lib/features/auth/presentation/widgets/community_card_grid.dart': 8,
       'lib/shared/widgets/community/community_chip_row.dart': 1,
       // One each, predating the scale. They round without a layout decision, and whoever next edits the file does it.
@@ -123,7 +131,8 @@ void main() {
   test('a corner radius is one AppRadius defines', () {
     final pattern = RegExp(r'BorderRadius\.circular\(\s*([0-9]+(?:\.[0-9]+)?)\s*\)');
     expectWithin('off-scale radius', countOf(pattern, offends: (m) => offScale(m, radiusScale)), const {
-      'lib/features/auth/presentation/pages/login_page.dart': 3,
+      // All three were login_page.dart's and all three are the brand panel's wide-only chrome now (#379).
+      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 3,
       'lib/shared/widgets/theme_selection_dialog.dart': 4,
       // circular(100), the other way this app spelled a pill before AppRadius.pill existed.
       'lib/features/object_browser/presentation/widgets/key_browser_list.dart': 1,
