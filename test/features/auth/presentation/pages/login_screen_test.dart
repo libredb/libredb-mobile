@@ -25,7 +25,8 @@ import 'package:libredb_mobile/app/shell/responsive_scaffold.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:libredb_mobile/features/auth/presentation/widgets/community_section_widget.dart';
+import 'package:libredb_mobile/features/auth/presentation/widgets/community_card_grid.dart';
+import 'package:libredb_mobile/shared/widgets/community/community_chip_row.dart';
 import 'package:libredb_mobile/infrastructure/auth/oidc/oidc_client.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
@@ -73,18 +74,18 @@ void main() {
       setViewport(tester, const Size(1600, 1600));
       await pumpLogin(tester);
 
-      expect(find.byType(CommunitySectionWidget), findsOneWidget);
+      expect(find.byType(CommunityCardGrid), findsOneWidget);
       expect(find.byKey(communityDocsKey), findsOneWidget);
-      expect(tester.widget<CommunitySectionWidget>(find.byType(CommunitySectionWidget)).isDesktop, isTrue);
+      expect(find.byType(CommunityChipRow), findsNothing, reason: 'the wide layout shows the grid, not the chips');
     });
 
     testWidgets('renders once, as the chips below the form, on a narrow surface', (tester) async {
       setViewport(tester, kPhoneViewport);
       await pumpLogin(tester);
 
-      expect(find.byType(CommunitySectionWidget), findsOneWidget);
+      expect(find.byType(CommunityChipRow), findsOneWidget);
       expect(find.byKey(communityDocsKey), findsOneWidget);
-      expect(tester.widget<CommunitySectionWidget>(find.byType(CommunitySectionWidget)).isDesktop, isFalse);
+      expect(find.byType(CommunityCardGrid), findsNothing, reason: 'the phone layout shows the chips, not the grid');
     });
   });
 
@@ -217,7 +218,7 @@ void main() {
       expect(find.widgetWithText(FilledButton, 'Sign in with SSO'), findsOneWidget);
       expect(find.text(_phoneSubtitle), findsOneWidget);
       expect(find.byType(TextField), findsNothing, reason: 'no password or code field');
-      expect(find.byType(CommunitySectionWidget), findsOneWidget);
+      expect(find.byType(CommunityChipRow), findsOneWidget);
       expect(find.byKey(loginButtonPlatformKey), findsNothing);
       expect(find.text(_studioHelper), findsNothing);
       expect(find.text(_platformHelper), findsNothing);

@@ -22,7 +22,11 @@ import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import '../../application/login_bloc.dart';
 import '../../domain/services/sso_auto_redirect_gate.dart';
 import '../../../../generated/l10n.dart';
-import '../widgets/community_section_widget.dart';
+import '../widgets/community_card_grid.dart';
+import '../../../../shared/widgets/app_version_label.dart';
+import '../../../../shared/widgets/community/community_actions.dart';
+import '../../../../shared/widgets/community/community_chip_row.dart';
+import '../../../../shared/widgets/community/community_urls.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.onToggleTheme, this.startupSignInError});
@@ -188,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       const SizedBox(height: 40),
                       _featureCards(),
                       const SizedBox(height: 10),
-                      CommunitySectionWidget(isDesktop: true, urls: _communityUrls(context)),
+                      CommunityCardGrid(actions: communityActions(_communityUrls(context))),
                     ],
                   ),
                 ),
@@ -445,10 +449,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         const SizedBox(height: 28),
         if (showCommunity) ...[
           const SizedBox(height: 4),
-          CommunitySectionWidget(isDesktop: false, urls: _communityUrls(context)),
+          CommunityChipRow(actions: communityActions(_communityUrls(context))),
         ],
         const SizedBox(height: 16),
-        _versionText(context),
+        const AppVersionLabel(),
       ],
     );
   }
@@ -567,16 +571,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       context.read<LoginBloc>().add(SsoSignInRequested(target: target));
 
   /// The links of the community section.
-  CommunityUrls _communityUrls(BuildContext context) => CommunityUrls.of(context.read<ProjectLinks>());
-
-  Widget _versionText(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Text(
-        'v${AppConstants.appVersion}+${AppConstants.appBuildNumber}',
-        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
-      ),
-    );
+  /// The community links of this build's [ProjectLinks].
+  ///
+  /// The mapping lives here rather than on `CommunityUrls`: that class is under `shared/`, which imports `core/`
+  /// only, and `ProjectLinks` is `infrastructure/config/` (`test/architecture/import_guard_test.dart`).
+  CommunityUrls _communityUrls(BuildContext context) {
+    final links = context.read<ProjectLinks>();
+    return CommunityUrls(repo: links.repositoryUrl, sponsor: links.sponsorUrl, docs: links.docsUrl);
   }
 
   Widget _themeBadge(bool isDark) {

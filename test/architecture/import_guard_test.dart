@@ -106,14 +106,17 @@ void main() {
       );
     });
 
-    test('shared/ must not import from features/ or app/', () {
+    // infrastructure/ is checked here as well as features/ and app/, because the doc comment above has said
+    // "core only" since this file was written and only the other two were ever tested. Nothing under lib/shared/
+    // imports infrastructure/ today, so the rule has held on discipline — which is not a guard.
+    test('shared/ must not import from features/, app/ or infrastructure/', () {
       final violations = <String>[];
       final sharedFiles = dartFiles.where((f) => f.path.contains('/shared/'));
 
       for (final file in sharedFiles) {
         final imports = _getImports(file);
         for (final import in imports) {
-          if (import.contains('/features/') || import.contains('/app/')) {
+          if (import.contains('/features/') || import.contains('/app/') || import.contains('/infrastructure/')) {
             final key = '${_relative(file.path)} → ${_importFragment(import)}';
             if (!_isKnownException(key, _knownSharedExceptions)) {
               violations.add('${_relative(file.path)}: imports $import');
@@ -122,7 +125,11 @@ void main() {
         }
       }
 
-      expect(violations, isEmpty, reason: 'shared/ must not import from features/ or app/:\n${violations.join('\n')}');
+      expect(
+        violations,
+        isEmpty,
+        reason: 'shared/ must not import from features/, app/ or infrastructure/:\n${violations.join('\n')}',
+      );
     });
 
     test('features/ must not import from other features/ internals', () {

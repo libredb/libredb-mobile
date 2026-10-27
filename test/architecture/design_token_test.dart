@@ -79,8 +79,10 @@ void main() {
     expectWithin('fontSize', countOf(RegExp(r'\bfontSize\s*:\s*[0-9]')), const {
       // M15 rewrites both of these; the budgets go with it. login_page.dart's remaining 13 pt sizes round to the
       // theme's 14, and the three inside the wide-only brand panel are frozen by the owner's iPad ruling.
-      'lib/features/auth/presentation/pages/login_page.dart': 9,
-      'lib/features/auth/presentation/widgets/community_section_widget.dart': 7,
+      'lib/features/auth/presentation/pages/login_page.dart': 8,
+      'lib/features/auth/presentation/widgets/community_card_grid.dart': 4,
+      'lib/shared/widgets/community/community_chip_row.dart': 3,
+      'lib/shared/widgets/app_version_label.dart': 1,
       // A source viewer sets the size of the code it shows. Permanent.
       'lib/features/object_browser/presentation/widgets/object_source_view.dart': 1,
     });
@@ -91,7 +93,7 @@ void main() {
       // All 29 are in the wide-only brand chrome, which M14's handover re-colours and the owner's iPad ruling
       // freezes until then.
       'lib/features/auth/presentation/pages/login_page.dart': 13,
-      'lib/features/auth/presentation/widgets/community_section_widget.dart': 16,
+      'lib/features/auth/presentation/widgets/community_card_grid.dart': 16,
     });
   });
 
@@ -104,7 +106,8 @@ void main() {
     );
     expectWithin('off-scale spacing', countOf(pattern, offends: (m) => offScale(m, spacingScale)), const {
       'lib/features/auth/presentation/pages/login_page.dart': 12,
-      'lib/features/auth/presentation/widgets/community_section_widget.dart': 9,
+      'lib/features/auth/presentation/widgets/community_card_grid.dart': 8,
+      'lib/shared/widgets/community/community_chip_row.dart': 1,
       // One each, predating the scale. They round without a layout decision, and whoever next edits the file does it.
       'lib/features/object_browser/presentation/widgets/object_tile.dart': 1,
       'lib/features/connections/presentation/widgets/connection_list_view.dart': 1,
