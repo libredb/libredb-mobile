@@ -38,7 +38,12 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
   // Per-test, unless a file opts out.
   setUp(() async {
-    if (TestEnv.autoReset) await TestEnv.reset();
+    if (!TestEnv.autoReset) return;
+    await TestEnv.reset();
+    // And then the one thing a cleared device does not have: the introduction already shown. Every test in this
+    // repository but the introduction's own was written when a cold start opened the login page, and is still about
+    // that; the flow's own tests call TestEnv.onboardingUnseen() to meet a real first run.
+    await TestEnv.onboardingSeen();
   });
   tearDown(() async {
     if (TestEnv.autoReset) await TestEnv.reset();

@@ -13,6 +13,9 @@ import 'package:libredb_mobile/features/app_lock/presentation/widgets/app_lock_s
 import 'package:libredb_mobile/features/auth/navigation/auth_routes.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
 import 'package:libredb_mobile/features/connections/navigation/connections_routes.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
+import 'package:libredb_mobile/features/onboarding/navigation/onboarding_routes.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
 import 'package:libredb_mobile/features/platform_audit/navigation/platform_audit_routes.dart';
@@ -28,15 +31,26 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouterFactory {
-  AppRouterFactory({required this._sessionCubit, List<NavigatorObserver>? observers}) : _observers = observers ?? [];
+  AppRouterFactory({required this._sessionCubit, OnboardingCubit? onboardingCubit, List<NavigatorObserver>? observers})
+    : _onboarding = onboardingCubit,
+      _observers = observers ?? [];
 
   static final _log = AppLogger.getLogger('AppRouterFactory');
 
   final SessionCubit _sessionCubit;
+
+  /// Whether this device has shown the introduction, or null when there is no introduction to show. Nullable so a
+  /// test that is about something else can build a router without one, and so `null` reads as "nothing to gate on"
+  /// rather than as a missing dependency.
+  final OnboardingCubit? _onboarding;
+
   final List<NavigatorObserver> _observers;
 
   GoRouter create() {
-    final refreshNotifier = AppRouterRefreshNotifier([_sessionCubit.stream]);
+    final onboarding = _onboarding;
+    // The redirect reads both, so it has to re-run when either changes: the session says whether the user is signed
+    // in, the flag whether they have seen the introduction.
+    final refreshNotifier = AppRouterRefreshNotifier([_sessionCubit.stream, if (onboarding != null) onboarding.stream]);
 
     return GoRouter(
       initialLocation: ApplicationRoutesConstants.root,
@@ -97,6 +111,8 @@ class AppRouterFactory {
             ),
           ],
         ),
+        // Public like the login page, and outside both shells: the introduction comes before any session.
+        ...OnboardingFeatureRoutes.routes,
         ...AuthFeatureRoutes.publicRoutes(
           loginBuilder: (context) => LoginScreen(
             onToggleTheme: () => context.read<ThemeBloc>().add(const ToggleBrightness()),
@@ -135,6 +151,22 @@ class AppRouterFactory {
           return null;
         }
 
+        // A device that has never shown the introduction sees it before anything else, carrying where it was going
+        // so the deep link survives. The authorization-code guard above stays first, and the authenticated branch
+        // above returns before this one, so a signed-in session never reaches the introduction.
+        if (_onboarding?.state is OnboardingRequired) {
+          if (location == ApplicationRoutesConstants.welcome) return null;
+          final fullPath = state.uri.toString();
+          // Forwarded, never nested: the login page's own returnUrl is handed over as it stands, so the page gets
+          // back exactly what it would have had.
+          final pending = location == ApplicationRoutesConstants.login
+              ? state.uri.queryParameters['returnUrl']
+              : (_isBareLocation(fullPath) ? null : fullPath);
+          return pending == null
+              ? ApplicationRoutesConstants.welcome
+              : '${ApplicationRoutesConstants.welcome}?returnUrl=${Uri.encodeQueryComponent(pending)}';
+        }
+
         // The router never sees SessionUnknown at startup: App mounts it
         // only once SessionCubit.restore() has settled the session. Should
         // a later SessionUnknown reach this redirect, it still counts as
@@ -150,12 +182,7 @@ class AppRouterFactory {
           // login screen validates the value as a local path before
           // honoring it (see LoginScreen — open-redirect guard).
           final fullPath = state.uri.toString();
-          if (fullPath == ApplicationRoutesConstants.root ||
-              fullPath == ApplicationRoutesConstants.home ||
-              fullPath == ApplicationRoutesConstants.platformHome ||
-              fullPath == ApplicationRoutesConstants.login) {
-            return ApplicationRoutesConstants.login;
-          }
+          if (_isBareLocation(fullPath)) return ApplicationRoutesConstants.login;
           final encoded = Uri.encodeQueryComponent(fullPath);
           return '${ApplicationRoutesConstants.login}?returnUrl=$encoded';
         }
@@ -181,5 +208,19 @@ class AppRouterFactory {
     SessionTarget.platform => SessionTarget.studio,
   };
 
-  bool _isPublicRoute(String path) => path == ApplicationRoutesConstants.login;
+  /// The routes a user reaches without a session: the login page, and the introduction that comes before it.
+  ///
+  /// Adding the introduction here buys three behaviours at once — the catch-all below stops bouncing `/welcome` to
+  /// `/login?returnUrl=%2Fwelcome`, the authenticated branch sends a signed-in session off it to their home, and
+  /// [isExitForced] treats leaving it as forced, so it never asks about unsaved changes.
+  bool _isPublicRoute(String path) =>
+      path == ApplicationRoutesConstants.login || path == ApplicationRoutesConstants.welcome;
+
+  /// Whether [fullPath] is a landing location rather than somewhere the user asked for, so there is nothing worth
+  /// carrying as a `returnUrl`.
+  static bool _isBareLocation(String fullPath) =>
+      fullPath == ApplicationRoutesConstants.root ||
+      fullPath == ApplicationRoutesConstants.home ||
+      fullPath == ApplicationRoutesConstants.platformHome ||
+      fullPath == ApplicationRoutesConstants.login;
 }

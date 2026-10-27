@@ -665,6 +665,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_title": MessageLookupByLibrary.simpleMessage("Sayfa Bulunamadı"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("İnternet bağlantısı gerekiyor"),
     "offline_stale_data": m43,
+    "onboarding_done": MessageLookupByLibrary.simpleMessage("Başlayalım"),
+    "onboarding_skip": MessageLookupByLibrary.simpleMessage("Atla"),
+    "onboarding_subtitle": MessageLookupByLibrary.simpleMessage(
+      "Giriş yapmadan önce burada neler yapabileceğinize kısaca bakalım.",
+    ),
+    "onboarding_title": MessageLookupByLibrary.simpleMessage("LibreDB\'ye hoş geldiniz"),
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Önce bir bağlantı seçin"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Bu sekmeyi kullanmak için Bağlantılar sekmesinden bir bağlantı açın.",

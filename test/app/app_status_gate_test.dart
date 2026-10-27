@@ -16,6 +16,8 @@ import 'package:libredb_mobile/features/platform_status/application/platform_sta
 import 'package:libredb_mobile/features/platform_status/application/platform_status_event.dart';
 import 'package:libredb_mobile/features/platform_status/application/usecases/check_platform_liveness_usecase.dart';
 import 'package:libredb_mobile/features/platform_status/presentation/pages/platform_unreachable_page.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_event.dart';
 import 'package:libredb_mobile/features/studio_status/application/usecases/check_studio_liveness_usecase.dart';
@@ -30,6 +32,8 @@ import 'package:mocktail/mocktail.dart';
 import '../mocks/mock_classes.dart';
 
 class _MockSessionCubit extends MockCubit<SessionState> implements SessionCubit {}
+
+class _MockOnboardingCubit extends MockCubit<OnboardingState> implements OnboardingCubit {}
 
 const _offline = NetworkError('No Internet connection');
 
@@ -48,6 +52,8 @@ void main() {
   late PlatformStatusBloc platformBloc;
   late _MockSessionCubit session;
   late StreamController<SessionState> sessions;
+  late _MockOnboardingCubit onboarding;
+  late StreamController<OnboardingState> introductions;
 
   setUp(() {
     studio = MockIStudioStatusRepository();
@@ -57,6 +63,9 @@ void main() {
     session = _MockSessionCubit();
     sessions = StreamController<SessionState>.broadcast();
     addTearDown(sessions.close);
+    onboarding = _MockOnboardingCubit();
+    introductions = StreamController<OnboardingState>.broadcast();
+    addTearDown(introductions.close);
   });
 
   // The blocs are created inside the test body, so their event streams run in the test's fake async zone, and the
@@ -65,9 +74,12 @@ void main() {
     WidgetTester tester, {
     required PlatformTargetConfig target,
     required SessionState initial,
+    // Seen by default, so every test written before the introduction existed is about what it was about.
+    OnboardingState introduction = const OnboardingSeen(),
     Widget child = const Scaffold(body: Text('app content')),
   }) async {
     whenListen(session, sessions.stream, initialState: initial);
+    whenListen(onboarding, introductions.stream, initialState: introduction);
     studioBloc = StudioStatusBloc(
       checkLivenessUseCase: CheckStudioLivenessUseCase(studio),
       readReadinessUseCase: ReadStudioReadinessUseCase(studio),
@@ -85,6 +97,7 @@ void main() {
         child: MultiBlocProvider(
           providers: [
             BlocProvider<SessionCubit>.value(value: session),
+            BlocProvider<OnboardingCubit>.value(value: onboarding),
             BlocProvider(create: (_) => studioBloc),
             BlocProvider(create: (_) => platformBloc),
           ],
@@ -121,6 +134,12 @@ void main() {
 
   Future<void> changeSession(WidgetTester tester, SessionState state) async {
     sessions.add(state);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  Future<void> changeOnboarding(WidgetTester tester, OnboardingState state) async {
+    introductions.add(state);
     await tester.pump();
     await tester.pump();
   }
@@ -283,6 +302,119 @@ void main() {
       await changeSession(tester, _studioSession);
       expect(find.byType(StudioUnreachablePage), findsOneWidget);
       expect(find.text('unsaved draft', skipOffstage: false), findsOneWidget);
+    });
+  });
+
+  /// The introduction needs no server, and it is the first screen a new user meets. A gate that covers it with an
+  /// unreachable page turns the one screen guaranteed to work offline into a failure notice — the exact first
+  /// impression this milestone exists to remove. So while the introduction is required, both gates pass through and
+  /// Platform's first check waits for it to end.
+  group('while the introduction is required', () {
+    const introduction = OnboardingRequired();
+
+    testWidgets('shows the introduction in a build without a Platform target, with Studio unreachable', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformNotConfigured(),
+        initial: const SessionUnauthenticated(),
+        introduction: introduction,
+      );
+      when(() => studio.liveness()).thenAnswer((_) async => const Failure(_offline));
+      await checkStudio(tester);
+
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+      expect(find.text('app content'), findsOneWidget);
+    });
+
+    testWidgets('shows the introduction in a build with a Platform target, with both servers unreachable', (
+      tester,
+    ) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
+        initial: const SessionUnauthenticated(),
+        introduction: introduction,
+      );
+      when(() => studio.liveness()).thenAnswer((_) async => const Failure(_offline));
+      when(() => platform.liveness()).thenAnswer((_) async => const Failure(_offline));
+      await checkStudio(tester);
+      await checkPlatform(tester);
+
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+      expect(find.byType(PlatformUnreachablePage), findsNothing);
+      expect(find.text('app content'), findsOneWidget);
+    });
+
+    // AppStatusGate sits above the wait that holds the router back, so it is built while the flag is still being
+    // read. Asking then is asking before the answer exists: a first run would probe a server on the way to a screen
+    // that needs none, which is the thing this defers. The restore is short, and nothing but the spinner is on
+    // screen during it, so waiting for it costs nothing.
+    testWidgets('asks Platform nothing while the flag is still being read', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
+        initial: const SessionUnauthenticated(),
+        introduction: const OnboardingRestoring(),
+      );
+
+      verifyNever(() => platform.liveness());
+    });
+
+    testWidgets('asks Platform once the flag says the introduction is behind the user', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
+        initial: const SessionUnauthenticated(),
+        introduction: const OnboardingRestoring(),
+      );
+      verifyNever(() => platform.liveness());
+
+      await changeOnboarding(tester, const OnboardingSeen());
+
+      verify(() => platform.liveness()).called(1);
+    });
+
+    testWidgets('asks Platform nothing, although the login page would', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
+        initial: const SessionUnauthenticated(),
+        introduction: introduction,
+      );
+
+      verifyNever(() => platform.liveness());
+    });
+
+    testWidgets('asks Platform once the introduction ends, and only once', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformConfigured(baseUrl: 'https://platform.example.test/api'),
+        initial: const SessionUnauthenticated(),
+        introduction: introduction,
+      );
+      verifyNever(() => platform.liveness());
+
+      await changeOnboarding(tester, const OnboardingSeen());
+      verify(() => platform.liveness()).called(1);
+
+      await changeSession(tester, _platformSession);
+      verifyNever(() => platform.liveness());
+    });
+
+    testWidgets('covers the login page again once the introduction ends and Studio does not answer', (tester) async {
+      await pumpAppGate(
+        tester,
+        target: const PlatformNotConfigured(),
+        initial: const SessionUnauthenticated(),
+        introduction: introduction,
+      );
+      when(() => studio.liveness()).thenAnswer((_) async => const Failure(_offline));
+      await checkStudio(tester);
+      expect(find.byType(StudioUnreachablePage), findsNothing);
+
+      await changeOnboarding(tester, const OnboardingSeen());
+
+      expect(find.byType(StudioUnreachablePage), findsOneWidget);
     });
   });
 }

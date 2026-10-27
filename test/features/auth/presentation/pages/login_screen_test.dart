@@ -723,6 +723,20 @@ void main() {
         expect(find.text(_failedMessage), findsOneWidget);
       });
 
+      // There is no `onboardingPending` parameter on LoginScreen, and there should not be: under the route design it
+      // would always be false, so it would be dead weight. This is the test that parameter was really about. If
+      // anyone later moves the introduction into the page instead of in front of it, a build that signs in on its
+      // own sends a first-time user to the identity provider without ever showing the introduction, and this fails.
+      testWidgets('does not run while the introduction is still ahead of the user', (tester) async {
+        await TestEnv.onboardingUnseen();
+        final client = ScriptedOidcClient();
+        await pumpOidcApp(tester, OidcDependencies(client, autoRedirect: true));
+
+        expect(client.signIns, 0);
+        expect(location(tester), ApplicationRoutesConstants.welcome);
+        expect(find.byType(LoginScreen), findsNothing);
+      });
+
       testWidgets('does not run when it is turned off', (tester) async {
         final client = ScriptedOidcClient();
         await pumpOidcApp(tester, OidcDependencies(client));

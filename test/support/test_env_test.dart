@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 
 import 'test_env.dart';
 
@@ -48,6 +49,32 @@ void main() {
 
     test('leaves the other directories unanswered, as without a mock', () async {
       await expectLater(getApplicationSupportDirectory(), throwsA(isA<MissingPluginException>()));
+    });
+  });
+
+  /// The introduction flag's default, and the one call that opts out of it.
+  ///
+  /// Every test in this repository but the introduction's own was written when a cold start opened the login page,
+  /// and that is still what each of them is about. The default keeps those assertions true without touching them;
+  /// the introduction's tests clear the flag and are the only ones that meet a first run.
+  ///
+  /// The default is set in `flutter_test_config.dart`, beside the reset, so a file that opts out of the reset opts
+  /// out of this too. Those files manage their own storage and none of them pumps `App`.
+  group('the introduction flag', () {
+    Future<bool> isSet() async => await AppLocalStorage().read(StorageKeys.onboardingSeen.key) != null;
+
+    test('a test starts on a device that has already shown the introduction', () async {
+      expect(await isSet(), isTrue);
+    });
+
+    test('onboardingUnseen puts the test on a device that never has', () async {
+      await TestEnv.onboardingUnseen();
+
+      expect(await isSet(), isFalse);
+    });
+
+    test('and it does not leak into the next test', () async {
+      expect(await isSet(), isTrue);
     });
   });
 }

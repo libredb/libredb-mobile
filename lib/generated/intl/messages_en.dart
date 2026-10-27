@@ -656,6 +656,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "not_found_title": MessageLookupByLibrary.simpleMessage("Page Not Found"),
     "offline_action_unavailable": MessageLookupByLibrary.simpleMessage("Needs an internet connection"),
     "offline_stale_data": m43,
+    "onboarding_done": MessageLookupByLibrary.simpleMessage("Get started"),
+    "onboarding_skip": MessageLookupByLibrary.simpleMessage("Skip"),
+    "onboarding_subtitle": MessageLookupByLibrary.simpleMessage(
+      "A quick look at what you can do here, before you sign in.",
+    ),
+    "onboarding_title": MessageLookupByLibrary.simpleMessage("Welcome to LibreDB"),
     "pick_connection_first": MessageLookupByLibrary.simpleMessage("Pick a connection first"),
     "pick_connection_first_description": MessageLookupByLibrary.simpleMessage(
       "Open a connection from the Connections tab to use this tab.",

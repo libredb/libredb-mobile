@@ -6,6 +6,10 @@ const Key loginThemeToggleKey = Key("loginThemeToggleKey");
 const Key loginUnreachableRetryStudioKey = Key("loginUnreachableRetryStudioKey");
 const Key loginUnreachableRetryPlatformKey = Key("loginUnreachableRetryPlatformKey");
 
+// the introduction, shown once before the first sign-in
+const Key onboardingDoneKey = Key("onboardingDoneKey");
+const Key onboardingSkipKey = Key("onboardingSkipKey");
+
 // the progress over the shell while a sign-out runs
 const Key signOutProgressIndicatorKey = Key("signOutProgressIndicatorKey");
 

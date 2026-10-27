@@ -98,10 +98,19 @@ class TestEnv {
 
   /// Marks the introduction as already shown, so a test lands on the screen it is about rather than on `/welcome`.
   ///
-  /// Every test written before the onboarding flow existed assumes a cold start opens the login page. Rather than
-  /// change each of those assertions, the flow's own tests are the ones that leave this unset. Call it in a test
-  /// body or `setUp`, after the global reset has cleared the store — never in `setUpAll`.
+  /// This is the default of every test: `flutter_test_config.dart` calls it right after [reset]. Every test in this
+  /// repository but the introduction's own was written when a cold start opened the login page, and that is still
+  /// what each of them is about — so the default keeps their assertions true without touching them. A file that
+  /// opts out of the reset opts out of this too; none of those pumps `App`.
+  ///
+  /// Call it by hand only to undo an [onboardingUnseen] inside one test.
   static Future<void> onboardingSeen() => AppLocalStorage().save(StorageKeys.onboardingSeen.key, true);
+
+  /// Puts the test on a device that has never shown the introduction, which is what a first run is.
+  ///
+  /// The introduction's own tests call this; nothing else should, because every other test's assertions are about a
+  /// cold start that opens the login page.
+  static Future<void> onboardingUnseen() => AppLocalStorage().remove(StorageKeys.onboardingSeen.key);
 
   /// Always re-installs the handler. `secure_storage_test.dart` temporarily
   /// overrides the same channel and resets the handler to null in its
