@@ -421,11 +421,14 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   rewraps a comment and cannot split a string literal, and no analyzer lint takes a width.
 - **`agent_scratch_test.dart`** fails if a coding agent's working directory holds a tracked file, or is not
   git-ignored. Ignore rules do not apply to a path git already follows, so both halves are checked.
-- **`first_run_writes_nothing_test.dart`** fails if a cold start stores any preference before the introduction is
-  decided. `OnboardingSeenPreferences` treats any stored key as proof the device has used the app before, which is
-  what spares a user who upgrades while signed out an introduction to software they know. A default written at launch
-  would make every device look like a returning one and take the introduction away from new users silently, because
-  every other test starts on a device that has already seen it.
+- **`first_run_writes_nothing_test.dart`** guards what a launch stores against what the introduction reads.
+  `OnboardingSeenPreferences` treats a stored preference as proof this device has used the app before, which is what
+  spares a user who upgrades while signed out an introduction to software they know; every key a launch writes has to
+  be left out of that, because a brand-new device holds it too. One half reads `app_bootstrap.dart` and fails on a
+  launch-time write the store does not know about; the other pumps `App` and fails if anything above the bootstrap
+  stores a key. The first version of the rule read every key and the bootstrap writes the default palette, so no new
+  user would have seen the introduction — with the suite green, because every other test starts on a device that has
+  already seen it.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,

@@ -6,6 +6,16 @@ import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 class OnboardingSeenPreferences implements IOnboardingSeenStore {
   OnboardingSeenPreferences();
 
+  /// The keys a launch stores before anyone has done anything, so holding one is no proof the app has been used.
+  ///
+  /// `AppBootstrap` writes the default palette on a device that has none. Nothing else is written at launch — the
+  /// brightness is deliberately left unset so the theme follows the system, and the language is stored only when the
+  /// user picks one.
+  ///
+  /// `first_run_writes_nothing_test.dart` reads `app_bootstrap.dart` and fails if it writes a key that is not in this
+  /// set, so a future launch-time default cannot quietly turn every new device into a returning one.
+  static const keysWrittenAtLaunch = {StorageKeys.theme};
+
   static final _log = AppLogger.getLogger('OnboardingSeenPreferences');
 
   /// Whether this device has anything left to introduce.
@@ -20,15 +30,15 @@ class OnboardingSeenPreferences implements IOnboardingSeenStore {
   /// reaches the introduction, because the redirect returns on the authenticated branch first; one who upgrades
   /// while signed out does.
   ///
-  /// Reading the other keys this way is only sound because a genuinely fresh first run writes none of them before
-  /// the introduction is decided. That is measured, not assumed: `first_run_writes_nothing_test.dart` fails if a
-  /// future change writes a default at launch, which would otherwise take the introduction away from every new user
-  /// and do it silently.
+  /// [keysWrittenAtLaunch] are left out, because a brand-new device holds them before the introduction is decided and
+  /// counting them as earlier use takes the introduction away from every new user. That is not hypothetical: it is
+  /// what the first version of this rule did, and only running the app on a device caught it.
   @override
   Future<bool> read() async {
     try {
       final storage = AppLocalStorage();
       for (final key in StorageKeys.values) {
+        if (keysWrittenAtLaunch.contains(key)) continue;
         if (await storage.read(key.key) != null) return true;
       }
       return false;

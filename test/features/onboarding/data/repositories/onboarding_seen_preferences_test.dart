@@ -88,6 +88,22 @@ void main() {
       expect(await store.read(), isFalse);
     });
 
+    // AppBootstrap writes the default palette before anything else on a fresh install (app_bootstrap.dart), so on a
+    // brand-new device this key is already set when the introduction is decided. Counting it as earlier use takes the
+    // introduction away from every new user — which is exactly what it did, and only the emulator caught it.
+    test('a device holding only the palette the bootstrap writes at launch is still a first run', () async {
+      await AppLocalStorage().save(StorageKeys.theme.key, 'classic');
+
+      expect(await store.read(), isFalse);
+    });
+
+    test('but a palette beside something the user did is earlier use', () async {
+      await AppLocalStorage().save(StorageKeys.theme.key, 'classic');
+      await AppLocalStorage().save(StorageKeys.activeConnection.key, 'seed:pg');
+
+      expect(await store.read(), isTrue);
+    });
+
     test('and the flag itself still answers on a device that holds nothing else', () async {
       await store.write();
 
