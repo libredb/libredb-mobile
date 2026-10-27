@@ -6,6 +6,23 @@ This policy describes what LibreDB Mobile for Android does with your data.
 LibreDB Mobile is a client of LibreDB Studio: it signs you in through Keycloak and shows the databases that Studio offers you.
 Questions about this policy go to [info@libredb.org](mailto:info@libredb.org).
 
+## Who publishes the app
+
+LibreDB Mobile is published on Google Play by **Sekoya Tech**, the trade name of **Sekoya Grup Bilisim ve Teknoloji Ltd. Sti.**, a limited liability company registered in Turkiye and the data controller for the processing described here.
+
+| | |
+| --- | --- |
+| Registered company name | Sekoya Grup Bilisim ve Teknoloji Ltd. Sti. |
+| Trade name | Sekoya Tech |
+| Registered office | Inkilap Mah. Hasim Iscan Sok. Kent Sitesi F Blok No: 4/33, 34768 Umraniye / Istanbul, Turkiye |
+| Tax ID (VKN) | 7591146987 |
+| MERSIS No | 0759114698700001 |
+| Trade Registry No | 1015843 |
+
+Full company information is published at [sekoya.tech](https://sekoya.tech).
+
+This policy covers the app. The policy for the website is a separate one, at [libredb.org/privacy-policy](https://libredb.org/privacy-policy).
+
 ## The servers the app talks to
 
 The app talks to four kinds of servers, and to no others on its own:
