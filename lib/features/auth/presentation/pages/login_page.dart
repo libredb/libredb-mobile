@@ -370,7 +370,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: isDark ? cs.surfaceContainerHighest : cs.primaryContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: cs.outline),
       ),
       child: Icon(Icons.bolt_rounded, size: 24, color: cs.onSurface),
     );
@@ -589,7 +589,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: radius,
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: cs.outline),
       ),
       child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, size: 18, color: cs.onSurfaceVariant),
     );

@@ -24,7 +24,7 @@ class AppFormCard extends StatelessWidget {
       color: cs.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: cs.outlineVariant),
+        side: BorderSide(color: cs.outline),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
