@@ -245,6 +245,21 @@ void main() {
       expect(find.text('Sign in to Studio'), findsNothing);
     });
 
+    // The owner's standing instruction (2026-10-28): "amulatorde hangi modda calistirirsan calistir asla debug
+    // banneri olmayacak". The banner is a debug-build overlay, so no golden and no release build ever showed it and
+    // nothing in this suite looked at it — it was only ever visible on a device, which is exactly where it was not
+    // wanted.
+    testWidgets('never shows the debug banner, in any build', (tester) async {
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<MaterialApp>(find.byType(MaterialApp)).debugShowCheckedModeBanner,
+        isFalse,
+        reason: 'the banner paints only in a debug build, so only a device would have caught this',
+      );
+    });
+
     // The task switcher shows this title.
     for (final (language, title) in [('en', 'LibreDB'), ('tr', 'LibreDB')]) {
       testWidgets('names the app in the task switcher in the app language ($language)', (tester) async {

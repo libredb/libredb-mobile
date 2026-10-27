@@ -134,7 +134,10 @@ class _AppViewState extends State<_AppView> {
             darkTheme: AppTheme.dark(themeState.palette),
             themeMode: themeState.themeMode,
             themeAnimationDuration: Duration.zero,
-            debugShowCheckedModeBanner: true,
+            // Off in every build, debug included. The owner does not want it on the emulator at all, and it is the
+            // one thing on screen that no golden and no release build can show — so nothing but a person looking at
+            // a device would ever report it. `app_test.dart` holds it off.
+            debugShowCheckedModeBanner: false,
             localizationsDelegates: const [
               S.delegate,
               GlobalMaterialLocalizations.delegate,
