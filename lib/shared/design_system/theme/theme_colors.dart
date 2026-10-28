@@ -19,6 +19,14 @@ import 'app_theme_palette.dart';
 /// *is* the page, and the web's `--surface` is a card, which lands on `surfaceContainer*`. Read the other way
 /// round, the action colour sits at 2.80:1 on the page and fails 1.4.11; read this way it is 3.08:1.
 ///
+/// **A deviation is the other consumer's where it has one.** `tertiary` is `--text-tertiary`, which the system
+/// sets too light to read in either scope. The website hit exactly this and recorded its answer in the layer
+/// beside its own copy of the system — vendored here at `tool/design-system/other-consumer/a11y.css` — so this
+/// app takes that lift rather than computing a second one: two consumers of one design system showing two
+/// different greys is the thing a shared design system exists to prevent. `outline` and `outlineVariant` get no
+/// such help, because 1.4.3 is about text and the website never applied 1.4.11 to its borders; those two walk
+/// the system's own `--neutral-*` ramp and are this app's own deviation, in #369's convention.
+///
 /// **One rule covers all four status colours**, `error` included: the colour is `--<kind>-text`, what sits on it
 /// is the scope's `--text-inverse`, and the quiet pair is `--<kind>-bg` with `--<kind>-text` on it. It has to be
 /// the `-text` member of each web triplet because this app paints *text* with these roles at least as often as it
@@ -90,7 +98,7 @@ class ThemeColors {
         onSecondary: _textInverseLight,
         secondaryContainer: Color(0xFFF1F3F9), // --action-tertiary, the quiet button's surface
         onSecondaryContainer: Color(0xFF0E1020), // --text-primary
-        tertiary: Color(0xFF70768D), // --text-tertiary at 3.86:1, lifted 35% toward --neutral-600 for 4.50:1
+        tertiary: Color(0xFF6C728A), // --text-tertiary at 3.86:1; the website's own lift, 4.76:1
         onTertiary: _textInverseLight,
         tertiaryContainer: Color(0xFFF1F3F9), // --action-tertiary
         onTertiaryContainer: Color(0xFF0E1020), // --text-primary
@@ -121,7 +129,7 @@ class ThemeColors {
         onSecondary: _textInverseDark,
         secondaryContainer: Color(0xFF1B2038), // --action-tertiary
         onSecondaryContainer: Color(0xFFF2F4FB), // --text-primary
-        tertiary: Color(0xFF767E9E), // --text-tertiary, 4.84:1 on the page — the one that needs no lift
+        tertiary: Color(0xFF7F87A7), // --text-tertiary at 4.84:1; the website's own lift, 5.46:1
         onTertiary: _textInverseDark,
         tertiaryContainer: Color(0xFF1B2038), // --action-tertiary
         onTertiaryContainer: Color(0xFFF2F4FB), // --text-primary

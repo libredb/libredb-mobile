@@ -304,12 +304,12 @@ void main() {
     // Each row asserts both halves: that the web value really does fail, and that the value taken instead clears.
     // If the system ever lifts one of these, the first half fails and the deviation is reconsidered, not kept.
     final deviations = <(String, Brightness, String, Color Function(ColorScheme), double, Color)>[
-      ('tertiary', Brightness.light, 'text-tertiary', (s) => s.tertiary, 4.5, Color(0xFF70768D)),
       ('outline', Brightness.light, 'border-strong', (s) => s.outline, 3.0, Color(0xFF8E94AC)),
       ('outlineVariant', Brightness.light, 'border', (s) => s.outlineVariant, 1.9, Color(0xFFB5BBCF)),
       ('outline', Brightness.dark, 'border-strong', (s) => s.outline, 3.0, Color(0xFF585E75)),
       ('outlineVariant', Brightness.dark, 'border', (s) => s.outlineVariant, 1.9, Color(0xFF3C4057)),
     ];
+    // `tertiary` is not in that list because its lift is not this app's. It is in the test below.
 
     for (final (role, brightness, token, read, floor, taken) in deviations) {
       final scheme = ThemeColors.getColorScheme(AppThemePalette.classic, brightness);
@@ -326,11 +326,48 @@ void main() {
         reason: 'the lifted value has to clear the floor it was lifted for',
       );
     }
+  });
 
-    // The sixth is not a deviation: in the dark scope the web's own `--text-tertiary` clears 4.5:1 on the page, so
-    // it is taken unchanged. It sits here rather than in the test above to keep the six readable as one group.
-    final dark = ThemeColors.getColorScheme(AppThemePalette.classic, Brightness.dark);
-    expect(dark.tertiary, colourOf('text-tertiary', Brightness.dark), reason: 'dark tertiary needs no lift');
+  /// The lift `--<token>` is given in [brightness]'s scope of the other consumer's accessibility layer.
+  ///
+  /// `tool/design-system/other-consumer/a11y.css` is a verbatim copy of `src/styles/a11y.css` in
+  /// `libredb/libredb.github.io`, taken at `2e8c39b`. It is *not* part of the design system — it is the website's
+  /// record of where the system and WCAG 1.4.3 collide, and its own header says each value is "the MINIMUM lift
+  /// that clears 4.5:1 on the darkest/lightest surface the token is actually painted on".
+  Color liftOf(String token, Brightness brightness) {
+    final source = File('tool/design-system/other-consumer/a11y.css').readAsStringSync();
+    final darkAt = RegExp(r"^\[data-theme='dark'\]", multiLine: true).firstMatch(source)!.start;
+    final scope = brightness == Brightness.light ? source.substring(0, darkAt) : source.substring(darkAt);
+    final declaration = RegExp('--$token\\s*:\\s*#([0-9a-fA-F]{6})\\s*;').firstMatch(scope);
+    expect(declaration, isNotNull, reason: '--$token carries no lift in the ${brightness.name} scope of a11y.css');
+    return Color(0xFF000000 | int.parse(declaration!.group(1)!, radix: 16));
+  }
+
+  test("tertiary takes the website's lift, not one of this app's own", () {
+    // The system sets `--text-tertiary` too light to read in both scopes — 3.86:1 on white, and 4.40:1 on the
+    // card the website paints it on. The website measured that and lifted it; this app takes the same value,
+    // because two consumers of one design system showing two different greys is what a shared system prevents.
+    //
+    // Reading it from the vendored file rather than restating it is what makes a later divergence fail here: if
+    // the website re-lifts the token, this app follows instead of drifting.
+    for (final brightness in Brightness.values) {
+      final scheme = ThemeColors.getColorScheme(AppThemePalette.classic, brightness);
+      expect(
+        colourOf('text-tertiary', brightness),
+        isNot(liftOf('text-tertiary', brightness)),
+        reason: 'if the system itself adopts the lift, this whole deviation goes away',
+      );
+      expect(
+        scheme.tertiary,
+        liftOf('text-tertiary', brightness),
+        reason: "classic/${brightness.name}: tertiary is the website's --text-tertiary lift",
+      );
+      expect(
+        contrastRatio(scheme.tertiary, scheme.surface),
+        greaterThanOrEqualTo(4.5),
+        reason: 'and it has to clear 4.5:1 on this app\'s page, which is not one of the grounds it was cut for',
+      );
+    }
   });
 
   test('nature and sunset keep their own neutrals, deliberately', () {
