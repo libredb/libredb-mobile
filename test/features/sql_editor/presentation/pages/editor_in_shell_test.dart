@@ -224,6 +224,25 @@ void main() {
     ),
   );
 
+  // Regression: the title had no semantics container of its own, so it was absorbed into an ancestor's node and
+  // the ancestor's node is the whole view. `DevConsoleShortcut` wraps the signed-in shell in `Shortcuts` -> `Focus`
+  // in a debug build, and a `Focus` with no container of its own contributes a screen-sized semantics node; the
+  // title ends in `Tooltip(InkWell(onTap:))`, which has none either, so its label, its tooltip and its tap landed
+  // there. Measured on the device at 392.7 x 802.9 logical against the 312 x 47 the title occupies: a screen
+  // reader met one item covering the screen, reading the connection's name, and a double-tap anywhere no other
+  // node covered opened the connection switcher.
+  testWidgets('the connection title keeps a semantics node of its own, not the whole view', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpShell(tester);
+
+    // Measured and released before the expectation, so a failure reports the rect rather than a leaked handle.
+    final rect = tester.getSemantics(find.byType(ActiveConnectionTitle)).rect;
+    final view = tester.view.physicalSize / tester.view.devicePixelRatio;
+    semantics.dispose();
+
+    expect(rect.height, lessThan(view.height), reason: 'the title claims the whole view: $rect, view $view');
+  });
+
   testWidgets('the confirmation covers the tab bar, so a tap on another tab changes nothing', (tester) async {
     final router = await pumpShell(tester);
     await openConfirmation(tester);

@@ -56,19 +56,26 @@ class ActiveConnectionTitle extends StatelessWidget {
           ),
       ];
     }
-    return Tooltip(
-      message: S.of(context).connection_switcher_title,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => ConnectionSwitcherSheet.show(context),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            spacing: AppSpacing.sm,
-            children: [
-              ...children,
-              Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurfaceVariant),
-            ],
+    // A container of its own, because without one this widget has no semantics node and its label, its tooltip and
+    // its tap are absorbed by the nearest ancestor that has one. In a debug build that ancestor is
+    // `DevConsoleShortcut`'s `Focus`, whose node is the whole view — so a screen reader met one item covering the
+    // screen, and a double-tap anywhere no other node covered opened the switcher (#285). The container also makes
+    // the widget independent of any ancestor a later shortcut or focus layer might add.
+    return MergeSemantics(
+      child: Tooltip(
+        message: S.of(context).connection_switcher_title,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => ConnectionSwitcherSheet.show(context),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Row(
+              spacing: AppSpacing.sm,
+              children: [
+                ...children,
+                Icon(Icons.arrow_drop_down, color: theme.colorScheme.onSurfaceVariant),
+              ],
+            ),
           ),
         ),
       ),
