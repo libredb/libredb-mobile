@@ -89,7 +89,8 @@ class AppTheme {
       listTileTheme: ListTileThemeData(
         iconColor: colorScheme.onSurface,
         textColor: colorScheme.onSurface,
-        selectedColor: colorScheme.primary,
+        // `--text-brand`, because this colours the selected tile's label and icon — text, not a fill.
+        selectedColor: colorScheme.onPrimaryContainer,
         titleTextStyle: textTheme.bodyLarge,
         subtitleTextStyle: textTheme.bodyMedium,
       ),

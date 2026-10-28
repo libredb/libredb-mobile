@@ -437,7 +437,7 @@ class _EventRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(event.statementType, style: textTheme.labelMedium?.copyWith(color: colorScheme.primary)),
+              Text(event.statementType, style: textTheme.labelMedium?.copyWith(color: colorScheme.onPrimaryContainer)),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),

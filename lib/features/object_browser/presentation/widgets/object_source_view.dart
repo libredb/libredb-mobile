@@ -250,7 +250,8 @@ class _SourceLinesState extends State<_SourceLines> {
     final numberStyle = style.copyWith(color: scheme.onSurfaceVariant);
     final kindStyles = {
       SourceTokenKind.plain: style,
-      SourceTokenKind.keyword: style.copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
+      // `--text-brand`, which this app carries as `onPrimaryContainer`; see highlighting_text_controller.dart.
+      SourceTokenKind.keyword: style.copyWith(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600),
       SourceTokenKind.string: style.copyWith(color: scheme.tertiary),
       SourceTokenKind.number: style.copyWith(color: scheme.secondary),
       SourceTokenKind.comment: style.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic),

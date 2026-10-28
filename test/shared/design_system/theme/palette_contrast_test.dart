@@ -48,6 +48,19 @@ void main() {
     //   not only fills. The web's `--action-destructive` is 4.01:1 on the dark page; its `--error-text` is 10.20.
     ((cs) => cs.primary, (cs) => cs.surface, 3.0, 'primary on surface — the fill of a filled button'),
     ((cs) => cs.error, (cs) => cs.surface, 4.5, 'error on surface — the app paints text with it'),
+    // The third was found by counting what each role actually paints, and it is the one nobody had looked at.
+    // `inversePrimary` has no call site in `lib/` at all, which is why it was missed — but it is painted, by a
+    // Flutter default this app never overrides: `snackBarTheme` sets no `actionTextColor`
+    // (`app_theme.dart:76-80`), so `_SnackbarDefaultsM3` returns `inversePrimary` for the one `SnackBarAction`
+    // this app builds, the "Copy statement" button of `studio_error_banner.dart:214`, and it sits on
+    // `inverseSurface`. On `main` that pair was **4.41:1 in nature/dark** — under this floor, unmeasured for as
+    // long as the palette has existed. A role with no call site is not a role nobody sees.
+    (
+      (cs) => cs.inversePrimary,
+      (cs) => cs.inverseSurface,
+      4.5,
+      "inversePrimary on inverseSurface — a snack bar's action",
+    ),
   ];
 
   for (final palette in AppThemePalette.values) {

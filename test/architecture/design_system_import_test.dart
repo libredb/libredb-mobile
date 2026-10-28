@@ -204,9 +204,12 @@ void main() {
     }
   });
 
-  test("onPrimary deviates: the system's own --text-inverse cannot be read on its own action colour", () {
-    // In the light scope --text-inverse *is* white, so light follows the system and dark does not. The deviation is
-    // forced by a floor, not chosen: a button label is text, and 1.4.3 asks 4.5:1 of it.
+  test('a button label is white, which is what the design system itself paints', () {
+    // Not a deviation, although it reads like one. `--text-inverse` is `#0B0D18` in the dark scope and 3.08:1 on
+    // the action colour, so it cannot be a button label — but the system never asks it to be one. The website
+    // sets `color: #fff` as a literal at all ten of its filled brand buttons, with no dark override, and paints
+    // `--text-inverse` in exactly one place: as the ink of `--surface-inverse`, which is where this app puts it
+    // too (`onInverseSurface`). White here follows the system's own practice; the floor only confirms it.
     final darkInverse = colourOf('text-inverse', Brightness.dark);
     final indigo = colourOf('action-primary', Brightness.dark);
     expect(

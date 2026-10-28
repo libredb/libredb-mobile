@@ -43,11 +43,13 @@ class ThemeColors {
   /// `--action-primary`. The same value in both scopes, as the system declares it.
   static const Color _actionPrimary = Color(0xFF4F46E5);
 
-  /// White, in both scopes, and not the system's own `--text-inverse`.
+  /// White, in both scopes — which is what the design system itself paints, not a deviation from it.
   ///
-  /// The dark scope sets `--text-inverse:#0B0D18`, which on `--action-primary` is 3.08:1 — a button label is text
-  /// and 1.4.3 asks 4.5:1 of it. White is 6.29:1 on the action colour in both scopes. The deviation is forced by
-  /// the floor rather than chosen, and the guard pins the reason as well as the value.
+  /// It reads like one, because the dark scope's `--text-inverse` is `#0B0D18` and that is 3.08:1 on the action
+  /// colour. But the system never asks `--text-inverse` to be a button label: the website sets `color: #fff` as a
+  /// literal at all ten of its filled brand buttons, and paints `--text-inverse` in one place only — as the ink
+  /// of `--surface-inverse`, which is where this app puts it too. White is 6.29:1 on the action colour in both
+  /// scopes, so the floor confirms the system's practice rather than overruling it.
   static const Color _onAction = Color(0xFFFFFFFF);
 
   static const Color _surfaceBrandLight = Color(0xFFEEF2FF); // --surface-brand
