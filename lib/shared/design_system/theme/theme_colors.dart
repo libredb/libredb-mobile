@@ -110,6 +110,13 @@ class ThemeColors {
         onErrorContainer: _errorLight,
         surface: Color(0xFFFFFFFF), // --background
         onSurface: Color(0xFF0E1020), // --text-primary
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): --background-subtle twice and
+        // --surface-hover twice: the light scope has three surfaces and Material wants
+        // five, so two steps repeat rather than invent a value the system does not have.
+        surfaceContainerLow: Color(0xFFF8F9FC),
+        surfaceContainer: Color(0xFFF8F9FC),
+        surfaceContainerHigh: Color(0xFFF1F3F9),
         surfaceContainerHighest: Color(0xFFF1F3F9), // --surface-hover
         onSurfaceVariant: Color(0xFF4A5069), // --text-secondary
         outline: Color(0xFF8E94AC), // --border-strong at 1.51:1, 53% --neutral-400→500 for 3.01:1 (WCAG 1.4.11)
@@ -141,6 +148,12 @@ class ThemeColors {
         onErrorContainer: _errorDark,
         surface: Color(0xFF0B0D18), // --background
         onSurface: Color(0xFFF2F4FB), // --text-primary
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): --background-subtle, --surface
+        // and --surface-elevated: the dark scope has the whole ladder.
+        surfaceContainerLow: Color(0xFF101321),
+        surfaceContainer: Color(0xFF141829),
+        surfaceContainerHigh: Color(0xFF1B2038),
         surfaceContainerHighest: Color(0xFF232842), // --surface-hover
         onSurfaceVariant: Color(0xFFA8B0CC), // --text-secondary
         outline: Color(0xFF585E75), // --border-strong at 1.98:1, 86% --neutral-700→600 for 3.02:1
@@ -177,6 +190,12 @@ class ThemeColors {
         onErrorContainer: _errorLight,
         surface: Color(0xFFFCFDFC),
         onSurface: Color(0xFF0D0F0D), // Sage 950
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): evenly between this palette's own
+        // page and its own top step — its family, not a new one.
+        surfaceContainerLow: Color(0xFFF9FBF9),
+        surfaceContainer: Color(0xFFF6F9F6),
+        surfaceContainerHigh: Color(0xFFF3F6F3),
         surfaceContainerHighest: Color(0xFFF0F4F0), // Sage 100
         onSurfaceVariant: Color(0xFF5F7A64), // Sage 600 — 4.62:1, the only palette whose secondary text was under AA
         outline: Color(0xFF839887), // 3.03:1
@@ -208,6 +227,12 @@ class ThemeColors {
         onErrorContainer: _errorDark,
         surface: Color(0xFF0D0F0D), // Sage 950
         onSurface: Color(0xFFF5F8F5), // Sage 50
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): evenly between this palette's own
+        // page and its own top step.
+        surfaceContainerLow: Color(0xFF141715),
+        surfaceContainer: Color(0xFF1C201C),
+        surfaceContainerHigh: Color(0xFF232824),
         surfaceContainerHighest: Color(0xFF2A302B), // Sage 800
         onSurfaceVariant: Color(0xFF8BA68F), // Sage 400
         outline: Color(0xFF556357), // 3.03:1
@@ -244,6 +269,12 @@ class ThemeColors {
         onErrorContainer: _errorLight,
         surface: Color(0xFFFAFAF9), // Stone 50
         onSurface: Color(0xFF0C0A09), // Stone 950
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): evenly between this palette's own
+        // page and its own top step.
+        surfaceContainerLow: Color(0xFFF9F9F8),
+        surfaceContainer: Color(0xFFF8F8F7),
+        surfaceContainerHigh: Color(0xFFF6F6F5),
         surfaceContainerHighest: Color(0xFFF5F5F4), // Stone 100
         onSurfaceVariant: Color(0xFF78716C), // Stone 500
         outline: Color(0xFF989089), // 3.01:1
@@ -275,6 +306,12 @@ class ThemeColors {
         onErrorContainer: _errorDark,
         surface: Color(0xFF0C0A09), // Stone 950
         onSurface: Color(0xFFFAFAF9), // Stone 50
+        // The ladder a card, an accessory bar and a table header fill with. Material resolves these to the
+        // page when they are left out, so a fill with one drew nothing at all (#386): evenly between this palette's own
+        // page and its own top step.
+        surfaceContainerLow: Color(0xFF131110),
+        surfaceContainer: Color(0xFF1B1816),
+        surfaceContainerHigh: Color(0xFF221E1D),
         surfaceContainerHighest: Color(0xFF292524), // Stone 800
         onSurfaceVariant: Color(0xFFA8A29E), // Stone 400
         outline: Color(0xFF625C58), // 3.00:1
