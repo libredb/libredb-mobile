@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:libredb_mobile/core/security/sensitive_data_scrubber.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -33,7 +34,20 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// post-deprecation SDK API where `copyWith` is gone. Lives in its own file
 /// specifically so tests can exercise it without booting the SDK.
 
-SentryEvent sentryBeforeSend(SentryEvent event) {
+SentryEvent? sentryBeforeSend(SentryEvent event) {
+  try {
+    return _scrubEvent(event);
+  } catch (error) {
+    // Fail closed, the way the native scrubber does. The SDK sets its processed event to the one it was handed
+    // before it calls this hook, so a throw halfway through would leave the original — part masked, part not — to
+    // be sent. Only the exception's class is logged: its message could carry the value that made the masking
+    // throw, which is the one thing this function exists to keep off the wire.
+    _log.error('Dropped a Sentry event because scrubbing it threw: {}', [error.runtimeType]);
+    return null;
+  }
+}
+
+SentryEvent _scrubEvent(SentryEvent event) {
   final request = event.request;
   if (request != null) {
     // SentryRequest.data has no public setter (the SDK exposes only
@@ -77,6 +91,27 @@ SentryEvent sentryBeforeSend(SentryEvent event) {
     if (template != null) msg.template = _maskText(template);
     final params = msg.params;
     if (params != null) msg.params = [for (final param in params) _maskValue(param)];
+  }
+
+  // `extra` is where a transaction's data ends up, and a navigation's data is the route's arguments:
+  // `SentryNavigatorObserver` calls `setData('route_settings_arguments', ...)` with go_router's path and query
+  // parameters, which on the browse routes are `connectionId`, `kind`, `browsePath` and `browsePrefix` — row keys
+  // and key prefixes. The breadcrumb copy of those arguments was masked and this one was not, because the native
+  // scrubber masks `event.extras` and Dart events never reach it: they go to `captureEnvelope`.
+  // `extra` is deprecated in favour of `contexts`, and the SDK still fills it and still sends it: `SentryTransaction`
+  // assigns `extra: extra ?? tracer.data`, and `SentryEvent.toJson` writes `extra` whenever it is not empty. A
+  // deprecated field that still reaches the wire still has to be masked.
+  // ignore: deprecated_member_use
+  final extra = event.extra;
+  // ignore: deprecated_member_use
+  if (extra != null) event.extra = _maskMap(Map<String, dynamic>.from(scrubBodyKeys(extra)! as Map));
+
+  // `SentryTransaction` puts the same map in the trace context as well, so masking one of the two is masking
+  // neither. `data` is one of the few fields the SDK leaves mutable, so this edits it in place.
+  final trace = event.contexts.trace;
+  final traceData = trace?.data;
+  if (trace != null && traceData != null) {
+    trace.data = _maskMap(Map<String, dynamic>.from(scrubBodyKeys(traceData)! as Map));
   }
 
   return event;
@@ -202,6 +237,8 @@ void installSentryScrubbers(SentryOptions options) {
   options.beforeSendLog = (log, hint) => sentryBeforeSendLog(log);
   options.enablePrintBreadcrumbs = false;
 }
+
+final _log = AppLogger.getLogger('SentryScrub');
 
 /// Masks emails and JWTs in a URL or in one of its parts. Route and query
 /// parameters travel there: the email in `/login-otp-verify/:email` would

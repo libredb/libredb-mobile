@@ -85,6 +85,18 @@ That Sentry receives the timer's error comes from the #191 device check on the t
   Only an HTTP integration such as `sentry_dio` attaches a request body; the app has none today.
 - Email addresses and JWTs in the request URL (`request.url`, query string, fragment) and the transaction name are masked the same way.
 - In the same text, the value of a JSON member or a `name=value` pair whose name contains one of those words, and the credentials of a `Bearer` authorization, are replaced with `[REDACTED]` by `maskSecrets`, which `AppLogger` also runs over every line it prints.
+- The event's `extra` and the `data` of its trace context are masked like a request body: credential keys replaced
+  whole, email addresses and JWTs masked at any depth. That is where a transaction's data lands, and a navigation's
+  data is the route's arguments — `SentryNavigatorObserver` calls `setData('route_settings_arguments', ...)` with
+  go_router's path and query parameters, which on the browse routes are `connectionId`, `kind`, `browsePath` and
+  `browsePrefix`, so a row key or a key prefix travels in them. The breadcrumb copy of those arguments was masked
+  from the start and this copy was not, because the Android scrubber masks `event.extras` and a Dart event never
+  reaches it: it goes to `captureEnvelope`. `extra` is deprecated in the SDK and still sent, which is why it is
+  still read.
+- **The hook fails closed.** If masking throws, the event is dropped and only the exception's class is logged — its
+  message could carry the value that made the masking throw. The Android scrubber has always done this; the Dart
+  one did not, and the SDK sets its processed event to the one it was handed *before* calling the hook, so a throw
+  halfway through would have sent the original, part masked and part not.
 
 `sentryBeforeBreadcrumb` masks the email addresses, JWTs and secrets in the message and the data of every breadcrumb when it is recorded, and the value of every credential key of the data.
 That covers the breadcrumbs of `SentryAnalyticsService`, the navigation breadcrumbs, and the http and ui breadcrumbs that `sentry_dio` or `SentryUserInteractionWidget` would add.
