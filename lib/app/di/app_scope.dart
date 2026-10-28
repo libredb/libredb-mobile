@@ -87,6 +87,7 @@ class AppScope extends StatelessWidget {
     required this.dependencies,
     this.secureStorage,
     required this.defaultLocale,
+    this.followsDeviceLanguage = true,
     required this.child,
   });
 
@@ -100,6 +101,10 @@ class AppScope extends StatelessWidget {
 
   /// The language [LocaleCubit] shows when no language is stored on the device.
   final Locale defaultLocale;
+
+  /// Whether [defaultLocale] is the phone's own language, so the app keeps following the phone while no language is
+  /// stored on the device. See `App.followsDeviceLanguage`.
+  final bool followsDeviceLanguage;
   final Widget child;
 
   @override
@@ -418,8 +423,11 @@ class AppScope extends StatelessWidget {
             ),
           ),
           BlocProvider<LocaleCubit>(
-            create: (_) =>
-                LocaleCubit(storage: dependencies.createLocalStorage(), defaultLocale: defaultLocale)..restore(),
+            create: (_) => LocaleCubit(
+              storage: dependencies.createLocalStorage(),
+              defaultLocale: defaultLocale,
+              followsDevice: followsDeviceLanguage,
+            )..restore(),
           ),
           // Beside the language, and started the same way: both are device preferences the first frame waits on,
           // and App holds the router back until each has answered (see app.dart).
