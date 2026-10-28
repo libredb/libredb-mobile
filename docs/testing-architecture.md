@@ -441,6 +441,16 @@ wrong scope.
   turned a real failure green, because the warnings chip's own `onTap` collapses the list inside the measured area.
   And the bar is a share of the control's own area rather than a single byte, because the chip's defect leaked 50
   corner pixels while the ripple that mattered stayed hidden.
+- **`tap_splash_test.dart`** is the other half of that rule: the splash — the circle that grows out of the touch point
+  and over whatever is behind the control — is off in every theme the app can be shown in, and the flat press
+  highlight is not. It fails when a theme loses `splashFactory: NoSplash.splashFactory`, when a theme has no press
+  highlight left either (which would reach "no splash" by making every control silent, the defect of #367), when a
+  control built under the app theme hands its own ink a splash factory past the theme — every `ButtonStyleButton`
+  resolves one through `ButtonStyle`, so the lever reaching them is measured here rather than assumed — and when any
+  file in `lib/` names a splash factory that is not `NoSplash`. Removing the splash took the only answer two result
+  rows had: their cells hold the gesture arena open with a long press, so the ink under them draws nothing while held
+  and the splash confirming on release was the whole of it. They now paint `ThemeData.highlightColor` themselves
+  (`PressHighlight`), and `result_row_touch_test.dart` measures the held frame rather than the released one.
 - **`post_frame_context_test.dart`** fails when an `addPostFrameCallback` in `lib/` reaches a `BuildContext` without
   checking `mounted` first, following one level of indirection so `(_) => _method()` is read together with the body of
   `_method`. The callback runs at the end of a frame its widget may already have left, and a read from a `State` that
