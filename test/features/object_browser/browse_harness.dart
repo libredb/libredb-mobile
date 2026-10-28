@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/app/app_scroll_behavior.dart';
 import 'package:libredb_mobile/app/connectivity/app_connectivity_scope.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
@@ -191,6 +192,8 @@ class BrowseHarness {
             child: MaterialApp.router(
               routerConfig: router,
               locale: locale,
+              // As in the app: no elastic overscroll and no glow, so the pulls below are the pulls a device gets.
+              scrollBehavior: const AppScrollBehavior(),
               localizationsDelegates: const [
                 S.delegate,
                 GlobalMaterialLocalizations.delegate,

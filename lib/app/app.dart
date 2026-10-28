@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/analytics/analytics_route_observer.dart';
+import 'package:libredb_mobile/app/app_scroll_behavior.dart';
 import 'package:libredb_mobile/app/app_status_gate.dart';
 import 'package:libredb_mobile/app/app_target_reachability.dart';
 import 'package:libredb_mobile/app/bootstrap/app_session_listeners.dart';
@@ -134,6 +135,8 @@ class _AppViewState extends State<_AppView> {
             darkTheme: AppTheme.dark(themeState.palette),
             themeMode: themeState.themeMode,
             themeAnimationDuration: Duration.zero,
+            // Every scrollable in the app, on both platforms: no elastic overscroll and no overscroll glow (#418).
+            scrollBehavior: const AppScrollBehavior(),
             // Off in every build, debug included. The owner does not want it on the emulator at all, and it is the
             // one thing on screen that no golden and no release build can show — so nothing but a person looking at
             // a device would ever report it. `app_test.dart` holds it off.

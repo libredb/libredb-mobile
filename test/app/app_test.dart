@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/mock_sign_in_dependencies.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/app_scroll_behavior.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
@@ -258,6 +259,15 @@ void main() {
         isFalse,
         reason: 'the banner paints only in a debug build, so only a device would have caught this',
       );
+    });
+
+    // What AppScrollBehavior answers is its own test; this is the one place that says the app actually installs it,
+    // so the behaviour cannot sit in the tree unreferenced while every screen keeps Material's stretch.
+    testWidgets('installs the app scroll behaviour over every screen', (tester) async {
+      await tester.pumpWidget(App(dependencies: MockSignInDependencies(), language: 'en'));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).scrollBehavior, isA<AppScrollBehavior>());
     });
 
     // The task switcher shows this title.
