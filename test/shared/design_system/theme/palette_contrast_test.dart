@@ -38,6 +38,16 @@ void main() {
     ((cs) => cs.onSecondaryContainer, (cs) => cs.secondaryContainer, 4.5, 'onSecondaryContainer on its container'),
     ((cs) => cs.onTertiaryContainer, (cs) => cs.tertiaryContainer, 4.5, 'onTertiaryContainer on its container'),
     ((cs) => cs.onErrorContainer, (cs) => cs.errorContainer, 4.5, 'onErrorContainer on its container — a warning'),
+    // Two pairs this guard did not have until #283 moved the palettes onto the design system, each added because
+    // the move would have shipped a failure it could not see:
+    //
+    // * `primary` against the page is 1.4.11 again — a filled button's own fill is the boundary that identifies
+    //   it. Mapping `surface` to the web's `--surface` rather than `--background` put the action colour at
+    //   2.80:1 there, and nothing in this file would have said so.
+    // * `error` against the page is 1.4.3, because this app paints *text* with that role at twenty call sites,
+    //   not only fills. The web's `--action-destructive` is 4.01:1 on the dark page; its `--error-text` is 10.20.
+    ((cs) => cs.primary, (cs) => cs.surface, 3.0, 'primary on surface — the fill of a filled button'),
+    ((cs) => cs.error, (cs) => cs.surface, 4.5, 'error on surface — the app paints text with it'),
   ];
 
   for (final palette in AppThemePalette.values) {
