@@ -371,6 +371,7 @@ containers, is what makes this reproducible; until then a `libredb-installer app
 | Step | Result |
 | --- | --- |
 | 1. Sign in; role; governance chip | Passed: the custom tab loaded Keycloak on `sso.lab.test` with no interstitial, the form signed in, and the app landed on the connection list. The profile sheet shows `mobile-test@lab.test`, the role **User**, the chip "Governed by LibreDB Platform", and a "Switch to Platform" entry |
+| 2. The app lock | Passed, on the emulator: the switch is disabled while the device has no screen lock and says so — "Set a screen lock on this device to turn this on". With a PIN set it becomes live; turning it on raises the system's own prompt first, so the lock cannot be enabled by someone who cannot already unlock the phone. With the delay set to **Hemen** the app came back from the background locked — "LibreDB kilitli", offering **Kilidi aç** and **Çıkış Yap** — and a fingerprint unlocked it to the screen it had left. The emulator holds both a credential and an enrolled print, so none of this needed a phone |
 | 3. Connection list | Passed: one connection, "Deneme DVD Rental" / `dvdrental`, under the group "Deneme" with its count, carrying the LOCAL badge and the "Read only" lock, with the LOCAL environment chip above it |
 | 5. Browse | Passed: the schema `public`, then 15 tables, 7 views, 0 materialized views, 13 sequences, 9 functions, 0 procedures and 15 triggers — the same counts `POST /api/db/objects/counts` answers. The table list carries each table's row count and size (`actor` 200 rows · 72 KB, `film` 1000 rows) |
 | 4. The check, the switcher, reopening and the offline strip | Passed: a long press on the connection opens its sheet, whose **Check** sent `POST /api/db/test-connection` and came back `online, 3 ms, 0 warnings`. The switcher is a sheet of its own with its own search, the environment chip and the active connection marked. Sent to the background and brought back, the app returned to the schema list it was on. In aeroplane mode the system strip reads "No internet connection" and the app's own, under the bar, reads **"Offline: showing what was loaded at 7:44 PM"** — it names the time the cached answers are from. Turning the radio back on, `ConnectivityService` logged `wifi` and the screens recovered without a retry |
@@ -382,9 +383,6 @@ containers, is what makes this reproducible; until then a `libredb-installer app
 
 ### What this run did not cover, and why
 
-- **Step 2, the app lock.** `AppConfig.local` sets `appLockRequired=false`, and a fingerprint needs real hardware.
-  The settings screen shows the switch disabled under "Set a screen lock on this device to turn this on", which is
-  the right thing to say on an emulator with no device credential.
 - **Step 11 and the prod steps.** This was a debug build of `main_local.dart`, which carries no certificate pins and
   no `screenCaptureProtection`.
 ### The prod steps, from a release build
@@ -426,6 +424,14 @@ The protection is a lease that value areas take, not a flag over the app, and th
 note here listed: the result view and the row detail sheet as well as the script result, the audit event and audit
 log pages, the key-value page, the object source view and the browse database words. That is why the login page is
 capturable and a result is not.
+
+### Setting a device credential signs the session out
+
+Worth knowing before it is reported as a bug. Giving the emulator its first PIN, so the app lock could be turned on
+at all, dropped the session: the app came back to the login page. The tokens are kept in the Android keystore, and
+Android invalidates keystore entries when the lock screen credential changes, so the store comes back empty and
+`SessionCubit` reads it as unauthenticated. That is the keystore protecting the token rather than the app losing it,
+and the same thing happens to anyone who sets, changes or removes a screen lock.
 
 ### Driving the statement field from `adb`
 
