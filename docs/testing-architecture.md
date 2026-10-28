@@ -470,6 +470,16 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   reader relies on: every `file:line` the page cites exists, every colour it prints for `classic` is the colour the
   app ships (all 26 roles, both scopes), and every number it prints is the number the token holds. It caught nine
   citations that resolved to nothing and three curves written in the wrong form on its first run.
+- **`app_icon_test.dart`** fails while either platform ships the framework's own logo as the app icon, and while
+  Android has no adaptive icon. `flutter create` writes a blue chevron into both sets and nothing had replaced it:
+  the Play listing icon of #197 is a different asset, uploaded to the console, so the store page showed LibreDB's
+  mark while the installed app showed Flutter's. iOS review rejects such a build; Android does not, which is worse,
+  because it ships. The guard states what the icons must **not** be rather than keeping a second copy of what they
+  are — a hash of the shipped art would need updating every time the mark is redrawn and would say nothing about
+  the next platform the project adds, while the framework's defaults never change. It identifies them by weight:
+  the default is flat three-colour art that compresses under 40 bytes per thousand pixels, and a gradient mark is
+  far above that at every size. `tool/generate_app_icons.dart` writes the real ones, driving Flutter's own
+  rasteriser from `flutter test` because the project has no other (#390).
 - **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
   the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
   `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
