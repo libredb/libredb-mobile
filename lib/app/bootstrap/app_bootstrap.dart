@@ -82,8 +82,10 @@ class AppBootstrap {
     await SystemChrome.setPreferredOrientations(config.preferredOrientations);
 
     // The language the app opens in: the phone's, unless this build pins one. A language stored on the device still
-    // wins over it, in LocaleCubit.restore.
+    // wins over it, in LocaleCubit.restore. While neither a stored nor a pinned language exists, the app also keeps
+    // following the phone as it is switched (LocaleCubit.followDevice).
     final startupLanguage = config.startupLanguage();
+    final followsDeviceLanguage = config.defaultLanguage == null;
 
     log.info('Starting app with env: {}, startup language: {}, palette: {}, brightness: {}', [
       config.environment.name,
@@ -104,6 +106,7 @@ class AppBootstrap {
         runApp(
           App(
             language: startupLanguage,
+            followsDeviceLanguage: followsDeviceLanguage,
             dependencies: appDependencies,
             secureStorage: secureStorage,
             analytics: analytics,
