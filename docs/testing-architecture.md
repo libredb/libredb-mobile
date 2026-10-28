@@ -470,6 +470,12 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   reader relies on: every `file:line` the page cites exists, every colour it prints for `classic` is the colour the
   app ships (all 26 roles, both scopes), and every number it prints is the number the token holds. It caught nine
   citations that resolved to nothing and three curves written in the wrong form on its first run.
+- **`android_resource_xml_test.dart`** fails when a comment in an Android resource file holds a double hyphen.
+  AAPT parses those files strictly and refuses the whole file over it, and writing `--background` in one — the
+  name of a design token, which this repository writes that way everywhere else — took the Android build down
+  with a stack trace about `ErrorHandlerWrapper`. That build is the only other thing that catches it and the
+  slowest check in CI: it fails after seven minutes, in a job a Dart author has no reason to read. This reads the
+  files in milliseconds and names the rule as well as the line (#390).
 - **`app_icon_test.dart`** fails while either platform ships the framework's own logo as the app icon, and while
   Android has no adaptive icon. `flutter create` writes a blue chevron into both sets and nothing had replaced it:
   the Play listing icon of #197 is a different asset, uploaded to the console, so the store page showed LibreDB's

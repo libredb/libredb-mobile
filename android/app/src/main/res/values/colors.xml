@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      The ground the adaptive icon's mark sits on: `--background` of the design system's dark scope, the same
-      colour the app's own dark theme paints its page with (#390).
+      The ground the adaptive icon's mark sits on: the background token of the design system's dark scope, the
+      same colour the app's own dark theme paints its page with. Written out rather than quoted as a CSS
+      custom property, because a double hyphen is not permitted inside an XML comment and AAPT refuses the
+      whole file over it (#390).
     -->
     <color name="ic_launcher_background">#0B0D18</color>
 </resources>
