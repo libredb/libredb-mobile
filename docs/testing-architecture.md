@@ -516,13 +516,16 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
 The colour has two guards next to the code they guard, and the second exists because the first could not see
 what it was missing:
 
-- `test/shared/design_system/theme/palette_contrast_test.dart` measures fourteen pairs of every one of the six
-  `ColorScheme`s. Twelve date from #369; #283 added `primary` on `surface` at 3:1, because a filled button's own
+- `test/shared/design_system/theme/palette_contrast_test.dart` measures fifteen pairs of every one of the six
+  `ColorScheme`s — twelve, then three. Twelve date from #369; #283 added `primary` on `surface` at 3:1, because a filled button's own
   fill is the boundary 1.4.11 asks to be identifiable, and `error` on `surface` at 4.5:1, because this app paints
   *text* with that role at twenty call sites and not only fills. Both were added for a failure the move onto the
   design system would otherwise have shipped: reading `surface` as the web's `--surface` rather than
   `--background` puts the action colour at 2.80:1 on the page, and the web's `--action-destructive` is 4.01:1 on
-  the dark page.
+  the dark page. The fifteenth is `inversePrimary` on `inverseSurface`, a snack bar's action: `inversePrimary` has
+  no call site in `lib/` at all, and is painted anyway by `_SnackbarDefaultsM3`, which supplies it because
+  `snackBarTheme` sets no `actionTextColor`. It was 4.41:1 in nature dark, unmeasured for as long as the palette
+  had existed — a role with no call site is not a role nobody sees.
 - `test/shared/design_system/theme/semantic_contrast_test.dart` measures the same way for `success`, `warning` and
   `info`. For as long as both files have existed nothing measured those three, because the guard above reads a
   `ColorScheme` and these live in a `ThemeExtension` — and two of them were under the floor the whole time.
