@@ -288,6 +288,58 @@ No Studio defect was found.
 
 The iOS simulator was not run, since this Linux host has none and CI builds Android only (`.github/workflows/build_and_test.yml:83-84`), so no step is verified on iOS; the M5 steps were added to #91, which tracks the iOS walkthrough on macOS.
 
+## M6 walkthrough against the Railway deployment
+
+The first run of #196's steps against a real deployment rather than a local stack, on 2026-10-28 from `main` at
+`01f1cee`, built with Flutter 3.47.7 as a debug APK of `main_prod.dart` with
+`--dart-define=PROD_API_URL=https://studio-dev.libredb.org/api`,
+`--dart-define=OIDC_ISSUER=https://auth-dev.libredb.org/realms/libredb` and
+`--dart-define=OIDC_CLIENT_ID=libredb-mobile`.
+The device was the Android emulator with the AVD `libredb_lab_api30`: API 30 Google APIs image, Android 11,
+`sdk_gphone64_arm64`. The account was `studio-user1`, which holds the Studio role `User`.
+
+`mobile-docs/google-play-steps.md` J.2 is what sets the target: *"Kalan adımları Mobile ekibi test telefonunda
+Railway'e karşı çalıştırır"*. This run is that, on an emulator rather than the test phone, so the two steps that
+need real hardware — the fingerprint unlock and the Sentry event — are not in it.
+
+| Step | Result |
+| --- | --- |
+| 1. Sign in; role; governance chip | Passed: the custom tab opens `auth-dev.libredb.org` with a valid certificate and no interstitial, the Keycloak form signs in, and the app lands on the connection list. The profile sheet shows `studio-user1@example.com`, the role **User**, and the chip "Governed by LibreDB Platform". No Platform entry, which is right for a Studio-only account |
+| 3. Connection list | Passed: four connections under the group "Samples" — Periodic Table, Postgres Air, Titanic and Wikipedia Embeddings — each with the DEV badge and the "Read only" lock, and the DEV environment chip above them |
+| 4. Reopening | Passed in part: after the app was sent to the background and started again, `SessionCubit` restored the stored token (`restore: token found for studio`) and opened on the connection list with Titanic still marked active and listed under "Recent". The connection check and the switcher were not exercised |
+| 5. Browse | Passed: Titanic's `public` schema reads Tables 1 and every other kind 0; the tables list shows `passenger` with **1,309 rows · 408 KB**; the table page shows the real columns with `passengerid` marked as the key, the types, the nullable markers and the Indexes and Foreign keys tabs; "View rows" opens the rows |
+| 7. Editor | Passed in part: the editor binds to the active connection and shows its DEV badge and lock. A statement that the analysis cannot classify raised the confirmation sheet, which named the connection, the environment and "May change data: SELSELECT on line 1" before offering Cancel and Run — the written confirmation of #196/7, working. A clean statement was not run to a result, for the reason in the notes |
+| 10. Nothing leaks to logcat | Passed: 19,114 lines of `adb logcat` taken after the sign-in, the browse and two editor runs hold **no** `Bearer` token, no `access_token`, `refresh_token` or `id_token`, no password, and no statement text. The app's own lines name screens and outcomes only: a failed run reads `StatementRepository : run failed: studio.query_error`, the code and not the database's message |
+
+Also confirmed, outside the numbered steps:
+
+- **Screen capture protection.** Every screen that shows data refuses `adb shell screencap`: the file comes back
+  empty on the rows view and on the editor once it holds a result, and is normal on the connection list and the
+  schema page. That is the prod-only `screenCaptureProtection` of step 50, measured rather than argued.
+- **The product's mark ships.** The login screen draws the brand mark of `BrandMark` rather than a Material glyph,
+  and the onboarding flow's four panels render with the adoption figures from `assets/adoption.json`.
+
+### What this run did not cover, and why
+
+- **Steps 2, 6, 8 and 9.** The app lock needs a device credential and a fingerprint enrolled on real hardware;
+  masked fields and `Load more` need a table with a masked column, which the sample connections do not have;
+  revoking a grant needs a Platform admin to revoke one while the app is open; "Remove my data" and the sign-out
+  were left for a run that does not end on a shared deployment's session.
+- **A statement run to a result.** Driving the editor through `adb shell input` proved unreliable: the text field
+  kept its earlier contents through a long `KEYCODE_DEL` run, so the statement that reached Studio was
+  `selselect 1` and came back `studio.query_error`. That is this run's fault and not the app's — and the
+  confirmation sheet above is the evidence that the editor reached Studio and that the analysis ran. A result row,
+  a cancel, a script and the history belong to the test-phone run, where a person types.
+- **Step 11 (prod: the certificate pins).** The pins are a prod-build concern and this was a debug build.
+
+### The lab VM is not this walkthrough's target
+
+The first attempt ran against the Lima VM `libredb-lab` and could not complete a sign-in. Both reasons are
+recorded in #393 and are properties of that VM rather than of the app: its realm has no `libredb-mobile` client,
+and its leaf certificates are valid for 824 days, which every browser refuses — Chrome caps them at 398. The app
+itself reached the lab over TLS once its CA was in the emulator's system store (`GET /api/health -> 200`), so what
+failed there was the browser half of the OIDC flow, not the app.
+
 ## Postgres seeds
 
 The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:
