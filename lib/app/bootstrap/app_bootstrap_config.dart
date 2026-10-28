@@ -1,4 +1,4 @@
-import 'dart:ui' show Locale, PlatformDispatcher;
+import 'dart:ui' show Locale;
 
 import 'package:flutter/services.dart';
 import 'package:libredb_mobile/app/localization/startup_language.dart';
@@ -57,7 +57,14 @@ class AppBootstrapConfig {
   ///
   /// [deviceLocales] defaults to what the engine reports for this device. A caller passes its own only to resolve a
   /// language for a device that is not this one, which is what the tests do.
+  ///
+  /// The device's own list is read through the binding, not through `PlatformDispatcher.instance`: a widget test's
+  /// binding answers the phone the test set up (`tester.platformDispatcher.localesTestValue`), while the instance
+  /// answers the machine the test runs on. `AppBootstrap.run` initializes the binding before it calls this.
   String startupLanguage({Iterable<Locale>? deviceLocales}) =>
       defaultLanguage ??
-      resolveStartupLanguage(deviceLocales ?? PlatformDispatcher.instance.locales, S.delegate.supportedLocales);
+      resolveStartupLanguage(
+        deviceLocales ?? ServicesBinding.instance.platformDispatcher.locales,
+        S.delegate.supportedLocales,
+      );
 }
