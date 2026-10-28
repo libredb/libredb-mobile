@@ -406,8 +406,11 @@ void main() {
     }
   });
 
-  // A phone held in landscape with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing
-  // overflows, the name field stays on screen while the user types, and Run works with the keyboard still up.
+  // A short, wide window with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing overflows, the
+  // name field stays on screen while the user types, and Run works with the keyboard still up. The size is the one a
+  // phone held in landscape reported; after #419 a phone stays upright, and this height is reached in a split-screen
+  // view or on a tablet or foldable, where the platform ignores the portrait lock. The golden cases named "landscape"
+  // above keep their names, because the name is part of the golden file's name.
   testWidgets('fits a landscape phone with the keyboard up on a production connection', (tester) async {
     tester.view
       ..devicePixelRatio = 1

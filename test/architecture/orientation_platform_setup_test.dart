@@ -2,20 +2,23 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Guards that the platform files agree with the orientations `AppBootstrapConfig` asks for at start (#127).
+/// Guards that the platform files agree with the orientations `AppBootstrapConfig` asks for at start (#419).
+///
+/// The app is held upright, so the bootstrap asks for `portraitUp` alone, and both platform files have to say the same
+/// thing, or the lock leaks around it:
 ///
 /// - iOS takes the intersection of `UISupportedInterfaceOrientations` and the run-time list, so the iPhone key lists
-///   exactly portrait and both landscape sides. The iPad key keeps all four, which iPad multitasking requires; with
-///   multitasking on, iOS ignores the run-time list on the iPad, so all four apply there.
-/// - Android has no `android:screenOrientation` on any activity, so the run-time list alone decides; Flutter turns it
-///   into `SCREEN_ORIENTATION_USER`, which follows the user's auto-rotate setting.
+///   portrait alone; a launch into landscape is then impossible, before Dart runs as well as after.
+/// - The iPad key keeps all four, which iPad multitasking requires; with multitasking on, iOS ignores the run-time
+///   list on the iPad, so all four apply there and the tablet layout stays reachable on an iPad.
+/// - Android draws its first frame from the manifest, before Dart runs, so `.MainActivity` fixes
+///   `android:screenOrientation="portrait"` itself. Android 16 ignores that at a smallest width of 600dp and above,
+///   because the app targets SDK 36, so an Android tablet on 16 is free as well.
 void main() {
-  test('the iPhone orientations of Info.plist are portrait and both landscape sides', () {
+  test('the iPhone orientations of Info.plist are portrait alone', () {
     expect(_plistOrientations('UISupportedInterfaceOrientations'), [
       'UIInterfaceOrientationPortrait',
-      'UIInterfaceOrientationLandscapeLeft',
-      'UIInterfaceOrientationLandscapeRight',
-    ], reason: '$_plistPath must list the iPhone orientations the bootstrap asks for');
+    ], reason: '$_plistPath must list the one iPhone orientation the bootstrap asks for');
   });
 
   test('the iPad orientations of Info.plist are all four, as iPad multitasking requires', () {
@@ -31,14 +34,18 @@ void main() {
     );
   });
 
-  test('no Android activity fixes its screen orientation', () {
+  test('the Android launcher activity fixes its screen orientation to portrait', () {
     const manifestPath = 'android/app/src/main/AndroidManifest.xml';
     final manifest = File(manifestPath).readAsStringSync().replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+    final activity = RegExp(r'<activity\b(.*?)>', dotAll: true).firstMatch(manifest);
+    expect(activity, isNotNull, reason: '$manifestPath declares no activity');
 
     expect(
-      manifest,
-      isNot(contains('android:screenOrientation')),
-      reason: '$manifestPath must leave the orientation to the bootstrap, which allows portrait and landscape',
+      activity![1],
+      contains('android:screenOrientation="portrait"'),
+      reason:
+          '$manifestPath must fix the orientation of .MainActivity, or Android draws the first frame in landscape '
+          'before the bootstrap asks for portrait',
     );
   });
 }

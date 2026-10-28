@@ -115,6 +115,8 @@ void main() {
     expect(tester.widget<ButtonStyleButton>(find.byKey(appLockSignOutKey)).enabled, isFalse);
   });
 
+  // 844 by 390 is a phone's landscape size, which #419 made unreachable on a phone; the screen still meets it in a
+  // split-screen view and on a tablet or foldable, where the platform ignores the app's portrait lock.
   testWidgets('fits a landscape phone', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;

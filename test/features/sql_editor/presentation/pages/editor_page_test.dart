@@ -399,8 +399,10 @@ void main() {
     });
   });
 
-  // A phone held in landscape with the keyboard up leaves the page about 70 logical pixels (#176): nothing overflows,
-  // the text field stays where the user types, and Run is reached by scrolling, with the keyboard still up.
+  // A short, wide window with the keyboard up leaves the page about 70 logical pixels (#176): nothing overflows, the
+  // text field stays where the user types, and Run is reached by scrolling, with the keyboard still up. The numbers
+  // are the ones a phone held in landscape reported; since #419 a phone cannot be turned, and a split-screen view, a
+  // foldable or a tablet — where the platform ignores the portrait lock — is what reaches this height.
   testWidgets('fits a landscape phone with the keyboard up, and Run is reachable without closing it', (tester) async {
     answerRun('SELECT * FROM customers', () => Success(_recorded('query_preview_postgres_customers')));
     await pump(tester, size: const Size(829, 393), recordsInFull: true);

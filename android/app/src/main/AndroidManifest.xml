@@ -14,8 +14,14 @@
         android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules">
+        <!-- The app is held upright (#419). The orientation is fixed here as well as in AppBootstrapConfig, because
+             Android draws the first frame from this manifest, before Dart runs, and would otherwise draw it in
+             landscape on a phone that is lying sideways. `portrait` is portraitUp, the one orientation the bootstrap
+             asks the platform for. Android 16 ignores this at a smallest width of 600dp and above, since the app
+             targets SDK 36, so a tablet and a split-screen window keep the wide layout. -->
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
