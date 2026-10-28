@@ -398,7 +398,7 @@ values are absent, and says which key it used: *"Release build signed with the d
 | Step | Result |
 | --- | --- |
 | 1. A release build carries no DEBUG banner | Passed: the welcome screen and the login page draw no ribbon in the corner, which a debug build does |
-| 11. The certificate pins are valid | Passed, by what did **not** happen: the app opened on the login page with no "Studio is unreachable" state, which means the launch health check reached `https://studio-dev.libredb.org/api/health` through the pins. A pin that no longer matched would fail the handshake and show that state, so the quiet page is the evidence |
+| 11. The certificate pins are valid | **Not applicable to a shipping build, which is the finding.** `docs/release.md` lists `STUDIO_CERT_PINS` and `OIDC_CERT_PINS` as "No; pinning ships off", and `AppConfig.prod` reads them from defines that default to empty — so a store build carries no pin and there is nothing for this step to verify. What the run does show is that the launch health check reached `https://studio-dev.libredb.org/api/health` and the login page opened with no "Studio is unreachable" state; that is TLS against the public chain, not a pin. Verifying a pinned build means setting the two variables and rebuilding, which is a different exercise and belongs to whoever decides to turn pinning on |
 
 Two things worth recording from the same build, neither of them a step:
 
@@ -406,7 +406,10 @@ Two things worth recording from the same build, neither of them a step:
   `docs/release.md` says the store build does until M12-P passes — the first time that has been seen rather than
   read. The version label reads `v1.0.0+1`.
 - A release build prints none of the app's own log lines to logcat, so the health call cannot be read there. That is
-  the hygiene working, and it is also why step 11 is answered from the screen rather than from the log.
+  the hygiene working, and it is also why the health check is read from the screen rather than from the log.
+- The first answer written for step 11 was wrong and is worth leaving a trace of: the quiet login page was read as
+  the pins having matched. There were no pins. A page that does not say "unreachable" proves the request succeeded
+  and nothing about how it was trusted, and the difference is the whole point of the step.
 
 **The screenshot step (`screenCaptureProtection`) is not here**, and the reason is more precise than "prod
 screenshots are black": the protection is a lease that particular value areas take — the audit event and audit log
