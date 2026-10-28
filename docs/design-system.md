@@ -112,7 +112,7 @@ appears in the same order in both.
 | `onSurface` | `#0E1020` | `#F2F4FB` | `--text-primary` |
 | `surfaceContainerHighest` | `#F1F3F9` | `#232842` | `--surface-hover` |
 | `onSurfaceVariant` | `#4A5069` | `#A8B0CC` | `--text-secondary` |
-| `outline` | `#8E94AC` | `#585E75` | `--border-strong`, **lifted** |
+| `outline` | `#868CA4` | `#6C7289` | `--border-strong`, **lifted** |
 | `outlineVariant` | `#B5BBCF` | `#3C4057` | `--border`, **lifted** |
 | `inverseSurface` | `#0B0D18` | `#FFFFFF` | `--surface-inverse` |
 | `onInverseSurface` | `#FFFFFF` | `#0B0D18` | `--text-inverse` |
@@ -129,11 +129,19 @@ nothing else: their page, their edges, their quiet text and their accent — sag
 orange `#C2410C` / `#FB923C` — are what these two palettes *are*. Pinned in both directions by the import guard,
 because three palettes that differ only in the name of their action colour are one palette with three names.
 
+In `nature` light the accent and the quiet text used to be the same literal, and they are not any more. `#5F7A64`
+read at 4.62:1 on the page and 4.24:1 on a card, so the quiet text moved one step along the sage ramp to `#5B7560`
+and the accent stayed where it is (#386). The palette now carries two greens on purpose: the one it is named for,
+and the one its secondary text can be read in.
+
 ### The five deviations
 
 Each is a web value this app cannot paint where it paints it. The rule applied: **start at the web value, walk the
-web's own `--neutral-*` ramp away from the page, and stop at the first 8-bit point that clears the floor** — so the
-value stays inside the system and as close to the web's as the floor allows. `Color.lerp` returns floating-point
+web's own `--neutral-*` ramp away from the ground the role is painted on, and stop at the first 8-bit point that
+clears the floor** — so the value stays inside the system and as close to the web's as the floor allows. For most
+roles that ground is the page. For `outline` it is `surfaceContainerHighest`, because the one place a border meets
+a filled box is the edge of a container, and the `at` column below still reports the page so the two rows stay
+comparable with the rest. `Color.lerp` returns floating-point
 channels, and three of these fell back under their floor when written as a literal, so the quantised value is what
 is checked.
 
@@ -141,8 +149,8 @@ is checked.
 |---|---|---|---|---|---|---|
 | `tertiary` | light | `--text-tertiary` `#7B8199` | 3.86 | `#6C728A` | 4.76 | the **website's own lift**, not this app's |
 | `tertiary` | dark | `--text-tertiary` `#767E9E` | 4.84 | `#7F87A7` | 5.46 | the website's own lift |
-| `outline` | light | `--border-strong` `#CDD2E0` | 1.51 | `#8E94AC` | 3.01 | 53% `--neutral-400`→`500` |
-| `outline` | dark | `--border-strong` `#3A416A` | 1.98 | `#585E75` | 3.02 | 86% `--neutral-700`→`600` |
+| `outline` | light | `--border-strong` `#CDD2E0` | 1.51 | `#868CA4` | 3.33 | along `--neutral-400`→`500` until 3:1 on `surfaceContainerHighest` |
+| `outline` | dark | `--border-strong` `#3A416A` | 1.98 | `#6C7289` | 4.06 | along `--neutral-700`→`600` until 3:1 on `surfaceContainerHighest` |
 | `outlineVariant` | light | `--border` `#E4E7EF` | 1.24 | `#B5BBCF` | 1.91 | 56% `--neutral-300`→`400` |
 | `outlineVariant` | dark | `--border` `#262B45` | 1.40 | `#3C4057` | 1.90 | 69% `--neutral-800`→`700` |
 
@@ -166,10 +174,10 @@ tokens and 3:1 on five gradient pairs, and no floor at all on `--border`. There 
 
 | pair | floor | classic dark | classic light | nature dark | nature light | sunset dark | sunset light |
 |---|---|---|---|---|---|---|---|
-| `outline` on `surface` | 3.0 | 3.02 | 3.01 | 3.03 | 3.03 | 3.00 | 3.01 |
+| `outline` on `surface` | 3.0 | 4.06 | 3.33 | 4.32 | 3.28 | 3.94 | 3.16 |
 | `outlineVariant` on `surface` | 1.9 | 1.90 | 1.91 | 1.91 | 1.90 | 1.93 | 1.90 |
 | `tertiary` on `surface` | 4.5 | 5.46 | 4.76 | 4.52 | 4.54 | 4.50 | 4.53 |
-| `onSurfaceVariant` on `surface` | 4.5 | 8.98 | 7.95 | 7.28 | 4.62 | 7.83 | 4.59 |
+| `onSurfaceVariant` on `surface` | 4.5 | 8.98 | 7.95 | 7.28 | 4.95 | 7.83 | 4.72 |
 | `onSurface` on `surface` | 4.5 | 17.61 | 18.86 | 17.99 | 18.87 | 18.92 | 18.92 |
 | `onPrimary` on `primary` | 4.5 | 6.29 | 6.29 | 6.29 | 6.29 | 6.29 | 6.29 |
 | `onSecondary` on `secondary` | 4.5 | 8.98 | 7.95 | 7.28 | 4.71 | 8.73 | 5.18 |

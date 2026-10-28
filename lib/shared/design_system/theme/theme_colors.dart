@@ -119,7 +119,7 @@ class ThemeColors {
         surfaceContainerHigh: Color(0xFFF1F3F9),
         surfaceContainerHighest: Color(0xFFF1F3F9), // --surface-hover
         onSurfaceVariant: Color(0xFF4A5069), // --text-secondary
-        outline: Color(0xFF8E94AC), // --border-strong at 1.51:1, 53% --neutral-400→500 for 3.01:1 (WCAG 1.4.11)
+        outline: Color(0xFF868CA4), // --border-strong at 1.51:1, along --neutral-400→500 for 3.00:1 on the container
         outlineVariant: Color(0xFFB5BBCF), // --border at 1.24:1, 56% --neutral-300→400 for 1.91:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
@@ -156,7 +156,7 @@ class ThemeColors {
         surfaceContainerHigh: Color(0xFF1B2038),
         surfaceContainerHighest: Color(0xFF232842), // --surface-hover
         onSurfaceVariant: Color(0xFFA8B0CC), // --text-secondary
-        outline: Color(0xFF585E75), // --border-strong at 1.98:1, 86% --neutral-700→600 for 3.02:1
+        outline: Color(0xFF6C7289), // --border-strong at 1.98:1, along --neutral-700→600 for 3.03:1 on the container
         outlineVariant: Color(0xFF3C4057), // --border at 1.40:1, 69% --neutral-800→700 for 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
@@ -197,8 +197,8 @@ class ThemeColors {
         surfaceContainer: Color(0xFFF6F9F6),
         surfaceContainerHigh: Color(0xFFF3F6F3),
         surfaceContainerHighest: Color(0xFFF0F4F0), // Sage 100
-        onSurfaceVariant: Color(0xFF5F7A64), // Sage 600 — 4.62:1, the only palette whose secondary text was under AA
-        outline: Color(0xFF839887), // 3.03:1
+        onSurfaceVariant: Color(0xFF5B7560), // Sage, one step past 600 — 4.55:1 on the container, 4.95:1 on the page
+        outline: Color(0xFF7C9281), // 3.01:1 on the container
         outlineVariant: Color(0xFFA6C1AB), // 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
@@ -235,7 +235,7 @@ class ThemeColors {
         surfaceContainerHigh: Color(0xFF232824),
         surfaceContainerHighest: Color(0xFF2A302B), // Sage 800
         onSurfaceVariant: Color(0xFF8BA68F), // Sage 400
-        outline: Color(0xFF556357), // 3.03:1
+        outline: Color(0xFF6A7C6D), // 3.03:1 on the container
         outlineVariant: Color(0xFF3B443D), // 1.91:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
@@ -276,8 +276,8 @@ class ThemeColors {
         surfaceContainer: Color(0xFFF8F8F7),
         surfaceContainerHigh: Color(0xFFF6F6F5),
         surfaceContainerHighest: Color(0xFFF5F5F4), // Stone 100
-        onSurfaceVariant: Color(0xFF78716C), // Stone 500
-        outline: Color(0xFF989089), // 3.01:1
+        onSurfaceVariant: Color(0xFF766F6B), // Stone, just past 500 — 4.52:1 on the container
+        outline: Color(0xFF958C85), // 3.02:1 on the container
         outlineVariant: Color(0xFFC1B6AE), // 1.90:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
@@ -314,7 +314,7 @@ class ThemeColors {
         surfaceContainerHigh: Color(0xFF221E1D),
         surfaceContainerHighest: Color(0xFF292524), // Stone 800
         onSurfaceVariant: Color(0xFFA8A29E), // Stone 400
-        outline: Color(0xFF625C58), // 3.00:1
+        outline: Color(0xFF756E69), // 3.03:1 on the container
         outlineVariant: Color(0xFF44403D), // 1.93:1
         shadow: Color(0xFF000000),
         scrim: Color(0xFF000000),
