@@ -28,6 +28,8 @@ import 'package:libredb_mobile/infrastructure/config/project_links.dart';
 import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/app/app.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
+import 'package:libredb_mobile/shared/widgets/brightness_selection_dialog.dart';
 import 'package:libredb_mobile/app/shell/top_bar/top_bar_widget.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +81,12 @@ class _LocalStorageDependencies extends MockSignInDependencies {
 
 void main() {
   // The app links to the documentation [docs].
-  Widget buildTestableWidget({String docs = _docs, Locale locale = const Locale('en')}) {
+  // [themeMode] is the day and night mode the app is already on when the screen opens.
+  Widget buildTestableWidget({
+    String docs = _docs,
+    Locale locale = const Locale('en'),
+    ThemeMode themeMode = ThemeMode.system,
+  }) {
     final router = GoRouter(
       initialLocation: ApplicationRoutesConstants.settings,
       routes: [
@@ -98,16 +105,19 @@ void main() {
 
     return MultiRepositoryProvider(
       providers: [RepositoryProvider<ProjectLinks>.value(value: ProjectLinks(docs: docs))],
-      child: MaterialApp.router(
-        routerConfig: router,
-        locale: locale,
-        localizationsDelegates: const [
-          S.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: S.delegate.supportedLocales,
+      child: BlocProvider(
+        create: (_) => ThemeBloc()..add(SelectBrightness(themeMode: themeMode)),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: locale,
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+        ),
       ),
     );
   }
@@ -207,6 +217,67 @@ void main() {
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }
+    });
+  });
+
+  // ToggleBrightness on the login page was the only way to change the mode, and it writes only 'light' or 'dark', so
+  // one tap there stranded the app off the phone's setting for good. Appearance had no brightness tile at all (#410).
+  group('SettingsScreen - day and night', () {
+    testWidgets('Appearance carries a day and night tile between Theme and Language', (tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(settingsBrightnessButtonKey), findsOneWidget);
+      expect(
+        find.descendant(of: find.byKey(settingsBrightnessButtonKey), matching: find.text('Day and night')),
+        findsOneWidget,
+      );
+      final theme = tester.getCenter(find.text('Theme')).dy;
+      final brightness = tester.getCenter(find.byKey(settingsBrightnessButtonKey)).dy;
+      final language = tester.getCenter(find.text('Language')).dy;
+      expect(theme, lessThan(brightness));
+      expect(brightness, lessThan(language));
+    });
+
+    for (final (mode, subtitle) in [
+      (ThemeMode.system, 'Follow the phone'),
+      (ThemeMode.light, 'Light'),
+      (ThemeMode.dark, 'Dark'),
+    ]) {
+      testWidgets('the tile names $mode as the mode in force', (tester) async {
+        TestEnv.authenticate();
+        await tester.pumpWidget(buildTestableWidget(themeMode: mode));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(of: find.byKey(settingsBrightnessButtonKey), matching: find.text(subtitle)),
+          findsOneWidget,
+        );
+      });
+    }
+
+    testWidgets('the tile opens the day and night dialog', (tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(settingsBrightnessButtonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BrightnessSelectionDialog), findsOneWidget);
+    });
+
+    testWidgets('names the tile and the mode in force in Turkish', (tester) async {
+      TestEnv.authenticate();
+      await tester.pumpWidget(buildTestableWidget(locale: const Locale('tr'), themeMode: ThemeMode.dark));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: find.byKey(settingsBrightnessButtonKey), matching: find.text('Gece ve gündüz')),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: find.byKey(settingsBrightnessButtonKey), matching: find.text('Koyu')), findsOneWidget);
     });
   });
 
