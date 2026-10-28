@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
@@ -39,6 +41,33 @@ void main() {
         ),
         throwsA(isA<ProdHttpsConfigError>().having((e) => e.define, 'define', 'OIDC_ISSUER')),
       );
+    });
+  });
+
+  group('AppBootstrapConfig.startupLanguage', () {
+    test('names no language of its own, so the first run can follow the phone', () {
+      const config = AppBootstrapConfig(environment: Environment.mock);
+      expect(config.defaultLanguage, isNull);
+    });
+
+    test('follows the phone when the entry point names no language', () {
+      const config = AppBootstrapConfig(environment: Environment.mock);
+      expect(config.startupLanguage(deviceLocales: const [Locale('tr', 'TR')]), 'tr');
+    });
+
+    test('falls back to English when the phone speaks a language the app does not have', () {
+      const config = AppBootstrapConfig(environment: Environment.mock);
+      expect(config.startupLanguage(deviceLocales: const [Locale('de', 'DE')]), 'en');
+    });
+
+    test('the language an entry point names wins over the phone, so a build can still pin one', () {
+      const config = AppBootstrapConfig(environment: Environment.mock, defaultLanguage: 'en');
+      expect(config.startupLanguage(deviceLocales: const [Locale('tr', 'TR')]), 'en');
+    });
+
+    test('reads this device when no list is handed in, and answers a language the app supports', () {
+      const config = AppBootstrapConfig(environment: Environment.mock);
+      expect(config.startupLanguage(), isIn(['en', 'tr']));
     });
   });
 }

@@ -24,7 +24,6 @@ void main() async {
       ),
       apiBaseUrl: String.fromEnvironment('PROD_API_URL', defaultValue: 'https://studio.lab.test/api'),
       platformApiUrl: String.fromEnvironment('PLATFORM_API_URL', defaultValue: 'https://libredb.lab.test/api'),
-      defaultLanguage: 'en',
       defaultPalette: 'classic',
       defaultBrightness: 'light',
     ),
