@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'theme_event.dart';
 part 'theme_state.dart';
@@ -13,7 +14,11 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     on<LoadTheme>(_onLoadTheme);
     on<ChangeThemePalette>(_onChangeThemePalette);
     on<ToggleBrightness>(_onToggleBrightness);
-    on<SelectBrightness>(_onSelectBrightness);
+    // Queued, not concurrent: the handler emits and then awaits the write, and the Appearance dialog's Cancel makes
+    // two selections in a row routine (tap a mode, then put the opened-on mode back). Under bloc's default
+    // concurrent transformer the second write starts while the first is in flight, so a platform that completes them
+    // out of order would store the abandoned mode under a UI showing the chosen one.
+    on<SelectBrightness>(_onSelectBrightness, transformer: EventTransformers.queue());
   }
 
   /// The stored name of each mode, and the mode of each stored name. Anything else — an old name, a value of another
