@@ -557,13 +557,16 @@ The single sign-on has more guards next to the code they guard:
   = false)` and use `pumpBeforeTest: pumpOnce` for animated widgets. Coverage: all
   design-system components, shared widgets, and key screens (rendered with mocked
   BLoCs via the `test/support/golden_app.dart` `goldenScreen` helper):
-  **40 golden images** across **45 scenarios** in 18 files, counted by
+  **42 golden images** across **46 scenarios** in 19 files, counted by
   `test/architecture/testing_doc_test.dart`, which fails when this paragraph and the
   tree disagree. The login screen also has images for a misconfigured build and for a
   Studio that does not answer, which are the two states a user meets that are not the
-  working one. Only the login and settings screens have a dark variant today.
-  The brand mark has a file of its own, because every other test of it measures geometry — that
-  the paths parse, that the data rows are where the design system puts them — and none of those
+  working one. The login, settings and onboarding screens have a dark variant today.
+  The introduction's file renders two `OnboardingPanel`s directly rather than swiping
+  the page: alchemist renders a frame, not a session, and driving a pager through it
+  would need a hook in the page that exists for no other reason. The brand mark has a
+  file of its own, because every other test of it measures geometry — that the paths
+  parse, that the data rows are where the design system puts them — and none of those
   can tell a correct hexagon from one assembled wrong.
   The responsive **shell / home screen is intentionally not goldened** (it boots
   via real DI in
