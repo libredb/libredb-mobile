@@ -489,6 +489,17 @@ what it was missing:
   `success` was Green 600, which put its white label at 3.30:1, and `warning` was Yellow 500, which as text on
   the page is **1.92:1**. The design system's own values are 5.48:1 and 5.02:1.
 
+- `test/shared/design_system/theme/material_default_contrast_test.dart` measures the text this app never colours.
+  `TextButton`, `OutlinedButton` and `TabBar` are given a size, a shape and a text style in `app_theme.dart` and
+  no foreground colour, so Flutter's own M3 defaults supply one — `colorScheme.primary`. That was harmless while
+  `primary` was a near-white or a near-black, and stopped being harmless when #283 pointed it at the product's
+  indigo: 6.29:1 on a light page and **3.08:1** on a dark one, so every quiet button in the app and the selected
+  tab of the object detail page went under the floor at once. The three guards above could not see it, because
+  the colour comes from neither a role this app sets nor a line this app writes. **The emulator saw it** — a
+  screenshot of the welcome screen showed an indigo "Skip" on a near-black page — which is why the walkthrough is
+  a merge gate and not a courtesy. This guard pumps the real widgets under the real theme, because what it holds
+  is precisely the value the theme does not carry.
+
 The single sign-on has more guards next to the code they guard:
 
 - `test/app/di/app_scope_test.dart` fails if a misconfigured build creates or provides an OIDC client.
