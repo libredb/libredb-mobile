@@ -8,6 +8,7 @@ import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 import 'package:libredb_mobile/shared/design_system/theme/theme_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_breakpoints.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_durations.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_gradients.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_sizes.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
@@ -394,6 +395,34 @@ void main() {
         );
       }
     }
+  });
+
+  test("the two brand gradients are the system's own stops", () {
+    // `colors.css` ends with them, and they are the one part of the system this app had no counterpart for: the
+    // login panel reached for six hues of its own instead. Read from the primitive file rather than `theme.css`,
+    // because that is where the system declares them — they are a graphic device, not a semantic token, and its
+    // own comment says so: "mark, one accent surface, graphic device. Never a page bg."
+    final source = File('tool/design-system/tokens/colors.css').readAsStringSync();
+
+    List<Color> stopsOf(String name) {
+      final declaration = RegExp('--gradient-$name\\s*:\\s*linear-gradient\\(([^)]*)\\)').firstMatch(source);
+      expect(declaration, isNotNull, reason: '--gradient-$name is not declared in colors.css');
+      return [
+        for (final match in RegExp('#([0-9a-fA-F]{6})').allMatches(declaration!.group(1)!))
+          Color(0xFF000000 | int.parse(match.group(1)!, radix: 16)),
+      ];
+    }
+
+    expect(stopsOf('brand'), [AppGradients.brandStart, AppGradients.brandEnd], reason: '--gradient-brand');
+    expect(stopsOf('data'), [AppGradients.dataStart, AppGradients.dataEnd], reason: '--gradient-data');
+    expect(AppGradients.brand.colors, [AppGradients.brandStart, AppGradients.brandEnd]);
+    expect(AppGradients.data.colors, [AppGradients.dataStart, AppGradients.dataEnd]);
+
+    // The field the brand panel stands on is the dark scope's own ground, not a colour of the panel's choosing.
+    expect(AppGradients.brandField.colors.first, colourOf('background', Brightness.dark));
+    expect(AppGradients.brandField.colors[1], colourOf('surface', Brightness.dark));
+    expect(AppGradients.brandFieldOnLight.colors.first, colourOf('surface', Brightness.dark));
+    expect(AppGradients.brandFieldOnLight.colors[1], colourOf('surface-elevated', Brightness.dark));
   });
 
   test('the tap target deviates from the design system, deliberately', () {
