@@ -70,7 +70,7 @@ class AppTheme {
         ),
         labelStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
         helperStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant.withAlpha(153), fontSize: 14),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
         errorStyle: TextStyle(color: colorScheme.error, fontSize: 12),
       ),
       snackBarTheme: SnackBarThemeData(

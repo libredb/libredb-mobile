@@ -486,6 +486,14 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   the default is flat three-colour art that compresses under 40 bytes per thousand pixels, and a gradient mark is
   far above that at every size. `tool/generate_app_icons.dart` writes the real ones, driving Flutter's own
   rasteriser from `flutter test` because the project has no other (#390).
+- **`quiet_alpha_test.dart`** fails when text painted with a quiet role faded by an alpha drops under 4.5:1 on the
+  page or on either container it can sit on. It reads the alpha out of the source rather than holding a list, so a
+  fade written tomorrow is measured the moment it is written, and the only way out is the exemption list, whose two
+  entries each carry their reason — a debug overlay no release build carries, and the bars that stand for text in
+  the theme dialog's miniature. Four sites failed it: the hint of every text field at 2.82:1 on a card, the build
+  number with it, the community subtitle at 3.49:1 and the result header's type at 4.38:1. No alpha fixes them —
+  in `nature` light and `sunset` light no value in 0-255 clears the floor on a container — so the fades were
+  removed, which is also where Material 3's own `InputDecoration` hint already sits (#386).
 - **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
   the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
   `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays

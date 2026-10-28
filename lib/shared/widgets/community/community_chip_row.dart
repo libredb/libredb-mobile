@@ -36,7 +36,7 @@ class CommunityChipRow extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           l10n.community_subtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
