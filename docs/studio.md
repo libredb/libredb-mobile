@@ -374,15 +374,18 @@ containers, is what makes this reproducible; until then a `libredb-installer app
 | 3. Connection list | Passed: one connection, "Deneme DVD Rental" / `dvdrental`, under the group "Deneme" with its count, carrying the LOCAL badge and the "Read only" lock, with the LOCAL environment chip above it |
 | 5. Browse | Passed: the schema `public`, then 15 tables, 7 views, 0 materialized views, 13 sequences, 9 functions, 0 procedures and 15 triggers — the same counts `POST /api/db/objects/counts` answers. The table list carries each table's row count and size (`actor` 200 rows · 72 KB, `film` 1000 rows) |
 | 7. Editor | Passed in part: `select count(*) as films from film` ran to **1 row, 8 ms**, the list view showed `1000` and the table view the column `films` of type `bigint`. The editor's own keyboard row (`; , ( ) * ' " =`) appeared above the system keyboard. A deliberately broken statement answered "The statement failed." with the engine's text and the app's note that Studio added `LIMIT 501`, so a position the error names may be in that clause. Cancel, a script, the write confirmation, the background run, the history and the draft were not exercised |
+| 8. Revoking a grant | Passed: with the app open, Platform's `DELETE /api/v1/connections/{id}/grants/{grantId}` answered 204, and the connection list emptied to "No databases have been granted to you yet. Ask an administrator for access." — the empty state, not an error. Granting it again brought the connection back on the list's own 10 second poll, with no pull to refresh. The connection was on the list rather than open, so the message for a connection that disappears under the user was not the one this exercised |
+| 9. "Remove my data" and the sign-out | Passed: the dialog names what goes (drafts, statement history, starred and recent connections, the last open connection, the collapsed sections) and what stays (language, theme, result view, app lock), and says the sign-out follows. Confirming posted `POST /api/auth/logout -> 200`, cleared the target, the tokens and the cached responses, and the router redirected to `/login` with `SessionUnauthenticated`. The provider session went with it: the user's remaining Keycloak sessions were all from this walkthrough's own API calls at the Docker gateway address, none from the emulator |
+| 10. Nothing leaks to logcat | Passed: of 443 lines the app wrote across the whole run, none carries statement text, an access token, an e-mail address or a database error text, and the only line that comes near one reads `fetch: role user, bearer [REDACTED]` |
 
 ### What this run did not cover, and why
 
 - **Step 2, the app lock.** `AppConfig.local` sets `appLockRequired=false`, and a fingerprint needs real hardware.
+  The settings screen shows the switch disabled under "Set a screen lock on this device to turn this on", which is
+  the right thing to say on an emulator with no device credential.
 - **Step 4, the connection check, the switcher and the offline strip.** Not reached.
 - **Step 6, masked fields and `Load more`.** The lab's one connection is the DVD Rental sample, which has no masked
   column.
-- **Step 8, revoking a grant.** Platform's grant API answers now, so this is reachable; it was not run.
-- **Steps 9 and 10, "Remove my data", the sign-out and the logcat read.** Not reached.
 - **Step 11 and the prod steps.** This was a debug build of `main_local.dart`, which carries no certificate pins and
   no `screenCaptureProtection`.
 
