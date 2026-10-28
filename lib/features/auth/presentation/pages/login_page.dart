@@ -316,7 +316,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(S.of(context).success),
+          // The ink comes with the background. `snackBarTheme` colours its text `onInverseSurface`, the ink for
+          // the surface the line below replaces; on the action colour that is 3.08:1 in the dark scope (#283).
+          // What sits on the action colour is `onPrimary`, 6.29:1 in both. The style merges with the theme's, so
+          // only the colour moves.
+          content: Text(S.of(context).success, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           backgroundColor: Theme.of(context).colorScheme.primary,
           width: MediaQuery.of(context).size.width * 0.8,
         ),

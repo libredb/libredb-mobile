@@ -463,6 +463,15 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   palette with three names. Five values deviate, and each deviation asserts *both* halves — that the web value
   really does fail its floor, and that the value taken instead clears it — so a system that later lifts one of
   them fails the first half and the deviation is reconsidered rather than kept.
+- **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
+  the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
+  `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
+  behind, still coloured for a surface that is no longer there. It went unnoticed because it used to be true by
+  accident: the login page paints its sign-in confirmation with `primary`, and while `primary` was a near-black in
+  light and a near-white in dark it was always the opposite of the page, which is what `onInverseSurface` is the
+  ink for. #283 made `primary` the indigo in both scopes, the coincidence ended, and the dark scope's ink landed on
+  indigo at 3.08:1. A source guard rather than a widget test, because the rule is about what a call site must
+  supply and the next call site does not exist yet.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
