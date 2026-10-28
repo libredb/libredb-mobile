@@ -303,14 +303,20 @@ void main() {
     // The rule, applied: start at the web value, walk the web's own `--neutral-*` ramp away from the surface, and
     // stop at the first point that clears the floor. The taken value is therefore inside the system's own ramp and
     // as close to the web's as the floor allows — which is also the convention #369 set, where every shipping
-    // `outline` sits at 3.00-3.05 and every `outlineVariant` at 1.90-1.93.
+    // `outlineVariant` sits at 1.90-1.93.
+    //
+    // `outline` is lifted one notch further than that convention, and the floor below is the one it clears on the
+    // page rather than the one it was lifted for. It draws the edge of a box filled with `surfaceContainerHighest`
+    // — the theme badge — and a border that clears 3:1 against the page can sit at 2.25:1 against the container in
+    // front of it, which is the ground the eye actually sees it on (#386). `container_contrast_test.dart` holds
+    // that floor; this row holds the one the website's own value fails, which is why the deviation exists at all.
     //
     // Each row asserts both halves: that the web value really does fail, and that the value taken instead clears.
     // If the system ever lifts one of these, the first half fails and the deviation is reconsidered, not kept.
     final deviations = <(String, Brightness, String, Color Function(ColorScheme), double, Color)>[
-      ('outline', Brightness.light, 'border-strong', (s) => s.outline, 3.0, Color(0xFF8E94AC)),
+      ('outline', Brightness.light, 'border-strong', (s) => s.outline, 3.0, Color(0xFF868CA4)),
       ('outlineVariant', Brightness.light, 'border', (s) => s.outlineVariant, 1.9, Color(0xFFB5BBCF)),
-      ('outline', Brightness.dark, 'border-strong', (s) => s.outline, 3.0, Color(0xFF585E75)),
+      ('outline', Brightness.dark, 'border-strong', (s) => s.outline, 3.0, Color(0xFF6C7289)),
       ('outlineVariant', Brightness.dark, 'border', (s) => s.outlineVariant, 1.9, Color(0xFF3C4057)),
     ];
     // `tertiary` is not in that list because its lift is not this app's. It is in the test below.
