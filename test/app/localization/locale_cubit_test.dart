@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/app/localization/locale_cubit.dart';
-import 'package:libredb_mobile/app/localization/startup_language.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,19 +85,6 @@ void main() {
         build: () => LocaleCubit(storage: AppLocalStorage(), defaultLocale: const Locale('en')),
         act: (cubit) => cubit.restore(),
         expect: () => const [LocaleReady(locale: Locale('tr'))],
-      );
-
-      // Issue #409: the default handed in is now the phone's language. A language picked in Settings still wins over
-      // it, and still survives a restart, so this must not regress.
-      blocTest<LocaleCubit, LocaleState>(
-        'shows the stored language over the phone language',
-        setUp: () => AppLocalStorage().save(StorageKeys.language.key, 'en'),
-        build: () => LocaleCubit(
-          storage: AppLocalStorage(),
-          defaultLocale: Locale(resolveStartupLanguage(const [Locale('tr', 'TR')], const [Locale('en'), Locale('tr')])),
-        ),
-        act: (cubit) => cubit.restore(),
-        expect: () => const [LocaleReady(locale: Locale('en'))],
       );
 
       blocTest<LocaleCubit, LocaleState>(

@@ -65,9 +65,18 @@ void main() {
       expect(config.startupLanguage(deviceLocales: const [Locale('tr', 'TR')]), 'en');
     });
 
-    test('reads this device when no list is handed in, and answers a language the app supports', () {
+    // No list handed in: the device the app runs on. The device here is the binding's, which the test sets, so each
+    // answer is one this case decides — `isIn(['en', 'tr'])` was true of every branch the function has.
+    test('reads this device when no list is handed in', () {
+      final device = TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher;
+      addTearDown(device.clearLocalesTestValue);
       const config = AppBootstrapConfig(environment: Environment.mock);
-      expect(config.startupLanguage(), isIn(['en', 'tr']));
+
+      device.localesTestValue = const [Locale('tr', 'TR')];
+      expect(config.startupLanguage(), 'tr');
+
+      device.localesTestValue = const [Locale('de', 'DE')];
+      expect(config.startupLanguage(), 'en', reason: 'a device language the app does not have falls back to English');
     });
   });
 }
