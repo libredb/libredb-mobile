@@ -373,7 +373,8 @@ containers, is what makes this reproducible; until then a `libredb-installer app
 | 1. Sign in; role; governance chip | Passed: the custom tab loaded Keycloak on `sso.lab.test` with no interstitial, the form signed in, and the app landed on the connection list. The profile sheet shows `mobile-test@lab.test`, the role **User**, the chip "Governed by LibreDB Platform", and a "Switch to Platform" entry |
 | 3. Connection list | Passed: one connection, "Deneme DVD Rental" / `dvdrental`, under the group "Deneme" with its count, carrying the LOCAL badge and the "Read only" lock, with the LOCAL environment chip above it |
 | 5. Browse | Passed: the schema `public`, then 15 tables, 7 views, 0 materialized views, 13 sequences, 9 functions, 0 procedures and 15 triggers — the same counts `POST /api/db/objects/counts` answers. The table list carries each table's row count and size (`actor` 200 rows · 72 KB, `film` 1000 rows) |
-| 7. Editor | Passed in part: `select count(*) as films from film` ran to **1 row, 8 ms**, the list view showed `1000` and the table view the column `films` of type `bigint`. The editor's own keyboard row (`; , ( ) * ' " =`) appeared above the system keyboard. A deliberately broken statement answered "The statement failed." with the engine's text and the app's note that Studio added `LIMIT 501`, so a position the error names may be in that clause. Cancel, a script, the write confirmation, the background run, the history and the draft were not exercised |
+| 4. The check, the switcher, reopening and the offline strip | Passed: a long press on the connection opens its sheet, whose **Check** sent `POST /api/db/test-connection` and came back `online, 3 ms, 0 warnings`. The switcher is a sheet of its own with its own search, the environment chip and the active connection marked. Sent to the background and brought back, the app returned to the schema list it was on. In aeroplane mode the system strip reads "No internet connection" and the app's own, under the bar, reads **"Offline: showing what was loaded at 7:44 PM"** — it names the time the cached answers are from. Turning the radio back on, `ConnectivityService` logged `wifi` and the screens recovered without a retry |
+| 7. Editor | Passed: `select count(*) as films from film` ran to **1 row, 8 ms**, the list view showed `1000` and the table view the column `films` of type `bigint`; `select title from film limit 3` to **3 rows, 1 ms** of real titles. The editor's own keyboard row (`; , ( ) * ' " =`) appears above the system keyboard. A deliberately broken statement answered "The statement failed." with the engine's text and the app's note that Studio added `LIMIT 501`, so a position the error names may be in that clause. **History** holds each run with its connection, status, row count, duration and time, behind All / Succeeded / Failed and a search. A **script** of two statements and a **write** raised the confirmation sheet together: "May change data: UPDATE on line 1", "Runs more than one statement", and the lock line below. Cancel left the text as it was, and the **draft** survived leaving the tab and coming back. A `select pg_sleep(20)` turned Run into **Cancel**, which sent `POST /api/db/cancel -> 200` and left a quiet "Cancelled" line rather than an error. Only the background run was not exercised |
 | 8. Revoking a grant | Passed: with the app open, Platform's `DELETE /api/v1/connections/{id}/grants/{grantId}` answered 204, and the connection list emptied to "No databases have been granted to you yet. Ask an administrator for access." — the empty state, not an error. Granting it again brought the connection back on the list's own 10 second poll, with no pull to refresh. The connection was on the list rather than open, so the message for a connection that disappears under the user was not the one this exercised |
 | 9. "Remove my data" and the sign-out | Passed: the dialog names what goes (drafts, statement history, starred and recent connections, the last open connection, the collapsed sections) and what stays (language, theme, result view, app lock), and says the sign-out follows. Confirming posted `POST /api/auth/logout -> 200`, cleared the target, the tokens and the cached responses, and the router redirected to `/login` with `SessionUnauthenticated`. The provider session went with it: the user's remaining Keycloak sessions were all from this walkthrough's own API calls at the Docker gateway address, none from the emulator |
 | 10. Nothing leaks to logcat | Passed: of 443 lines the app wrote across the whole run, none carries statement text, an access token, an e-mail address or a database error text, and the only line that comes near one reads `fetch: role user, bearer [REDACTED]` |
@@ -383,11 +384,21 @@ containers, is what makes this reproducible; until then a `libredb-installer app
 - **Step 2, the app lock.** `AppConfig.local` sets `appLockRequired=false`, and a fingerprint needs real hardware.
   The settings screen shows the switch disabled under "Set a screen lock on this device to turn this on", which is
   the right thing to say on an emulator with no device credential.
-- **Step 4, the connection check, the switcher and the offline strip.** Not reached.
 - **Step 6, masked fields and `Load more`.** The lab's one connection is the DVD Rental sample, which has no masked
   column.
 - **Step 11 and the prod steps.** This was a debug build of `main_local.dart`, which carries no certificate pins and
   no `screenCaptureProtection`.
+- **The editor's background run.** Everything else of #196/7 was driven; a statement that keeps running while the
+  app is in the background was not.
+
+### Driving the statement field from `adb`
+
+The Railway run above could not clear the editor and blamed itself without saying why. The reason is worth writing
+down, because it will cost the next person the same hour: `KEYCODE_MOVE_END` moves to the end of the **visual
+line**, not of the text, so in a field whose text wraps, a run of `KEYCODE_DEL` deletes to the start of that line
+and then stops — the field looks stuck. `KEYCODE_FORWARD_DEL` is what clears the rest. Read the field back from
+`uiautomator dump` between batches rather than counting characters, and read it with a pattern that cannot miss
+("the text of the `EditText` node"), not one built from words you expect to still be there.
 
 ### A read grant executed writes and DDL
 
