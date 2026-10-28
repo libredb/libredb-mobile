@@ -89,19 +89,35 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    height: AppSizes.minTapTarget,
+                  // The tap target has a floor, not a fixed height: a height pins the label to the box and a word
+                  // that outgrows it is cut off in half, silently — there is no overflow stripe for text that
+                  // simply does not fit its box. The word on this control is the longest in the flow and it
+                  // changes with the language, so it is given room to grow and keeps the 48 pt minimum.
+                  //
+                  // Growing room means the label can wrap, which is why it is centred. A button label's box is as
+                  // wide as its longest line, so the short line of a wrapped label would otherwise hang on the
+                  // leading edge: at a text scale of 3.0 "Get started" breaks after the first word and
+                  // "Başlayalım" breaks mid-word, and both leave a line with 184 pt of slack beside it.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
                     child: FilledButton(
                       key: onboardingDoneKey,
                       onPressed: _advance,
-                      child: Text(_panel == _panelCount - 1 ? l10n.onboarding_done : l10n.onboarding_next),
+                      child: Text(
+                        _panel == _panelCount - 1 ? l10n.onboarding_done : l10n.onboarding_next,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  SizedBox(
-                    height: AppSizes.minTapTarget,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
                     // Skip stays on every panel, because a user who wants out looks for the word rather than for the
-                    // last panel.
+                    // last panel. It is not centred, because there is nothing to centre: a label that fits on one
+                    // line is laid out in a box of exactly its own width, and this label is one short word in both
+                    // languages — "Skip" and "Atla" still take a single line at a text scale of 3.0, where the
+                    // primary control's word has already wrapped. An alignment no rendering can show is a line no
+                    // test can defend.
                     child: TextButton(key: onboardingSkipKey, onPressed: _leave, child: Text(l10n.onboarding_skip)),
                   ),
                 ],
