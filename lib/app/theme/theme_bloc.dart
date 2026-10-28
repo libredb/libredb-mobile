@@ -13,19 +13,20 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     on<LoadTheme>(_onLoadTheme);
     on<ChangeThemePalette>(_onChangeThemePalette);
     on<ToggleBrightness>(_onToggleBrightness);
+    on<SelectBrightness>(_onSelectBrightness);
   }
+
+  /// The stored name of each mode, and the mode of each stored name. Anything else — an old name, a value of another
+  /// type, nothing at all — reads back as [ThemeMode.system], so the app follows the phone until the user says
+  /// otherwise.
+  static const _storedBrightness = {ThemeMode.system: 'system', ThemeMode.light: 'light', ThemeMode.dark: 'dark'};
+
+  static ThemeMode _brightnessOf(Object? stored) =>
+      _storedBrightness.keys.firstWhere((mode) => _storedBrightness[mode] == stored, orElse: () => ThemeMode.system);
 
   Future<void> _onLoadTheme(LoadTheme event, Emitter<ThemeState> emit) async {
     try {
-      final brightnessPref = await AppLocalStorage().read(StorageKeys.brightness.key);
-      ThemeMode themeMode;
-      if (brightnessPref == 'dark') {
-        themeMode = ThemeMode.dark;
-      } else if (brightnessPref == 'light') {
-        themeMode = ThemeMode.light;
-      } else {
-        themeMode = ThemeMode.system;
-      }
+      final themeMode = _brightnessOf(await AppLocalStorage().read(StorageKeys.brightness.key));
 
       final palettePref = await AppLocalStorage().read(StorageKeys.theme.key);
       AppThemePalette palette = AppThemePalette.classic;
@@ -82,6 +83,16 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     emit(state.copyWith(themeMode: newMode));
     try {
       await AppLocalStorage().save(StorageKeys.brightness.key, newMode == ThemeMode.dark ? 'dark' : 'light');
+    } catch (_) {}
+  }
+
+  /// Puts the app on the mode the user picked and stores it, [ThemeMode.system] included. [ToggleBrightness] only ever
+  /// stores 'light' or 'dark', so before this event one tap on the login toggle left the app unable to follow the
+  /// phone's setting again (#410).
+  Future<void> _onSelectBrightness(SelectBrightness event, Emitter<ThemeState> emit) async {
+    emit(state.copyWith(themeMode: event.themeMode));
+    try {
+      await AppLocalStorage().save(StorageKeys.brightness.key, _storedBrightness[event.themeMode]);
     } catch (_) {}
   }
 }

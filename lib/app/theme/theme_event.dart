@@ -17,3 +17,9 @@ class ChangeThemePalette extends ThemeEvent {
 class ToggleBrightness extends ThemeEvent {
   const ToggleBrightness();
 }
+
+class SelectBrightness extends ThemeEvent {
+  const SelectBrightness({required this.themeMode});
+
+  final ThemeMode themeMode;
+}

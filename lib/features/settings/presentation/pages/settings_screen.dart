@@ -11,6 +11,7 @@ import 'package:libredb_mobile/shared/user_data/signed_in_account_scope.dart';
 import 'package:libredb_mobile/shared/user_data/user_data_registry.dart';
 import 'package:libredb_mobile/shared/utils/app_constants.dart';
 import 'package:libredb_mobile/shared/utils/external_link.dart';
+import 'package:libredb_mobile/shared/widgets/brightness_selection_dialog.dart';
 import 'package:libredb_mobile/shared/widgets/language_selection_dialog.dart';
 import 'package:libredb_mobile/shared/widgets/theme_selection_dialog.dart';
 
@@ -56,6 +57,17 @@ class SettingsScreen extends StatelessWidget {
                     title: S.of(context).theme,
                     subtitle: S.of(context).settings_theme_subtitle,
                     onTap: () => ThemeSelectionDialog.show(context),
+                  ),
+                  // The subtitle is the mode in force, so the tile says whether the app follows the phone without
+                  // being opened.
+                  BrightnessModeInForce(
+                    builder: (context, name) => _SettingsTile(
+                      key: settingsBrightnessButtonKey,
+                      icon: Icons.brightness_6_outlined,
+                      title: S.of(context).brightness,
+                      subtitle: name,
+                      onTap: () => BrightnessSelectionDialog.show(context),
+                    ),
                   ),
                   _SettingsTile(
                     key: settingsChangeLanguageButtonKey,

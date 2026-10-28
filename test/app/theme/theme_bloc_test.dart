@@ -50,6 +50,11 @@ void main() {
       const event = ToggleBrightness();
       expect(event, isA<ThemeEvent>());
     });
+
+    test('SelectBrightness holds the mode it selects', () {
+      const event = SelectBrightness(themeMode: ThemeMode.system);
+      expect(event.themeMode, ThemeMode.system);
+    });
   });
 
   group('ThemeBloc', () {
@@ -94,6 +99,36 @@ void main() {
         build: () => ThemeBloc(),
         act: (bloc) => bloc.add(const LoadTheme()),
         expect: () => [isA<ThemeState>().having((s) => s.themeMode, 'themeMode', ThemeMode.light)],
+      );
+
+      blocTest<ThemeBloc, ThemeState>(
+        'emits system mode when brightness preference is system',
+        setUp: () async {
+          await AppLocalStorage().save(StorageKeys.brightness.key, 'system');
+        },
+        build: () => ThemeBloc(),
+        act: (bloc) => bloc.add(const LoadTheme()),
+        expect: () => [isA<ThemeState>().having((s) => s.themeMode, 'themeMode', ThemeMode.system)],
+      );
+
+      blocTest<ThemeBloc, ThemeState>(
+        'falls back to system mode for an unknown brightness preference',
+        setUp: () async {
+          await AppLocalStorage().save(StorageKeys.brightness.key, 'twilight');
+        },
+        build: () => ThemeBloc(),
+        act: (bloc) => bloc.add(const LoadTheme()),
+        expect: () => [isA<ThemeState>().having((s) => s.themeMode, 'themeMode', ThemeMode.system)],
+      );
+
+      blocTest<ThemeBloc, ThemeState>(
+        'falls back to system mode when the stored brightness is not even a string',
+        setUp: () async {
+          await AppLocalStorage().save(StorageKeys.brightness.key, 3);
+        },
+        build: () => ThemeBloc(),
+        act: (bloc) => bloc.add(const LoadTheme()),
+        expect: () => [isA<ThemeState>().having((s) => s.themeMode, 'themeMode', ThemeMode.system)],
       );
 
       blocTest<ThemeBloc, ThemeState>(
@@ -235,6 +270,51 @@ void main() {
               .having((s) => s.palette, 'palette', AppThemePalette.sunset),
         ],
       );
+    });
+
+    // ToggleBrightness only ever writes 'light' or 'dark', so one tap on the login toggle stranded the app off the
+    // phone's setting for good: no event could write 'system' back (#410).
+    group('SelectBrightness', () {
+      for (final (mode, stored) in [
+        (ThemeMode.system, 'system'),
+        (ThemeMode.light, 'light'),
+        (ThemeMode.dark, 'dark'),
+      ]) {
+        blocTest<ThemeBloc, ThemeState>(
+          'selecting $mode emits it and keeps the palette',
+          seed: () => const ThemeState(palette: AppThemePalette.sunset, themeMode: ThemeMode.dark),
+          build: () => ThemeBloc(),
+          act: (bloc) => bloc.add(SelectBrightness(themeMode: mode)),
+          expect: () => [
+            isA<ThemeState>()
+                .having((s) => s.themeMode, 'themeMode', mode)
+                .having((s) => s.palette, 'palette', AppThemePalette.sunset),
+          ],
+        );
+
+        blocTest<ThemeBloc, ThemeState>(
+          'selecting $mode stores \'$stored\'',
+          build: () => ThemeBloc(),
+          act: (bloc) => bloc.add(SelectBrightness(themeMode: mode)),
+          verify: (_) async {
+            expect(await AppLocalStorage().read(StorageKeys.brightness.key), stored);
+          },
+        );
+
+        blocTest<ThemeBloc, ThemeState>(
+          'a restart after selecting $mode comes back to $mode',
+          build: () => ThemeBloc(),
+          act: (bloc) async {
+            bloc.add(SelectBrightness(themeMode: mode));
+            await Future<void>.delayed(Duration.zero);
+          },
+          verify: (_) async {
+            final restarted = ThemeBloc()..add(const LoadTheme());
+            await expectLater(restarted.stream, emits(isA<ThemeState>().having((s) => s.themeMode, 'themeMode', mode)));
+            await restarted.close();
+          },
+        );
+      }
     });
   });
 }
