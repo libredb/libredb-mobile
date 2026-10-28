@@ -80,7 +80,7 @@ void main() {
       // M15 rewrites these; the budgets go with it. The 13 pt sizes round to the theme's 14, and the five inside
       // the wide-only brand panel are frozen by the owner's iPad ruling. #379 split login_page.dart's 8 across
       // three files without adding one: 5 + 2 + 1, and the page itself now has none.
-      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 5,
+      // login_brand_panel.dart is gone from this list: #284 put its type on the product's scale.
       'lib/features/auth/presentation/widgets/sign_in_entry.dart': 2,
       'lib/features/auth/presentation/widgets/sign_in_error_line.dart': 1,
       'lib/features/auth/presentation/widgets/community_card_grid.dart': 4,
@@ -96,7 +96,7 @@ void main() {
       // All 29 are in the wide-only brand chrome, which M14's handover re-colours and the owner's iPad ruling
       // freezes until then. #379 moved all 13 of login_page.dart's into the brand panel, which is that chrome and
       // nothing else — the ruling is enforceable now that no other change has to open the file holding them.
-      'lib/features/auth/presentation/widgets/login_brand_panel.dart': 13,
+      // login_brand_panel.dart is gone from this list: #284 put its colour on the design system's.
       'lib/features/auth/presentation/widgets/community_card_grid.dart': 16,
     });
   });
