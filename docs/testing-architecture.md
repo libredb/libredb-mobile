@@ -470,6 +470,22 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   reader relies on: every `file:line` the page cites exists, every colour it prints for `classic` is the colour the
   app ships (all 26 roles, both scopes), and every number it prints is the number the token holds. It caught nine
   citations that resolved to nothing and three curves written in the wrong form on its first run.
+- **`android_resource_xml_test.dart`** fails when a comment in an Android resource file holds a double hyphen.
+  AAPT parses those files strictly and refuses the whole file over it, and writing `--background` in one — the
+  name of a design token, which this repository writes that way everywhere else — took the Android build down
+  with a stack trace about `ErrorHandlerWrapper`. That build is the only other thing that catches it and the
+  slowest check in CI: it fails after seven minutes, in a job a Dart author has no reason to read. This reads the
+  files in milliseconds and names the rule as well as the line (#390).
+- **`app_icon_test.dart`** fails while either platform ships the framework's own logo as the app icon, and while
+  Android has no adaptive icon. `flutter create` writes a blue chevron into both sets and nothing had replaced it:
+  the Play listing icon of #197 is a different asset, uploaded to the console, so the store page showed LibreDB's
+  mark while the installed app showed Flutter's. iOS review rejects such a build; Android does not, which is worse,
+  because it ships. The guard states what the icons must **not** be rather than keeping a second copy of what they
+  are — a hash of the shipped art would need updating every time the mark is redrawn and would say nothing about
+  the next platform the project adds, while the framework's defaults never change. It identifies them by weight:
+  the default is flat three-colour art that compresses under 40 bytes per thousand pixels, and a gradient mark is
+  far above that at every size. `tool/generate_app_icons.dart` writes the real ones, driving Flutter's own
+  rasteriser from `flutter test` because the project has no other (#390).
 - **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
   the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
   `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
@@ -557,14 +573,17 @@ The single sign-on has more guards next to the code they guard:
   = false)` and use `pumpBeforeTest: pumpOnce` for animated widgets. Coverage: all
   design-system components, shared widgets, and key screens (rendered with mocked
   BLoCs via the `test/support/golden_app.dart` `goldenScreen` helper):
-  **40 golden images** across **45 scenarios** in 18 files, counted by
+  **42 golden images** across **46 scenarios** in 19 files, counted by
   `test/architecture/testing_doc_test.dart`, which fails when this paragraph and the
   tree disagree. The login screen also has images for a misconfigured build and for a
   Studio that does not answer, which are the two states a user meets that are not the
   working one. The login, settings and onboarding screens have a dark variant today.
   The introduction's file renders two `OnboardingPanel`s directly rather than swiping
   the page: alchemist renders a frame, not a session, and driving a pager through it
-  would need a hook in the page that exists for no other reason.
+  would need a hook in the page that exists for no other reason. The brand mark has a
+  file of its own, because every other test of it measures geometry — that the paths
+  parse, that the data rows are where the design system puts them — and none of those
+  can tell a correct hexagon from one assembled wrong.
   The responsive **shell / home screen is intentionally not goldened** (it boots
   via real DI in
   `App()` rather than mockable to a single deterministic frame; its
