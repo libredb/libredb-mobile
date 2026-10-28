@@ -1,3 +1,7 @@
+// The SDK deprecates `extra` in favour of `contexts` and still sends it, so the scrubber still reads it
+// and these tests still set it. See the comment at the call site in sentry_scrub.dart.
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -27,19 +31,19 @@ void main() {
     test('removes Authorization header (case-insensitive)', () {
       final result = sentryBeforeSend(
         _eventWithHeaders({'Authorization': 'Bearer token', 'Accept': 'application/json'}),
-      );
+      )!;
       expect(result.request?.headers.containsKey('Authorization'), isFalse);
       expect(result.request?.headers['Accept'], 'application/json');
     });
 
     test('removes lowercase authorization', () {
-      final result = sentryBeforeSend(_eventWithHeaders({'authorization': 'Bearer x', 'X-Other': 'y'}));
+      final result = sentryBeforeSend(_eventWithHeaders({'authorization': 'Bearer x', 'X-Other': 'y'}))!;
       expect(result.request?.headers.containsKey('authorization'), isFalse);
       expect(result.request?.headers['X-Other'], 'y');
     });
 
     test('removes Cookie and Set-Cookie headers', () {
-      final result = sentryBeforeSend(_eventWithHeaders({'Cookie': 'sid=abc', 'Set-Cookie': 'sid=abc', 'X-K': 'v'}));
+      final result = sentryBeforeSend(_eventWithHeaders({'Cookie': 'sid=abc', 'Set-Cookie': 'sid=abc', 'X-K': 'v'}))!;
       expect(result.request?.headers.containsKey('Cookie'), isFalse);
       expect(result.request?.headers.containsKey('Set-Cookie'), isFalse);
       expect(result.request?.headers['X-K'], 'v');
@@ -54,7 +58,7 @@ void main() {
     test('masks emails and JWTs in header values', () {
       final result = sentryBeforeSend(
         _eventWithHeaders({'X-Debug-Context': 'session $jwt', 'X-User-Email': 'jane.doe@example.com'}),
-      );
+      )!;
       expect(result.request?.headers, {
         'X-Debug-Context': 'session [REDACTED_JWT]',
         'X-User-Email': '[REDACTED_EMAIL]',
@@ -68,7 +72,7 @@ void main() {
             env: {'REMOTE_USER': 'jane.doe@example.com', 'SESSION': jwt, 'QUERY_STRING': 'code=4f2a9c&state=st4te999'},
           ),
         ),
-      );
+      )!;
       expect(result.request?.env, {
         'REMOTE_USER': '[REDACTED_EMAIL]',
         'SESSION': '[REDACTED_JWT]',
@@ -77,7 +81,7 @@ void main() {
     });
 
     test('keeps a header value without a secret as it was', () {
-      final result = sentryBeforeSend(_eventWithHeaders({'Accept': 'application/json', 'X-Request-Id': 'abc-123'}));
+      final result = sentryBeforeSend(_eventWithHeaders({'Accept': 'application/json', 'X-Request-Id': 'abc-123'}))!;
       expect(result.request?.headers, {'Accept': 'application/json', 'X-Request-Id': 'abc-123'});
     });
 
@@ -86,7 +90,7 @@ void main() {
     test('masks the whole value of a header named like a credential', () {
       final result = sentryBeforeSend(
         _eventWithHeaders({'X-Auth-Token': 'at-opaque-0a1b2c3d', 'Accept': 'text/plain'}),
-      );
+      )!;
       expect(result.request?.headers, {'X-Auth-Token': '[REDACTED]', 'Accept': 'text/plain'});
     });
   });
@@ -101,7 +105,7 @@ void main() {
         'Api-Key': 'k-9f8e7d6c',
         'X-Keyboard-Layout': 'tr-q',
       }),
-    );
+    )!;
     expect(result.request?.headers, {
       'Proxy-Authorization': '[REDACTED]',
       'X-Api-Key': '[REDACTED]',
@@ -115,9 +119,48 @@ void main() {
   test('sentryBeforeSend masks the value of a tag named like a credential and the text of every tag', () {
     final event = SentryEvent(tags: {'otp': '493817', 'login': 'jane.doe@example.com', 'event.origin': 'flutter'});
 
-    final result = sentryBeforeSend(event);
+    final result = sentryBeforeSend(event)!;
 
     expect(result.tags, {'otp': '[REDACTED]', 'login': '[REDACTED_EMAIL]', 'event.origin': 'flutter'});
+  });
+
+  // Regression: `extra` was the one map this hook never read. The native scrubber masks `event.extras`, so Android
+  // crashes were covered and Dart events were not — and Dart events do not go through the native hook, they go
+  // through `captureEnvelope`. What lands there is not hypothetical: `SentryNavigatorObserver` calls
+  // `transaction.setData('route_settings_arguments', ...)` with go_router's path and query parameters, which for
+  // this app's browse routes are `connectionId`, `kind`, `browsePath` and `browsePrefix` — row keys and key
+  // prefixes. `SentryTransaction` copies that map into `extra` and into `contexts.trace.data`, and
+  // `tracesSampleRate` is 0.2, so one navigation in five sent them. The breadcrumb copy of the same arguments was
+  // masked; this copy was not.
+  test('sentryBeforeSend masks the extra of an event, where a navigation puts its route arguments', () {
+    final event = SentryEvent(
+      extra: {
+        'route_settings_arguments': {
+          'connectionId': 'seed:dvdrental',
+          'browsePrefix': 'customer:jane.doe@example.com',
+          'token': 'at-0a1b2c3d',
+        },
+        'note': 'opened by jane.doe@example.com',
+      },
+    );
+
+    final result = sentryBeforeSend(event)!;
+
+    final arguments = (result.extra!['route_settings_arguments']! as Map).cast<String, Object?>();
+    expect(arguments['browsePrefix'], 'customer:[REDACTED_EMAIL]');
+    expect(arguments['token'], '[REDACTED]');
+    expect(arguments['connectionId'], 'seed:dvdrental', reason: 'a connection id is not a secret and stays');
+    expect(result.extra!['note'], 'opened by [REDACTED_EMAIL]');
+  });
+
+  // The native scrubber fails closed: `NativeSentryScrubber` catches a `Throwable`, drops the event and logs only
+  // the exception's class. This one did not, and the SDK sets `processedEvent = event` before calling the hook, so
+  // a throw halfway through left the original event — partly masked, partly not — to be sent anyway. The layer
+  // whose masking is regular expressions over arbitrary strings is the one that should fail closed.
+  test('sentryBeforeSend drops the event when masking throws, rather than sending it half-masked', () {
+    final event = SentryEvent(extra: {'hostile': _ThrowsOnToString(), 'login': 'jane.doe@example.com'});
+
+    expect(sentryBeforeSend(event), isNull);
   });
 
   // Regression: the user was sent as it was, so code that calls setUserId with an email sent the address.
@@ -133,7 +176,7 @@ void main() {
       ),
     );
 
-    final user = sentryBeforeSend(event).user!;
+    final user = sentryBeforeSend(event)!.user!;
 
     expect(user.id, '[REDACTED_EMAIL]');
     expect(user.username, 'jane [REDACTED_JWT]');
@@ -150,8 +193,8 @@ void main() {
     for (final entry in cases.cast<Map<String, dynamic>>()) {
       final input = (entry['input'] as Map<String, dynamic>).cast<String, String>();
       final result = switch (entry['field']) {
-        'headers' => sentryBeforeSend(_eventWithHeaders(input)).request?.headers,
-        'tags' => sentryBeforeSend(SentryEvent(tags: input)).tags,
+        'headers' => sentryBeforeSend(_eventWithHeaders(input))!.request?.headers,
+        'tags' => sentryBeforeSend(SentryEvent(tags: input))!.tags,
         final field => fail('unknown field $field'),
       };
       expect(result, entry['expected'], reason: '${entry['field']}');
@@ -168,7 +211,7 @@ void main() {
         'refreshToken': 'yyy',
         'note': 'kept',
       };
-      final result = sentryBeforeSend(_eventWithBody(body));
+      final result = sentryBeforeSend(_eventWithBody(body))!;
       expect(result.request!.data, {
         'username': 'alice',
         'password': '[REDACTED]',
@@ -181,12 +224,12 @@ void main() {
 
     test('key match is case-insensitive', () {
       final body = {'Password': 'a', 'OTP': 'b', 'newPassword': 'c'};
-      final result = sentryBeforeSend(_eventWithBody(body));
+      final result = sentryBeforeSend(_eventWithBody(body))!;
       expect(result.request!.data, {'Password': '[REDACTED]', 'OTP': '[REDACTED]', 'newPassword': '[REDACTED]'});
     });
 
     test('keeps a non-Map body without an email or a JWT as it is', () {
-      final result = sentryBeforeSend(_eventWithBody('plain string body'));
+      final result = sentryBeforeSend(_eventWithBody('plain string body'))!;
       expect(result.request?.data, 'plain string body');
     });
   });
@@ -195,21 +238,21 @@ void main() {
     const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.signaturepart';
 
     test('masks a JWT-shaped token inside an exception value', () {
-      final result = sentryBeforeSend(_eventWithExceptionValue('Failed with token=$jwt — try again'));
+      final result = sentryBeforeSend(_eventWithExceptionValue('Failed with token=$jwt — try again'))!;
       final value = result.exceptions?.first.value ?? '';
       expect(value.contains(jwt), isFalse, reason: 'raw JWT must not appear');
       expect(value.contains('[REDACTED_JWT]'), isTrue);
     });
 
     test('masks JWT in event.message', () {
-      final result = sentryBeforeSend(_eventWithMessage('Token rotated: $jwt'));
+      final result = sentryBeforeSend(_eventWithMessage('Token rotated: $jwt'))!;
       final formatted = result.message?.formatted ?? '';
       expect(formatted.contains(jwt), isFalse);
       expect(formatted.contains('[REDACTED_JWT]'), isTrue);
     });
 
     test('leaves an exception value without a JWT or an email untouched', () {
-      final result = sentryBeforeSend(_eventWithExceptionValue('Server returned 500 with body {"error":"oops"}'));
+      final result = sentryBeforeSend(_eventWithExceptionValue('Server returned 500 with body {"error":"oops"}'))!;
       expect(result.exceptions?.first.value, 'Server returned 500 with body {"error":"oops"}');
     });
 
@@ -218,7 +261,7 @@ void main() {
         SentryEvent(
           request: SentryRequest(url: 'https://app.example/', queryString: 'token=$jwt', fragment: 'access_token=$jwt'),
         ),
-      );
+      )!;
       expect(result.request?.queryString, 'token=[REDACTED_JWT]');
       expect(result.request?.fragment, 'access_token=[REDACTED_JWT]');
     });
@@ -232,7 +275,7 @@ void main() {
         SentryEvent(
           request: SentryRequest(url: 'https://app.example/', fragment: '/login-otp-verify/jane.doe@example.com'),
         ),
-      );
+      )!;
       expect(result.toJson().toString(), isNot(contains('jane.doe')));
       expect(result.request?.fragment, '/login-otp-verify/[REDACTED_EMAIL]');
     });
@@ -246,7 +289,7 @@ void main() {
             queryString: 'email=jane.doe%40example.com',
           ),
         ),
-      );
+      )!;
       expect(result.toJson().toString(), isNot(contains('jane.doe')));
       expect(result.request?.url, 'https://app.example/login-otp-verify/[REDACTED_EMAIL]');
       expect(result.request?.queryString, 'email=[REDACTED_EMAIL]');
@@ -257,7 +300,7 @@ void main() {
   group('sentryBeforeSend — passthroughs', () {
     test('event with no request or exception passes through unchanged', () {
       final event = SentryEvent(message: SentryMessage('Plain note'));
-      final result = sentryBeforeSend(event);
+      final result = sentryBeforeSend(event)!;
       expect(result.message?.formatted, 'Plain note');
     });
   });
@@ -273,7 +316,7 @@ void main() {
     test('masks an email in an exception value', () {
       final result = sentryBeforeSend(
         _eventWithExceptionValue('Not found: {"status":404,"path":"/api/admin/users/jane.doe@example.com"}'),
-      );
+      )!;
       expect(result.exceptions?.first.value, 'Not found: {"status":404,"path":"/api/admin/users/[REDACTED_EMAIL]"}');
     });
 
@@ -286,7 +329,7 @@ void main() {
             params: ['jane.doe@example.com', 3],
           ),
         ),
-      );
+      )!;
       expect(result.message?.formatted, 'Signed in as [REDACTED_EMAIL]');
       expect(result.message?.template, 'Signed in as %s (was [REDACTED_EMAIL])');
       expect(result.message?.params, ['[REDACTED_EMAIL]', 3]);
@@ -303,7 +346,7 @@ void main() {
           },
           'age': 42,
         }),
-      );
+      )!;
       expect(result.request?.data, {
         'login': '[REDACTED_EMAIL]',
         'password': '[REDACTED]',
@@ -316,7 +359,7 @@ void main() {
     });
 
     test('masks an email and a JWT in a raw string body', () {
-      final result = sentryBeforeSend(_eventWithBody('{"email":"jane.doe@example.com","id_token":"$jwt"}'));
+      final result = sentryBeforeSend(_eventWithBody('{"email":"jane.doe@example.com","id_token":"$jwt"}'))!;
       expect(result.request?.data, '{"email":"[REDACTED_EMAIL]","id_token":"[REDACTED_JWT]"}');
     });
   });
@@ -336,7 +379,7 @@ void main() {
             ),
           ],
         ),
-      );
+      )!;
 
       expect(result.message?.formatted, 'retry with Bearer [REDACTED]');
       expect(result.exceptions?.first.value, 'Unexpected end: {"id_token":"[REDACTED]","refresh_token":"[REDACTED]"');
@@ -560,4 +603,11 @@ class _CapturingTransport implements Transport {
     }
     return SentryId.newId();
   }
+}
+
+/// A value whose `toString` throws, which is the one way a masker that falls back to `toString` can be made to
+/// fail from outside. Nothing in the app does this; the point is what happens if something ever does.
+class _ThrowsOnToString {
+  @override
+  String toString() => throw StateError('hostile');
 }
