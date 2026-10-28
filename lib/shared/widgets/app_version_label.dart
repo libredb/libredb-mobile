@@ -14,7 +14,7 @@ class AppVersionLabel extends StatelessWidget {
     return Center(
       child: Text(
         'v${AppConstants.appVersion}+${AppConstants.appBuildNumber}',
-        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
       ),
     );
   }

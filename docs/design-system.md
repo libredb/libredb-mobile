@@ -190,19 +190,30 @@ tokens and 3:1 on five gradient pairs, and no floor at all on `--border`. There 
 | `error` on `surface` | 4.5 | 10.20 | 6.47 | 10.14 | 6.35 | 10.41 | 6.19 |
 | `inversePrimary` on `inverseSurface` | 4.5 | 7.90 | 12.98 | 7.39 | 11.40 | 7.57 | 11.72 |
 
-Three more guards measure what this table cannot see, and each exists because something was shipping under a floor
+Six more guards measure what this table cannot see, and each exists because something was shipping under a floor
 with nothing looking at it:
 
 * `semantic_contrast_test.dart` — `success`, `warning` and `info` live in a `ThemeExtension`, not a `ColorScheme`.
 * `material_default_contrast_test.dart` — the labels Flutter's own M3 defaults colour, which this app never sets.
 * `architecture/snack_bar_ink_test.dart` — a `SnackBar` that replaces its background must replace its ink.
+* `surface_ladder_test.dart` — a container role has to be a colour of its own; one that resolves to the page means
+  a widget asking for a fill draws nothing.
+* `container_contrast_test.dart` — the table above measures a role against the page, and a role is also painted on
+  a card. It measures the pairs the code paints, read from the call sites rather than crossed.
+* `architecture/quiet_alpha_test.dart` — a fade is written where the text is, not in the scheme, so a role can clear
+  its floor everywhere and the text drawn with 60% of it still be unreadable. It reads the alpha out of the source.
 
 ### What a reviewer should know is *not* covered
 
-`surfaceContainerHighest` is the only container role this app defines, so `surfaceContainerLow` and
-`surfaceContainerHigh` resolve to the page colour. Quiet text and card edges on a container are below their floor
-in all six palettes, and a text field's placeholder is below it in all six. All three are **open and measured** in
-**#386**, and are not a finding to re-report.
+The three gaps this section used to name were #386, and they are closed: the container roles are colours of their
+own, quiet text and card edges clear their floor on a container, and nothing fades a quiet role any more. The last
+three guards above are what closed them, and they are what keeps them closed.
+
+What no guard here measures is text on a background that is not a scheme role at all — a widget that hard-codes a
+colour and paints on it. `design_token_test.dart` catches the literal under `lib/features/`; nothing measures the
+pair. Two places fade a quiet role on purpose and are exempt by name in `quiet_alpha_test.dart`, each with its
+reason: the dev console, which no release build carries, and the theme dialog's preview tile, whose bars stand for
+text inside a miniature of a theme rather than being text.
 
 ---
 

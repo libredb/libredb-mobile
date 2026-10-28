@@ -486,6 +486,14 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   the default is flat three-colour art that compresses under 40 bytes per thousand pixels, and a gradient mark is
   far above that at every size. `tool/generate_app_icons.dart` writes the real ones, driving Flutter's own
   rasteriser from `flutter test` because the project has no other (#390).
+- **`quiet_alpha_test.dart`** fails when text painted with a quiet role faded by an alpha drops under 4.5:1 on the
+  page or on either container it can sit on. It reads the alpha out of the source rather than holding a list, so a
+  fade written tomorrow is measured the moment it is written, and the only way out is the exemption list, whose two
+  entries each carry their reason — a debug overlay no release build carries, and the bars that stand for text in
+  the theme dialog's miniature. Four sites failed it: the hint of every text field at 2.82:1 on a card, the build
+  number with it, the community subtitle at 3.49:1 and the result header's type at 4.38:1. No alpha fixes them —
+  in `nature` light and `sunset` light no value in 0-255 clears the floor on a container — so the fades were
+  removed, which is also where Material 3's own `InputDecoration` hint already sits (#386).
 - **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
   the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
   `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
@@ -508,13 +516,16 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
 The colour has two guards next to the code they guard, and the second exists because the first could not see
 what it was missing:
 
-- `test/shared/design_system/theme/palette_contrast_test.dart` measures fourteen pairs of every one of the six
-  `ColorScheme`s. Twelve date from #369; #283 added `primary` on `surface` at 3:1, because a filled button's own
+- `test/shared/design_system/theme/palette_contrast_test.dart` measures fifteen pairs of every one of the six
+  `ColorScheme`s — twelve, then three. Twelve date from #369; #283 added `primary` on `surface` at 3:1, because a filled button's own
   fill is the boundary 1.4.11 asks to be identifiable, and `error` on `surface` at 4.5:1, because this app paints
   *text* with that role at twenty call sites and not only fills. Both were added for a failure the move onto the
   design system would otherwise have shipped: reading `surface` as the web's `--surface` rather than
   `--background` puts the action colour at 2.80:1 on the page, and the web's `--action-destructive` is 4.01:1 on
-  the dark page.
+  the dark page. The fifteenth is `inversePrimary` on `inverseSurface`, a snack bar's action: `inversePrimary` has
+  no call site in `lib/` at all, and is painted anyway by `_SnackbarDefaultsM3`, which supplies it because
+  `snackBarTheme` sets no `actionTextColor`. It was 4.41:1 in nature dark, unmeasured for as long as the palette
+  had existed — a role with no call site is not a role nobody sees.
 - `test/shared/design_system/theme/semantic_contrast_test.dart` measures the same way for `success`, `warning` and
   `info`. For as long as both files have existed nothing measured those three, because the guard above reads a
   `ColorScheme` and these live in a `ThemeExtension` — and two of them were under the floor the whole time.

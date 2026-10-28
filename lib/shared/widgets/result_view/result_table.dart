@@ -176,7 +176,7 @@ TextStyle? _nameStyle(ThemeData theme) =>
     theme.textTheme.labelMedium?.copyWith(fontFamily: AppTypography.mono, color: theme.colorScheme.onSurfaceVariant);
 
 TextStyle? _typeStyle(ThemeData theme) =>
-    theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8));
+    theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
 TextStyle? _cellStyle(ThemeData theme) => theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono);
 
