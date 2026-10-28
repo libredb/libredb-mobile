@@ -40,6 +40,28 @@ console ramp and has no counterpart here, and the gradient headline stops, which
 to paint. The lifts this app computes **itself** are `outline` and `outlineVariant`: 1.4.3 is about text, the
 website never applied 1.4.11 to its borders, and so there is no value there to take.
 
+## `assets/lb-icon.svg` — the mark
+
+`assets/lb-icon.svg` is a verbatim copy of `design-system/assets/lb-icon.svg` in the same repository, taken at
+`2e8c39b`. It is the product's brand mark: a hexagon frame around three data rows, between two chevrons, filled
+with `--gradient-brand` and `--gradient-data`.
+
+The app does not ship it. It **paints** it: `lib/shared/design_system/brand/brand_mark.dart` holds the same path
+data as Dart constants and `parseSvgPath` turns them into a `Path`, because the mark is drawn synchronously, in a
+frame, and an asset to wait for would make every caller asynchronous for a shape that never changes. The copy here
+is what makes that safe — `test/shared/design_system/brand/brand_mark_test.dart` reads this file, matches the paths
+**by their fill** rather than their order, and fails when the two stop agreeing.
+
+Refresh it with the token files, from `origin/main`:
+
+```sh
+git show origin/main:design-system/assets/lb-icon.svg > <libredb-mobile>/tool/design-system/assets/lb-icon.svg
+```
+
+The other eight assets are not taken. `lb-icon-white.svg` and `lb-icon-ink.svg` are the same geometry in one flat
+colour, which `BrandMark`'s `color` draws from the same paths; the six wordmarks are a lockup of the mark with type,
+and nothing in this app shows one.
+
 ## Why a copy and not a reference
 
 The site's repository is not checked out on CI, and a token file read across a folder boundary would make this
