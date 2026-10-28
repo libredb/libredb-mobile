@@ -157,7 +157,12 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: AppSpacing.sm),
-        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        // Wraps rather than running past the edge. The header is `titleSmall`, which the product's type scale sets
+        // two points larger than Material's, and at 320 px with a 1.3 text scale "Current Route" was 0.4 px too
+        // wide for the row (#283).
+        Flexible(
+          child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        ),
       ],
     );
   }
