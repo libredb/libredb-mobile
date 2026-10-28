@@ -12,6 +12,7 @@ library;
 
 export 'app_breakpoints.dart';
 export 'app_durations.dart';
+export 'app_gradients.dart';
 export 'app_radius.dart';
 export 'app_sizes.dart';
 export 'app_spacing.dart';
