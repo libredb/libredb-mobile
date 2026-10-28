@@ -81,6 +81,35 @@ jobs:
         # Excludes generated/bootstrap code from the metric (see scripts/check_coverage.sh, issue #149).
         run: scripts/check_coverage.sh coverage/lcov.info 65
 
+  # TEMPORARY — #283. The palettes now take their colour from the design system, so all 17 golden files have to be
+  # rendered on this runner and committed from the artifact; a local regeneration sends CI red
+  # (docs/testing-architecture.md). Deleted in the same pull request, with the images it produces.
+  regenerate-goldens:
+    name: Regenerate goldens (temporary, #283)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Render the goldens
+        run: flutter test --tags golden --update-goldens
+
+      - name: Upload them
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: goldens
+          path: '**/goldens/ci/*.png'
+
   build:
     name: Build Android
     runs-on: ubuntu-latest
