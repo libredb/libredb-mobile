@@ -388,6 +388,32 @@ containers, is what makes this reproducible; until then a `libredb-installer app
   column.
 - **Step 11 and the prod steps.** This was a debug build of `main_local.dart`, which carries no certificate pins and
   no `screenCaptureProtection`.
+### The prod steps, from a release build
+
+Steps 1 and 11 of #196 need a release build, which the lab run was not, so they were taken separately on
+2026-10-28: `fvm flutter build apk --release --target lib/main/main_prod.dart`, installed on the same emulator.
+The build needs no secret — `android/app/build.gradle.kts` falls back to the debug key when the upload signing
+values are absent, and says which key it used: *"Release build signed with the debug key."*
+
+| Step | Result |
+| --- | --- |
+| 1. A release build carries no DEBUG banner | Passed: the welcome screen and the login page draw no ribbon in the corner, which a debug build does |
+| 11. The certificate pins are valid | Passed, by what did **not** happen: the app opened on the login page with no "Studio is unreachable" state, which means the launch health check reached `https://studio-dev.libredb.org/api/health` through the pins. A pin that no longer matched would fail the handshake and show that state, so the quiet page is the evidence |
+
+Two things worth recording from the same build, neither of them a step:
+
+- The login page of a prod release offers **only** "Sign in with SSO". The Platform entry is absent, which is what
+  `docs/release.md` says the store build does until M12-P passes — the first time that has been seen rather than
+  read. The version label reads `v1.0.0+1`.
+- A release build prints none of the app's own log lines to logcat, so the health call cannot be read there. That is
+  the hygiene working, and it is also why step 11 is answered from the screen rather than from the log.
+
+**The screenshot step (`screenCaptureProtection`) is not here**, and the reason is more precise than "prod
+screenshots are black": the protection is a lease that particular value areas take — the audit event and audit log
+pages, the key-value page and the object source view — not a flag over the whole app. The login page screenshots
+normally in a release build, as it should. Reaching a guarded screen needs a Studio account on the deployment, which
+this run did not have.
+
 ### Driving the statement field from `adb`
 
 The Railway run above could not clear the editor and blamed itself without saying why. The reason is worth writing
