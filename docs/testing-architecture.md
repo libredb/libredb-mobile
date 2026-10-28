@@ -463,6 +463,13 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   palette with three names. Five values deviate, and each deviation asserts *both* halves — that the web value
   really does fail its floor, and that the value taken instead clears it — so a system that later lifts one of
   them fails the first half and the deviation is reconsidered rather than kept.
+- **`design_system_doc_test.dart`** holds `docs/design-system.md` to the code it describes. That page exists to be
+  cited — M16's review layer judges the app's visual consistency against the design system, and a finding that
+  cites nothing is taste rather than a finding — so a page of values that has quietly drifted is worse than no page
+  at all: it makes a wrong citation look like a right one. Three things are checked, and they are the three a
+  reader relies on: every `file:line` the page cites exists, every colour it prints for `classic` is the colour the
+  app ships (all 26 roles, both scopes), and every number it prints is the number the token holds. It caught nine
+  citations that resolved to nothing and three curves written in the wrong form on its first run.
 - **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
   the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
   `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
