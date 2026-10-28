@@ -5,7 +5,9 @@ class AppBreakpoints {
   /// Screen width breakpoints.
   static const double mobile = 768.0;
   static const double tablet = 1024.0;
-  static const double desktop = 1200.0;
+
+  /// `--bp-xl`. It was 1200, a number on neither side's scale; the design system's desktop edge is 1280 (#283).
+  static const double desktop = 1280.0;
 
   /// Below this screen height, Material's compact height class, such as a phone held sideways, the shell puts its tabs
   /// in a rail at the side and a page header shares its rows. It reads the screen, which the keyboard does not change,
