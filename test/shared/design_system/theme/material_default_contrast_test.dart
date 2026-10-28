@@ -45,7 +45,12 @@ void main() {
                   children: [
                     TextButton(onPressed: () {}, child: const Text('Skip')),
                     OutlinedButton(onPressed: () {}, child: const Text('Cancel')),
-                    const TabBar(tabs: [Tab(text: 'Columns'), Tab(text: 'Source')]),
+                    const TabBar(
+                      tabs: [
+                        Tab(text: 'Columns'),
+                        Tab(text: 'Source'),
+                      ],
+                    ),
                   ],
                 ),
               ),

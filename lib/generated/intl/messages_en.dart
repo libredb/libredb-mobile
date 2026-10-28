@@ -1087,7 +1087,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Choose Theme"),
     "theme_palette_applied": m97,
     "theme_palette_classic": MessageLookupByLibrary.simpleMessage("Classic"),
-    "theme_palette_classic_description": MessageLookupByLibrary.simpleMessage("Neutral zinc, clean and minimal"),
+    "theme_palette_classic_description": MessageLookupByLibrary.simpleMessage("Cool neutral, clean and minimal"),
     "theme_palette_nature": MessageLookupByLibrary.simpleMessage("Nature"),
     "theme_palette_nature_description": MessageLookupByLibrary.simpleMessage("Sage green, calm and organic"),
     "theme_palette_sunset": MessageLookupByLibrary.simpleMessage("Sunset"),

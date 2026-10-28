@@ -560,10 +560,10 @@ class S {
     return Intl.message('Classic', name: 'theme_palette_classic', desc: '', args: []);
   }
 
-  /// `Neutral zinc, clean and minimal`
+  /// `Cool neutral, clean and minimal`
   String get theme_palette_classic_description {
     return Intl.message(
-      'Neutral zinc, clean and minimal',
+      'Cool neutral, clean and minimal',
       name: 'theme_palette_classic_description',
       desc: '',
       args: [],

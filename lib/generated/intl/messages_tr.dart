@@ -1100,7 +1100,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "theme_dialog_title": MessageLookupByLibrary.simpleMessage("Tema Seçin"),
     "theme_palette_applied": m97,
     "theme_palette_classic": MessageLookupByLibrary.simpleMessage("Klasik"),
-    "theme_palette_classic_description": MessageLookupByLibrary.simpleMessage("Nötr çinko, sade ve minimal"),
+    "theme_palette_classic_description": MessageLookupByLibrary.simpleMessage("Soğuk nötr, sade ve minimal"),
     "theme_palette_nature": MessageLookupByLibrary.simpleMessage("Doğa"),
     "theme_palette_nature_description": MessageLookupByLibrary.simpleMessage("Adaçayı yeşili, sakin ve doğal"),
     "theme_palette_sunset": MessageLookupByLibrary.simpleMessage("Gün Batımı"),

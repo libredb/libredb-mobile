@@ -47,6 +47,29 @@ void main() {
     ]);
   });
 
+  test('no palette describes itself by a ramp it no longer uses', () {
+    // Copy ages with the values it describes. `classic` was the zinc ramp and said so — "Neutral zinc" in English,
+    // "Nötr çinko" in Turkish — and #283 replaced it with the design system's own slightly cool neutral, which is
+    // what the palette now *is*. `nature` and `sunset` still are sage and stone, so only this one word moved.
+    //
+    // The guard is a word, not the whole sentence: pinning the copy verbatim would be one more copy of a value
+    // that lives somewhere else, and this catches what actually goes wrong — a description left behind by a change
+    // to the colour it describes.
+    for (final (locale, arb) in [('en', en), ('tr', tr)]) {
+      for (final word in ['zinc', 'çinko']) {
+        final offenders = [
+          for (final key in messages(arb))
+            if (key.startsWith('theme_palette_') && (arb[key] as String).toLowerCase().contains(word)) key,
+        ];
+        expect(
+          offenders,
+          isEmpty,
+          reason: 'intl_$locale.arb still names "$word" in ${offenders.join(', ')}; no palette uses that ramp',
+        );
+      }
+    }
+  });
+
   test('no ARB file under lib/l10n holds a key twice', () {
     final files = Directory('lib/l10n').listSync().whereType<File>().where((file) => file.path.endsWith('.arb'));
     expect(files, isNotEmpty);
