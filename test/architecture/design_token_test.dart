@@ -104,9 +104,15 @@ void main() {
   test('a gap or a padding is on the spacing scale', () {
     // SizedBox and EdgeInsets are where a layout reaches for a number; AppSpacing.* references are not literals and
     // so never match.
+    //
+    // The number has to *be* an argument — it follows a `:`, a `,` or a `(`. Without that the digits inside an
+    // identifier count as debt: `child: Text(l10n.onboarding_skip)` inside a `SizedBox(height: …)` was read as the
+    // spacing value **10**, and `_panelCount - 1` as the spacing value **1**. Neither is a gap and neither is on
+    // any scale, so both were reported, and whether they were depended on something as incidental as whether an
+    // earlier argument happened to close a bracket first. #284 met both at once.
     final pattern = RegExp(
       r'(?:SizedBox\s*\(\s*(?:height|width)|EdgeInsets\.(?:all|symmetric|only|fromLTRB)|spacing|runSpacing)'
-      r'[^)]*?([0-9]+(?:\.[0-9]+)?)',
+      r'[^)]*?[:,(]\s*([0-9]+(?:\.[0-9]+)?)',
     );
     expectWithin('off-scale spacing', countOf(pattern, offends: (m) => offScale(m, spacingScale)), const {
       // #379 split login_page.dart's 12: 6 to the brand panel, 2 to the entry, 3 left on the page. The twelfth was
@@ -119,7 +125,8 @@ void main() {
       // One each, predating the scale. They round without a layout decision, and whoever next edits the file does it.
       'lib/features/object_browser/presentation/widgets/object_tile.dart': 1,
       'lib/features/connections/presentation/widgets/connection_list_view.dart': 1,
-      'lib/features/connections/presentation/widgets/connection_details_sheet.dart': 1,
+      // connection_details_sheet.dart is gone from this list: its one entry was `Text(l10n…)` after a
+      // `spacing:`, read as the number 10. Fake debt, and the ratchet only ever lets a budget shrink.
       'lib/features/sql_editor/presentation/widgets/write_confirmation_sheet.dart': 2,
       'lib/features/sql_editor/presentation/widgets/statement_history_sheet.dart': 1,
       'lib/shared/widgets/result_view/result_notices.dart': 1,

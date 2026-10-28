@@ -448,19 +448,84 @@ class S {
     return Intl.message('Switch to dark mode', name: 'login_switch_to_dark_mode', desc: '', args: []);
   }
 
-  /// `Welcome to LibreDB`
-  String get onboarding_title {
-    return Intl.message('Welcome to LibreDB', name: 'onboarding_title', desc: '', args: []);
+  /// `LibreDB Platform governs`
+  String get onboarding_platform_title {
+    return Intl.message('LibreDB Platform governs', name: 'onboarding_platform_title', desc: '', args: []);
   }
 
-  /// `A quick look at what you can do here, before you sign in.`
-  String get onboarding_subtitle {
+  /// `Platform owns the connections, decides who may reach which database, and keeps a record of every statement that runs.`
+  String get onboarding_platform_body {
     return Intl.message(
-      'A quick look at what you can do here, before you sign in.',
-      name: 'onboarding_subtitle',
+      'Platform owns the connections, decides who may reach which database, and keeps a record of every statement that runs.',
+      name: 'onboarding_platform_body',
       desc: '',
       args: [],
     );
+  }
+
+  /// `LibreDB Studio runs them`
+  String get onboarding_studio_title {
+    return Intl.message('LibreDB Studio runs them', name: 'onboarding_studio_title', desc: '', args: []);
+  }
+
+  /// `Studio holds every credential and opens every connection. It runs what you ask against the databases Platform has granted you, and this app never sees a password.`
+  String get onboarding_studio_body {
+    return Intl.message(
+      'Studio holds every credential and opens every connection. It runs what you ask against the databases Platform has granted you, and this app never sees a password.',
+      name: 'onboarding_studio_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{engines} database engines, published on {channels} channels`
+  String onboarding_studio_figures(int engines, int channels) {
+    return Intl.message(
+      '$engines database engines, published on $channels channels',
+      name: 'onboarding_studio_figures',
+      desc: '',
+      args: [engines, channels],
+    );
+  }
+
+  /// `This app is the window`
+  String get onboarding_mobile_title {
+    return Intl.message('This app is the window', name: 'onboarding_mobile_title', desc: '', args: []);
+  }
+
+  /// `Browse the databases you have been granted, read a table, run a statement and see the answer, from your phone.`
+  String get onboarding_mobile_body {
+    return Intl.message(
+      'Browse the databases you have been granted, read a table, run a statement and see the answer, from your phone.',
+      name: 'onboarding_mobile_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Where you already look`
+  String get onboarding_listings_title {
+    return Intl.message('Where you already look', name: 'onboarding_listings_title', desc: '', args: []);
+  }
+
+  /// `LibreDB is listed on {listings} official vendor and project sites.`
+  String onboarding_listings_body(int listings) {
+    return Intl.message(
+      'LibreDB is listed on $listings official vendor and project sites.',
+      name: 'onboarding_listings_body',
+      desc: '',
+      args: [listings],
+    );
+  }
+
+  /// `Next`
+  String get onboarding_next {
+    return Intl.message('Next', name: 'onboarding_next', desc: '', args: []);
+  }
+
+  /// `Panel {index} of {total}`
+  String onboarding_panel_position(int index, int total) {
+    return Intl.message('Panel $index of $total', name: 'onboarding_panel_position', desc: '', args: [index, total]);
   }
 
   /// `Skip`

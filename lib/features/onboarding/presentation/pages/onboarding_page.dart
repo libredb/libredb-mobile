@@ -3,84 +3,176 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
 import 'package:libredb_mobile/features/onboarding/navigation/onboarding_destination.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_panel.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/adoption/adoption_figures.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
-/// The introduction, shown once before the first sign-in.
+/// The introduction, shown once before the first sign-in: four panels that say what the three parts of LibreDB are
+/// and where the product is listed.
 ///
-/// The body is a placeholder: the four panels and the adoption figures replace it in the flow's own step. What is
-/// settled here is the way the page leaves, because that is the part the router depends on. Both controls mark the
-/// introduction seen and go to the login page; [returnUrl] is the location the first run was heading for, which the
-/// redirect handed over and which the login page re-validates before honoring.
+/// **The panel is local state, not a cubit.** `OnboardingState` says so itself — routing every swipe through a
+/// cubit would turn a four-panel flow into four variants for nothing. What the cubit owns is whether the
+/// introduction has been shown at all, which the router depends on.
 ///
-/// Skip and the final control do the same thing while there is one panel. They stay two controls because a user who
-/// wants out looks for the word, not for the last panel — and the flow's step gives Skip its own meaning without
-/// having to add it to the page then.
-class OnboardingPage extends StatelessWidget {
+/// **The figures have no loading state and no error state**, because they cannot fail: `IAdoptionFiguresSource`
+/// promises [AdoptionFigures.fallback] instead of throwing, and the fallback is the `initialData` here, so the
+/// panels are drawn with numbers from the first frame and the asset only ever replaces them with fresher ones.
+/// That is also why there is no BLoC for them: there is no event, no second state and nothing to retry.
+///
+/// Both controls mark the introduction seen and go to the login page; [returnUrl] is the location the first run was
+/// heading for, which the redirect handed over and which the login page re-validates before honoring.
+class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key, this.returnUrl});
 
   /// Where the first run was going before the introduction took its place, or null when it was going nowhere special.
   final String? returnUrl;
 
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  /// Platform, Studio, this app, and where the product is listed.
+  static const int _panelCount = 4;
+
+  final PageController _controller = PageController();
+  late final Future<AdoptionFigures> _figures = context.read<IAdoptionFiguresSource>().read();
+
+  int _panel = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   /// Marks the introduction seen and leaves. The cubit emits before it stores, so the redirect has the new answer by
   /// the time [GoRouter.go] runs even on a device that refuses the write.
-  void _leave(BuildContext context) {
+  void _leave() {
     context.read<OnboardingCubit>().markSeen();
-    context.go(onboardingDestination(returnUrl: returnUrl));
+    context.go(onboardingDestination(returnUrl: widget.returnUrl));
+  }
+
+  /// The primary control: the next panel while there is one, and the way out on the last.
+  void _advance() {
+    if (_panel == _panelCount - 1) {
+      _leave();
+      return;
+    }
+    _controller.nextPage(duration: AppDurations.normal, curve: AppDurations.easeOut);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = S.of(context);
-    final text = Theme.of(context).textTheme;
     return Scaffold(
-      // Scrolls only when it has to. The body was a plain Column whose two Spacers absorbed the slack until there was
-      // none, and then it overflowed: sideways at an accessibility text size, upright at the largest one, and on a
-      // short viewport. Android's font-size setting reaches well past the largest ordinary step, so that is a setting
-      // a real user has, and what they got was the overflow stripe across the first screen the app ever shows them.
-      // The minimum height keeps the Spacers working at the sizes that do fit, so the layout is unchanged there.
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, viewport) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: viewport.maxHeight),
-              child: IntrinsicHeight(child: _body(l10n, text, context)),
+        child: Column(
+          children: [
+            Expanded(
+              child: FutureBuilder<AdoptionFigures>(
+                future: _figures,
+                initialData: AdoptionFigures.fallback,
+                builder: (context, snapshot) => PageView(
+                  controller: _controller,
+                  onPageChanged: (panel) => setState(() => _panel = panel),
+                  children: _panels(l10n, snapshot.data ?? AdoptionFigures.fallback),
+                ),
+              ),
             ),
-          ),
+            _Dots(count: _panelCount, current: _panel),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: AppSizes.minTapTarget,
+                    child: FilledButton(
+                      key: onboardingDoneKey,
+                      onPressed: _advance,
+                      child: Text(_panel == _panelCount - 1 ? l10n.onboarding_done : l10n.onboarding_next),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    height: AppSizes.minTapTarget,
+                    // Skip stays on every panel, because a user who wants out looks for the word rather than for the
+                    // last panel.
+                    child: TextButton(key: onboardingSkipKey, onPressed: _leave, child: Text(l10n.onboarding_skip)),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _body(S l10n, TextTheme text, BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  List<Widget> _panels(S l10n, AdoptionFigures figures) {
+    final panels = <OnboardingPanel>[
+      OnboardingPanel(
+        icon: Icons.verified_user_outlined,
+        title: l10n.onboarding_platform_title,
+        body: l10n.onboarding_platform_body,
+      ),
+      OnboardingPanel(
+        icon: Icons.storage_outlined,
+        title: l10n.onboarding_studio_title,
+        body: l10n.onboarding_studio_body,
+        figures: l10n.onboarding_studio_figures(figures.engines, figures.channels),
+      ),
+      OnboardingPanel(
+        icon: Icons.phone_iphone_outlined,
+        title: l10n.onboarding_mobile_title,
+        body: l10n.onboarding_mobile_body,
+      ),
+      OnboardingPanel(
+        icon: Icons.public_outlined,
+        title: l10n.onboarding_listings_title,
+        body: l10n.onboarding_listings_body(figures.listings),
+      ),
+    ];
+    return [
+      for (final (index, panel) in panels.indexed)
+        // Where in the flow this is, said rather than only drawn: the dots carry it for a sighted reader and nothing
+        // carried it for anyone else.
+        Semantics(label: l10n.onboarding_panel_position(index + 1, panels.length), child: panel),
+    ];
+  }
+}
+
+/// The position in the flow, drawn. It is excluded from semantics because each panel already says the same thing in
+/// words, and a screen reader that announced both would say it twice.
+class _Dots extends StatelessWidget {
+  const _Dots({required this.count, required this.current});
+
+  final int count;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Spacer(),
-          Text(l10n.onboarding_title, style: text.headlineSmall, textAlign: TextAlign.center),
-          const SizedBox(height: AppSpacing.md),
-          Text(l10n.onboarding_subtitle, style: text.bodyMedium, textAlign: TextAlign.center),
-          const Spacer(),
-          SizedBox(
-            height: AppSizes.minTapTarget,
-            child: FilledButton(
-              key: onboardingDoneKey,
-              onPressed: () => _leave(context),
-              child: Text(l10n.onboarding_done),
+          for (var index = 0; index < count; index++)
+            AnimatedContainer(
+              duration: AppDurations.fast,
+              curve: AppDurations.easeOut,
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              height: AppSpacing.sm,
+              width: index == current ? AppSpacing.xl : AppSpacing.sm,
+              decoration: BoxDecoration(
+                color: index == current ? colors.primary : colors.outlineVariant,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: AppSizes.minTapTarget,
-            child: TextButton(
-              key: onboardingSkipKey,
-              onPressed: () => _leave(context),
-              child: Text(l10n.onboarding_skip),
-            ),
-          ),
         ],
       ),
     );
