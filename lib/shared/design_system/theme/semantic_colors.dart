@@ -33,36 +33,48 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
     required this.onInfoContainer,
   });
 
-  /// Light theme semantic colors (shared across all palettes).
+  /// The design system's status colours, light scope (shared across all palettes).
+  ///
+  /// One rule, the same one `ThemeColors` follows for `error`: the colour is `--<kind>-text`, what sits on it is
+  /// the scope's `--text-inverse`, and the quiet pair is `--<kind>-bg` with `--<kind>-text` on it. It has to be
+  /// the `-text` member because this app paints text with these roles as well as filling with them, and the
+  /// guard in `test/architecture/design_system_import_test.dart` reads the vendored `theme.css` and holds all
+  /// twelve values to it.
+  ///
+  /// Taking them repaired two failures that had been shipping unmeasured, which is why this is not a repaint:
+  /// `success` was Green 600, so its white label sat at **3.30:1**, and `warning` was Yellow 500, which as text
+  /// on the page was **1.92:1** — a yellow all but invisible on white. The web's values are 5.48:1 and 5.02:1.
+  /// `palette_contrast_test.dart` never caught either, because it reads `ColorScheme` and these are a
+  /// `ThemeExtension`; `semantic_contrast_test.dart` now covers them (#283).
   static const light = SemanticColors(
-    success: Color(0xFF16A34A), // Green 600
-    onSuccess: Color(0xFFFFFFFF),
-    successContainer: Color(0xFFDCFCE7), // Green 100
-    onSuccessContainer: Color(0xFF14532D), // Green 900
-    warning: Color(0xFFEAB308), // Yellow 500
-    onWarning: Color(0xFF000000),
-    warningContainer: Color(0xFFFEF9C3), // Yellow 100
-    onWarningContainer: Color(0xFF713F12), // Yellow 900
-    info: Color(0xFF2563EB), // Blue 600
+    success: Color(0xFF047857), // --success-text
+    onSuccess: Color(0xFFFFFFFF), // --text-inverse
+    successContainer: Color(0xFFECFDF5), // --success-bg
+    onSuccessContainer: Color(0xFF047857), // --success-text
+    warning: Color(0xFFB45309), // --warning-text
+    onWarning: Color(0xFFFFFFFF),
+    warningContainer: Color(0xFFFFFBEB), // --warning-bg
+    onWarningContainer: Color(0xFFB45309),
+    info: Color(0xFF1D4ED8), // --info-text
     onInfo: Color(0xFFFFFFFF),
-    infoContainer: Color(0xFFDBEAFE), // Blue 100
-    onInfoContainer: Color(0xFF1E3A8A), // Blue 900
+    infoContainer: Color(0xFFEFF6FF), // --info-bg
+    onInfoContainer: Color(0xFF1D4ED8),
   );
 
-  /// Dark theme semantic colors (shared across all palettes).
+  /// The design system's status colours, dark scope (shared across all palettes).
   static const dark = SemanticColors(
-    success: Color(0xFF4ADE80), // Green 400
-    onSuccess: Color(0xFF052E16), // Green 950
-    successContainer: Color(0xFF166534), // Green 800
-    onSuccessContainer: Color(0xFFBBF7D0), // Green 200
-    warning: Color(0xFFFACC15), // Yellow 400
-    onWarning: Color(0xFF000000),
-    warningContainer: Color(0xFF854D0E), // Yellow 800
-    onWarningContainer: Color(0xFFFEF08A), // Yellow 200
-    info: Color(0xFF60A5FA), // Blue 400
-    onInfo: Color(0xFF172554), // Blue 950
-    infoContainer: Color(0xFF1E40AF), // Blue 800
-    onInfoContainer: Color(0xFFBFDBFE), // Blue 200
+    success: Color(0xFF6EE7B7), // --success-text
+    onSuccess: Color(0xFF0B0D18), // --text-inverse
+    successContainer: Color(0xFF052E21), // --success-bg
+    onSuccessContainer: Color(0xFF6EE7B7), // --success-text
+    warning: Color(0xFFFCD34D), // --warning-text
+    onWarning: Color(0xFF0B0D18),
+    warningContainer: Color(0xFF33220A), // --warning-bg
+    onWarningContainer: Color(0xFFFCD34D),
+    info: Color(0xFF93C5FD), // --info-text
+    onInfo: Color(0xFF0B0D18),
+    infoContainer: Color(0xFF0D1F3D), // --info-bg
+    onInfoContainer: Color(0xFF93C5FD),
   );
 
   @override

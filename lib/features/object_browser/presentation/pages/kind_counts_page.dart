@@ -134,7 +134,7 @@ class _KindCountsView extends StatelessWidget {
                         header: true,
                         child: Text(
                           group.label,
-                          style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary),
+                          style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onPrimaryContainer),
                         ),
                       ),
                     ),

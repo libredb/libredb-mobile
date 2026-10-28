@@ -150,7 +150,7 @@ void main() {
     testWidgets('shows the palette descriptions without a dash in English', (tester) async {
       await openDialog(tester, const Size(412, 915));
 
-      expect(find.text('Neutral zinc, clean and minimal'), findsOneWidget);
+      expect(find.text('Cool neutral, clean and minimal'), findsOneWidget);
     });
 
     for (final textScale in [1.0, 1.3]) {
@@ -162,7 +162,7 @@ void main() {
           'Tema Seçin',
           'Tercih ettiğiniz tema stilini seçin',
           'Klasik',
-          'Nötr çinko, sade ve minimal',
+          'Soğuk nötr, sade ve minimal',
         ]) {
           expect(find.text(text), findsOneWidget, reason: text);
         }

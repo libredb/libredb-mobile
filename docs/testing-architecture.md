@@ -454,6 +454,24 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   instead of merely lookupable. The file asserts what was measured at the import, not a wish: the app's spacing and
   radius scales each sit *inside* the web's, so adopting the web scale adds steps and invalidates no layout, and the
   tap target is pinned at 48 in both directions because the owner ruled against the web's 44 (#283, #373).
+  It reads the colour the same way, out of the half of `theme.css` that applies — by the `[data-theme="dark"]`
+  selector where it starts a line, not its first mention, because the file's own header comment names it and
+  splitting there leaves the light half empty. Four relationships are pinned: the brand group is the same web
+  token in all three palettes, `classic` is the system token for token, the four status colours follow one rule
+  (`--<kind>-text` with the scope's `--text-inverse` on it), and `nature` and `sunset` keep their own neutrals,
+  pinned in both directions because three palettes that differ only in the name of their action colour are one
+  palette with three names. Five values deviate, and each deviation asserts *both* halves — that the web value
+  really does fail its floor, and that the value taken instead clears it — so a system that later lifts one of
+  them fails the first half and the deviation is reconsidered rather than kept.
+- **`snack_bar_ink_test.dart`** fails when a `SnackBar` in `lib/` gives itself a background without giving itself
+  the ink to go on it. A snack bar's text colour comes from `snackBarTheme.contentTextStyle`, which is set to
+  `onInverseSurface` — the ink for the background the theme also supplies. Replace the background and the ink stays
+  behind, still coloured for a surface that is no longer there. It went unnoticed because it used to be true by
+  accident: the login page paints its sign-in confirmation with `primary`, and while `primary` was a near-black in
+  light and a near-white in dark it was always the opposite of the page, which is what `onInverseSurface` is the
+  ink for. #283 made `primary` the indigo in both scopes, the coincidence ended, and the dark scope's ink landed on
+  indigo at 3.08:1. A source guard rather than a widget test, because the rule is about what a call site must
+  supply and the next call site does not exist yet.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
@@ -463,6 +481,33 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
 - **`installer_lab_config_test.dart`** guards the Platform installer environment used for the full-system check.
+
+The colour has two guards next to the code they guard, and the second exists because the first could not see
+what it was missing:
+
+- `test/shared/design_system/theme/palette_contrast_test.dart` measures fourteen pairs of every one of the six
+  `ColorScheme`s. Twelve date from #369; #283 added `primary` on `surface` at 3:1, because a filled button's own
+  fill is the boundary 1.4.11 asks to be identifiable, and `error` on `surface` at 4.5:1, because this app paints
+  *text* with that role at twenty call sites and not only fills. Both were added for a failure the move onto the
+  design system would otherwise have shipped: reading `surface` as the web's `--surface` rather than
+  `--background` puts the action colour at 2.80:1 on the page, and the web's `--action-destructive` is 4.01:1 on
+  the dark page.
+- `test/shared/design_system/theme/semantic_contrast_test.dart` measures the same way for `success`, `warning` and
+  `info`. For as long as both files have existed nothing measured those three, because the guard above reads a
+  `ColorScheme` and these live in a `ThemeExtension` — and two of them were under the floor the whole time.
+  `success` was Green 600, which put its white label at 3.30:1, and `warning` was Yellow 500, which as text on
+  the page is **1.92:1**. The design system's own values are 5.48:1 and 5.02:1.
+
+- `test/shared/design_system/theme/material_default_contrast_test.dart` measures the text this app never colours.
+  `TextButton`, `OutlinedButton` and `TabBar` are given a size, a shape and a text style in `app_theme.dart` and
+  no foreground colour, so Flutter's own M3 defaults supply one — `colorScheme.primary`. That was harmless while
+  `primary` was a near-white or a near-black, and stopped being harmless when #283 pointed it at the product's
+  indigo: 6.29:1 on a light page and **3.08:1** on a dark one, so every quiet button in the app and the selected
+  tab of the object detail page went under the floor at once. The three guards above could not see it, because
+  the colour comes from neither a role this app sets nor a line this app writes. **The emulator saw it** — a
+  screenshot of the welcome screen showed an indigo "Skip" on a near-black page — which is why the walkthrough is
+  a merge gate and not a courtesy. This guard pumps the real widgets under the real theme, because what it holds
+  is precisely the value the theme does not carry.
 
 The single sign-on has more guards next to the code they guard:
 

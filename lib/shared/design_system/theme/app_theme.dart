@@ -89,7 +89,8 @@ class AppTheme {
       listTileTheme: ListTileThemeData(
         iconColor: colorScheme.onSurface,
         textColor: colorScheme.onSurface,
-        selectedColor: colorScheme.primary,
+        // `--text-brand`, because this colours the selected tile's label and icon — text, not a fill.
+        selectedColor: colorScheme.onPrimaryContainer,
         titleTextStyle: textTheme.bodyLarge,
         subtitleTextStyle: textTheme.bodyMedium,
       ),
@@ -103,8 +104,16 @@ class AppTheme {
           textStyle: textTheme.labelLarge?.copyWith(fontSize: 14),
         ),
       ),
+      tabBarTheme: TabBarThemeData(
+        // `--text-brand`, for the same reason as the quiet buttons: a tab's label is text. The indicator
+        // under it keeps `primary`, because a rail is a boundary and its floor is 3:1, which it clears.
+        labelColor: colorScheme.onPrimaryContainer,
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          // `--text-brand`: a quiet button's label is text, and `primary` — which is what Flutter's M3
+          // default supplies when this is left out — is the action *fill* colour, 3.08:1 on a dark page.
+          foregroundColor: colorScheme.onPrimaryContainer,
           minimumSize: const Size(0, 36),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -113,6 +122,9 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
+          // `--text-brand`: a quiet button's label is text, and `primary` — which is what Flutter's M3
+          // default supplies when this is left out — is the action *fill* colour, 3.08:1 on a dark page.
+          foregroundColor: colorScheme.onPrimaryContainer,
           minimumSize: const Size(0, 36),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),

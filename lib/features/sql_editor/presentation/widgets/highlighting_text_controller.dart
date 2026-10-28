@@ -42,7 +42,10 @@ class HighlightingTextController extends TextEditingController {
   /// The colours of each kind of token over [base], the ones the source viewer uses.
   static Map<SourceTokenKind, TextStyle> stylesOf(ColorScheme scheme, TextStyle base) => {
     SourceTokenKind.plain: base,
-    SourceTokenKind.keyword: base.copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
+    // `onPrimaryContainer`, not `primary`: Material has no role for brand-coloured *text*, and this app's
+    // `onPrimaryContainer` carries the design system's `--text-brand`, which is that token. A keyword is read,
+    // so it takes the 4.5:1 floor, and `--action-primary` is 3.08:1 on a dark page (#283).
+    SourceTokenKind.keyword: base.copyWith(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600),
     SourceTokenKind.string: base.copyWith(color: scheme.tertiary),
     SourceTokenKind.number: base.copyWith(color: scheme.secondary),
     SourceTokenKind.comment: base.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic),

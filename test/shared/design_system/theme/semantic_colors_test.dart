@@ -6,109 +6,37 @@ import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('SemanticColors light', () {
-    const colors = SemanticColors.light;
+  // The twelve values of each scope are not restated here. They come from `tool/design-system/tokens/theme.css`
+  // and `test/architecture/design_system_import_test.dart` reads that file and holds them to it; a second copy
+  // of the same table in this file would drift from the first, and a drifted copy is worse than no copy (#283).
+  //
+  // What this file owns is the *rule* the twelve follow, which the CSS cannot state: one ink per scope, and a
+  // container whose label is its own colour. Both would catch the shape of the mistake that used to ship here —
+  // `onWarning` was black while the other two were white, and Yellow 500 as text on white was 1.92:1.
+  for (final (scope, colors, ink) in [
+    ('light', SemanticColors.light, const Color(0xFFFFFFFF)),
+    ('dark', SemanticColors.dark, const Color(0xFF0B0D18)),
+  ]) {
+    group('SemanticColors $scope', () {
+      test('every status colour carries the same ink', () {
+        expect(
+          [colors.onSuccess, colors.onWarning, colors.onInfo],
+          everyElement(ink),
+          reason: "what sits on a filled status colour is the scope's --text-inverse, the same for all three",
+        );
+      });
 
-    test('success is Green 600', () {
-      expect(colors.success, const Color(0xFF16A34A));
+      test("every container's label is its own status colour", () {
+        expect(colors.onSuccessContainer, colors.success);
+        expect(colors.onWarningContainer, colors.warning);
+        expect(
+          colors.onInfoContainer,
+          colors.info,
+          reason: 'the container is --<kind>-bg and its label is --<kind>-text, the same token as the colour',
+        );
+      });
     });
-
-    test('onSuccess is white', () {
-      expect(colors.onSuccess, const Color(0xFFFFFFFF));
-    });
-
-    test('successContainer is Green 100', () {
-      expect(colors.successContainer, const Color(0xFFDCFCE7));
-    });
-
-    test('onSuccessContainer is Green 900', () {
-      expect(colors.onSuccessContainer, const Color(0xFF14532D));
-    });
-
-    test('warning is Yellow 500', () {
-      expect(colors.warning, const Color(0xFFEAB308));
-    });
-
-    test('onWarning is black', () {
-      expect(colors.onWarning, const Color(0xFF000000));
-    });
-
-    test('warningContainer is Yellow 100', () {
-      expect(colors.warningContainer, const Color(0xFFFEF9C3));
-    });
-
-    test('onWarningContainer is Yellow 900', () {
-      expect(colors.onWarningContainer, const Color(0xFF713F12));
-    });
-
-    test('info is Blue 600', () {
-      expect(colors.info, const Color(0xFF2563EB));
-    });
-
-    test('onInfo is white', () {
-      expect(colors.onInfo, const Color(0xFFFFFFFF));
-    });
-
-    test('infoContainer is Blue 100', () {
-      expect(colors.infoContainer, const Color(0xFFDBEAFE));
-    });
-
-    test('onInfoContainer is Blue 900', () {
-      expect(colors.onInfoContainer, const Color(0xFF1E3A8A));
-    });
-  });
-
-  group('SemanticColors dark', () {
-    const colors = SemanticColors.dark;
-
-    test('success is Green 400', () {
-      expect(colors.success, const Color(0xFF4ADE80));
-    });
-
-    test('onSuccess is Green 950', () {
-      expect(colors.onSuccess, const Color(0xFF052E16));
-    });
-
-    test('successContainer is Green 800', () {
-      expect(colors.successContainer, const Color(0xFF166534));
-    });
-
-    test('onSuccessContainer is Green 200', () {
-      expect(colors.onSuccessContainer, const Color(0xFFBBF7D0));
-    });
-
-    test('warning is Yellow 400', () {
-      expect(colors.warning, const Color(0xFFFACC15));
-    });
-
-    test('onWarning is black', () {
-      expect(colors.onWarning, const Color(0xFF000000));
-    });
-
-    test('warningContainer is Yellow 800', () {
-      expect(colors.warningContainer, const Color(0xFF854D0E));
-    });
-
-    test('onWarningContainer is Yellow 200', () {
-      expect(colors.onWarningContainer, const Color(0xFFFEF08A));
-    });
-
-    test('info is Blue 400', () {
-      expect(colors.info, const Color(0xFF60A5FA));
-    });
-
-    test('onInfo is Blue 950', () {
-      expect(colors.onInfo, const Color(0xFF172554));
-    });
-
-    test('infoContainer is Blue 800', () {
-      expect(colors.infoContainer, const Color(0xFF1E40AF));
-    });
-
-    test('onInfoContainer is Blue 200', () {
-      expect(colors.onInfoContainer, const Color(0xFFBFDBFE));
-    });
-  });
+  }
 
   group('SemanticColors light and dark differ', () {
     test('success colors differ between light and dark', () {

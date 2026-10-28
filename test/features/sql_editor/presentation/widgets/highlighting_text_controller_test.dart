@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/editor_language.dart';
 import 'package:libredb_mobile/features/sql_editor/presentation/widgets/highlighting_text_controller.dart';
 import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
+import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
+import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
+import 'package:libredb_mobile/shared/design_system/theme/theme_colors.dart';
 
 const _base = TextStyle(fontSize: 14);
 const _styles = {
@@ -130,5 +133,28 @@ void main() {
     final highlighted = controller.buildTextSpan(context: context, style: _base, withComposing: false);
     expect(highlighted.toPlainText(), 'select 1');
     expect(highlighted.children, isNotEmpty);
+  });
+
+  group('every kind of token can be read', () {
+    // The editor and the source viewer paint a statement the user has to read, so every token colour is text
+    // under WCAG 1.4.3 and carries the 4.5:1 floor the palette guards apply. Nothing measured them until #283
+    // pointed `primary` at the product's indigo: `--action-primary` is 6.29:1 on a light page and **3.08:1** on a
+    // dark one, so the keyword of every statement in the editor stopped clearing the floor in three of the six
+    // palettes at once. A brand colour that works as a button fill is not thereby a colour text can be set in.
+    for (final palette in AppThemePalette.values) {
+      for (final brightness in Brightness.values) {
+        test('in ${palette.name}/${brightness.name}', () {
+          final scheme = ThemeColors.getColorScheme(palette, brightness);
+          final styles = HighlightingTextController.stylesOf(scheme, const TextStyle(fontSize: 14));
+          final under = <String>[];
+          styles.forEach((kind, style) {
+            final colour = style.color ?? scheme.onSurface;
+            final ratio = contrastRatio(colour, scheme.surface);
+            if (ratio < 4.5) under.add('${kind.name}: ${ratio.toStringAsFixed(2)}:1, floor 4.5:1');
+          });
+          expect(under, isEmpty, reason: 'in ${palette.name}/${brightness.name}:\n${under.join('\n')}');
+        });
+      }
+    }
   });
 }
