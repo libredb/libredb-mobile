@@ -410,11 +410,22 @@ Two things worth recording from the same build, neither of them a step:
   the pins having matched. There were no pins. A page that does not say "unreachable" proves the request succeeded
   and nothing about how it was trusted, and the difference is the whole point of the step.
 
-**The screenshot step (`screenCaptureProtection`) is not here**, and the reason is more precise than "prod
-screenshots are black": the protection is a lease that particular value areas take — the audit event and audit log
-pages, the key-value page and the object source view — not a flag over the whole app. The login page screenshots
-normally in a release build, as it should. Reaching a guarded screen needs a Studio account on the deployment, which
-this run did not have.
+### The screenshot step, from the same release build
+
+Step 9's screen-capture half, taken on 2026-10-28 against `studio-dev.libredb.org` with the release APK and the
+demo account `studio-user1` that `mobile-docs/google-play-steps.md` D sets up. The earlier note here said the step
+needed an account this run did not have; the account was written down the whole time, and so was where its password
+lives.
+
+| What | Result |
+| --- | --- |
+| A screenshot of a result | **Blocked**: `adb exec-out screencap` wrote a **0 byte** file on the rows of `periodic_table` (118 rows). The login page, by contrast, screenshots normally at 123 KB — which is the design, not a gap |
+| The recent-apps preview | **Carries nothing**: the card is blank, with the app's mark above it and no trace of the rows behind. On this launcher it draws white rather than black; what matters is that none of the data is in it |
+
+The protection is a lease that value areas take, not a flag over the app, and the areas are more than an earlier
+note here listed: the result view and the row detail sheet as well as the script result, the audit event and audit
+log pages, the key-value page, the object source view and the browse database words. That is why the login page is
+capturable and a result is not.
 
 ### Driving the statement field from `adb`
 
