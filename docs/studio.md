@@ -411,6 +411,33 @@ known and the statement ran anyway. The table was dropped again and the sample i
 This is Studio's behaviour, not the app's: the app showed the connection as "Read only", which is what Studio's own
 `access: read` told it. It is written down here because the walkthrough is what found it.
 
+## The mock walkthrough
+
+Run once, on 2026-10-28, as a debug APK of `main_mock.dart` on the same emulator. It is written down because it is
+the only run of it there will be: mock answers from `assets/mock/*.json` and reaches no server, so what passes here
+is evidence about the app's own screens and about the fixtures, and evidence about nothing else. Every later
+walkthrough goes against the lab.
+
+What it showed that the lab cannot, because the lab has one connection, one engine and a `User`:
+
+| What | Result |
+| --- | --- |
+| Sign-in | The mock provider signs in without a form — `MockSignInDependencies`, which only this entry point carries. The profile sheet reads `admin@example.com`, the role **Administrator**, the chip "Governed by LibreDB Platform" |
+| The connection list | Five connections over four groups and four environments, in SQL Server, MongoDB, MySQL and Oracle, each with its engine's icon. A governance banner above them: "Statements you run are recorded in full in this server's query log." The PROD row carries a red badge, a red stripe down its left edge and the "Read only" lock, and keeps all three into the app bar of the screen it opens |
+| Browse | The fixtures are deliberately awkward and the screen takes them: `Views 1,000+` for a count the server capped, and under **Functions**, in place of a number, `permission denied for schema sales`. A MySQL connection lists no materialized views and no sequences, because the engine has none |
+| The editor | `select * from invoices limit 5` answered **2 rows, 14 ms** beside a `limited` chip, and the rows render `NULL` in italic rather than as the word |
+| Platform mode | "Switch to Platform" asks first, and says why: "The first time this account opens Platform, it takes one admin seat of the license." Confirming lands on Platform's Home — the organization card (`Example Org`, `example-org`, signed in as **Platform Admin**), a Connections card, and a bottom bar of Home, Connections and Audit |
+
+### One thing measured and left unexplained
+
+After the app was sent to the home screen and resumed with `am start`, every pixel of its window — the app bar
+included — came back at `#ECECEC` instead of the page's `#FFFFFF`, while the system bars stayed black. That is the
+app's own window dimmed by about 7.5%, not a display filter, and `#ECECEC` is in no palette this app ships: every
+neutral of all six carries a blue cast and this one is exactly grey. A force-stop and a cold start came back at
+`#FFFFFF`. The likely cause is a bottom sheet's barrier left behind when `KEYCODE_BACK` popped the app rather than
+the sheet, which is not a sequence a person performs; it is written down because it was measured, and not filed,
+because it was not reproduced.
+
 ## Postgres seeds
 
 The default stack also runs `postgres`, Postgres 17 loaded by `tool/studio-dev/postgres/seed.sql`, and Studio reads `tool/studio-dev/seed-connections.yaml` through `SEED_CONFIG_PATH` beside its built-in samples:
