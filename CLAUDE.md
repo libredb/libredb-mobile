@@ -230,6 +230,9 @@ which table, and without a one-sentence substitute.
   That file is the only inventory; it is not duplicated here, because two copies of a 56-row table
   drift, and a drifted table is the guess the rule exists to forbid.
 - **One table.** Done and remaining are rows of the same table, never two tables.
+- **"tablo" hides the rows that are both finished and merged**; the numbers hidden go in one line
+  under the table, so nothing reads as missing. **"tam tablo" shows every row.** A row that is
+  finished but not yet merged stays visible either way.
 - **Numbered 1..56, continuously, and the numbers are fixed.** New work starts at 57; nothing is
   inserted in the middle and no row is renumbered.
 - **Columns:** `# | Ne | Durum | Kanıt / bekleyen` — four, in that order.
