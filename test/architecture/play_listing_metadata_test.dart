@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// Guards the Play store listing texts in `android/fastlane/metadata/android/` (issue #197).
 ///
 /// The texts sit in the fastlane metadata layout, so a later pipeline step can upload them: one directory per locale,
-/// each with `title.txt`, `short_description.txt` and `full_description.txt`. Play refuses a listing whose title is
+/// each with `title.txt`, `short_description.txt` and `full_description.txt`, and the phone screenshots under
+/// `images/phoneScreenshots/` (`docs/release.md`). The file-set checks cover every file; only the text checks read
+/// one, because a PNG is not UTF-8. Play refuses a listing whose title is
 /// longer than 30 characters, whose short description is longer than 80 or whose full description is longer than
 /// 4000, so this test fails before the Console would. Play counts characters, not bytes, so a Turkish `ş` counts as
 /// one.
@@ -61,10 +63,12 @@ void main() {
   });
 
   test('no listing text, live or draft, holds an en dash or an em dash', () {
+    // `.txt` only: the listing also holds the phone screenshots, and reading a PNG as UTF-8 throws rather than
+    // failing with a reason anyone can act on.
     final offending = [
       for (final root in [_metadataRoot, _draftsRoot])
         for (final file in Directory(root).listSync(recursive: true).whereType<File>())
-          if (file.readAsStringSync().contains(RegExp('[\u2013\u2014]'))) file.path,
+          if (file.path.endsWith('.txt') && file.readAsStringSync().contains(RegExp('[\u2013\u2014]'))) file.path,
     ];
 
     expect(offending, isEmpty, reason: 'U+2013 or U+2014 in ${offending.join(', ')}');
