@@ -103,10 +103,52 @@
   "@login_switch_to_light_mode": {},
   "login_switch_to_dark_mode": "Switch to dark mode",
   "@login_switch_to_dark_mode": {},
-  "onboarding_title": "Welcome to LibreDB",
-  "@onboarding_title": {},
-  "onboarding_subtitle": "A quick look at what you can do here, before you sign in.",
-  "@onboarding_subtitle": {},
+  "onboarding_platform_title": "LibreDB Platform governs",
+  "@onboarding_platform_title": {},
+  "onboarding_platform_body": "Platform owns the connections, decides who may reach which database, and keeps a record of every statement that runs.",
+  "@onboarding_platform_body": {},
+  "onboarding_studio_title": "LibreDB Studio runs them",
+  "@onboarding_studio_title": {},
+  "onboarding_studio_body": "Studio holds every credential and opens every connection. It runs what you ask against the databases Platform has granted you, and this app never sees a password.",
+  "@onboarding_studio_body": {},
+  "onboarding_studio_figures": "{engines} database engines, published on {channels} channels",
+  "@onboarding_studio_figures": {
+    "placeholders": {
+      "engines": {
+        "type": "int"
+      },
+      "channels": {
+        "type": "int"
+      }
+    }
+  },
+  "onboarding_mobile_title": "This app is the window",
+  "@onboarding_mobile_title": {},
+  "onboarding_mobile_body": "Browse the databases you have been granted, read a table, run a statement and see the answer, from your phone.",
+  "@onboarding_mobile_body": {},
+  "onboarding_listings_title": "Where you already look",
+  "@onboarding_listings_title": {},
+  "onboarding_listings_body": "LibreDB is listed on {listings} official vendor and project sites.",
+  "@onboarding_listings_body": {
+    "placeholders": {
+      "listings": {
+        "type": "int"
+      }
+    }
+  },
+  "onboarding_next": "Next",
+  "@onboarding_next": {},
+  "onboarding_panel_position": "Panel {index} of {total}",
+  "@onboarding_panel_position": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "onboarding_skip": "Skip",
   "@onboarding_skip": {},
   "onboarding_done": "Get started",
