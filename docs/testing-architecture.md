@@ -407,9 +407,10 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   It fails if `android/app/build.gradle.kts` passes `SENTRY_DSN` to the native SDK other than through the check on the target file name, or if that file is not the only entry point that selects the prod environment, and if `MainActivity.kt` stops answering the channel `nativeSdkReady` asks.
   The logic of the two copies is held equal by `test/fixtures/native_scrub_cases.json` and `test/fixtures/native_scrub_map_cases.json`, which the Dart tests and the Android JVM tests (`android/app/src/test/kotlin`) both run; see "Running tests" for the JVM command.
 
-The twelve below guard the build, the release and the repository rather than a line of app code. They are named here
-because a contributor who has not read them cannot tell a fixture gap from a real regression when one fails —
-`user_data_registry_test.dart` in particular fails any pull request that files a new storage key in the wrong scope.
+The guards below hold the build, the release, the documentation and the repository rather than a line of app code.
+They are named here because a contributor who has not read them cannot tell a fixture gap from a real regression when
+one fails — `user_data_registry_test.dart` in particular fails any pull request that files a new storage key in the
+wrong scope.
 
 - **`user_data_registry_test.dart`** fails if a `StorageKeys` value is neither registered in `createUserDataRegistry`
   nor classified as a device preference, or if a repository that writes one is not listed. Exactly one of the two,
@@ -470,6 +471,15 @@ because a contributor who has not read them cannot tell a fixture gap from a rea
   reader relies on: every `file:line` the page cites exists, every colour it prints for `classic` is the colour the
   app ships (all 26 roles, both scopes), and every number it prints is the number the token holds. It caught nine
   citations that resolved to nothing and three curves written in the wrong form on its first run.
+- **`usability_doc_test.dart`** holds `docs/usability-findings.md`, the record format of M16's usage layer (#285), to
+  the tree it points at. All three of that page's load-bearing claims point outside itself — the guards whose classes
+  make an observation a test gap instead of a usability finding, the rows of `docs/design-system.md` a visual finding
+  has to cite, and how many guards this directory holds — and each fails quietly: a discard rule naming a guard that
+  no longer exists discards nothing, a citation that has slid two lines down sends a reviewer to the wrong sentence
+  while still looking right, and a count read from the issue rather than the tree is already wrong, since #285 says
+  24 guards. So every `test/` path the page names has to exist, every `docs/design-system.md:NNN` citation has to
+  resolve to a paragraph that still carries the sentence it is quoted for — the paragraph, not the line, because that
+  page wraps at 120 columns — and the guard count the page states has to be the number of `*_test.dart` files here.
 - **`android_resource_xml_test.dart`** fails when a comment in an Android resource file holds a double hyphen.
   AAPT parses those files strictly and refuses the whole file over it, and writing `--background` in one — the
   name of a design token, which this repository writes that way everywhere else — took the Android build down
