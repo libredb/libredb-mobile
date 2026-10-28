@@ -521,6 +521,13 @@ what it was missing:
   `success` was Green 600, which put its white label at 3.30:1, and `warning` was Yellow 500, which as text on
   the page is **1.92:1**. The design system's own values are 5.48:1 and 5.02:1.
 
+- `test/shared/design_system/theme/surface_ladder_test.dart` fails when a container role this app paints with is
+  the page colour. `theme_colors.dart` defined one of them and left the rest to Material, which resolves them to
+  the page, so `app_card.dart`'s fill, the editor's accessory bar and the result table's header row were painting
+  the page onto the page, and what made a card visible was only its border. It is not a contrast rule — one
+  surface owes another nothing, and the design system genuinely puts a white card on a white page and separates
+  them with a border — it asks only that the role **differ**, because a fill that is exactly the page is not a
+  quiet fill, it is no fill, and the widget asking for one is lying about what it draws (#386).
 - `test/shared/design_system/theme/material_default_contrast_test.dart` measures the text this app never colours.
   `TextButton`, `OutlinedButton` and `TabBar` are given a size, a shape and a text style in `app_theme.dart` and
   no foreground colour, so Flutter's own M3 defaults supply one — `colorScheme.primary`. That was harmless while
