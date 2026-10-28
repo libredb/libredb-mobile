@@ -448,6 +448,271 @@ class S {
     return Intl.message('Switch to dark mode', name: 'login_switch_to_dark_mode', desc: '', args: []);
   }
 
+  /// `Skip`
+  String get ob_skip {
+    return Intl.message('Skip', name: 'ob_skip', desc: '', args: []);
+  }
+
+  /// `Next`
+  String get ob_next {
+    return Intl.message('Next', name: 'ob_next', desc: '', args: []);
+  }
+
+  /// `Get started`
+  String get ob_done {
+    return Intl.message('Get started', name: 'ob_done', desc: '', args: []);
+  }
+
+  /// `Step {index} of {total}`
+  String ob_step(String index, String total) {
+    return Intl.message(
+      'Step $index of $total',
+      name: 'ob_step',
+      desc: 'The introduction\'s step counter.',
+      args: [index, total],
+    );
+  }
+
+  /// `your connections`
+  String get ob1_cap {
+    return Intl.message('your connections', name: 'ob1_cap', desc: '', args: []);
+  }
+
+  /// `Your databases.\nReached from here.`
+  String get ob1_title {
+    return Intl.message('Your databases.\nReached from here.', name: 'ob1_title', desc: '', args: []);
+  }
+
+  /// `here`
+  String get ob1_accent {
+    return Intl.message('here', name: 'ob1_accent', desc: '', args: []);
+  }
+
+  /// `Three connections, granted to you. Tap orders-prod to open it.`
+  String get ob1_body {
+    return Intl.message(
+      'Three connections, granted to you. Tap orders-prod to open it.',
+      name: 'ob1_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `tap orders-prod`
+  String get ob1_hint {
+    return Intl.message('tap orders-prod', name: 'ob1_hint', desc: '', args: []);
+  }
+
+  /// `what travels, and what does not`
+  String get ob2_cap {
+    return Intl.message('what travels, and what does not', name: 'ob2_cap', desc: '', args: []);
+  }
+
+  /// `You never hold\nthe credentials.`
+  String get ob2_title {
+    return Intl.message('You never hold\nthe credentials.', name: 'ob2_title', desc: '', args: []);
+  }
+
+  /// `credentials`
+  String get ob2_accent {
+    return Intl.message('credentials', name: 'ob2_accent', desc: '', args: []);
+  }
+
+  /// `The app asks Studio by connection id. Studio holds the password and sends rows back. Nothing to leak if you lose the phone.`
+  String get ob2_body {
+    return Intl.message(
+      'The app asks Studio by connection id. Studio holds the password and sends rows back. Nothing to leak if you lose the phone.',
+      name: 'ob2_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `connectionId: "seed:7"`
+  String get ob2_request {
+    return Intl.message('connectionId: "seed:7"', name: 'ob2_request', desc: '', args: []);
+  }
+
+  /// `LibreDB Studio`
+  String get ob2_studio {
+    return Intl.message('LibreDB Studio', name: 'ob2_studio', desc: '', args: []);
+  }
+
+  /// `holds every password`
+  String get ob2_vault {
+    return Intl.message('holds every password', name: 'ob2_vault', desc: '', args: []);
+  }
+
+  /// `rows come back`
+  String get ob2_rows {
+    return Intl.message('rows come back', name: 'ob2_rows', desc: '', args: []);
+  }
+
+  /// `orders-prod · browse`
+  String get ob3_cap {
+    return Intl.message('orders-prod · browse', name: 'ob3_cap', desc: '', args: []);
+  }
+
+  /// `Open it. Read it.\nSome of it is masked.`
+  String get ob3_title {
+    return Intl.message('Open it. Read it.\nSome of it is masked.', name: 'ob3_title', desc: '', args: []);
+  }
+
+  /// `masked`
+  String get ob3_accent {
+    return Intl.message('masked', name: 'ob3_accent', desc: '', args: []);
+  }
+
+  /// `Schemas, tables, row counts. Tap a table and the rows arrive — with the sensitive columns already covered.`
+  String get ob3_body {
+    return Intl.message(
+      'Schemas, tables, row counts. Tap a table and the rows arrive — with the sensitive columns already covered.',
+      name: 'ob3_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `tap orders`
+  String get ob3_hint {
+    return Intl.message('tap orders', name: 'ob3_hint', desc: '', args: []);
+  }
+
+  /// `MASKED`
+  String get ob3_masked {
+    return Intl.message('MASKED', name: 'ob3_masked', desc: '', args: []);
+  }
+
+  /// `masked by column name, by Studio — not by a switch on this device`
+  String get ob3_why {
+    return Intl.message(
+      'masked by column name, by Studio — not by a switch on this device',
+      name: 'ob3_why',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `editor · orders-prod`
+  String get ob4_cap {
+    return Intl.message('editor · orders-prod', name: 'ob4_cap', desc: '', args: []);
+  }
+
+  /// `Ask it\nsomething.`
+  String get ob4_title {
+    return Intl.message('Ask it\nsomething.', name: 'ob4_title', desc: '', args: []);
+  }
+
+  /// `something`
+  String get ob4_accent {
+    return Intl.message('something', name: 'ob4_accent', desc: '', args: []);
+  }
+
+  /// `A real editor and a real result. Press Run.`
+  String get ob4_body {
+    return Intl.message('A real editor and a real result. Press Run.', name: 'ob4_body', desc: '', args: []);
+  }
+
+  /// `press Run`
+  String get ob4_hint {
+    return Intl.message('press Run', name: 'ob4_hint', desc: '', args: []);
+  }
+
+  /// `Run`
+  String get ob4_run {
+    return Intl.message('Run', name: 'ob4_run', desc: '', args: []);
+  }
+
+  /// `1 row · 41 ms`
+  String get ob4_meta {
+    return Intl.message('1 row · 41 ms', name: 'ob4_meta', desc: '', args: []);
+  }
+
+  /// `platform · orders-prod`
+  String get ob5_cap {
+    return Intl.message('platform · orders-prod', name: 'ob5_cap', desc: '', args: []);
+  }
+
+  /// `Someone decided\nyou could.`
+  String get ob5_title {
+    return Intl.message('Someone decided\nyou could.', name: 'ob5_title', desc: '', args: []);
+  }
+
+  /// `decided`
+  String get ob5_accent {
+    return Intl.message('decided', name: 'ob5_accent', desc: '', args: []);
+  }
+
+  /// `Platform owns the connection and the grants. This is the grant that let you read it — and you can end someone else's.`
+  String get ob5_body {
+    return Intl.message(
+      'Platform owns the connection and the grants. This is the grant that let you read it — and you can end someone else\'s.',
+      name: 'ob5_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `you`
+  String get ob5_yours {
+    return Intl.message('you', name: 'ob5_yours', desc: '', args: []);
+  }
+
+  /// `Revoke`
+  String get ob5_revoke {
+    return Intl.message('Revoke', name: 'ob5_revoke', desc: '', args: []);
+  }
+
+  /// `CLOSED`
+  String get ob5_closed {
+    return Intl.message('CLOSED', name: 'ob5_closed', desc: '', args: []);
+  }
+
+  /// `revoke the write grant`
+  String get ob5_hint {
+    return Intl.message('revoke the write grant', name: 'ob5_hint', desc: '', args: []);
+  }
+
+  /// `platform · audit`
+  String get ob6_cap {
+    return Intl.message('platform · audit', name: 'ob6_cap', desc: '', args: []);
+  }
+
+  /// `And it all\nleft a record.`
+  String get ob6_title {
+    return Intl.message('And it all\nleft a record.', name: 'ob6_title', desc: '', args: []);
+  }
+
+  /// `record`
+  String get ob6_accent {
+    return Intl.message('record', name: 'ob6_accent', desc: '', args: []);
+  }
+
+  /// `Every statement and every change is in the log — including the query you just ran. Admins ask from the same phone.`
+  String get ob6_body {
+    return Intl.message(
+      'Every statement and every change is in the log — including the query you just ran. Admins ask from the same phone.',
+      name: 'ob6_body',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `your query, a moment ago`
+  String get ob6_mine {
+    return Intl.message('your query, a moment ago', name: 'ob6_mine', desc: '', args: []);
+  }
+
+  /// `press Run`
+  String get ob6_hint {
+    return Intl.message('press Run', name: 'ob6_hint', desc: '', args: []);
+  }
+
+  /// `Run`
+  String get ob6_run {
+    return Intl.message('Run', name: 'ob6_run', desc: '', args: []);
+  }
+
   /// `LibreDB Platform governs`
   String get onboarding_platform_title {
     return Intl.message('LibreDB Platform governs', name: 'onboarding_platform_title', desc: '', args: []);
