@@ -237,6 +237,8 @@ which table, and without a one-sentence substitute.
   inserted in the middle and no row is renumbered.
 - **Columns:** `# | Ne | Durum | Kanıt / bekleyen` — four, in that order.
 - **Status:** `✅ bitti` · `🟡 kısmen` · `🔵 elimde` · `⬜ başlamadı/bekliyor` · `⛔ engelli/sende`
+- A `sende` row that is store work is written `sende (market)`, so Play Console work is distinct
+  from the other things only the owner can do.
 - No sub-sections, no epic breakdown, no verification paragraph. The table, then at most three or
   four lines of notes.
 - Every row's status comes from a command run now, not from the previous table and not from
