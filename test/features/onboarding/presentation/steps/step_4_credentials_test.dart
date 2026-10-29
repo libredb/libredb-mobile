@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_4_credentials.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// How far past the left or right edge of its own box the screen draws, on the frame now on screen, in logical
 /// pixels. Zero when every box of the hero is inside it.
@@ -21,6 +22,13 @@ double _drawsOutsideItsBox(WidgetTester tester) {
   final hero = tester.renderObject<RenderBox>(find.byType(Step4Credentials));
   var worst = 0.0;
   void measure(RenderObject node) {
+    // A box that is popping scales to 1.05 of itself for 400 ms and the hero clips it at its edge, as the prototype's
+    // `overflow-x:hidden` does; its words are measured on every other frame.
+    final creator = node.debugCreator;
+    if (creator is DebugCreator) {
+      final key = creator.element.widget.key;
+      if (key is ValueKey<String> && key.value.startsWith('ob4-pop')) return;
+    }
     if (node is RenderBox && node.hasSize) {
       final box = MatrixUtils.transformRect(node.getTransformTo(hero), Offset.zero & node.size);
       worst = max(worst, max(box.right - hero.size.width, -box.left));
@@ -50,7 +58,8 @@ void main() {
     double heroWidth = 318,
   }) async {
     addTearDown(tester.view.reset);
-    tester.view.physicalSize = const Size(390, 844);
+    // A hero wider than the phone needs a screen wider than it: the scroll view hands its child the screen's width.
+    tester.view.physicalSize = Size(heroWidth > 390 ? heroWidth + 100 : 390, 844);
     tester.view.devicePixelRatio = 1.0;
     await tester.pumpWidget(
       MaterialApp(
@@ -83,24 +92,44 @@ void main() {
     );
   }
 
+  /// How wide a box is drawn, scale included: `getRect` takes the transformed corner and the untransformed size.
+  double drawnWidth(WidgetTester tester, String key) {
+    final finder = find.byKey(ValueKey(key));
+    return tester.getBottomRight(finder).dx - tester.getTopLeft(finder).dx;
+  }
+
   S l10n(WidgetTester tester) => S.of(tester.element(find.byType(Step4Credentials)));
 
-  group('the padlock on Studio', () {
-    testWidgets('is open on the frame before its beat and shut on the frame after it', (tester) async {
-      await show(tester);
-      await tester.pump(Step4Credentials.keyShutsAt - const Duration(milliseconds: 20));
-      expect(find.byIcon(Icons.lock_open_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.lock_outline), findsNothing);
+  group('the key on Studio', () {
+    Color keyColour(WidgetTester tester) {
+      final painter = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const ValueKey('ob4-key')), matching: find.byType(CustomPaint)),
+      );
+      return (painter.painter! as dynamic).color as Color;
+    }
 
-      await tester.pump(const Duration(milliseconds: 40));
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-      expect(find.byIcon(Icons.lock_open_outlined), findsNothing);
+    testWidgets('is the edge ink before its beat and the accent after it', (tester) async {
+      await show(tester);
+      final colors = AppTheme.light().colorScheme;
+      await tester.pump(Step4Credentials.keyShutsAt - const Duration(milliseconds: 20));
+      expect(keyColour(tester), colors.outline);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(keyColour(tester), colors.primary);
     });
 
-    testWidgets('stays shut to the end', (tester) async {
+    testWidgets('stays shut to the end, 16 drawn at 1.15 of itself', (tester) async {
       await show(tester);
       await tester.pump(past);
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(keyColour(tester), AppTheme.light().colorScheme.primary);
+      expect(drawnWidth(tester, 'ob4-key'), closeTo(18.4, 0.1));
+    });
+
+    testWidgets('is a key, not a padlock', (tester) async {
+      await show(tester);
+      await tester.pump(past);
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
+      expect(find.byIcon(Icons.lock_open_outlined), findsNothing);
     });
   });
 
@@ -126,13 +155,17 @@ void main() {
       expect(sawIt, isTrue, reason: 'the request token was never drawn');
     });
 
-    testWidgets('the token moves down the wire rather than sitting still', (tester) async {
+    testWidgets('the comet moves down the wire rather than sitting still, and the token stays where it is', (
+      tester,
+    ) async {
       await show(tester);
-      await tester.pump(Step4Credentials.requestAt + const Duration(milliseconds: 80));
-      final first = tester.getRect(find.byKey(Step4Credentials.requestTokenKey)).top;
+      await tester.pump(Step4Credentials.requestAt + const Duration(milliseconds: 120));
+      final first = tester.getRect(find.byKey(const ValueKey('ob4-comet-upper'))).top;
+      final token = tester.getRect(find.byKey(Step4Credentials.requestTokenKey)).top;
       await tester.pump(const Duration(milliseconds: 200));
-      final later = tester.getRect(find.byKey(Step4Credentials.requestTokenKey)).top;
+      final later = tester.getRect(find.byKey(const ValueKey('ob4-comet-upper'))).top;
       expect(later, greaterThan(first));
+      expect(tester.getRect(find.byKey(Step4Credentials.requestTokenKey)).top, token);
     });
 
     testWidgets('the closing note, that rows come back and the password does not, shows at the end', (tester) async {
@@ -143,7 +176,110 @@ void main() {
 
       await tester.pump(past);
       expect(tester.widget<Opacity>(find.byKey(Step4Credentials.closingNoteKey)).opacity, 1.0);
-      expect(find.text(s.ob4_back), findsOneWidget);
+      expect(find.text('\u2191 ${s.ob4_back}'), findsOneWidget);
+    });
+  });
+
+  /// The geometry of the prototype's fourth screen, read in headless Chrome at 390x844 (Turkish, light; the same in
+  /// English and dark). Three nodes of 54 (`padding:10px 12px` round a 16 title and a 14 line 2 below it, in a 1px
+  /// border, radius 12) on two wires of 42, a rail at 26 and the pill at 10 and 12 into the wire (18 high,
+  /// `padding:2px 7px`), the key 16 square at the trailing end, and a note 8 under the last node: 270.5 in all.
+  ///
+  /// **The font trap:** every height here is a box round a line whose height is a multiplier of its size, which Ahem
+  /// lays out as the product font does, and every width is read as a box less the text inside it.
+  group('the screen is the prototype\'s', () {
+    Rect rect(WidgetTester tester, String key) => tester.getRect(find.byKey(ValueKey(key)));
+
+    testWidgets('three nodes of 54, two wires of 42 and a note, 270.5 in all', (tester) async {
+      // 700 wide so the note is the one line it is on a phone and not two of Ahem's.
+      await show(tester, heroWidth: 700);
+      await tester.pump(past);
+
+      for (var i = 0; i < 3; i++) {
+        expect(rect(tester, 'ob4-node-$i').height, closeTo(54, 0.5), reason: 'node $i');
+      }
+      expect(tester.getRect(find.byKey(Step4Credentials.upperWireKey)).height, closeTo(42, 0.5));
+      expect(tester.getSize(find.byType(Step4Credentials)).height, closeTo(270.5, 0.5));
+      final note = tester.getRect(find.byKey(Step4Credentials.closingNoteKey));
+      expect(note.top - rect(tester, 'ob4-node-2').bottom, closeTo(8, 0.5));
+    });
+
+    testWidgets('the title is 12.5 semibold and the line under it mono 11, 2 below', (tester) async {
+      await show(tester);
+      await tester.pump(past);
+
+      final title = tester.widget<Text>(find.text(Step4Credentials.connectionName)).style!;
+      final detail = tester.widget<Text>(find.text(Step4Credentials.engine)).style!;
+      expect(title.fontSize, 12.5);
+      expect(title.fontWeight, FontWeight.w600);
+      expect(detail.fontSize, 11);
+      expect(detail.fontFamily, AppTypography.mono);
+      expect(
+        tester.getRect(find.text(Step4Credentials.engine)).top -
+            tester.getRect(find.text(Step4Credentials.connectionName)).bottom,
+        closeTo(2, 0.5),
+      );
+    });
+
+    testWidgets('the rail is 26 in, the pill 10 and 12 into the wire, 18 high round a 7 inset', (tester) async {
+      await show(tester);
+      await tester.pump(past);
+
+      final wire = tester.getRect(find.byKey(Step4Credentials.upperWireKey));
+      final hero = tester.getRect(find.byType(Step4Credentials));
+      expect(wire.left - hero.left, closeTo(26, 0.5));
+      final pill = tester.getRect(find.byKey(Step4Credentials.requestTokenKey));
+      expect(pill.left - wire.left, closeTo(10, 0.5));
+      expect(pill.top - wire.top, closeTo(12, 0.5));
+      expect(pill.height, closeTo(18, 0.5));
+      expect(pill.width - tester.getRect(find.text(Step4Credentials.connectionReference)).width, closeTo(14, 0.5));
+    });
+
+    testWidgets('only Studio is lit at the end, and the key is 12 in from its trailing edge', (tester) async {
+      await show(tester);
+      await tester.pump(past);
+
+      final colors = AppTheme.light().colorScheme;
+      Color? border(int i) =>
+          (tester.widget<Container>(find.byKey(ValueKey('ob4-node-$i'))).decoration! as BoxDecoration)
+              .border
+              ?.top
+              .color;
+      expect(border(0), colors.outlineVariant);
+      expect(border(1), colors.primary);
+      expect(border(2), colors.outlineVariant);
+      final node = rect(tester, 'ob4-node-1');
+      expect(
+        node.right - tester.getRect(find.byKey(const ValueKey('ob4-key'))).center.dx,
+        closeTo(21, 0.5),
+        reason: '1 border + 12 padding + half of the 16',
+      );
+    });
+
+    testWidgets('a ring runs out of a box when it pops, and the note is an arrow, a space and the sentence', (
+      tester,
+    ) async {
+      await show(tester);
+      await tester.pump(Step4Credentials.keyShutsAt + const Duration(milliseconds: 150));
+      expect(
+        tester.widget<Container>(find.byKey(const ValueKey('ob4-node-1'))).foregroundDecoration,
+        isNotNull,
+        reason: 'the ring is running out of Studio',
+      );
+
+      await tester.pump(past);
+      for (var i = 0; i < 3; i++) {
+        expect(
+          tester.widget<Container>(find.byKey(ValueKey('ob4-node-$i'))).foregroundDecoration,
+          isNull,
+          reason: 'node $i still has a ring on it at the end: the timeline stops before the last ring has finished',
+        );
+      }
+      final style = tester.widget<Text>(find.textContaining(l10n(tester).ob4_back)).style!;
+      expect(style.fontFamily, AppTypography.mono);
+      expect(style.fontSize, 11);
+      expect(style.height, 1.5);
+      expect(style.color, AppTheme.light().colorScheme.onPrimaryContainer);
     });
   });
 
@@ -163,10 +299,9 @@ void main() {
       await show(tester, animations: false);
       await tester.pump();
       final s = l10n(tester);
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-      expect(find.byIcon(Icons.lock_open_outlined), findsNothing);
+      expect(drawnWidth(tester, 'ob4-key'), closeTo(18.4, 0.1));
       expect(tester.widget<Opacity>(find.byKey(Step4Credentials.closingNoteKey)).opacity, 1.0);
-      expect(find.text(s.ob4_back), findsOneWidget);
+      expect(find.text('\u2191 ${s.ob4_back}'), findsOneWidget);
     });
 
     testWidgets('lays out at every ordinary text scale without overflowing', (tester) async {
@@ -190,7 +325,7 @@ void main() {
       final s = l10n(tester);
       expect(find.text(s.ob4_app), findsOneWidget);
       expect(find.text(s.ob4_vault), findsOneWidget);
-      expect(find.text(s.ob4_back), findsOneWidget);
+      expect(find.text('\u2191 ${s.ob4_back}'), findsOneWidget);
     });
   });
 

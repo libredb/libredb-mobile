@@ -34,7 +34,8 @@ void main() {
     ThemeData? theme,
   }) async {
     addTearDown(tester.view.reset);
-    tester.view.physicalSize = const Size(390, 844);
+    // A hero wider than the phone needs a screen wider than it: the scroll view hands its child the screen's width.
+    tester.view.physicalSize = Size(heroWidth > 390 ? heroWidth + 100 : 390, 844);
     tester.view.devicePixelRatio = 1.0;
     await tester.pumpWidget(
       MaterialApp(
