@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/query_result.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/utils/sensitive_clipboard.dart';
+import 'package:libredb_mobile/shared/utils/sheet_insets.dart';
 import 'package:libredb_mobile/shared/widgets/cells/detail_cell.dart';
 import 'package:libredb_mobile/shared/widgets/cells/sensitive_selectable_text.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
@@ -206,7 +207,8 @@ class _RowFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
-    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+    // The foot of the list scrolls clear of the home indicator; the sheet's own surface still reaches the screen edge.
+    padding: EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.sm + sheetBottomInset(context)),
     itemCount: result.fields.length,
     separatorBuilder: (context, _) => const Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg),
     itemBuilder: (context, position) =>
