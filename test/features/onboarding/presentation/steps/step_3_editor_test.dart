@@ -8,7 +8,8 @@ import 'package:libredb_mobile/features/onboarding/presentation/steps/step_3_edi
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
-import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
+import 'package:libredb_mobile/shared/design_system/theme/syntax_colors.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
 /// The third screen's hero: a statement that types itself, runs, and is then replaced by a delete that raises the
 /// write confirmation.
@@ -30,13 +31,14 @@ void main() {
     Locale locale = const Locale('en'),
     double textScale = 1.0,
     double heroWidth = 318,
+    ThemeData? theme,
   }) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.light(),
+        theme: theme ?? AppTheme.light(),
         locale: locale,
         localizationsDelegates: const [
           S.delegate,
@@ -92,10 +94,9 @@ void main() {
       expect(seen.last, Step3Editor.statement);
     });
 
-    testWidgets('colours its keywords with the role the app colours a real statement with', (tester) async {
+    testWidgets('colours its keywords and strings in the prototype\'s ink and leaves the rest plain', (tester) async {
       await show(tester);
       await tester.pump(Step3Editor.runLitAt);
-      final colors = AppTheme.light().colorScheme;
       final span = tester.widget<Text>(find.byKey(Step3Editor.statementKey)).textSpan! as TextSpan;
       final byText = <String, TextStyle?>{};
       span.visitChildren((child) {
@@ -105,10 +106,12 @@ void main() {
       // `select` and `from` are keywords of the app's own SQL rules; `count` and `orders` are not, so they come back
       // in the plain runs between them. The difference between the two is the whole of what reusing the app's own
       // highlighting buys, so both sides of it are checked.
-      expect(byText['select']?.color, colors.onPrimaryContainer);
-      expect(byText['from']?.color, colors.onPrimaryContainer);
-      expect(byText[' count(*) ']?.color, isNot(colors.onPrimaryContainer));
-      expect(byText[' orders;']?.color, isNot(colors.onPrimaryContainer));
+      final keyword = SyntaxColors.keyword(Brightness.light);
+      expect(byText['select']?.color, keyword);
+      expect(byText['select']?.fontWeight, FontWeight.w600);
+      expect(byText['from']?.color, keyword);
+      expect(byText[' count(*) ']?.color, isNot(keyword));
+      expect(byText[' orders;']?.color, isNot(keyword));
     });
 
     testWidgets('grows: the frames are not all the finished statement', (tester) async {
@@ -127,7 +130,7 @@ void main() {
       expect(find.text('128,440'), findsOneWidget);
       final s = l10n(tester);
       expect(find.text(s.ob3_meta(s.sql_history_rows(1), s.sql_history_duration(41))), findsOneWidget);
-      expect(find.text(s.ob3_count), findsOneWidget);
+      expect(find.text(s.ob3_count.toUpperCase()), findsOneWidget, reason: 'in capitals, as `.scal .h` sets it');
     });
 
     testWidgets('is not there before the run answers', (tester) async {
@@ -175,18 +178,155 @@ void main() {
       expect(find.text(s.write_confirm_title), findsNothing);
     });
 
-    testWidgets('is drawn on errorContainer with onErrorContainer ink, never error as a fill', (tester) async {
-      await show(tester);
+    // The audit that first drew this header on `errorContainer` measured the prototype's old pair, white on `#FCA5A5`
+    // at 1.90:1. The prototype's pair is now `--err-fill` / `--on-err`: the error colour with white in the light scope
+    // and `#3A0F13` with `#F2F4FB` in the dark one. What matters is the contrast, and both scopes clear 4.5:1.
+    testWidgets('is drawn on the prototype\'s error fill, readable in both scopes', (tester) async {
+      for (final (theme, fill, ink) in [
+        (AppTheme.light(), AppTheme.light().colorScheme.error, AppTheme.light().colorScheme.onError),
+        (AppTheme.dark(), AppTheme.dark().colorScheme.errorContainer, AppTheme.dark().colorScheme.onSurface),
+      ]) {
+        await show(tester, theme: theme);
+        await tester.pump(past);
+        final header = tester.widget<DecoratedBox>(find.byKey(Step3Editor.sheetHeaderKey));
+        expect((header.decoration as BoxDecoration).color, fill);
+        final title = tester.widget<Text>(find.text(l10n(tester).write_confirm_title));
+        expect(title.style?.color, ink);
+        double luminance(Color c) => c.computeLuminance();
+        final light = luminance(fill) > luminance(ink) ? fill : ink;
+        final dark = luminance(fill) > luminance(ink) ? ink : fill;
+        expect((luminance(light) + 0.05) / (luminance(dark) + 0.05), greaterThanOrEqualTo(4.5));
+      }
+    });
+  });
+
+  /// The geometry of the prototype's third screen, read in headless Chrome at 390x844 (Turkish, light; the same in
+  /// English and dark). The editor is a card at least 52 high (`padding:10px 12px`, mono 11 over 1.7), the Run pill is
+  /// 26 high (`padding:6px 14px` round a mono 11/700 label tracked .1em, in capitals), the answer is a 76 high card —
+  /// a 26 high header (`padding:6px 11px`, tracked .13em, in capitals) over a 48 high number (`padding:11px`, mono 26
+  /// over a line of 1) — 9 under the bar, and the confirmation is a card whose header is 27 high, its prompt box 28,
+  /// its two pills 27, with 11 of margin either side of the box and 10 under the pills.
+  ///
+  /// **The font trap:** every height here is a box round a line whose height is a multiplier of its size, which Ahem
+  /// lays out as the product font does, and every width is read as a box less the text inside it. The hero is 700
+  /// wide so that each line of the confirmation is the one line it is on a phone and not one of four in Ahem.
+  group('the screen is the prototype\'s', () {
+    Rect rect(WidgetTester tester, String key) => tester.getRect(find.byKey(ValueKey(key)));
+
+    testWidgets('the editor is a 52 high card with 12 inside it, and the bar is 8 under it', (tester) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(counted);
+
+      final editor = rect(tester, 'ob3-editor');
+      expect(editor.height, closeTo(52, 0.5));
+      expect(tester.getRect(find.byKey(Step3Editor.statementKey)).left - editor.left, closeTo(13, 0.5));
+      expect(
+        tester.getRect(find.byKey(Step3Editor.statementKey)).top - editor.top,
+        closeTo(11, 0.5),
+        reason: 'the statement sits on the top line of the box, 1 border + 10 padding in, not at the bottom of a 52',
+      );
+      expect(rect(tester, 'ob3-run').top - editor.bottom, closeTo(8, 0.5));
+      expect(tester.widget<Text>(find.byKey(Step3Editor.statementKey)).textSpan!.style!.height, 1.7);
+    });
+
+    testWidgets('the Run pill is 26 high, 14 round a tracked mono label in capitals', (tester) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(counted);
+
+      final pill = rect(tester, 'ob3-run');
+      final label = find.descendant(of: find.byKey(const ValueKey('ob3-run')), matching: find.byType(Text));
+      final style = tester.widget<Text>(label).style!;
+      expect(tester.widget<Text>(label).data, 'RUN');
+      expect(pill.height, closeTo(26, 0.5));
+      expect(pill.width - tester.getRect(label).width, closeTo(28, 0.5));
+      expect(style.fontFamily, AppTypography.mono);
+      expect(style.fontSize, 11);
+      expect(style.fontWeight, FontWeight.w700);
+      expect(style.letterSpacing, closeTo(1.1, 0.001));
+    });
+
+    testWidgets('the answer is a 76 high card 9 under the bar: a 26 high header over a 48 high number', (tester) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(counted);
+
+      final card = rect(tester, 'ob3-result');
+      expect(card.height, closeTo(76, 0.5));
+      expect(card.top - rect(tester, 'ob3-run').bottom, closeTo(9, 0.5));
+      expect(rect(tester, 'ob3-result-head').height, closeTo(26, 0.5));
+      expect(rect(tester, 'ob3-result-value').height, closeTo(48, 0.5));
+      final head = tester.widget<Text>(find.text('COUNT'));
+      expect(head.style!.letterSpacing, closeTo(1.43, 0.001));
+      final value = tester.widget<Text>(find.text('128,440')).style!;
+      expect(value.fontSize, 26);
+      expect(value.fontWeight, FontWeight.w600);
+      expect(value.height, 1);
+      expect(value.letterSpacing, closeTo(-0.52, 0.001));
+    });
+
+    testWidgets('while the run is pending the line beside the pill is an ellipsis, not an icon', (tester) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(Step3Editor.pendingAt + const Duration(milliseconds: 60));
+
+      expect(find.text('\u2026'), findsOneWidget);
+      expect(find.byIcon(Icons.more_horiz), findsNothing);
+    });
+
+    testWidgets('the confirmation is a 27 high header, a 28 high prompt box and two 27 high pills', (tester) async {
+      await show(tester, heroWidth: 700);
       await tester.pump(past);
-      final colors = AppTheme.light().colorScheme;
+
+      final sheet = rect(tester, 'ob3-sheet');
+      expect(sheet.top - rect(tester, 'ob3-run').bottom, closeTo(9, 0.5));
+      expect(tester.getRect(find.byKey(Step3Editor.sheetHeaderKey)).height, closeTo(27, 0.5));
+      final box = rect(tester, 'ob3-typebox');
+      expect(box.height, closeTo(28, 0.5));
+      expect(box.left - sheet.left, closeTo(12, 0.5), reason: '1 border + 11 margin');
+      expect(sheet.right - box.right, closeTo(12, 0.5));
+      final cancel = rect(tester, 'ob3-cancel');
+      final go = rect(tester, 'ob3-go');
+      expect(cancel.height, closeTo(27, 0.5));
+      expect(go.height, closeTo(27, 0.5));
+      expect(go.left - cancel.right, closeTo(7, 0.5));
+      expect(cancel.left - sheet.left, closeTo(12, 0.5));
+      expect(sheet.bottom - cancel.bottom, closeTo(11, 0.5), reason: '10 under the pills + 1 border');
+      expect(cancel.top - box.bottom, closeTo(9, 0.5));
+    });
+
+    testWidgets('the header is the error fill with white in light and the error container with text ink in dark', (
+      tester,
+    ) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(past);
+
+      final light = AppTheme.light().colorScheme;
       final header = tester.widget<DecoratedBox>(find.byKey(Step3Editor.sheetHeaderKey));
-      expect((header.decoration as BoxDecoration).color, colors.errorContainer);
-      final s = l10n(tester);
-      final title = tester.widget<Text>(find.text(s.write_confirm_title));
-      expect(title.style?.color, colors.onErrorContainer);
-      for (final box in tester.widgetList<DecoratedBox>(find.byType(DecoratedBox))) {
-        final decoration = box.decoration;
-        if (decoration is BoxDecoration) expect(decoration.color, isNot(colors.error));
+      expect((header.decoration as BoxDecoration).color, light.error);
+      expect(tester.widget<Text>(find.text(l10n(tester).write_confirm_title)).style!.color, light.onError);
+      expect(tester.widget<Text>(find.text(l10n(tester).write_confirm_title)).style!.fontWeight, FontWeight.w700);
+    });
+
+    testWidgets('the Run pill of the sheet is the header fill at .45 and the Cancel pill is outlined', (tester) async {
+      await show(tester, heroWidth: 700);
+      await tester.pump(past);
+
+      final go = tester.widget<Opacity>(
+        find.ancestor(of: find.byKey(const ValueKey('ob3-go')), matching: find.byType(Opacity)).first,
+      );
+      expect(go.opacity, 0.45);
+      final cancel = tester.widget<Container>(find.byKey(const ValueKey('ob3-cancel')));
+      expect((cancel.decoration as BoxDecoration).border, isNotNull);
+    });
+
+    testWidgets('the sentences are the prototype\'s, in both languages', (tester) async {
+      for (final (locale, body) in [
+        (
+          const Locale('tr'),
+          'Veri değiştirebilecek her deyim önce onay ister. Üretim bağlantısında adını yazmanız gerekir.',
+        ),
+        (const Locale('en'), 'Anything that may change data asks first. On a production connection you type its name.'),
+      ]) {
+        await show(tester, locale: locale);
+        expect(l10n(tester).ob3_body, body);
       }
     });
   });
@@ -240,7 +380,7 @@ void main() {
       await show(tester);
       await tester.pump(counted);
       final s = l10n(tester);
-      final pill = find.text(s.sql_editor_run);
+      final pill = find.text(s.sql_editor_run.toUpperCase());
       final meta = find.text(
         s.ob3_meta(s.sql_history_rows(Step3Editor.answerRows), s.sql_history_duration(Step3Editor.answerMilliseconds)),
       );
@@ -249,8 +389,8 @@ void main() {
       expect(hero.width, 318, reason: 'the hero of a 390 pt phone, which the numbers below are the prototype of');
       expect(
         tester.getRect(pill).left - hero.left,
-        AppSpacing.lg,
-        reason: 'the pill label sits one `lg` inside the hero leading edge, the padding of its own fill',
+        14,
+        reason: 'the pill label sits 14 inside the hero leading edge, the padding of its own fill',
       );
       expect(hero.right - tester.getRect(meta).right, 0, reason: 'the line ends on the hero trailing edge');
     });

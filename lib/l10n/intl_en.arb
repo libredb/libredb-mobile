@@ -1695,7 +1695,7 @@
   "@ob3_title": {"description": "The headline of the third onboarding screen. The line break is deliberate."},
   "ob3_accent": "try a delete",
   "@ob3_accent": {"description": "The run of ob3_title the screen paints in the accent colour; it must appear in ob3_title verbatim."},
-  "ob3_body": "Anything that may change data asks first. On production you type the connection's name.",
+  "ob3_body": "Anything that may change data asks first. On a production connection you type its name.",
   "@ob3_body": {"description": "The body of the third onboarding screen."},
   "ob3_count": "count",
   "@ob3_count": {"description": "The header of the demo result card, the column name the counting statement answers with."},

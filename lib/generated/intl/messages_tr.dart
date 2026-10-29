@@ -718,7 +718,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "ob3_accent": MessageLookupByLibrary.simpleMessage("silmeyi dene"),
     "ob3_body": MessageLookupByLibrary.simpleMessage(
-      "Veri değiştirebilecek her deyim önce onay ister. Üretimde bağlantının adını yazmanız gerekir.",
+      "Veri değiştirebilecek her deyim önce onay ister. Üretim bağlantısında adını yazmanız gerekir.",
     ),
     "ob3_cap": m47,
     "ob3_count": MessageLookupByLibrary.simpleMessage("sayı"),

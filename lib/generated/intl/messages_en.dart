@@ -709,7 +709,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ob2_why": MessageLookupByLibrary.simpleMessage("masked by column name —\nthere is no switch here to turn it off"),
     "ob3_accent": MessageLookupByLibrary.simpleMessage("try a delete"),
     "ob3_body": MessageLookupByLibrary.simpleMessage(
-      "Anything that may change data asks first. On production you type the connection\'s name.",
+      "Anything that may change data asks first. On a production connection you type its name.",
     ),
     "ob3_cap": m47,
     "ob3_count": MessageLookupByLibrary.simpleMessage("count"),

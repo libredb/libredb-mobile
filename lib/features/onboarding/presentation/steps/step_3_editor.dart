@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/theme/syntax_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 import 'package:libredb_mobile/shared/utils/source_highlighter.dart';
@@ -95,7 +97,7 @@ class Step3Editor extends StatefulWidget {
 
 class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStateMixin {
   /// How far the caret, the result and the confirmation come in from the trailing edge as they arrive.
-  static const _slidesIn = AppSpacing.xl;
+  static const _slidesIn = 22.0;
 
   /// How deep the Run pill presses itself.
   static const _pressDepth = 0.06;
@@ -106,6 +108,49 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
   /// the pill asks for at the ordinary text size in either language, and nothing there is capped. At an
   /// accessibility text size the label grows past the whole bar, and this is what holds it inside.
   static const _pillShare = 0.6;
+
+  /// The prototype's own measures of this hero, from headless Chrome at 390x844 (`ob.html`, screen 3). None is on the
+  /// closed spacing scale and all are this screen's own: `.ed{padding:10px 12px;min-height:52px;border-radius:11px}`,
+  /// `.runb{padding:6px 14px}`, `.scal{margin-top:9px;border-radius:11px}`, `.scal .h{padding:6px 11px}`,
+  /// `.scal .v{padding:11px;font-size:26px}`, `.sheet .sh{padding:7px 11px}`, `.sheet .sb2{padding:9px 11px}`,
+  /// `.typebox{margin:0 11px 9px;padding:6px 8px;border-radius:8px}`, `.sheetacts{gap:7px;padding:0 11px 10px}` and
+  /// `.sheetacts span{padding:6px 12px}`.
+  static const _editorPadX = 12.0;
+  static const _editorPadY = 10.0;
+  static const _editorMinHeight = 52.0;
+  static const _cardRadius = 11.0;
+  static const _gap = 9.0;
+  static const _pillPadX = 14.0;
+  static const _pillPadY = 6.0;
+  static const _headPadX = 11.0;
+  static const _answerHeadPadY = 6.0;
+  static const _answerPad = 11.0;
+  static const _sheetHeadPadY = 7.0;
+  static const _sheetPadY = 9.0;
+  static const _sheetPadX = 11.0;
+  static const _warnGap = 5.0;
+  static const _boxPadY = 6.0;
+  static const _boxPadX = 8.0;
+  static const _actsGap = 7.0;
+  static const _actsPadBottom = 10.0;
+  static const _actPadX = 12.0;
+
+  /// The type: mono 11 over a 14 line, sans 11 over 1.5 and over a 13 line (the header and the pills), the editor's
+  /// 1.7, the answer's 26 over a line of 1, and the tracking of the pill, the answer's header and the number.
+  static const _small = 11.0;
+  static const _monoLine = 14 / _small;
+  static const _sansLine = 1.5;
+  static const _tightLine = 13 / _small;
+  static const _editorLine = 1.7;
+  static const _answerSize = 26.0;
+  static const _pillTrackingEm = 0.1;
+  static const _headTrackingEm = 0.13;
+  static const _answerTrackingEm = -0.02;
+
+  /// How opaque the Run pill is before it is lit, and the confirmation's Run pill at rest: `.runb{opacity:.3}`,
+  /// `.sa-r{opacity:.45}`.
+  static const _pillRestOpacity = 0.3;
+  static const _sheetRunOpacity = 0.45;
 
   /// Half a blink. The caret is on for one of these and off for the next.
   static const _blink = AppDurations.media;
@@ -163,7 +208,16 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     final s = S.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final mono = theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono) ?? const TextStyle();
+    final mono =
+        theme.textTheme.labelSmall?.copyWith(
+          fontFamily: AppTypography.mono,
+          fontSize: _small,
+          height: _monoLine,
+          letterSpacing: 0,
+          fontWeight: FontWeight.w400,
+          color: colors.onSurface,
+        ) ??
+        const TextStyle();
 
     return AnimatedBuilder(
       animation: _play,
@@ -173,14 +227,18 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _editor(at, colors, mono),
+            _editor(at, theme, mono),
             const SizedBox(height: AppSpacing.sm),
             _runBar(at, s, colors, mono),
-            const SizedBox(height: AppSpacing.sm),
-            if (at >= Step3Editor.sheetRisesAt)
-              _arriving(at, Step3Editor.sheetRisesAt, _confirmation(s, theme, colors, mono))
-            else if (at >= Step3Editor.answersAt)
-              _arriving(at, Step3Editor.answersAt, _result(at, s, theme, colors)),
+            // The gap is the arriving piece's own margin (`.scal{margin-top:9px}`), so there is none before it comes
+            // and the bar sits centred on its own until the answer takes its place.
+            if (at >= Step3Editor.sheetRisesAt) ...[
+              const SizedBox(height: _gap),
+              _arriving(at, Step3Editor.sheetRisesAt, _confirmation(s, theme, mono)),
+            ] else if (at >= Step3Editor.answersAt) ...[
+              const SizedBox(height: _gap),
+              _arriving(at, Step3Editor.answersAt, _result(at, s, theme, mono)),
+            ],
           ],
         );
       },
@@ -196,39 +254,45 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     );
   }
 
-  /// The editor box: the statement, coloured by the editor's own highlighter, and the caret beside it.
-  Widget _editor(Duration at, ColorScheme colors, TextStyle mono) {
+  /// The editor box: the statement, coloured as the prototype colours it, and the caret beside it.
+  Widget _editor(Duration at, ThemeData theme, TextStyle mono) {
+    final colors = theme.colorScheme;
     final typed = _typed(at);
-    return DecoratedBox(
+    final line = mono.copyWith(height: _editorLine);
+    return Container(
+      key: const ValueKey('ob3-editor'),
+      constraints: const BoxConstraints(minHeight: _editorMinHeight),
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow,
         border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(_cardRadius),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Flexible(child: Text.rich(_coloured(typed, colors, mono), key: Step3Editor.statementKey)),
-            // The caret is its own box rather than a character in the span, so the span holds the statement and
-            // nothing else and a test reads the text the editor really has.
-            SizedBox(
-              width: AppSpacing.xs,
-              height: mono.fontSize,
-              child: ColoredBox(color: _caretShows(at) ? colors.primary : Colors.transparent),
-            ),
-          ],
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: _editorPadX, vertical: _editorPadY),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(child: Text.rich(_coloured(typed, theme, line), key: Step3Editor.statementKey)),
+          // The caret is its own box rather than a character in the span, so the span holds the statement and
+          // nothing else and a test reads the text the editor really has. `.caret` is 6 wide and a whole line high.
+          SizedBox(
+            width: _caretWidth,
+            height: _small * _editorLine,
+            child: ColoredBox(color: _caretShows(at) ? colors.primary : Colors.transparent),
+          ),
+        ],
       ),
     );
   }
 
+  /// `meta.textContent='…'`: a punctuation mark, not a sentence, so it is no string of the app's.
+  static const _pendingMark = '\u2026';
+
+  /// `.caret{width:6px}`.
+  static const _caretWidth = 6.0;
+
   /// The Run pill and the line beside it: quiet, then bright, then pressed, then answered.
   Widget _runBar(Duration at, S s, ColorScheme colors, TextStyle mono) {
     final lit = _eased(at, Step3Editor.runLitAt, AppDurations.normal);
-    final fill = Color.lerp(colors.surfaceContainerHighest, colors.primary, lit);
-    final ink = Color.lerp(colors.onSurfaceVariant, colors.onPrimary, lit);
     // The bar is measured rather than assumed, because the pill is the one thing on this screen that cannot be
     // allowed to ask for its natural width. The line beside it already yields — it is `Expanded` and wraps — but
     // the pill was the row's inflexible child, so `Çalıştır` at a text scale of 3 asked for more than the row had
@@ -239,6 +303,7 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     //
     // The `LayoutBuilder` is safe for the same reason the chassis's own one is: `_HeroExtent` answers the page's
     // intrinsic question itself and never puts it to a step.
+    final locale = Localizations.localeOf(context);
     return LayoutBuilder(
       builder: (context, bar) => Row(
         children: [
@@ -246,13 +311,20 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
             constraints: BoxConstraints(maxWidth: (bar.maxWidth - AppSpacing.sm) * _pillShare),
             child: Transform.scale(
               scale: 1 - _pressDepth * _press(at),
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(AppRadius.pill)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              // `.runb{opacity:.3}` until `.go` lights it: the pill is always the accent, drawn faint.
+              child: Opacity(
+                opacity: _pillRestOpacity + (1 - _pillRestOpacity) * lit,
+                child: Container(
+                  key: const ValueKey('ob3-run'),
+                  decoration: BoxDecoration(color: colors.primary, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                  padding: const EdgeInsets.symmetric(horizontal: _pillPadX, vertical: _pillPadY),
                   child: Text(
-                    s.sql_editor_run,
-                    style: mono.copyWith(color: ink, fontWeight: FontWeight.w600),
+                    onboardingCapitals(s.sql_editor_run, locale),
+                    style: mono.copyWith(
+                      color: colors.onPrimary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: _small * _pillTrackingEm,
+                    ),
                   ),
                 ),
               ),
@@ -270,14 +342,14 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
                     s.sql_history_rows(Step3Editor.answerRows),
                     s.sql_history_duration(Step3Editor.answerMilliseconds),
                   ),
+                  key: const ValueKey('ob3-meta'),
                   textAlign: TextAlign.end,
                   style: mono.copyWith(color: colors.onSurfaceVariant),
                 ),
-                // A mark rather than a word: the pending state of a demo is not a sentence the app has to translate.
-                _ when at >= Step3Editor.pendingAt => Icon(
-                  Icons.more_horiz,
-                  size: AppSizes.iconMd,
-                  color: colors.onSurfaceVariant,
+                // `meta.textContent='…'`: the prototype's pending state is the character, not an icon.
+                _ when at >= Step3Editor.pendingAt => Text(
+                  _pendingMark,
+                  style: mono.copyWith(color: colors.onSurfaceVariant),
                 ),
                 _ => const SizedBox.shrink(),
               },
@@ -298,37 +370,40 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
   }
 
   /// The answer: the column name the statement asked for, and the number climbing to it.
-  Widget _result(Duration at, S s, ThemeData theme, ColorScheme colors) {
+  Widget _result(Duration at, S s, ThemeData theme, TextStyle mono) {
+    final colors = theme.colorScheme;
     final climbed = _eased(at, Step3Editor.answersAt, Step3Editor.countsUpOver);
     final number = NumberFormat.decimalPattern(Localizations.localeOf(context).toLanguageTag());
-    return DecoratedBox(
+    return Container(
+      key: const ValueKey('ob3-result'),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(_cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(color: colors.surfaceContainerHighest),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              child: Text(
-                s.ob3_count,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontFamily: AppTypography.mono,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
+          Container(
+            key: const ValueKey('ob3-result-head'),
+            color: colors.surfaceContainerHighest,
+            padding: const EdgeInsets.symmetric(horizontal: _headPadX, vertical: _answerHeadPadY),
+            child: Text(
+              onboardingCapitals(s.ob3_count, Localizations.localeOf(context)),
+              style: mono.copyWith(color: colors.onSurfaceVariant, letterSpacing: _small * _headTrackingEm),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+          Container(
+            key: const ValueKey('ob3-result-value'),
+            padding: const EdgeInsets.all(_answerPad),
             child: Text(
               number.format((Step3Editor.answer * climbed).round()),
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontFamily: AppTypography.mono,
+              style: mono.copyWith(
+                fontSize: _answerSize,
+                fontWeight: FontWeight.w600,
+                height: 1,
+                letterSpacing: _answerSize * _answerTrackingEm,
                 color: colors.onPrimaryContainer,
               ),
             ),
@@ -338,12 +413,23 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     );
   }
 
-  /// The write confirmation, drawn the way the app's own sheet draws itself: the title over an `errorContainer`
-  /// header, every reason the check gives in words, the refusal line for a read-only grant, the production prompt,
-  /// the field the connection's name is typed in, and Cancel beside a Run that cannot run yet.
-  Widget _confirmation(S s, ThemeData theme, ColorScheme colors, TextStyle mono) {
-    final body = theme.textTheme.bodySmall;
-    return DecoratedBox(
+  /// The write confirmation, drawn the way the prototype draws it: the title over the error fill, the production
+  /// prompt, the reason in mono, the refusal line for a read-only grant, the field the connection's name is typed
+  /// in, and Cancel beside a Run that cannot run yet.
+  ///
+  /// The header is `--err-fill` with `--on-err` on it: the error colour with white in the light scope, and the error
+  /// container with the text ink in the dark one. The audit that moved this off `error` as a fill measured the dark
+  /// scope — white on `#FCA5A5` at 1.90:1 — and the prototype it audited has since made that pair `#3A0F13` with
+  /// `#F2F4FB` on it, which is what the dark scope's `errorContainer` and `onSurface` are.
+  Widget _confirmation(S s, ThemeData theme, TextStyle mono) {
+    final colors = theme.colorScheme;
+    final light = theme.brightness == Brightness.light;
+    final fill = light ? colors.error : colors.errorContainer;
+    final onFill = light ? colors.onError : colors.onSurface;
+    final sans = theme.textTheme.bodySmall?.copyWith(fontSize: _small, height: _sansLine, letterSpacing: 0);
+    return Container(
+      key: const ValueKey('ob3-sheet'),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border.all(color: colors.error),
@@ -354,71 +440,87 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
         children: [
           DecoratedBox(
             key: Step3Editor.sheetHeaderKey,
-            decoration: BoxDecoration(color: colors.errorContainer),
+            decoration: BoxDecoration(color: fill),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, size: AppSizes.iconLg, color: colors.onErrorContainer),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      s.write_confirm_title,
-                      style: theme.textTheme.titleSmall?.copyWith(color: colors.onErrorContainer),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: _headPadX, vertical: _sheetHeadPadY),
+              child: Text(
+                s.write_confirm_title,
+                style: sans?.copyWith(color: onFill, fontWeight: FontWeight.w700, height: _tightLine),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: _sheetPadX, vertical: _sheetPadY),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: AppSpacing.sm,
               children: [
+                Text(s.write_confirm_production_prompt, style: sans?.copyWith(color: colors.onSurfaceVariant)),
+                const SizedBox(height: _warnGap),
                 Text(
                   s.write_confirm_reason_may_write_at(Step3Editor.flaggedWord, Step3Editor.flaggedLine),
-                  style: body?.copyWith(color: colors.onSurfaceVariant),
+                  style: mono.copyWith(color: colors.error, height: _sansLine),
                 ),
-                Text(s.write_confirm_production_prompt, style: body?.copyWith(color: colors.error)),
-                Text(s.write_confirm_read_grant, style: body?.copyWith(color: colors.error)),
-                DecoratedBox(
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(_sheetPadX, 0, _sheetPadX, _sheetPadY),
+            child: Text(s.write_confirm_read_grant, style: sans?.copyWith(color: colors.error)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(_sheetPadX, 0, _sheetPadX, _sheetPadY),
+            child: Container(
+              key: const ValueKey('ob3-typebox'),
+              padding: const EdgeInsets.symmetric(horizontal: _boxPadX, vertical: _boxPadY),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLow,
+                border: Border.all(color: colors.outlineVariant),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Text(s.write_confirm_name_label(Step3Editor.connectionName), style: mono),
+            ),
+          ),
+          // A `Wrap`, as the app's own sheet uses for the same two labels: side by side while they fit, and Run on a
+          // second line when they do not. A `Row` here overflowed by 272 pt at a text scale of 3.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(_sheetPadX, 0, _sheetPadX, _actsPadBottom),
+            child: Wrap(
+              spacing: _actsGap,
+              runSpacing: AppSpacing.xs,
+              children: [
+                Container(
+                  key: const ValueKey('ob3-cancel'),
                   decoration: BoxDecoration(
                     border: Border.all(color: colors.outlineVariant),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text(
-                      s.write_confirm_name_label(Step3Editor.connectionName),
-                      style: mono.copyWith(color: colors.onSurfaceVariant),
+                  padding: const EdgeInsets.symmetric(horizontal: _actPadX, vertical: _pillPadY),
+                  child: Text(
+                    s.write_confirm_cancel,
+                    style: sans?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      height: _tightLine,
                     ),
                   ),
                 ),
-                // A `Wrap`, as the app's own sheet uses for the same two labels: side by side while they fit, and Run
-                // on a second line when they do not. A `Row` here overflowed by 272 pt at a text scale of 3.
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    Text(s.write_confirm_cancel, style: body?.copyWith(color: colors.onSurfaceVariant)),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.errorContainer,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                        child: Text(
-                          s.write_confirm_run,
-                          style: body?.copyWith(color: colors.onErrorContainer, fontWeight: FontWeight.w600),
-                        ),
-                      ),
+                Opacity(
+                  opacity: _sheetRunOpacity,
+                  // The prototype's two pills sit in a stretching flex row, so the borderless one is as tall as the
+                  // bordered one; a transparent border of the same width gives it that without a stretch.
+                  child: Container(
+                    key: const ValueKey('ob3-go'),
+                    decoration: BoxDecoration(
+                      color: fill,
+                      border: Border.all(color: Colors.transparent),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
-                  ],
+                    padding: const EdgeInsets.symmetric(horizontal: _actPadX, vertical: _pillPadY),
+                    child: Text(
+                      s.write_confirm_run,
+                      style: sans?.copyWith(color: onFill, fontWeight: FontWeight.w600, height: _tightLine),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -428,29 +530,33 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     );
   }
 
-  /// [statement] coloured by the app's own keyword rules.
+  /// [statement] coloured by the app's own keyword rules, in the prototype's ink.
   ///
   /// `SourceHighlighter` is the highlighting itself and lives in `shared/`, so nothing about SQL is decided here; the
-  /// three lines of colour below are the token-to-role map, which this repository keeps at each call site (the SQL
+  /// few lines of colour below are the token-to-role map, which this repository keeps at each call site (the SQL
   /// editor's text controller and the object browser's source viewer each hold the same one) because the import guard
-  /// holds cross-feature imports at zero. The roles are the same roles, so a demo statement is coloured exactly as a
-  /// real one.
-  TextSpan _coloured(String statement, ColorScheme colors, TextStyle mono) => TextSpan(
-    style: mono,
-    children: [
-      for (final token in SourceHighlighter.forLanguage(_sql).tokens(statement))
-        TextSpan(
-          text: token.text,
-          style: switch (token.kind) {
-            SourceTokenKind.plain => mono,
-            SourceTokenKind.keyword => mono.copyWith(color: colors.onPrimaryContainer, fontWeight: FontWeight.w600),
-            SourceTokenKind.string => mono.copyWith(color: colors.tertiary),
-            SourceTokenKind.number => mono.copyWith(color: colors.secondary),
-            SourceTokenKind.comment => mono.copyWith(color: colors.onSurfaceVariant, fontStyle: FontStyle.italic),
-          },
-        ),
-    ],
-  );
+  /// holds cross-feature imports at zero. The prototype sets `.k` in its keyword ink at 600 and `.s` in its string
+  /// ink, a number being a `.s` there, and leaves everything else in the plain ink.
+  TextSpan _coloured(String statement, ThemeData theme, TextStyle mono) {
+    final colors = theme.colorScheme;
+    final keyword = SyntaxColors.keyword(theme.brightness);
+    final string = SyntaxColors.string(theme.brightness);
+    return TextSpan(
+      style: mono,
+      children: [
+        for (final token in SourceHighlighter.forLanguage(_sql).tokens(statement))
+          TextSpan(
+            text: token.text,
+            style: switch (token.kind) {
+              SourceTokenKind.plain => mono,
+              SourceTokenKind.keyword => mono.copyWith(color: keyword, fontWeight: FontWeight.w600),
+              SourceTokenKind.string || SourceTokenKind.number => mono.copyWith(color: string),
+              SourceTokenKind.comment => mono.copyWith(color: colors.onSurfaceVariant, fontStyle: FontStyle.italic),
+            },
+          ),
+      ],
+    );
+  }
 
   /// The language the demo connection speaks, as `SourceHighlighter` names it.
   static const _sql = 'sql';

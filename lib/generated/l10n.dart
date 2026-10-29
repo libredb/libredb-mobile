@@ -5035,10 +5035,10 @@ class S {
     );
   }
 
-  /// `Anything that may change data asks first. On production you type the connection's name.`
+  /// `Anything that may change data asks first. On a production connection you type its name.`
   String get ob3_body {
     return Intl.message(
-      'Anything that may change data asks first. On production you type the connection\'s name.',
+      'Anything that may change data asks first. On a production connection you type its name.',
       name: 'ob3_body',
       desc: 'The body of the third onboarding screen.',
       args: [],

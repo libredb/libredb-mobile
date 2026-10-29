@@ -1685,7 +1685,7 @@
   "@ob3_title": {"description": "The headline of the third onboarding screen. The line break is deliberate."},
   "ob3_accent": "silmeyi dene",
   "@ob3_accent": {"description": "The run of ob3_title the screen paints in the accent colour; it must appear in ob3_title verbatim."},
-  "ob3_body": "Veri değiştirebilecek her deyim önce onay ister. Üretimde bağlantının adını yazmanız gerekir.",
+  "ob3_body": "Veri değiştirebilecek her deyim önce onay ister. Üretim bağlantısında adını yazmanız gerekir.",
   "@ob3_body": {"description": "The body of the third onboarding screen."},
   "ob3_count": "sayı",
   "@ob3_count": {"description": "The header of the demo result card, the column name the counting statement answers with."},
