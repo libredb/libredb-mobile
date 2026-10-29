@@ -265,10 +265,10 @@ void main() {
     expect(
       level.center.dy,
       closeTo(holder.center.dy, holder.height),
-      reason: 'the level sits at ${level.center.dy.toStringAsFixed(1)} against a holder centred at '
+      reason:
+          'the level sits at ${level.center.dy.toStringAsFixed(1)} against a holder centred at '
           '${holder.center.dy.toStringAsFixed(1)} — it is under the holder, not beside it',
     );
     expect(level.left, greaterThan(holder.right), reason: 'the level is not to the right of the holder');
   });
-
 }

@@ -207,7 +207,8 @@ void main() {
     expect(
       box.height,
       greaterThanOrEqualTo(line * 3 - 0.5),
-      reason: 'the headline block is ${box.height.toStringAsFixed(1)}, under the ${(line * 3).toStringAsFixed(1)} '
+      reason:
+          'the headline block is ${box.height.toStringAsFixed(1)}, under the ${(line * 3).toStringAsFixed(1)} '
           'that three lines of its own type come to (the prototype reserves 98)',
     );
   });

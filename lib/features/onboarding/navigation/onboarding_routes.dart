@@ -16,10 +16,7 @@ class OnboardingFeatureRoutes {
       path: ApplicationRoutesConstants.welcome,
       pageBuilder: (context, state) => appPlatformPage(
         state: state,
-        child: OnboardingPage(
-          returnUrl: state.uri.queryParameters['returnUrl'],
-          heroBuilder: onboardingStepHero,
-        ),
+        child: OnboardingPage(returnUrl: state.uri.queryParameters['returnUrl'], heroBuilder: onboardingStepHero),
       ),
     ),
   ];
