@@ -44,6 +44,7 @@ The app follows the feature-first clean architecture of [feature-first-clean-bou
 | --- | --- |
 | `lib/features/auth/` | Sign-in through Keycloak, the only sign-in ([oidc.md](oidc.md)), `StudioIdentityRepository` for `GET /api/auth/me` and the sign-out record at `POST /api/auth/logout`, and `StudioIdentityCubit`, which holds Studio's latest answer about the user for the shell and every feature |
 | `lib/features/connections/` | The managed connections, the connection policy and the connection test |
+| `lib/features/access_requests/` | What a Studio user under governance asks Platform for ([platform.md](platform.md#access-requests-from-a-studio-session)): the repository over Platform's four requester routes, the use cases, `MyAccessRequestsBloc`, `WithdrawAccessRequestBloc` and `AccessRequestFormBloc`, and the two pages "My requests" and the request form, under `/connections/requests`; it imports `infrastructure/platform/` only |
 | `lib/features/object_browser/` | Containers, counts, objects, details, source, search, key scan, and the rows and row count of an object |
 | `lib/features/sql_editor/` | Statements, scripts, cancel and transactions |
 | `lib/features/studio_status/` | Studio's liveness and readiness: the unreachable page and the wording of a governance outage ([below](#studio-reachability)) |

@@ -11,6 +11,7 @@ import 'package:libredb_mobile/features/connections/presentation/widgets/connect
 import 'package:libredb_mobile/features/connections/application/connection_policy_cubit.dart';
 import 'package:libredb_mobile/features/connections/domain/entities/connection_policy.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_empty_state.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_error_state.dart';
@@ -376,10 +377,14 @@ class _EmptyList extends StatelessWidget {
         ConnectionPolicyInitial() || ConnectionPolicyLoading() || ConnectionPolicyFailure() => false,
       },
     );
+    // Asking for access is Platform's workflow: only a build with a Platform target under governance offers it.
+    final canRequestAccess = governed && context.read<AppConfig>().platform is PlatformConfigured;
     final l10n = S.of(context);
     return AppEmptyState(
       icon: Icons.storage_outlined,
       title: governed ? l10n.connection_list_empty_governed : l10n.connection_list_empty,
+      actionLabel: canRequestAccess ? l10n.access_requests_empty_action : null,
+      onAction: canRequestAccess ? () => context.push(ApplicationRoutesConstants.accessRequestNew) : null,
     );
   }
 }

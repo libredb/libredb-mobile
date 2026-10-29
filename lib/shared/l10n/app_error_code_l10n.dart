@@ -70,6 +70,13 @@ extension AppErrorCodeL10n on AppErrorCode {
       AppErrorCode.platformInternalError => s.error_platform_internal_error,
       AppErrorCode.platformUnreachable => s.error_platform_unreachable,
       AppErrorCode.platformUnreadableAnswer => s.error_platform_unreadable_answer,
+      AppErrorCode.platformStudioRoleRequired => s.error_platform_studio_role_required,
+      AppErrorCode.platformAccessRequestsDisabled => s.error_platform_access_requests_disabled,
+      AppErrorCode.platformAccessRequestPending => s.error_platform_access_request_pending,
+      AppErrorCode.platformAccessAlreadyGranted => s.error_platform_access_already_granted,
+      AppErrorCode.platformAccessRequestLimit => s.error_platform_access_request_limit,
+      AppErrorCode.platformAccessRequestDecided => s.error_platform_access_request_decided,
+      AppErrorCode.platformAccessRequestReasonRefused => s.error_platform_access_request_reason_refused,
       AppErrorCode.generic => s.error_generic,
     };
   }

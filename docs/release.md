@@ -360,15 +360,18 @@ Other declarations: the app contains no ads, its target audience is 18 and over,
 Every screen needs a sign-in, so the app access entry is "All or some functionality is restricted".
 The maintainer creates the demo account in the review deployment's Keycloak, with a Studio role that reaches the sample connections only, and enters its username and password in that entry of the Play Console; neither is ever written into the repository, an issue or a pull request.
 The instructions for the entry, which name no host and no password:
+Play limits the entry's "Any other information required to access your app" field to 500 characters, so both blocks are
+written to fit it; `test/architecture/release_docs_test.dart` fails when either grows past it. A reviewer on a build
+that carries the six-screen introduction (#66) meets it before the login page, which is why both blocks open with Skip.
+
 
 ```text
-LibreDB Mobile is a client of LibreDB Studio, so every screen needs a sign-in.
-This build signs in to the publisher's own LibreDB deployment, which holds sample databases only; no VPN, code or other setup is needed.
-1. Open the app and tap "Sign in with SSO".
-2. On the sign-in page that opens in the browser, enter the username and password given in this entry.
-3. The Connections tab lists the sample connections; tap one to open it.
-4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
-5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
+Every screen needs a sign-in. This build uses the publisher's own deployment; sample databases only, no VPN or code.
+1. On a new install the app opens on a six-screen introduction. Tap "Skip", bottom left, which every screen carries.
+2. Tap "Sign in with SSO" and enter this entry's username and password in the browser.
+3. Connections lists the samples; tap one.
+4. Browse: open a table, tap "View rows". Sensitive columns are masked.
+5. SQL runs statements, e.g. SELECT 1; a write asks to confirm.
 ```
 
 In a build with `PLATFORM_API_URL` set, the login page has two entries instead of the single SSO button, so the entry gets the instructions below in place of the block above; they name no host, no username and no password.
@@ -379,22 +382,12 @@ A Platform admin sees and can change every connection of the install, so the rev
 The Studio demo account and its grants stay as they are.
 
 ```text
-LibreDB Mobile is a client of LibreDB Studio and LibreDB Platform, so every screen needs a sign-in.
-This build signs in to the publisher's own LibreDB deployment, which holds sample databases only; no VPN, code or other setup is needed.
-This entry gives two accounts: a Studio account and a Platform admin account.
-Studio:
-1. Open the app and tap "Sign in to Studio".
-2. On the sign-in page that opens in the browser, enter the Studio account's username and password.
-3. The Connections tab lists the sample connections; tap one to open it.
-4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
-5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
-6. Tap the avatar at the top right, tap "Logout" and confirm.
-Platform:
-7. Tap "Sign in to Platform" and enter the Platform admin account's username and password on the sign-in page.
-8. The "Home" tab shows the organization and the signed-in admin.
-9. The "Connections" tab lists every connection of the deployment; tap one to see who holds access to it.
-10. The "Audit" tab lists the queries Studio ran on these connections; "Filters" narrows the list.
-Please do not tap "Add access", "Change access", "Remove access" or "Disable connection": other testers use the same sample connections.
+Every screen needs a sign-in. This entry gives a Studio account and a Platform admin account. Sample data only.
+1. On a new install tap "Skip", bottom left of the six-screen introduction.
+2. Tap "Sign in to Studio", enter the Studio account.
+3. Connections lists the samples; Browse opens a table, "View rows" shows rows, SQL runs e.g. SELECT 1.
+4. Tap the avatar, "Logout", confirm.
+5. Tap "Sign in to Platform", enter the admin account. Home, Connections and Audit are read-only for review.
 ```
 
 `test/architecture/release_docs_test.dart` fails when a double-quoted string inside a `text` block of this section is not a label of `lib/l10n/intl_en.arb`, so a pull request that renames such a label updates these instructions in the same change.

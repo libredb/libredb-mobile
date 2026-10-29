@@ -84,9 +84,12 @@ class ResponsiveScaffold extends StatelessWidget {
   }
 
   /// Whether [route], in [tab], has a back arrow while keeping the tab's bottom navigation bar: in Studio a page under
-  /// the Browse root, as before Platform mode; in Platform any page under a tab root.
+  /// the Browse root, as before Platform mode, and the access request pages under the connection list; in Platform any
+  /// page under a tab root.
   bool _hasBackInTab(String route, String tab) => switch (target) {
-    SessionTarget.studio => route.startsWith('${ApplicationRoutesConstants.browse}/'),
+    SessionTarget.studio =>
+      route.startsWith('${ApplicationRoutesConstants.browse}/') ||
+          route.startsWith('${ApplicationRoutesConstants.connectionList}/'),
     SessionTarget.platform => route != tab,
   };
 
@@ -139,6 +142,8 @@ class ResponsiveScaffold extends StatelessWidget {
     if (segments.isEmpty) return l10n.connections;
     final segment = segments.first;
     return switch (segment) {
+      'connections' when route == ApplicationRoutesConstants.accessRequests => l10n.access_requests_title,
+      'connections' when route == ApplicationRoutesConstants.accessRequestNew => l10n.access_requests_new_title,
       'connections' => l10n.connections,
       'browse' => l10n.tab_browse,
       'sql' => l10n.tab_sql,

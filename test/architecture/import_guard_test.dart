@@ -48,6 +48,7 @@ void main() {
       ('lib/infrastructure/studio/statement_repository.dart', [platformImport]),
       ('lib/features/auth/data/repositories/mixed_repository.dart', [studioImport, platformImport]),
       ('lib/features/platform_grants/data/grant_repository.dart', [studioImport]),
+      ('lib/features/access_requests/data/repositories/access_request_repository.dart', [studioImport]),
     ]) {
       test('fails $path importing ${imports.length == 2 ? 'both' : imports.single.split('/')[2]}', () {
         expect(studioPlatformViolations([(path, imports)]), hasLength(1));
@@ -60,6 +61,7 @@ void main() {
       ('lib/features/auth/data/repositories/studio_identity_repository.dart', [studioImport]),
       ('lib/features/auth/data/repositories/platform_identity_repository.dart', [platformImport]),
       ('lib/features/platform_grants/data/grant_repository.dart', [platformImport]),
+      ('lib/features/access_requests/data/repositories/access_request_repository.dart', [platformImport]),
       ('lib/app/di/app_dependencies.dart', [studioImport, platformImport]),
     ]) {
       test('passes $path', () {
@@ -232,7 +234,9 @@ void main() {
 ///
 /// - no file under `lib/infrastructure/platform/` imports `infrastructure/studio/`, and the reverse;
 /// - no file under `lib/features/` imports both `infrastructure/studio/` and `infrastructure/platform/`;
-/// - no file under `lib/features/platform_*/` imports `infrastructure/studio/`.
+/// - no file under `lib/features/platform_*/` imports `infrastructure/studio/`;
+/// - no file under `lib/features/access_requests/` imports `infrastructure/studio/`, although it serves a Studio
+///   session: it asks LibreDB Platform for access, so Platform is the only server it talks to.
 ///
 /// `lib/app/` is exempt: it is the composition root that wires both clients.
 List<String> studioPlatformViolations(Iterable<(String, List<String>)> files) {
@@ -253,6 +257,10 @@ List<String> studioPlatformViolations(Iterable<(String, List<String>)> files) {
     }
     if (RegExp(r'^lib/features/platform_[^/]*/').hasMatch(path) && importsStudio) {
       violations.add('$path: a Platform feature imports infrastructure/studio/');
+    }
+    // access_requests serves a Studio session, so it is named outside platform_*, but it talks to Platform only.
+    if (path.startsWith('lib/features/access_requests/') && importsStudio) {
+      violations.add('$path: the access requests feature imports infrastructure/studio/');
     }
   }
   return violations;
