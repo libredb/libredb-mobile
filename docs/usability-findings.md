@@ -66,7 +66,7 @@ A `visual` finding carries two keys more, and only a `visual` finding may:
 ```text
 kind:          visual
 token:         AppSizes.minTapTarget
-cites:         `docs/design-system.md:272` — "The tap target deviates, deliberately."
+cites:         `docs/design-system.md:277` — "The tap target deviates, deliberately."
 ```
 
 ### Why the screen is a route constant and not a screen name
@@ -194,7 +194,7 @@ guard. On a screen with no such test, the finding stands — and it asks for a t
 The epic evaluates the app against the design system and asks for screen changes, not token changes. A finding that
 the spacing scale is too coarse, that the indigo is too dark or that the tap target should be 44 is a conflict for
 M14 (#283), recorded there, and it does not travel forward as an implementation. The tap target in particular is
-pinned in both directions and against the web — `docs/design-system.md:272` — "The tap target deviates,
+pinned in both directions and against the web — `docs/design-system.md:277` — "The tap target deviates,
 deliberately." — so a finding that asks for the web's 44 is answered, not open.
 
 ### A finding with no step or no evidence is not a finding
