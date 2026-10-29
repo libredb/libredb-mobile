@@ -64,6 +64,15 @@ const _noteAt = Duration(milliseconds: 3550);
 /// The padlock beside the masked column's name, as `ResultTable` draws it.
 const _lockSize = 12.0;
 
+/// The least room a tree line leaves the name beside the row count, in ems of the name's own type.
+///
+/// A row count is laid out at its natural width — a `Row` has nothing to shrink it with — and that width is the
+/// reader's to set: at a text scale of 3.0 `128.440 satır` is wider than the whole hero. One em is the width of a
+/// character of the name, so the line is kept while the name still has a character's room on it and given up when
+/// it has not, which is the moment the name would otherwise be squeezed away and the count would spill out of the
+/// card. The count then takes a line of its own, under the name.
+const _nameFloorEm = 1.0;
+
 /// The demo schema. The counts are the numbers the screen counts up to.
 const _schema = 'public';
 const _tables = [('orders', 128440), ('customers', 12901), ('invoices', 44512)];
@@ -291,6 +300,11 @@ class _Indented extends StatelessWidget {
 }
 
 /// One line of the tree: a name, and what the browse screen says of it on the right.
+///
+/// One line while the two fit on one. At an accessibility text size the row count outgrows the line it shares — a
+/// count is as wide as the text size makes it and a `Row` cannot shrink it — and then it takes a line of its own
+/// under the name, where it is free to wrap rather than spill out of the card. [_nameFloorEm] is where the line is
+/// given up; at the ordinary text size, which is the size the screen was measured against, nothing moves.
 class _TreeNode extends StatelessWidget {
   const _TreeNode({required this.name, required this.trailing, required this.isSchema, required this.lit});
 
@@ -309,6 +323,8 @@ class _TreeNode extends StatelessWidget {
     final scheme = theme.colorScheme;
     final ink = Color.lerp(scheme.onSurface, scheme.onPrimaryContainer, lit);
     final quiet = Color.lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, lit);
+    final nameStyle = (isSchema ? theme.textTheme.titleSmall : theme.textTheme.bodyMedium)?.copyWith(color: ink);
+    final countStyle = theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono, color: quiet);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Color.lerp(null, scheme.primaryContainer, lit),
@@ -316,26 +332,50 @@ class _TreeNode extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
-          spacing: AppSpacing.sm,
-          children: [
-            Expanded(
-              child: Text(
-                name,
-                style: (isSchema ? theme.textTheme.titleSmall : theme.textTheme.bodyMedium)?.copyWith(color: ink),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text(
-              trailing,
-              style: theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono, color: quiet),
-              maxLines: 1,
-            ),
-          ],
+        // The line is laid out against the room it actually has, which is a width and not a text scale: the same
+        // count fits a phone at a scale of 1.3 and does not fit a small one. Safe here — the chassis answers the
+        // page's intrinsic question itself and never puts it to the hero.
+        child: LayoutBuilder(
+          builder: (context, line) => _holdsOneLine(context, line.maxWidth, nameStyle, countStyle)
+              ? Row(
+                  spacing: AppSpacing.sm,
+                  children: [
+                    Expanded(
+                      child: Text(name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    Text(trailing, style: countStyle, maxLines: 1),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    // Nothing cuts the count short on its own line: a count a line cannot hold wraps onto the next,
+                    // which the hero's own scroll view absorbs.
+                    Text(trailing, style: countStyle),
+                  ],
+                ),
         ),
       ),
     );
+  }
+
+  /// Whether the name and the row count still share one line of [width].
+  ///
+  /// The count's width is measured rather than guessed: what `128.440 satır` comes to is the font's business and the
+  /// text size is the reader's, and a `Row` lays an inflexible child out at its natural width whatever is left.
+  bool _holdsOneLine(BuildContext context, double width, TextStyle? nameStyle, TextStyle? countStyle) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final painter = TextPainter(
+      text: TextSpan(text: trailing, style: DefaultTextStyle.of(context).style.merge(countStyle)),
+      textDirection: Directionality.of(context),
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final count = painter.width;
+    painter.dispose();
+    return count + AppSpacing.sm + scaler.scale(nameStyle?.fontSize ?? 0) * _nameFloorEm <= width;
   }
 }
 
