@@ -649,9 +649,9 @@ void main() {
       final pending = Uri.encodeQueryComponent(ApplicationRoutesConstants.settings);
       expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.welcome}?returnUrl=$pending');
 
-      // The control advances through the four panels and leaves on the last, so the deep link has to survive four
+      // The control advances through the six screens and leaves on the last, so the deep link has to survive six
       // taps rather than one — which is the point: it is held across the whole flow, not across one screen.
-      for (var panel = 0; panel < 4; panel++) {
+      for (var step = 0; step < onboardingStepCount; step++) {
         await tester.tap(find.byKey(onboardingDoneKey));
         await tester.pumpAndSettle();
       }

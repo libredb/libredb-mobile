@@ -9,6 +9,13 @@ const Key loginUnreachableRetryPlatformKey = Key("loginUnreachableRetryPlatformK
 // the introduction, shown once before the first sign-in
 const Key onboardingDoneKey = Key("onboardingDoneKey");
 const Key onboardingSkipKey = Key("onboardingSkipKey");
+// The frame the six screens are drawn in. The counter and the rule say the same thing two ways, so both are named:
+// a test that reads one and not the other cannot see them disagree.
+const Key onboardingCounterKey = Key("onboardingCounterKey");
+const Key onboardingProgressKey = Key("onboardingProgressKey");
+const Key onboardingHeadlineKey = Key("onboardingHeadlineKey");
+const Key onboardingBodyKey = Key("onboardingBodyKey");
+const Key onboardingCaptionKey = Key("onboardingCaptionKey");
 
 // the progress over the shell while a sign-out runs
 const Key signOutProgressIndicatorKey = Key("signOutProgressIndicatorKey");
