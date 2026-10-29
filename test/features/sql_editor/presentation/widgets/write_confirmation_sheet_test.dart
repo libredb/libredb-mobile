@@ -81,6 +81,20 @@ Finder get _nameField => find.byKey(WriteConfirmationSheet.nameFieldKey);
 void main() {
   setUp(_answers.clear);
 
+  testWidgets('on a phone with a home indicator Run ends above the bottom inset', (tester) async {
+    // 34 logical points, as FakeViewPadding takes physical pixels.
+    final inset = 34 * tester.view.devicePixelRatio;
+    tester.view.viewPadding = FakeViewPadding(bottom: inset);
+    tester.view.padding = FakeViewPadding(bottom: inset);
+    addTearDown(tester.view.resetViewPadding);
+    addTearDown(tester.view.resetPadding);
+
+    await _open(tester);
+
+    final run = tester.getBottomLeft(_run).dy;
+    expect(run, lessThanOrEqualTo(tester.view.physicalSize.height / tester.view.devicePixelRatio - 34));
+  });
+
   group('on a development connection', () {
     testWidgets('shows the name, the environment, every reason with the word and its line, and every line', (
       tester,
