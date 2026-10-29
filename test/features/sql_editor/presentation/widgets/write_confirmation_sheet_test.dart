@@ -408,9 +408,9 @@ void main() {
 
   // A short, wide window with the keyboard up leaves the sheet under 100 logical pixels (#176): nothing overflows, the
   // name field stays on screen while the user types, and Run works with the keyboard still up. The size is the one a
-  // phone held in landscape reported; after #419 a phone stays upright, and this height is reached in a split-screen
-  // view or on a tablet or foldable, where the platform ignores the portrait lock. The golden cases named "landscape"
-  // above keep their names, because the name is part of the golden file's name.
+  // phone held in landscape reported; since #419 the app is upright on every form factor, and what still reports this
+  // height is a window the system sizes — a split-screen or free-form window, which ignores an orientation
+  // restriction. The cases named "landscape" above keep their names for the same reason, and for the same viewport.
   testWidgets('fits a landscape phone with the keyboard up on a production connection', (tester) async {
     tester.view
       ..devicePixelRatio = 1
@@ -433,7 +433,10 @@ void main() {
     expect(_answers, [WriteConfirmation.confirmed]);
   });
 
-  testWidgets('a rotation while the name is typed keeps the field, its text and its focus', (tester) async {
+  // What makes this size change since #419 is a window the system sizes — a split-screen or free-form window,
+  // which ignores an orientation restriction — not a phone turned sideways, which the build no longer allows. The
+  // state that has to survive it is the same, so the case is kept with its viewports.
+  testWidgets('a resize while the name is typed keeps the field, its text and its focus', (tester) async {
     tester.view
       ..devicePixelRatio = 1
       ..physicalSize = const Size(393, 829);

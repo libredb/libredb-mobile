@@ -154,9 +154,8 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), isNull);
     });
 
-    // The app is held upright (#419): portrait up alone, so no phone rotates it. A large screen is the platform's
-    // call, not this list's: iOS ignores it on an iPad with multitasking on, and Android 16 ignores it at a smallest
-    // width of 600dp and above, because the app targets SDK 36.
+    // The app is held upright on every form factor (#419): portrait up alone, so no device rotates it. No large
+    // screen is exempted, because an exemption protected nothing — see `AppBootstrapConfig.preferredOrientations`.
     test('defaults to portrait up alone', () {
       expect(const AppBootstrapConfig(environment: Environment.mock).preferredOrientations, const [
         DeviceOrientation.portraitUp,

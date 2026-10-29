@@ -33,12 +33,13 @@ class AppBootstrapConfig {
   final String defaultPalette;
   final String defaultBrightness;
 
-  /// The app is held upright, so this is `portraitUp` alone and a phone cannot rotate it (#419).
-  /// `ios/Runner/Info.plist` lists the same one orientation for the iPhone and `.MainActivity` fixes it in the Android
-  /// manifest, so neither platform can draw a landscape frame before this call. A large screen is the platform's call
-  /// rather than this list's: iOS ignores it on an iPad with multitasking on, where the plist keeps all four, and
-  /// Android 16 ignores it at a smallest width of 600dp and above, because the app targets SDK 36. So a tablet still
-  /// reaches the wide layout of `ResponsiveScaffold`, and so does any split-screen or free-form window.
+  /// The app is held upright on every form factor, so this is `portraitUp` alone and no device can rotate it (#419).
+  /// `ios/Runner/Info.plist` lists the same one orientation for both the iPhone and the iPad key, and `.MainActivity`
+  /// fixes it in the Android manifest, so neither platform can draw a landscape frame before this call.
+  /// No form factor is exempted, because an exemption would protect nothing: the only layout a rotation reaches is the
+  /// one `AppBreakpoints.isCompactHeight` gates, a screen height below 480, and only a phone on its side reports that
+  /// in full screen. What still reaches it is a window the system sizes — a split-screen or free-form window, which
+  /// ignores an orientation restriction anyway — so `ResponsiveScaffold`'s rail stays live without this list's help.
   final List<DeviceOrientation> preferredOrientations;
 
   bool get isProduction => environment == Environment.prod;
