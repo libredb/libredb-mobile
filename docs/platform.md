@@ -145,6 +145,12 @@ Platform's `message`, and the messages of `fieldErrors`, are never logged, put i
 | 503 `KEYCLOAK_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR`, 502 `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND` | `platformKeycloakUnavailable` | `ServerError` |
 | 403 `PLAN_FEATURE_REQUIRED` | `platformPlanFeatureRequired` | `AuthError` |
 | 403 `PERMISSION_DENIED` | `platformPermissionDenied` | `AuthError` |
+| 403 `STUDIO_ROLE_REQUIRED` | `platformStudioRoleRequired` | `AuthError` |
+| 404 `ACCESS_REQUESTS_DISABLED` | `platformAccessRequestsDisabled` | `NotFoundError` |
+| 409 `ACCESS_REQUEST_PENDING` | `platformAccessRequestPending` | `ValidationError` |
+| 409 `ACCESS_ALREADY_GRANTED` | `platformAccessAlreadyGranted` | `ValidationError` |
+| 409 `ACCESS_REQUEST_LIMIT` | `platformAccessRequestLimit` | `ValidationError` |
+| 409 `ACCESS_REQUEST_DECIDED` | `platformAccessRequestDecided` | `ValidationError` |
 | 500 `INTERNAL_ERROR`, or any 5xx with another code | `platformInternalError` | `ServerError` |
 | Any 5xx without a code, which only the edge in front of a stopped Platform sends, since Platform codes every 5xx of its own | `platformUnreachable` | `ServerError` |
 | Any other status with another code or no envelope | none | 400 `ValidationError`, 401 or 403 `AuthError`, 404 `NotFoundError`, else `UnknownError` |
@@ -154,6 +160,11 @@ Platform's `message`, and the messages of `fieldErrors`, are never logged, put i
 
 `platformGrantWriteError`, for a grant `PUT` only, maps a 400 `VALIDATION_FAILED` refused on exactly one of `level`, `subject` or `expiresAt` to `platformGrantLevelRefused`, `platformGrantSubjectRefused` or `platformGrantExpiryRefused`, and everything else through `platformError`.
 The grant rows stay out of `platformError`, because `GET /api/v1/audit` also has a `subject` filter whose refusal must not say that Keycloak does not know the user.
+
+`platformAccessRequestWriteError`, for an access request create and an admin's refuse only, maps a 400 `VALIDATION_FAILED` refused on exactly `reason` to `platformAccessRequestReasonRefused` and on exactly `level` to `platformGrantLevelRefused`, each a `ValidationError`, and everything else through `platformError`.
+The reason row stays out of `platformError` for the same reason the grant rows do: another route's `reason` refusal must not say that the text is too long.
+An approve uses `platformGrantWriteError` unchanged, because its body is the grant's.
+The six access request codes above reach `platformError`, so a repository that only reads requests needs no write mapper; a 409 with another code or without an envelope is still `UnknownError`.
 
 `KEYCLOAK_NOT_FOUND` comes from the directory reading a user's roles (`src/shared/lib/keycloak/directory.ts`), so it is an outage of the directory, not a missing item.
 `PLAN_FEATURE_REQUIRED` is reachable on `GET /api/v1/audit`, since the plan is checked before any permission (`src/features/audit/lib/audit-read.ts`).

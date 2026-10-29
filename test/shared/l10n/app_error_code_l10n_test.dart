@@ -62,6 +62,24 @@ void main() {
     }
   });
 
+  group('LibreDB Platform access request error codes', () {
+    const sentences = {
+      AppErrorCode.platformStudioRoleRequired: 'Your account has no Studio role, so it cannot ask for access.',
+      AppErrorCode.platformAccessRequestsDisabled: 'Access requests are turned off on this installation.',
+      AppErrorCode.platformAccessRequestPending: 'You already have an open request for this connection.',
+      AppErrorCode.platformAccessAlreadyGranted: 'You already have this access.',
+      AppErrorCode.platformAccessRequestLimit: 'You have too many open requests. Wait for an answer or withdraw one.',
+      AppErrorCode.platformAccessRequestDecided: 'This request was already answered or withdrawn.',
+      AppErrorCode.platformAccessRequestReasonRefused: 'Write a reason of at most 500 characters.',
+    };
+
+    for (final MapEntry(key: code, value: sentence) in sentences.entries) {
+      testWidgets('${code.name} resolves to its English sentence', (tester) async {
+        expect(await resolved(tester, code), sentence);
+      });
+    }
+  });
+
   group('SQL editor error codes', () {
     const sentences = {
       AppErrorCode.editorSavedTextUnreadable:

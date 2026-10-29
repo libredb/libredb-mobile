@@ -40,6 +40,12 @@ const Set<String> sensitiveHeaderNameSubstrings = {'authorization', 'api-key', '
 /// error text of a Platform audit event out of every exit; as substrings
 /// they also mask `statementType`, `statementCapture`, `fixStatement` and
 /// the like, which is accepted for logs and crash reports.
+///
+/// `requesteremail` and `reason` keep an access request's requester and the
+/// free text they wrote out of every exit, since a reason can name anyone;
+/// as a substring `reason` also masks `decisionReason`, the text an admin
+/// writes when refusing, and Studio's `endReason` and the `reason` of a
+/// truncated source, which is accepted for logs and crash reports.
 const Set<String> sensitiveBodyKeySubstrings = {
   'password',
   'otp',
@@ -47,9 +53,29 @@ const Set<String> sensitiveBodyKeySubstrings = {
   'refreshtoken',
   'secret',
   'subjectemail',
+  'requesteremail',
+  'reason',
   'statement',
   'errormessage',
 };
+
+/// The substrings of [sensitiveBodyKeySubstrings] that mask a value for what
+/// it can carry, not because the word names a credential.
+///
+/// `reason` is this app's own word for why something happened, so an
+/// identifier that contains it — a retry's reason, a sign-out's reason, the
+/// `reason` of a truncated source, `OidcConfigException.reason` — is not a
+/// credential, and the two code guards
+/// (`test/architecture/log_secrets_test.dart` and
+/// `credential_to_string_test.dart`) read
+/// `sensitiveBodyKeySubstrings.difference(privacyOnlyBodyKeySubstrings)`
+/// instead. Every exit still masks the value of a `reason` key: the logger,
+/// the Sentry Dart hook and the native scrubber all read
+/// [sensitiveBodyKeySubstrings] whole, so an access request's reason never
+/// leaves the device in a line or an event. A requester's e-mail is not here:
+/// `requesteremail` names a credential like `subjectemail` does, and the
+/// guards keep their whole strength on it.
+const Set<String> privacyOnlyBodyKeySubstrings = {'reason'};
 
 /// Keys of the OpenID Connect protocol whose values are masked too: the
 /// authorization code, the PKCE verifier, `state`, `nonce`, `session_state`

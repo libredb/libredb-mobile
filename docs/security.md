@@ -5,7 +5,8 @@ What the app sends to Studio and what it never holds is in [architecture.md](arc
 
 ## Encryption in transit
 
-A prod build (`lib/main/main_prod.dart`) talks to Studio, Keycloak, Sentry and, in Platform mode, LibreDB Platform over https only, which the privacy policy and the Play Data safety answer "data is encrypted in transit" rely on.
+A prod build (`lib/main/main_prod.dart`) talks to Studio, Keycloak, Sentry and, in a build with a Platform target, LibreDB Platform over https only, which the privacy policy and the Play Data safety answer "data is encrypted in transit" rely on.
+Such a build calls the Platform host from Studio mode too, for the access requests of M13-P, over https and with the same pins; every other Platform call is made in Platform mode.
 `AppConfig.fromEnvironment` (`lib/infrastructure/config/environment.dart`) stops the start with a `ProdHttpsConfigError` when `PROD_API_URL`, `OIDC_ISSUER`, a set `SENTRY_DSN` or a set `PLATFORM_API_URL` is not an absolute https URL with a host, a loopback http issuer included; there is no fallback and no downgrade.
 The rule is one pattern, `AppConfig.httpsUrlPattern`: the scheme in any case, optional user info, a host name or an IPv6 literal, an optional port, then the end or a path, query or fragment.
 `OIDC_ISSUER` is trimmed first, as the sign-in reads it, while `PROD_API_URL`, `SENTRY_DSN` and `PLATFORM_API_URL` are refused with surrounding whitespace, since they are used as given.
@@ -114,6 +115,7 @@ fvm flutter build apk --release --target lib/main/main_prod.dart \
 
 - An empty define leaves that host on the system trust store.
 - A set `PLATFORM_CERT_PINS` without `PLATFORM_API_URL` stops the start, because a pin without a host is a build mistake.
+- `PLATFORM_CERT_PINS` pins every call to the host of `PLATFORM_API_URL`, the access requests a Studio-mode session sends included, because a pin is read per host, not per mode.
 - A set define needs at least two distinct pins: the key the server uses now and a backup key that is not deployed yet.
 - Each pin must be exactly what the command below prints: 44 characters of standard base64 ending in `=`, 32 bytes once decoded.
 - A define that breaks either rule stops a prod build at start with `CertificatePinsConfigError`, as `ProdApiUrlConfigError` does; it never falls back to an unpinned connection.

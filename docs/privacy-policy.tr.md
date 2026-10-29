@@ -1,6 +1,6 @@
 # LibreDB Mobile gizlilik politikası
 
-Son güncelleme: 25 Ekim 2026.
+Son güncelleme: 29 Ekim 2026.
 
 Bu politika, Android için LibreDB Mobile'ın verilerinizle ne yaptığını anlatır.
 LibreDB Mobile, LibreDB Studio'nun bir istemcisidir: Keycloak üzerinden oturumunuzu açar ve Studio'nun size sunduğu veritabanlarını gösterir.
@@ -34,10 +34,12 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Uygulama isteklerinde Studio'ya Keycloak erişim belirtecinizi gönderir; böylece Studio kim olduğunuzu ve neyi kullanabileceğinizi bilir.
   Erişim belirteci, Keycloak'un içine koyduklarını taşır: örneğin kullanıcı adınızı, e-posta adresinizi ve adınızı.
   Uygulama Studio'ya ondan istediklerinizi de gönderir: açtığınız bağlantıyı, baktığınız nesneleri ve çalıştırdığınız deyimleri.
-- Aynı kurulumun **LibreDB Platform**'u; ancak yalnızca Platform modunu içeren bir sürümde ve yalnızca oturum açma sayfasında Platform girişini seçtikten ya da profilde Platform'a geçtikten sonra.
+- Aynı kurulumun **LibreDB Platform**'u; ancak yalnızca Platform modunu içeren bir sürümde.
+  Böyle bir sürümde uygulama, oturum açma sayfasında Platform girişini seçtikten ya da profilde Platform'a geçtikten sonra Platform'la konuşur; ayrıca Studio'dayken, sizde olmayan bir bağlantı için erişim istediğinizde de konuşur.
   Uygulama isteklerinde Platform'a Keycloak erişim belirtecinizi gönderir ve Platform kimliğinizi alır: Platform kullanıcı kimliğinizi, e-posta adresinizi, adınızı ve kuruluşunuzu.
   Uygulama bu kimliği oturumunuz açıkken bellekte tutar ve cihazda hiç saklamaz.
   Platform'un hesabınıza ilk yanıtı, Platform kullanıcı kaydınızı oluşturur ve lisansın yönetici koltuklarından birini kullanır.
+  Bu, Platform'a giriş yaptığınızda olur; Studio'dan erişim istemek Platform kullanıcı kaydı oluşturmaz ve koltuk kullanmaz.
   Platform modunda uygulama bir bağlantıya kimlerin erişimi olduğunu gösterir: kullanıcı adlarını ve e-posta adreslerini, ayrıca erişimi veren yöneticinin adını ya da e-posta adresini.
   Bunları sayfa açıkken bellekte tutar ve cihazda hiç saklamaz; Platform'a da kaldırmak istediğiniz erişimleri gönderir.
   Birine erişim vermek için dizinde arama yaptığınızda arama metni Platform'a gider, Platform da Keycloak'ta arar; uygulama bulunan kullanıcıların kullanıcı adlarını, adlarını, e-posta adreslerini, etkin olup olmadıklarını ve Studio rollerini gösterir.
@@ -45,6 +47,9 @@ Uygulama dört tür sunucuyla konuşur, kendiliğinden başka hiçbir sunucuyla 
   Platform modunda uygulama Platform'a istediğiniz bir bağlantının etkinleştirilmesini ya da devre dışı bırakılmasını da gönderir; o bağlantı hakkında başka bir şey göndermez.
   Platform modunda uygulama yönetilen sorguların denetim kaydını gösterir: onları çalıştıran kullanıcıları (kullanıcı adlarını ve Keycloak kimliklerini), bağlantıları, veritabanlarından veri taşıyabilen deyim metnini, veritabanı hata mesajlarını ve zamanları.
   Bunları denetim sayfası açıkken bellekte tutar ve cihazda hiç saklamaz; Platform'a da belirlediğiniz filtreleri, deyim arama metni dahil, gönderir.
+  Bir bağlantı için erişim istediğinizde uygulama Platform'a bağlantıyı, seçtiğiniz erişim düzeyini ve yazdığınız gerekçeyi, kullanıcı adınızı ve e-posta adresinizi taşıyan Keycloak erişim belirtecinizle birlikte gönderir; Platform yöneticileri isteği kullanıcı adınız ve e-posta adresinizle görür.
+  Uygulama isteklerinizi ve onlara ne olduğunu sayfa açıkken bellekte tutar, cihazda hiç saklamaz.
+  Platform modunda uygulama yöneticilere her isteğin kullanıcı adını, e-posta adresini ve gerekçesini gösterir; yöneticinin verdiği kararı da Platform'a gönderir: onaylamada düzeyi ve bitiş zamanını, reddetmede gerekçeyi.
 - **Sentry**, bir çökme raporlama hizmeti; ancak yalnızca uygulama bir Sentry proje anahtarıyla derlendiyse.
   Ayrıntılar aşağıdaki Çökme raporları bölümünde.
 
