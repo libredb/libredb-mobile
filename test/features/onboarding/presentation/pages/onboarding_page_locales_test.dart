@@ -97,7 +97,14 @@ void main() {
 
   /// The window the user sees of the frame. The frame scrolls inside it and nothing outside it is drawn, so it —
   /// not the screen — is what "on screen" means.
-  Rect frameWindow(WidgetTester tester) => tester.getRect(find.byType(Scrollable));
+  ///
+  /// **There are two scroll views on this page, and only one of them is the frame.** The chassis gives each step's
+  /// hero its own scrolling box (`_HeroExtent` over a `SingleChildScrollView`), so `find.byType(Scrollable)` is
+  /// ambiguous and the measurement has to name which one it means. It is named by what it holds: the words live in
+  /// the frame and never in the hero's box, so the frame is the headline's scrolling ancestor. Asking for the
+  /// *first* Scrollable would pick the same one today and quietly pick the wrong one the day the tree is reordered.
+  Rect frameWindow(WidgetTester tester) =>
+      tester.getRect(find.ancestor(of: find.byKey(onboardingHeadlineKey), matching: find.byType(Scrollable)));
 
   /// Fails when a widget has no pixel inside the window that paints it, which is what a user means by "it is not
   /// there". This is the claim `find.text` cannot make: a word below the fold satisfies the finder and shows
