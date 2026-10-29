@@ -488,3 +488,5 @@ Notes:
 - The sign-in snackbar reads only "Success", in Platform mode as in Studio mode (`lib/features/auth/presentation/pages/login_page.dart`); it is not an iOS difference and no step turns on it.
 - The grants page, the directory and the grant editor all carry "Connections" as their app bar title, which is the shell's branch title and not the page's; that is not an iOS difference either.
 - No step opened an unreachable page or a refusal: the mock answers every Platform call, so [Liveness and the two gates](#liveness-and-the-two-gates) and [Session and refusals](#session-and-refusals) stay covered by their widget tests and by the Android walkthroughs.
+- The only error lines in the log belong to the walk itself: `StackFrame` asserts on the `Eval ()` frame that a pointer event sent over the VM service carries, which `CrashReporter` then reports as a non-fatal of the gesture library.
+  A tap a finger makes carries no such frame, so those lines say nothing about the app.
