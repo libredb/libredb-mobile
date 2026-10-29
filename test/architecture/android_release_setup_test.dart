@@ -583,6 +583,19 @@ void main() {
       );
     });
 
+    test('release-as is gone once its version has a released section in the changelog', () {
+      final releaseAs = (package! as Map<String, Object?>)['release-as'];
+      if (releaseAs == null) return;
+      final changelog = File(_changelogPath).readAsStringSync();
+      expect(
+        changelog,
+        isNot(contains('## [$releaseAs]')),
+        reason:
+            'release-please already released $releaseAs, so release-as pins every later release pull request to it '
+            '(docs/release.md, step 11)',
+      );
+    });
+
     test('the docs name the Actions setting release-please needs to open its pull request', () {
       expect(releaseDocs, contains('Allow GitHub Actions to create and approve pull requests'));
       expect(releaseDocs, contains('Workflow permissions'));
@@ -596,6 +609,7 @@ void main() {
 }
 
 const _gradlePath = 'android/app/build.gradle.kts';
+const _changelogPath = 'CHANGELOG.md';
 const _releaseDocsPath = 'docs/release.md';
 const _releasePath = '.github/workflows/release.yml';
 const _releasePleasePath = '.github/workflows/release-please.yml';
