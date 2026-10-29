@@ -549,6 +549,12 @@ wrong scope.
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
 - **`installer_lab_config_test.dart`** guards the Platform installer environment used for the full-system check.
+- **`platform_image_pin_test.dart`** guards that the `platform` profile of `tool/studio-dev` names one Platform release
+  everywhere it is named: both `PLATFORM_IMAGE` defaults, the comment that introduces the profile, and the
+  `## Platform` section of `docs/studio.md`. Every answer under `test/fixtures/platform/` was recorded from that one
+  release, so a bump that reaches the image but not the prose leaves the doc describing a Platform that no longer
+  serves the fixtures, and a bump that reaches one service but not the other migrates with one release and serves with
+  another.
 
 The colour has two guards next to the code they guard, and the second exists because the first could not see
 what it was missing:
