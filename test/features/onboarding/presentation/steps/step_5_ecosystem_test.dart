@@ -35,10 +35,26 @@ void main() {
     Locale locale = const Locale('en'),
     bool disableAnimations = false,
     Size viewport = const Size(390, 844),
+    double textScale = 1.0,
+    double? hero,
   }) async {
     addTearDown(tester.view.reset);
     tester.view.physicalSize = viewport;
     tester.view.devicePixelRatio = 1.0;
+    // [hero] draws the step in the box the chassis really gives it — 318 points wide on a 390 phone, scrolling
+    // itself vertically — rather than across the whole test surface, because the only axis a hero cannot absorb is
+    // the horizontal one.
+    final body = hero == null
+        ? const SingleChildScrollView(
+            child: Padding(padding: EdgeInsets.all(AppSpacing.lg), child: Step5Ecosystem()),
+          )
+        : Center(
+            child: SizedBox(
+              width: hero,
+              height: 405,
+              child: const SingleChildScrollView(child: Step5Ecosystem()),
+            ),
+          );
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -51,13 +67,10 @@ void main() {
         ],
         supportedLocales: S.delegate.supportedLocales,
         locale: locale,
-        home: const Scaffold(
-          body: SingleChildScrollView(
-            child: Padding(padding: EdgeInsets.all(AppSpacing.lg), child: Step5Ecosystem()),
-          ),
-        ),
+        home: Scaffold(body: body),
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(disableAnimations: disableAnimations),
+          data: MediaQuery.of(context)
+              .copyWith(disableAnimations: disableAnimations, textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
       ),
@@ -173,5 +186,60 @@ void main() {
     expect(drawnHeight(tester, 'ob5-leg-2'), greaterThan(0));
     expect(borderOf(tester, 'ob5-database-0'), scheme.primary);
     expect(tester.widget<Opacity>(find.byKey(const ValueKey('ob5-modes'))).opacity, 1.0);
+  });
+
+  group('the ecosystem survives the text size the phone is set to', () {
+    /// The hero on a 390 phone, and the one a 320 phone leaves: the two widths the chassis measures the step at.
+    ///
+    /// Vertical growth is the hero's own problem — it scrolls — so what is asserted is that **no row of the step is
+    /// wider than the hero it is drawn in**. An accessibility text size is a real Android setting, not a hypothesis:
+    /// at 3.0 in Turkish the identity row was 363 points wider than its box and drew the overflow stripe across the
+    /// top of the diagram.
+    for (final (name, hero) in [('a 390 phone', 318.0), ('a 320 phone', 248.0)]) {
+      for (final scale in [1.0, 1.3, 2.0, 3.0]) {
+        for (final locale in [const Locale('en'), const Locale('tr')]) {
+          testWidgets('nothing overflows the hero of $name at a text scale of $scale in ${locale.languageCode}', (
+            tester,
+          ) async {
+            await pumpStep(tester, elapsed: Step5Beats.whole, locale: locale, hero: hero, textScale: scale);
+            final step = tester.getRect(find.byType(Step5Ecosystem));
+
+            // Measured off the boxes themselves rather than read off an overflow stripe: a layout that draws past
+            // its parent without a flex in it says nothing at all, and this step is drawn with boxes of its own.
+            for (final element
+                in find.descendant(of: find.byType(Step5Ecosystem), matching: find.byType(Text)).evaluate()) {
+              final box = element.renderObject! as RenderBox;
+              final rect = box.localToGlobal(Offset.zero) & box.size;
+              final word = (element.widget as Text).data;
+              expect(rect.left, greaterThanOrEqualTo(step.left - 0.01), reason: '"$word" starts before the hero');
+              expect(rect.right, lessThanOrEqualTo(step.right + 0.01), reason: '"$word" runs past the hero');
+            }
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
+
+    /// The shape the prototype approved, which is what the step must still draw once it no longer overflows: the
+    /// identity's name against the left edge of its box, its note against the right, the two on one line and
+    /// vertically centred on each other. A fix that stacked them at every text size would pass the tests above and
+    /// lose the drawing.
+    testWidgets('the identity keeps its name at one edge and its note at the other', (tester) async {
+      final s = await pumpStep(
+        tester,
+        elapsed: Step5Beats.whole,
+        locale: const Locale('tr'),
+        viewport: const Size(800, 844),
+        hero: 600,
+      );
+      final step = tester.getRect(find.byType(Step5Ecosystem));
+      final name = tester.getRect(find.text(s.ob5_keycloak));
+      final note = tester.getRect(find.text(s.ob5_keycloak_note));
+
+      // The tier box pads its contents by `md` inside a hairline border.
+      expect(name.left, closeTo(step.left + AppSpacing.md + 1, 0.01), reason: 'the name left the left edge');
+      expect(note.right, closeTo(step.right - AppSpacing.md - 1, 0.01), reason: 'the note left the right edge');
+      expect(note.center.dy, closeTo(name.center.dy, 0.01), reason: 'the note is no longer centred on the name');
+    });
   });
 }

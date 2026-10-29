@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
@@ -163,11 +166,9 @@ class _Ecosystem extends StatelessWidget {
           phase: _phase(elapsed, Duration.zero, Step5Beats.arrival),
           child: _TierBox(
             lit: 0,
-            child: Row(
-              children: [
-                Expanded(child: Text(s.ob5_keycloak, style: text.titleSmall)),
-                Text(s.ob5_keycloak_note, style: mono),
-              ],
+            child: _NameAndNote(
+              name: Text(s.ob5_keycloak, style: text.titleSmall),
+              note: Text(s.ob5_keycloak_note, style: mono),
             ),
           ),
         ),
@@ -288,6 +289,137 @@ class _Ecosystem extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The identity tier: a name against the leading edge of its box and a note against the trailing one, the two
+/// centred on each other — and, when the pair needs more than the row is wide, the note under the name.
+///
+/// A `Row` of `Expanded(name)` and the note draws the first case and only the first. A flex lays an inflexible
+/// child out against an unbounded width, so the note took whatever its glyphs asked for: at a text scale of 3.0 in
+/// Turkish — a setting an Android phone really offers — it asked for 439 of the 292 points the hero gives this row
+/// and the overflow stripe went across the top of the diagram, 363 points of it. A `Wrap`, which is what the
+/// chassis uses for its two controls, fixes that case and loses this one: a `Wrap` never squeezes, so it would
+/// break the pair onto two lines as soon as the name and the note *together* wanted more than the row, rather than
+/// handing the name what the note leaves.
+///
+/// So the note is measured against the whole row first and the name is given the rest:
+///
+/// * the note takes the lesser of what it asks for and the whole row;
+/// * if anything is left, the name takes exactly that — which is what `Expanded` gave it — and the two sit on one
+///   line, centred on each other, the note flush with the trailing edge;
+/// * if nothing is left, each is given the whole row and the note drops under the name, still flush with that edge.
+///
+/// Neither height is capped: vertical growth is the hero's business, and the hero scrolls.
+class _NameAndNote extends MultiChildRenderObjectWidget {
+  _NameAndNote({required Widget name, required Widget note}) : super(children: [name, note]);
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderNameAndNote(Directionality.of(context));
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderNameAndNote renderObject) {
+    renderObject.textDirection = Directionality.of(context);
+  }
+}
+
+/// Where this row keeps each piece's offset; it carries nothing of its own.
+class _NameAndNoteParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderNameAndNote extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _NameAndNoteParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _NameAndNoteParentData> {
+  _RenderNameAndNote(this._textDirection);
+
+  /// Between the name and the note once the note has dropped under it.
+  static const double _gap = AppSpacing.xs;
+
+  TextDirection get textDirection => _textDirection;
+  TextDirection _textDirection;
+
+  set textDirection(TextDirection value) {
+    if (_textDirection == value) return;
+    _textDirection = value;
+    markNeedsLayout();
+  }
+
+  RenderBox get _name => firstChild!;
+
+  RenderBox get _note => lastChild!;
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _NameAndNoteParentData) {
+      child.parentData = _NameAndNoteParentData();
+    }
+  }
+
+  /// Where the two pieces go, under [constraints], laid out for real or dryly depending on [layoutChild].
+  (Size, Offset, Offset) _geometry(BoxConstraints constraints, ChildLayouter layoutChild) {
+    final row = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : _name.getMaxIntrinsicWidth(double.infinity) + _note.getMaxIntrinsicWidth(double.infinity);
+    final note = layoutChild(_note, BoxConstraints(maxWidth: row));
+    final room = row - note.width;
+    final trailing = textDirection == TextDirection.ltr ? row - note.width : 0.0;
+    if (room > 0) {
+      final name = layoutChild(_name, BoxConstraints.tightFor(width: room));
+      final height = math.max(name.height, note.height);
+      final leading = textDirection == TextDirection.ltr ? 0.0 : row - name.width;
+      return (
+        Size(row, height),
+        Offset(leading, (height - name.height) / 2),
+        Offset(trailing, (height - note.height) / 2),
+      );
+    }
+    final name = layoutChild(_name, BoxConstraints(maxWidth: row));
+    final leading = textDirection == TextDirection.ltr ? 0.0 : row - name.width;
+    return (Size(row, name.height + _gap + note.height), Offset(leading, 0), Offset(trailing, name.height + _gap));
+  }
+
+  @override
+  void performLayout() {
+    final (laid, name, note) = _geometry(constraints, ChildLayoutHelper.layoutChild);
+    size = constraints.constrain(laid);
+    (_name.parentData! as BoxParentData).offset = name;
+    (_note.parentData! as BoxParentData).offset = note;
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(_geometry(constraints, ChildLayoutHelper.dryLayoutChild).$1);
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      math.max(_name.getMinIntrinsicWidth(height), _note.getMinIntrinsicWidth(height));
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _name.getMaxIntrinsicWidth(height) + _note.getMaxIntrinsicWidth(height);
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _intrinsicHeight(width, (child, extent) => child.getMinIntrinsicHeight(extent));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _intrinsicHeight(width, (child, extent) => child.getMaxIntrinsicHeight(extent));
+
+  /// The same two cases as [_geometry], asked of the children's intrinsics instead of their layout, so the chassis
+  /// measuring the hero gets the height this row will really take.
+  double _intrinsicHeight(double width, double Function(RenderBox, double) heightOf) {
+    final note = math.min(_note.getMaxIntrinsicWidth(double.infinity), width);
+    final room = width - note;
+    if (room > 0) return math.max(heightOf(_name, room), heightOf(_note, note));
+    return heightOf(_name, width) + _gap + heightOf(_note, width);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }
 
 /// A piece arriving: it fades in and settles the last few points upward, the way the rest of the app enters.
