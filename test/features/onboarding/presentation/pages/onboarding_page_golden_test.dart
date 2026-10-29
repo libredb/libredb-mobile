@@ -1,100 +1,73 @@
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
-import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_panel.dart';
-import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/shared/adoption/adoption_figures.dart';
-import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
+import 'package:libredb_mobile/features/onboarding/data/repositories/onboarding_seen_preferences.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/steps/onboarding_steps.dart';
 
-import '../../../../support/golden_app.dart' show kGoldenScreenSize;
+import '../../../../support/golden_app.dart' show goldenScreen, kGoldenScreenSize;
 import '../../../../support/test_env.dart';
 
-/// What the introduction draws, in both brightnesses.
+/// What the introduction draws: all six screens of the deck, in both brightnesses.
 ///
-/// The four panels are rendered directly rather than by swiping the page: `alchemist` renders a frame, not a
-/// session, and driving a pager through it would need a hook in the page that exists only for this file. The page's
-/// own chrome — the dots, the two controls, the way the primary one changes on the last panel — is covered by
-/// `onboarding_page_test.dart`, which can tap.
+/// The page is the real one, wired the way the route wires it (`heroBuilder: onboardingStepHero`), so the image is
+/// the hero of the step *and* the chassis around it: counter, caption, headline, body, progress rule, Skip and the
+/// primary pill.
 ///
-/// The figures are the ones shipped in the source, so the image does not move when `assets/adoption.json` is
-/// refreshed: a committed number is a fact about the product, and a golden that re-renders every time it changes
-/// would make every refresh a visual review.
+/// `alchemist` renders a frame, not a session, and the step the page is on is its own state. So each step is its own
+/// golden (six steps, two brightnesses, twelve images), and `whilePerforming` swipes the page to that step the way a
+/// thumb would, then lets the hero's one-shot animation play out, so the image is the resting frame the user is left
+/// looking at. One golden per step rather than six scenarios in one, because an interaction applies to the whole
+/// test and a composed frame would need a hook in the page that exists for no other reason. A failing image then
+/// names the step that moved. The interaction also asserts the counter, so a swipe that lands on the wrong screen
+/// fails the test instead of silently blessing a wrong image.
+///
+/// Languages are not repeated here: `onboarding_page_locales_test.dart` holds the Turkish copy, and the hero art is
+/// language-free, so a second set of twelve images would mostly re-draw the same pixels.
 void main() {
   setUpAll(() => TestEnv.autoReset = false);
 
-  Widget panels({required bool dark}) {
-    const figures = AdoptionFigures.fallback;
-    return RepositoryProvider<IAdoptionFiguresSource>(
-      create: (_) => const _ShippedFigures(),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: dark ? AppTheme.dark() : AppTheme.light(),
-        localizationsDelegates: const [
-          S.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: S.delegate.supportedLocales,
-        locale: const Locale('en'),
-        home: Builder(
-          builder: (context) {
-            final l10n = S.of(context);
-            return Scaffold(
-              body: Column(
-                children: [
-                  Expanded(
-                    child: OnboardingPanel(
-                      icon: Icons.verified_user_outlined,
-                      title: l10n.onboarding_platform_title,
-                      body: l10n.onboarding_platform_body,
-                    ),
-                  ),
-                  Expanded(
-                    child: OnboardingPanel(
-                      icon: Icons.storage_outlined,
-                      title: l10n.onboarding_studio_title,
-                      body: l10n.onboarding_studio_body,
-                      figures: l10n.onboarding_studio_figures(figures.engines, figures.channels),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
+  Widget page({required bool dark}) => BlocProvider<OnboardingCubit>(
+    create: (_) => OnboardingCubit(store: OnboardingSeenPreferences()),
+    child: goldenScreen(const OnboardingPage(heroBuilder: onboardingStepHero), dark: dark),
+  );
+
+  Future<void> swipeTo(WidgetTester tester, int step) async {
+    await tester.pumpAndSettle();
+    for (var i = 0; i < step; i++) {
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
+      await tester.pumpAndSettle();
+    }
+    final counter = tester.widget<Text>(find.byKey(onboardingCounterKey)).data!;
+    expect(counter, startsWith('0${step + 1}'), reason: 'the swipe did not land on screen ${step + 1}');
   }
 
   for (final (name, dark) in [('light', false), ('dark', true)]) {
-    goldenTest(
-      'OnboardingPage — $name',
-      fileName: 'onboarding_page_$name',
-      pumpBeforeTest: pumpOnce,
-      builder: () => GoldenTestGroup(
-        columns: 1,
-        children: [
-          GoldenTestScenario(
-            name: 'the panel that governs, and the one that carries the figures',
-            child: SizedBox.fromSize(
-              size: kGoldenScreenSize,
-              child: panels(dark: dark),
+    for (var step = 0; step < onboardingStepCount; step++) {
+      goldenTest(
+        'OnboardingPage — screen ${step + 1}, $name',
+        fileName: 'onboarding_page_${step + 1}_$name',
+        pumpBeforeTest: pumpOnce,
+        whilePerforming: (tester) async {
+          await swipeTo(tester, step);
+          return null;
+        },
+        builder: () => GoldenTestGroup(
+          columns: 1,
+          children: [
+            GoldenTestScenario(
+              name: 'screen ${step + 1} of $onboardingStepCount',
+              child: SizedBox.fromSize(
+                size: kGoldenScreenSize,
+                child: page(dark: dark),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    }
   }
-}
-
-/// The figures the source ships, so the image does not move when the asset is refreshed.
-class _ShippedFigures implements IAdoptionFiguresSource {
-  const _ShippedFigures();
-
-  @override
-  Future<AdoptionFigures> read() async => AdoptionFigures.fallback;
 }
