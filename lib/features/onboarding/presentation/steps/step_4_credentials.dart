@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/widgets/key_mark.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/ring_decoration.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
@@ -114,9 +115,7 @@ class _Step4CredentialsState extends State<Step4Credentials> with SingleTickerPr
   static const _current = 1.5;
 
   /// A node's ring and pop: `.ring{border:1.5px;opacity:.85}` growing to 1.13 over `.7s`, `.pop` to 1.05 over `.4s`.
-  static const _ringWidth = 1.5;
-  static const _ringOpacity = 0.85;
-  static const _ringGrowth = 0.13;
+  static const _ringRadius = 11.0;
   static const _ringFor = Duration(milliseconds: 700);
   static const _popScale = 1.05;
   static const _popFor = Duration(milliseconds: 400);
@@ -293,7 +292,9 @@ class _Step4CredentialsState extends State<Step4Credentials> with SingleTickerPr
         border: Border.all(color: lit ? colors.primary : colors.outlineVariant),
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
-      foregroundDecoration: ring > 0 && ring < 1 ? _RingDecoration(colors.primary, ring) : null,
+      foregroundDecoration: ring > 0 && ring < 1
+          ? RingDecoration(color: colors.primary, progress: ring, radius: _ringRadius)
+          : null,
       padding: const EdgeInsets.symmetric(horizontal: _nodePadX, vertical: _nodePadY),
       child: Row(
         spacing: _nodeGap,
@@ -450,45 +451,5 @@ class _Step4CredentialsState extends State<Step4Credentials> with SingleTickerPr
         ),
       ),
     );
-  }
-}
-
-/// The ring that runs out of a box: `.ring{border:1.5px solid var(--accent)}` over the box's padding edge, fading from
-/// .85 as it grows to 1.13 of itself. It is painted, not laid out, so it draws past the box without being one.
-class _RingDecoration extends Decoration {
-  const _RingDecoration(this.color, this.progress);
-
-  final Color color;
-  final double progress;
-
-  @override
-  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _RingPainter(color, progress);
-}
-
-class _RingPainter extends BoxPainter {
-  _RingPainter(this.color, this.progress);
-
-  final Color color;
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
-    final size = configuration.size;
-    if (size == null) return;
-    final grown = 1 + _Step4CredentialsState._ringGrowth * AppDurations.easeOut.transform(progress);
-    final rect = (offset & size).deflate(1);
-    canvas
-      ..save()
-      ..translate(rect.center.dx, rect.center.dy)
-      ..scale(grown)
-      ..translate(-rect.center.dx, -rect.center.dy)
-      ..drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(11)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = _Step4CredentialsState._ringWidth
-          ..color = color.withValues(alpha: _Step4CredentialsState._ringOpacity * (1 - progress)),
-      )
-      ..restore();
   }
 }

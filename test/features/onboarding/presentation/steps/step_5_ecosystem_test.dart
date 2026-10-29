@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_5_ecosystem.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
 /// The fifth screen of the introduction: the ecosystem the person has been standing inside for four screens.
@@ -151,13 +152,14 @@ void main() {
     );
   });
 
-  testWidgets('the Platform hub carries its three roles in the case the ARB writes them', (tester) async {
+  testWidgets('the Platform hub carries its three roles in capitals, by the rules of the language', (tester) async {
     final s = await pumpStep(tester, elapsed: Step5Beats.whole, locale: const Locale('tr'));
 
     expect(find.text(s.ob5_hub), findsOneWidget);
-    for (final role in [s.ob5_role_connections, s.ob5_role_grants, s.ob5_role_audit]) {
+    // `.role{text-transform:uppercase}`, which a browser applies by the document's language: a Turkish `i` becomes
+    // `İ`, and Dart's own `toUpperCase` would write `I`.
+    for (final role in ['BAĞLANTILAR', 'YETKİLER', 'DENETİM KAYDI']) {
       expect(find.text(role), findsOneWidget, reason: '$role is not on a chip');
-      expect(find.text(role.toUpperCase()), findsNothing, reason: "Dart's toUpperCase turns a Turkish i into I");
     }
   });
 
@@ -186,6 +188,109 @@ void main() {
     expect(drawnHeight(tester, 'ob5-leg-2'), greaterThan(0));
     expect(borderOf(tester, 'ob5-database-0'), scheme.primary);
     expect(tester.widget<Opacity>(find.byKey(const ValueKey('ob5-modes'))).opacity, 1.0);
+  });
+
+  /// The geometry of the prototype's fifth screen, read in headless Chrome at 390x844 and a device scale of 2 (Turkish,
+  /// light; the same in English and dark). Keycloak is a 45 high box (`padding:7px 11px` round a 14.5 name over a
+  /// 14.5 mono line), the phone a 31.5 high bar and Platform a 68 high one, 7 apart; the fan is 34 high — a stem of 13,
+  /// a rail at 13 and three drops of 21 at the centres of the columns — over three Studios of 46.5 in columns with a
+  /// 6 gap, 15 of legs, three databases of 26.5, the mode pills 9 under them, 28 high, and the note 5 under those.
+  ///
+  /// **The font trap:** every height is a box round lines whose heights are multipliers of their sizes, which Ahem lays
+  /// out as the product font does, and every x is an inset from an edge or a column. The hero is 700 wide so that no
+  /// word wraps in Ahem's full-em glyphs.
+  group('the screen is the prototype\'s', () {
+    Rect rect(WidgetTester tester, String key) => tester.getRect(find.byKey(ValueKey(key)));
+
+    Future<void> whole(WidgetTester tester) async {
+      await pumpStep(tester, elapsed: Step5Beats.whole, viewport: const Size(800, 900), hero: 700);
+    }
+
+    testWidgets('Keycloak is 45, the phone 31.5 and Platform 68, 7 apart', (tester) async {
+      await whole(tester);
+
+      expect(rect(tester, 'ob5-kc').height, closeTo(45, 0.6));
+      expect(rect(tester, 'ob5-you').height, closeTo(31.5, 0.6));
+      expect(rect(tester, 'ob5-hub').height, closeTo(68, 0.6));
+      expect(rect(tester, 'ob5-you').top - rect(tester, 'ob5-kc').bottom, closeTo(7, 0.6));
+      expect(rect(tester, 'ob5-hub').top - rect(tester, 'ob5-you').bottom, closeTo(7, 0.6));
+    });
+
+    testWidgets('the three drops hang from the rail down into the tops of the Studios, at the column centres', (
+      tester,
+    ) async {
+      await whole(tester);
+
+      final hub = rect(tester, 'ob5-hub');
+      final column = (700 - 12) / 3;
+      final rail = rect(tester, 'ob5-rail');
+      expect(rail.top - hub.bottom, closeTo(13, 0.6));
+      expect(rail.left - hub.left, closeTo(column / 2, 0.6), reason: 'the rail starts at the first column\'s centre');
+      expect(hub.right - rail.right, closeTo(column / 2, 0.6));
+      final stem = rect(tester, 'ob5-stem');
+      expect(stem.height, closeTo(13, 0.6));
+      expect(stem.center.dx, closeTo(hub.center.dx, 0.6));
+      for (var i = 0; i < 3; i++) {
+        final twig = rect(tester, 'ob5-twig-$i');
+        final studio = rect(tester, 'ob5-studio-$i');
+        expect(twig.height, closeTo(21, 0.6), reason: 'twig $i');
+        expect(twig.width, 1);
+        expect(twig.center.dx, closeTo(studio.center.dx, 0.6), reason: 'twig $i is not over its Studio');
+        expect(twig.top, closeTo(rail.top, 0.6), reason: 'twig $i hangs from the rail');
+        expect(twig.bottom, closeTo(studio.top, 0.6), reason: 'twig $i does not reach the top of its Studio');
+      }
+    });
+
+    testWidgets('the Studios are 46.5 in columns with 6 between, the legs 15 and the databases 26.5', (tester) async {
+      await whole(tester);
+
+      final column = (700 - 12) / 3;
+      for (var i = 0; i < 3; i++) {
+        final studio = rect(tester, 'ob5-studio-$i');
+        final leg = rect(tester, 'ob5-leg-$i');
+        final database = rect(tester, 'ob5-database-$i');
+        expect(studio.width, closeTo(column, 0.6));
+        expect(studio.height, closeTo(46.5, 0.6), reason: 'Studio $i');
+        expect(leg.height, closeTo(15, 0.6));
+        expect(leg.top, closeTo(studio.bottom, 0.6));
+        expect(leg.center.dx, closeTo(studio.center.dx, 0.6));
+        expect(database.height, closeTo(26.5, 0.6), reason: 'database $i');
+        expect(database.top, closeTo(leg.bottom, 0.6));
+      }
+      expect(rect(tester, 'ob5-studio-1').left - rect(tester, 'ob5-studio-0').right, closeTo(6, 0.6));
+    });
+
+    testWidgets('the mode pills are 28 high, 9 under the databases, and the note is 5 under them', (tester) async {
+      await whole(tester);
+
+      final database = rect(tester, 'ob5-database-0');
+      final studio = rect(tester, 'ob5-mode-studio');
+      final platform = rect(tester, 'ob5-mode-platform');
+      expect(studio.top - database.bottom, closeTo(9, 0.6));
+      expect(studio.height, closeTo(28, 0.6));
+      expect(platform.left - studio.right, closeTo(6, 0.6));
+      final note = tester.getRect(find.byKey(const ValueKey('ob5-note')));
+      expect(note.top - studio.bottom, closeTo(5, 0.6));
+      final style = tester.widget<Text>(find.byKey(const ValueKey('ob5-note'))).style!;
+      expect(style.fontFamily, AppTypography.mono);
+      expect(style.fontSize, 11);
+      expect(style.height, 1.5);
+      expect(style.letterSpacing, 0);
+    });
+
+    testWidgets('the footnote is there, centred, in both languages', (tester) async {
+      for (final locale in [const Locale('en'), const Locale('tr')]) {
+        final s = await pumpStep(
+          tester,
+          elapsed: Step5Beats.whole,
+          viewport: const Size(800, 900),
+          hero: 700,
+          locale: locale,
+        );
+        expect(find.text(s.ob5_mode_note), findsOneWidget);
+        expect(tester.widget<Text>(find.byKey(const ValueKey('ob5-note'))).textAlign, TextAlign.center);
+      }
+    });
   });
 
   group('the ecosystem survives the text size the phone is set to', () {
@@ -220,11 +325,10 @@ void main() {
       }
     }
 
-    /// The shape the prototype approved, which is what the step must still draw once it no longer overflows: the
-    /// identity's name against the left edge of its box, its note against the right, the two on one line and
-    /// vertically centred on each other. A fix that stacked them at every text size would pass the tests above and
-    /// lose the drawing.
-    testWidgets('the identity keeps its name at one edge and its note at the other', (tester) async {
+    /// The shape the prototype draws: the identity's name over its note, both against the left edge of the box. It used
+    /// to be a name at one edge and a note at the other on one line; the prototype's `.kc` stacks them, and stacking
+    /// them is also what holds at an accessibility text size, so the measuring render object it needed is gone.
+    testWidgets('the identity stacks its name over its note, both on the left edge', (tester) async {
       final s = await pumpStep(
         tester,
         elapsed: Step5Beats.whole,
@@ -236,10 +340,9 @@ void main() {
       final name = tester.getRect(find.text(s.ob5_keycloak));
       final note = tester.getRect(find.text(s.ob5_keycloak_note));
 
-      // The tier box pads its contents by `md` inside a hairline border.
-      expect(name.left, closeTo(step.left + AppSpacing.md + 1, 0.01), reason: 'the name left the left edge');
-      expect(note.right, closeTo(step.right - AppSpacing.md - 1, 0.01), reason: 'the note left the right edge');
-      expect(note.center.dy, closeTo(name.center.dy, 0.01), reason: 'the note is no longer centred on the name');
+      expect(name.left, closeTo(step.left + 12, 0.01), reason: '1 border + 11 padding');
+      expect(note.left, closeTo(name.left, 0.01), reason: 'the note is under the name, not at the other edge');
+      expect(note.top, greaterThanOrEqualTo(name.bottom - 0.01));
     });
   });
 }

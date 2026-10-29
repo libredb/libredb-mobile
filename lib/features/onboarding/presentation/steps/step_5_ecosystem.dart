@@ -1,7 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_type.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/ring_decoration.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
@@ -21,49 +21,57 @@ const _databases = ['orders-prod', '…', '…'];
 /// than from a drawing, so a fourth Studio would move the geometry and not the code.
 const _columns = 3;
 
-/// When each beat of the fifth screen starts, measured from the frame the step is first shown on.
+/// When each beat of the fifth screen starts, measured from the frame the step is first shown on: the prototype's own
+/// `PLAY[4]` schedule, in milliseconds.
 ///
-/// Every value is a sum of `AppDurations`, so the screen moves at the speeds the rest of the app moves at and a
-/// change to the product's motion carries the deck with it. The order is the one claim this screen makes with its
-/// drawing rather than its words — see [Step5Ecosystem].
+/// The order is the one claim this screen makes with its drawing rather than its words — see [Step5Ecosystem].
 class Step5Beats {
   Step5Beats._();
 
-  /// How long one piece takes to arrive once its beat has come.
-  static final Duration arrival = AppDurations.normal;
+  /// How long a connector takes to grow once its beat has come, and how long a piece takes to arrive: `--d-med`.
+  static const Duration arrival = Duration(milliseconds: 240);
 
-  /// Between one tier of the stack rising and the next.
-  static final Duration tierStagger = AppDurations.instant;
+  /// How long the rail takes, which is longer than the lines it joins: `transition:transform var(--d-slower)`.
+  static const Duration railGrows = Duration(milliseconds: 400);
+
+  /// Between one tier of the stack rising and the next: `animation-delay:90ms`.
+  static const Duration tierStagger = Duration(milliseconds: 90);
 
   /// The legs from the databases up to the Studios.
-  static final Duration legs = AppDurations.slow + AppDurations.normal;
+  static const Duration legs = Duration(milliseconds: 600);
 
   /// `orders-prod`, its leg and the Studio that holds it take the accent.
-  static final Duration lit = legs + AppDurations.normal + AppDurations.fast;
+  static const Duration lit = Duration(milliseconds: 1100);
 
   /// The branch: the rail the Studios hang under, and the stem up into Platform.
-  static final Duration branch = lit + AppDurations.slow + AppDurations.normal;
+  static const Duration branch = Duration(milliseconds: 1600);
 
   /// The twigs, from each Studio up to the rail.
-  static final Duration twigs = branch + AppDurations.slow;
+  static const Duration twigs = Duration(milliseconds: 1950);
 
   /// The branch and `orders-prod`'s twig take the accent: the path the statement travelled.
-  static final Duration hot = twigs + AppDurations.slow + AppDurations.fast;
+  static const Duration hot = Duration(milliseconds: 2500);
 
-  /// Platform's three role chips.
-  static final Duration hub = hot + AppDurations.slow + AppDurations.normal;
+  /// Platform pops and rings, and its three role chips follow.
+  static const Duration hub = Duration(milliseconds: 3100);
 
   /// The mode switch, which is what the screen ends on.
-  static final Duration modes = hub + AppDurations.media + AppDurations.slow;
+  static const Duration modes = Duration(milliseconds: 4100);
 
-  /// The whole timeline.
-  static final Duration whole = modes + AppDurations.media;
+  /// The whole timeline, long enough for the mode switch's own fade to finish inside it.
+  static const Duration whole = Duration(milliseconds: 4500);
 
-  /// Between one role chip popping in and the next.
-  static final Duration chipStagger = AppDurations.fast;
+  /// Between one role chip popping in and the next, and how long after the hub pops the first one does.
+  static const Duration chipStagger = Duration(milliseconds: 150);
+  static const Duration chipsAfter = Duration(milliseconds: 200);
 
-  /// Between one connector of a row being drawn and the next.
-  static final Duration wireStagger = AppDurations.instant;
+  /// Between one connector of a row being drawn and the next: the legs 110 apart, the twigs 150.
+  static const Duration wireStagger = Duration(milliseconds: 110);
+  static const Duration twigStagger = Duration(milliseconds: 150);
+
+  /// A pop and a ring: `pop var(--d-slower)`, `ringOut .7s`.
+  static const Duration pop = Duration(milliseconds: 400);
+  static const Duration ring = Duration(milliseconds: 700);
 }
 
 /// The fifth screen of the introduction: the ecosystem, and where the viewer stands in it.
@@ -85,6 +93,10 @@ class Step5Beats {
 /// session and no second sign-in — and that the first switch takes an admin seat of the licence. Studio is the pill
 /// that is on: Platform mode is for administrators, and an audit caught the prototype promising every new reader a
 /// mode they may not be able to enter (`docs/platform.md`).
+///
+/// **The drawing is the prototype's**, measured in headless Chrome at 390x844 and a device scale of 2 (`ob.html`,
+/// screen 5): Keycloak 45 high with its name over its note, the phone 31.5, Platform 68, a fan of 34, Studios of 46.5
+/// in three columns with a 6 gap, legs of 15, databases of 26.5, the mode pills 28.
 ///
 /// Nothing here is tappable. Next is the only control, and the chassis draws it.
 class Step5Ecosystem extends StatefulWidget {
@@ -136,14 +148,53 @@ double _phase(Duration elapsed, Duration start, Duration span) {
   return AppDurations.easeOut.transform(raw.clamp(0.0, 1.0));
 }
 
-/// The design system's hairline: the thickness its dividers paint with, so a connector is as thin as a divider and
-/// not a number of its own.
-double _hairline(BuildContext context) => DividerTheme.of(context).thickness ?? 1;
+/// The same, without the easing.
+double _linear(Duration elapsed, Duration start, Duration span) {
+  final raw = (elapsed - start).inMicroseconds / span.inMicroseconds;
+  return raw.clamp(0.0, 1.0);
+}
 
 /// [quiet] until [phase] has run, [accent] once it has, and exactly [accent] at the end so the finished diagram
 /// states its colour rather than approaching it.
 Color _taking(Color quiet, Color accent, double phase) =>
     phase >= 1 ? accent : Color.lerp(quiet, accent, phase) ?? quiet;
+
+/// The prototype's own measures of this hero, none of them on the closed spacing scale:
+/// `.kc{padding:7px 11px;border-radius:8px}`, `.you{border:1.5px;padding:7px 11px}`, `.hub{border:1.5px;
+/// padding:10px 12px;border-radius:11px}`, `.hub .roles{gap:4px;margin-top:7px}`, `.hub .role{padding:2.5px 6px}`,
+/// `.fan{height:34px}` with a stem of 13 and drops of 21, `.st{padding:7px 4px}`, `.legs{height:15px}`,
+/// `.db{padding:5px 2px;border-radius:6px}`, `.modes{margin-top:9px}`, `.mode{padding:6px}` and the note's 5.
+const double _gapTier = 7;
+const double _gapColumns = 6;
+const double _padX = 11;
+const double _padY = 7;
+const double _hubPadX = 12;
+const double _hubPadY = 10;
+const double _hubRadius = 11;
+const double _accentBorder = 1.5;
+const double _chipGap = 4;
+const double _chipPadX = 6;
+const double _chipPadY = 2.5;
+const double _stemHeight = 13;
+const double _dropHeight = 21;
+const double _legHeight = 15;
+const double _studioPadX = 4;
+const double _databasePadX = 2;
+const double _modesGap = 9;
+const double _noteGap = 5;
+const double _popScale = 1.05;
+const double _chipFrom = 0.7;
+
+/// The type: the identity's name 11.5 semibold, the phone 11.5 bold, Platform 13 bold, everything else 11, the roles
+/// tracked `.07em`.
+const double _kcSize = 11.5;
+const double _hubSize = 13;
+const double _small = 11;
+const double _roleTrackingEm = 0.07;
+const double _noteLine = 1.5;
+
+/// How much a role chip overshoots as it pops in: `cubic-bezier(.2,1.6,.4,1)`.
+const Curve _chipCurve = Cubic(0.2, 1.6, 0.4, 1);
 
 class _Ecosystem extends StatelessWidget {
   const _Ecosystem({required this.elapsed});
@@ -153,9 +204,24 @@ class _Ecosystem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final mono = text.bodySmall?.copyWith(fontFamily: AppTypography.mono, color: scheme.onSurfaceVariant);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final locale = Localizations.localeOf(context);
+    TextStyle? sans(double size, FontWeight weight, Color color) => theme.textTheme.bodySmall?.copyWith(
+      fontSize: size,
+      fontWeight: weight,
+      height: onboardingSansLine,
+      letterSpacing: 0,
+      color: color,
+    );
+    final mono = theme.textTheme.labelSmall?.copyWith(
+      fontFamily: AppTypography.mono,
+      fontSize: _small,
+      fontWeight: FontWeight.w400,
+      height: onboardingMonoLine,
+      letterSpacing: 0,
+      color: scheme.onSurfaceVariant,
+    );
     final litPhase = _phase(elapsed, Step5Beats.lit, Step5Beats.arrival);
     final hotPhase = _phase(elapsed, Step5Beats.hot, Step5Beats.arrival);
 
@@ -164,265 +230,152 @@ class _Ecosystem extends StatelessWidget {
       children: [
         _Riser(
           phase: _phase(elapsed, Duration.zero, Step5Beats.arrival),
-          child: _TierBox(
-            lit: 0,
-            child: _NameAndNote(
-              name: Text(s.ob5_keycloak, style: text.titleSmall),
-              note: Text(s.ob5_keycloak_note, style: mono),
+          child: Container(
+            key: const ValueKey('ob5-kc'),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              border: Border.all(color: scheme.outline),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _Riser(
-          phase: _phase(elapsed, Step5Beats.tierStagger, Step5Beats.arrival),
-          child: _TierBox(
-            lit: 1,
-            child: Text(
-              s.ob5_you,
-              textAlign: TextAlign.center,
-              style: text.titleSmall?.copyWith(color: scheme.onPrimaryContainer),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _Riser(
-          phase: _phase(elapsed, Step5Beats.tierStagger * 2, Step5Beats.arrival),
-          child: _TierBox(
-            lit: 1,
+            padding: const EdgeInsets.symmetric(horizontal: _padX, vertical: _padY),
+            // The name over its note, both on the leading edge, as `.kc` stacks them. It used to be a name at one edge
+            // and a note at the other, which needed a render object of its own to survive an accessibility text size.
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.ob5_hub, style: text.titleSmall?.copyWith(color: scheme.onPrimaryContainer)),
-                const SizedBox(height: AppSpacing.sm),
-                _Roles(elapsed: elapsed),
+                Text(s.ob5_keycloak, style: sans(_kcSize, FontWeight.w600, scheme.onSurface)),
+                Text(s.ob5_keycloak_note, style: mono),
               ],
             ),
           ),
         ),
+        const SizedBox(height: _gapTier),
+        _Riser(
+          phase: _phase(elapsed, Step5Beats.tierStagger, Step5Beats.arrival),
+          child: Container(
+            key: const ValueKey('ob5-you'),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              border: Border.all(color: scheme.primary, width: _accentBorder),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: _padX, vertical: _padY),
+            child: Text(
+              s.ob5_you,
+              textAlign: TextAlign.center,
+              style: sans(_kcSize, FontWeight.w700, scheme.onPrimaryContainer),
+            ),
+          ),
+        ),
+        const SizedBox(height: _gapTier),
+        _Riser(
+          phase: _phase(elapsed, Step5Beats.tierStagger * 2, Step5Beats.arrival),
+          child: _Hub(elapsed: elapsed, sans: sans, locale: locale),
+        ),
         _Fan(elapsed: elapsed, hotPhase: hotPhase),
         Row(
-          spacing: AppSpacing.sm,
+          spacing: _gapColumns,
           children: [
             for (var i = 0; i < _columns; i++)
               Expanded(
-                child: _TierBox(
-                  boxKey: ValueKey('ob5-studio-$i'),
-                  lit: i == 0 ? litPhase : 0,
-                  child: Column(
-                    children: [
-                      Text(_studios[i], style: text.labelLarge, textAlign: TextAlign.center),
-                      Text(_holdings[i], style: mono, textAlign: TextAlign.center),
-                    ],
+                child: _Popping(
+                  phase: i == 0 ? _linear(elapsed, Step5Beats.lit, Step5Beats.pop) : 0,
+                  child: Container(
+                    key: ValueKey('ob5-studio-$i'),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      border: Border.all(color: _taking(scheme.outline, scheme.primary, i == 0 ? litPhase : 0)),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: _studioPadX, vertical: _padY),
+                    child: Column(
+                      children: [
+                        Text(
+                          _studios[i],
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(
+                            _small,
+                            FontWeight.w600,
+                            _taking(scheme.onSurface, scheme.onPrimaryContainer, i == 0 ? litPhase : 0),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs / 2),
+                        Text(
+                          _holdings[i],
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: mono,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
           ],
         ),
-        _WireRow(
-          keyPrefix: 'ob5-leg',
-          height: AppSpacing.lg,
-          start: Step5Beats.legs,
-          hotPhase: litPhase,
-          elapsed: elapsed,
-        ),
+        _Legs(elapsed: elapsed, litPhase: litPhase),
         Row(
-          spacing: AppSpacing.sm,
+          spacing: _gapColumns,
           children: [
             for (var i = 0; i < _columns; i++)
               Expanded(
                 child: _Riser(
                   phase: _phase(elapsed, Step5Beats.wireStagger * i, Step5Beats.arrival),
-                  child: _TierBox(
-                    boxKey: ValueKey('ob5-database-$i'),
-                    lit: i == 0 ? litPhase : 0,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
-                    child: Text(_databases[i], style: mono, textAlign: TextAlign.center),
+                  child: Container(
+                    key: ValueKey('ob5-database-$i'),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _taking(scheme.outline, scheme.primary, i == 0 ? litPhase : 0)),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: _databasePadX, vertical: AppSpacing.xs + 1),
+                    child: Text(
+                      _databases[i],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono?.copyWith(
+                        color: _taking(scheme.onSurfaceVariant, scheme.onPrimaryContainer, i == 0 ? litPhase : 0),
+                      ),
+                    ),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
         Opacity(
           key: const ValueKey('ob5-modes'),
           opacity: _phase(elapsed, Step5Beats.modes, AppDurations.media),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                spacing: AppSpacing.sm,
-                children: [
-                  Expanded(
-                    child: _TierBox(
-                      boxKey: const ValueKey('ob5-mode-studio'),
-                      lit: 1,
-                      pill: true,
-                      child: Text(
-                        s.profile_mode_studio,
-                        textAlign: TextAlign.center,
-                        style: text.labelLarge?.copyWith(color: scheme.onPrimaryContainer),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: _TierBox(
-                      boxKey: const ValueKey('ob5-mode-platform'),
-                      lit: 0,
-                      pill: true,
-                      child: Text(
-                        s.profile_mode_platform,
-                        textAlign: TextAlign.center,
-                        style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                s.ob5_mode_note,
-                textAlign: TextAlign.center,
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(top: _modesGap),
+            child: Row(
+              spacing: _gapColumns,
+              children: [
+                Expanded(
+                  child: _Mode(boxKey: const ValueKey('ob5-mode-studio'), label: s.profile_mode_studio, on: true),
+                ),
+                Expanded(
+                  child: _Mode(boxKey: const ValueKey('ob5-mode-platform'), label: s.profile_mode_platform, on: false),
+                ),
+              ],
+            ),
           ),
+        ),
+        const SizedBox(height: _noteGap),
+        Text(
+          s.ob5_mode_note,
+          key: const ValueKey('ob5-note'),
+          textAlign: TextAlign.center,
+          style: mono?.copyWith(height: _noteLine),
         ),
       ],
     );
   }
 }
 
-/// The identity tier: a name against the leading edge of its box and a note against the trailing one, the two
-/// centred on each other — and, when the pair needs more than the row is wide, the note under the name.
-///
-/// A `Row` of `Expanded(name)` and the note draws the first case and only the first. A flex lays an inflexible
-/// child out against an unbounded width, so the note took whatever its glyphs asked for: at a text scale of 3.0 in
-/// Turkish — a setting an Android phone really offers — it asked for 439 of the 292 points the hero gives this row
-/// and the overflow stripe went across the top of the diagram, 363 points of it. A `Wrap`, which is what the
-/// chassis uses for its two controls, fixes that case and loses this one: a `Wrap` never squeezes, so it would
-/// break the pair onto two lines as soon as the name and the note *together* wanted more than the row, rather than
-/// handing the name what the note leaves.
-///
-/// So the note is measured against the whole row first and the name is given the rest:
-///
-/// * the note takes the lesser of what it asks for and the whole row;
-/// * if anything is left, the name takes exactly that — which is what `Expanded` gave it — and the two sit on one
-///   line, centred on each other, the note flush with the trailing edge;
-/// * if nothing is left, each is given the whole row and the note drops under the name, still flush with that edge.
-///
-/// Neither height is capped: vertical growth is the hero's business, and the hero scrolls.
-class _NameAndNote extends MultiChildRenderObjectWidget {
-  _NameAndNote({required Widget name, required Widget note}) : super(children: [name, note]);
-
-  @override
-  RenderObject createRenderObject(BuildContext context) => _RenderNameAndNote(Directionality.of(context));
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderNameAndNote renderObject) {
-    renderObject.textDirection = Directionality.of(context);
-  }
-}
-
-/// Where this row keeps each piece's offset; it carries nothing of its own.
-class _NameAndNoteParentData extends ContainerBoxParentData<RenderBox> {}
-
-class _RenderNameAndNote extends RenderBox
-    with
-        ContainerRenderObjectMixin<RenderBox, _NameAndNoteParentData>,
-        RenderBoxContainerDefaultsMixin<RenderBox, _NameAndNoteParentData> {
-  _RenderNameAndNote(this._textDirection);
-
-  /// Between the name and the note once the note has dropped under it.
-  static const double _gap = AppSpacing.xs;
-
-  TextDirection get textDirection => _textDirection;
-  TextDirection _textDirection;
-
-  set textDirection(TextDirection value) {
-    if (_textDirection == value) return;
-    _textDirection = value;
-    markNeedsLayout();
-  }
-
-  RenderBox get _name => firstChild!;
-
-  RenderBox get _note => lastChild!;
-
-  @override
-  void setupParentData(RenderBox child) {
-    if (child.parentData is! _NameAndNoteParentData) {
-      child.parentData = _NameAndNoteParentData();
-    }
-  }
-
-  /// Where the two pieces go, under [constraints], laid out for real or dryly depending on [layoutChild].
-  (Size, Offset, Offset) _geometry(BoxConstraints constraints, ChildLayouter layoutChild) {
-    final row = constraints.hasBoundedWidth
-        ? constraints.maxWidth
-        : _name.getMaxIntrinsicWidth(double.infinity) + _note.getMaxIntrinsicWidth(double.infinity);
-    final note = layoutChild(_note, BoxConstraints(maxWidth: row));
-    final room = row - note.width;
-    final trailing = textDirection == TextDirection.ltr ? row - note.width : 0.0;
-    if (room > 0) {
-      final name = layoutChild(_name, BoxConstraints.tightFor(width: room));
-      final height = math.max(name.height, note.height);
-      final leading = textDirection == TextDirection.ltr ? 0.0 : row - name.width;
-      return (
-        Size(row, height),
-        Offset(leading, (height - name.height) / 2),
-        Offset(trailing, (height - note.height) / 2),
-      );
-    }
-    final name = layoutChild(_name, BoxConstraints(maxWidth: row));
-    final leading = textDirection == TextDirection.ltr ? 0.0 : row - name.width;
-    return (Size(row, name.height + _gap + note.height), Offset(leading, 0), Offset(trailing, name.height + _gap));
-  }
-
-  @override
-  void performLayout() {
-    final (laid, name, note) = _geometry(constraints, ChildLayoutHelper.layoutChild);
-    size = constraints.constrain(laid);
-    (_name.parentData! as BoxParentData).offset = name;
-    (_note.parentData! as BoxParentData).offset = note;
-  }
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) =>
-      constraints.constrain(_geometry(constraints, ChildLayoutHelper.dryLayoutChild).$1);
-
-  @override
-  double computeMinIntrinsicWidth(double height) =>
-      math.max(_name.getMinIntrinsicWidth(height), _note.getMinIntrinsicWidth(height));
-
-  @override
-  double computeMaxIntrinsicWidth(double height) =>
-      _name.getMaxIntrinsicWidth(height) + _note.getMaxIntrinsicWidth(height);
-
-  @override
-  double computeMinIntrinsicHeight(double width) =>
-      _intrinsicHeight(width, (child, extent) => child.getMinIntrinsicHeight(extent));
-
-  @override
-  double computeMaxIntrinsicHeight(double width) =>
-      _intrinsicHeight(width, (child, extent) => child.getMaxIntrinsicHeight(extent));
-
-  /// The same two cases as [_geometry], asked of the children's intrinsics instead of their layout, so the chassis
-  /// measuring the hero gets the height this row will really take.
-  double _intrinsicHeight(double width, double Function(RenderBox, double) heightOf) {
-    final note = math.min(_note.getMaxIntrinsicWidth(double.infinity), width);
-    final room = width - note;
-    if (room > 0) return math.max(heightOf(_name, room), heightOf(_note, note));
-    return heightOf(_name, width) + _gap + heightOf(_note, width);
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
-      defaultHitTestChildren(result, position: position);
-}
-
-/// A piece arriving: it fades in and settles the last few points upward, the way the rest of the app enters.
+/// A piece that comes in from below as it arrives, `riser`: up into place as it fades in.
 class _Riser extends StatelessWidget {
   const _Riser({required this.phase, required this.child});
 
@@ -430,82 +383,16 @@ class _Riser extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: phase,
-      child: Transform.translate(offset: Offset(0, AppSpacing.sm * (1 - phase)), child: child),
-    );
-  }
+  Widget build(BuildContext context) => Opacity(
+    opacity: phase,
+    child: Transform.translate(offset: Offset(0, (1 - phase) * _arrivesFrom), child: child),
+  );
 }
 
-/// One box of a tier. [lit] is how far it has taken the accent: 0 is a quiet member of the ecosystem, 1 is on the
-/// path the person's statement travelled.
-class _TierBox extends StatelessWidget {
-  const _TierBox({required this.lit, required this.child, this.boxKey, this.padding, this.pill = false});
+/// How far a piece rises into place: `@keyframes rise{from{transform:translateY(13px)}}`.
+const double _arrivesFrom = 13;
 
-  final double lit;
-  final Widget child;
-
-  /// The key of the painted box itself, so a test reads the decoration it is asserting and nothing else.
-  final Key? boxKey;
-  final EdgeInsetsGeometry? padding;
-
-  /// A mode pill, which is the one shape here that is not a card.
-  final bool pill;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      key: boxKey,
-      padding: padding ?? const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: _taking(scheme.surface, scheme.primaryContainer, lit),
-        borderRadius: BorderRadius.circular(pill ? AppRadius.pill : AppRadius.lg),
-        border: Border.all(color: _taking(scheme.outline, scheme.primary, lit)),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// The three things Platform holds, popping in one after another once the branch has reached it.
-class _Roles extends StatelessWidget {
-  const _Roles({required this.elapsed});
-
-  final Duration elapsed;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = S.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    // Rendered in the case the ARB writes them: Dart's toUpperCase has no Turkish locale and would print YETKILER.
-    final roles = [s.ob5_role_connections, s.ob5_role_grants, s.ob5_role_audit];
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      alignment: WrapAlignment.center,
-      children: [
-        for (var i = 0; i < roles.length; i++)
-          _Popping(
-            phase: _phase(elapsed, Step5Beats.hub + Step5Beats.chipStagger * i, Step5Beats.arrival),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(color: scheme.primary),
-              ),
-              child: Text(roles[i], style: text.labelSmall?.copyWith(color: scheme.onPrimaryContainer)),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// A chip arriving: it grows from nothing to its size on the entrance curve, which reads as a pop without a curve
-/// that overshoots — `AppDurations` has none, on purpose.
+/// A piece that pops once as [phase] runs 0 to 1: up to [_popScale] by 38% of the beat and back to rest by its end.
 class _Popping extends StatelessWidget {
   const _Popping({required this.phase, required this.child});
 
@@ -513,146 +400,264 @@ class _Popping extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Opacity(
-    opacity: phase,
-    child: Transform.scale(scale: phase, child: child),
-  );
+  Widget build(BuildContext context) {
+    final lift = phase <= 0 || phase >= 1
+        ? 0.0
+        : phase < 0.38
+        ? Curves.easeOutCubic.transform(phase / 0.38)
+        : 1 - Curves.easeOutCubic.transform((phase - 0.38) / 0.62);
+    return Transform.scale(scale: 1 + (_popScale - 1) * lift, child: child);
+  }
 }
 
-/// A vertical connector, drawn out of its **lower** end: the direction the current flows and the headline claims.
-class _Wire extends StatelessWidget {
-  const _Wire({required this.height, required this.phase, required this.hotPhase, this.lineKey});
+/// Platform: the accent box with its name and its three role chips, which pops and rings when its beat comes.
+class _Hub extends StatelessWidget {
+  const _Hub({required this.elapsed, required this.sans, required this.locale});
 
-  final double height;
-  final double phase;
-
-  /// The key of the drawn line, whose height is how far it has been drawn.
-  final Key? lineKey;
-
-  /// How far this connector has taken the accent, once the path it belongs to is the lit one.
-  final double hotPhase;
+  final Duration elapsed;
+  final TextStyle? Function(double size, FontWeight weight, Color color) sans;
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: height,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          key: lineKey,
-          width: _hairline(context),
-          height: height * phase,
-          color: _taking(scheme.outline, scheme.primary, hotPhase),
+    final s = S.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final ring = _linear(elapsed, Step5Beats.hub, Step5Beats.ring);
+    final roles = [s.ob5_role_connections, s.ob5_role_grants, s.ob5_role_audit];
+    return _Popping(
+      phase: _linear(elapsed, Step5Beats.hub, Step5Beats.pop),
+      child: Container(
+        key: const ValueKey('ob5-hub'),
+        decoration: BoxDecoration(
+          color: scheme.primaryContainer,
+          border: Border.all(color: scheme.primary, width: _accentBorder),
+          borderRadius: BorderRadius.circular(_hubRadius),
+        ),
+        foregroundDecoration: ring > 0 && ring < 1
+            ? RingDecoration(color: scheme.primary, progress: ring, radius: _hubRadius)
+            : null,
+        padding: const EdgeInsets.symmetric(horizontal: _hubPadX, vertical: _hubPadY),
+        child: Column(
+          children: [
+            Text(
+              s.ob5_hub,
+              textAlign: TextAlign.center,
+              style: sans(_hubSize, FontWeight.w700, scheme.onPrimaryContainer),
+            ),
+            const SizedBox(height: _gapTier),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: _chipGap,
+              runSpacing: _chipGap,
+              children: [
+                for (final (i, role) in roles.indexed)
+                  _RoleChip(
+                    key: ValueKey('ob5-chip-$i'),
+                    label: onboardingCapitals(role, locale),
+                    phase: _linear(
+                      elapsed,
+                      Step5Beats.hub + Step5Beats.chipsAfter + Step5Beats.chipStagger * i,
+                      const Duration(milliseconds: 450),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// One row of connectors, one under the centre of each column, drawn left to right.
-class _WireRow extends StatelessWidget {
-  const _WireRow({
-    required this.keyPrefix,
-    required this.height,
-    required this.start,
-    required this.hotPhase,
-    required this.elapsed,
-  });
+/// One role chip: a mono word in capitals in an accent outline, which pops in from 0.7 of itself.
+class _RoleChip extends StatelessWidget {
+  const _RoleChip({required this.label, required this.phase, super.key});
 
-  final String keyPrefix;
-  final double height;
-  final Duration start;
-
-  /// Applied to the first connector only: the path that lit is `orders-prod`'s.
-  final double hotPhase;
-  final Duration elapsed;
+  final String label;
+  final double phase;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      spacing: AppSpacing.sm,
-      children: [
-        for (var i = 0; i < _columns; i++)
-          Expanded(
-            child: _Wire(
-              lineKey: ValueKey('$keyPrefix-$i'),
-              height: height,
-              phase: _phase(elapsed, start + Step5Beats.wireStagger * i, Step5Beats.arrival),
-              hotPhase: i == 0 ? hotPhase : 0,
+    final scheme = Theme.of(context).colorScheme;
+    final eased = _chipCurve.transform(phase);
+    return Opacity(
+      opacity: phase.clamp(0.0, 1.0),
+      child: Transform.scale(
+        scale: _chipFrom + (1 - _chipFrom) * eased,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.primary),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: _chipPadX, vertical: _chipPadY),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontFamily: AppTypography.mono,
+              fontSize: _small,
+              fontWeight: FontWeight.w400,
+              height: onboardingMonoLine,
+              letterSpacing: _small * _roleTrackingEm,
+              color: scheme.onPrimaryContainer,
             ),
           ),
-      ],
+        ),
+      ),
     );
   }
 }
 
-/// The branch and its twigs: the rail the three Studios hang under, the stem up into Platform, and one twig out of
-/// each Studio. The branch is drawn first; the twigs hang from it afterwards.
+/// One of the two mode pills: `.mode{border:1px solid var(--edge);border-radius:999px;padding:6px;font-weight:600}`,
+/// and `.on` in the accent.
+class _Mode extends StatelessWidget {
+  const _Mode({required this.boxKey, required this.label, required this.on});
+
+  final Key boxKey;
+  final String label;
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: boxKey,
+      decoration: BoxDecoration(
+        color: on ? scheme.primaryContainer : null,
+        border: Border.all(color: on ? scheme.primary : scheme.outline),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.sm - 2),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontSize: _small,
+          fontWeight: FontWeight.w600,
+          height: onboardingSansLine,
+          letterSpacing: 0,
+          color: on ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// A connector that grows out of its lower end: [length] tall at full strength, [phase] of it drawn, one logical pixel
+/// wide, in the quiet edge ink until [hot] and the accent after.
+class _Line extends StatelessWidget {
+  const _Line({required this.length, required this.phase, required this.hot, this.lineKey});
+
+  final double length;
+  final double phase;
+  final double hot;
+  final Key? lineKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SizedBox(
+        key: lineKey,
+        width: 1,
+        height: length * phase,
+        child: ColoredBox(color: _taking(scheme.outline, scheme.primary, hot)),
+      ),
+    );
+  }
+}
+
+/// The legs from the databases up to the Studios, one under each column.
+class _Legs extends StatelessWidget {
+  const _Legs({required this.elapsed, required this.litPhase});
+
+  final Duration elapsed;
+  final double litPhase;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: _legHeight,
+    child: Row(
+      spacing: _gapColumns,
+      children: [
+        for (var i = 0; i < _columns; i++)
+          Expanded(
+            child: _Line(
+              lineKey: ValueKey('ob5-leg-$i'),
+              length: _legHeight,
+              phase: _phase(elapsed, Step5Beats.legs + Step5Beats.wireStagger * i, Step5Beats.arrival),
+              hot: i == 0 ? litPhase : 0,
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// The branch under Platform: the stem up into it, the rail the Studios hang under, and the three twigs that drop
+/// from the rail into the tops of the Studios.
+///
+/// `.fan{height:34px}`: the stem is the top 13, the rail is the line at 13 from the centre of the first column to the
+/// centre of the last, and the twigs are the 21 under it, one at the centre of each column.
 class _Fan extends StatelessWidget {
   const _Fan({required this.elapsed, required this.hotPhase});
 
   final Duration elapsed;
-
-  /// How far the branch has taken the accent.
   final double hotPhase;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const stemHeight = AppSpacing.md;
-    const twigHeight = AppSpacing.xl;
-    final railPhase = _phase(elapsed, Step5Beats.branch, Step5Beats.arrival);
-    // The box sits outside the `LayoutBuilder`, not inside it. The chassis measures the hero with an
-    // `IntrinsicHeight` so it can absorb the page's slack, a `LayoutBuilder` answers no intrinsic question, and a
-    // tight height short-circuits the question before it ever reaches one. The drawing is unchanged: the builder
-    // still gets the full width, and this subtree was already exactly this tall.
+    final railPhase = _phase(elapsed, Step5Beats.branch, Step5Beats.railGrows);
+    final stemPhase = _phase(elapsed, Step5Beats.branch, Step5Beats.arrival);
     return SizedBox(
-      height: stemHeight + twigHeight,
+      height: _stemHeight + _dropHeight,
       child: LayoutBuilder(
-        builder: (context, constraints) {
-          // The rail runs from the centre of the first column to the centre of the last, so it meets every twig
-          // and overhangs none of them.
-          final cell = (constraints.maxWidth - AppSpacing.sm * (_columns - 1)) / _columns;
-          final railWidth = (cell + AppSpacing.sm) * (_columns - 1);
+        builder: (context, fan) {
+          // `left:calc((100% - 12px)/6)`: half a column in from each side.
+          final column = (fan.maxWidth - _gapColumns * (_columns - 1)) / _columns;
           return Stack(
             children: [
               Positioned(
-                top: 0,
                 left: 0,
                 right: 0,
-                height: stemHeight,
-                child: _Wire(
-                  lineKey: const ValueKey('ob5-stem'),
-                  height: stemHeight,
-                  phase: railPhase,
-                  hotPhase: hotPhase,
-                ),
+                top: 0,
+                height: _stemHeight,
+                child: _Line(lineKey: const ValueKey('ob5-stem'), length: _stemHeight, phase: stemPhase, hot: hotPhase),
               ),
               Positioned(
-                top: stemHeight,
-                left: 0,
-                right: 0,
+                left: column / 2,
+                right: column / 2,
+                top: _stemHeight,
+                height: 1,
                 child: Align(
-                  child: Container(
+                  child: SizedBox(
                     key: const ValueKey('ob5-rail'),
-                    width: railWidth * railPhase,
-                    height: _hairline(context),
-                    color: _taking(scheme.outline, scheme.primary, hotPhase),
+                    width: (fan.maxWidth - column) * railPhase,
+                    height: 1,
+                    child: ColoredBox(color: _taking(scheme.outline, scheme.primary, hotPhase)),
                   ),
                 ),
               ),
               Positioned(
-                top: stemHeight,
                 left: 0,
                 right: 0,
-                height: twigHeight,
-                child: _WireRow(
-                  keyPrefix: 'ob5-twig',
-                  height: twigHeight,
-                  start: Step5Beats.twigs,
-                  hotPhase: hotPhase,
-                  elapsed: elapsed,
+                top: _stemHeight,
+                height: _dropHeight,
+                child: Row(
+                  spacing: _gapColumns,
+                  children: [
+                    for (var i = 0; i < _columns; i++)
+                      Expanded(
+                        child: _Line(
+                          lineKey: ValueKey('ob5-twig-$i'),
+                          length: _dropHeight,
+                          phase: _phase(elapsed, Step5Beats.twigs + Step5Beats.twigStagger * i, Step5Beats.arrival),
+                          hot: i == 0 ? hotPhase : 0,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
