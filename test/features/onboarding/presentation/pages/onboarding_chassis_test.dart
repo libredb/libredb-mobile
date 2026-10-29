@@ -254,7 +254,7 @@ void main() {
       expect(find.text(l10n.ob_next), findsNothing);
     });
 
-    testWidgets('Skip holds the leading gutter and the primary control the trailing one', (tester) async {
+    testWidgets('Skip holds the leading gutter, and the control that signs in the trailing one', (tester) async {
       await pumpFrame(tester);
 
       expect(
@@ -263,9 +263,19 @@ void main() {
         reason: 'Skip sits on the frame\'s own indent, at the leading edge of the words above it',
       );
       expect(
+        find.byKey(onboardingDoneKey),
+        findsNothing,
+        reason: 'the deck is turned by dragging it, so nothing holds the trailing end before the last screen',
+      );
+
+      // The control that signs in appears on the sixth, and it is the one that takes the trailing gutter.
+      for (var step = 0; step < onboardingStepCount - 1; step++) {
+        await advance(tester);
+      }
+      expect(
         tester.getTopRight(find.byKey(onboardingDoneKey)).dx,
         closeTo(390 - AppSpacing.xl, 1.0),
-        reason: 'the primary control sits at the opposite end, under the counter',
+        reason: 'the control that signs in sits at the opposite end, under the counter',
       );
     });
 

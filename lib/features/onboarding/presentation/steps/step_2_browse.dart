@@ -325,6 +325,8 @@ class _TreeNode extends StatelessWidget {
     final quiet = Color.lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, lit);
     final nameStyle = (isSchema ? theme.textTheme.titleSmall : theme.textTheme.bodyMedium)?.copyWith(color: ink);
     final countStyle = theme.textTheme.bodySmall?.copyWith(fontFamily: AppTypography.mono, color: quiet);
+    final nameText = Text(name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+    final countText = Text(trailing, style: countStyle, maxLines: 1);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Color.lerp(null, scheme.primaryContainer, lit),
@@ -335,15 +337,18 @@ class _TreeNode extends StatelessWidget {
         // The line is laid out against the room it actually has, which is a width and not a text scale: the same
         // count fits a phone at a scale of 1.3 and does not fit a small one. Safe here — the chassis answers the
         // page's intrinsic question itself and never puts it to the hero.
+        //
+        // The two texts are built once above the branch rather than twice inside it: both arrangements draw the
+        // same two, and written inline their `maxLines: 1` sat where `design_token_test`'s spacing pattern, which
+        // scans forward from the word for the next number, read it as an off-scale gap of 1. The guard's own
+        // comment records that class of false positive, and hoisting is the fix that does not widen its budget.
         child: LayoutBuilder(
           builder: (context, line) => _holdsOneLine(context, line.maxWidth, nameStyle, countStyle)
               ? Row(
                   spacing: AppSpacing.sm,
                   children: [
-                    Expanded(
-                      child: Text(name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                    Text(trailing, style: countStyle, maxLines: 1),
+                    Expanded(child: nameText),
+                    countText,
                   ],
                 )
               : Column(

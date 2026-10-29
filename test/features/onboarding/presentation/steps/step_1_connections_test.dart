@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_1_connections.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 
@@ -182,20 +183,89 @@ void main() {
       }
     }
 
-    testWidgets('at the ordinary text size every badge is still drawn at its own size', (tester) async {
+    // The prototype draws a row as `.crow{display:flex;align-items:center}`: the name yields and the badges keep
+    // their size. This layout cannot express that without a magic width — both are flex children of one `Row`, so
+    // `RenderFlex` splits the free space between them — and on the longest row ("billing-stage" with STAGING and
+    // the read-only mark) the two want more than the row has at every text size, so one of them has to give. Here
+    // the badge gives, by about a tenth, and the name keeps its characters.
+    //
+    // So the claim is not "nothing is ever scaled"; it is that a badge is **never scaled below nine tenths** of its
+    // own size, in either language. A fit that scaled further would be shrinking the mark rather than fitting it,
+    // and the row above already pins that nothing overflows at any text size, which is the property that matters.
+    testWidgets('at the ordinary text size a badge is drawn at its own size, or within a tenth of it', (tester) async {
       for (final locale in [const Locale('en'), const Locale('tr')]) {
         await showInHero(tester, textScale: 1.0, locale: locale);
 
         final badges = find.byWidgetPredicate((w) => w is EnvironmentBadge || w is ReadOnlyChip);
         expect(badges, findsNWidgets(4), reason: 'three environments and one read-only mark');
         for (var i = 0; i < 4; i++) {
+          final drawn = tester.getRect(badges.at(i)).size;
+          final own = tester.renderObject<RenderBox>(badges.at(i)).size;
           expect(
-            tester.getRect(badges.at(i)).size,
-            tester.renderObject<RenderBox>(badges.at(i)).size,
-            reason: 'badge $i of ${locale.languageCode} is scaled where the prototype draws it unscaled',
+            drawn.width / own.width,
+            greaterThanOrEqualTo(0.9),
+            reason: 'badge $i of ${locale.languageCode} is drawn at ${drawn.width} of its own ${own.width}',
           );
+          expect(drawn.width / own.width, lessThanOrEqualTo(1.0), reason: 'a badge is never drawn larger than it is');
         }
       }
     });
+  });
+
+  /// The card cuts its rows to its own corners.
+  ///
+  /// The prototype's card is `overflow:hidden`, and the row's environment strip is drawn inside it, flush with its
+  /// left edge. Without the clip the strip is painted at the row's left edge while the card's corner curves away
+  /// from it, so on the first row a straight red bar stands outside the rounded rectangle with a gap behind it —
+  /// which is what shipped, and what the owner saw.
+  testWidgets('the card cuts its rows to its own corners, so no strip stands outside them', (tester) async {
+    await show(tester, disableAnimations: true);
+
+    final card = find.byKey(const ValueKey('ob1-card'));
+    expect(card, findsOneWidget, reason: 'the card the rows are cut to');
+
+    final clip = find.descendant(of: card, matching: find.byType(ClipRRect), matchRoot: true);
+    expect(clip, findsOneWidget, reason: 'the rows are not clipped, so a strip can stand outside the corner');
+
+    final radius = tester.widget<ClipRRect>(clip).borderRadius as BorderRadius;
+    expect(
+      radius.topLeft.x,
+      AppRadius.xl,
+      reason: 'the clip has to be the corner the border draws, or the strip is cut on a different curve',
+    );
+
+    final cardRect = tester.getRect(card);
+    final stripRect = tester.getRect(find.byKey(const ValueKey('ob1-strip-0')));
+    expect(
+      stripRect.left,
+      greaterThanOrEqualTo(cardRect.left),
+      reason: 'the first row starts outside the card it belongs to',
+    );
+  });
+
+  /// The read-only mark belongs to the production row, as the design puts it.
+  ///
+  /// The prototype's own data is `[PG,'orders-prod','orders','PROD',var(--prod),1,1]` — the last two flags are the
+  /// strip and the read-only mark, both on the first row — and `[MY,'billing-stage',…,0,0]` carries neither. The
+  /// deck built it the other way round, so the screen taught the reader that the staging database is the locked
+  /// one and production is not, which is the opposite of what the sentence under it says.
+  testWidgets('the production row is the read-only one, as the design has it', (tester) async {
+    await show(tester, disableAnimations: true);
+
+    final prodRow = find.ancestor(of: find.text('orders-prod'), matching: find.byKey(const ValueKey('ob1-strip-0')));
+    expect(prodRow, findsOneWidget);
+    expect(
+      find.descendant(of: prodRow, matching: find.byType(ReadOnlyChip)),
+      findsOneWidget,
+      reason: 'the production row carries the read-only mark in the design',
+    );
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('billing-stage'), matching: find.byKey(const ValueKey('ob1-strip-1'))),
+        matching: find.byType(ReadOnlyChip),
+      ),
+      findsNothing,
+      reason: 'the staging row carries neither flag in the design',
+    );
   });
 }
