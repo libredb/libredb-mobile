@@ -1,9 +1,12 @@
 @Tags(['widget'])
 library;
 
+import 'dart:ui' show Locale;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/app.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
 import 'package:libredb_mobile/app/bootstrap/sentry_start.dart';
@@ -121,6 +124,74 @@ void main() {
         sentry.gatedConfigs.single.platform,
         isA<PlatformConfigured>().having((p) => p.baseUrl, 'baseUrl', 'https://libredb.lab.test/api'),
       );
+    });
+
+    // Issue #409: the whole fix hangs on the language AppBootstrap.run hands App. A Turkish phone must reach the
+    // widget tree as Turkish; handing over the build's own default instead is the bug this closes.
+    testWidgets('opens the app in the phone language, so a Turkish phone reaches the tree as Turkish', (tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'app',
+        packageName: 'app',
+        version: '1.0.0',
+        buildNumber: '1',
+        buildSignature: '',
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+        (call) async => ['none'],
+      );
+      tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+        const EventChannel('dev.fluttercommunity.plus/connectivity_status'),
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+      tester.platformDispatcher.localesTestValue = const [Locale('tr', 'TR')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      final flutterErrorHandler = FlutterError.onError;
+      final platformErrorHandler = PlatformDispatcher.instance.onError;
+      final observer = Bloc.observer;
+
+      await tester.runAsync(() => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock)));
+      FlutterError.onError = flutterErrorHandler;
+      PlatformDispatcher.instance.onError = platformErrorHandler;
+      Bloc.observer = observer;
+
+      expect(tester.widget<App>(find.byType(App)).language, 'tr');
+    });
+
+    // The phone is followed only while the build names no language of its own: a build that pins one stays in it, so
+    // a phone language change must not move it.
+    testWidgets('tells App to follow the phone, unless this build pins a language', (tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'app',
+        packageName: 'app',
+        version: '1.0.0',
+        buildNumber: '1',
+        buildSignature: '',
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+        (call) async => ['none'],
+      );
+      tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+        const EventChannel('dev.fluttercommunity.plus/connectivity_status'),
+        MockStreamHandler.inline(onListen: (arguments, events) {}),
+      );
+      tester.platformDispatcher.localesTestValue = const [Locale('tr', 'TR')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      final flutterErrorHandler = FlutterError.onError;
+      final platformErrorHandler = PlatformDispatcher.instance.onError;
+      final observer = Bloc.observer;
+
+      await tester.runAsync(
+        () => AppBootstrap.run(const AppBootstrapConfig(environment: Environment.mock, defaultLanguage: 'en')),
+      );
+      FlutterError.onError = flutterErrorHandler;
+      PlatformDispatcher.instance.onError = platformErrorHandler;
+      Bloc.observer = observer;
+
+      final app = tester.widget<App>(find.byType(App));
+      expect(app.language, 'en', reason: 'the pinned language, not the phone\'s');
+      expect(app.followsDeviceLanguage, isFalse);
     });
 
     testWidgets('leaves the language unstored on a first start, so the app follows the configured default', (

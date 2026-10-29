@@ -1,6 +1,7 @@
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
@@ -47,18 +48,21 @@ void main() {
 
     return MultiRepositoryProvider(
       providers: [RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks())],
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        theme: dark ? AppTheme.dark() : AppTheme.light(),
-        localizationsDelegates: const [
-          S.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: S.delegate.supportedLocales,
-        locale: const Locale('en'),
-        routerConfig: router,
+      child: BlocProvider(
+        create: (_) => ThemeBloc(),
+        child: MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          locale: const Locale('en'),
+          routerConfig: router,
+        ),
       ),
     );
   }

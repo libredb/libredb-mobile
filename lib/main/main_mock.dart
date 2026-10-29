@@ -10,12 +10,7 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 /// `fvm flutter run --target lib/main/main_mock.dart`
 void main() async {
   await AppBootstrap.run(
-    const AppBootstrapConfig(
-      environment: Environment.mock,
-      defaultLanguage: 'en',
-      defaultPalette: 'classic',
-      defaultBrightness: 'light',
-    ),
+    const AppBootstrapConfig(environment: Environment.mock, defaultPalette: 'classic', defaultBrightness: 'light'),
     dependencies: (appConfig) => MockSignInDependencies(appConfig: appConfig),
   );
 }
