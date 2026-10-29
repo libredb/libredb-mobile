@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/engine_mark.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
@@ -218,7 +219,16 @@ class _DemoConnectionRow extends StatelessWidget {
       child: Row(
         spacing: AppSpacing.md,
         children: [
-          Icon(engineIcon(connection.type), semanticLabel: connection.type, color: theme.colorScheme.primary),
+          // The engine's own mark, named for a test and read aloud as the engine's type. The `Semantics` is outside
+          // the key so what the key addresses is the mark alone: two rows of the same engine draw the same thing,
+          // and a test that compared the labelled widget would pass on the label and never see the glyph.
+          Semantics(
+            label: connection.type,
+            child: KeyedSubtree(
+              key: ValueKey('ob1-engine-$index'),
+              child: EngineMarkIcon(type: connection.type, color: theme.colorScheme.primary),
+            ),
+          ),
           // The prototype's row is `.crow{display:flex;align-items:center}`: the strip, the engine, the name over
           // the database, and then the badges on the *right*, on the same line. Stacked under the name instead,
           // the row is half again as tall and the badges read as a third line of the connection's name.
