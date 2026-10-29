@@ -277,7 +277,7 @@ void main() {
 
       expect(caption.top - counter.top, closeTo(12, 0.5), reason: 'the prototype: counter 40, caption 52');
       expect(counter.right, closeTo(column.right, 0.5), reason: 'the counter ends at the column\'s right edge');
-      expect(caption.left, closeTo(column.left, 0.5), reason: 'the caption starts at the left edge, 48');
+      expect(caption.left, closeTo(column.left, 0.5), reason: 'the caption starts at the left edge of the column');
     });
 
     /// `.counter{letter-spacing:.16em}` and `.cap{letter-spacing:.14em}`, over 11px: 1.76 and 1.54. The app tracked
@@ -287,6 +287,26 @@ void main() {
 
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).style!.letterSpacing, closeTo(1.76, 0.001));
       expect(tester.widget<Text>(find.byKey(onboardingCaptionKey)).style!.letterSpacing, closeTo(1.54, 0.001));
+    });
+
+    /// The owner's decision, which overrides the prototype: the prototype is asymmetric (48 on the left, 24 on the
+    /// right of a 390 frame, a 318 column), and he wants the content centred. The column keeps its 318 and the 72 that
+    /// is left is split evenly: 36 a side. Everything the column governs moves with it — the caption and counter, the
+    /// hero, the headline, the body, the rule and the controls — so each is checked against the same two edges.
+    testWidgets('the margins are equal: 36 a side, and every part of the page is on the same two edges', (
+      tester,
+    ) async {
+      await pumpFrame(tester);
+
+      final rule = tester.getRect(find.byKey(onboardingProgressKey));
+      expect(rule.left, closeTo(36, 0.5));
+      expect(390 - rule.right, closeTo(36, 0.5));
+      expect(rule.width, closeTo(318, 0.5), reason: 'the column keeps its width');
+      for (final key in [onboardingCaptionKey, onboardingHeadlineKey, onboardingBodyKey]) {
+        expect(tester.getRect(find.byKey(key)).left, closeTo(36, 0.5), reason: '$key');
+      }
+      expect(tester.getRect(find.byKey(onboardingCounterKey)).right, closeTo(390 - 36, 0.5));
+      expect(tester.getRect(find.byKey(onboardingSkipKey)).left, closeTo(36, 0.5));
     });
 
     testWidgets('the counter is 40 from the top of the page', (tester) async {
@@ -382,7 +402,7 @@ void main() {
 
       expect(
         tester.getTopLeft(find.byKey(onboardingSkipKey)).dx,
-        closeTo(AppSpacing.xxxxl, 1.0),
+        closeTo(36, 1.0),
         reason: 'Skip sits on the frame\'s own indent, at the leading edge of the words above it',
       );
       expect(
@@ -397,7 +417,7 @@ void main() {
       }
       expect(
         tester.getTopRight(find.byKey(onboardingDoneKey)).dx,
-        closeTo(390 - AppSpacing.xl, 1.0),
+        closeTo(390 - 36, 1.0),
         reason: 'the control that signs in sits at the opposite end, under the counter',
       );
     });
@@ -412,7 +432,7 @@ void main() {
       final style = tester.widget<Text>(word).style ?? DefaultTextStyle.of(tester.element(word)).style;
       final colors = Theme.of(tester.element(find.byType(OnboardingPage))).colorScheme;
 
-      expect(tester.getTopLeft(word).dx, closeTo(48, 0.5), reason: 'the word, not the button, is on the edge');
+      expect(tester.getTopLeft(word).dx, closeTo(36, 0.5), reason: 'the word, not the button, is on the edge');
       expect(tester.getSize(find.byKey(onboardingSkipKey)).height, 48);
       final resolved = tester.widget<TextButton>(find.byKey(onboardingSkipKey)).style!.textStyle!.resolve({});
       expect(resolved!.fontSize, 14);

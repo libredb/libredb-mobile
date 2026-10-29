@@ -449,9 +449,16 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
   );
 }
 
-/// The gutters of the frame. The left one is wide on purpose: it is the indent the prototype sets every screen's
-/// words and hero against, and the counter sits in the narrow one opposite it.
-const EdgeInsets _gutter = EdgeInsets.fromLTRB(AppSpacing.xxxxl, AppSpacing.xxxl, AppSpacing.xl, AppSpacing.xl);
+/// The side margin of the frame: equal on both sides, by the owner's decision, which overrides the prototype.
+///
+/// The prototype is asymmetric — 48 on the left and 24 on the right of a 390 frame, a 318 column — and this app copied
+/// it. The owner wants the content centred. The column keeps its width and the 72 left over is split evenly, 36 a
+/// side, so on a 392.7 phone the column is the same 320.7 it was. It is not on the closed spacing scale, whose nearest
+/// steps are 32 and 40.
+const double _sideMargin = 36;
+
+/// The gutters of the frame: [_sideMargin] either side, the header's distance from the top, and the foot's 24.
+const EdgeInsets _gutter = EdgeInsets.fromLTRB(_sideMargin, AppSpacing.xxxl, _sideMargin, AppSpacing.xl);
 
 /// The words of one step: everything the chassis draws around that step's hero.
 typedef _Words = ({String caption, String title, String accent, String body});
