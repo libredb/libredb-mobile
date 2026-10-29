@@ -430,3 +430,64 @@ Notes:
 
 - `SENTRY_DSN` is a repository secret, so the dry-run bundle carries the DSN and its app starts Sentry; the bundle was never shared beyond the workflow artifact and the scratch directory.
 - The images that Railway platform-dev ran that day were not read.
+
+## iOS Platform walkthrough
+
+Platform mode was walked on iOS for the first time on 2026-10-29, from `main` at `a5bbe9de`, against the fixtures of `assets/mock/`.
+What passes here is evidence about the app's own Platform screens and about those fixtures, and evidence about no server, as [studio.md](studio.md) says of the mock walkthrough.
+The lab part of #307 is not this run and stays open: a mock build signs in without Keycloak, so no step here exercises `ASWebAuthenticationSession`, Platform's sign-in refusals, the two liveness gates or an account that takes an admin seat.
+The host was the owner's Mac on macOS 27.0.1 (26A434) with Xcode 27.1 (27A9275), and the device the simulator iPhone 18 Pro on iOS 27.0, 402 by 874 points at a device pixel ratio of 3.
+The build was Flutter 3.47.7, a debug build of `main_mock.dart`, run twice: once with the mock environment's default screen capture protection, which is off, and once with `--dart-define=SCREEN_CAPTURE_PROTECTION=true`.
+The identity came from `assets/mock/GET_v1_me.json`, which names the admin Platform Admin of Example Org, and the connections, grants, directory and audit answers from the other `GET_v1_*` fixtures.
+Xcode 27.1 on this Mac ships no Simulator application, so the device ran headless: every screen was read with `xcrun simctl io <udid> screenshot`, and every tap, drag and scroll was sent into the running app's gesture binding over the Dart VM service of `flutter run`.
+Face ID was enrolled, matched and refused with the simulator's `notifyutil` keys, because the Features menu that would do it belongs to that missing application.
+
+| Step | Result |
+| --- | --- |
+| 1. Login page | Passed: a first start shows the four introduction screens, and Get started opens a login page with "Sign in to Studio" and "Sign in to Platform" of equal weight, the Platform helper text about the admin seat, and no unreachable notice under either entry, since the mock answers `GET /health` and `GET /health/live` |
+| 2. Platform sign-in | Passed: the Platform entry lands in the Platform shell without a form, the tabs read Home, Connections and Audit, and the profile sheet labels the mode "Platform admin" |
+| 3. Home | Passed: the organization card reads Example Org and `example-org`, signed in as Platform Admin, above the Connections shortcut; the shell sends no Studio request |
+| 4. Connections | Passed: four connections, İstanbul Önbellek (redis), Event Store (mongodb), Legacy Billing (mysql) and Orders (postgres), with the Active and Inactive badges, the "Read grants only" chip on the two without a write credential, and the Turkish name's İ and Ö drawn correctly |
+| 5. Grants | Passed: Orders lists four grants with username, e-mail, level, expiry and granted by, and the expired one is red with a crossed-calendar icon |
+| 6. Directory | Passed: "Add access" opens Choose a user with the search field and the directory rows, each with its Studio role chip and its current level |
+| 7. Grant editor | Passed: "Change access to Orders" shows the user, the Read and Write segments, the expiry in the device's time zone and Save; "Pick a date and time" opens Flutter's Material date picker, not a Cupertino one, as everywhere else in this app |
+| 8. Back by swipe | Passed: a drag from the left edge pops the grant editor back to the grant list, so the iOS edge-swipe works on these routes |
+| 9. Revoke dialog | Passed: the row menu offers Change access and Remove access, and the dialog says that alice.reader will lose read access to Orders; Cancel keeps the row |
+| 10. Disable dialog | Passed: the connection menu offers Disable connection, and the dialog says the connection closes for every Studio user within about 30 seconds, that running queries are not stopped and that the grants are kept; Cancel keeps it Active |
+| 11. Audit list | Passed: the rows are newest first with the user, connection, type, time, duration, rows and status, the redacted and the uncaptured statements read as the fixtures hold them, and a long statement is cut with an ellipsis |
+| 12. Audit event | Passed: the event page shows every field, "Only this user" and "Only this connection", error code 42P01, the truncated statement with "Truncated by Studio" and the error message |
+| 13. Filters | Partly passed: the sheet opens with Status, Statement type, Source, From, To and the statement text with its 0/200 counter, and Done closes it, but its Done button reaches into the home indicator (see the defects below) |
+| 14. Profile sheet | Passed: the sheet names the admin and the organization, and offers Switch to Studio, Settings and Logout, with no "Remove my data", since a Platform session keeps nothing on the device |
+| 15. Settings | Passed: Appearance holds Theme, Day and night and Language, Security holds App lock and Lock after, and no "Remove my data" row appears in Platform mode |
+| 16. App lock | Passed: with Face ID enrolled, the switch asks the system prompt, a matching face turns the lock on and "Lock after" becomes live; turning it off asks nothing, as [security.md](security.md) says it does not |
+| 17. Kill and relaunch | Passed: a `simctl terminate` and `launch` comes back to "LibreDB is locked"; a non-matching face answers "Face Not Recognized" and keeps it locked, a matching face unlocks, and the session restores into the Platform shell, not into Studio |
+| 18. Mode switch | Passed: "Switch to Studio" lands in the Studio shell with its governance banner and no sign-in page, and "Switch to Platform" asks the seat confirmation first and then opens the Platform home again |
+| 19. Screen capture | Passed for the task-switcher snapshot, and a screenshot is never blocked: with the define on, the card iOS draws for the app while it resigns active is fully blurred over the audit list and over an audit event, 0 dark pixels of 1,080,000 in the 900 by 1200 band where the rows' text sits against 27,008 in the live screen, while `xcrun simctl io screenshot` of the live audit list is a readable 251 KB image, as `lib/core/security/screen_capture_platform.dart` says of iOS |
+| 20. Sign-out | Passed: Logout asks to confirm and returns to the login page with both entries, and the app's log holds no warn line about a missing Studio record of the sign-out |
+| 21. Logs | Passed: the simulator's log for the `Runner` process over the whole run, 9,335 lines with 382 of the app's own, holds no JWT, no `Bearer` value, no e-mail address at all, no statement text and no Platform error message text; a Platform request's query values print as `[REDACTED]` |
+
+### What the iOS run found
+
+Three defects, each measured on the simulator, and each still to be filed as its own issue:
+
+- The top safe area is painted pure black in both shells, which hides the iOS status bar.
+  On the Platform home every pixel of the 1206 by 170 band at the top of the screenshot is `#000000`, 205,020 of 205,020, and the band ends at row 185, which is exactly the view's top padding of 186 physical pixels, 62 points, read from the running app.
+  The same band of the login page is `#FFFFFF` with the clock, the Wi-Fi mark and the battery legible, and the Studio shell this run switched into in place is as black as the Platform one, row for row.
+  The screenshots of the iPhone 17 simulator that #91's run left behind hold the same 186 black rows, so it is not this device.
+  `ConnectivityBanner` holds that inset with an `AnimatedContainer` that is `Colors.transparent` while the device is online, and both shells sit the banner in a bare `Column` above the `Expanded` that holds `ResponsiveScaffold`, so nothing paints behind it; an unpainted Flutter surface is black on iOS, while on Android the window below it is not.
+- The audit filter sheet's Done button reaches into the home indicator.
+  Its fill spans physical rows 2448 to 2555 of a 2622 pixel screen, so 67 pixels, 22 points, are left below it, while the view's bottom padding is 102 pixels, 34 points: the button overlaps the home indicator by 35 pixels, 12 points.
+  `showAuditFilterSheet` passes `useSafeArea: true`, which Flutter applies to the top only, and the sheet's own bottom padding is `AppSpacing.lg` plus `MediaQuery.viewInsetsOf(context).bottom`, which is the keyboard inset and zero while no field has focus.
+- The app lock names the wrong sensor on a Face ID device.
+  `lib/features/app_lock/presentation/pages/app_lock_screen.dart` draws `Icons.fingerprint` on the Unlock button whatever the device offers, and this device has Face ID only, which iOS proved by putting up its Face ID sheet and answering "Face Not Recognized" to a refused face.
+
+Notes:
+
+- `screen_protector`, the plugin that blurs the snapshot, logs `Plugin ScreenProtectorPlugin uses deprecated application lifecycle events` and asks for `UIScene` support, which a later Flutter will require; it is the only plugin of this app that logs it, and it logs it in both runs.
+- The blur is taken by the audit screens and is not given back when the admin leaves them: after the Audit tab had been opened once the card of the Platform home was blurred too, while on a launch that never opened Audit the home's card shows the organization and the admin's name.
+  That errs on the safe side, so it is written down rather than filed.
+- The sign-in snackbar reads only "Success", in Platform mode as in Studio mode (`lib/features/auth/presentation/pages/login_page.dart`); it is not an iOS difference and no step turns on it.
+- The grants page, the directory and the grant editor all carry "Connections" as their app bar title, which is the shell's branch title and not the page's; that is not an iOS difference either.
+- No step opened an unreachable page or a refusal: the mock answers every Platform call, so [Liveness and the two gates](#liveness-and-the-two-gates) and [Session and refusals](#session-and-refusals) stay covered by their widget tests and by the Android walkthroughs.
+- The only error lines in the log belong to the walk itself: `StackFrame` asserts on the `Eval ()` frame that a pointer event sent over the VM service carries, which `CrashReporter` then reports as a non-fatal of the gesture library.
+  A tap a finger makes carries no such frame, so those lines say nothing about the app.
