@@ -381,19 +381,50 @@ class _Event extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(user, style: dense, overflow: TextOverflow.ellipsis),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(verb, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
-              const SizedBox(width: AppSpacing.sm),
-              AppStatusBadge(
-                label: outcome,
-                color: succeeded ? context.semanticColors.success : context.semanticColors.warning,
-              ),
-            ],
+          // The name takes the line and the statement type with the outcome sit flush against the end of it. While
+          // the three of them fit, this is the `Row` it has always been and every glyph is where the prototype
+          // puts it: the name yields its width first, down to the ellipsis, exactly as it did before.
+          //
+          // What the `Row` alone could not do is give the line back. A name, `UPDATE` and `Reddedildi` are three
+          // things with no break in them: at the largest accessibility text size they came to 587pt inside a 292pt
+          // card, and the overflow stripe lay across the audit log. So the pair is **bounded by the line it has to
+          // fit in** and parts onto a second run when it no longer does — which, because the bound is the line
+          // less the gap the name needs to have given up by then, is exactly the point at which the `Row` used to
+          // overflow and not one text size earlier. A `Row` cannot bound it: a child of a `Row` with no flex of
+          // its own is measured against infinity, so the pair would never learn that the line had run out.
+          //
+          // The level beside the holder above is left a plain `Row`: one holder and one badge fit that card at
+          // every width and text size measured.
+          //
+          // The builder is safe here, and that is a layout claim rather than a hope: it asks its own child no
+          // intrinsic question, and nothing above asks this line one either — the chassis measures the hero with
+          // an `IntrinsicHeight`, and `_RenderHeroExtent` answers it from its own floor without descending into a
+          // step. `step_5_ecosystem.dart` draws its fan under the same rule.
+          LayoutBuilder(
+            builder: (context, line) => Row(
+              children: [
+                Expanded(
+                  child: Text(user, style: dense, overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: (line.maxWidth - AppSpacing.sm).clamp(0, double.infinity)),
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      Text(verb, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
+                      AppStatusBadge(
+                        label: outcome,
+                        color: succeeded ? context.semanticColors.success : context.semanticColors.warning,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           Text([_connection, ...details].join('  ·  '), style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
           if (sql != null) ...[

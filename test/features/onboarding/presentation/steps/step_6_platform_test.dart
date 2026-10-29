@@ -271,4 +271,102 @@ void main() {
     expect(level.left, greaterThan(holder.right), reason: 'the level is not to the right of the holder');
   });
 
+  /// What a measurement of a painted edge is allowed to be out by: a rounded border, not a column of text.
+  const rounding = 0.01;
+
+  /// The record has to survive the text size the reader has set.
+  ///
+  /// The hero is 318pt wide on the phone the deck was measured against and 224 inside the card on the smallest
+  /// phone the flow is tested on, and it **scrolls itself vertically** — so what it cannot absorb is width.
+  /// Android's font size setting goes to 3.0 and Turkish is the longer of the two languages: `Reddedildi` beside
+  /// `UPDATE` beside a name is three unbreakable things on one line, and at a scale of 3 they came to 587pt in a
+  /// 292pt row — the stripe lay across the audit log of the last screen the introduction shows.
+  ///
+  /// **The claim is horizontal only.** A height measured under `flutter test` is a claim about Ahem, whose glyphs
+  /// are square ems, not about the product font; a width that does not fit is wrong in both.
+  ///
+  /// The overflow is read off the painted boxes rather than only off `takeException`, so that the test still fails
+  /// if the rendering library ever stops reporting one.
+  group('the record survives the text size the reader has set', () {
+    /// The step alone in a box of [width], at [scale], with its timeline finished.
+    Future<void> pumpInHero(WidgetTester tester, double width, double scale, Locale locale) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(1200, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      await withClock(Clock.fixed(now), () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            localizationsDelegates: const [
+              S.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: S.delegate.supportedLocales,
+            locale: locale,
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(width: width, child: const Step6Platform()),
+              ),
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale), disableAnimations: true),
+              child: child!,
+            ),
+          ),
+        );
+      });
+      await tester.pump();
+    }
+
+    /// How far past the right edge of its box the step paints, and what paints there.
+    (double, String) widestRight(WidgetTester tester) {
+      var worst = 0.0;
+      var what = 'nothing';
+      void walk(RenderObject node) {
+        if (node is RenderBox && node.hasSize && node.attached) {
+          final right = node.localToGlobal(Offset(node.size.width, 0)).dx;
+          if (right > worst) {
+            worst = right;
+            what = node.toStringShort();
+          }
+        }
+        node.visitChildren(walk);
+      }
+
+      walk(tester.renderObject(find.byType(Step6Platform)));
+      return (worst, what);
+    }
+
+    const cases = <(String, double, double, Locale)>[
+      ('the hero of the phone it was measured on', 318, 1.0, Locale('en')),
+      ('the hero at the largest ordinary text size', 318, 1.3, Locale('tr')),
+      ('the hero at an accessibility text size', 318, 2.0, Locale('tr')),
+      ('the hero at the largest accessibility text size', 318, 3.0, Locale('tr')),
+      ('the hero at the largest accessibility text size in English', 318, 3.0, Locale('en')),
+      ('the smallest phone', 224, 1.0, Locale('tr')),
+      ('the smallest phone at the largest ordinary text size', 224, 1.3, Locale('tr')),
+      ('the smallest phone at an accessibility text size', 224, 2.0, Locale('tr')),
+      ('the smallest phone at the largest accessibility text size', 224, 3.0, Locale('tr')),
+    ];
+
+    for (final (name, width, scale, locale) in cases) {
+      testWidgets('nothing of the record reaches past $name', (tester) async {
+        await pumpInHero(tester, width, scale, locale);
+
+        final (right, what) = widestRight(tester);
+        expect(
+          right,
+          lessThanOrEqualTo(width + rounding),
+          reason:
+              '$what paints ${(right - width).toStringAsFixed(1)}pt past the ${width}pt the hero gives it, at '
+              'a text scale of $scale in ${locale.languageCode}',
+        );
+        expect(tester.takeException(), isNull, reason: 'the record overflowed its box at a text scale of $scale');
+      });
+    }
+  });
 }
