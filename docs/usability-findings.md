@@ -164,7 +164,7 @@ evidence, and the rule below discards it.
 
 ### A class a guard already measures is a test gap, not a usability finding
 
-`test/architecture/` holds 40 guards, and some of them measure, repository-wide, exactly what a persona would
+`test/architecture/` holds 41 guards, and some of them measure, repository-wide, exactly what a persona would
 otherwise report as a finding. When a guard measures the class and is green, the finding is about the guard's reach —
 file it against the guard, not as a usability finding.
 
