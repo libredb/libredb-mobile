@@ -4147,11 +4147,51 @@ class S {
     return Intl.message('LibreDB is locked', name: 'app_lock_locked_title', desc: '', args: []);
   }
 
-  /// `Unlock with your fingerprint, face or screen lock to continue.`
+  /// `Unlock with your screen lock to continue.`
   String get app_lock_locked_message {
     return Intl.message(
-      'Unlock with your fingerprint, face or screen lock to continue.',
+      'Unlock with your screen lock to continue.',
       name: 'app_lock_locked_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your face or screen lock to continue.`
+  String get app_lock_locked_message_face {
+    return Intl.message(
+      'Unlock with your face or screen lock to continue.',
+      name: 'app_lock_locked_message_face',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your fingerprint or screen lock to continue.`
+  String get app_lock_locked_message_fingerprint {
+    return Intl.message(
+      'Unlock with your fingerprint or screen lock to continue.',
+      name: 'app_lock_locked_message_fingerprint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your iris or screen lock to continue.`
+  String get app_lock_locked_message_iris {
+    return Intl.message(
+      'Unlock with your iris or screen lock to continue.',
+      name: 'app_lock_locked_message_iris',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your biometrics or screen lock to continue.`
+  String get app_lock_locked_message_several {
+    return Intl.message(
+      'Unlock with your biometrics or screen lock to continue.',
+      name: 'app_lock_locked_message_several',
       desc: '',
       args: [],
     );

@@ -261,8 +261,18 @@ class MessageLookup extends MessageLookupByLibrary {
       "Uygulama kilidini açmak için kimliğinizi doğrulayın",
     ),
     "app_lock_failed": MessageLookupByLibrary.simpleMessage("Tanınmadı. Tekrar deneyin."),
-    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage(
-      "Devam etmek için parmak iziniz, yüzünüz veya ekran kilidinizle kilidi açın.",
+    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage("Devam etmek için ekran kilidinizle kilidi açın."),
+    "app_lock_locked_message_face": MessageLookupByLibrary.simpleMessage(
+      "Devam etmek için yüzünüz veya ekran kilidinizle kilidi açın.",
+    ),
+    "app_lock_locked_message_fingerprint": MessageLookupByLibrary.simpleMessage(
+      "Devam etmek için parmak iziniz veya ekran kilidinizle kilidi açın.",
+    ),
+    "app_lock_locked_message_iris": MessageLookupByLibrary.simpleMessage(
+      "Devam etmek için iris taramanız veya ekran kilidinizle kilidi açın.",
+    ),
+    "app_lock_locked_message_several": MessageLookupByLibrary.simpleMessage(
+      "Devam etmek için biyometrik doğrulamanız veya ekran kilidinizle kilidi açın.",
     ),
     "app_lock_locked_out": MessageLookupByLibrary.simpleMessage("Çok fazla deneme yapıldı. Daha sonra tekrar deneyin."),
     "app_lock_locked_title": MessageLookupByLibrary.simpleMessage("LibreDB kilitli"),
