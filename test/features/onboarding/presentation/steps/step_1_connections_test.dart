@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/onboarding/presentation/steps/step_1_con
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 
@@ -18,6 +19,49 @@ import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 /// the opacity of each row rather than off the end state: a step whose three rows all land at once renders the same
 /// final frame, which is the one defect a test that looks only at the end cannot see.
 void main() {
+  /// The step in the box the chassis's hero gives it on a 390pt phone: 318pt wide, scrolled vertically.
+  ///
+  /// Width is the whole point. The hero absorbs vertical growth by scrolling, so what a text size can still break
+  /// is the one axis it cannot yield on — and the row's badges are the part of the real list that is laid out side
+  /// by side rather than wrapped.
+  Future<void> showInHero(
+    WidgetTester tester, {
+    required double textScale,
+    required Locale locale,
+    double width = 318,
+  }) async {
+    tester.view.physicalSize = Size(width > 390 ? width : 390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        locale: locale,
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.delegate.supportedLocales,
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true, textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: width,
+                  child: SingleChildScrollView(child: Step1Connections()),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
+
   Future<void> show(WidgetTester tester, {bool disableAnimations = false}) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -138,41 +182,6 @@ void main() {
   });
 
   group('the badges survive an accessibility text size', () {
-    /// The step in the box the chassis's hero gives it on a 390pt phone: 318pt wide, scrolled vertically.
-    ///
-    /// Width is the whole point. The hero absorbs vertical growth by scrolling, so what a text size can still break
-    /// is the one axis it cannot yield on — and the row's badges are the part of the real list that is laid out side
-    /// by side rather than wrapped.
-    Future<void> showInHero(WidgetTester tester, {required double textScale, required Locale locale}) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          locale: locale,
-          localizationsDelegates: const [
-            S.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: S.delegate.supportedLocales,
-          home: Builder(
-            builder: (context) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(disableAnimations: true, textScaler: TextScaler.linear(textScale)),
-              child: const Scaffold(
-                body: Center(
-                  child: SizedBox(width: 318, child: SingleChildScrollView(child: Step1Connections())),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-    }
-
     for (final locale in [const Locale('en'), const Locale('tr')]) {
       for (final scale in [1.0, 1.3, 2.0, 3.0]) {
         testWidgets('nothing overflows the hero in ${locale.languageCode} at x$scale', (tester) async {
@@ -209,6 +218,61 @@ void main() {
           expect(drawn.width / own.width, lessThanOrEqualTo(1.0), reason: 'a badge is never drawn larger than it is');
         }
       }
+    });
+  });
+
+  /// The row is one line, as the prototype's `.crow{display:flex;align-items:center;gap:10px}` is: the name over the
+  /// database on the left, the marks on the right of that same line, the row about 54 high (54, 55, 55 in headless
+  /// Chrome at 390x844 in both languages) against the 82 the stacked arrangement drew.
+  ///
+  /// **The font trap:** Ahem's glyphs are full em squares, so "orders-prod" and "Salt okunur" are a third wider here
+  /// than on a phone and the one-line row cannot fit 318 pt under test the way it does on the device. So the one-line
+  /// claim is read in a box wide enough for Ahem, and the narrow box is asked the other question — that the row
+  /// degrades to the stacked form rather than overflow. Heights are read as differences against the name block's own
+  /// height, which cancels the font out.
+  group('the row is one line while the marks fit beside the name', () {
+    Rect rect(WidgetTester tester, Finder f) => tester.getRect(f);
+
+    testWidgets('where they fit, the row is the name block and the vertical padding, and nothing more', (tester) async {
+      const names = ['orders-prod', 'billing-stage', 'lab'];
+      const databases = ['orders', 'billing', 'dvdrental'];
+      for (final locale in [const Locale('en'), const Locale('tr')]) {
+        await showInHero(tester, textScale: 1.0, locale: locale, width: 900);
+        for (final index in [0, 1, 2]) {
+          final row = find.byKey(ValueKey('ob1-strip-$index'));
+          final name = rect(tester, find.descendant(of: row, matching: find.text(names[index])));
+          final database = rect(tester, find.descendant(of: row, matching: find.text(databases[index])));
+          final block = name.expandToInclude(database);
+          expect(
+            rect(tester, row).height - block.height,
+            2 * AppSpacing.md,
+            reason:
+                'row $index (${locale.languageCode}) is taller than its name block: the marks are on their own line',
+          );
+        }
+      }
+    });
+
+    testWidgets('where they fit, the marks stand to the right of the name on its line', (tester) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final row = find.byKey(const ValueKey('ob1-strip-0'));
+      final name = rect(tester, find.descendant(of: row, matching: find.text('orders-prod')));
+      final pill = rect(tester, find.descendant(of: row, matching: find.byType(ReadOnlyChip)));
+      final badge = rect(tester, find.descendant(of: row, matching: find.byType(EnvironmentBadge)));
+      expect(pill.left, greaterThanOrEqualTo(name.right + 10), reason: 'the pill is beside the name, not under it');
+      expect(pill.right, lessThan(badge.left), reason: 'the pill comes first and the badge last');
+      expect(badge.center.dy, pill.center.dy);
+      expect(badge.center.dy, inInclusiveRange(name.top, name.bottom + 20), reason: 'the marks sit on the name block');
+      expect(rect(tester, row).right - badge.right, AppSpacing.lg, reason: 'the badge ends at the row\'s own inset');
+    });
+
+    testWidgets('where they cannot fit, the marks go under the name and nothing overflows', (tester) async {
+      await showInHero(tester, textScale: 3.0, locale: const Locale('tr'));
+      final row = find.byKey(const ValueKey('ob1-strip-0'));
+      final database = rect(tester, find.descendant(of: row, matching: find.text('orders')));
+      final pill = rect(tester, find.descendant(of: row, matching: find.byType(ReadOnlyChip)));
+      expect(pill.top, greaterThanOrEqualTo(database.bottom), reason: 'the stacked form is the fallback at x3');
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -288,7 +352,8 @@ void main() {
     final env = tester.getRect(find.descendant(of: prodRow, matching: find.byType(EnvironmentBadge)));
     final readOnly = tester.getRect(find.descendant(of: prodRow, matching: find.byType(ReadOnlyChip)));
     expect(env.center.dy, readOnly.center.dy, reason: 'the two marks share a line, so the gap is a horizontal one');
-    expect(readOnly.left - env.right, 10.0);
+    // The prototype draws the pill first and the badge last: `${r[6]?'<div class="ro">':''}<div class="bdg">`.
+    expect(env.left - readOnly.right, 10.0);
   });
 
   testWidgets('the production row is the read-only one, as the design has it', (tester) async {

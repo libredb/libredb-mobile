@@ -210,17 +210,32 @@ class _DemoConnectionRow extends StatelessWidget {
       scheme: theme.colorScheme,
     ).strip;
     final secondary = connection.database ?? connection.host;
+    // The pill first and the badge last, as the prototype's row writes them.
     final badges = [
-      if (EnvironmentBadge.showsFor(environment)) EnvironmentBadge(environment: environment!, color: connection.color),
       if (connection.readOnlyForUser) const ReadOnlyChip(),
+      if (EnvironmentBadge.showsFor(environment)) EnvironmentBadge(environment: environment!, color: connection.color),
     ];
+    final nameBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(connection.name, style: theme.textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (secondary != null)
+          Text(
+            secondary,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
+    );
     return Container(
       key: ValueKey('ob1-strip-$index'),
       constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: strip ?? Colors.transparent, width: 4)),
       ),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
       child: Row(
         spacing: AppSpacing.md,
         children: [
@@ -234,42 +249,31 @@ class _DemoConnectionRow extends StatelessWidget {
               child: EngineMarkIcon(type: connection.type, color: theme.colorScheme.primary),
             ),
           ),
-          // The prototype's row is `.crow{display:flex;align-items:center}`: the strip, the engine, the name over
-          // the database, and then the badges on the *right*, on the same line. Stacked under the name instead,
-          // the row is half again as tall and the badges read as a third line of the connection's name.
-          // The prototype draws this row as `.crow{display:flex;align-items:center}`, with the badges beside the
-          // name. Tried and reverted on 2026-10-29: in that arrangement the name and the badges together want more
-          // than the row has at every text size, and the badge that gives way is drawn at 77% of itself in Turkish
-          // — a visibly squeezed mark. The cause was not the arrangement but the chip: `ReadOnlyChip` carried a
-          // lock whose size followed the text scaler, so its inset was 32 pt at the ordinary text size and 56 pt at
-          // x3 against the 14 pt the prototype's own `.ro` draws.
+          // The prototype's row is `.crow{display:flex;align-items:center;gap:10px}`: the name over the database on
+          // the left, the pill and the badge on the right of the same line, 54 high in headless Chrome against the 82
+          // the marks cost when they sat under the name.
           //
-          // That obstacle is gone — the lock is out and the inset is a flat 16 pt at every text size — so the split
-          // is now a change that can fit. It is still a change to *this row*, measured on its own, and not the
-          // chip's; until then the badges keep their own line here and the row is a line taller than the design.
+          // It was tried once and reverted on 2026-10-29, because the badges, then 16 pt wider and carrying a lock that
+          // followed the text scaler, did not fit beside the name at a squeezed Turkish size and one was drawn at 77%
+          // of itself. They fit now. A `Wrap` is the arrangement that keeps both promises: the marks take the right
+          // end of the name's line while the two fit together, and the whole group moves to a line of its own — the
+          // old stacked form — only at the text size where they cannot, rather than being squeezed or clipped.
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              // `.crow{align-items:center}`: the marks centre on the name block, and the gap is the row's 10.
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: _markGap,
+              runSpacing: AppSpacing.xs,
               children: [
-                Text(connection.name, style: theme.textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-                if (secondary != null)
-                  Text(
-                    secondary,
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                nameBlock,
                 if (badges.isNotEmpty)
-                  Wrap(
-                    spacing: _markGap,
-                    // `.crow{align-items:center}`: the 20 pt badge and the 22 pt pill share a centre line.
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    runSpacing: AppSpacing.xs,
-                    // A pill is laid out side by side and cannot wrap: at an accessibility text size `ReadOnlyChip`
-                    // asks for more width than the hero has and the row overflows to the right — 169pt in Turkish
-                    // at x3, measured. The hero scrolls vertically, so this is the one axis nothing absorbs.
-                    children: [for (final badge in badges) FittedBox(fit: BoxFit.scaleDown, child: badge)],
+                  // A pill is laid out side by side and cannot wrap: at an accessibility text size `ReadOnlyChip`
+                  // asks for more width than the hero has and the row overflows to the right — 169pt in Turkish at
+                  // x3, measured. The hero scrolls vertically, so this is the one axis nothing absorbs.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(mainAxisSize: MainAxisSize.min, spacing: _markGap, children: badges),
                   ),
               ],
             ),
