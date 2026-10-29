@@ -417,12 +417,12 @@ App Privacy, for a build with a Platform target:
 | Contact Info, Email Address | Yes | App Functionality | Yes | No | The same token carries the admin's e-mail address; the app never sends another user's |
 | Identifiers, User ID | Yes | App Functionality | Yes | No | The same token's subject and username, and the Keycloak id a grant names |
 | User Content, Other User Content | Yes | App Functionality | Yes | No | The statements sent to Studio, which Studio may record in its audit and query logs; Platform mode adds no free text |
-| Usage Data, Product Interaction | Sentry | Analytics | No | No | The navigation breadcrumbs and session records of a crash report, in a build with a DSN |
-| Diagnostics, Crash Data | Sentry | Analytics | No | No | The crash reports, in a build with a DSN |
-| Diagnostics, Performance Data | Sentry | Analytics | No | No | The traces of `tracesSampleRate = 0.2`, in a build with a DSN |
-| Diagnostics, Other Diagnostic Data | Sentry | Analytics | No | No | The device context and the session records, in a build with a DSN |
-| Identifiers, Device ID | Sentry | Analytics | No | No | The Sentry SDK's own installation id, which the app does not set; what sentry-cocoa records is #198's subject and is not read yet, so this row is the Play answer for Device or other IDs carried over |
-| Location, Coarse Location | Sentry | Analytics | No | No | Sentry derives a place from the client IP at ingestion, until 'Prevent Storing of IP Addresses' is on in the project ([crash-reporting.md](crash-reporting.md)) |
+| Usage Data, Product Interaction | Yes (Sentry) | Analytics | No | No | The navigation breadcrumbs and session records of a crash report, in a build with a DSN |
+| Diagnostics, Crash Data | Yes (Sentry) | Analytics | No | No | The crash reports, in a build with a DSN |
+| Diagnostics, Performance Data | Yes (Sentry) | Analytics | No | No | The traces of `tracesSampleRate = 0.2`, in a build with a DSN |
+| Diagnostics, Other Diagnostic Data | Yes (Sentry) | Analytics | No | No | The device context and the session records, in a build with a DSN |
+| Identifiers, Device ID | Yes (Sentry) | Analytics | No | No | The Sentry SDK's own installation id, which the app does not set; what sentry-cocoa records is #198's subject and is not read yet, so this row is the Play answer for Device or other IDs carried over |
+| Location, Coarse Location | Yes (Sentry) | Analytics | No | No | Sentry derives a place from the client IP at ingestion, until 'Prevent Storing of IP Addresses' is on in the project ([crash-reporting.md](crash-reporting.md)) |
 | Search History | No | | | | Owner's ruling of 2026-10-26: the directory search text and the audit statement search text are a query sent to the admin's own Platform to answer that search, and the app keeps no search history |
 
 Nothing is used to track the user, so Data Used to Track You is empty and the app asks for no tracking permission; every other Apple data type, Health, Fitness, Financial Info, Precise Location, Physical Address, Sensitive Info, Contacts, Photos or Videos, Audio Data, Gameplay Content, Customer Support, Browsing History, Advertising Data and Purchases, is Data Not Collected.
