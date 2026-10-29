@@ -643,6 +643,9 @@ The single sign-on has more guards next to the code they guard:
   Its `Duration` argument is the **per-pump interval, not a timeout** (the timeout is a separate, later parameter), so prefer the bare form.
   For **continuous / indeterminate animations** (spinner, shimmer, looping) never `pumpAndSettle`: it pumps until its own timeout of 10 minutes of fake time, 6000 frames at the default interval, and then throws `pumpAndSettle timed out`, usually within seconds, unless slow frames reach the 30 second test timeout first.
   Assert the spinner with `pump()` and use `pump(const Duration(...))` for a fixed frame; in goldens use `pumpBeforeTest: pumpOnce`.
+- **Frames:** a test that has to say what is on screen *during* an animation pumps it 16 ms at a time and reads the pixels back, because nothing else here can see a frame that is neither the first nor the last — a golden renders one resting frame and a `pumpAndSettle` skips straight to the end.
+  `test/support/route_change_frames.dart` captures the surface inside a `RepaintBoundary` and counts the pixels two frames differ by, on the machinery `test/support/pressed_frame.dart` already uses for a press.
+  `app_page_transition_overlap_test.dart` pushes a blue page over a red one and counts the pixels that hold both, which is how a transition that drew 100% of the screen twice for 14 consecutive frames was measured and is now pinned; `app_skeleton_route_change_test.dart` reads the same surface to fail if the shimmer still sweeps on a page that is being left (#421).
 
 These are documented so newcomers know what is intentional vs. not-yet-done.
 
