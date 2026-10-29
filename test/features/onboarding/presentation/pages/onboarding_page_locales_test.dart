@@ -182,12 +182,10 @@ void main() {
     });
   }
 
-  /// Taps the primary control the way a user reaches it: a user who has scrolled for a word scrolls back to the
-  /// control, and at an accessibility text size it is below the fold until they do.
+  /// Moves to the next screen the way a user does: the deck is turned by dragging it, and the primary control is
+  /// gone from every screen but the last.
   Future<void> advance(WidgetTester tester) async {
-    await tester.ensureVisible(find.byKey(onboardingDoneKey));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(onboardingDoneKey));
+    await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
   }
 

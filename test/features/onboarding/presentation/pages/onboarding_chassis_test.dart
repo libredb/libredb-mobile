@@ -69,8 +69,10 @@ void main() {
     return S.of(tester.element(find.byType(OnboardingPage)));
   }
 
+  /// Moves to the next screen the way a user does: the deck is turned by dragging it, and the primary control is
+  /// gone from every screen but the last.
   Future<void> advance(WidgetTester tester) async {
-    await tester.tap(find.byKey(onboardingDoneKey));
+    await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
   }
 
@@ -313,4 +315,55 @@ void main() {
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, '02 / 06');
     });
   });
+
+  /// The counter as the chassis writes it: the digits are padded, the separator is the ARB's.
+  String padded(S l10n, int step) =>
+      l10n.ob_step(step, onboardingStepCount).replaceAllMapped(RegExp(r'\d+'), (m) => m[0]!.padLeft(2, '0'));
+
+  /// The deck is turned by hand.
+  ///
+  /// The owner replaced the primary control with the gesture: a drag to the left is the next screen, a drag to the
+  /// right is the one before, Skip still leaves from anywhere, and the control that signs in stays on the last
+  /// screen because without it there is no way out of the deck.
+  group('the deck is turned by dragging it', () {
+    testWidgets('a drag to the left is the next screen and a drag to the right is the one before', (tester) async {
+      final l10n = await pumpFrame(tester);
+
+      expect(find.byKey(onboardingCounterKey), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 1));
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 2));
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 1));
+    });
+
+    testWidgets('there is no Next control before the last screen, and the last one still signs in', (tester) async {
+      final l10n = await pumpFrame(tester);
+
+      for (var step = 1; step < onboardingStepCount; step++) {
+        expect(
+          find.text(l10n.ob_next),
+          findsNothing,
+          reason: 'screen $step of $onboardingStepCount still carries a Next control',
+        );
+        await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
+        await tester.pumpAndSettle();
+      }
+      expect(find.text(l10n.ob_done), findsOneWidget);
+    });
+
+    testWidgets('the first screen does not go back past itself', (tester) async {
+      final l10n = await pumpFrame(tester);
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(300, 0), 800);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 1));
+    });
+  });
+
 }

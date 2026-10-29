@@ -63,9 +63,10 @@ void main() {
     return S.of(tester.element(find.byType(OnboardingPage)));
   }
 
-  /// Moves to the next screen the way a user does.
+  /// Moves to the next screen the way a user does: the deck is turned by dragging it, and the primary control is
+  /// gone from every screen but the last.
   Future<void> advance(WidgetTester tester) async {
-    await tester.tap(find.byKey(onboardingDoneKey));
+    await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
   }
 

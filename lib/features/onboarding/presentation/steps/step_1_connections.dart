@@ -209,21 +209,32 @@ class _DemoConnectionRow extends StatelessWidget {
         spacing: AppSpacing.md,
         children: [
           Icon(engineIcon(connection.type), semanticLabel: connection.type, color: theme.colorScheme.primary),
+          // The prototype's row is `.crow{display:flex;align-items:center}`: the strip, the engine, the name over
+          // the database, and then the badges on the *right*, on the same line. Stacked under the name instead,
+          // the row is half again as tall and the badges read as a third line of the connection's name.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: AppSpacing.xs,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(connection.name, style: theme.textTheme.bodyLarge),
+                Text(connection.name, style: theme.textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
                 if (secondary != null)
                   Text(
                     secondary,
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                if (badges.isNotEmpty) Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: badges),
               ],
             ),
           ),
+          if (badges.isNotEmpty)
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: badges,
+            ),
         ],
       ),
     );

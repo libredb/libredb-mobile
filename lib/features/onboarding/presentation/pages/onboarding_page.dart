@@ -29,6 +29,15 @@ const int onboardingStepCount = 6;
 /// any text size, which a pixel would not.
 const int _headlineLines = 3;
 
+/// How fast a horizontal drag has to be, in logical pixels a second, before it turns the deck.
+const double _turnVelocity = 200;
+
+/// How far an arriving screen travels in, in logical pixels.
+///
+/// Far enough to read as the deck being turned and short enough that the words are legible the whole way; the
+/// hero, the headline and the body all travel it together, so the screen moves as one thing.
+const double _slideTravel = AppSpacing.xxxl;
+
 /// The least the hero is ever given, in logical pixels.
 ///
 /// The hero is the one part of the page that yields. At the ordinary text size it takes the whole slack the words
@@ -139,8 +148,20 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
       _leave();
       return;
     }
+    _show(_step + 1);
+  }
+
+  /// Shows screen [step]: the words change, the page returns to its top and the entrance plays once.
+  ///
+  /// With animations turned off the new screen is not played in — it is already there, finished and usable, on the
+  /// frame the gesture produces.
+  void _show(int step) {
     final settled = MediaQuery.disableAnimationsOf(context);
-    setState(() => _step++);
+    final from = step > _step ? 1.0 : -1.0;
+    setState(() {
+      _entranceFrom = from;
+      _step = step;
+    });
     if (_scroll.hasClients) {
       settled ? _scroll.jumpTo(0) : _scroll.animateTo(0, duration: AppDurations.slow, curve: AppDurations.easeOut);
     }
@@ -164,141 +185,177 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
     final headline = theme.textTheme.displaySmall?.copyWith(color: colors.onSurface);
     final body = theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant);
     final words = _words(l10n, _step);
+    final locale = Localizations.localeOf(context);
 
     return Scaffold(
-      body: SafeArea(
-        // The page is laid out against the box it is given rather than against the screen, and it scrolls only when
-        // it must: at the ordinary text size the hero absorbs all the slack and nothing scrolls, and at an
-        // accessibility size the words grow past the screen and both controls stay reachable.
-        child: LayoutBuilder(
-          builder: (context, viewport) {
-            final reserve = viewport.maxWidth - _gutter.horizontal;
-            return SingleChildScrollView(
-              controller: _scroll,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: viewport.maxHeight),
-                child: IntrinsicHeight(
-                  child: Padding(
-                    padding: _gutter,
-                    child: AnimatedBuilder(
-                      animation: _entrance,
-                      builder: (context, _) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _rise(Text(words.caption, key: onboardingCaptionKey, style: eyebrow)),
-                              ),
-                              _Counter(step: _step, style: eyebrow),
-                            ],
-                          ),
-                          Expanded(
-                            child: _HeroExtent(
-                              floor: _heroFloor,
-                              // `overflow-y:auto`, the prototype's own word for the hero. On a phone every hero
-                              // fits the slack and this scrolls nothing; it is here because `flutter test` draws
-                              // in Ahem, whose square-em glyphs make the same heroes a third taller than they are
-                              // on a device, and a frame that is right on the phone must not be red in CI.
-                              //
-                              // The `LayoutBuilder` is safe under `_HeroExtent`, which answers the page's
-                              // intrinsic question itself and never puts it to its child.
-                              child: LayoutBuilder(
-                                builder: (context, slack) => SingleChildScrollView(
-                                  physics: const ClampingScrollPhysics(),
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(minHeight: slack.maxHeight),
-                                    child: Center(
-                                      child: KeyedSubtree(
-                                        key: ValueKey<int>(_step),
-                                        child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+      body: GestureDetector(
+        // The deck is turned by dragging it. The primary control used to be the only way forward; it is gone from
+        // every screen but the last, where the one that signs in has to stay or there is no way out of the deck.
+        // Skip still leaves from anywhere.
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: _turn,
+        child: SafeArea(
+          // The page is laid out against the box it is given rather than against the screen, and it scrolls only when
+          // it must: at the ordinary text size the hero absorbs all the slack and nothing scrolls, and at an
+          // accessibility size the words grow past the screen and both controls stay reachable.
+          child: LayoutBuilder(
+            builder: (context, viewport) {
+              final reserve = viewport.maxWidth - _gutter.horizontal;
+              return SingleChildScrollView(
+                controller: _scroll,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: _gutter,
+                      child: AnimatedBuilder(
+                        animation: _entrance,
+                        builder: (context, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _rise(
+                                    Text(_capitals(words.caption, locale), key: onboardingCaptionKey, style: eyebrow),
+                                  ),
+                                ),
+                                _Counter(step: _step, style: eyebrow),
+                              ],
+                            ),
+                            Expanded(
+                              child: _HeroExtent(
+                                floor: _heroFloor,
+                                // `overflow-y:auto`, the prototype's own word for the hero. On a phone every hero
+                                // fits the slack and this scrolls nothing; it is here because `flutter test` draws
+                                // in Ahem, whose square-em glyphs make the same heroes a third taller than they are
+                                // on a device, and a frame that is right on the phone must not be red in CI.
+                                //
+                                // The `LayoutBuilder` is safe under `_HeroExtent`, which answers the page's
+                                // intrinsic question itself and never puts it to its child.
+                                child: LayoutBuilder(
+                                  builder: (context, slack) => SingleChildScrollView(
+                                    physics: const ClampingScrollPhysics(),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(minHeight: slack.maxHeight),
+                                      child: Center(
+                                        child: KeyedSubtree(
+                                          key: ValueKey<int>(_step),
+                                          child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          _rise(
-                            _Reserved(
-                              candidates: _titles(l10n),
-                              style: headline,
-                              width: reserve,
-                              minLines: _headlineLines,
-                              child: Text.rich(
-                                _accented(words.title, words.accent, colors.primary),
-                                key: onboardingHeadlineKey,
+                            _rise(
+                              _Reserved(
+                                candidates: _titles(l10n),
                                 style: headline,
+                                width: reserve,
+                                minLines: _headlineLines,
+                                child: Text.rich(
+                                  _accented(words.title, words.accent, colors.primary),
+                                  key: onboardingHeadlineKey,
+                                  style: headline,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          _rise(
-                            _Reserved(
-                              candidates: _bodies(l10n),
-                              style: body,
-                              width: reserve,
-                              child: Text(words.body, key: onboardingBodyKey, style: body),
+                            const SizedBox(height: AppSpacing.md),
+                            _rise(
+                              _Reserved(
+                                candidates: _bodies(l10n),
+                                style: body,
+                                width: reserve,
+                                child: Text(words.body, key: onboardingBodyKey, style: body),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _Progress(step: _step, entrance: _entrance.value),
-                          const SizedBox(height: AppSpacing.lg),
-                          // The two controls sit at opposite ends of one line and stack when they no longer fit on
-                          // one, which they do not at an accessibility text size: a `Row` overflowed its box by
-                          // 124 pt in Turkish at a scale of 3.0 — a real Android setting — and drew the stripe
-                          // across the controls of the first screen the app ever shows.
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: double.infinity),
-                            child: Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: AppSpacing.lg,
-                              runSpacing: AppSpacing.sm,
-                              children: [
-                                // Skip is on every screen, because someone who wants out looks for the word
-                                // rather than for the last screen.
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
-                                  child: TextButton(
-                                    key: onboardingSkipKey,
-                                    onPressed: _leave,
-                                    child: Text(l10n.ob_skip),
-                                  ),
-                                ),
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
-                                  child: FilledButton(
-                                    key: onboardingDoneKey,
-                                    onPressed: _advance,
-                                    child: Text(
-                                      _step == onboardingStepCount - 1 ? l10n.ob_done : l10n.ob_next,
-                                      textAlign: TextAlign.center,
+                            const SizedBox(height: AppSpacing.lg),
+                            _Progress(step: _step, entrance: _entrance.value),
+                            const SizedBox(height: AppSpacing.lg),
+                            // The two controls sit at opposite ends of one line and stack when they no longer fit on
+                            // one, which they do not at an accessibility text size: a `Row` overflowed its box by
+                            // 124 pt in Turkish at a scale of 3.0 — a real Android setting — and drew the stripe
+                            // across the controls of the first screen the app ever shows.
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: double.infinity),
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: AppSpacing.lg,
+                                runSpacing: AppSpacing.sm,
+                                children: [
+                                  // Skip is on every screen, because someone who wants out looks for the word
+                                  // rather than for the last screen.
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+                                    child: TextButton(
+                                      key: onboardingSkipKey,
+                                      onPressed: _leave,
+                                      child: Text(l10n.ob_skip),
                                     ),
                                   ),
-                                ),
-                              ],
+                                  if (_step == onboardingStepCount - 1)
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+                                      child: FilledButton(
+                                        key: onboardingDoneKey,
+                                        // `.next{border-radius:999px}` — the prototype's primary control is a pill.
+                                        style: FilledButton.styleFrom(shape: const StadiumBorder()),
+                                        onPressed: _advance,
+                                        child: Text(
+                                          _step == onboardingStepCount - 1 ? l10n.ob_done : l10n.ob_next,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
+  /// Which side the arriving screen travels in from: 1 is from the right, -1 from the left.
+  double _entranceFrom = 1;
+
+  /// Turns the deck: a drag to the left is the next screen, a drag to the right is the one before.
+  ///
+  /// The threshold is a velocity rather than a distance, so a slow reposition of the finger does not turn a page
+  /// the reader did not mean to turn. The first screen does not go back past itself and the last does not go
+  /// forward past itself — leaving the deck is Skip's job, and the control that signs in.
+  void _turn(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < _turnVelocity) return;
+    if (velocity < 0 && _step < onboardingStepCount - 1) {
+      _advance();
+    } else if (velocity > 0 && _step > 0) {
+      _show(_step - 1);
+    }
+  }
+
   /// The rise the words of a new step arrive with: up into place as they fade in, and nothing at all when the
   /// device asks for no animation, because the controller is then already finished.
+  /// The entrance of a screen, travelling the way the deck was turned.
+  ///
+  /// The deck is turned sideways, so the screen arrives sideways: dragged to the left, the next screen comes in
+  /// from the right; dragged to the right, the one before comes in from the left. It used to rise from below
+  /// whichever way the finger went, which read as the screen ignoring the gesture.
   Widget _rise(Widget child) => FadeTransition(
     opacity: _entrance,
-    child: Transform.translate(offset: Offset(0, AppSpacing.md * (1 - _entrance.value)), child: child),
+    child: Transform.translate(offset: Offset(_entranceFrom * _slideTravel * (1 - _entrance.value), 0), child: child),
   );
 }
 
@@ -458,7 +515,9 @@ class _Progress extends StatelessWidget {
                   color: _colour(index, colors),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
-                child: const SizedBox(height: AppSpacing.xs),
+                // `.seg{height:2px}` in the prototype. The spacing scale starts at 4, so the rule's own
+                // thickness is written as half of its smallest step rather than as a number of its own.
+                child: const SizedBox(height: AppSpacing.xs / 2),
               ),
             ),
         ],
@@ -528,4 +587,16 @@ class _RenderHeroExtent extends RenderProxyBox {
 
   @override
   double computeMaxIntrinsicWidth(double height) => 0;
+}
+
+/// [text] in capitals, by the rules of [locale].
+///
+/// The prototype sets the caption in `text-transform:uppercase`, and a browser applies that by the document's
+/// language: under `lang="tr"` it turns `i` into `İ` and leaves `I` alone. Dart's own `toUpperCase` is the
+/// language-neutral one, so in Turkish it would write `BAGLANTILARINIZ` with a dotless `I` where the prototype
+/// writes `BAĞLANTILARINIZ`. The prototype itself shipped the opposite bug once — its `lang` was pinned to `tr`,
+/// so the English deck read `İT PLAYS İTSELF` — which is why this follows the locale rather than a constant.
+String _capitals(String text, Locale locale) {
+  if (locale.languageCode != 'tr') return text.toUpperCase();
+  return text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase();
 }

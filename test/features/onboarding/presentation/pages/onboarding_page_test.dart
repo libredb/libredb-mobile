@@ -93,7 +93,7 @@ void main() {
   /// Advances to the last screen, where the primary control is the one that leaves.
   Future<void> reachLastScreen(WidgetTester tester) async {
     for (var i = 0; i < 5; i++) {
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
     }
   }
@@ -212,10 +212,35 @@ void main() {
       expect(find.text('the login page'), findsOneWidget);
     });
 
-    // The four panels were a pager and a swipe moved between them. The six screens are not: the owner's standing
-    // rule is that the primary control is the only way forward, so a drag across the page has to do nothing at all
-    // — a flow that also answers a swipe answers it over the step that is playing itself.
-    testWidgets('a drag across the page does not move the flow', (tester) async {
+    // The rule here was reversed by the owner on 2026-10-29: "ileri butonunu kaldır sağa sola kayrırabilmeli
+    // ileride gidebilmeli geride gidebilmeli direk atlayadabilmeli". Until then the primary control was the only
+    // way forward and a drag had to do nothing, which is what this test used to assert. Now the deck is turned by
+    // dragging it, the control that signs in stays on the last screen because without it there is no way out, and
+    // Skip still leaves from anywhere.
+    testWidgets('a fling turns the deck forward and back, and the first screen does not go back past itself', (
+      tester,
+    ) async {
+      await pumpWelcome(tester);
+      final all = screens(tester).map((screen) => screen.$2).toList();
+
+      String headline() => tester.renderObject<RenderParagraph>(find.byKey(onboardingHeadlineKey)).text.toPlainText();
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(headline(), all.first, reason: 'the first screen went back past itself');
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(headline(), all[1], reason: 'a fling to the left did not open the next screen');
+
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(headline(), all.first, reason: 'a fling to the right did not open the screen before');
+    });
+
+    // The threshold is a velocity, not a distance: a reader repositioning a finger must not turn a page they did
+    // not mean to turn.
+    testWidgets('a slow drag does not turn the deck', (tester) async {
       await pumpWelcome(tester);
       final first = screens(tester).first.$2;
 
@@ -225,7 +250,7 @@ void main() {
       expect(
         tester.renderObject<RenderParagraph>(find.byKey(onboardingHeadlineKey)).text.toPlainText(),
         first,
-        reason: 'a sideways drag moved the flow, and Next is the only control',
+        reason: 'a slow drag turned the deck, and only a fling may',
       );
     });
 
@@ -267,26 +292,25 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('keeps both controls reachable on $name', (tester) async {
+      // Skip is the only control before the last screen: the deck is turned by dragging it, and the control that
+      // signs in appears on the sixth. So this asks for Skip everywhere and for the other one only at the end.
+      testWidgets('keeps the control that leaves reachable on $name', (tester) async {
         await pumpWelcome(tester, viewport: viewport, textScale: scale, locale: locale);
 
-        for (final key in [onboardingDoneKey, onboardingSkipKey]) {
-          await tester.ensureVisible(find.byKey(key));
-          await tester.pumpAndSettle();
-          expect(find.byKey(key), findsOneWidget, reason: '$key on $name');
-        }
+        await tester.ensureVisible(find.byKey(onboardingSkipKey));
+        await tester.pumpAndSettle();
+        expect(find.byKey(onboardingSkipKey), findsOneWidget, reason: 'Skip on $name');
+        expect(find.byKey(onboardingDoneKey), findsNothing, reason: 'a Next control on the first screen of $name');
+
+        await reachLastScreen(tester);
+        await tester.ensureVisible(find.byKey(onboardingDoneKey));
+        await tester.pumpAndSettle();
+        expect(find.byKey(onboardingDoneKey), findsOneWidget, reason: 'the control that signs in on $name');
       });
 
       testWidgets('shows no overflow on the last screen of $name', (tester) async {
         await pumpWelcome(tester, viewport: viewport, textScale: scale, locale: locale);
-        for (var step = 0; step < 5; step++) {
-          // A user who scrolled for a word scrolls back to the control; at an accessibility text size on a short
-          // viewport it is below the fold until they do, and a tap that misses would make this test vacuous.
-          await tester.ensureVisible(find.byKey(onboardingDoneKey));
-          await tester.pumpAndSettle();
-          await tester.tap(find.byKey(onboardingDoneKey));
-          await tester.pumpAndSettle();
-        }
+        await reachLastScreen(tester);
 
         expect(tester.takeException(), isNull, reason: 'the word that leaves is the longest of the three');
       });
