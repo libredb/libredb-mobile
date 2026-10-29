@@ -94,6 +94,15 @@ That Sentry receives the timer's error comes from the #191 device check on the t
   from the start and this copy was not, because the Android scrubber masks `event.extras` and a Dart event never
   reaches it: it goes to `captureEnvelope`. `extra` is deprecated in the SDK and still sent, which is why it is
   still read.
+- Every context the SDK did not fill itself is masked the same way. `Scope.setContexts(key, value)` is what the SDK
+  offers in place of the deprecated `setExtra`, and what it stores reaches the wire under `contexts.<key>` exactly as
+  `extra` did; the SDK's own contexts (`device`, `os`, `app`, `runtime`, `runtimes`, `browser`, `gpu`, `culture`,
+  `response`, `feedback`, `flags`, `trace`) are typed objects and are left alone, since masking one as a map would
+  send its `toString` instead of its fields, and `trace.data`, the one of them that carries app data, is masked.
+- The breadcrumbs an event carries itself are masked as well. `Scope.applyToEvent` keeps the event's own breadcrumbs
+  and adds none of the scope's whenever the event brought any, and those never passed `beforeBreadcrumb`, the only
+  hook that masks a breadcrumb on its way to the scope. Masking is idempotent, so the scope's already-masked
+  breadcrumbs are unchanged by the second pass. The Kotlin scrubber has always masked `event.breadcrumbs`.
 - **The hook fails closed.** If masking throws, the event is dropped and only the exception's class is logged — its
   message could carry the value that made the masking throw. The Android scrubber has always done this; the Dart
   one did not, and the SDK sets its processed event to the one it was handed *before* calling the hook, so a throw
@@ -111,32 +120,40 @@ Review it whenever the app starts handling a new kind of personal data.
 
 ## The native SDKs
 
-The native Sentry SDKs record breadcrumbs and send events of their own (activity and app lifecycle, system events, Java and Kotlin exceptions, ANR events, native crash reports), and none of them pass through the Dart hooks.
+The native Sentry SDKs record breadcrumbs and send events of their own (app and screen lifecycle, system events, Java, Kotlin and Objective-C exceptions, ANR events and app hangs, native crash reports), and none of them pass through the Dart hooks.
 
-On Android the host app starts sentry-android itself (`MainApplication.kt` and `NativeSentry.kt` under `android/app/src/main/kotlin`) with `beforeSend` and `beforeBreadcrumb` hooks that mask them with a Kotlin copy of the same rules (`NativeSentryScrubber.kt`), and the Dart side turns `autoInitializeNativeSdk` off on Android only.
-`test/architecture/sentry_native_scrub_patterns_test.dart` fails when the Kotlin patterns drift from the Dart ones, and the fixtures in `test/fixtures/` run both in the Dart tests and in the Android JVM unit tests:
+On both platforms the host app starts the native SDK itself, with `beforeSend` and `beforeBreadcrumb` hooks that mask what it records with a copy of the same rules, and the Dart side turns `autoInitializeNativeSdk` off there (`hostStartsNativeSdk`):
+
+- Android: `MainApplication.kt` and `NativeSentry.kt` under `android/app/src/main/kotlin`, with the Kotlin copy `NativeSentryScrubber.kt` over `NativeScrubPatterns.kt`.
+- iOS: `AppDelegate.swift` and `NativeSentry.swift` under `ios/Runner`, with the Swift copy `NativeSentryScrubber.swift` over `NativeScrubPatterns.swift`.
+
+`test/architecture/sentry_native_scrub_patterns_test.dart` fails when the Kotlin or the Swift patterns drift from the Dart ones, and the fixtures in `test/fixtures/` run in the Dart tests, in the Android JVM unit tests and in the iOS XCTest cases:
 
 ```shell
 cd android && ./gradlew :app:testDebugUnitTest -Ptarget=lib/main/main_prod.dart
+
+# macOS with Xcode only; the first command writes ios/Flutter/Generated.xcconfig, which the project needs
+fvm flutter build ios --config-only --no-codesign --target lib/main/main_prod.dart
+cd ios && xcodebuild test -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 Gradle needs JDK 17 there, and the Gradle wrapper is not committed: any Flutter Android build writes it, for example `fvm flutter build apk --config-only --target lib/main/main_prod.dart`.
-The lifecycle breadcrumbs of sentry-android keep their `state` (such as `resumed` or `foreground`); a copy that Sentry merges into a Dart event still shows it masked.
+The lifecycle breadcrumbs of the native SDKs keep their `state` (such as `resumed` on Android, or `foreground` on both); a copy that Sentry merges into a Dart event still shows it masked.
 That `state: [REDACTED]` is a harmless over-match: the Dart scrubber masks every `state` key as an OpenID Connect value, and a lifecycle state holds nothing personal.
+sentry-cocoa writes a `state` only under `app.lifecycle`, so a `ui.lifecycle` breadcrumb that carries one is masked on iOS.
 
 | Platform | Dart events and breadcrumbs | Native breadcrumbs | Native events and crash reports |
 | --- | --- | --- | --- |
 | Android | Scrubbed | Scrubbed | Scrubbed |
-| iOS | Scrubbed | Not scrubbed | Not scrubbed |
+| iOS | Scrubbed | Scrubbed | Scrubbed |
 
-Native scrubbing is not done on iOS yet: sentry_flutter starts sentry-cocoa there, and what it records itself leaves the device unmasked.
-Until a native scrubber covers iOS (roadmap M6), do not give an iOS release build a Sentry DSN.
 Sentry's server-side data scrubbing (Advanced Data Scrubbing in the project settings) is a useful complement on every platform, but it runs after the data has left the device, so it does not replace the hooks.
 
-On Android, Gradle passes the DSN to the native SDK only for a `lib/main/main_prod.dart` build (`android/app/build.gradle.kts`), the only entry point that selects the prod environment in which the Dart side starts Sentry.
-Renaming that entry point means changing the check there too.
-When the two disagree, or the host app does not answer the check, the app throws a `StateError` at start in a debug or profile build, and a release build logs the error and runs exactly as without a DSN: no Sentry SDK and the log-only analytics.
-A native option set in `configureSentryOptions` does not reach the Android SDK, so set it in `NativeSentry.kt` as well; Session Replay would need its recorder wired there before it can be turned on.
+The DSN reaches the native SDK only in a `lib/main/main_prod.dart` build, the only entry point that selects the prod environment in which the Dart side starts Sentry: Gradle writes `BuildConfig.SENTRY_DSN` on Android (`android/app/build.gradle.kts`), and on iOS the last build phase of the Runner target runs `ios/native_sentry_defines.sh`, which decodes the dart-defines of the build and writes `SENTRY_DSN`, `SENTRY_ENVIRONMENT` and `SENTRY_DIST` into the built `Info.plist`, where `NativeSentry.start` reads them.
+Renaming that entry point means changing both checks too.
+When the two gates disagree, or the host app does not answer the check, the app throws a `StateError` at start in a debug or profile build, and a release build logs the error and runs exactly as without a DSN: no Sentry SDK and the log-only analytics.
+A native option set in `configureSentryOptions` does not reach the native SDKs, so set it in `NativeSentry.kt` and in `NativeSentry.swift` as well; Session Replay would need its recorder wired there before it can be turned on.
 
 ## The device check
 
@@ -155,7 +172,9 @@ Never ship a build with that define.
    ```
 
 2. Start the app.
-   Right after it starts, it records a user action breadcrumb with the email `device.check@example.com` and a JWT-shaped token, then throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` (`lib/app/bootstrap/sentry_device_check.dart`).
+   Right after it starts, it records a user action breadcrumb and a context named `device_check`, each carrying all four kinds of secret: the email `device.check@example.com`, the password-shaped `device-check-only-not-a-password` under a `password` key, the JWT-shaped token after a `Bearer `, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` under a `statement` key.
+   Then it throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the same statement in its `fixStatement` (`lib/app/bootstrap/sentry_device_check.dart`).
+   The context is in the check because `contexts` is where `Scope.setContexts` puts what the SDK deprecated `extra` in favour of, and `extra` is the field that once reached Sentry unmasked (PR #398).
    It throws from a microtask so that the error reaches Sentry as the `AuthError` object through `PlatformDispatcher.onError`; a timer's error would reach it only as text through the isolate error listener (see "Where an uncaught error goes").
 3. Crash the native side:
 
@@ -165,7 +184,71 @@ Never ship a build with that define.
 
    `SentryDeviceCheck.kt` throws a `RuntimeException` that names the same email and a `Bearer` token, and sentry-android sends it on the next start.
 4. Start the app once more, so the crash report is sent.
-5. In Sentry, open both events and confirm that neither carries the email, the token, `device_check_payroll` or the statement: the Dart event shows `AuthError(code: studio.database_auth)` and a breadcrumb whose target is `[REDACTED_EMAIL]`, and the native crash shows `[REDACTED_EMAIL]` and `Bearer [REDACTED_JWT]`.
+5. In Sentry, open both events and read them against "What the dashboard must show" below, row by row.
+   Nothing in that section is a judgement call: each row names a field, and the value it must hold.
+
+## What the dashboard must show
+
+The owner runs this part, because it needs the Sentry account; the app side of it is pinned by `test/infrastructure/analytics/sentry_event_exits_test.dart` and `test/app/bootstrap/sentry_device_check_test.dart`, which assert the same values against the JSON the transport sends.
+
+### 1. Five strings, zero hits
+
+Open the Dart event, click **JSON** (the raw payload, top right of the event), and search the page for each string.
+Then do the same on the native crash event.
+Every one of the five must have **zero** hits in both:
+
+| # | String to search for | Hits allowed |
+|---|---|---|
+| 1 | `device.check@example.com` | 0 |
+| 2 | `device-check-only-not-a-password` | 0 |
+| 3 | `eyJhbGciOiJIUzI1NiJ9` (the token's first segment) | 0 |
+| 4 | `GRANT SELECT ON device_check_payroll` | 0 |
+| 5 | `permission denied for table device_check_payroll` | 0 |
+
+A hit on any of them is a failure; record which string, which event and which field, and stop — do not re-run the check until it is fixed.
+
+### 2. The Dart event, field by field
+
+The issue's title is `AuthError`, its culprit `AuthError(code: studio.database_auth)`:
+
+| Where in the event | Field | Must read exactly |
+|---|---|---|
+| Exception | value | `AuthError(code: studio.database_auth)` |
+| Breadcrumbs, last row (`ui.action`, `sentry_device_check`) | `target` | `[REDACTED_EMAIL]` |
+| the same breadcrumb | `password` | `[REDACTED]` |
+| the same breadcrumb | `statement` | `[REDACTED]` |
+| the same breadcrumb | `note` | `Bearer [REDACTED_JWT]` |
+| Contexts → `device_check` | `email` | `[REDACTED_EMAIL]` |
+| Contexts → `device_check` | `password` | `[REDACTED]` |
+| Contexts → `device_check` | `statement` | `[REDACTED]` |
+| Contexts → `device_check` | `note` | `Bearer [REDACTED_JWT]` |
+| Contexts → `device_check` | `connectionId` | `seed:dev-postgres`, kept on purpose: a connection id is not a secret |
+
+These must be **absent** from the Dart event:
+
+- Any **User** section with an address in `id`, `username` or `email`; the check signs nobody in, and `sendDefaultPii` is off.
+- Any **IP address** or any city or country on the user; if one shows, 'Prevent Storing of IP Addresses' is still off (see "The user's steps").
+- Any **Request** section: this event carries none, so a `headers`, `cookies` or `data` block under it means something else set one.
+- Any **Additional Data** (`extra`) key whose value is an address, a password, a statement or a token; a navigation transaction may add `route_settings_arguments`, and there `connectionId`, `kind`, `browsePath` and `browsePrefix` are kept on purpose while the rest reads masked.
+
+### 3. The native crash event
+
+| Where in the event | Field | Must read exactly |
+|---|---|---|
+| Exception | type | `RuntimeException` |
+| Exception | value | `LibreDB Sentry device check: native crash for [REDACTED_EMAIL] with Bearer [REDACTED_JWT]` |
+
+The native crash carries no password: a password in free text has no shape a scrubber can find, so `SentryDeviceCheck.kt` does not write one, and the `password` key is proven on the Dart side only.
+
+### 4. What a failure looks like
+
+- A cleartext hit from table 1 — the scrubber did not run, or it stopped covering that field.
+- A field in table 2 or 3 holding the value instead of the mask, in one event but not the other — the Dart and the Kotlin copy of the policy have drifted (`test/architecture/sentry_native_scrub_patterns_test.dart` guards the patterns, not the fields).
+- No `[REDACTED` anywhere in the event — the event is not the check's: confirm the breadcrumb message is `sentry_device_check` before reading anything else.
+- Only one of the two events in the project — the Dart event comes from the first start, the native crash only after the next one (step 4).
+- The issue shows a release the Sentry project has no symbols for, so the stack trace is obfuscated: that is a release-pipeline matter ([release.md](release.md)), not a scrubbing failure; the fields above are still readable.
+
+On iOS the same steps 1, 2, 4 and 5 run from `fvm flutter build ipa --release --target lib/main/main_prod.dart` with the same defines; the native crash of step 3 has no iOS half yet, so what it confirms there is the Dart event and the breadcrumbs sentry-cocoa recorded around it.
 
 ## The user's steps
 
