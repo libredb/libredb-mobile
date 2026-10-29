@@ -392,4 +392,59 @@ void main() {
       expect(find.text('No internet connection'), findsNothing);
     });
   });
+
+  group('the status bar inset', () {
+    // Both shells put the banner above the body in a bare Column, so nothing paints behind the inset; a transparent
+    // one shows the black of an unpainted surface on iOS and hides the status bar (#442).
+    Future<void> pumpInset(WidgetTester tester, ConnectivityState state, ThemeData theme) async {
+      when(() => mockCubit.state).thenReturn(state);
+      whenListen(mockCubit, Stream<ConnectivityState>.value(state), initialState: state);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(padding: const EdgeInsets.only(top: 62)),
+            child: child!,
+          ),
+          home: BlocProvider<ConnectivityCubit>.value(
+            value: mockCubit,
+            child: const Column(
+              children: [
+                ConnectivityBanner(),
+                Expanded(child: SizedBox()),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Color? insetColor(WidgetTester tester) {
+      final box = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      return (box.decoration as BoxDecoration?)?.color;
+    }
+
+    for (final (name, theme) in [('light', ThemeData.light()), ('dark', ThemeData.dark())]) {
+      testWidgets('is painted with the scaffold background while online ($name)', (tester) async {
+        await pumpInset(tester, const ConnectivityState(status: ConnectivityStatus.online), theme);
+
+        expect(tester.getSize(find.byType(AnimatedContainer)).height, 62);
+        expect(insetColor(tester), theme.scaffoldBackgroundColor);
+      });
+
+      testWidgets('is painted with the error colour while offline ($name)', (tester) async {
+        await pumpInset(tester, const ConnectivityState(status: ConnectivityStatus.offline), theme);
+
+        expect(insetColor(tester), theme.colorScheme.error);
+      });
+    }
+  });
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:libredb_mobile/core/result/result.dart';
+import 'package:libredb_mobile/features/access_requests/data/repositories/access_request_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/platform_identity_repository.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/studio_identity_repository.dart';
 import 'package:libredb_mobile/features/connections/data/repositories/connection_repository.dart';
@@ -96,6 +97,14 @@ void main() {
     'IPlatformAuditRepository.list': (client) =>
         PlatformAuditRepository(client).list(filter: const AuditFilter(), offset: 0),
     'IPlatformStatusRepository.liveness': (client) => PlatformStatusRepository(client).liveness(),
+    'IAccessRequestRepository.requestableConnections': (client) =>
+        AccessRequestRepository(client).requestableConnections(),
+    'IAccessRequestRepository.mine': (client) => AccessRequestRepository(client).mine(),
+    'IAccessRequestRepository.create': (client) =>
+        AccessRequestRepository(client)
+            .create(connectionId: 'cm0conn0000000000000000001', level: 'read', reason: 'The quarterly report'),
+    'IAccessRequestRepository.withdraw': (client) =>
+        AccessRequestRepository(client).withdraw('cm0req00000000000000000001'),
   };
 
   for (final MapEntry(key: name, value: send) in platformRequests.entries) {

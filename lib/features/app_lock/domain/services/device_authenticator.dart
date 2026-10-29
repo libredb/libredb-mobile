@@ -39,10 +39,32 @@ final class DeviceAuthNoScreenLock extends DeviceAuthResult {
   const DeviceAuthNoScreenLock();
 }
 
+/// The biometric the device offers the app, which the lock screen names in its icon and text.
+enum DeviceBiometric {
+  /// Face recognition, such as Face ID.
+  face,
+
+  /// A fingerprint reader.
+  fingerprint,
+
+  /// An iris scanner.
+  iris,
+
+  /// More than one kind, or biometrics that the platform reports only as strong or weak without a kind. Named by none.
+  several,
+
+  /// Nothing enrolled or available to the app, or the platform could not say. Claims no biometric.
+  none,
+}
+
 /// The device's own authentication: its biometrics, with its screen lock (PIN, pattern or password) as the fallback.
 abstract interface class IDeviceAuthenticator {
   /// Whether the device has a screen lock, so [authenticate] can prove who holds it.
   Future<bool> canAuthenticate();
+
+  /// The biometric the device offers the app now; [DeviceBiometric.none] when none is enrolled. May throw when the
+  /// platform cannot answer.
+  Future<DeviceBiometric> availableBiometric();
 
   /// Opens the system prompt with [prompt]'s texts and answers how it ended. Never retries by itself.
   Future<DeviceAuthResult> authenticate(DeviceAuthPrompt prompt);

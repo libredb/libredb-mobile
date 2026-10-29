@@ -14,6 +14,10 @@ import '../support/dart_code.dart';
 /// This meta-test reads every AppLogger call in `lib/` and fails when an argument, or an interpolation in the message,
 /// names a credential: an identifier that contains one of [sensitiveBodyKeySubstrings], such as `passwordChangeDTO`
 /// or `event.otpCode`. A token may still be logged through `maskToken`, which keeps four characters at each end.
+///
+/// [privacyOnlyBodyKeySubstrings] is left out of that set: those words mask a value for what it can carry, not
+/// because they name a credential, so an identifier that contains one is an ordinary name here. Every exit still
+/// masks the value of such a key in the line it prints.
 void main() {
   test('no AppLogger call in lib logs a value named for a credential', () {
     final calls = [
@@ -41,6 +45,9 @@ final _callStart = RegExp(r'(?:\b_?log|AppLogger\.getLogger\([^)]*\))\s*\.(?:tra
 
 final _identifier = RegExp(r'[A-Za-z_$][A-Za-z0-9_$]*');
 
+/// The masked key substrings that name a credential, so an identifier holding one may not reach a log line.
+final Set<String> _credentialKeySubstrings = sensitiveBodyKeySubstrings.difference(privacyOnlyBodyKeySubstrings);
+
 /// The AppLogger calls in the file at [path], each with the identifiers in its arguments that name a credential.
 Iterable<({String location, List<String> credentials})> _logCalls(String path, String source) sync* {
   final code = codeOnly(source);
@@ -51,7 +58,7 @@ Iterable<({String location, List<String> credentials})> _logCalls(String path, S
       location: '$path:${'\n'.allMatches(code.substring(0, match.start)).length + 1}',
       credentials: [
         for (final name in _identifier.allMatches(arguments).map((m) => m[0]!).toSet())
-          if (sensitiveBodyKeySubstrings.any(name.toLowerCase().contains)) name,
+          if (_credentialKeySubstrings.any(name.toLowerCase().contains)) name,
       ],
     );
   }

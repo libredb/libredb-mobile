@@ -26,12 +26,14 @@ class ConnectivityBanner extends StatelessWidget {
       builder: (context, state) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // The inset keeps its height and only changes colour, so the body below never moves because of it.
+          // The inset keeps its height and only changes colour, so the body below never moves because of it. Online it
+          // carries the colour the shell's own Scaffold paints: nothing sits behind this Column, and an unpainted
+          // surface is black on iOS, which hid the status bar (#442).
           AnimatedContainer(
             duration: AppDurations.normal,
             curve: AppDurations.easeInOut,
             height: inset,
-            color: state.isOffline ? Theme.of(context).colorScheme.error : Colors.transparent,
+            color: state.isOffline ? Theme.of(context).colorScheme.error : Theme.of(context).scaffoldBackgroundColor,
           ),
           _message(context, state),
         ],
