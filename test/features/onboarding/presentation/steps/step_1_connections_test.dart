@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/onboarding/presentation/steps/step_1_con
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
+import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 
 /// The first screen of the introduction: the connection list assembling.
 ///
@@ -133,5 +134,68 @@ void main() {
     final step = find.byType(Step1Connections);
     expect(find.descendant(of: step, matching: find.byType(InkWell)), findsNothing);
     expect(find.descendant(of: step, matching: find.byType(GestureDetector)), findsNothing);
+  });
+
+  group('the badges survive an accessibility text size', () {
+    /// The step in the box the chassis's hero gives it on a 390pt phone: 318pt wide, scrolled vertically.
+    ///
+    /// Width is the whole point. The hero absorbs vertical growth by scrolling, so what a text size can still break
+    /// is the one axis it cannot yield on — and the row's badges are the part of the real list that is laid out side
+    /// by side rather than wrapped.
+    Future<void> showInHero(WidgetTester tester, {required double textScale, required Locale locale}) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          locale: locale,
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true, textScaler: TextScaler.linear(textScale)),
+              child: const Scaffold(
+                body: Center(
+                  child: SizedBox(width: 318, child: SingleChildScrollView(child: Step1Connections())),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    for (final locale in [const Locale('en'), const Locale('tr')]) {
+      for (final scale in [1.0, 1.3, 2.0, 3.0]) {
+        testWidgets('nothing overflows the hero in ${locale.languageCode} at x$scale', (tester) async {
+          await showInHero(tester, textScale: scale, locale: locale);
+
+          expect(tester.takeException(), isNull, reason: 'the row is 318pt wide whatever the text size');
+        });
+      }
+    }
+
+    testWidgets('at the ordinary text size every badge is still drawn at its own size', (tester) async {
+      for (final locale in [const Locale('en'), const Locale('tr')]) {
+        await showInHero(tester, textScale: 1.0, locale: locale);
+
+        final badges = find.byWidgetPredicate((w) => w is EnvironmentBadge || w is ReadOnlyChip);
+        expect(badges, findsNWidgets(4), reason: 'three environments and one read-only mark');
+        for (var i = 0; i < 4; i++) {
+          expect(
+            tester.getRect(badges.at(i)).size,
+            tester.renderObject<RenderBox>(badges.at(i)).size,
+            reason: 'badge $i of ${locale.languageCode} is scaled where the prototype draws it unscaled',
+          );
+        }
+      }
+    });
   });
 }
