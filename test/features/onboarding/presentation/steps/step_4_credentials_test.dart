@@ -1,12 +1,36 @@
 @Tags(['widget'])
 library;
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_4_credentials.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+
+/// How far past the left or right edge of its own box the screen draws, on the frame now on screen, in logical
+/// pixels. Zero when every box of the hero is inside it.
+///
+/// This is measured off the laid-out boxes rather than read off Flutter's overflow stripe, because the stripe is a
+/// debug-paint artefact of `RenderFlex` alone: a `Positioned`, an `Align` or a `Transform` that puts something
+/// outside the hero draws no stripe and throws nothing. The hero's own box is the reference, so the measurement does
+/// not depend on where the chassis puts it.
+double _drawsOutsideItsBox(WidgetTester tester) {
+  final hero = tester.renderObject<RenderBox>(find.byType(Step4Credentials));
+  var worst = 0.0;
+  void measure(RenderObject node) {
+    if (node is RenderBox && node.hasSize) {
+      final box = MatrixUtils.transformRect(node.getTransformTo(hero), Offset.zero & node.size);
+      worst = max(worst, max(box.right - hero.size.width, -box.left));
+    }
+    node.visitChildren(measure);
+  }
+
+  measure(hero);
+  return worst;
+}
 
 /// The fourth screen's hero: this app, Studio and the database on one wire, the padlock shutting on Studio, and rows
 /// coming back up.
@@ -168,5 +192,38 @@ void main() {
       expect(find.text(s.ob4_vault), findsOneWidget);
       expect(find.text(s.ob4_back), findsOneWidget);
     });
+  });
+
+  /// The chassis gives the hero a box that scrolls vertically, so a screen that grows taller than the slack is
+  /// absorbed; what nothing absorbs is width. At an accessibility text size the words of this screen are two and
+  /// three times as long, and every one of them has to fold inside the hero's own width instead of running out of
+  /// it — which is what [_drawsOutsideItsBox] measures, frame by frame, rather than trusting the drawing.
+  ///
+  /// The widths are the ones the chassis actually hands a step on the devices `onboarding_page_test.dart` walks:
+  /// the viewport less the 48 pt leading and 24 pt trailing gutter — 318 pt on a 390 pt phone, 248 pt on a 320 pt
+  /// one, 772 pt turned sideways.
+  group('the screen folds inside the width it is given', () {
+    const heroWidths = <double>[318, 248, 772];
+    const frame = Duration(milliseconds: 100);
+
+    for (final scale in [1.3, 2.0, 3.0]) {
+      testWidgets('draws nothing outside its own box at a text scale of $scale', (tester) async {
+        for (final width in heroWidths) {
+          for (final locale in [const Locale('en'), const Locale('tr')]) {
+            await show(tester, textScale: scale, heroWidth: width, locale: locale);
+            // Every frame of the timeline, not only the last: a token is mid-wire for most of it, and a label that
+            // ran out of the hero would be back inside it by the time the screen settled.
+            for (var at = Duration.zero; at < past; at += frame) {
+              await tester.pump(frame);
+              expect(
+                _drawsOutsideItsBox(tester),
+                lessThanOrEqualTo(0.0001),
+                reason: 'at $width pt, a text scale of $scale, ${locale.languageCode}, ${at.inMilliseconds} ms in',
+              );
+            }
+          }
+        }
+      });
+    }
   });
 }
