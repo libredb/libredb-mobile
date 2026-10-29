@@ -13,6 +13,7 @@ import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.
 import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:libredb_mobile/features/onboarding/data/repositories/onboarding_seen_preferences.dart';
 import 'package:libredb_mobile/features/onboarding/navigation/onboarding_routes.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
@@ -155,6 +156,11 @@ void main() {
     );
   });
 
+  /// The headline the flow is showing, as plain text. It is a `Text.rich` with one accented run, so its words are
+  /// read off the paragraph rather than off a `Text` widget's `data`, which is null here.
+  String headline(WidgetTester tester) =>
+      tester.renderObject<RenderParagraph>(find.byKey(onboardingHeadlineKey)).text.toPlainText();
+
   group('the six screens', () {
     /// Every screen's caption and headline, in the order the flow shows them.
     List<(String, String)> screens(WidgetTester tester) {
@@ -254,6 +260,30 @@ void main() {
       );
     });
 
+    // The test above drags and lets go at rest: `tester.drag` dispatches no velocity, so a page that answered only
+    // a *thrown* swipe — which is how Android's own pagers turn, and the gesture a reader of six screens actually
+    // makes — would pass it and still move. Both directions are thrown, because a pager that refused the forward
+    // fling would have taken the backward one. The throw starts from the second screen so that either direction
+    // has a screen to land on, and a move in either would be visible.
+    testWidgets('a fling across the page does not move the flow either', (tester) async {
+      await pumpWelcome(tester);
+      final flow = screens(tester);
+      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.pumpAndSettle();
+      expect(headline(tester), flow[1].$2, reason: 'the throw starts from the second of the six screens');
+
+      for (final thrown in <Offset>[Offset(-300, 0), Offset(300, 0)]) {
+        await tester.fling(find.byKey(onboardingHeadlineKey), thrown, 800);
+        await tester.pumpAndSettle();
+
+        expect(
+          headline(tester),
+          flow[1].$2,
+          reason: 'a fling of $thrown moved the flow, and the primary control is the only way forward',
+        );
+      }
+    });
+
     testWidgets('Skip leaves from any screen, not only the first', (tester) async {
       await pumpWelcome(tester);
       await tester.tap(find.byKey(onboardingDoneKey));
@@ -265,6 +295,28 @@ void main() {
       expect(find.text('the login page'), findsOneWidget);
       expect(cubit.state, const OnboardingSeen());
     });
+
+    // That Skip is *drawn* on all six screens is measured in `onboarding_chassis_test.dart`; what is measured here
+    // is that it still *leaves* from each of them. A Skip wired to nothing on the screens between the first and the
+    // last passes both that test and the one above it, and still traps a reader in the middle of the deck — which
+    // is the one place a reader who has seen enough actually presses it.
+    for (var start = 0; start < onboardingStepCount; start++) {
+      testWidgets('Skip leaves from screen ${start + 1} of $onboardingStepCount', (tester) async {
+        await pumpWelcome(tester);
+        final flow = screens(tester);
+        for (var step = 0; step < start; step++) {
+          await tester.tap(find.byKey(onboardingDoneKey));
+          await tester.pumpAndSettle();
+        }
+        expect(headline(tester), flow[start].$2, reason: 'the walk did not reach screen ${start + 1}');
+
+        await tester.tap(find.byKey(onboardingSkipKey));
+        await tester.pumpAndSettle();
+
+        expect(find.text('the login page'), findsOneWidget, reason: 'Skip did not leave from screen ${start + 1}');
+        expect(cubit.state, const OnboardingSeen());
+      });
+    }
   });
 
   /// The first screen the app ever shows has to survive the device it is shown on.
@@ -315,6 +367,33 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'the word that leaves is the longest of the three');
       });
     }
+
+    // A reader who scrolled down the fifth screen's body must not meet the sixth already scrolled past its own
+    // headline: the frame gives the offset back on a step change.
+    //
+    // **How this avoids the Ahem trap.** `flutter test` draws in Ahem, whose square-em glyphs make every text-
+    // dependent height about a third taller than on a phone — so no height is asked for here. The viewport is the
+    // short one the case list above already exercises, which makes the frame scroll under any font, and the only
+    // number asserted is zero, the offset after the step change, which no font metric can move. The
+    // `greaterThan(0)` guards exist so that a frame which one day stops scrolling here fails loudly instead of
+    // passing an assertion about an offset nobody ever moved.
+    testWidgets('a step change gives back the offset the reader scrolled', (tester) async {
+      await pumpWelcome(tester, viewport: const Size(390, 380), textScale: 1.3, locale: const Locale('tr'));
+      // Two scroll views are on this page — the frame and the hero's own box — so the one meant is named by what
+      // it holds rather than by its position in the tree: the words are in the frame and never in the hero's box.
+      final frameScroll = find.ancestor(of: find.byKey(onboardingHeadlineKey), matching: find.byType(Scrollable));
+      final frame = tester.widget<Scrollable>(frameScroll).controller!;
+      expect(frame.position.maxScrollExtent, greaterThan(0), reason: 'the frame must scroll for this to mean a thing');
+
+      frame.jumpTo(frame.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(frame.offset, greaterThan(0), reason: 'the reader scrolled down the screen they are on');
+
+      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.pumpAndSettle();
+
+      expect(frame.offset, 0, reason: 'the new screen opened already scrolled past its own headline');
+    });
 
     // The layout is made to survive, not redesigned: on the surface the app is built for, the hero still holds the
     // top of the screen and the words and the controls sit under it, rather than everything collapsing into a
