@@ -5,10 +5,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Guards the button and screen labels that the Play App access instructions in `docs/release.md` quote (issue #300).
 ///
+/// Also guards two things a reviewer meets before any label: Play limits the entry's "Any other information required to
+/// access your app" field to 500 characters, measured in the console on 2026-10-29 against a block this page then held
+/// at 724, and a build that carries the six-screen introduction (#66) opens on it rather than on the login page, so a
+/// block that does not say how to leave the introduction sends the reviewer at a button they cannot reach.
 /// A reviewer follows those instructions word by word, so every double-quoted string inside a `text` code block of the
 /// "App access" section must be a value of `lib/l10n/intl_en.arb`. A pull request that renames a quoted label, such as
 /// the login page copy of M15, then fails here until it updates `docs/release.md` in the same change.
 void main() {
+  test('every App access text block fits the 500 characters Play gives the field', () {
+    final long = appAccessBlocksOverLimit(_releaseDoc());
+
+    expect(long, isEmpty, reason: long.join('\n'));
+  });
+
+  test('a block one character over the limit is named', () {
+    final problems = appAccessBlocksOverLimit('### App access\n\n```text\n${'a' * 501}\n```\n');
+
+    expect(problems, ['Text block 1 of the App access instructions is 501 characters, over the 500 Play allows']);
+  });
+
+  test('every App access text block says how to leave the introduction', () {
+    final problems = appAccessIntroductionProblems(_releaseDoc());
+
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
   test('every label quoted in the App access instructions is a value of intl_en.arb', () {
     final problems = appAccessLabelProblems(_releaseDoc(), _englishArb());
 
@@ -138,4 +160,36 @@ String? _appAccessSection(String markdown) {
   final rest = markdown.substring(start.end);
   final end = RegExp(r'^#{2,3} ', multiLine: true).firstMatch(rest);
   return end == null ? rest : rest.substring(0, end.start);
+}
+
+/// The App access text blocks of [markdown] that are longer than the 500 characters Play allows in the entry's
+/// "Any other information required to access your app" field.
+List<String> appAccessBlocksOverLimit(String markdown) {
+  const limit = 500;
+  return [
+    for (final (index, block) in _appAccessBlocks(markdown).indexed)
+      if (block.length > limit)
+        'Text block ${index + 1} of the App access instructions is ${block.length} characters, over the $limit Play '
+            'allows',
+  ];
+}
+
+/// The App access text blocks of [markdown] that do not say how to leave the six-screen introduction (#66), which a
+/// build carrying it opens on before the login page.
+List<String> appAccessIntroductionProblems(String markdown) {
+  return [
+    for (final (index, block) in _appAccessBlocks(markdown).indexed)
+      if (!block.contains('Skip'))
+        'Text block ${index + 1} of the App access instructions does not say how to leave the introduction',
+  ];
+}
+
+/// The contents of every `text` code block of the "App access" section of [markdown], trailing newline removed.
+List<String> _appAccessBlocks(String markdown) {
+  final section = _appAccessSection(markdown);
+  if (section == null) return const [];
+  return [
+    for (final block in RegExp(r'^```text\n(.*?)^```', multiLine: true, dotAll: true).allMatches(section))
+      block.group(1)!.trimRight(),
+  ];
 }
