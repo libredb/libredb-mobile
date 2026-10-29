@@ -25,6 +25,7 @@ const Key accountRefusalRetryKey = Key("accountRefusalRetryKey");
 const Key accountRefusalSignOutKey = Key("accountRefusalSignOutKey");
 
 // settings screen
+const Key settingsBrightnessButtonKey = Key("settingsBrightnessButtonKey");
 const Key settingsChangeLanguageButtonKey = Key("settingsChangeLanguageButtonKey");
 // Logout is intentionally not exposed from settings — it lives in the
 // profile sheet of the shell (see SettingsScreen for the rationale).

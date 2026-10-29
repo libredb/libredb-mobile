@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter/services.dart';
+import 'package:libredb_mobile/app/localization/startup_language.dart';
+import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 
@@ -8,7 +12,7 @@ class AppBootstrapConfig {
     this.authDefines = const AuthDefines(),
     this.apiBaseUrl = AppConfig.prodApiUrl,
     this.platformApiUrl = AppConfig.platformApiUrl,
-    this.defaultLanguage = 'en',
+    this.defaultLanguage,
     this.defaultPalette = 'classic',
     this.defaultBrightness = 'light',
     this.preferredOrientations = const [
@@ -33,7 +37,12 @@ class AppBootstrapConfig {
   /// `PLATFORM_API_URL` define.
   final String platformApiUrl;
 
-  final String defaultLanguage;
+  /// The language this build opens in whatever the phone says, or null — the default — to follow the phone.
+  ///
+  /// It stays an override so a test can pin a language and a future build can ship in one; every entry point leaves
+  /// it out, because a Turkish phone should see its first run, onboarding included, in Turkish.
+  final String? defaultLanguage;
+
   final String defaultPalette;
   final String defaultBrightness;
 
@@ -42,4 +51,20 @@ class AppBootstrapConfig {
   final List<DeviceOrientation> preferredOrientations;
 
   bool get isProduction => environment == Environment.prod;
+
+  /// The language the app opens in before one is stored on the device: [defaultLanguage] when this build pins one,
+  /// otherwise the phone's own language if the app has it and English if it does not.
+  ///
+  /// [deviceLocales] defaults to what the engine reports for this device. A caller passes its own only to resolve a
+  /// language for a device that is not this one, which is what the tests do.
+  ///
+  /// The device's own list is read through the binding, not through `PlatformDispatcher.instance`: a widget test's
+  /// binding answers the phone the test set up (`tester.platformDispatcher.localesTestValue`), while the instance
+  /// answers the machine the test runs on. `AppBootstrap.run` initializes the binding before it calls this.
+  String startupLanguage({Iterable<Locale>? deviceLocales}) =>
+      defaultLanguage ??
+      resolveStartupLanguage(
+        deviceLocales ?? ServicesBinding.instance.platformDispatcher.locales,
+        S.delegate.supportedLocales,
+      );
 }

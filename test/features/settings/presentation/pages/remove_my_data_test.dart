@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
+import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/features/settings/presentation/pages/settings_screen.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/infrastructure/config/project_links.dart';
@@ -56,20 +57,23 @@ void main() {
         RepositoryProvider<ProjectLinks>.value(value: const ProjectLinks()),
         RepositoryProvider<UserDataRegistry>.value(value: UserDataRegistry([drafts.entry, favorites.entry])),
       ],
-      child: MaterialApp(
-        locale: locale,
-        localizationsDelegates: const [
-          S.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: S.delegate.supportedLocales,
-        home: SignedInAccountScope(
-          subject: subject,
-          signOut: () async => signOuts++,
-          reloadStoredData: () => reloads++,
-          child: const Scaffold(body: SettingsScreen()),
+      child: BlocProvider(
+        create: (_) => ThemeBloc(),
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.delegate.supportedLocales,
+          home: SignedInAccountScope(
+            subject: subject,
+            signOut: () async => signOuts++,
+            reloadStoredData: () => reloads++,
+            child: const Scaffold(body: SettingsScreen()),
+          ),
         ),
       ),
     );

@@ -26,10 +26,23 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class App extends StatefulWidget {
-  const App({super.key, required this.language, required this.dependencies, this.secureStorage, this._analytics});
+  const App({
+    super.key,
+    required this.language,
+    this.followsDeviceLanguage = true,
+    required this.dependencies,
+    this.secureStorage,
+    this._analytics,
+  });
 
-  /// The configured default language: the app shows it until a language is stored on the device, see [LocaleCubit].
+  /// The language the app shows until a language is stored on the device, see [LocaleCubit]: the phone's own, which
+  /// `AppBootstrapConfig.startupLanguage` resolved, or the one this build pins.
   final String language;
+
+  /// Whether [language] is the phone's own, so the app follows the phone for as long as no language is stored on the
+  /// device — a phone language change moves the running app, which Android does not restart for one. False in a
+  /// build that pins a language; the phone never overrides that one.
+  final bool followsDeviceLanguage;
   final AppDependencies dependencies;
 
   /// Single [ISecureStorage] instance created in bootstrap. Threaded
@@ -57,6 +70,7 @@ class _AppState extends State<App> {
       dependencies: widget.dependencies,
       secureStorage: widget.secureStorage,
       defaultLocale: Locale(widget.language),
+      followsDeviceLanguage: widget.followsDeviceLanguage,
       child: AppSessionListeners(
         scaffoldMessengerKey: _scaffoldMessengerKey,
         child: AppConnectivityScope(
@@ -81,9 +95,24 @@ class _AppView extends StatefulWidget {
   State<_AppView> createState() => _AppViewState();
 }
 
-class _AppViewState extends State<_AppView> {
+class _AppViewState extends State<_AppView> with WidgetsBindingObserver {
   GoRouter? _router;
   UnsavedChangesRegistry? _unsavedChanges;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// The phone's languages changed. While the user has picked no language the app follows them, so a phone switched
+  /// to Turkish shows the app in Turkish without being restarted — Android does not recreate the activity for a
+  /// language change (`android:configChanges` carries `locale`), so nothing else would notice.
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    super.didChangeLocales(locales);
+    context.read<LocaleCubit>().followDevice(locales ?? const []);
+  }
 
   @override
   void didChangeDependencies() {
@@ -111,6 +140,7 @@ class _AppViewState extends State<_AppView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router?.routeInformationProvider.removeListener(_receivePlatformRoutes);
     super.dispose();
   }

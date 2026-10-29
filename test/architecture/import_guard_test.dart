@@ -25,6 +25,7 @@ const _knownCoreExceptions = {'lib/core/security/security_utils.dart → infrast
 
 /// shared/ importing app/ (theme/language dialogs depend on app-level blocs)
 const _knownSharedExceptions = {
+  'lib/shared/widgets/brightness_selection_dialog.dart → app/theme/theme_bloc',
   'lib/shared/widgets/theme_selection_dialog.dart → app/theme/theme_bloc',
   'lib/shared/widgets/language_selection_dialog.dart → app/localization/locale_cubit',
 };

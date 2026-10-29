@@ -40,6 +40,20 @@ void main() {
     expect(source, isNot(contains('PROD_API_URL')));
   });
 
+  // Issue #409: each entry point used to pass `defaultLanguage: 'en'`, so a Turkish phone's first run — the
+  // onboarding included — was in English. The language now comes from the phone, which only happens while no entry
+  // point names one.
+  test('no entry point pins a language, so the first run follows the phone', () {
+    for (final entryPoint in ['main_prod.dart', 'main_local.dart', 'main_mock.dart']) {
+      final code = sourceOf(entryPoint).split('\n').where((line) => !line.trimLeft().startsWith('///')).join('\n');
+      expect(
+        code,
+        isNot(contains('defaultLanguage')),
+        reason: '$entryPoint must leave the language to the device, see AppBootstrapConfig.startupLanguage',
+      );
+    }
+  });
+
   test('every default is overridable, so an outside deployment can point the app elsewhere', () {
     const defines = {
       'main_local.dart': ['PROD_API_URL', 'OIDC_ISSUER', 'OIDC_CLIENT_ID', 'PLATFORM_API_URL'],

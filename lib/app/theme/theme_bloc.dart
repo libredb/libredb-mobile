@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart';
+import 'package:libredb_mobile/shared/utils/event_transformers.dart';
 
 part 'theme_event.dart';
 part 'theme_state.dart';
@@ -13,19 +14,24 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     on<LoadTheme>(_onLoadTheme);
     on<ChangeThemePalette>(_onChangeThemePalette);
     on<ToggleBrightness>(_onToggleBrightness);
+    // Queued, not concurrent: the handler emits and then awaits the write, and the Appearance dialog's Cancel makes
+    // two selections in a row routine (tap a mode, then put the opened-on mode back). Under bloc's default
+    // concurrent transformer the second write starts while the first is in flight, so a platform that completes them
+    // out of order would store the abandoned mode under a UI showing the chosen one.
+    on<SelectBrightness>(_onSelectBrightness, transformer: EventTransformers.queue());
   }
+
+  /// The stored name of each mode, and the mode of each stored name. Anything else — an old name, a value of another
+  /// type, nothing at all — reads back as [ThemeMode.system], so the app follows the phone until the user says
+  /// otherwise.
+  static const _storedBrightness = {ThemeMode.system: 'system', ThemeMode.light: 'light', ThemeMode.dark: 'dark'};
+
+  static ThemeMode _brightnessOf(Object? stored) =>
+      _storedBrightness.keys.firstWhere((mode) => _storedBrightness[mode] == stored, orElse: () => ThemeMode.system);
 
   Future<void> _onLoadTheme(LoadTheme event, Emitter<ThemeState> emit) async {
     try {
-      final brightnessPref = await AppLocalStorage().read(StorageKeys.brightness.key);
-      ThemeMode themeMode;
-      if (brightnessPref == 'dark') {
-        themeMode = ThemeMode.dark;
-      } else if (brightnessPref == 'light') {
-        themeMode = ThemeMode.light;
-      } else {
-        themeMode = ThemeMode.system;
-      }
+      final themeMode = _brightnessOf(await AppLocalStorage().read(StorageKeys.brightness.key));
 
       final palettePref = await AppLocalStorage().read(StorageKeys.theme.key);
       AppThemePalette palette = AppThemePalette.classic;
@@ -82,6 +88,16 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     emit(state.copyWith(themeMode: newMode));
     try {
       await AppLocalStorage().save(StorageKeys.brightness.key, newMode == ThemeMode.dark ? 'dark' : 'light');
+    } catch (_) {}
+  }
+
+  /// Puts the app on the mode the user picked and stores it, [ThemeMode.system] included. [ToggleBrightness] only ever
+  /// stores 'light' or 'dark', so before this event one tap on the login toggle left the app unable to follow the
+  /// phone's setting again (#410).
+  Future<void> _onSelectBrightness(SelectBrightness event, Emitter<ThemeState> emit) async {
+    emit(state.copyWith(themeMode: event.themeMode));
+    try {
+      await AppLocalStorage().save(StorageKeys.brightness.key, _storedBrightness[event.themeMode]);
     } catch (_) {}
   }
 }
