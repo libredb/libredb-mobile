@@ -665,7 +665,10 @@ void main() {
         expect(fullyShownTableRows(tester), greaterThanOrEqualTo(3));
       });
 
-      testWidgets('a rotation keeps the rows, the table and its scroll position, with no new request', (tester) async {
+      // What makes this size change since #419 is a window the system sizes — a split-screen or free-form
+      // window, which ignores an orientation restriction — not a phone turned sideways, which the build no longer
+      // allows. The state that has to survive it is the same, so the case is kept with its viewports.
+      testWidgets('a resize keeps the rows, the table and its scroll position, with no new request', (tester) async {
         await pumpSideways(tester);
         tester.view.physicalSize = const Size(393, 829);
         await tester.pumpAndSettle();

@@ -118,19 +118,30 @@ It covers the session restore and the login page only in a build without a Platf
 
 ### Orientation
 
-Phones show the app in portrait and in both landscape orientations, never upside down (#127, a product decision of 2026-10-24).
-`AppBootstrapConfig.preferredOrientations` asks for `portraitUp`, `landscapeLeft` and `landscapeRight` at start.
-On Android no activity sets `android:screenOrientation`, so that list alone decides; Flutter turns it into `SCREEN_ORIENTATION_USER`, which follows the user's auto-rotate setting.
-On iOS the iPhone key of `UISupportedInterfaceOrientations` in `Info.plist` lists the same three; the iPad key keeps all four, which iPad multitasking requires, and since iOS ignores the run-time list on an iPad with multitasking on, all four apply there.
-`test/architecture/orientation_platform_setup_test.dart` keeps the platform files in line with the list.
-On the Android emulator, a rotation kept the state of the connection list, Browse, the rows page, the row detail sheet, the key value page and the SQL editor with its result, and sent no request (the device table of PR #179).
-Below a screen height of 480, Material's compact height class (`AppBreakpoints.isCompactHeight`), such as a phone held sideways, the layout gives the content the height (#177).
+The app is held upright on every form factor: it shows in `portraitUp` and no device can rotate it (#419, a product decision of 2026-10-29, which replaces the three orientations of #127 of 2026-10-24).
+Three places say so, because each of them can leak the lock on its own:
+`AppBootstrapConfig.preferredOrientations` asks the platform for `portraitUp` alone at start;
+`.MainActivity` in `android/app/src/main/AndroidManifest.xml` sets `android:screenOrientation="portrait"`, because Android draws the first frame from the manifest, before Dart runs, and no other activity declares an orientation of its own;
+and both the iPhone and the iPad key of `UISupportedInterfaceOrientations` in `ios/Runner/Info.plist` list portrait alone, which iOS intersects with the run-time list.
+`test/architecture/orientation_platform_setup_test.dart` keeps the two platform files in line with that list, and `test/app/bootstrap/app_bootstrap_test.dart` reads what the bootstrap sends over `flutter/platform`.
+
+No form factor is exempted, because an exemption would protect nothing, and that is measured rather than assumed.
+The only layout a rotation can reach is the short one below, gated on a screen height under 480 (`AppBreakpoints.isCompactHeight`); `ResponsiveScaffold` has no width fork at all, and renders the same bottom-bar layout at 412 by 915, at 800 by 1280 and at 1280 by 800.
+In landscape, in full screen, a phone is under that edge (an iPhone 16 Pro Max is 440 high, an iPhone SE 320) and nothing else is: the lowest iPad is 744 (iPad mini), a Pixel Tablet is 800, a Nexus 9 768 and an unfolded Pixel Fold 920.
+So leaving a large screen free bought no layout, and cost a second code path in the plist and in the guard.
+
+What still reaches the short layout is a window the system sizes — a split-screen or free-form window — which ignores an orientation restriction whatever the app asked for, so the branch is live without an exemption.
+Two leaks stay open and the app cannot close either: Android 16 ignores `android:screenOrientation` at a smallest width of 600dp and above, because the app targets SDK 36 (`flutter.targetSdkVersion`), so an Android tablet on 16 rotates regardless; and Play can warn about large-screen quality, because the manifest does declare a restriction.
+Undoing the decision is one line in each of the three places.
+
+Below a screen height of 480, Material's compact height class (`AppBreakpoints.isCompactHeight`), the layout gives the content the height (#177).
 The shell shows the tabs in a `NavigationRail` at the side instead of the bottom bar.
 A Browse heading puts its wrapped actions on the title row, and the key browser puts Load more and Load all beside its progress line.
 The result view puts Load more beside the card and table toggle, except for a failed page, whose banner stays under the rows.
 The connection list puts the search and the environment chips on one row, and the badges on the name line.
 The statement capture note stays fixed above the list.
-The test reads the screen size, which the keyboard does not change, so typing never switches the layout, and the page keeps its place in the tree, so a rotation keeps its state.
+The test reads the screen size, which the keyboard does not change, so typing never switches the layout, and the page keeps its place in the tree, so a window that changes size keeps its state.
+On the Android emulator, while phones still rotated, a rotation kept the state of the connection list, Browse, the rows page, the row detail sheet, the key value page and the SQL editor with its result, and sent no request (the device table of PR #179); since #419 that path is reached only where a window changes size, which is what the five `a resize ...` widget cases exercise.
 
 ## Sessions
 
