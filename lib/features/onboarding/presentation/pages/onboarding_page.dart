@@ -22,6 +22,13 @@ typedef OnboardingHeroBuilder = Widget Function(BuildContext context, int step);
 /// and the step the primary control leaves on are all this one number.
 const int onboardingStepCount = 6;
 
+/// The lines of its own type the headline block is given, whatever the title in it comes to.
+///
+/// The prototype's `h2{min-height:98px}` over `30px/1.08` type is three of its lines, and the app's `displaySmall`
+/// is the same 30/1.08, so the rule carries over as a line count rather than as a pixel count — it then holds at
+/// any text size, which a pixel would not.
+const int _headlineLines = 3;
+
 /// The least the hero is ever given, in logical pixels.
 ///
 /// The hero is the one part of the page that yields. At the ordinary text size it takes the whole slack the words
@@ -203,6 +210,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                               candidates: _titles(l10n),
                               style: headline,
                               width: reserve,
+                              minLines: _headlineLines,
                               child: Text.rich(
                                 _accented(words.title, words.accent, colors.primary),
                                 key: onboardingHeadlineKey,
@@ -340,9 +348,22 @@ TextSpan _accented(String title, String accent, Color colour) {
 /// paragraph is laid out with. A pixel count would be a claim about one language at one text size, which is the
 /// claim that put the controls in a different place on each screen to begin with.
 class _Reserved extends StatelessWidget {
-  const _Reserved({required this.candidates, required this.style, required this.width, required this.child});
+  const _Reserved({
+    required this.candidates,
+    required this.style,
+    required this.width,
+    required this.child,
+    this.minLines = 0,
+  });
 
   final List<String> candidates;
+
+  /// The least the box is given, counted in lines of [style].
+  ///
+  /// The prototype sets `h2{min-height:98px}` against its own `30px/1.08` type — three of its lines for titles it
+  /// authors as two, so the headline sits in a block with air under it. Measured on the emulator, reserving only
+  /// the tallest of the six titles gave 64, which is the two lines and none of the air.
+  final int minLines;
   final TextStyle? style;
   final double width;
   final Widget child;
@@ -351,7 +372,7 @@ class _Reserved extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
-    var tallest = 0.0;
+    var tallest = scaler.scale((style?.fontSize ?? 0) * (style?.height ?? 1)) * minLines;
     for (final candidate in candidates) {
       final painter = TextPainter(
         text: TextSpan(text: candidate, style: style),

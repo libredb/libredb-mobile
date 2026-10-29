@@ -185,6 +185,33 @@ void main() {
   /// own top edge: without the reserve, the headline of a two-line screen starts lower than the headline of a
   /// three-line one, and a reader's eye is dragged up and down the six screens. Both are measured, and the second
   /// is the one that bites.
+  /// The air the approved prototype leaves under the headline.
+  ///
+  /// Its stylesheet sets `h2{min-height:98px}` at `font-size:30px;line-height:1.08` — three lines of its own type
+  /// for titles that are authored as two, so the headline sits in a block with room under it rather than hugging
+  /// its last line. The app's `displaySmall` is the same 30/1.08, so the same rule reads as three lines here.
+  /// Measured on the emulator before this was added, the block was 64 — the two lines the titles use, 34 short.
+  ///
+  /// **Why the wide viewport.** `flutter test` does not load the product font; it draws in Ahem, whose every glyph
+  /// is a full em square. At phone width that wraps a two-line Turkish title to four lines and the block comes to
+  /// 192 on its own, so a floor of three lines changes nothing and the test cannot fail. Given room for each
+  /// authored line to fit, the content is the two lines it is on a real phone and the floor is the only thing that
+  /// can lift the block — which is the thing being tested.
+  testWidgets('the headline block keeps the three lines of air the prototype leaves it', (tester) async {
+    await pumpFrame(tester, viewport: const Size(1400, 844));
+
+    final style = Theme.of(tester.element(find.byType(OnboardingPage))).textTheme.displaySmall!;
+    final line = style.fontSize! * style.height!;
+    final box = tester.getRect(find.byKey(onboardingHeadlineKey));
+
+    expect(
+      box.height,
+      greaterThanOrEqualTo(line * 3 - 0.5),
+      reason: 'the headline block is ${box.height.toStringAsFixed(1)}, under the ${(line * 3).toStringAsFixed(1)} '
+          'that three lines of its own type come to (the prototype reserves 98)',
+    );
+  });
+
   group('the words and the controls do not move between screens', () {
     for (final (language, locale) in [('English', Locale('en')), ('Turkish', Locale('tr'))]) {
       testWidgets('the words and the foot land at the same y on all six $language screens', (tester) async {
