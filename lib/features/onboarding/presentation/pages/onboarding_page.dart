@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
@@ -20,6 +21,15 @@ typedef OnboardingHeroBuilder = Widget Function(BuildContext context, int step);
 /// How many screens the introduction has. The counter's denominator, the number of segments in the progress rule
 /// and the step the primary control leaves on are all this one number.
 const int onboardingStepCount = 6;
+
+/// The least the hero is ever given, in logical pixels.
+///
+/// The hero is the one part of the page that yields. At the ordinary text size it takes the whole slack the words
+/// leave — 493pt on a 390x844 phone, which is what the approved prototype measures on all six of its screens — and
+/// at an accessibility text size the words grow into it until only this is left, at which point the page starts to
+/// scroll and both controls stay reachable. The prototype has no text-scaling story to copy, so this number is
+/// mine; it is set where a hero still reads as a picture rather than a sliver.
+const double _heroFloor = 180;
 
 /// The connection the second and third screens are set on. A connection name reads the same in every language, so
 /// it is a value the captions take rather than a string either language owns.
@@ -178,10 +188,13 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                             ],
                           ),
                           Expanded(
-                            child: Center(
-                              child: KeyedSubtree(
-                                key: ValueKey<int>(_step),
-                                child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                            child: _HeroExtent(
+                              floor: _heroFloor,
+                              child: Center(
+                                child: KeyedSubtree(
+                                  key: ValueKey<int>(_step),
+                                  child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                                ),
                               ),
                             ),
                           ),
@@ -422,4 +435,61 @@ class _Progress extends StatelessWidget {
     if (index < step || entrance >= 1) return colors.primary;
     return Color.lerp(colors.outlineVariant, colors.primary, entrance)!;
   }
+}
+
+/// A box that answers every intrinsic question with [floor] and never puts the question to its child.
+///
+/// The prototype's own stylesheet says what the hero is: `.hero{flex:1 1 auto;min-height:0;overflow-y:auto}`. It
+/// takes the slack the words leave and shrinks rather than pushing them, which is why the controls sit at the same
+/// `772..820` on all six of its screens in both themes and both languages — 24 measurements, one answer.
+///
+/// Flutter needs this said out loud. The page measures itself with an [IntrinsicHeight] so that [Expanded] has
+/// slack to hand out inside a scroll view, and an `IntrinsicHeight` asks every child how tall it wants to be. Asked
+/// that, a hero answers with its natural height and is given it — which put the primary control 14, 26, 176 and
+/// 464pt below the fold on screens 1, 4, 5 and 6, and made the page scroll on four of six. Answering [floor]
+/// instead leaves the hero exactly the slack and nothing else.
+///
+/// It also keeps the question away from a hero drawn with a `LayoutBuilder`, which cannot answer an intrinsic
+/// question at all and throws when one reaches it.
+///
+/// A hero whose content does not fit the slack is *not* quietly scrolled here, unlike the prototype's
+/// `overflow-y:auto`: it overflows, loudly, in a debug build and in every test. A step that does not fit is a step
+/// drawn to the wrong size, and the prototype's own heroes never overflow (`scrollHeight == clientHeight` in all 24
+/// measurements), so there is nothing faithful to preserve by hiding it.
+class _HeroExtent extends SingleChildRenderObjectWidget {
+  const _HeroExtent({required this.floor, required super.child});
+
+  final double floor;
+
+  @override
+  _RenderHeroExtent createRenderObject(BuildContext context) => _RenderHeroExtent(floor);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHeroExtent renderObject) => renderObject.floor = floor;
+}
+
+class _RenderHeroExtent extends RenderProxyBox {
+  _RenderHeroExtent(this._floor);
+
+  double get floor => _floor;
+  double _floor;
+  set floor(double value) {
+    if (_floor == value) return;
+    _floor = value;
+    markNeedsLayout();
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _floor;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _floor;
+
+  // The page is laid out in a column, so nothing asks the hero for an intrinsic width. Answering without descending
+  // keeps the promise this box makes whole: the child is never asked an intrinsic question.
+  @override
+  double computeMinIntrinsicWidth(double height) => 0;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => 0;
 }

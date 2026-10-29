@@ -471,15 +471,19 @@ class _Fan extends StatelessWidget {
     const stemHeight = AppSpacing.md;
     const twigHeight = AppSpacing.xl;
     final railPhase = _phase(elapsed, Step5Beats.branch, Step5Beats.arrival);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // The rail runs from the centre of the first column to the centre of the last, so it meets every twig and
-        // overhangs none of them.
-        final cell = (constraints.maxWidth - AppSpacing.sm * (_columns - 1)) / _columns;
-        final railWidth = (cell + AppSpacing.sm) * (_columns - 1);
-        return SizedBox(
-          height: stemHeight + twigHeight,
-          child: Stack(
+    // The box sits outside the `LayoutBuilder`, not inside it. The chassis measures the hero with an
+    // `IntrinsicHeight` so it can absorb the page's slack, a `LayoutBuilder` answers no intrinsic question, and a
+    // tight height short-circuits the question before it ever reaches one. The drawing is unchanged: the builder
+    // still gets the full width, and this subtree was already exactly this tall.
+    return SizedBox(
+      height: stemHeight + twigHeight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The rail runs from the centre of the first column to the centre of the last, so it meets every twig
+          // and overhangs none of them.
+          final cell = (constraints.maxWidth - AppSpacing.sm * (_columns - 1)) / _columns;
+          final railWidth = (cell + AppSpacing.sm) * (_columns - 1);
+          return Stack(
             children: [
               Positioned(
                 top: 0,
@@ -520,9 +524,9 @@ class _Fan extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
