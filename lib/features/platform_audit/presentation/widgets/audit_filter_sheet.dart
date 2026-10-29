@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_voc
 import 'package:libredb_mobile/features/platform_audit/presentation/widgets/audit_labels.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/utils/sheet_insets.dart';
 
 /// Opens the filter sheet of the audit list whose [AuditLogBloc] is above [context].
 Future<void> showAuditFilterSheet(BuildContext context) {
@@ -92,12 +93,7 @@ class _AuditFilterSheetState extends State<AuditFilterSheet> {
     return BlocSelector<AuditLogBloc, AuditLogState, AuditFilter>(
       selector: (state) => state.filter,
       builder: (context, filter) => SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
-        ),
+        padding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg + sheetBottomInset(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

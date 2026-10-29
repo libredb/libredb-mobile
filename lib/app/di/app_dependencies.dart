@@ -8,6 +8,8 @@ import 'package:libredb_mobile/features/app_lock/data/services/local_auth_device
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/recents_preview.dart';
+import 'package:libredb_mobile/features/access_requests/data/repositories/access_request_repository.dart';
+import 'package:libredb_mobile/features/access_requests/domain/repositories/access_request_repository.dart';
 import 'package:libredb_mobile/features/auth/application/usecases/switch_session_target_usecase.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:libredb_mobile/features/auth/data/repositories/auth_session_repository_impl.dart';
@@ -292,6 +294,11 @@ class AppDependencies {
   /// Platform's audit log, the governed query events of the install.
   IPlatformAuditRepository createPlatformAuditRepository(PlatformApiClient apiClient) =>
       PlatformAuditRepository(apiClient);
+
+  /// Platform's requester routes, the ones a Studio session may call: the connections it may ask for, its own
+  /// requests, a new request and the withdrawal of an open one. It provisions no Platform user and takes no seat.
+  IAccessRequestRepository createAccessRequestRepository(PlatformApiClient apiClient) =>
+      AccessRequestRepository(apiClient);
 
   /// Platform's public liveness probe, which the login page and a Platform session ask.
   IPlatformStatusRepository createPlatformStatusRepository(PlatformApiClient apiClient) =>

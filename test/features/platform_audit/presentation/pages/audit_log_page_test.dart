@@ -36,6 +36,23 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  group('on a phone with a home indicator', () {
+    testWidgets('the Done button of the filters sheet ends above the bottom inset', (tester) async {
+      harness.answer([auditEvent('e1')]);
+      await harness.pump(tester);
+      // iPhone: 34 logical points of home indicator, at the 1.0 pixel ratio the harness sets.
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.resetViewPadding);
+      addTearDown(tester.view.resetPadding);
+
+      await openSheet(tester);
+
+      final done = tester.getBottomLeft(find.byKey(const ValueKey('platform-audit-filter-done'))).dy;
+      expect(done, lessThanOrEqualTo(tester.view.physicalSize.height - 34));
+    });
+  });
+
   group('rows', () {
     testWidgets('a full capture shows the user, connection, type, status, duration, rows and the first line', (
       tester,

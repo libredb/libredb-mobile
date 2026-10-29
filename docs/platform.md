@@ -1,6 +1,7 @@
 # LibreDB Platform
 
 Platform mode is the sign-in entry for Platform admins: sign-in stays Keycloak, and every call in Platform mode goes to LibreDB Platform's bearer API under `/api/v1`.
+A Studio session reaches that API too, on the requester routes alone, when the user asks for access to a connection ([below](#access-requests-from-a-studio-session)).
 The app still holds no database credential, and it never creates, edits or deletes a connection.
 This page is the contract the app relies on; paths in libredb-platform are given at its `origin/main` `d6ad8f5`, whose `docs/api/v1.md` is the source of truth.
 
@@ -37,6 +38,10 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `PATCH /api/v1/connections/{id}`, body `{active}` | one connection: `{id, name, engine, status, hasWriteCredential}` | `IPlatformConnectionRepository.setActive`, `PlatformConnectionsModel.readOne` |
 | `GET /api/v1/audit?subject=&connectionId=&source=&statementType=&status=&from=&to=&search=&limit=&offset=` | `{events: [{eventId, startedAt, finishedAt, subject, username, sessionRole, connectionId, connectionKnown, connectionName, engine, accessLevel, source, statementType, explain, statementCapture, statement, statementTruncated, rowCount, durationMs, status, errorCode, errorMessage, transactionOutcome}], total}` | `IPlatformAuditRepository.list`, `AuditPageJson` |
 | `GET /api/health/live` | `{status: "live"}` | `IPlatformStatusRepository.liveness`, `PlatformStatusJson` |
+| `GET /api/v1/requester/connections` | `{connections: [{id, name, engine, hasWriteCredential, access: {level, expiresAt} \| null, pendingRequestId}]}` | `IAccessRequestRepository.requestableConnections`, `RequestableConnectionsJson` |
+| `GET /api/v1/requester/access-requests` | `{requests: [AccessRequest]}` | `IAccessRequestRepository.mine`, `AccessRequestJson.readList` |
+| `POST /api/v1/requester/access-requests`, body `{connectionId, level, reason}` | 201 `{request: AccessRequest}` | `IAccessRequestRepository.create`, `AccessRequestCreateBody`, `AccessRequestJson.readOne` |
+| `POST /api/v1/requester/access-requests/{id}/withdraw`, body `{}` | `{request: AccessRequest}` | `IAccessRequestRepository.withdraw`, `AccessRequestJson.readOne` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -119,6 +124,51 @@ The Audit tab (`/platform/audit`, `AuditLogPage`) shows the events newest first:
 - The event reaches the page as go_router `extra`, `AuditEventArgs`, whose text names only the event id and status; the location carries no value, and a location without that `extra` opens the list.
 - The list rows, while the list is not empty, and the event's statement and error message are kept out of screenshots while on screen; leaving the tab disposes the bloc and its filters.
 
+## Access requests from a Studio session
+
+A Studio user under governance asks for a connection they do not hold through Platform's requester routes, with the same Keycloak access token the Studio calls carry.
+This is the one place a Studio session talks to Platform; `lib/features/access_requests/` holds it, and it imports `infrastructure/platform/` only, which `test/architecture/import_guard_test.dart` holds it to.
+The feature is named outside `platform_*` for that reason: it serves a Studio session, not Platform mode.
+
+- Every requester route accepts a token holding the Studio user role or the admin role.
+  None of them provisions a Platform user and none takes a license seat, so a Studio user who asks for access stays off the admin seat count.
+- `IAccessRequestRepository` (`lib/features/access_requests/domain/repositories/`) has `requestableConnections`, `mine`, `create` and `withdraw`; `AccessRequestRepository` sends them over `PlatformApiClient` and catches everything.
+  `create` maps through `platformAccessRequestWriteError`, so a 400 refused on exactly `reason` or exactly `level` lands under its field; everything else maps through `platformError`.
+  A code that lands unmapped is given its `AppErrorCode` in `platformError`, never with a switch in the repository.
+- The create and the withdrawal are each a `POST` sent without the client's `idempotent` opt-in, so neither is ever sent twice; both name `reason` in `sensitiveKeys`, so the verbose HTTP log and the dev console mask it.
+  The withdrawal sends `{}`, not a null body: `ApiClient` serializes anything but a `Map`, a `String` or a `List` by calling `toJson()` on it.
+- `MyAccessRequest` holds no requester: the requester is the caller, so Platform's `requester` object, which carries a username and an e-mail address, is never read, and neither is `decidedBy`.
+  `status` is read as `AccessRequestStatus`, with an unknown value kept as `unknown` plus the raw string; `level`, `engine` and the connection's `status` stay opaque strings.
+- The log carries counts, the operation, the level and the mapped code only.
+  No reason, decision reason, username, e-mail address or connection name reaches a line, and neither `MyAccessRequest.toString` nor `RequestableConnection.toString` prints one: they print the id, the status and the level.
+- **A Platform answer to these routes never ends or refuses the Studio session.**
+  A 401 `BEARER_INVALID` starts one refresh and, when it survives it, answers `platform.auth_invalid_access_token` to the screen with the Studio session still signed in (`lib/app/di/app_scope.dart`, `test/app/di/app_scope_test.dart`).
+  A 403 `STUDIO_ROLE_REQUIRED`, `ADMIN_ROLE_REQUIRED` or `LICENSE_ADMIN_SEATS` refuses neither account and opens no refusal page; the screen shows the message of the code.
+  The Platform unreachable gate never covers a Studio session either ([below](#liveness-and-the-two-gates)), so these screens say a transport failure themselves.
+- `MockInterceptor` answers the four routes from `assets/mock/GET_v1_requester_connections.json`, `GET_v1_requester_access_requests.json`, `POST_v1_requester_access_requests.json` and `POST_v1_requester_access_requests_pathParams.json`, the last for every withdrawal; it answers every `POST` with 201, so the readers take any 2xx.
+- No fixture is recorded yet: Platform `origin/main` has no requester route, so nothing can be recorded against the `platform` profile of `tool/studio-dev`.
+  When a Platform image carries them, `test/fixtures/platform/requester_connections.json`, `requester_requests.json`, `requester_create.json`, `requester_create_pending.json` and `requester_withdraw_decided.json` are recorded and read by `test/infrastructure/platform/recorded_platform_answers_test.dart`.
+
+### The screens
+
+Two pages sit on the repository above, under the Studio connection list, so `ApplicationRoutesConstants.belongsTo(SessionTarget.studio, ...)` already holds for them and a Platform session never reaches them: `accessRequests` (`/connections/requests`, "My requests") and `accessRequestNew` (`/connections/requests/new`, the form).
+`AccessRequestsFeatureRoutes.routes` composes them into the Studio shell; its BLoCs (`MyAccessRequestsBloc`, `WithdrawAccessRequestBloc`, `AccessRequestFormBloc`) are created in the routes, so a sign-out or a mode switch has nothing of this feature to clear.
+
+- **Visibility.** The two entry points and both routes exist only in a build with a Platform target (`AppConfig.platform is PlatformConfigured`) while Studio's connection policy is loaded with `governance` true.
+  The entries are the "Request access" action of the governed empty connection list and the "Access requests" tile of the profile sheet, directly under the mode switch, in a Studio session only.
+  Both routes redirect to `connectionList` unless `accessRequestsAvailable` (`lib/app/router/access_requests_availability.dart`) holds, so a typed location or a `returnUrl` sends no Platform request outside the rule; the predicate lives in `lib/app/` because the feature must not read the connection policy of another feature.
+- **My requests** lists the caller's newest requests in Platform's order: the connection, the level, the sent time, and the status as a badge (pending `warning`, approved `success`, refused `destructive`, withdrawn `secondary`, any other value `outline` with the raw value).
+  A refused row shows the administrator's reason, an approved row says the connection appears in the list after a refresh (Studio picks up the grant at its next governance reload), and a pending row has Withdraw.
+  Withdraw asks first, is sent once and never retried, and disables every row's Withdraw while it runs; the answer replaces its row in place (`MyAccessRequestReplaced`) without a reload, and a 409 `ACCESS_REQUEST_DECIDED` or a 404 reads the list again.
+  Pull to refresh keeps the list on screen and says a failed refresh in a snackbar; an empty list offers Request access, a list offers a floating button, and a failed load offers Retry.
+- **The form** lists the requestable connections, shows one with a pending request or already held at the highest level disabled with the reason, picks a level (write is disabled without a write credential, read when read is held), and takes a reason of 1 to 500 characters after trimming with a counter.
+  Send is disabled while a request is out; a second Send is dropped.
+  The draft stays across a refusal: a 400 on `reason` or `level` lands under its field, a 409 `ACCESS_REQUEST_PENDING` or `ACCESS_ALREADY_GRANTED` shows its text and offers "My requests", and any other refusal shows its text with Retry, which sends the draft again because the user asked.
+  The page asks before it is left with a reason written (`UnsavedChangesScope`, `onExit: confirmLeavingUnsavedChanges`); a request Platform took closes it to "My requests", which reloads, with a snackbar.
+- **Refusals in a Studio session.** The pages show every Platform refusal themselves with `errorCode.resolve(context)`: a 403 (`ADMIN_ROLE_REQUIRED`, `STUDIO_ROLE_REQUIRED`, any `LICENSE_*`), a 404 from a Platform without the requester routes, an offline device (`network.offline`) and a Platform that does not answer (`platform.unreachable`, "Platform does not answer. Try again in a moment.").
+  None ends the Studio session, opens the Platform refusal page or signs out.
+- The mock rows for the device check are in the four `assets/mock/GET_v1_requester_*.json` and `POST_*` answers: one request per known status, a refused one with its reason, and requestable connections that include one already held, one with a pending request, one held without a write credential and one free without a write credential.
+
 ## Errors
 
 Every error body is `{"error":{"code","message","fieldErrors"?}}` (`src/shared/lib/bearer/api-v1-response.ts`); a 5xx keeps its code with a generic message, and a 500 is always `INTERNAL_ERROR`.
@@ -145,6 +195,12 @@ Platform's `message`, and the messages of `fieldErrors`, are never logged, put i
 | 503 `KEYCLOAK_UNAVAILABLE`, 502 `KEYCLOAK_AUTH_ERROR`, 502 `KEYCLOAK_PERMISSION_ERROR`, 404 `KEYCLOAK_NOT_FOUND` | `platformKeycloakUnavailable` | `ServerError` |
 | 403 `PLAN_FEATURE_REQUIRED` | `platformPlanFeatureRequired` | `AuthError` |
 | 403 `PERMISSION_DENIED` | `platformPermissionDenied` | `AuthError` |
+| 403 `STUDIO_ROLE_REQUIRED` | `platformStudioRoleRequired` | `AuthError` |
+| 404 `ACCESS_REQUESTS_DISABLED` | `platformAccessRequestsDisabled` | `NotFoundError` |
+| 409 `ACCESS_REQUEST_PENDING` | `platformAccessRequestPending` | `ValidationError` |
+| 409 `ACCESS_ALREADY_GRANTED` | `platformAccessAlreadyGranted` | `ValidationError` |
+| 409 `ACCESS_REQUEST_LIMIT` | `platformAccessRequestLimit` | `ValidationError` |
+| 409 `ACCESS_REQUEST_DECIDED` | `platformAccessRequestDecided` | `ValidationError` |
 | 500 `INTERNAL_ERROR`, or any 5xx with another code | `platformInternalError` | `ServerError` |
 | Any 5xx without a code, which only the edge in front of a stopped Platform sends, since Platform codes every 5xx of its own | `platformUnreachable` | `ServerError` |
 | Any other status with another code or no envelope | none | 400 `ValidationError`, 401 or 403 `AuthError`, 404 `NotFoundError`, else `UnknownError` |
@@ -154,6 +210,11 @@ Platform's `message`, and the messages of `fieldErrors`, are never logged, put i
 
 `platformGrantWriteError`, for a grant `PUT` only, maps a 400 `VALIDATION_FAILED` refused on exactly one of `level`, `subject` or `expiresAt` to `platformGrantLevelRefused`, `platformGrantSubjectRefused` or `platformGrantExpiryRefused`, and everything else through `platformError`.
 The grant rows stay out of `platformError`, because `GET /api/v1/audit` also has a `subject` filter whose refusal must not say that Keycloak does not know the user.
+
+`platformAccessRequestWriteError`, for an access request create and an admin's refuse only, maps a 400 `VALIDATION_FAILED` refused on exactly `reason` to `platformAccessRequestReasonRefused` and on exactly `level` to `platformGrantLevelRefused`, each a `ValidationError`, and everything else through `platformError`.
+The reason row stays out of `platformError` for the same reason the grant rows do: another route's `reason` refusal must not say that the text is too long.
+An approve uses `platformGrantWriteError` unchanged, because its body is the grant's.
+The six access request codes above reach `platformError`, so a repository that only reads requests needs no write mapper; a 409 with another code or without an envelope is still `UnknownError`.
 
 `KEYCLOAK_NOT_FOUND` comes from the directory reading a user's roles (`src/shared/lib/keycloak/directory.ts`), so it is an outage of the directory, not a missing item.
 `PLAN_FEATURE_REQUIRED` is reachable on `GET /api/v1/audit`, since the plan is checked before any permission (`src/features/audit/lib/audit-read.ts`).
@@ -430,3 +491,64 @@ Notes:
 
 - `SENTRY_DSN` is a repository secret, so the dry-run bundle carries the DSN and its app starts Sentry; the bundle was never shared beyond the workflow artifact and the scratch directory.
 - The images that Railway platform-dev ran that day were not read.
+
+## iOS Platform walkthrough
+
+Platform mode was walked on iOS for the first time on 2026-10-29, from `main` at `a5bbe9de`, against the fixtures of `assets/mock/`.
+What passes here is evidence about the app's own Platform screens and about those fixtures, and evidence about no server, as [studio.md](studio.md) says of the mock walkthrough.
+The lab part of #307 is not this run and stays open: a mock build signs in without Keycloak, so no step here exercises `ASWebAuthenticationSession`, Platform's sign-in refusals, the two liveness gates or an account that takes an admin seat.
+The host was the owner's Mac on macOS 27.0.1 (26A434) with Xcode 27.1 (27A9275), and the device the simulator iPhone 18 Pro on iOS 27.0, 402 by 874 points at a device pixel ratio of 3.
+The build was Flutter 3.47.7, a debug build of `main_mock.dart`, run twice: once with the mock environment's default screen capture protection, which is off, and once with `--dart-define=SCREEN_CAPTURE_PROTECTION=true`.
+The identity came from `assets/mock/GET_v1_me.json`, which names the admin Platform Admin of Example Org, and the connections, grants, directory and audit answers from the other `GET_v1_*` fixtures.
+Xcode 27.1 on this Mac ships no Simulator application, so the device ran headless: every screen was read with `xcrun simctl io <udid> screenshot`, and every tap, drag and scroll was sent into the running app's gesture binding over the Dart VM service of `flutter run`.
+Face ID was enrolled, matched and refused with the simulator's `notifyutil` keys, because the Features menu that would do it belongs to that missing application.
+
+| Step | Result |
+| --- | --- |
+| 1. Login page | Passed: a first start shows the four introduction screens, and Get started opens a login page with "Sign in to Studio" and "Sign in to Platform" of equal weight, the Platform helper text about the admin seat, and no unreachable notice under either entry, since the mock answers `GET /health` and `GET /health/live` |
+| 2. Platform sign-in | Passed: the Platform entry lands in the Platform shell without a form, the tabs read Home, Connections and Audit, and the profile sheet labels the mode "Platform admin" |
+| 3. Home | Passed: the organization card reads Example Org and `example-org`, signed in as Platform Admin, above the Connections shortcut; the shell sends no Studio request |
+| 4. Connections | Passed: four connections, İstanbul Önbellek (redis), Event Store (mongodb), Legacy Billing (mysql) and Orders (postgres), with the Active and Inactive badges, the "Read grants only" chip on the two without a write credential, and the Turkish name's İ and Ö drawn correctly |
+| 5. Grants | Passed: Orders lists four grants with username, e-mail, level, expiry and granted by, and the expired one is red with a crossed-calendar icon |
+| 6. Directory | Passed: "Add access" opens Choose a user with the search field and the directory rows, each with its Studio role chip and its current level |
+| 7. Grant editor | Passed: "Change access to Orders" shows the user, the Read and Write segments, the expiry in the device's time zone and Save; "Pick a date and time" opens Flutter's Material date picker, not a Cupertino one, as everywhere else in this app |
+| 8. Back by swipe | Passed: a drag from the left edge pops the grant editor back to the grant list, so the iOS edge-swipe works on these routes |
+| 9. Revoke dialog | Passed: the row menu offers Change access and Remove access, and the dialog says that alice.reader will lose read access to Orders; Cancel keeps the row |
+| 10. Disable dialog | Passed: the connection menu offers Disable connection, and the dialog says the connection closes for every Studio user within about 30 seconds, that running queries are not stopped and that the grants are kept; Cancel keeps it Active |
+| 11. Audit list | Passed: the rows are newest first with the user, connection, type, time, duration, rows and status, the redacted and the uncaptured statements read as the fixtures hold them, and a long statement is cut with an ellipsis |
+| 12. Audit event | Passed: the event page shows every field, "Only this user" and "Only this connection", error code 42P01, the truncated statement with "Truncated by Studio" and the error message |
+| 13. Filters | Partly passed: the sheet opens with Status, Statement type, Source, From, To and the statement text with its 0/200 counter, and Done closes it, but its Done button reaches into the home indicator (see the defects below) |
+| 14. Profile sheet | Passed: the sheet names the admin and the organization, and offers Switch to Studio, Settings and Logout, with no "Remove my data", since a Platform session keeps nothing on the device |
+| 15. Settings | Passed: Appearance holds Theme, Day and night and Language, Security holds App lock and Lock after, and no "Remove my data" row appears in Platform mode |
+| 16. App lock | Passed: with Face ID enrolled, the switch asks the system prompt, a matching face turns the lock on and "Lock after" becomes live; turning it off asks nothing, as [security.md](security.md) says it does not |
+| 17. Kill and relaunch | Passed: a `simctl terminate` and `launch` comes back to "LibreDB is locked"; a non-matching face answers "Face Not Recognized" and keeps it locked, a matching face unlocks, and the session restores into the Platform shell, not into Studio |
+| 18. Mode switch | Passed: "Switch to Studio" lands in the Studio shell with its governance banner and no sign-in page, and "Switch to Platform" asks the seat confirmation first and then opens the Platform home again |
+| 19. Screen capture | Passed for the task-switcher snapshot, and a screenshot is never blocked: with the define on, the card iOS draws for the app while it resigns active is fully blurred over the audit list and over an audit event, 0 dark pixels of 1,080,000 in the 900 by 1200 band where the rows' text sits against 27,008 in the live screen, while `xcrun simctl io screenshot` of the live audit list is a readable 251 KB image, as `lib/core/security/screen_capture_platform.dart` says of iOS |
+| 20. Sign-out | Passed: Logout asks to confirm and returns to the login page with both entries, and the app's log holds no warn line about a missing Studio record of the sign-out |
+| 21. Logs | Passed: the simulator's log for the `Runner` process over the whole run, 9,335 lines with 382 of the app's own, holds no JWT, no `Bearer` value, no e-mail address at all, no statement text and no Platform error message text; a Platform request's query values print as `[REDACTED]` |
+
+### What the iOS run found
+
+Three defects, each measured on the simulator, and each still to be filed as its own issue:
+
+- The top safe area is painted pure black in both shells, which hides the iOS status bar.
+  On the Platform home every pixel of the 1206 by 170 band at the top of the screenshot is `#000000`, 205,020 of 205,020, and the band ends at row 185, which is exactly the view's top padding of 186 physical pixels, 62 points, read from the running app.
+  The same band of the login page is `#FFFFFF` with the clock, the Wi-Fi mark and the battery legible, and the Studio shell this run switched into in place is as black as the Platform one, row for row.
+  The screenshots of the iPhone 17 simulator that #91's run left behind hold the same 186 black rows, so it is not this device.
+  `ConnectivityBanner` holds that inset with an `AnimatedContainer` that is `Colors.transparent` while the device is online, and both shells sit the banner in a bare `Column` above the `Expanded` that holds `ResponsiveScaffold`, so nothing paints behind it; an unpainted Flutter surface is black on iOS, while on Android the window below it is not.
+- The audit filter sheet's Done button reaches into the home indicator.
+  Its fill spans physical rows 2448 to 2555 of a 2622 pixel screen, so 67 pixels, 22 points, are left below it, while the view's bottom padding is 102 pixels, 34 points: the button overlaps the home indicator by 35 pixels, 12 points.
+  `showAuditFilterSheet` passes `useSafeArea: true`, which Flutter applies to the top only, and the sheet's own bottom padding is `AppSpacing.lg` plus `MediaQuery.viewInsetsOf(context).bottom`, which is the keyboard inset and zero while no field has focus.
+- The app lock names the wrong sensor on a Face ID device.
+  `lib/features/app_lock/presentation/pages/app_lock_screen.dart` draws `Icons.fingerprint` on the Unlock button whatever the device offers, and this device has Face ID only, which iOS proved by putting up its Face ID sheet and answering "Face Not Recognized" to a refused face.
+
+Notes:
+
+- `screen_protector`, the plugin that blurs the snapshot, logs `Plugin ScreenProtectorPlugin uses deprecated application lifecycle events` and asks for `UIScene` support, which a later Flutter will require; it is the only plugin of this app that logs it, and it logs it in both runs.
+- The blur is taken by the audit screens and is not given back when the admin leaves them: after the Audit tab had been opened once the card of the Platform home was blurred too, while on a launch that never opened Audit the home's card shows the organization and the admin's name.
+  That errs on the safe side, so it is written down rather than filed.
+- The sign-in snackbar reads only "Success", in Platform mode as in Studio mode (`lib/features/auth/presentation/pages/login_page.dart`); it is not an iOS difference and no step turns on it.
+- The grants page, the directory and the grant editor all carry "Connections" as their app bar title, which is the shell's branch title and not the page's; that is not an iOS difference either.
+- No step opened an unreachable page or a refusal: the mock answers every Platform call, so [Liveness and the two gates](#liveness-and-the-two-gates) and [Session and refusals](#session-and-refusals) stay covered by their widget tests and by the Android walkthroughs.
+- The only error lines in the log belong to the walk itself: `StackFrame` asserts on the `Eval ()` frame that a pointer event sent over the VM service carries, which `CrashReporter` then reports as a non-fatal of the gesture library.
+  A tap a finger makes carries no such frame, so those lines say nothing about the app.

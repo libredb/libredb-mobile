@@ -3346,6 +3346,76 @@ class S {
     );
   }
 
+  /// `Your account has no Studio role, so it cannot ask for access.`
+  String get error_platform_studio_role_required {
+    return Intl.message(
+      'Your account has no Studio role, so it cannot ask for access.',
+      name: 'error_platform_studio_role_required',
+      desc: 'Platform refused an access request because the account\'s token carries no Studio role.',
+      args: [],
+    );
+  }
+
+  /// `Access requests are turned off on this installation.`
+  String get error_platform_access_requests_disabled {
+    return Intl.message(
+      'Access requests are turned off on this installation.',
+      name: 'error_platform_access_requests_disabled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have an open request for this connection.`
+  String get error_platform_access_request_pending {
+    return Intl.message(
+      'You already have an open request for this connection.',
+      name: 'error_platform_access_request_pending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have this access.`
+  String get error_platform_access_already_granted {
+    return Intl.message(
+      'You already have this access.',
+      name: 'error_platform_access_already_granted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You have too many open requests. Wait for an answer or withdraw one.`
+  String get error_platform_access_request_limit {
+    return Intl.message(
+      'You have too many open requests. Wait for an answer or withdraw one.',
+      name: 'error_platform_access_request_limit',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This request was already answered or withdrawn.`
+  String get error_platform_access_request_decided {
+    return Intl.message(
+      'This request was already answered or withdrawn.',
+      name: 'error_platform_access_request_decided',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Write a reason of at most 500 characters.`
+  String get error_platform_access_request_reason_refused {
+    return Intl.message(
+      'Write a reason of at most 500 characters.',
+      name: 'error_platform_access_request_reason_refused',
+      desc: 'Platform refused an access request create or refuse on the reason field alone.',
+      args: [],
+    );
+  }
+
   /// `Type one or more statements`
   String get sql_editor_hint {
     return Intl.message(
@@ -4147,11 +4217,51 @@ class S {
     return Intl.message('LibreDB is locked', name: 'app_lock_locked_title', desc: '', args: []);
   }
 
-  /// `Unlock with your fingerprint, face or screen lock to continue.`
+  /// `Unlock with your screen lock to continue.`
   String get app_lock_locked_message {
     return Intl.message(
-      'Unlock with your fingerprint, face or screen lock to continue.',
+      'Unlock with your screen lock to continue.',
       name: 'app_lock_locked_message',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your face or screen lock to continue.`
+  String get app_lock_locked_message_face {
+    return Intl.message(
+      'Unlock with your face or screen lock to continue.',
+      name: 'app_lock_locked_message_face',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your fingerprint or screen lock to continue.`
+  String get app_lock_locked_message_fingerprint {
+    return Intl.message(
+      'Unlock with your fingerprint or screen lock to continue.',
+      name: 'app_lock_locked_message_fingerprint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your iris or screen lock to continue.`
+  String get app_lock_locked_message_iris {
+    return Intl.message(
+      'Unlock with your iris or screen lock to continue.',
+      name: 'app_lock_locked_message_iris',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unlock with your biometrics or screen lock to continue.`
+  String get app_lock_locked_message_several {
+    return Intl.message(
+      'Unlock with your biometrics or screen lock to continue.',
+      name: 'app_lock_locked_message_several',
       desc: '',
       args: [],
     );
@@ -5341,6 +5451,251 @@ class S {
       'The introduction ends here; the app opens through Keycloak.',
       name: 'ob6_bye_note',
       desc: 'Under ob6_bye on the hand-off panel.',
+      args: [],
+    );
+  }
+
+  /// `My requests`
+  String get access_requests_title {
+    return Intl.message('My requests', name: 'access_requests_title', desc: '', args: []);
+  }
+
+  /// `Request access`
+  String get access_requests_new_title {
+    return Intl.message('Request access', name: 'access_requests_new_title', desc: '', args: []);
+  }
+
+  /// `Access requests`
+  String get access_requests_profile_tile {
+    return Intl.message('Access requests', name: 'access_requests_profile_tile', desc: '', args: []);
+  }
+
+  /// `Request access`
+  String get access_requests_empty_action {
+    return Intl.message('Request access', name: 'access_requests_empty_action', desc: '', args: []);
+  }
+
+  /// `No requests yet`
+  String get access_requests_empty_title {
+    return Intl.message('No requests yet', name: 'access_requests_empty_title', desc: '', args: []);
+  }
+
+  /// `Ask for access to a connection and follow the answer here.`
+  String get access_requests_empty_description {
+    return Intl.message(
+      'Ask for access to a connection and follow the answer here.',
+      name: 'access_requests_empty_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your requests could not be loaded`
+  String get access_requests_load_failed {
+    return Intl.message('Your requests could not be loaded', name: 'access_requests_load_failed', desc: '', args: []);
+  }
+
+  /// `Pending`
+  String get access_requests_status_pending {
+    return Intl.message('Pending', name: 'access_requests_status_pending', desc: '', args: []);
+  }
+
+  /// `Approved`
+  String get access_requests_status_approved {
+    return Intl.message('Approved', name: 'access_requests_status_approved', desc: '', args: []);
+  }
+
+  /// `Refused`
+  String get access_requests_status_refused {
+    return Intl.message('Refused', name: 'access_requests_status_refused', desc: '', args: []);
+  }
+
+  /// `Withdrawn`
+  String get access_requests_status_withdrawn {
+    return Intl.message('Withdrawn', name: 'access_requests_status_withdrawn', desc: '', args: []);
+  }
+
+  /// `Read`
+  String get access_requests_level_read {
+    return Intl.message('Read', name: 'access_requests_level_read', desc: '', args: []);
+  }
+
+  /// `Write`
+  String get access_requests_level_write {
+    return Intl.message('Write', name: 'access_requests_level_write', desc: '', args: []);
+  }
+
+  /// `read`
+  String get access_requests_level_read_in_sentence {
+    return Intl.message('read', name: 'access_requests_level_read_in_sentence', desc: '', args: []);
+  }
+
+  /// `write`
+  String get access_requests_level_write_in_sentence {
+    return Intl.message('write', name: 'access_requests_level_write_in_sentence', desc: '', args: []);
+  }
+
+  /// `Sent {date}`
+  String access_requests_sent_at(String date) {
+    return Intl.message('Sent $date', name: 'access_requests_sent_at', desc: '', args: [date]);
+  }
+
+  /// `Administrator's reason: {reason}`
+  String access_requests_refused_reason(String reason) {
+    return Intl.message(
+      'Administrator\'s reason: $reason',
+      name: 'access_requests_refused_reason',
+      desc: '',
+      args: [reason],
+    );
+  }
+
+  /// `The administrator gave no reason.`
+  String get access_requests_refused_no_reason {
+    return Intl.message(
+      'The administrator gave no reason.',
+      name: 'access_requests_refused_no_reason',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The connection appears in your connection list after you refresh it. It can take a moment.`
+  String get access_requests_approved_note {
+    return Intl.message(
+      'The connection appears in your connection list after you refresh it. It can take a moment.',
+      name: 'access_requests_approved_note',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Withdraw`
+  String get access_requests_withdraw {
+    return Intl.message('Withdraw', name: 'access_requests_withdraw', desc: '', args: []);
+  }
+
+  /// `Withdraw request`
+  String get access_requests_withdraw_title {
+    return Intl.message('Withdraw request', name: 'access_requests_withdraw_title', desc: '', args: []);
+  }
+
+  /// `Your request for {level} access to {connection} will be withdrawn. You can ask again later.`
+  String access_requests_withdraw_message(String level, String connection) {
+    return Intl.message(
+      'Your request for $level access to $connection will be withdrawn. You can ask again later.',
+      name: 'access_requests_withdraw_message',
+      desc: '',
+      args: [level, connection],
+    );
+  }
+
+  /// `Request withdrawn.`
+  String get access_requests_withdrawn_snackbar {
+    return Intl.message('Request withdrawn.', name: 'access_requests_withdrawn_snackbar', desc: '', args: []);
+  }
+
+  /// `Request sent.`
+  String get access_requests_sent_snackbar {
+    return Intl.message('Request sent.', name: 'access_requests_sent_snackbar', desc: '', args: []);
+  }
+
+  /// `Connection`
+  String get access_requests_form_connection {
+    return Intl.message('Connection', name: 'access_requests_form_connection', desc: '', args: []);
+  }
+
+  /// `There is no connection you can ask for right now.`
+  String get access_requests_form_no_connections {
+    return Intl.message(
+      'There is no connection you can ask for right now.',
+      name: 'access_requests_form_no_connections',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The connections could not be loaded`
+  String get access_requests_form_load_failed {
+    return Intl.message(
+      'The connections could not be loaded',
+      name: 'access_requests_form_load_failed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have a pending request`
+  String get access_requests_form_connection_pending {
+    return Intl.message(
+      'You already have a pending request',
+      name: 'access_requests_form_connection_pending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have access`
+  String get access_requests_form_connection_granted {
+    return Intl.message('You already have access', name: 'access_requests_form_connection_granted', desc: '', args: []);
+  }
+
+  /// `Access level`
+  String get access_requests_form_level {
+    return Intl.message('Access level', name: 'access_requests_form_level', desc: '', args: []);
+  }
+
+  /// `This connection has no write credential, so write access cannot be requested.`
+  String get access_requests_form_level_write_unavailable {
+    return Intl.message(
+      'This connection has no write credential, so write access cannot be requested.',
+      name: 'access_requests_form_level_write_unavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have read access to this connection.`
+  String get access_requests_form_level_read_held {
+    return Intl.message(
+      'You already have read access to this connection.',
+      name: 'access_requests_form_level_read_held',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reason`
+  String get access_requests_form_reason {
+    return Intl.message('Reason', name: 'access_requests_form_reason', desc: '', args: []);
+  }
+
+  /// `Why do you need this access?`
+  String get access_requests_form_reason_hint {
+    return Intl.message('Why do you need this access?', name: 'access_requests_form_reason_hint', desc: '', args: []);
+  }
+
+  /// `Send request`
+  String get access_requests_form_send {
+    return Intl.message('Send request', name: 'access_requests_form_send', desc: '', args: []);
+  }
+
+  /// `Choose a connection.`
+  String get access_requests_form_connection_required {
+    return Intl.message('Choose a connection.', name: 'access_requests_form_connection_required', desc: '', args: []);
+  }
+
+  /// `Choose an access level.`
+  String get access_requests_form_level_required {
+    return Intl.message('Choose an access level.', name: 'access_requests_form_level_required', desc: '', args: []);
+  }
+
+  /// `Write a reason of 1 to 500 characters.`
+  String get access_requests_form_reason_invalid {
+    return Intl.message(
+      'Write a reason of 1 to 500 characters.',
+      name: 'access_requests_form_reason_invalid',
+      desc: '',
       args: [],
     );
   }

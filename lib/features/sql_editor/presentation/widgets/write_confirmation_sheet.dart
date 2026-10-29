@@ -6,6 +6,7 @@ import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
 import 'package:libredb_mobile/shared/models/studio_access.dart';
 import 'package:libredb_mobile/shared/models/studio_connection.dart';
 import 'package:libredb_mobile/shared/models/studio_environment.dart';
+import 'package:libredb_mobile/shared/utils/sheet_insets.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
@@ -106,7 +107,7 @@ class _WriteConfirmationSheetState extends State<WriteConfirmationSheet> {
     final environment = connection.environment;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.only(bottom: sheetBottomInset(context)),
       // The sheet sizes from its content. When it is tall enough, the text box takes the room the other lines leave;
       // when it is not, as on a phone held sideways or with the keyboard up, the sheet lays out at its natural height
       // with the text box at a few lines and scrolls. On a wide sheet the name field and the buttons share one row, so

@@ -1,6 +1,8 @@
 @Tags(['widget'])
 library;
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +21,7 @@ const _on5 = AppLockSettings(enabled: true, timeout: AppLockTimeout.fiveMinutes)
 
 void main() {
   late MockAppLockBloc bloc;
+  late MockIDeviceAuthenticator authenticator;
   late int signOuts;
 
   setUpAll(
@@ -27,14 +30,19 @@ void main() {
 
   setUp(() {
     bloc = MockAppLockBloc();
+    authenticator = MockIDeviceAuthenticator();
+    when(() => authenticator.availableBiometric()).thenAnswer((_) async => DeviceBiometric.none);
     signOuts = 0;
   });
 
   Future<void> pump(WidgetTester tester, AppLockState state, {bool signingOut = false, Locale? locale}) async {
     whenListen(bloc, const Stream<AppLockState>.empty(), initialState: state);
-    final screen = BlocProvider<AppLockBloc>.value(
-      value: bloc,
-      child: AppLockScreen(signingOut: signingOut, onSignOut: () => signOuts++),
+    final screen = RepositoryProvider<IDeviceAuthenticator>.value(
+      value: authenticator,
+      child: BlocProvider<AppLockBloc>.value(
+        value: bloc,
+        child: AppLockScreen(signingOut: signingOut, onSignOut: () => signOuts++),
+      ),
     );
     await tester.pumpWidget(goldenScreen(screen));
     await tester.pump();
@@ -44,9 +52,99 @@ void main() {
     await pump(tester, const AppLockLocked(settings: _on5));
 
     expect(find.text('LibreDB is locked'), findsOneWidget);
-    expect(find.text('Unlock with your fingerprint, face or screen lock to continue.'), findsOneWidget);
+    expect(find.text('Unlock with your screen lock to continue.'), findsOneWidget);
     expect(find.byKey(appLockUnlockKey), findsOneWidget);
     expect(find.byKey(appLockSignOutKey), findsOneWidget);
+  });
+
+  // #444: the screen names the biometric the device has, not a fingerprint on every device.
+  Finder unlockIcon() => find.descendant(of: find.byKey(appLockUnlockKey), matching: find.byType(Icon));
+
+  IconData? unlockIconData(WidgetTester tester) => tester.widget<Icon>(unlockIcon()).icon;
+
+  group('the biometric the device has', () {
+    Future<void> pumpWith(WidgetTester tester, Future<DeviceBiometric> Function() answer) async {
+      when(() => authenticator.availableBiometric()).thenAnswer((_) => answer());
+      await pump(tester, const AppLockLocked(settings: _on5));
+    }
+
+    testWidgets('a Face ID device shows a face and says face, never fingerprint', (tester) async {
+      await pumpWith(tester, () async => DeviceBiometric.face);
+
+      expect(unlockIconData(tester), Icons.face_unlock_outlined);
+      expect(find.text('Unlock with your face or screen lock to continue.'), findsOneWidget);
+      expect(find.textContaining('fingerprint'), findsNothing);
+    });
+
+    testWidgets('a fingerprint device shows a fingerprint', (tester) async {
+      await pumpWith(tester, () async => DeviceBiometric.fingerprint);
+
+      expect(unlockIconData(tester), Icons.fingerprint);
+      expect(find.text('Unlock with your fingerprint or screen lock to continue.'), findsOneWidget);
+    });
+
+    testWidgets('an iris device shows an eye', (tester) async {
+      await pumpWith(tester, () async => DeviceBiometric.iris);
+
+      expect(unlockIconData(tester), Icons.remove_red_eye_outlined);
+      expect(find.text('Unlock with your iris or screen lock to continue.'), findsOneWidget);
+    });
+
+    testWidgets('a device with several biometrics claims none of them', (tester) async {
+      await pumpWith(tester, () async => DeviceBiometric.several);
+
+      expect(unlockIconData(tester), Icons.lock_open_outlined);
+      expect(find.text('Unlock with your biometrics or screen lock to continue.'), findsOneWidget);
+    });
+
+    testWidgets('a device with no biometric enrolled names only the screen lock', (tester) async {
+      await pumpWith(tester, () async => DeviceBiometric.none);
+
+      expect(unlockIconData(tester), Icons.lock_open_outlined);
+      expect(find.text('Unlock with your screen lock to continue.'), findsOneWidget);
+    });
+
+    testWidgets('a failed question claims no biometric', (tester) async {
+      await pumpWith(tester, () async => throw StateError('platform channel failed'));
+
+      expect(unlockIconData(tester), Icons.lock_open_outlined);
+      expect(find.text('Unlock with your screen lock to continue.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('while the answer is pending no icon and no biometric text show, so nothing flickers', (tester) async {
+      final answer = Completer<DeviceBiometric>();
+      await pumpWith(tester, () => answer.future);
+
+      expect(unlockIcon(), findsNothing);
+      expect(find.textContaining('Unlock with your'), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.textContaining('Unlock with your'),
+          matching: find.byWidgetPredicate((widget) => widget is Visibility && !widget.visible),
+        ),
+        findsOneWidget,
+        reason: 'the text keeps its space but is hidden and unread until the platform has answered',
+      );
+      expect(find.byKey(appLockUnlockKey), findsOneWidget);
+
+      answer.complete(DeviceBiometric.face);
+      await tester.pump();
+      await tester.pump();
+
+      expect(unlockIconData(tester), Icons.face_unlock_outlined);
+      expect(find.text('Unlock with your face or screen lock to continue.'), findsOneWidget);
+    });
+
+    testWidgets('a slow answer falls back to the screen lock after a few seconds', (tester) async {
+      await pumpWith(tester, () => Completer<DeviceBiometric>().future);
+
+      expect(unlockIcon(), findsNothing);
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(unlockIconData(tester), Icons.lock_open_outlined);
+      expect(find.text('Unlock with your screen lock to continue.'), findsOneWidget);
+    });
   });
 
   testWidgets('Unlock opens the prompt with its texts in the app language', (tester) async {

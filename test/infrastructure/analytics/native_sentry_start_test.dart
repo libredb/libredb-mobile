@@ -15,6 +15,15 @@ class _AndroidPlatform extends Platform {
   OperatingSystem get operatingSystem => OperatingSystem.android;
 }
 
+/// The platform sentry_flutter reports on an iOS device, where the host app starts sentry-cocoa itself
+/// (ios/Runner/NativeSentry.swift).
+class _IOSPlatform extends Platform {
+  const _IOSPlatform();
+
+  @override
+  OperatingSystem get operatingSystem => OperatingSystem.ios;
+}
+
 void main() {
   group('configureNativeSdkStart', () {
     test('turns the native auto-init off where the host app starts the native SDK', () {
@@ -42,7 +51,16 @@ void main() {
       expect(options.autoInitializeNativeSdk, isFalse);
     });
 
-    // The test host is not Android, so sentry_flutter starts the native SDK itself, as it does on iOS.
+    test('reads iOS from the platform of the options', () {
+      final options = SentryFlutterOptions(platform: const _IOSPlatform());
+
+      configureNativeSdkStart(options);
+
+      expect(hostStartsNativeSdk(options), isTrue);
+      expect(options.autoInitializeNativeSdk, isFalse);
+    });
+
+    // The test host is neither Android nor iOS, so sentry_flutter starts the native SDK itself there.
     test('reads the platform of the options when the caller does not say', () {
       final options = SentryFlutterOptions();
 

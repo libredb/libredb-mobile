@@ -61,6 +61,19 @@ void main() {
       );
     });
 
+    test('masks the reason and the requester e-mail of an access request in a log line', () {
+      expect(
+        maskSecrets(
+          '{"requesterEmail":"jane@example.org","reason":"I need the payroll table","level":"read","status":"pending"}',
+        ),
+        '{"requesterEmail":"[REDACTED]","reason":"[REDACTED]","level":"read","status":"pending"}',
+      );
+      expect(
+        maskSecrets('reason=please&decisionReason=no&errorCode=42501'),
+        'reason=[REDACTED]&decisionReason=[REDACTED]&errorCode=42501',
+      );
+    });
+
     test('keeps a value that is already masked', () {
       const masked = 'access_token=[REDACTED_JWT] {"id_token":"[REDACTED_JWT]"} Bearer [REDACTED_JWT]';
 
@@ -243,9 +256,55 @@ void main() {
       });
     });
 
+    // An access request carries the requester's e-mail and the free text they wrote, which can name anyone.
+    test('masks requesterEmail, reason and decisionReason, and keeps errorCode, status and level', () {
+      final result = scrubBodyKeys({
+        'id': 'r-1',
+        'requesterEmail': 'jane@example.org',
+        'reason': 'I need the payroll table',
+        'decisionReason': 'ask your team lead',
+        'endReason': 'the server closed',
+        'errorCode': '42501',
+        'status': 'pending',
+        'level': 'read',
+      });
+      expect(result, {
+        'id': 'r-1',
+        'requesterEmail': '[REDACTED]',
+        'reason': '[REDACTED]',
+        'decisionReason': '[REDACTED]',
+        'endReason': '[REDACTED]',
+        'errorCode': '42501',
+        'status': 'pending',
+        'level': 'read',
+      });
+    });
+
     test('non-Map body is returned untouched', () {
       expect(scrubBodyKeys('plain string'), 'plain string');
       expect(scrubBodyKeys(null), isNull);
+    });
+  });
+
+  group('privacyOnlyBodyKeySubstrings', () {
+    test('is part of the masked set, so every exit still masks the keys it names', () {
+      expect(privacyOnlyBodyKeySubstrings, isNotEmpty);
+      expect(sensitiveBodyKeySubstrings, containsAll(privacyOnlyBodyKeySubstrings));
+    });
+
+    test("holds reason, the app's own word for why something happened", () {
+      expect(privacyOnlyBodyKeySubstrings, contains('reason'));
+    });
+
+    test('holds no substring that names a credential, so the code guards keep their whole strength there', () {
+      expect(
+        privacyOnlyBodyKeySubstrings,
+        isNot(anyOf(contains('password'), contains('otp'), contains('token'), contains('secret'))),
+      );
+      expect(privacyOnlyBodyKeySubstrings, isNot(contains('requesteremail')));
+      expect(privacyOnlyBodyKeySubstrings, isNot(contains('subjectemail')));
+      expect(privacyOnlyBodyKeySubstrings, isNot(contains('statement')));
+      expect(privacyOnlyBodyKeySubstrings, isNot(contains('errormessage')));
     });
   });
 
