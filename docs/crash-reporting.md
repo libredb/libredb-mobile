@@ -93,6 +93,15 @@ That Sentry receives the timer's error comes from the #191 device check on the t
   from the start and this copy was not, because the Android scrubber masks `event.extras` and a Dart event never
   reaches it: it goes to `captureEnvelope`. `extra` is deprecated in the SDK and still sent, which is why it is
   still read.
+- Every context the SDK did not fill itself is masked the same way. `Scope.setContexts(key, value)` is what the SDK
+  offers in place of the deprecated `setExtra`, and what it stores reaches the wire under `contexts.<key>` exactly as
+  `extra` did; the SDK's own contexts (`device`, `os`, `app`, `runtime`, `runtimes`, `browser`, `gpu`, `culture`,
+  `response`, `feedback`, `flags`, `trace`) are typed objects and are left alone, since masking one as a map would
+  send its `toString` instead of its fields, and `trace.data`, the one of them that carries app data, is masked.
+- The breadcrumbs an event carries itself are masked as well. `Scope.applyToEvent` keeps the event's own breadcrumbs
+  and adds none of the scope's whenever the event brought any, and those never passed `beforeBreadcrumb`, the only
+  hook that masks a breadcrumb on its way to the scope. Masking is idempotent, so the scope's already-masked
+  breadcrumbs are unchanged by the second pass. The Kotlin scrubber has always masked `event.breadcrumbs`.
 - **The hook fails closed.** If masking throws, the event is dropped and only the exception's class is logged — its
   message could carry the value that made the masking throw. The Android scrubber has always done this; the Dart
   one did not, and the SDK sets its processed event to the one it was handed *before* calling the hook, so a throw
@@ -154,7 +163,9 @@ Never ship a build with that define.
    ```
 
 2. Start the app.
-   Right after it starts, it records a user action breadcrumb with the email `device.check@example.com` and a JWT-shaped token, then throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` (`lib/app/bootstrap/sentry_device_check.dart`).
+   Right after it starts, it records a user action breadcrumb and a context named `device_check`, each carrying all four kinds of secret: the email `device.check@example.com`, the password-shaped `device-check-only-not-a-password` under a `password` key, the JWT-shaped token after a `Bearer `, and the statement `GRANT SELECT ON device_check_payroll TO device_check_reader` under a `statement` key.
+   Then it throws, from a microtask, an uncaught `AuthError` built by `studioError` from a refused database credential whose answer carries the database text `permission denied for table device_check_payroll`, the email, the token, and the same statement in its `fixStatement` (`lib/app/bootstrap/sentry_device_check.dart`).
+   The context is in the check because `contexts` is where `Scope.setContexts` puts what the SDK deprecated `extra` in favour of, and `extra` is the field that once reached Sentry unmasked (PR #398).
    It throws from a microtask so that the error reaches Sentry as the `AuthError` object through `PlatformDispatcher.onError`; a timer's error would reach it only as text through the isolate error listener (see "Where an uncaught error goes").
 3. Crash the native side:
 
@@ -164,7 +175,69 @@ Never ship a build with that define.
 
    `SentryDeviceCheck.kt` throws a `RuntimeException` that names the same email and a `Bearer` token, and sentry-android sends it on the next start.
 4. Start the app once more, so the crash report is sent.
-5. In Sentry, open both events and confirm that neither carries the email, the token, `device_check_payroll` or the statement: the Dart event shows `AuthError(code: studio.database_auth)` and a breadcrumb whose target is `[REDACTED_EMAIL]`, and the native crash shows `[REDACTED_EMAIL]` and `Bearer [REDACTED_JWT]`.
+5. In Sentry, open both events and read them against "What the dashboard must show" below, row by row.
+   Nothing in that section is a judgement call: each row names a field, and the value it must hold.
+
+## What the dashboard must show
+
+The owner runs this part, because it needs the Sentry account; the app side of it is pinned by `test/infrastructure/analytics/sentry_event_exits_test.dart` and `test/app/bootstrap/sentry_device_check_test.dart`, which assert the same values against the JSON the transport sends.
+
+### 1. Five strings, zero hits
+
+Open the Dart event, click **JSON** (the raw payload, top right of the event), and search the page for each string.
+Then do the same on the native crash event.
+Every one of the five must have **zero** hits in both:
+
+| # | String to search for | Hits allowed |
+|---|---|---|
+| 1 | `device.check@example.com` | 0 |
+| 2 | `device-check-only-not-a-password` | 0 |
+| 3 | `eyJhbGciOiJIUzI1NiJ9` (the token's first segment) | 0 |
+| 4 | `GRANT SELECT ON device_check_payroll` | 0 |
+| 5 | `permission denied for table device_check_payroll` | 0 |
+
+A hit on any of them is a failure; record which string, which event and which field, and stop — do not re-run the check until it is fixed.
+
+### 2. The Dart event, field by field
+
+The issue's title is `AuthError`, its culprit `AuthError(code: studio.database_auth)`:
+
+| Where in the event | Field | Must read exactly |
+|---|---|---|
+| Exception | value | `AuthError(code: studio.database_auth)` |
+| Breadcrumbs, last row (`ui.action`, `sentry_device_check`) | `target` | `[REDACTED_EMAIL]` |
+| the same breadcrumb | `password` | `[REDACTED]` |
+| the same breadcrumb | `statement` | `[REDACTED]` |
+| the same breadcrumb | `note` | `Bearer [REDACTED_JWT]` |
+| Contexts → `device_check` | `email` | `[REDACTED_EMAIL]` |
+| Contexts → `device_check` | `password` | `[REDACTED]` |
+| Contexts → `device_check` | `statement` | `[REDACTED]` |
+| Contexts → `device_check` | `note` | `Bearer [REDACTED_JWT]` |
+| Contexts → `device_check` | `connectionId` | `seed:dev-postgres`, kept on purpose: a connection id is not a secret |
+
+These must be **absent** from the Dart event:
+
+- Any **User** section with an address in `id`, `username` or `email`; the check signs nobody in, and `sendDefaultPii` is off.
+- Any **IP address** or any city or country on the user; if one shows, 'Prevent Storing of IP Addresses' is still off (see "The user's steps").
+- Any **Request** section: this event carries none, so a `headers`, `cookies` or `data` block under it means something else set one.
+- Any **Additional Data** (`extra`) key whose value is an address, a password, a statement or a token; a navigation transaction may add `route_settings_arguments`, and there `connectionId`, `kind`, `browsePath` and `browsePrefix` are kept on purpose while the rest reads masked.
+
+### 3. The native crash event
+
+| Where in the event | Field | Must read exactly |
+|---|---|---|
+| Exception | type | `RuntimeException` |
+| Exception | value | `LibreDB Sentry device check: native crash for [REDACTED_EMAIL] with Bearer [REDACTED_JWT]` |
+
+The native crash carries no password: a password in free text has no shape a scrubber can find, so `SentryDeviceCheck.kt` does not write one, and the `password` key is proven on the Dart side only.
+
+### 4. What a failure looks like
+
+- A cleartext hit from table 1 — the scrubber did not run, or it stopped covering that field.
+- A field in table 2 or 3 holding the value instead of the mask, in one event but not the other — the Dart and the Kotlin copy of the policy have drifted (`test/architecture/sentry_native_scrub_patterns_test.dart` guards the patterns, not the fields).
+- No `[REDACTED` anywhere in the event — the event is not the check's: confirm the breadcrumb message is `sentry_device_check` before reading anything else.
+- Only one of the two events in the project — the Dart event comes from the first start, the native crash only after the next one (step 4).
+- The issue shows a release the Sentry project has no symbols for, so the stack trace is obfuscated: that is a release-pipeline matter ([release.md](release.md)), not a scrubbing failure; the fields above are still readable.
 
 ## The user's steps
 
