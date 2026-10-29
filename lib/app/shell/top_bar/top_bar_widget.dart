@@ -73,6 +73,12 @@ class TopBarWidget extends StatelessWidget {
         // Stacks on the open tab, so the back arrow returns to it; on the settings it stays.
         final settings = ApplicationRoutesConstants.settingsFor(target);
         if (router.state.uri.path != settings) router.push(settings);
+      case ProfileSheetAction.accessRequests:
+        final router = GoRouter.of(context);
+        // Stacks on the open tab like the settings, so the back arrow returns to it; on the list it stays.
+        if (router.state.uri.path != ApplicationRoutesConstants.accessRequests) {
+          router.push(ApplicationRoutesConstants.accessRequests);
+        }
       case ProfileSheetAction.switchMode:
         await _switchMode(context);
       case ProfileSheetAction.signOut:

@@ -1660,5 +1660,102 @@
   "platform_audit_only_this_user": "Yalnızca bu kullanıcı",
   "@platform_audit_only_this_user": {},
   "platform_audit_only_this_connection": "Yalnızca bu bağlantı",
-  "@platform_audit_only_this_connection": {}
+  "@platform_audit_only_this_connection": {},
+  "access_requests_title": "Taleplerim",
+  "@access_requests_title": {},
+  "access_requests_new_title": "Erişim iste",
+  "@access_requests_new_title": {},
+  "access_requests_profile_tile": "Erişim talepleri",
+  "@access_requests_profile_tile": {},
+  "access_requests_empty_action": "Erişim iste",
+  "@access_requests_empty_action": {},
+  "access_requests_empty_title": "Henüz talep yok",
+  "@access_requests_empty_title": {},
+  "access_requests_empty_description": "Bir bağlantı için erişim isteyin ve yanıtı burada izleyin.",
+  "@access_requests_empty_description": {},
+  "access_requests_load_failed": "Talepleriniz yüklenemedi",
+  "@access_requests_load_failed": {},
+  "access_requests_status_pending": "Beklemede",
+  "@access_requests_status_pending": {},
+  "access_requests_status_approved": "Onaylandı",
+  "@access_requests_status_approved": {},
+  "access_requests_status_refused": "Reddedildi",
+  "@access_requests_status_refused": {},
+  "access_requests_status_withdrawn": "Geri çekildi",
+  "@access_requests_status_withdrawn": {},
+  "access_requests_level_read": "Okuma",
+  "@access_requests_level_read": {},
+  "access_requests_level_write": "Yazma",
+  "@access_requests_level_write": {},
+  "access_requests_level_read_in_sentence": "okuma",
+  "@access_requests_level_read_in_sentence": {},
+  "access_requests_level_write_in_sentence": "yazma",
+  "@access_requests_level_write_in_sentence": {},
+  "access_requests_sent_at": "{date} tarihinde gönderildi",
+  "@access_requests_sent_at": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_refused_reason": "Yöneticinin gerekçesi: {reason}",
+  "@access_requests_refused_reason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_refused_no_reason": "Yönetici gerekçe belirtmedi.",
+  "@access_requests_refused_no_reason": {},
+  "access_requests_approved_note": "Bağlantı, listeyi yenilediğinizde bağlantı listenizde görünür. Bu biraz sürebilir.",
+  "@access_requests_approved_note": {},
+  "access_requests_withdraw": "Geri çek",
+  "@access_requests_withdraw": {},
+  "access_requests_withdraw_title": "Talebi geri çek",
+  "@access_requests_withdraw_title": {},
+  "access_requests_withdraw_message": "{connection} bağlantısı için {level} erişim talebiniz geri çekilecek. Daha sonra yeniden isteyebilirsiniz.",
+  "@access_requests_withdraw_message": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_withdrawn_snackbar": "Talep geri çekildi.",
+  "@access_requests_withdrawn_snackbar": {},
+  "access_requests_sent_snackbar": "Talep gönderildi.",
+  "@access_requests_sent_snackbar": {},
+  "access_requests_form_connection": "Bağlantı",
+  "@access_requests_form_connection": {},
+  "access_requests_form_no_connections": "Şu anda erişim isteyebileceğiniz bir bağlantı yok.",
+  "@access_requests_form_no_connections": {},
+  "access_requests_form_load_failed": "Bağlantılar yüklenemedi",
+  "@access_requests_form_load_failed": {},
+  "access_requests_form_connection_pending": "Zaten bekleyen bir talebiniz var",
+  "@access_requests_form_connection_pending": {},
+  "access_requests_form_connection_granted": "Zaten erişiminiz var",
+  "@access_requests_form_connection_granted": {},
+  "access_requests_form_level": "Erişim düzeyi",
+  "@access_requests_form_level": {},
+  "access_requests_form_level_write_unavailable": "Bu bağlantının yazma kimlik bilgisi yok, bu yüzden yazma erişimi istenemez.",
+  "@access_requests_form_level_write_unavailable": {},
+  "access_requests_form_level_read_held": "Bu bağlantıya zaten okuma erişiminiz var.",
+  "@access_requests_form_level_read_held": {},
+  "access_requests_form_reason": "Gerekçe",
+  "@access_requests_form_reason": {},
+  "access_requests_form_reason_hint": "Bu erişime neden ihtiyacınız var?",
+  "@access_requests_form_reason_hint": {},
+  "access_requests_form_send": "Talebi gönder",
+  "@access_requests_form_send": {},
+  "access_requests_form_connection_required": "Bir bağlantı seçin.",
+  "@access_requests_form_connection_required": {},
+  "access_requests_form_level_required": "Bir erişim düzeyi seçin.",
+  "@access_requests_form_level_required": {},
+  "access_requests_form_reason_invalid": "1 ile 500 karakter arasında bir gerekçe yazın.",
+  "@access_requests_form_reason_invalid": {}
 }

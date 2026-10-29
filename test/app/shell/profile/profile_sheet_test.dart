@@ -430,4 +430,81 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('ProfileSheet - access requests', () {
+    for (final (platform, governance) in [(true, true), (true, false), (false, true), (false, false)]) {
+      final shown = platform && governance;
+      testWidgets('a Studio session ${shown ? 'offers' : 'offers no'} Access requests '
+          'with ${platform ? 'a' : 'no'} Platform target and governance ${governance ? 'on' : 'off'}', (tester) async {
+        await pumpSheet(
+          tester,
+          identityState: const StudioIdentityLoaded(user),
+          policyState: ConnectionPolicyLoaded(governance ? governed : ungoverned),
+          appConfig: platform ? const AppConfig.test() : const AppConfig.local(),
+        );
+
+        expect(inSheet(find.byKey(profileAccessRequestsKey)), shown ? findsOneWidget : findsNothing);
+        expect(inSheet(find.text('Access requests')), shown ? findsOneWidget : findsNothing);
+      });
+    }
+
+    testWidgets('a policy that is not loaded offers no Access requests', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(user),
+        policyState: const ConnectionPolicyLoading(),
+      );
+
+      expect(inSheet(find.byKey(profileAccessRequestsKey)), findsNothing);
+    });
+
+    testWidgets('a Platform session never offers Access requests', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityInitial(),
+        target: SessionTarget.platform,
+        policyState: const ConnectionPolicyLoaded(governed),
+      );
+
+      expect(inSheet(find.byKey(profileAccessRequestsKey)), findsNothing);
+    });
+
+    testWidgets('the tile sits directly under the mode switch', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(user),
+        policyState: const ConnectionPolicyLoaded(governed),
+      );
+
+      final switchTop = tester.getTopLeft(inSheet(find.byKey(profileSwitchModeKey))).dy;
+      final tileTop = tester.getTopLeft(inSheet(find.byKey(profileAccessRequestsKey))).dy;
+      final settingsTop = tester.getTopLeft(inSheet(find.byKey(profileSettingsKey))).dy;
+      expect(switchTop, lessThan(tileTop));
+      expect(tileTop, lessThan(settingsTop));
+    });
+
+    testWidgets('tapping it answers ProfileSheetAction.accessRequests', (tester) async {
+      final answers = await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(user),
+        policyState: const ConnectionPolicyLoaded(governed),
+      );
+
+      await tester.tap(inSheet(find.byKey(profileAccessRequestsKey)));
+      await tester.pumpAndSettle();
+
+      expect(answers, [ProfileSheetAction.accessRequests]);
+    });
+
+    testWidgets('reads Turkish', (tester) async {
+      await pumpSheet(
+        tester,
+        identityState: const StudioIdentityLoaded(user),
+        policyState: const ConnectionPolicyLoaded(governed),
+        language: 'tr',
+      );
+
+      expect(inSheet(find.text('Erişim talepleri')), findsOneWidget);
+    });
+  });
 }

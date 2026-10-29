@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:libredb_mobile/app/router/access_requests_availability.dart';
 import 'package:libredb_mobile/app/router/app_root_page.dart';
 import 'package:libredb_mobile/app/router/app_router_refresh_notifier.dart';
 import 'package:libredb_mobile/app/router/not_found_page.dart';
@@ -9,6 +10,7 @@ import 'package:libredb_mobile/app/shell/app_shell.dart';
 import 'package:libredb_mobile/app/shell/platform_shell.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/features/access_requests/navigation/access_requests_routes.dart';
 import 'package:libredb_mobile/features/app_lock/presentation/widgets/app_lock_settings_section.dart';
 import 'package:libredb_mobile/features/auth/navigation/auth_routes.dart';
 import 'package:libredb_mobile/features/auth/presentation/pages/login_page.dart';
@@ -84,6 +86,7 @@ class AppRouterFactory {
           ),
           routes: [
             ...ConnectionsFeatureRoutes.routes,
+            ...AccessRequestsFeatureRoutes.routes(isAvailable: accessRequestsAvailable),
             ...ObjectBrowserFeatureRoutes.routes,
             ...SqlEditorFeatureRoutes.routes,
             ...SettingsFeatureRoutes.routes(

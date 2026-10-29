@@ -18,7 +18,8 @@ import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 /// It wraps an [ApiClient] built with Platform's target: the base URL and pins of [AppConfig.platform] and
 /// [PlatformErrorEnvelope], with Platform's session rules ([isPlatformSessionExpired], [isPlatformSessionRefused]) and
 /// account refusals ([platformAccountRefusal]). Its answers are never cached (every `/v1/` path and the liveness probe
-/// `/health/live` are networkOnly), a coded answer is never retried, and only a GET is ever sent twice.
+/// `/health/live` are networkOnly), a coded answer is never retried, and only a GET is ever sent twice: a POST, a PUT,
+/// a PATCH and a DELETE are each sent once, whatever the failure.
 ///
 /// In a build whose [AppConfig.platform] is [PlatformNotConfigured], every call throws
 /// [PlatformNotConfiguredException] and no request is sent.
@@ -83,6 +84,18 @@ final class PlatformApiClient {
     timeout: timeout,
     bypassResilience: bypassResilience,
   );
+
+  /// `POST` [data] to [path], with [pathParams] appended as one more path segment; never sent twice, since it is
+  /// forwarded without [ApiClient.post]'s `idempotent` opt-in, so `ResilienceInterceptor` never repeats it.
+  ///
+  /// [sensitiveKeys] names the body keys the verbose HTTP log and the dev console mask, such as the `reason` of an
+  /// access request.
+  Future<Response<String>> post<T>(
+    String path,
+    T data, {
+    String? pathParams,
+    Set<String> sensitiveKeys = const {},
+  }) async => _configured.post(path, data, pathParams: pathParams, sensitiveKeys: sensitiveKeys);
 
   /// `PUT` [data] to [path]; never sent twice.
   Future<Response<String>> put<T>(String path, T data, {String? pathParams}) async =>
