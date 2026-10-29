@@ -17,11 +17,17 @@ import 'package:flutter_test/flutter_test.dart';
 /// U+FEFF and without U+0085, ICU the other way round, and OpenJDK as ASCII only. No pattern takes a case-insensitive
 /// flag, which Kotlin turns into Unicode case folding.
 ///
-/// The logic is held equal by `test/fixtures/native_scrub_cases.json`, which the Dart scrubber test and
-/// `NativeSentryScrubberTest.kt` both run.
+/// The Swift copy under `ios/Runner` is guarded the same way: a Swift raw string (`#"..."#`) also reads no escape,
+/// and NSRegularExpression is ICU too, so the same patterns must hold there byte for byte and without a flag.
+///
+/// The logic is held equal by `test/fixtures/native_scrub_cases.json`, which the Dart scrubber test,
+/// `NativeSentryScrubberTest.kt` and `NativeSentryScrubberTests.swift` all run.
 void main() {
   const patternsPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeScrubPatterns.kt';
   const scrubberPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentryScrubber.kt';
+  const swiftPatternsPath = 'ios/Runner/NativeScrubPatterns.swift';
+  const swiftScrubberPath = 'ios/Runner/NativeSentryScrubber.swift';
+  const iosGatePath = 'ios/native_sentry_defines.sh';
 
   final dartPatterns = {
     'JWT_PATTERN': jwtPattern,
@@ -38,6 +44,65 @@ void main() {
     'NAVIGATION_TYPES': sentryNavigationTypes,
   };
   const dartMasks = {'SECRET_MASK': secretMask, 'JWT_MASK': jwtMask, 'EMAIL_MASK': emailMask};
+
+  // The same policy under the names the Swift copy gives it.
+  final swiftPatterns = {
+    'jwtPattern': jwtPattern,
+    'emailPattern': emailPattern,
+    'jsonMemberPattern': jsonMemberPattern,
+    'namedValuePattern': namedValuePattern,
+    'bearerPattern': bearerPattern,
+  };
+  final swiftSets = {
+    'sensitiveHeaderNames': sensitiveHeaderNames,
+    'sensitiveHeaderNameSubstrings': sensitiveHeaderNameSubstrings,
+    'sensitiveBodyKeySubstrings': sensitiveBodyKeySubstrings,
+    'sensitiveExactKeys': sensitiveExactKeys,
+    'navigationTypes': sentryNavigationTypes,
+  };
+  const swiftMasks = {'secretMask': secretMask, 'jwtMask': jwtMask, 'emailMask': emailMask};
+
+  /// Every difference between the constants of [swiftSource] and the Dart policy.
+  List<String> swiftMismatches(String swiftSource) {
+    final raw = {
+      for (final match in RegExp(r'^\s*static let ([A-Za-z]+) = #"(.*)"#\s*$', multiLine: true).allMatches(swiftSource))
+        match[1]!: match[2]!,
+    };
+    final plain = {
+      for (final match in RegExp(
+        r'^\s*static let ([A-Za-z]+) = "([^"]*)"\s*$',
+        multiLine: true,
+      ).allMatches(swiftSource))
+        match[1]!: match[2]!,
+    };
+    final problems = <String>[];
+    final expectedNames = {...swiftPatterns.keys, ...swiftSets.keys, ...swiftMasks.keys};
+    final extra = {...raw.keys, ...plain.keys}.difference(expectedNames);
+    if (extra.isNotEmpty) problems.add('constants without a Dart counterpart: $extra');
+    for (final MapEntry(key: name, value: pattern) in swiftPatterns.entries) {
+      final swift = raw[name];
+      if (swift == null) {
+        problems.add('$name is missing or not a raw string');
+      } else if (swift != pattern.pattern) {
+        problems.add('$name differs:\n  Swift: $swift\n  Dart:  ${pattern.pattern}');
+      }
+      if (swift != null && swift.contains(r'\#(')) {
+        problems.add('$name contains a \\#(, which Swift reads as an interpolation');
+      }
+    }
+    for (final MapEntry(key: name, value: values) in swiftSets.entries) {
+      final swift = plain[name];
+      if (swift == null) {
+        problems.add('$name is missing');
+      } else if (!_sameSet(swift.split(','), values)) {
+        problems.add('$name differs: Swift {$swift}, Dart $values');
+      }
+    }
+    for (final MapEntry(key: name, value: mask) in swiftMasks.entries) {
+      if (plain[name] != mask) problems.add('$name differs: Swift ${plain[name]}, Dart $mask');
+    }
+    return problems;
+  }
 
   /// Every difference between the constants of [kotlinSource] and the Dart policy.
   List<String> mismatches(String kotlinSource) {
@@ -110,6 +175,81 @@ void main() {
       expect(scrubber, contains(compiled), reason: '$scrubberPath must compile $name as $compiled');
     }
     expect(scrubber, isNot(contains('RegexOption')), reason: '$scrubberPath must compile the patterns without options');
+  });
+
+  test('the Swift patterns, sets and masks equal the Dart ones', () {
+    final source = File(swiftPatternsPath).readAsStringSync();
+
+    final problems = swiftMismatches(source);
+
+    expect(problems, isEmpty, reason: '$swiftPatternsPath no longer matches the Dart policy:\n${problems.join('\n')}');
+  });
+
+  // Proves on every run that the comparison above would catch a changed Swift pattern string.
+  test('a changed Swift pattern string is reported', () {
+    final source = File(swiftPatternsPath).readAsStringSync();
+    final changed = source.replaceFirst('[A-Za-z0-9_-]{4,}', '[A-Za-z0-9_-]{5,}');
+
+    expect(changed, isNot(source));
+    expect(swiftMismatches(changed), [contains('jwtPattern differs')]);
+  });
+
+  test('the Swift scrubber compiles the patterns with the flags of the Dart ones', () {
+    final scrubber = File(swiftScrubberPath).readAsStringSync();
+
+    for (final name in swiftPatterns.keys) {
+      expect(
+        scrubber,
+        contains('$name: String = NativeScrubPatterns.$name'),
+        reason: '$swiftScrubberPath must take $name from NativeScrubPatterns',
+      );
+      expect(
+        scrubber,
+        contains('NSRegularExpression(pattern: $name)'),
+        reason: '$swiftScrubberPath must compile $name as NSRegularExpression(pattern: $name)',
+      );
+    }
+    // NSRegularExpression.Options.caseInsensitive folds Unicode as Kotlin's IGNORE_CASE does: a pattern spells out
+    // both cases instead, and none of them is compiled with an option.
+    expect(
+      scrubber,
+      isNot(contains('options:')),
+      reason: '$swiftScrubberPath must compile the patterns without options',
+    );
+  });
+
+  // The iOS host starts sentry-cocoa only when the Flutter target is this file, and on iOS every Dart event leaves
+  // through the native SDK, so the gate must name the entry point that selects the prod environment, as the Gradle
+  // gate does. nativeSdkReady fails loudly at start when the two still disagree.
+  test('the gate of the iOS native SDK names the only entry point that selects the prod environment', () {
+    final gate = RegExp(r'\*/(\w+\.dart)').allMatches(File(iosGatePath).readAsStringSync()).map((m) => m[1]).toSet();
+
+    expect(gate, [_prodEntryPoints().single]);
+  });
+
+  test('the iOS native SDK gets the DSN only through its gate', () {
+    final script = File(iosGatePath).readAsStringSync();
+
+    final problems = _iosGateProblems(script);
+
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
+  test('an ungated DSN in the iOS script is reported', () {
+    final script = File(iosGatePath).readAsStringSync();
+    final ungated = script.replaceFirst(RegExp(r'^.*\*/\w+\.dart.*\n', multiLine: true), '');
+
+    expect(ungated, isNot(script));
+    expect(_iosGateProblems(ungated), isNotEmpty);
+  });
+
+  test('AppDelegate answers on the channel that nativeSdkReady asks', () {
+    final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+    final nativeSentry = File('ios/Runner/NativeSentry.swift').readAsStringSync();
+
+    expect(nativeSentry, contains('static let channelName = "$nativeSentryChannelName"'));
+    expect(appDelegate, contains('name: NativeSentry.channelName'));
+    expect(appDelegate, contains('result(SentrySDK.isEnabled)'));
   });
 
   test('the shared patterns use no class that ICU reads differently from Dart', () {
@@ -216,6 +356,31 @@ List<String> _dsnGateProblems(String gradle) {
   }
   final reads = 'dartDefines["SENTRY_DSN"]'.allMatches(gradle).length;
   if (reads != 1) problems.add('the SENTRY_DSN define must be read once, in the gate, found $reads reads');
+  return problems;
+}
+
+/// The entry points under `lib/main` that select the prod environment, in which `AppConfig.sentryDsn` starts the
+/// Dart SDK; both native gates must name the one there is.
+List<String> _prodEntryPoints() =>
+    Directory('lib/main')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.readAsStringSync().contains('Environment.prod'))
+        .map((file) => file.uri.pathSegments.last)
+        .toList();
+
+/// What is wrong with how [script] passes SENTRY_DSN to the iOS native SDK: every write of a Sentry key into the
+/// built Info.plist must stand after the gate that leaves a build of another entry point, and the define must be
+/// read nowhere else.
+List<String> _iosGateProblems(String script) {
+  final problems = <String>[];
+  final gate = script.indexOf(RegExp(r'\*/\w+\.dart'));
+  if (gate < 0) return ['the script must gate on the file name of FLUTTER_TARGET'];
+  for (final match in RegExp(r'PlistBuddy -c "Add :').allMatches(script)) {
+    if (match.start < gate) problems.add('a Sentry key is written before the gate, at ${match.start}');
+  }
+  final reads = RegExp(r'DART_DEFINES').allMatches(script).length;
+  if (reads != 1) problems.add('the DART_DEFINES of the build must be read once, after the gate, found $reads reads');
   return problems;
 }
 

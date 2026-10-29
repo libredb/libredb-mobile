@@ -119,32 +119,40 @@ Review it whenever the app starts handling a new kind of personal data.
 
 ## The native SDKs
 
-The native Sentry SDKs record breadcrumbs and send events of their own (activity and app lifecycle, system events, Java and Kotlin exceptions, ANR events, native crash reports), and none of them pass through the Dart hooks.
+The native Sentry SDKs record breadcrumbs and send events of their own (app and screen lifecycle, system events, Java, Kotlin and Objective-C exceptions, ANR events and app hangs, native crash reports), and none of them pass through the Dart hooks.
 
-On Android the host app starts sentry-android itself (`MainApplication.kt` and `NativeSentry.kt` under `android/app/src/main/kotlin`) with `beforeSend` and `beforeBreadcrumb` hooks that mask them with a Kotlin copy of the same rules (`NativeSentryScrubber.kt`), and the Dart side turns `autoInitializeNativeSdk` off on Android only.
-`test/architecture/sentry_native_scrub_patterns_test.dart` fails when the Kotlin patterns drift from the Dart ones, and the fixtures in `test/fixtures/` run both in the Dart tests and in the Android JVM unit tests:
+On both platforms the host app starts the native SDK itself, with `beforeSend` and `beforeBreadcrumb` hooks that mask what it records with a copy of the same rules, and the Dart side turns `autoInitializeNativeSdk` off there (`hostStartsNativeSdk`):
+
+- Android: `MainApplication.kt` and `NativeSentry.kt` under `android/app/src/main/kotlin`, with the Kotlin copy `NativeSentryScrubber.kt` over `NativeScrubPatterns.kt`.
+- iOS: `AppDelegate.swift` and `NativeSentry.swift` under `ios/Runner`, with the Swift copy `NativeSentryScrubber.swift` over `NativeScrubPatterns.swift`.
+
+`test/architecture/sentry_native_scrub_patterns_test.dart` fails when the Kotlin or the Swift patterns drift from the Dart ones, and the fixtures in `test/fixtures/` run in the Dart tests, in the Android JVM unit tests and in the iOS XCTest cases:
 
 ```shell
 cd android && ./gradlew :app:testDebugUnitTest -Ptarget=lib/main/main_prod.dart
+
+# macOS with Xcode only; the first command writes ios/Flutter/Generated.xcconfig, which the project needs
+fvm flutter build ios --config-only --no-codesign --target lib/main/main_prod.dart
+cd ios && xcodebuild test -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 Gradle needs JDK 17 there, and the Gradle wrapper is not committed: any Flutter Android build writes it, for example `fvm flutter build apk --config-only --target lib/main/main_prod.dart`.
-The lifecycle breadcrumbs of sentry-android keep their `state` (such as `resumed` or `foreground`); a copy that Sentry merges into a Dart event still shows it masked.
+The lifecycle breadcrumbs of the native SDKs keep their `state` (such as `resumed` on Android, or `foreground` on both); a copy that Sentry merges into a Dart event still shows it masked.
 That `state: [REDACTED]` is a harmless over-match: the Dart scrubber masks every `state` key as an OpenID Connect value, and a lifecycle state holds nothing personal.
+sentry-cocoa writes a `state` only under `app.lifecycle`, so a `ui.lifecycle` breadcrumb that carries one is masked on iOS.
 
 | Platform | Dart events and breadcrumbs | Native breadcrumbs | Native events and crash reports |
 | --- | --- | --- | --- |
 | Android | Scrubbed | Scrubbed | Scrubbed |
-| iOS | Scrubbed | Not scrubbed | Not scrubbed |
+| iOS | Scrubbed | Scrubbed | Scrubbed |
 
-Native scrubbing is not done on iOS yet: sentry_flutter starts sentry-cocoa there, and what it records itself leaves the device unmasked.
-Until a native scrubber covers iOS (roadmap M6), do not give an iOS release build a Sentry DSN.
 Sentry's server-side data scrubbing (Advanced Data Scrubbing in the project settings) is a useful complement on every platform, but it runs after the data has left the device, so it does not replace the hooks.
 
-On Android, Gradle passes the DSN to the native SDK only for a `lib/main/main_prod.dart` build (`android/app/build.gradle.kts`), the only entry point that selects the prod environment in which the Dart side starts Sentry.
-Renaming that entry point means changing the check there too.
-When the two disagree, or the host app does not answer the check, the app throws a `StateError` at start in a debug or profile build, and a release build logs the error and runs exactly as without a DSN: no Sentry SDK and the log-only analytics.
-A native option set in `configureSentryOptions` does not reach the Android SDK, so set it in `NativeSentry.kt` as well; Session Replay would need its recorder wired there before it can be turned on.
+The DSN reaches the native SDK only in a `lib/main/main_prod.dart` build, the only entry point that selects the prod environment in which the Dart side starts Sentry: Gradle writes `BuildConfig.SENTRY_DSN` on Android (`android/app/build.gradle.kts`), and on iOS the last build phase of the Runner target runs `ios/native_sentry_defines.sh`, which decodes the dart-defines of the build and writes `SENTRY_DSN`, `SENTRY_ENVIRONMENT` and `SENTRY_DIST` into the built `Info.plist`, where `NativeSentry.start` reads them.
+Renaming that entry point means changing both checks too.
+When the two gates disagree, or the host app does not answer the check, the app throws a `StateError` at start in a debug or profile build, and a release build logs the error and runs exactly as without a DSN: no Sentry SDK and the log-only analytics.
+A native option set in `configureSentryOptions` does not reach the native SDKs, so set it in `NativeSentry.kt` and in `NativeSentry.swift` as well; Session Replay would need its recorder wired there before it can be turned on.
 
 ## The device check
 
@@ -238,6 +246,8 @@ The native crash carries no password: a password in free text has no shape a scr
 - No `[REDACTED` anywhere in the event — the event is not the check's: confirm the breadcrumb message is `sentry_device_check` before reading anything else.
 - Only one of the two events in the project — the Dart event comes from the first start, the native crash only after the next one (step 4).
 - The issue shows a release the Sentry project has no symbols for, so the stack trace is obfuscated: that is a release-pipeline matter ([release.md](release.md)), not a scrubbing failure; the fields above are still readable.
+
+On iOS the same steps 1, 2, 4 and 5 run from `fvm flutter build ipa --release --target lib/main/main_prod.dart` with the same defines; the native crash of step 3 has no iOS half yet, so what it confirms there is the Dart event and the breadcrumbs sentry-cocoa recorded around it.
 
 ## The user's steps
 
