@@ -248,6 +248,34 @@ void main() {
     );
   });
 
+  /// The measure the approved prototype gives the body, which is narrower than the one it gives the headline.
+  ///
+  /// `ob.html` caps exactly one of the two: `.body{margin-top:10px;font-size:13.5px;line-height:1.5;
+  /// color:var(--quiet);max-width:302px;min-height:62px}`, against an `h2` that runs the whole 318 the content
+  /// column of a 390 frame is wide. Measured on the emulator before this was added, the Flutter body ran the full
+  /// column — 320.7 of it — so a line of body text was longer here than in the design and every line of all six
+  /// screens broke in a different place.
+  ///
+  /// **How this avoids the font trap.** Nothing here is a text height. The column is read off the progress rule,
+  /// whose segments are `Expanded` and so fill the content column whatever is written anywhere; the body's own box
+  /// is given its width rather than taking it from its longest line. Ahem's square ems move neither, so the number
+  /// this test reads on the machine is the number a phone draws.
+  testWidgets('the body is capped a spacing step short of the column, the way the prototype caps it', (tester) async {
+    await pumpFrame(tester);
+
+    final column = tester.getRect(find.byKey(onboardingProgressKey)).width;
+    final measure = tester.getRect(find.byKey(onboardingBodyKey)).width;
+
+    expect(column, closeTo(318, 0.5), reason: 'the content column of a 390 frame, which the prototype runs h2 across');
+    expect(
+      measure,
+      closeTo(column - AppSpacing.lg, 0.5),
+      reason:
+          'the body is ${measure.toStringAsFixed(1)} wide of the ${column.toStringAsFixed(1)} the column has; the '
+          'prototype caps it at 302, which is this column less one spacing step',
+    );
+  });
+
   group('the words and the controls do not move between screens', () {
     for (final (language, locale) in [('English', Locale('en')), ('Turkish', Locale('tr'))]) {
       testWidgets('the words and the foot land at the same y on all six $language screens', (tester) async {
