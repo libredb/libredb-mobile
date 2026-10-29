@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/steps/onboarding_steps.dart';
 import 'package:libredb_mobile/shared/design_system/components/app_page_transition.dart';
 
 class OnboardingFeatureRoutes {
@@ -15,7 +16,7 @@ class OnboardingFeatureRoutes {
       path: ApplicationRoutesConstants.welcome,
       pageBuilder: (context, state) => appPlatformPage(
         state: state,
-        child: OnboardingPage(returnUrl: state.uri.queryParameters['returnUrl']),
+        child: OnboardingPage(returnUrl: state.uri.queryParameters['returnUrl'], heroBuilder: onboardingStepHero),
       ),
     ),
   ];

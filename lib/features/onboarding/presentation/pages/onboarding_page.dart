@@ -1,196 +1,703 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:libredb_mobile/core/testing/app_key_constants.dart';
 import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
-import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
 import 'package:libredb_mobile/features/onboarding/navigation/onboarding_destination.dart';
-import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_panel.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/shared/adoption/adoption_figures.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
-/// The introduction, shown once before the first sign-in: four panels that say what the three parts of LibreDB are
-/// and where the product is listed.
+/// Builds the animated hero of one step of the introduction, by index.
 ///
-/// **The panel is local state, not a cubit.** `OnboardingState` says so itself — routing every swipe through a
-/// cubit would turn a four-panel flow into four variants for nothing. What the cubit owns is whether the
-/// introduction has been shown at all, which the router depends on.
-///
-/// **The figures have no loading state and no error state**, because they cannot fail: `IAdoptionFiguresSource`
-/// promises [AdoptionFigures.fallback] instead of throwing, and the fallback is the `initialData` here, so the
-/// panels are drawn with numbers from the first frame and the asset only ever replaces them with fresher ones.
-/// That is also why there is no BLoC for them: there is no event, no second state and nothing to retry.
-///
-/// Both controls mark the introduction seen and go to the login page; [returnUrl] is the location the first run was
-/// heading for, which the redirect handed over and which the login page re-validates before honoring.
-class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key, this.returnUrl});
+/// Each step is its own `StatefulWidget` under `presentation/steps/`, plays itself as soon as it is shown, and then
+/// stops. A step draws **only** its hero: the caption, the headline, the body, the counter, the progress and the
+/// controls are the chassis's, so that all six read as one screen with one thing changing.
+typedef OnboardingHeroBuilder = Widget Function(BuildContext context, int step);
 
-  /// Where the first run was going before the introduction took its place, or null when it was going nowhere special.
+/// How many screens the introduction has. The counter's denominator, the number of segments in the progress rule
+/// and the step the primary control leaves on are all this one number.
+const int onboardingStepCount = 6;
+
+/// `h2{letter-spacing:-.028em}`: the prototype's tracking, which is not display-m's -.024.
+const double _headlineTrackingEm = -0.028;
+
+/// The least the headline block is given, in the prototype's own pixels: `h2{min-height:98px}`.
+///
+/// It is the three lines of `30px/1.08` type the prototype leaves a headline it authors as two, so there is air under
+/// it. It is scaled by the text size in force rather than held as a bare pixel count, so at an accessibility size it
+/// grows with the words instead of cutting into them.
+const double _headlineFloor = 98;
+
+/// The least the body block is given: `.body{min-height:62px}`.
+///
+/// **The box is its floor, and a body that needs more grows it — which is what the prototype does.** Of its twelve
+/// bodies one is longer than the floor, English screen 5, which needs a fourth line: the body grows and the hero
+/// yields the room (hero 474, not 493, and the headline 19 higher, in 2 of the 24 measurements). This chassis used to
+/// reserve the tallest of the six so the words never moved; measured against the prototype that put the headline
+/// 19 above its place on all six English screens to spare one, so the prototype's rule is carried over instead.
+const double _bodyFloor = 62;
+
+/// The body's own type, which is not the design system's `bodyMedium` (14/1.55): `.body{font-size:13.5px;
+/// line-height:1.5}`. At 14 the first screen's Turkish body takes three lines where the prototype takes two.
+const double _bodySize = 13.5;
+const double _bodyLine = 1.5;
+
+/// Skip's own type: `.skip{font-size:14px;font-weight:600}`.
+const double _skipSize = 14;
+
+/// The sign-in control's own type and inset: `.next{font-size:15px;font-weight:600;padding:13px 26px}`.
+const double _doneSize = 15;
+const double _doneInsetX = 26;
+
+/// The gap between the headline block and the body: `.body{margin-top:10px}`. Not on the spacing scale, whose nearest
+/// steps are 8 and 12.
+const double _bodyGap = 10;
+
+/// The gap between the caption and the hero: `.cap{margin-bottom:9px}`.
+const double _captionGap = 9;
+
+/// How far the caption sits below the counter, top edge to top edge: the counter is at 40 and the caption at 52 in the
+/// prototype, so the two stack instead of sharing a row.
+const double _captionBelowCounter = AppSpacing.md;
+
+/// The line box of the mono eyebrows, counter and caption alike: 14 in headless Chrome for 11px mono, which is what
+/// puts the counter's bottom 2 below the caption's top.
+const double _eyebrowSize = 11;
+const double _eyebrowLine = 14 / _eyebrowSize;
+
+/// How fast a horizontal drag has to be, in logical pixels a second, before it turns the deck.
+const double _turnVelocity = 200;
+
+/// How far an arriving screen travels in, in logical pixels.
+///
+/// Far enough to read as the deck being turned and short enough that the words are legible the whole way; the
+/// hero, the headline and the body all travel it together, so the screen moves as one thing.
+const double _slideTravel = AppSpacing.xxxl;
+
+/// The least the hero is ever given, in logical pixels.
+///
+/// The hero is the one part of the page that yields. At the ordinary text size it takes the whole slack the words
+/// leave — 493pt on a 390x844 phone, which is what the approved prototype measures on all six of its screens — and
+/// at an accessibility text size the words grow into it until only this is left, at which point the page starts to
+/// scroll and both controls stay reachable. The prototype has no text-scaling story to copy, so this number is
+/// mine; it is set where a hero still reads as a picture rather than a sliver.
+const double _heroFloor = 180;
+
+/// The connection the second and third screens are set on. A connection name reads the same in every language, so
+/// it is a value the captions take rather than a string either language owns.
+const String _demoConnection = 'orders-prod';
+
+/// The two eyebrows' tracking, in the system's own unit — a fraction of the size — as the prototype sets each:
+/// `.cap{letter-spacing:.14em}` and `.counter{letter-spacing:.16em}`, not the .1em of the system's overline.
+///
+/// `AppTypography` deliberately leaves `labelSmall` untracked: its own note says the system ties its tracking to the
+/// mono eyebrow treatment and that this app's 33 `labelSmall` call sites are ordinary small labels rather than
+/// eyebrows. The caption and the step counter are the two that *are* eyebrows, so they take it here instead of
+/// widening every other label in the app.
+const double _captionTrackingEm = 0.14;
+const double _counterTrackingEm = 0.16;
+
+/// How wide the counter's numbers are drawn: `01 / 06`, not `1 / 6`. Padding is a drawing decision, so it is made
+/// here rather than in the ARB, whose `ob_step` carries the shape of the line and whose placeholders are numbers.
+const int _counterDigits = 2;
+
+/// The introduction, shown once before the first sign-in: six screens that say what the app does, what it never
+/// holds, and who decides what you may reach.
+///
+/// **This file is the chassis, not the screens.** It owns the frame the prototype agreed — the step counter in the
+/// corner, the caption, the headline with its one accented word, the body, the six-segment progress rule and the
+/// two controls — and it owns the step the flow is on. The animated hero of each step comes from [heroBuilder].
+///
+/// Three things the audits of the prototype settled, and each one is a layout decision rather than a preference:
+///
+/// * **The headline and body boxes are fixed, so nothing moves between screens.** They are not fixed to a pixel
+///   count, which no translation survives: each box reserves the height of the *tallest of the six strings* in the
+///   language and at the text size actually in force, measured against the width actually available. Nothing is
+///   ever cut off to make it — if a string outgrows the reserve, the reserve is simply taller.
+///
+///   The foot is held down by the hero above it, which takes all the slack, so the controls would sit at the
+///   bottom even without the reserve. What the reserve buys is the **words'** own y: without it the headline of a
+///   two-line screen starts a line and a half lower than the headline of a three-line one, and the eye is dragged
+///   up and down the six screens. `onboarding_chassis_test.dart` measures both and says which of the two bites.
+/// * **One ground.** Every colour comes from `Theme.of(context).colorScheme`, so the page is wholly light or wholly
+///   dark with the rest of the app. There is no inverted panel and no second surface.
+/// * **The last control keeps its promise.** Skip and the primary control on the sixth screen both mark the
+///   introduction seen and go to the sign-in; neither loops back to the first screen.
+///
+/// **The step is local state, not a cubit.** What the cubit owns is whether the introduction has been shown at all,
+/// which the router depends on; routing six taps of one control through it would buy nothing. [returnUrl] is the
+/// location the first run was heading for, which the redirect handed over and which the login page re-validates.
+///
+/// **The hero must be able to report an intrinsic height.** The frame pins the foot to the bottom and gives the
+/// hero the slack above it, and it does that by measuring the column — so a step whose root is a `LayoutBuilder`
+/// cannot be measured. A `Column`, a `Stack`, a `SizedBox` or a `CustomPaint` with a size all can.
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key, this.returnUrl, this.heroBuilder});
+
+  /// Where the first run was going before the introduction took its place, or null when it was going nowhere
+  /// special.
   final String? returnUrl;
+
+  /// The animated hero of each step. Null draws no hero, which is what the chassis's own tests pump: every claim
+  /// the frame makes holds whatever the six steps paint inside it.
+  final OnboardingHeroBuilder? heroBuilder;
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
-  /// Platform, Studio, this app, and where the product is listed.
-  static const int _panelCount = 4;
+class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProviderStateMixin {
+  /// The entrance of the words of the step now on screen.
+  ///
+  /// The prototype re-renders its whole panel on a step change, so its words arrive with the same rise its hero
+  /// children use. Flutter rebuilds in place, where the same change would read as a flicker, so the words are
+  /// given that rise here: a step change is a page transition, which is what `AppDurations.slow` names, and the
+  /// curve is the product's own `--ease-out` rather than Flutter's.
+  late final AnimationController _controller = AnimationController(vsync: this, duration: AppDurations.slow, value: 1);
+  late final Animation<double> _entrance = CurvedAnimation(parent: _controller, curve: AppDurations.easeOut);
 
-  final PageController _controller = PageController();
-  late final Future<AdoptionFigures> _figures = context.read<IAdoptionFiguresSource>().read();
+  /// The frame scrolls only at a text size where the words outgrow it, and then the offset has to be given back on
+  /// a step change: a reader who scrolled down the fifth screen's body otherwise meets the sixth screen already
+  /// scrolled past its own headline.
+  final ScrollController _scroll = ScrollController();
 
-  int _panel = 0;
+  int _step = 0;
 
   @override
   void dispose() {
     _controller.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  /// Marks the introduction seen and leaves. The cubit emits before it stores, so the redirect has the new answer by
-  /// the time [GoRouter.go] runs even on a device that refuses the write.
+  /// Marks the introduction seen and leaves. The cubit emits before it stores, so the redirect has the new answer
+  /// by the time [GoRouter.go] runs even on a device that refuses the write.
   void _leave() {
     context.read<OnboardingCubit>().markSeen();
     context.go(onboardingDestination(returnUrl: widget.returnUrl));
   }
 
-  /// The primary control: the next panel while there is one, and the way out on the last.
+  /// The primary control: the next screen while there is one, and the way out on the last.
+  ///
+  /// With animations turned off the new screen is not played in — it is already there, finished and usable, on the
+  /// frame the tap produces.
   void _advance() {
-    if (_panel == _panelCount - 1) {
+    if (_step == onboardingStepCount - 1) {
       _leave();
       return;
     }
-    _controller.nextPage(duration: AppDurations.normal, curve: AppDurations.easeOut);
+    _show(_step + 1);
+  }
+
+  /// Shows screen [step]: the words change, the page returns to its top and the entrance plays once.
+  ///
+  /// With animations turned off the new screen is not played in — it is already there, finished and usable, on the
+  /// frame the gesture produces.
+  void _show(int step) {
+    final settled = MediaQuery.disableAnimationsOf(context);
+    final from = step > _step ? 1.0 : -1.0;
+    setState(() {
+      _entranceFrom = from;
+      _step = step;
+    });
+    if (_scroll.hasClients) {
+      settled ? _scroll.jumpTo(0) : _scroll.animateTo(0, duration: AppDurations.slow, curve: AppDurations.easeOut);
+    }
+    if (settled) {
+      _controller.value = 1;
+    } else {
+      _controller.forward(from: 0);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = S.of(context);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final eyebrow = theme.textTheme.labelSmall?.copyWith(
+      fontFamily: AppTypography.mono,
+      color: colors.onSurfaceVariant,
+      height: _eyebrowLine,
+    );
+    final headline = theme.textTheme.displaySmall?.copyWith(
+      color: colors.onSurface,
+      letterSpacing: (theme.textTheme.displaySmall?.fontSize ?? 0) * _headlineTrackingEm,
+    );
+    final body = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.onSurfaceVariant,
+      fontSize: _bodySize,
+      height: _bodyLine,
+      // Material's `bodyMedium` tracks 0.25 and the design system's level keeps it; `.body` has none.
+      letterSpacing: 0,
+    );
+    final words = _words(l10n, _step);
+    final locale = Localizations.localeOf(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: FutureBuilder<AdoptionFigures>(
-                future: _figures,
-                initialData: AdoptionFigures.fallback,
-                builder: (context, snapshot) => PageView(
-                  controller: _controller,
-                  onPageChanged: (panel) => setState(() => _panel = panel),
-                  children: _panels(l10n, snapshot.data ?? AdoptionFigures.fallback),
-                ),
-              ),
-            ),
-            _Dots(count: _panelCount, current: _panel),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // The tap target has a floor, not a fixed height: a height pins the label to the box and a word
-                  // that outgrows it is cut off in half, silently — there is no overflow stripe for text that
-                  // simply does not fit its box. The word on this control is the longest in the flow and it
-                  // changes with the language, so it is given room to grow and keeps the 48 pt minimum.
-                  //
-                  // Growing room means the label can wrap, which is why it is centred. A button label's box is as
-                  // wide as its longest line, so the short line of a wrapped label would otherwise hang on the
-                  // leading edge: at a text scale of 3.0 "Get started" breaks after the first word and
-                  // "Başlayalım" breaks mid-word, and both leave a line with 184 pt of slack beside it.
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
-                    child: FilledButton(
-                      key: onboardingDoneKey,
-                      onPressed: _advance,
-                      child: Text(
-                        _panel == _panelCount - 1 ? l10n.onboarding_done : l10n.onboarding_next,
-                        textAlign: TextAlign.center,
+      body: GestureDetector(
+        // The deck is turned by dragging it. The primary control used to be the only way forward; it is gone from
+        // every screen but the last, where the one that signs in has to stay or there is no way out of the deck.
+        // Skip still leaves from anywhere.
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: _turn,
+        child: SafeArea(
+          // The page is laid out against the box it is given rather than against the screen, and it scrolls only when
+          // it must: at the ordinary text size the hero absorbs all the slack and nothing scrolls, and at an
+          // accessibility size the words grow past the screen and both controls stay reachable.
+          child: LayoutBuilder(
+            builder: (context, viewport) {
+              final reserve = viewport.maxWidth - _gutter.horizontal;
+              final measure = math.max(0.0, reserve - AppSpacing.lg);
+              return SingleChildScrollView(
+                controller: _scroll,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: _gutter,
+                      child: AnimatedBuilder(
+                        animation: _entrance,
+                        builder: (context, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // The counter is in the corner and the caption stacks under it, `_captionBelowCounter`
+                            // lower: top-anchored, because both belong to the header the top inset decides.
+                            Stack(
+                              children: [
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: _Counter(
+                                    step: _step,
+                                    style: eyebrow?.copyWith(letterSpacing: _eyebrowSize * _counterTrackingEm),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: _captionBelowCounter),
+                                  child: _rise(
+                                    Text(
+                                      onboardingCapitals(words.caption, locale),
+                                      key: onboardingCaptionKey,
+                                      style: eyebrow?.copyWith(letterSpacing: _eyebrowSize * _captionTrackingEm),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: _captionGap),
+                            Expanded(
+                              child: _HeroExtent(
+                                floor: _heroFloor,
+                                // `overflow-y:auto`, the prototype's own word for the hero. On a phone every hero
+                                // fits the slack and this scrolls nothing; it is here because `flutter test` draws
+                                // in Ahem, whose square-em glyphs make the same heroes a third taller than they are
+                                // on a device, and a frame that is right on the phone must not be red in CI.
+                                //
+                                // The `LayoutBuilder` is safe under `_HeroExtent`, which answers the page's
+                                // intrinsic question itself and never puts it to its child.
+                                child: LayoutBuilder(
+                                  builder: (context, slack) => SingleChildScrollView(
+                                    physics: const ClampingScrollPhysics(),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(minHeight: slack.maxHeight),
+                                      child: Center(
+                                        child: KeyedSubtree(
+                                          key: ValueKey<int>(_step),
+                                          child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _rise(
+                              _Reserved(
+                                candidates: _titles(l10n),
+                                style: headline,
+                                width: reserve,
+                                floor: _headlineFloor,
+                                child: Text.rich(
+                                  _accented(words.title, words.accent, colors.primary),
+                                  key: onboardingHeadlineKey,
+                                  style: headline,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: _bodyGap),
+                            _rise(
+                              // `.body{…max-width:302px}`, against an `h2` the prototype runs across the whole
+                              // 318 its content column is wide. Only the body is capped, and the cap is written as
+                              // the column less one spacing step rather than as 302, which is the same number on
+                              // the prototype's frame (318 - 16) and still a reading measure on a frame of another
+                              // width — and which asks the design system for a token it has instead of putting a
+                              // raw pixel count under `lib/features/`.
+                              //
+                              // The reserve is measured at the capped width too: a body that needs a line more at
+                              // 302 than at 318 would otherwise outgrow a box measured against the wider one and
+                              // push the controls down on its own screen.
+                              SizedBox(
+                                width: measure,
+                                child: _Reserved(
+                                  candidates: const [],
+                                  style: body,
+                                  width: measure,
+                                  floor: _bodyFloor,
+                                  child: Text(words.body, key: onboardingBodyKey, style: body),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _Progress(step: _step, entrance: _entrance.value),
+                            const SizedBox(height: AppSpacing.lg),
+                            // The two controls sit at opposite ends of one line and stack when they no longer fit on
+                            // one, which they do not at an accessibility text size: a `Row` overflowed its box by
+                            // 124 pt in Turkish at a scale of 3.0 — a real Android setting — and drew the stripe
+                            // across the controls of the first screen the app ever shows.
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: double.infinity),
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: AppSpacing.lg,
+                                runSpacing: AppSpacing.sm,
+                                children: [
+                                  // Skip is on every screen, because someone who wants out looks for the word
+                                  // rather than for the last screen.
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+                                    child: TextButton(
+                                      key: onboardingSkipKey,
+                                      // `.skip{font-size:14px;font-weight:600;color:var(--quiet);background:none;
+                                      // border:0}`: a bare quiet word on the content edge. The theme's button puts 16
+                                      // either side of it and paints it in the brand colour.
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: colors.onSurfaceVariant,
+                                        padding: EdgeInsets.zero,
+                                        alignment: Alignment.centerLeft,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: const Size(0, AppSizes.minTapTarget),
+                                        textStyle: theme.textTheme.labelLarge?.copyWith(
+                                          fontSize: _skipSize,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0,
+                                        ),
+                                      ),
+                                      onPressed: _leave,
+                                      child: Text(l10n.ob_skip),
+                                    ),
+                                  ),
+                                  if (_step == onboardingStepCount - 1)
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
+                                      child: FilledButton(
+                                        key: onboardingDoneKey,
+                                        // `.next{border-radius:999px}` — the prototype's primary control is a pill.
+                                        //
+                                        // `.next{font-size:15px;font-weight:600;padding:13px 26px}` over a 48 floor.
+                                        style: FilledButton.styleFrom(
+                                          shape: const StadiumBorder(),
+                                          padding: const EdgeInsets.symmetric(horizontal: _doneInsetX),
+                                          minimumSize: const Size(0, AppSizes.minTapTarget),
+                                          textStyle: theme.textTheme.labelLarge?.copyWith(
+                                            fontSize: _doneSize,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0,
+                                          ),
+                                        ),
+                                        onPressed: _advance,
+                                        child: Text(
+                                          _step == onboardingStepCount - 1 ? l10n.ob_done : l10n.ob_next,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
-                    // Skip stays on every panel, because a user who wants out looks for the word rather than for the
-                    // last panel. It is not centred, because there is nothing to centre: a label that fits on one
-                    // line is laid out in a box of exactly its own width, and this label is one short word in both
-                    // languages — "Skip" and "Atla" still take a single line at a text scale of 3.0, where the
-                    // primary control's word has already wrapped. An alignment no rendering can show is a line no
-                    // test can defend.
-                    child: TextButton(key: onboardingSkipKey, onPressed: _leave, child: Text(l10n.onboarding_skip)),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  List<Widget> _panels(S l10n, AdoptionFigures figures) {
-    final panels = <OnboardingPanel>[
-      OnboardingPanel(
-        icon: Icons.verified_user_outlined,
-        title: l10n.onboarding_platform_title,
-        body: l10n.onboarding_platform_body,
+  /// Which side the arriving screen travels in from: 1 is from the right, -1 from the left.
+  double _entranceFrom = 1;
+
+  /// Turns the deck: a drag to the left is the next screen, a drag to the right is the one before.
+  ///
+  /// The threshold is a velocity rather than a distance, so a slow reposition of the finger does not turn a page
+  /// the reader did not mean to turn. The first screen does not go back past itself and the last does not go
+  /// forward past itself — leaving the deck is Skip's job, and the control that signs in.
+  void _turn(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < _turnVelocity) return;
+    if (velocity < 0 && _step < onboardingStepCount - 1) {
+      _advance();
+    } else if (velocity > 0 && _step > 0) {
+      _show(_step - 1);
+    }
+  }
+
+  /// The rise the words of a new step arrive with: up into place as they fade in, and nothing at all when the
+  /// device asks for no animation, because the controller is then already finished.
+  /// The entrance of a screen, travelling the way the deck was turned.
+  ///
+  /// The deck is turned sideways, so the screen arrives sideways: dragged to the left, the next screen comes in
+  /// from the right; dragged to the right, the one before comes in from the left. It used to rise from below
+  /// whichever way the finger went, which read as the screen ignoring the gesture.
+  Widget _rise(Widget child) => FadeTransition(
+    opacity: _entrance,
+    child: Transform.translate(offset: Offset(_entranceFrom * _slideTravel * (1 - _entrance.value), 0), child: child),
+  );
+}
+
+/// The side margin of the frame: equal on both sides, by the owner's decision, which overrides the prototype.
+///
+/// The prototype is asymmetric — 48 on the left and 24 on the right of a 390 frame, a 318 column — and this app copied
+/// it. The owner wants the content centred. The column keeps its width and the 72 left over is split evenly, 36 a
+/// side, so on a 392.7 phone the column is the same 320.7 it was. It is not on the closed spacing scale, whose nearest
+/// steps are 32 and 40.
+const double _sideMargin = 36;
+
+/// The gutters of the frame: [_sideMargin] either side, the header's distance from the top, and the foot's 24.
+const EdgeInsets _gutter = EdgeInsets.fromLTRB(_sideMargin, AppSpacing.xxxl, _sideMargin, AppSpacing.xl);
+
+/// The words of one step: everything the chassis draws around that step's hero.
+typedef _Words = ({String caption, String title, String accent, String body});
+
+_Words _words(S l10n, int step) => switch (step) {
+  0 => (caption: l10n.ob1_cap, title: l10n.ob1_title, accent: l10n.ob1_accent, body: l10n.ob1_body),
+  1 => (caption: l10n.ob2_cap(_demoConnection), title: l10n.ob2_title, accent: l10n.ob2_accent, body: l10n.ob2_body),
+  2 => (caption: l10n.ob3_cap(_demoConnection), title: l10n.ob3_title, accent: l10n.ob3_accent, body: l10n.ob3_body),
+  3 => (caption: l10n.ob4_cap, title: l10n.ob4_title, accent: l10n.ob4_accent, body: l10n.ob4_body),
+  4 => (caption: l10n.ob5_cap, title: l10n.ob5_title, accent: l10n.ob5_accent, body: l10n.ob5_body),
+  _ => (caption: l10n.ob6_cap, title: l10n.ob6_title, accent: l10n.ob6_accent, body: l10n.ob6_body),
+};
+
+/// Every headline of the flow, which is what the headline box reserves room for.
+List<String> _titles(S l10n) => [
+  l10n.ob1_title,
+  l10n.ob2_title,
+  l10n.ob3_title,
+  l10n.ob4_title,
+  l10n.ob5_title,
+  l10n.ob6_title,
+];
+
+/// The headline, with the one run [accent] names painted in the accent colour and nothing else.
+///
+/// The run has to appear in the title verbatim — the ARB entry says so — and when it does not, the headline is
+/// drawn whole rather than half-coloured, because a flow that loses a word is worse than one that loses a colour.
+TextSpan _accented(String title, String accent, Color colour) {
+  final at = accent.isEmpty ? -1 : title.indexOf(accent);
+  if (at < 0) return TextSpan(text: title);
+  return TextSpan(
+    children: [
+      if (at > 0) TextSpan(text: title.substring(0, at)),
+      TextSpan(
+        text: accent,
+        style: TextStyle(color: colour),
       ),
-      OnboardingPanel(
-        icon: Icons.storage_outlined,
-        title: l10n.onboarding_studio_title,
-        body: l10n.onboarding_studio_body,
-        figures: l10n.onboarding_studio_figures(figures.engines, figures.channels),
-      ),
-      OnboardingPanel(
-        icon: Icons.phone_iphone_outlined,
-        title: l10n.onboarding_mobile_title,
-        body: l10n.onboarding_mobile_body,
-      ),
-      OnboardingPanel(
-        icon: Icons.public_outlined,
-        title: l10n.onboarding_listings_title,
-        body: l10n.onboarding_listings_body(figures.listings),
-      ),
-    ];
-    return [
-      for (final (index, panel) in panels.indexed)
-        // Where in the flow this is, said rather than only drawn: the dots carry it for a sighted reader and nothing
-        // carried it for anyone else.
-        Semantics(label: l10n.onboarding_panel_position(index + 1, panels.length), child: panel),
-    ];
+      if (at + accent.length < title.length) TextSpan(text: title.substring(at + accent.length)),
+    ],
+  );
+}
+
+/// A box as tall as the tallest of [candidates], so that what it holds never moves what is under it.
+///
+/// The height is measured rather than declared: the same style, the same width and the same text size the real
+/// paragraph is laid out with. A pixel count would be a claim about one language at one text size, which is the
+/// claim that put the controls in a different place on each screen to begin with.
+class _Reserved extends StatelessWidget {
+  const _Reserved({
+    required this.candidates,
+    required this.style,
+    required this.width,
+    required this.child,
+    required this.floor,
+  });
+
+  final List<String> candidates;
+
+  /// The least the box is given, in the prototype's pixels, scaled by the text size in force.
+  final double floor;
+  final TextStyle? style;
+  final double width;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    var tallest = scaler.scale(floor);
+    for (final candidate in candidates) {
+      final painter = TextPainter(
+        text: TextSpan(text: candidate, style: style),
+        textDirection: direction,
+        textScaler: scaler,
+      )..layout(maxWidth: width);
+      tallest = math.max(tallest, painter.height);
+      painter.dispose();
+    }
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: tallest),
+      child: child,
+    );
   }
 }
 
-/// The position in the flow, drawn. It is excluded from semantics because each panel already says the same thing in
-/// words, and a screen reader that announced both would say it twice.
-class _Dots extends StatelessWidget {
-  const _Dots({required this.count, required this.current});
+/// The step counter: `01 / 06`, in the mono face, tracked open, in the corner opposite the caption.
+///
+/// The digits are padded and the separator is the ARB's, because the padding is a drawing decision and the shape of
+/// the line is not. A screen reader hears the step in words instead — `02 / 06` read out digit by digit is not what
+/// the counter means.
+class _Counter extends StatelessWidget {
+  const _Counter({required this.step, required this.style});
 
-  final int count;
-  final int current;
+  final int step;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = S.of(context);
+    final padded = l10n
+        .ob_step(step + 1, onboardingStepCount)
+        .replaceAllMapped(RegExp(r'\d+'), (match) => match[0]!.padLeft(_counterDigits, '0'));
+    return Semantics(
+      label: l10n.ob_step_semantics(step + 1, onboardingStepCount),
+      child: ExcludeSemantics(
+        child: Text(padded, key: onboardingCounterKey, style: style),
+      ),
+    );
+  }
+}
+
+/// The progress of the flow, drawn as a rule of [onboardingStepCount] segments — never dots.
+///
+/// Dots say "there are six of these"; a rule that fills says how much of the introduction is behind you, which is
+/// the thing a reader of six screens wants to know. The segment of the step just reached fills with the same
+/// entrance the words rise on, so one beat carries the whole change.
+class _Progress extends StatelessWidget {
+  const _Progress({required this.step, required this.entrance});
+
+  final int step;
+
+  /// How far the current step's entrance has got, 0 to 1.
+  final double entrance;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return ExcludeSemantics(
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        key: onboardingProgressKey,
+        spacing: AppSpacing.xs,
         children: [
-          for (var index = 0; index < count; index++)
-            AnimatedContainer(
-              duration: AppDurations.fast,
-              curve: AppDurations.easeOut,
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              height: AppSpacing.sm,
-              width: index == current ? AppSpacing.xl : AppSpacing.sm,
-              decoration: BoxDecoration(
-                color: index == current ? colors.primary : colors.outlineVariant,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
+          for (var index = 0; index < onboardingStepCount; index++)
+            Expanded(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _colour(index, colors),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                // `.seg{height:2px}` in the prototype. The spacing scale starts at 4, so the rule's own
+                // thickness is written as half of its smallest step rather than as a number of its own.
+                child: const SizedBox(height: AppSpacing.xs / 2),
               ),
             ),
         ],
       ),
     );
   }
+
+  Color _colour(int index, ColorScheme colors) {
+    if (index > step) return colors.outlineVariant;
+    if (index < step || entrance >= 1) return colors.primary;
+    return Color.lerp(colors.outlineVariant, colors.primary, entrance)!;
+  }
+}
+
+/// A box that answers every intrinsic question with [floor] and never puts the question to its child.
+///
+/// The prototype's own stylesheet says what the hero is: `.hero{flex:1 1 auto;min-height:0;overflow-y:auto}`. It
+/// takes the slack the words leave and shrinks rather than pushing them, which is why the controls sit at the same
+/// `772..820` on all six of its screens in both themes and both languages — 24 measurements, one answer.
+///
+/// Flutter needs this said out loud. The page measures itself with an [IntrinsicHeight] so that [Expanded] has
+/// slack to hand out inside a scroll view, and an `IntrinsicHeight` asks every child how tall it wants to be. Asked
+/// that, a hero answers with its natural height and is given it — which put the primary control 14, 26, 176 and
+/// 464pt below the fold on screens 1, 4, 5 and 6, and made the page scroll on four of six. Answering [floor]
+/// instead leaves the hero exactly the slack and nothing else.
+///
+/// It also keeps the question away from a hero drawn with a `LayoutBuilder`, which cannot answer an intrinsic
+/// question at all and throws when one reaches it.
+///
+/// A hero whose content does not fit the slack is *not* quietly scrolled here, unlike the prototype's
+/// `overflow-y:auto`: it overflows, loudly, in a debug build and in every test. A step that does not fit is a step
+/// drawn to the wrong size, and the prototype's own heroes never overflow (`scrollHeight == clientHeight` in all 24
+/// measurements), so there is nothing faithful to preserve by hiding it.
+class _HeroExtent extends SingleChildRenderObjectWidget {
+  const _HeroExtent({required this.floor, required super.child});
+
+  final double floor;
+
+  @override
+  _RenderHeroExtent createRenderObject(BuildContext context) => _RenderHeroExtent(floor);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHeroExtent renderObject) => renderObject.floor = floor;
+}
+
+class _RenderHeroExtent extends RenderProxyBox {
+  _RenderHeroExtent(this._floor);
+
+  double get floor => _floor;
+  double _floor;
+  set floor(double value) {
+    if (_floor == value) return;
+    _floor = value;
+    markNeedsLayout();
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _floor;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _floor;
+
+  // The page is laid out in a column, so nothing asks the hero for an intrinsic width. Answering without descending
+  // keeps the promise this box makes whole: the child is never asked an intrinsic question.
+  @override
+  double computeMinIntrinsicWidth(double height) => 0;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => 0;
+}
+
+/// [text] in capitals, by the rules of [locale].
+///
+/// Public because the tests that read a caption off the screen assert what the reader sees, and what the reader
+/// sees is this. The rule itself is pinned by a test of its own, so a test that uses it is not asserting nothing.
+///
+/// The prototype sets the caption in `text-transform:uppercase`, and a browser applies that by the document's
+/// language: under `lang="tr"` it turns `i` into `İ` and leaves `I` alone. Dart's own `toUpperCase` is the
+/// language-neutral one, so in Turkish it would write `BAGLANTILARINIZ` with a dotless `I` where the prototype
+/// writes `BAĞLANTILARINIZ`. The prototype itself shipped the opposite bug once — its `lang` was pinned to `tr`,
+/// so the English deck read `İT PLAYS İTSELF` — which is why this follows the locale rather than a constant.
+String onboardingCapitals(String text, Locale locale) {
+  if (locale.languageCode != 'tr') return text.toUpperCase();
+  return text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase();
 }

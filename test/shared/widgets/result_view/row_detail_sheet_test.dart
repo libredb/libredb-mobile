@@ -210,6 +210,35 @@ void main() {
       expect(find.byType(ResultView), findsOneWidget);
     });
 
+    testWidgets('on a phone with a home indicator the last field scrolls clear of it', (tester) async {
+      // 34 logical points, as FakeViewPadding takes physical pixels.
+      final inset = 34 * tester.view.devicePixelRatio;
+      tester.view.viewPadding = FakeViewPadding(bottom: inset);
+      tester.view.padding = FakeViewPadding(bottom: inset);
+      addTearDown(tester.view.resetViewPadding);
+      addTearDown(tester.view.resetPadding);
+      final fields = [for (var i = 0; i < 40; i++) 'f$i'];
+      await _pump(
+        tester,
+        _result(
+          fields: fields,
+          rows: [
+            {for (final f in fields) f: 'value of $f'},
+          ],
+          columnTypes: const {},
+        ),
+      );
+      await _openRow(tester, 0);
+
+      for (var i = 0; i < 10; i++) {
+        await tester.drag(_fieldList(), const Offset(0, -2000));
+        await tester.pumpAndSettle();
+      }
+
+      final last = tester.getBottomLeft(_field('f39')).dy;
+      expect(last, lessThanOrEqualTo(tester.view.physicalSize.height / tester.view.devicePixelRatio - 34));
+    });
+
     testWidgets('values are selectable', (tester) async {
       await _pump(tester, _result());
       await _openRow(tester, 0);

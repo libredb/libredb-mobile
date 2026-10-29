@@ -252,4 +252,25 @@ void main() {
 
     expect(picked, [null]);
   });
+
+  testWidgets('on a phone with a home indicator the last entry scrolls clear of it', (tester) async {
+    // The ListView takes MediaQuery.padding by itself; this guards that the sheet keeps it.
+    // 34 logical points, as FakeViewPadding takes physical pixels.
+    final inset = 34 * tester.view.devicePixelRatio;
+    tester.view.viewPadding = FakeViewPadding(bottom: inset);
+    tester.view.padding = FakeViewPadding(bottom: inset);
+    addTearDown(tester.view.resetViewPadding);
+    addTearDown(tester.view.resetPadding);
+    answerRead(Success([for (var i = 0; i < 30; i++) _entry('many-$i', 'SELECT $i')]));
+    await open(tester);
+
+    final list = find.byType(ListView);
+    for (var i = 0; i < 10; i++) {
+      await tester.drag(list, const Offset(0, -2000));
+      await tester.pumpAndSettle();
+    }
+
+    final last = tester.getBottomLeft(find.byType(Dismissible).last).dy;
+    expect(last, lessThanOrEqualTo(tester.view.physicalSize.height / tester.view.devicePixelRatio - 34));
+  });
 }
