@@ -244,6 +244,7 @@ Defects found, each filed and linked from #100:
 - #125: the rows page and the key value page scroll past their content in both directions and do not spring back after a pull.
 - #126: a table column sized to its content cuts its header or its longest value by a few pixels.
 - #127: the app was locked to portrait, so the rotation checks of #96 and #100 could not run; PR #179 lets phones rotate and ran them.
+  #419 locks portrait again on 2026-10-29, on every form factor, so step 3's rotation above describes a build that no longer exists and nothing re-runs it; what still exercises the kept state is a window the system resizes, which [The landscape half of step 3 and the rotation of step 7 are withdrawn](#the-landscape-half-of-step-3-and-the-rotation-of-step-7-are-withdrawn-419) describes.
 
 No Studio defect was found.
 
@@ -451,6 +452,19 @@ record it.
 
 - **Step 11 and the prod steps.** This was a debug build of `main_local.dart`, which carries no certificate pins and
   no `screenCaptureProtection`.
+
+### The landscape half of step 3 and the rotation of step 7 are withdrawn (#419)
+
+#196's step 3 asks for the connection list "in landscape with the keyboard up" and its step 7 for a rotation during a
+result. Since 2026-10-29 the app is held upright on every form factor, in all three places — the bootstrap, the
+Android manifest and both keys of `Info.plist` ("Orientation" in [architecture.md](architecture.md)) — so no device
+reaches either state by turning, and neither part is run as a rotation again. What replaces them is the same two
+checks in a window the system sizes rather than the app, since that ignores the lock: the connection list in a
+split-screen window short enough for the rail, with the keyboard up, and a split-screen resize over a result. A
+full-screen tablet is not the replacement — it never reports the short layout, measured in "Orientation".
+The rest of both steps is unchanged — the list's groups, search, badges, read-only markers, stars and recents, and the
+editor's run, error position, cancel, script, typed confirmation, history and drafts.
+
 ### The prod steps, from a release build
 
 Steps 1 and 11 of #196 need a release build, which the lab run was not, so they were taken separately on
