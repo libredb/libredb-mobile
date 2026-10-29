@@ -62,7 +62,10 @@ void main() {
   });
 
   group('ResponsiveScaffold - landscape side insets', () {
-    // A phone turned on its side: the status bar is on top and the camera cutout and the navigation bar on the sides.
+    // The insets of a device on its side: the status bar on top, the camera cutout and the navigation bar on the
+    // sides. Since #419 no device can be turned, so what reaches these sizes is a window the system sizes — a
+    // split-screen or free-form window, which ignores an orientation restriction. The insets and the sizes are the
+    // ones a device on its side reports, which is why they are kept.
     const landscape = FakeViewPadding(left: 48, top: 24, right: 48);
 
     for (final size in const [Size(915, 412), Size(740, 360)]) {
@@ -113,6 +116,9 @@ void main() {
 
   group('ResponsiveScaffold - a compact height', () {
     // The Android 13 emulator held sideways, as #177 measured it: 829 by 393 with a 24 px status bar and gesture bar.
+    // After #419 no device in full screen reports this: of the sizes above, only a phone on its side is under the 480
+    // pixel compact-height edge. A split-screen or free-form window still is, and it lands in the same height class,
+    // so the measurement stands and this is the one branch of `ResponsiveScaffold` that is still reached.
     const sideways = Size(829, 393);
     const statusBar = FakeViewPadding(top: 24, bottom: 24);
 

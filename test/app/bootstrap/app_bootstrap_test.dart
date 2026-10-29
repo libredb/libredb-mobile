@@ -225,17 +225,15 @@ void main() {
       expect(await AppLocalStorage().read(StorageKeys.language.key), isNull);
     });
 
-    // Phones rotate (#127): portrait and both landscape sides, not the upside-down portrait, which phones do not offer
-    // by default either.
-    test('defaults to portrait up and both landscape orientations', () {
+    // The app is held upright on every form factor (#419): portrait up alone, so no device rotates it. No large
+    // screen is exempted, because an exemption protected nothing — see `AppBootstrapConfig.preferredOrientations`.
+    test('defaults to portrait up alone', () {
       expect(const AppBootstrapConfig(environment: Environment.mock).preferredOrientations, const [
         DeviceOrientation.portraitUp,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
       ]);
     });
 
-    testWidgets('asks the platform for portrait up and both landscape orientations', (tester) async {
+    testWidgets('asks the platform for portrait up alone', (tester) async {
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         const MethodChannel('dev.fluttercommunity.plus/connectivity'),
         (call) async => ['none'],
@@ -260,7 +258,7 @@ void main() {
       Bloc.observer = observer;
 
       expect(orientationCalls, [
-        ['DeviceOrientation.portraitUp', 'DeviceOrientation.landscapeLeft', 'DeviceOrientation.landscapeRight'],
+        ['DeviceOrientation.portraitUp'],
       ]);
     });
 
