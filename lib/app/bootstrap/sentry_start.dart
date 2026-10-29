@@ -62,9 +62,10 @@ final _log = AppLogger.getLogger('SentryStart');
 /// breadcrumbs are off, so no `AppLogger` line becomes a log or a breadcrumb
 /// (`test/architecture/sentry_native_scrub_patterns_test.dart` keeps it so).
 ///
-/// On Android the host app starts the native SDK, so a native option set
-/// here must also be set in `NativeSentry.kt` of the Android host app (under
-/// `android/app/src/main/kotlin`), or it does nothing there.
+/// On Android and on iOS the host app starts the native SDK, so a native
+/// option set here must also be set in `NativeSentry.kt` of the Android host
+/// app (under `android/app/src/main/kotlin`) and in `NativeSentry.swift` of
+/// the iOS one (under `ios/Runner`), or it does nothing there.
 void configureSentryOptions(SentryFlutterOptions options, {required String dsn, required String release}) {
   options.dsn = dsn;
   installSentryScrubbers(options);

@@ -28,6 +28,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// and the data of the user are masked like the rest of the event, so code
 /// that sets an email as the user id or as a tag does not send it.
 ///
+/// `extra`, every context the SDK did not fill itself (what
+/// `Scope.setContexts` stores) and the breadcrumbs the event carries itself
+/// are masked too: each reaches the wire, and each has a hook that does not
+/// see it — `beforeBreadcrumb` never sees an event's own breadcrumbs.
+///
 /// Deterministic and free of external side effects, but **mutates the
 /// passed-in [SentryEvent] in place** (replacing `event.request` and editing
 /// the message and the exception values) before returning it, matching the
@@ -114,7 +119,55 @@ SentryEvent _scrubEvent(SentryEvent event) {
     trace.data = _maskMap(Map<String, dynamic>.from(scrubBodyKeys(traceData)! as Map));
   }
 
+  _scrubCustomContexts(event.contexts);
+
+  // An event can carry its own breadcrumbs, and then the scope keeps those and adds none of its own
+  // (`Scope.applyToEvent`: `event.breadcrumbs` wins whenever it is not empty). Those never passed
+  // `beforeBreadcrumb`, which is the only hook that masks a breadcrumb on its way to the scope. The Kotlin
+  // scrubber masks `event.breadcrumbs` and had no Dart counterpart, the same gap `extra` had (PR #398).
+  // Masking is idempotent, so running it again over the scope's already-masked breadcrumbs changes nothing.
+  final breadcrumbs = event.breadcrumbs;
+  if (breadcrumbs != null) {
+    for (final breadcrumb in breadcrumbs) {
+      sentryBeforeBreadcrumb(breadcrumb);
+    }
+  }
+
   return event;
+}
+
+/// The contexts the SDK and its integrations fill themselves. Each is a typed object with no user data of its own,
+/// and masking one as a map would send its `toString` instead of its fields, so each is left alone; `trace.data`,
+/// the one of them that carries app data, is masked by [_scrubEvent] before this runs.
+const Set<String> _sdkContextKeys = {
+  'device',
+  'os',
+  'runtime',
+  'runtimes',
+  'app',
+  'browser',
+  'gpu',
+  'culture',
+  'trace',
+  'response',
+  'feedback',
+  'flags',
+};
+
+/// Masks every other context: `Scope.setContexts(key, value)` is what the SDK offers in place of the deprecated
+/// `setExtra`, and what it stores reaches the wire under `contexts.<key>` exactly as `extra` did before PR #398.
+/// Each value is masked the way a request body is: a credential key replaced whole, and emails, JWTs and the other
+/// named secrets masked in every string at any depth.
+void _scrubCustomContexts(Contexts contexts) {
+  final custom = <String, dynamic>{
+    for (final MapEntry(:key, :value) in contexts.entries)
+      if (!_sdkContextKeys.contains(key) && value != null) key: value,
+  };
+  if (custom.isEmpty) return;
+  final masked = _maskMap(Map<String, dynamic>.from(scrubBodyKeys(custom)! as Map));
+  for (final MapEntry(:key, :value) in masked.entries) {
+    contexts[key] = value;
+  }
 }
 
 /// PII / token scrubber for Sentry breadcrumbs. Runs as the SDK's
