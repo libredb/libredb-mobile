@@ -392,6 +392,64 @@ Every screen needs a sign-in. This entry gives a Studio account and a Platform a
 
 `test/architecture/release_docs_test.dart` fails when a double-quoted string inside a `text` block of this section is not a label of `lib/l10n/intl_en.arb`, so a pull request that renames such a label updates these instructions in the same change.
 
+### App Store (Platform mode)
+
+#199 has not written the iOS section of this page yet, so the App Store answers for a build with a Platform target live here until it does and absorbs them.
+They are the Play answers of [A build with Platform mode](#a-build-with-platform-mode) and of [App access](#app-access) read into Apple's own forms, App Privacy and App Review Information, and nothing in them is new policy.
+The owner enters them in App Store Connect; this page never holds the demo accounts' usernames or passwords.
+iOS is released separately on macOS (#199), and the store build stays Studio-only, without `PLATFORM_API_URL`, until the owner approves a Platform target (#306), so these answers wait for that approval.
+
+An iOS release build carries no `SENTRY_DSN` while native scrubbing is missing on iOS ([crash-reporting.md](crash-reporting.md), "Native scrubbing is not done on iOS yet", roadmap M6 and #198).
+Every row below that the Play answers mark "Sentry" is therefore answered No in the first iOS build, and becomes Yes only in a build that carries a DSN once that scrubber ships; the Why column says which row that is.
+
+App Privacy, for a build with a Platform target:
+
+| Apple data type | Collected | Purposes | Linked to the user | Used for tracking | Why |
+| --- | --- | --- | --- | --- | --- |
+| Contact Info, Name | Yes | App Functionality | Yes | No | The access token the deployment's Studio and Platform receive carries what the `profile` scope gives, and Platform's identity answer returns the admin's own name |
+| Contact Info, Email Address | Yes | App Functionality | Yes | No | The same token carries the admin's e-mail address; the app never sends another user's |
+| Identifiers, User ID | Yes | App Functionality | Yes | No | The same token's subject and username, and the Keycloak id a grant names |
+| User Content, Other User Content | Yes | App Functionality | Yes | No | The statements sent to Studio, which Studio may record in its audit and query logs; Platform mode adds no free text |
+| Usage Data, Product Interaction | Yes (Sentry) | Analytics | No | No | The navigation breadcrumbs and session records of a crash report, in a build with a DSN |
+| Diagnostics, Crash Data | Yes (Sentry) | Analytics | No | No | The crash reports, in a build with a DSN |
+| Diagnostics, Performance Data | Yes (Sentry) | Analytics | No | No | The traces of `tracesSampleRate = 0.2`, in a build with a DSN |
+| Diagnostics, Other Diagnostic Data | Yes (Sentry) | Analytics | No | No | The device context and the session records, in a build with a DSN |
+| Identifiers, Device ID | Yes (Sentry) | Analytics | No | No | The Sentry SDK's own installation id, which the app does not set; what sentry-cocoa records is #198's subject and is not read yet, so this row is the Play answer for Device or other IDs carried over |
+| Location, Coarse Location | Yes (Sentry) | Analytics | No | No | Sentry derives a place from the client IP at ingestion, until 'Prevent Storing of IP Addresses' is on in the project ([crash-reporting.md](crash-reporting.md)) |
+| Search History | No | | | | Owner's ruling of 2026-10-26: the directory search text and the audit statement search text are a query sent to the admin's own Platform to answer that search, and the app keeps no search history |
+
+Nothing is used to track the user, so Data Used to Track You is empty and the app asks for no tracking permission; every other Apple data type, Health, Fitness, Financial Info, Precise Location, Physical Address, Sensitive Info, Contacts, Photos or Videos, Audio Data, Gameplay Content, Customer Support, Browsing History, Advertising Data and Purchases, is Data Not Collected.
+The app offers no account creation, so Apple's account deletion requirement does not apply: accounts are made in the deployment's Keycloak by the organisation, and Settings' "Remove my data" removes what a Studio session kept on the device, while a Platform session keeps nothing ([security.md](security.md), "Removing the app's data").
+The app asks for Face ID with `NSFaceIDUsageDescription` in `ios/Runner/Info.plist` only to unlock the app when the app lock is on, and it reads no camera, microphone, photo library, contacts or location permission.
+
+App Review Information, for a build with a Platform target:
+
+Sign-in is required on every screen, so the review needs the two demo accounts of the Play App access entry, a Studio account and a Platform admin account, both created in the review deployment's Keycloak and entered only in App Store Connect.
+The admin account takes one admin seat of that deployment's license on its first Platform sign-in, so the license needs a free one, and a Platform admin sees and can change every connection of the install, so the review deployment must hold sample connections only.
+The notes name no host, no username and no password:
+
+```text
+LibreDB Mobile is a client of LibreDB Studio and LibreDB Platform, so every screen needs a sign-in.
+This build signs in to the publisher's own LibreDB deployment, which holds sample databases only; no VPN, code or other setup is needed.
+This entry gives two accounts: a Studio account and a Platform admin account.
+Sign-in opens the deployment's sign-in page in an in-app browser sheet and returns to the app; the app never sees a database password.
+Studio:
+1. Open the app and tap "Sign in to Studio".
+2. On the sign-in page that opens, enter the Studio account's username and password.
+3. The Connections tab lists the sample connections; tap one to open it.
+4. The Browse tab shows its objects; open a table and tap "View rows" to see its rows. Columns with sensitive names, such as email, are masked.
+5. The SQL tab runs statements on a SQL connection, for example SELECT 1. A statement that may change data asks for confirmation before it runs.
+6. Tap the avatar at the top right, tap "Logout" and confirm.
+Platform:
+7. Tap "Sign in to Platform" and enter the Platform admin account's username and password on the sign-in page.
+8. The "Home" tab shows the organization and the signed-in admin.
+9. The "Connections" tab lists every connection of the deployment; tap one to see who holds access to it.
+10. The "Audit" tab lists the queries Studio ran on these connections; "Filters" narrows the list.
+Please do not tap "Add access", "Change access", "Remove access" or "Disable connection": other reviewers use the same sample connections.
+```
+
+The labels quoted above are the ones the Play App access block quotes, so a pull request that renames one updates both blocks; `test/architecture/release_docs_test.dart` guards the Play block only, since it reads the "App access" section alone.
+
 ## Actions
 
 Every action in every workflow under `.github/workflows/` is pinned to a full commit SHA with its version in a comment, and `test/architecture/android_release_setup_test.dart` fails on a tag or branch reference or a missing version comment.
