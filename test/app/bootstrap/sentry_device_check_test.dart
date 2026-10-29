@@ -13,12 +13,14 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../mocks/mock_classes.dart';
 
 void main() {
-  /// What must not leave the device: the database text, the statement, the email and the token of the check.
+  /// What must not leave the device: the database text, the statement, the email, the token and the password of
+  /// the check.
   final secrets = [
     sentryDeviceCheckDatabaseText,
     sentryDeviceCheckStatement,
     sentryDeviceCheckEmail,
     sentryDeviceCheckToken,
+    sentryDeviceCheckPassword,
   ];
 
   test('is off in a build without the SENTRY_DEVICE_CHECK define', () {
@@ -86,6 +88,13 @@ void main() {
     expect(sent, contains('AuthError(code: studio.database_auth)'));
     expect(sent, contains('"message":"sentry_device_check"'));
     expect(sent, contains('[REDACTED_EMAIL]'));
+    // One masked field per kind of secret, so the dashboard check of docs/crash-reporting.md reads all four: the
+    // breadcrumb carries the password, the statement and the token, and the context carries the route arguments
+    // of a navigation, the field PR #398 found leaking.
+    expect(sent, contains('"password":"[REDACTED]"'), reason: 'the breadcrumb carries a password');
+    expect(sent, contains('"statement":"[REDACTED]"'), reason: 'the breadcrumb carries a statement');
+    expect(sent, contains('Bearer [REDACTED_JWT]'), reason: 'the breadcrumb carries a bearer token');
+    expect(sent, contains('"device_check":{'), reason: 'the check sets a context of its own');
   });
 }
 
