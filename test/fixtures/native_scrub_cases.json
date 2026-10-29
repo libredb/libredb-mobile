@@ -28,6 +28,22 @@
     "expected": "{\"statementType\":\"[REDACTED]\",\"status\":\"error\"}"
   },
   {
+    "input": "{\"reason\":\"I need the payroll table\",\"level\":\"read\"}",
+    "expected": "{\"reason\":\"[REDACTED]\",\"level\":\"read\"}"
+  },
+  {
+    "input": "{\"decisionReason\":\"ask your team lead\",\"status\":\"refused\"}",
+    "expected": "{\"decisionReason\":\"[REDACTED]\",\"status\":\"refused\"}"
+  },
+  {
+    "input": "{\"requesterEmail\":\"not-an-address\",\"connectionId\":\"c-1\"}",
+    "expected": "{\"requesterEmail\":\"[REDACTED]\",\"connectionId\":\"c-1\"}"
+  },
+  {
+    "input": "reason=please&decisionReason=no&errorCode=42501",
+    "expected": "reason=[REDACTED]&decisionReason=[REDACTED]&errorCode=42501"
+  },
+  {
     "input": "{\"password\":\"hunter2\",\"n\":1}",
     "expected": "{\"password\":\"[REDACTED]\",\"n\":1}"
   },

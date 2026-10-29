@@ -472,6 +472,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "İnternet bağlantısı yok. Ağınızı kontrol edip tekrar deneyin.",
     ),
+    "error_platform_access_already_granted": MessageLookupByLibrary.simpleMessage("Bu erişim zaten sizde."),
+    "error_platform_access_request_decided": MessageLookupByLibrary.simpleMessage(
+      "Bu istek zaten yanıtlanmış ya da geri çekilmiş.",
+    ),
+    "error_platform_access_request_limit": MessageLookupByLibrary.simpleMessage(
+      "Çok fazla açık isteğiniz var. Bir yanıt bekleyin ya da birini geri çekin.",
+    ),
+    "error_platform_access_request_pending": MessageLookupByLibrary.simpleMessage(
+      "Bu bağlantı için zaten açık bir isteğiniz var.",
+    ),
+    "error_platform_access_request_reason_refused": MessageLookupByLibrary.simpleMessage(
+      "En çok 500 karakterlik bir gerekçe yazın.",
+    ),
+    "error_platform_access_requests_disabled": MessageLookupByLibrary.simpleMessage(
+      "Bu kurulumda erişim istekleri kapalı.",
+    ),
     "error_platform_account_refused": MessageLookupByLibrary.simpleMessage(
       "Platform bu girişi kabul etmedi. Bu uygulamanın Platform için ayarlandığını yöneticinize kontrol ettirin ya da Studio\'ya giriş yapın.",
     ),
@@ -517,6 +533,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
       "Bu Platform kurulumunun planı bu özelliği içermiyor.",
+    ),
+    "error_platform_studio_role_required": MessageLookupByLibrary.simpleMessage(
+      "Hesabınızın Studio rolü yok, bu yüzden erişim isteyemez.",
     ),
     "error_platform_unreachable": MessageLookupByLibrary.simpleMessage(
       "Platform yanıt vermiyor. Biraz sonra tekrar deneyin.",

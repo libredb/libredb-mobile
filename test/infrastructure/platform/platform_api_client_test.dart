@@ -283,6 +283,36 @@ void main() {
       expect(adapter.requests, hasLength(2));
     });
 
+    test('a POST sends its JSON body to the path with the path params appended', () async {
+      adapter.reply(201, '{}');
+
+      await client.post('/v1/requester/access-requests', const {'level': 'read'}, pathParams: 'r%2F1/withdraw');
+
+      expect(adapter.requests, ['POST $_platformUrl/v1/requester/access-requests/r%2F1/withdraw Bearer MOCK_TOKEN']);
+      expect(adapter.bodies, ['{"level":"read"}']);
+    });
+
+    test('a POST answering 503 with a code, 503 without one, or a transport error is sent once', () async {
+      adapter
+        ..reply(503, _envelope('INTERNAL_ERROR'))
+        ..reply(503);
+
+      for (var call = 0; call < 2; call++) {
+        await expectLater(
+          client.post('/v1/requester/access-requests', const {'reason': 'why'}),
+          throwsA(isA<AppException>()),
+        );
+      }
+      expect(adapter.requests, hasLength(2));
+
+      adapter.failTransport();
+      await expectLater(
+        client.post('/v1/requester/access-requests', const {'reason': 'why'}),
+        throwsA(isA<AppException>()),
+      );
+      expect(adapter.requests, hasLength(3), reason: 'a POST is never retried');
+    });
+
     test('a PATCH sends its JSON body to the path with the path params appended', () async {
       adapter.reply(200, '{}');
 
@@ -327,6 +357,7 @@ void main() {
       await expectLater(client.put('/v1/x', const {}), throwsA(isA<PlatformNotConfiguredException>()));
       await expectLater(client.delete('/v1/x'), throwsA(isA<PlatformNotConfiguredException>()));
       await expectLater(client.patch('/v1/x', const {}), throwsA(isA<PlatformNotConfiguredException>()));
+      await expectLater(client.post('/v1/x', const {}), throwsA(isA<PlatformNotConfiguredException>()));
       expect(() => client.instance, throwsA(isA<PlatformNotConfiguredException>()));
       expect(platformError(PlatformNotConfiguredException()).code, AppErrorCode.platformNotConfigured.key);
     });

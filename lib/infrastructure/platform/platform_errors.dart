@@ -55,6 +55,18 @@ AppError platformError(Object error) {
       return AuthError(message, code: AppErrorCode.platformPermissionDenied.key);
     case 'INTERNAL_ERROR':
       return ServerError(message, code: AppErrorCode.platformInternalError.key);
+    case 'STUDIO_ROLE_REQUIRED':
+      return AuthError(message, code: AppErrorCode.platformStudioRoleRequired.key);
+    case 'ACCESS_REQUESTS_DISABLED':
+      return NotFoundError(message, code: AppErrorCode.platformAccessRequestsDisabled.key);
+    case 'ACCESS_REQUEST_PENDING':
+      return ValidationError(message, code: AppErrorCode.platformAccessRequestPending.key);
+    case 'ACCESS_ALREADY_GRANTED':
+      return ValidationError(message, code: AppErrorCode.platformAccessAlreadyGranted.key);
+    case 'ACCESS_REQUEST_LIMIT':
+      return ValidationError(message, code: AppErrorCode.platformAccessRequestLimit.key);
+    case 'ACCESS_REQUEST_DECIDED':
+      return ValidationError(message, code: AppErrorCode.platformAccessRequestDecided.key);
   }
 
   return switch (status) {
@@ -81,6 +93,22 @@ AppError platformGrantWriteError(Object error) {
       'level' => AppErrorCode.platformGrantLevelRefused,
       'subject' => AppErrorCode.platformGrantSubjectRefused,
       'expiresAt' => AppErrorCode.platformGrantExpiryRefused,
+      _ => null,
+    };
+    if (code != null) return ValidationError(error.toString(), code: code.key);
+  }
+  return platformError(error);
+}
+
+/// The [AppError] for what a requester's access request create or an admin's refuse threw: a 400 `VALIDATION_FAILED`
+/// refused on exactly `reason` or exactly `level` gets that field's code; anything else is [platformError].
+///
+/// The approve uses [platformGrantWriteError] instead, because its body is the grant's.
+AppError platformAccessRequestWriteError(Object error) {
+  if (error is BadRequestException && error.errorCode == 'VALIDATION_FAILED' && error.fieldErrorKeys.length == 1) {
+    final code = switch (error.fieldErrorKeys.single) {
+      'reason' => AppErrorCode.platformAccessRequestReasonRefused,
+      'level' => AppErrorCode.platformGrantLevelRefused,
       _ => null,
     };
     if (code != null) return ValidationError(error.toString(), code: code.key);

@@ -123,6 +123,23 @@ enum AppErrorCode {
   platformUnreachable('platform.unreachable'),
   platformUnreadableAnswer('platform.unreadable_answer'),
 
+  // --- LibreDB Platform access requests (M13-P; the requester's routes and the admin's decision) ---
+  /// The account's token carries neither the Studio user role nor the Platform admin role, so it may not ask for
+  /// access (403 `STUDIO_ROLE_REQUIRED`).
+  platformStudioRoleRequired('platform.studio_role_required'),
+
+  /// This Platform install does not take access requests (404 `ACCESS_REQUESTS_DISABLED`).
+  platformAccessRequestsDisabled('platform.access_requests_disabled'),
+  platformAccessRequestPending('platform.access_request_pending'),
+  platformAccessAlreadyGranted('platform.access_already_granted'),
+  platformAccessRequestLimit('platform.access_request_limit'),
+
+  /// The request was answered or withdrawn before this decision reached Platform (409 `ACCESS_REQUEST_DECIDED`).
+  platformAccessRequestDecided('platform.access_request_decided'),
+
+  /// An access request create or refuse refused only on `reason` (`platformAccessRequestWriteError`).
+  platformAccessRequestReasonRefused('platform.access_request_reason_refused'),
+
   // --- generic fallback ---
   generic('error.generic');
 

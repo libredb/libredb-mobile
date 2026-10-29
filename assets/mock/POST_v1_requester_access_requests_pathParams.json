@@ -1,0 +1,24 @@
+{
+  "request": {
+    "id": "cm0req00000000000000000001",
+    "connection": {
+      "id": "cm0conn0000000000000000003",
+      "name": "Support tickets",
+      "engine": "postgres",
+      "status": "active"
+    },
+    "requester": {
+      "subject": "kc-0000-0000-0001",
+      "username": "jane.doe",
+      "email": "jane.doe@example.org"
+    },
+    "level": "read",
+    "reason": "I am on the support rota this week and need to read the ticket history.",
+    "status": "withdrawn",
+    "createdAt": "2026-10-28T09:12:00.000Z",
+    "decidedAt": "2026-10-29T10:05:00.000Z",
+    "decidedBy": null,
+    "decisionReason": null,
+    "grantId": null
+  }
+}

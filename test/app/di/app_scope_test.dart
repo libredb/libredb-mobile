@@ -20,6 +20,8 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/app/session/studio_account_refusal_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_api_exception.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
+import 'package:libredb_mobile/features/access_requests/domain/entities/my_access_request.dart';
+import 'package:libredb_mobile/features/access_requests/domain/repositories/access_request_repository.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/core/security/screen_capture_protection.dart';
 import 'package:libredb_mobile/features/auth/application/login_bloc.dart';
@@ -1245,6 +1247,59 @@ void main() {
 
       expect(scope.read<IPlatformIdentityRepository>(), isNotNull);
       expect(scope.read<PlatformIdentityCubit>().state, const PlatformIdentityInitial());
+    });
+
+    // A Studio session asks Platform for access through the requester routes; a Platform refusal of those calls is
+    // never the Studio session's end, and it refuses neither account.
+    testWidgets('an access request refused with 401 BEARER_INVALID keeps the Studio session signed in', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'studio');
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.refreshToken.key, 'stored-refresh-token');
+      final rotation = _FakeRotation(TokensRotated(accessToken: _unexpiredJwt()));
+      final scope = await _pumpScope(tester, _CountingDependencies(rotation: rotation, appConfig: _prodPlatformConfig));
+      final session = scope.read<SessionCubit>();
+      expect(session.state, const SessionAuthenticated(target: SessionTarget.studio));
+      final server = _ServerAdapter({
+        'GET /v1/requester/access-requests': (
+          401,
+          {
+            'error': {'code': 'BEARER_INVALID', 'message': 'invalid'},
+          },
+        ),
+      });
+      scope.read<PlatformApiClient>().instance.httpClientAdapter = server;
+
+      final result = await tester.runAsync(() => scope.read<IAccessRequestRepository>().mine());
+
+      expect((result! as Failure<List<MyAccessRequest>>).error.code, AppErrorCode.authInvalidAccessToken.key);
+      expect(rotation.rotations, 1, reason: 'the 401 starts one refresh, and the second answer is not refreshed again');
+      expect(session.state, const SessionAuthenticated(target: SessionTarget.studio));
+      expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
+      expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+    });
+
+    testWidgets('an access request refused with 403 STUDIO_ROLE_REQUIRED refuses neither account', (tester) async {
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.sessionTarget.key, 'studio');
+      await FlutterSecureStorageAdapter().write(SecureStorageKeys.jwtToken.key, _unexpiredJwt());
+      final scope = await _pumpScope(tester, _CountingDependencies(appConfig: _prodPlatformConfig));
+      final session = scope.read<SessionCubit>();
+      scope.read<PlatformApiClient>().instance.httpClientAdapter = _ServerAdapter({
+        'POST /v1/requester/access-requests': (
+          403,
+          {
+            'error': {'code': 'STUDIO_ROLE_REQUIRED', 'message': 'refused'},
+          },
+        ),
+      });
+
+      final result = await tester.runAsync(
+        () => scope.read<IAccessRequestRepository>().create(connectionId: 'c1', level: 'read', reason: 'why'),
+      );
+
+      expect((result! as Failure<MyAccessRequest>).error.code, AppErrorCode.platformStudioRoleRequired.key);
+      expect(scope.read<PlatformAccountRefusalCubit>().state, const PlatformAccountAccepted());
+      expect(scope.read<StudioAccountRefusalCubit>().state, const StudioAccountAccepted());
+      expect(session.state, const SessionAuthenticated(target: SessionTarget.studio));
     });
 
     testWidgets('provides the Platform connection repository over the Platform client', (tester) async {

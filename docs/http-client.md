@@ -70,6 +70,7 @@ A write the store refuses is logged as an error with the key and the size, the e
 Platform mode talks to LibreDB Platform's bearer API through `PlatformApiClient` (`lib/infrastructure/platform/platform_api_client.dart`), its own DI type next to the Studio `ApiClient`, so a Studio repository can never be given the Platform client, and the reverse.
 It wraps an `ApiClient` built with an `ApiTarget` (`lib/infrastructure/http/api_target.dart`): the base URL and pins of `AppConfig.platform` (`PLATFORM_API_URL`, `PLATFORM_CERT_PINS`) and `PlatformErrorEnvelope`; the Studio client uses `StudioErrorEnvelope` and is unchanged.
 The interceptor chain is the same, with the account refusal interceptor; both clients share the one token rotation.
+A Studio session uses this client too, on Platform's requester routes alone, when the user asks for access to a connection ([platform.md](platform.md#access-requests-from-a-studio-session)).
 
 - **Envelope.** Platform's error body is `{"error":{"code","message","fieldErrors"?}}`.
   `PlatformErrorEnvelope` reads `error.code` and the keys of `error.fieldErrors` (`BadRequestException.fieldErrorKeys`).
@@ -77,6 +78,8 @@ The interceptor chain is the same, with the account refusal interceptor; both cl
 - **Session.** A 401 `BEARER_INVALID` starts one refresh, and a second one after it ends the session as expired (`lib/infrastructure/platform/platform_session_policy.dart`).
   A 401 without Platform's envelope reaches the caller and keeps the session, and a 502 or 503 never ends it.
 - **Account refusal.** A 403 `ADMIN_ROLE_REQUIRED` or `LICENSE_ADMIN_SEATS` is reported to `PlatformAccountRefusalCubit`, only under a signed-in Platform session.
+- **Methods.** `PlatformApiClient` exposes `get`, `post`, `put`, `patch` and `delete`, each one path relative to Platform's `/api`, with `pathParams` appended as further segments.
+  `post` forwards `sensitiveKeys` to `ApiClient.post`, so a body key such as an access request's `reason` is masked in the verbose log and the dev console, and it never passes the `idempotent` opt-in, so a write is never sent twice.
 - **Retries.** `ResilienceInterceptor` reads the code through the client's envelope, so a coded Platform answer, such as a 503 `DIRECTORY_UNAVAILABLE` or a 502 `KEYCLOAK_AUTH_ERROR`, is sent once and never counted against the circuit breaker; only a `GET` is ever repeated.
 - **Cache.** Every path under `/v1/` and the liveness probe `/health/live` are `networkOnly`, whatever the request names, so a Platform answer is never stored or served from the cache, and an offline Platform never reads as live.
 - **No target.** In a build without `PLATFORM_API_URL` every call fails with `PlatformNotConfiguredException` and no request is sent.

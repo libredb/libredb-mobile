@@ -1,0 +1,24 @@
+{
+  "request": {
+    "id": "cm0req00000000000000000005",
+    "connection": {
+      "id": "cm0conn0000000000000000001",
+      "name": "Analytics warehouse",
+      "engine": "postgres",
+      "status": "active"
+    },
+    "requester": {
+      "subject": "kc-0000-0000-0001",
+      "username": "jane.doe",
+      "email": "jane.doe@example.org"
+    },
+    "level": "read",
+    "reason": "I need the October order totals for the quarterly report.",
+    "status": "pending",
+    "createdAt": "2026-10-29T10:00:00.000Z",
+    "decidedAt": null,
+    "decidedBy": null,
+    "decisionReason": null,
+    "grantId": null
+  }
+}
