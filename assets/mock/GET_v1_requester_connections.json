@@ -26,6 +26,14 @@
       "hasWriteCredential": true,
       "access": null,
       "pendingRequestId": "cm0req00000000000000000001"
+    },
+    {
+      "id": "cm0conn0000000000000000004",
+      "name": "Inventory feed",
+      "engine": "mysql",
+      "hasWriteCredential": false,
+      "access": null,
+      "pendingRequestId": null
     }
   ]
 }

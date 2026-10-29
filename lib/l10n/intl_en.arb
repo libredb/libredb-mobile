@@ -1670,5 +1670,102 @@
   "platform_audit_only_this_user": "Only this user",
   "@platform_audit_only_this_user": {},
   "platform_audit_only_this_connection": "Only this connection",
-  "@platform_audit_only_this_connection": {}
+  "@platform_audit_only_this_connection": {},
+  "access_requests_title": "My requests",
+  "@access_requests_title": {},
+  "access_requests_new_title": "Request access",
+  "@access_requests_new_title": {},
+  "access_requests_profile_tile": "Access requests",
+  "@access_requests_profile_tile": {},
+  "access_requests_empty_action": "Request access",
+  "@access_requests_empty_action": {},
+  "access_requests_empty_title": "No requests yet",
+  "@access_requests_empty_title": {},
+  "access_requests_empty_description": "Ask for access to a connection and follow the answer here.",
+  "@access_requests_empty_description": {},
+  "access_requests_load_failed": "Your requests could not be loaded",
+  "@access_requests_load_failed": {},
+  "access_requests_status_pending": "Pending",
+  "@access_requests_status_pending": {},
+  "access_requests_status_approved": "Approved",
+  "@access_requests_status_approved": {},
+  "access_requests_status_refused": "Refused",
+  "@access_requests_status_refused": {},
+  "access_requests_status_withdrawn": "Withdrawn",
+  "@access_requests_status_withdrawn": {},
+  "access_requests_level_read": "Read",
+  "@access_requests_level_read": {},
+  "access_requests_level_write": "Write",
+  "@access_requests_level_write": {},
+  "access_requests_level_read_in_sentence": "read",
+  "@access_requests_level_read_in_sentence": {},
+  "access_requests_level_write_in_sentence": "write",
+  "@access_requests_level_write_in_sentence": {},
+  "access_requests_sent_at": "Sent {date}",
+  "@access_requests_sent_at": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_refused_reason": "Administrator's reason: {reason}",
+  "@access_requests_refused_reason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_refused_no_reason": "The administrator gave no reason.",
+  "@access_requests_refused_no_reason": {},
+  "access_requests_approved_note": "The connection appears in your connection list after you refresh it. It can take a moment.",
+  "@access_requests_approved_note": {},
+  "access_requests_withdraw": "Withdraw",
+  "@access_requests_withdraw": {},
+  "access_requests_withdraw_title": "Withdraw request",
+  "@access_requests_withdraw_title": {},
+  "access_requests_withdraw_message": "Your request for {level} access to {connection} will be withdrawn. You can ask again later.",
+  "@access_requests_withdraw_message": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "connection": {
+        "type": "String"
+      }
+    }
+  },
+  "access_requests_withdrawn_snackbar": "Request withdrawn.",
+  "@access_requests_withdrawn_snackbar": {},
+  "access_requests_sent_snackbar": "Request sent.",
+  "@access_requests_sent_snackbar": {},
+  "access_requests_form_connection": "Connection",
+  "@access_requests_form_connection": {},
+  "access_requests_form_no_connections": "There is no connection you can ask for right now.",
+  "@access_requests_form_no_connections": {},
+  "access_requests_form_load_failed": "The connections could not be loaded",
+  "@access_requests_form_load_failed": {},
+  "access_requests_form_connection_pending": "You already have a pending request",
+  "@access_requests_form_connection_pending": {},
+  "access_requests_form_connection_granted": "You already have access",
+  "@access_requests_form_connection_granted": {},
+  "access_requests_form_level": "Access level",
+  "@access_requests_form_level": {},
+  "access_requests_form_level_write_unavailable": "This connection has no write credential, so write access cannot be requested.",
+  "@access_requests_form_level_write_unavailable": {},
+  "access_requests_form_level_read_held": "You already have read access to this connection.",
+  "@access_requests_form_level_read_held": {},
+  "access_requests_form_reason": "Reason",
+  "@access_requests_form_reason": {},
+  "access_requests_form_reason_hint": "Why do you need this access?",
+  "@access_requests_form_reason_hint": {},
+  "access_requests_form_send": "Send request",
+  "@access_requests_form_send": {},
+  "access_requests_form_connection_required": "Choose a connection.",
+  "@access_requests_form_connection_required": {},
+  "access_requests_form_level_required": "Choose an access level.",
+  "@access_requests_form_level_required": {},
+  "access_requests_form_reason_invalid": "Write a reason of 1 to 500 characters.",
+  "@access_requests_form_reason_invalid": {}
 }

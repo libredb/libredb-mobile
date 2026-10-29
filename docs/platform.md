@@ -149,6 +149,26 @@ The feature is named outside `platform_*` for that reason: it serves a Studio se
 - No fixture is recorded yet: Platform `origin/main` has no requester route, so nothing can be recorded against the `platform` profile of `tool/studio-dev`.
   When a Platform image carries them, `test/fixtures/platform/requester_connections.json`, `requester_requests.json`, `requester_create.json`, `requester_create_pending.json` and `requester_withdraw_decided.json` are recorded and read by `test/infrastructure/platform/recorded_platform_answers_test.dart`.
 
+### The screens
+
+Two pages sit on the repository above, under the Studio connection list, so `ApplicationRoutesConstants.belongsTo(SessionTarget.studio, ...)` already holds for them and a Platform session never reaches them: `accessRequests` (`/connections/requests`, "My requests") and `accessRequestNew` (`/connections/requests/new`, the form).
+`AccessRequestsFeatureRoutes.routes` composes them into the Studio shell; its BLoCs (`MyAccessRequestsBloc`, `WithdrawAccessRequestBloc`, `AccessRequestFormBloc`) are created in the routes, so a sign-out or a mode switch has nothing of this feature to clear.
+
+- **Visibility.** The two entry points and both routes exist only in a build with a Platform target (`AppConfig.platform is PlatformConfigured`) while Studio's connection policy is loaded with `governance` true.
+  The entries are the "Request access" action of the governed empty connection list and the "Access requests" tile of the profile sheet, directly under the mode switch, in a Studio session only.
+  Both routes redirect to `connectionList` unless `accessRequestsAvailable` (`lib/app/router/access_requests_availability.dart`) holds, so a typed location or a `returnUrl` sends no Platform request outside the rule; the predicate lives in `lib/app/` because the feature must not read the connection policy of another feature.
+- **My requests** lists the caller's newest requests in Platform's order: the connection, the level, the sent time, and the status as a badge (pending `warning`, approved `success`, refused `destructive`, withdrawn `secondary`, any other value `outline` with the raw value).
+  A refused row shows the administrator's reason, an approved row says the connection appears in the list after a refresh (Studio picks up the grant at its next governance reload), and a pending row has Withdraw.
+  Withdraw asks first, is sent once and never retried, and disables every row's Withdraw while it runs; the answer replaces its row in place (`MyAccessRequestReplaced`) without a reload, and a 409 `ACCESS_REQUEST_DECIDED` or a 404 reads the list again.
+  Pull to refresh keeps the list on screen and says a failed refresh in a snackbar; an empty list offers Request access, a list offers a floating button, and a failed load offers Retry.
+- **The form** lists the requestable connections, shows one with a pending request or already held at the highest level disabled with the reason, picks a level (write is disabled without a write credential, read when read is held), and takes a reason of 1 to 500 characters after trimming with a counter.
+  Send is disabled while a request is out; a second Send is dropped.
+  The draft stays across a refusal: a 400 on `reason` or `level` lands under its field, a 409 `ACCESS_REQUEST_PENDING` or `ACCESS_ALREADY_GRANTED` shows its text and offers "My requests", and any other refusal shows its text with Retry, which sends the draft again because the user asked.
+  The page asks before it is left with a reason written (`UnsavedChangesScope`, `onExit: confirmLeavingUnsavedChanges`); a request Platform took closes it to "My requests", which reloads, with a snackbar.
+- **Refusals in a Studio session.** The pages show every Platform refusal themselves with `errorCode.resolve(context)`: a 403 (`ADMIN_ROLE_REQUIRED`, `STUDIO_ROLE_REQUIRED`, any `LICENSE_*`), a 404 from a Platform without the requester routes, an offline device (`network.offline`) and a Platform that does not answer (`platform.unreachable`, "Platform does not answer. Try again in a moment.").
+  None ends the Studio session, opens the Platform refusal page or signs out.
+- The mock rows for the device check are in the four `assets/mock/GET_v1_requester_*.json` and `POST_*` answers: one request per known status, a refused one with its reason, and requestable connections that include one already held, one with a pending request, one held without a write credential and one free without a write credential.
+
 ## Errors
 
 Every error body is `{"error":{"code","message","fieldErrors"?}}` (`src/shared/lib/bearer/api-v1-response.ts`); a 5xx keeps its code with a generic message, and a 500 is always `INTERNAL_ERROR`.

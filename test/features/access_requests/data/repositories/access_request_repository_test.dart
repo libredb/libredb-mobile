@@ -97,11 +97,16 @@ void main() {
       final result = await AccessRequestRepository(TestEnv.platformApiClient()).requestableConnections();
 
       final connections = (result as Success<List<RequestableConnection>>).data;
-      expect(connections, hasLength(3));
+      expect(connections, hasLength(4));
       expect(connections.where((connection) => connection.access == null), isNotEmpty);
       expect(connections.where((connection) => connection.access?.expiresAt != null), isNotEmpty);
       expect(connections.where((connection) => connection.pendingRequestId != null), isNotEmpty);
       expect(connections.where((connection) => !connection.hasWriteCredential), isNotEmpty);
+      // One that can be asked for at read only: free, and with no write credential.
+      expect(
+        connections.where((connection) => !connection.hasWriteCredential && connection.access == null),
+        isNotEmpty,
+      );
     });
 
     test('sends GET /v1/requester/connections', () async {
