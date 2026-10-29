@@ -13,7 +13,7 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/studio_identity.dart';
 
 /// What the user picked in the [ProfileSheet]; the caller acts on it once the sheet has closed.
-enum ProfileSheetAction { switchMode, settings, signOut }
+enum ProfileSheetAction { switchMode, accessRequests, settings, signOut }
 
 /// Who the user is signed in as and in which mode, with the way to the other mode, to the settings and to sign out.
 ///
@@ -69,6 +69,7 @@ class ProfileSheet extends StatelessWidget {
             },
             const Divider(height: AppSpacing.xl),
             if (context.read<AppConfig>().platform is PlatformConfigured) _SwitchModeTile(target: target),
+            if (target == SessionTarget.studio) const _AccessRequestsTile(),
             ListTile(
               key: profileSettingsKey,
               leading: const Icon(Icons.settings_outlined),
@@ -112,6 +113,32 @@ class _SwitchModeTile extends StatelessWidget {
           }),
           enabled: !running,
           onTap: () => Navigator.of(context).pop(ProfileSheetAction.switchMode),
+        );
+      },
+    );
+  }
+}
+
+/// The way to the user's access requests: only in a build with a Platform target, and only while Studio's connection
+/// policy says Platform governs it, since requests are Platform's workflow for a governed Studio.
+class _AccessRequestsTile extends StatelessWidget {
+  const _AccessRequestsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.read<AppConfig>().platform is! PlatformConfigured) return const SizedBox.shrink();
+    return BlocBuilder<ConnectionPolicyCubit, ConnectionPolicyState>(
+      builder: (context, state) {
+        final governed = switch (state) {
+          ConnectionPolicyLoaded(:final policy) => policy.governance,
+          ConnectionPolicyInitial() || ConnectionPolicyLoading() || ConnectionPolicyFailure() => false,
+        };
+        if (!governed) return const SizedBox.shrink();
+        return ListTile(
+          key: profileAccessRequestsKey,
+          leading: const Icon(Icons.lock_open_outlined),
+          title: Text(S.of(context).access_requests_profile_tile),
+          onTap: () => Navigator.of(context).pop(ProfileSheetAction.accessRequests),
         );
       },
     );

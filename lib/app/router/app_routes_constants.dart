@@ -63,6 +63,14 @@ class ApplicationRoutesConstants {
   /// The tabs of the Studio shell, in the order of its bottom navigation bar. New code reads [tabsFor].
   static const tabs = [connectionList, browse, sql];
 
+  /// The access requests of a Studio user under governance: "My requests". Under [connectionList], so it is a Studio
+  /// route and no Platform route.
+  static const accessRequests = '$connectionList/requests';
+
+  /// The form that asks for access to a connection, opened from "My requests", the empty connection list or the profile
+  /// sheet's entry.
+  static const accessRequestNew = '$accessRequests/new';
+
   // Settings routes
   static const settings = '/settings';
 
