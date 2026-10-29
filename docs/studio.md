@@ -125,6 +125,9 @@ xcrun simctl keychain booted add-root-cert studio-dev-ca.crt
 ```
 
 This step was not run, since the stack was verified on Linux.
+The simulator itself has since been used, on macOS with Xcode 27.1, for the mock target only, which reaches no server
+and so needs no CA; what that run showed is in
+[The same mock walkthrough on the iOS simulator](#the-same-mock-walkthrough-on-the-ios-simulator-91).
 
 ### What the walkthrough shows
 
@@ -165,7 +168,10 @@ That is the trigger #26 asks for; once Browse and SQL send requests (M3), the 40
 The emulator's keyboard (Gboard, English) types neither `İ` nor `ı`, so the Turkish search terms were copied in Chrome from a page served to the emulator and pasted from Gboard's clipboard.
 The emulator process exited once in the middle of step 4 on the governed Studio, with only graphics errors in its log; after a cold boot and `trust-android-emulator.sh` the walkthrough went on from the relaunch.
 
-The iOS simulator was not run, since the walkthrough ran on Linux, so no step is verified on iOS.
+The iOS simulator was not run, since the walkthrough ran on Linux, so no step of this walkthrough is verified on iOS.
+The app has since been built and walked through on the iOS simulator against the mock fixtures, which covers the
+screens of steps 1, 2 and 4 but no request to Studio and no Keycloak sign-in; it is written down in
+[The same mock walkthrough on the iOS simulator](#the-same-mock-walkthrough-on-the-ios-simulator-91).
 
 ## M3 walkthrough
 
@@ -200,7 +206,9 @@ Found during the walkthrough and logged for the backlog, none of which fails a s
 - A Browse level that failed offline loads again only on Retry after airplane mode ends, while the connection list recovers by itself.
 - The Postgres seed has no exclusion constraint, which is why the table above was added by hand.
 
-The iOS simulator was not run, since this Linux host has none and CI builds Android only, so no step is verified on iOS, #57's share sheet included; #91 tracks the iOS walkthrough.
+The iOS simulator was not run, since this Linux host has none and CI builds Android only, so no step of this walkthrough is verified on iOS.
+#57's share sheet has since been opened on the iOS simulator against the mock fixtures, as have the kinds page, the object list, a table detail and a source page; that run is in
+[The same mock walkthrough on the iOS simulator](#the-same-mock-walkthrough-on-the-ios-simulator-91), and #91 still tracks the walkthrough against Studio.
 
 ### Studio 1.1.0 check
 
@@ -559,6 +567,72 @@ neutral of all six carries a blue cast and this one is exactly grey. A force-sto
 `#FFFFFF`. The likely cause is a bottom sheet's barrier left behind when `KEYCODE_BACK` popped the app rather than
 the sheet, which is not a sequence a person performs; it is written down because it was measured, and not filed,
 because it was not reproduced.
+
+### The same mock walkthrough on the iOS simulator (#91)
+
+Run on 2026-10-29 from `main` at `a5bbe9de`, as a debug build of `main_mock.dart` on the iPhone 17 simulator, iOS
+27.0, under Xcode 27.1 on macOS 27.0.
+It is the first time this app has been built or run on iOS at all; everything before it was Android.
+The mock target reaches no server, so what passes here is evidence about the app's own screens on iOS and about
+nothing else: no request to Studio, no Keycloak sign-in and no TLS are covered, and the steps of the M2, M3 and M5
+walkthroughs that need the stack stay unverified on iOS.
+
+The build is `fvm flutter build ios --simulator --debug --target lib/main/main_mock.dart`.
+It needs `fvm flutter config --enable-swift-package-manager` first: Swift Package Manager is Flutter 3.47.7's own
+default, but it was off in this machine's `~/.config/flutter/settings`, and with it off the build stops at "The
+following plugin(s) are only compatible with Swift Package Manager: sentry_flutter".
+With it on the build takes about a minute and writes `build/ios/iphonesimulator/Runner.app`, which
+`xcrun simctl install booted` takes as it is; a simulator build is signed by nobody and needs no certificate.
+The build also re-integrates CocoaPods, which nobody asked for: `ios/Podfile` is still tracked although
+`docs/development.md` says the project has none, so the build runs `pod install`, prints "All plugins found for ios
+are Swift Packages, but your project still has CocoaPods integration", and writes `Pods/Pods.xcodeproj` into
+`ios/Runner.xcworkspace/contents.xcworkspacedata` and Pods xcconfigs and frameworks into
+`ios/Runner.xcodeproj/project.pbxproj` — two tracked files dirtied by a build, which this run put back.
+
+This machine's Xcode ships no `Simulator.app` and `simctl` has no touch command, so the walkthrough drove the running
+app through its own Dart VM Service: `flutter attach` for the expression compiler, then pointer events handed to
+`GestureBinding.instance.handlePointerEvent` and text handed to the focused `TextInputClient`.
+Every screen below was read from an `xcrun simctl io booted screenshot` of the booted device.
+A device booted without `Simulator.app` shuts itself down after about fifteen minutes, which ends `flutter attach`
+with "Lost connection to device"; the app and the walkthrough survive a re-boot, re-launch and re-attach.
+
+| What | Result on iOS |
+| --- | --- |
+| Onboarding | The four pages ("LibreDB Platform governs", "LibreDB Studio runs them", "This app is the window", "Where you already look") render, Next walks them, the dots follow, and Get started lands on the login page |
+| The login page | The brand mark, both sign-in buttons with their notes, and the community chips all render; the status bar is black on white and legible |
+| Sign-in | The mock provider signs in without a form and lands on the connection list; the profile sheet reads `admin@example.com`, the role **Administrator**, and the chip "Governed by LibreDB Platform" |
+| The connection list | The five connections over four groups, the governance banner, the engine icons, the PROD badge, the red stripe and the "Read only" lock, as on Android |
+| Settings | Appearance, Security, Privacy and Help & Resources render and scroll; the page has no bottom navigation bar, as it is no tab |
+| Browse | `Views 1,000+` and, under **Functions**, `permission denied for schema sales`; the object list, a table detail with its key mark, and the Foreign keys tab with "References customers.id" |
+| Source, copy and share | The source page shows Studio's text with "Regenerated by Studio, not the stored text"; Copy says "Copied" and the text is on the device pasteboard (`xcrun simctl pbpaste`), and Share opens iOS's own share sheet with the text, offering Reminders, Copy and Save to Files — #57's `share_plus` on iOS |
+| The editor | The keyboard rises with the accessory row (`;`, `,`, `(`, `)`, `*`, `'`, `"`, `=`), the statement is highlighted as it is typed, and `select * from invoices limit 5` answers **2 rows, 14 ms** beside a `limited` chip, with `NULL` in italic |
+| History | The sheet opens scoped to the active connection and says "Nothing matches the filter."; All connections shows the run above, with its connection, outcome, rows and time, kept across a relaunch and across a sign-out and sign-in of the same account |
+| The connection switcher | The app-bar title opens the switcher, which marks the active connection; switching to Billing (MySQL) carries the red stripe, the PROD badge and the lock into the app bar |
+| Relaunch | A force stop and a relaunch open on the connection list with the session kept, the active connection kept and a Recent chip for it |
+| Platform mode | "Switch to Platform" asks first and says why; confirming lands on Platform's Home, and the Audit tab lists its events with their Success, Refused, Error and Cancelled chips |
+| Sign-out | Logout asks, and the app is back on the login page |
+| Dark mode | `xcrun simctl ui booted appearance dark` turns the app with the phone, since Day and night follows it; the badges keep their colours and the status bar is legible |
+| The device log | 30 minutes of `xcrun simctl spawn booted log stream` over the whole walkthrough holds no statement text, no column or table name from a source page and no e-mail address; the access token prints as `MOCK…OKEN` and a bearer as `[REDACTED]` |
+
+What the mock target cannot show here, beyond the stack itself: the offline steps, because a simulator shares the
+host's network and has no airplane mode, and anything that needs a second account.
+
+#### The status bar is a black band on every signed-in screen
+
+On iOS, in the light theme, the top safe area of every signed-in screen is pure black, `#000000`, over its full
+height — 186 physical pixels, 62 points, on this device — and the clock, the Wi-Fi mark and the battery are invisible
+on it.
+The login page and the onboarding pages are white there, with a legible clock, so the band arrives with the shell and
+leaves with it.
+`ConnectivityBanner` is the cause: both shells sit it above the body in a `Column` and it holds the status-bar inset
+at all times, as an `AnimatedContainer` of `MediaQuery.paddingOf(context).top`, whose colour online is
+`Colors.transparent` (`lib/app/connectivity/connectivity_banner.dart`).
+Nothing paints behind it, so on iOS the engine's own black shows through; on Android the system draws the status bar
+behind the app, which is why no Android walkthrough saw it.
+The render tree shows it exactly: the shell's `Scaffold` is laid out at `offset=Offset(0.0, 62.0)` with its white
+`Material` starting there, while the 402x62 box above it is a `BoxDecoration` with `color: Color(alpha: 0.0000 …)`.
+In the dark theme the same band reads as part of the page and the status bar stays legible, which is why only the
+light theme looks broken.
 
 ## Postgres seeds
 
