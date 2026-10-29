@@ -170,6 +170,7 @@ Only the maintainer does these, and no value from them is ever written into an i
    Merging it tags `v1.0.0` and starts the release; approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
    Do not push the tag `v1.0.0` by hand as well, since release-please then cannot create its release of `1.0.0`.
 11. Once `v1.0.0` is tagged, remove `release-as` from `release-please-config.json` in a follow-up commit, or every later release pull request stays at `1.0.0`.
+   Done; `test/architecture/android_release_setup_test.dart` now fails while `release-as` names a version `CHANGELOG.md` already holds a released section for.
 12. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
 13. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
 14. Approve the build job and then the upload job each time a release waits for them.
