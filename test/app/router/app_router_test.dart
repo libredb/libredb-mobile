@@ -649,12 +649,18 @@ void main() {
       final pending = Uri.encodeQueryComponent(ApplicationRoutesConstants.settings);
       expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.welcome}?returnUrl=$pending');
 
-      // The control advances through the six screens and leaves on the last, so the deep link has to survive six
-      // taps rather than one — which is the point: it is held across the whole flow, not across one screen.
-      for (var step = 0; step < onboardingStepCount; step++) {
-        await tester.tap(find.byKey(onboardingDoneKey));
+      // The deck is dragged through its six screens and the control that signs in leaves on the last, so the deep
+      // link has to survive the whole flow rather than one screen.
+      for (var step = 0; step < onboardingStepCount - 1; step++) {
+        await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+        await tester.pump();
+        await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
         await tester.pumpAndSettle();
       }
+      await tester.ensureVisible(find.byKey(onboardingDoneKey));
+      await tester.pump();
+      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.pumpAndSettle();
       expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.login}?returnUrl=$pending');
 
       TestEnv.authenticate();
@@ -677,6 +683,8 @@ void main() {
 
       expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.welcome}?returnUrl=$pending');
 
+      await tester.ensureVisible(find.byKey(onboardingSkipKey));
+      await tester.pump();
       await tester.tap(find.byKey(onboardingSkipKey));
       await tester.pumpAndSettle();
       expect(routerFromApp(tester).state.uri.toString(), '${ApplicationRoutesConstants.login}?returnUrl=$pending');

@@ -72,6 +72,8 @@ void main() {
   /// Moves to the next screen the way a user does: the deck is turned by dragging it, and the primary control is
   /// gone from every screen but the last.
   Future<void> advance(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+    await tester.pump();
     await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
   }
@@ -243,7 +245,7 @@ void main() {
       final l10n = await pumpFrame(tester);
 
       for (var step = 0; step < 5; step++) {
-        expect(find.text(l10n.ob_next), findsOneWidget, reason: 'step ${step + 1} of 6 still advances');
+        expect(find.text(l10n.ob_next), findsNothing, reason: 'step ${step + 1} of 6 still carries a Next');
         expect(find.text(l10n.ob_done), findsNothing, reason: 'step ${step + 1} of 6 does not leave yet');
         await advance(tester);
       }
@@ -278,18 +280,22 @@ void main() {
   });
 
   group('the step change is animated', () {
-    testWidgets('the words rise into place over the slow duration rather than appearing', (tester) async {
+    // The entrance travelled upward until the owner replaced the primary control with the gesture on 2026-10-29;
+    // the deck is turned sideways, so the screen arrives sideways. The axis is what changed, not the timing.
+    testWidgets('the words travel in sideways over the slow duration rather than appearing', (tester) async {
       await pumpFrame(tester);
-      final resting = tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dy;
+      final resting = tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dx;
 
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pump();
 
       expect(entrance(tester).opacity.value, lessThan(0.1), reason: 'the words of the new step start invisible');
       expect(
-        tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dy,
+        tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dx,
         greaterThan(resting),
-        reason: 'the words of the new step start below where they come to rest',
+        reason: 'dragged to the left, the words of the new step start to the right of where they come to rest',
       );
 
       await tester.pump(AppDurations.slow ~/ 2);
@@ -298,19 +304,21 @@ void main() {
 
       await tester.pump(AppDurations.slow);
       expect(entrance(tester).opacity.value, 1.0);
-      expect(tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dy, resting);
+      expect(tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dx, resting);
     });
 
     testWidgets('with animations off every screen settles immediately into its finished state', (tester) async {
       await pumpFrame(tester, disableAnimations: true);
-      final resting = tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dy;
+      final resting = tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dx;
       final accent = AppTheme.light().colorScheme.primary;
 
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pump();
 
       expect(entrance(tester).opacity.value, 1.0, reason: 'the words are fully there on the first frame');
-      expect(tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dy, resting, reason: 'and already at rest');
+      expect(tester.getTopLeft(find.byKey(onboardingHeadlineKey)).dx, resting, reason: 'and already at rest');
       expect(segments(tester).where((colour) => colour == accent).length, 2, reason: 'and the rule is already filled');
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, '02 / 06');
     });
@@ -332,6 +340,8 @@ void main() {
       expect(find.byKey(onboardingCounterKey), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 1));
 
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
       await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 2));
@@ -350,6 +360,8 @@ void main() {
           findsNothing,
           reason: 'screen $step of $onboardingStepCount still carries a Next control',
         );
+        await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+        await tester.pump();
         await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
         await tester.pumpAndSettle();
       }
@@ -365,5 +377,4 @@ void main() {
       expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).data, padded(l10n, 1));
     });
   });
-
 }

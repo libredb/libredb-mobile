@@ -94,7 +94,9 @@ void main() {
       if (step < 6) {
         await tester.ensureVisible(find.byKey(onboardingDoneKey));
         await tester.pump();
-        await tester.tap(find.byKey(onboardingDoneKey));
+        await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+        await tester.pump();
+        await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
         await tester.pump();
         await tester.pump(const Duration(seconds: 2));
       }
@@ -125,7 +127,9 @@ void main() {
       if (step < 6) {
         await tester.ensureVisible(find.byKey(onboardingDoneKey));
         await tester.pump();
-        await tester.tap(find.byKey(onboardingDoneKey));
+        await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+        await tester.pump();
+        await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
         await tester.pump();
         await tester.pump(const Duration(seconds: 2));
       }

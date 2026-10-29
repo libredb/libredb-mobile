@@ -192,6 +192,8 @@ void main() {
   /// Moves to the next screen the way a user does: the deck is turned by dragging it, and the primary control is
   /// gone from every screen but the last.
   Future<void> advance(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+    await tester.pump();
     await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
     await tester.pumpAndSettle();
   }
@@ -267,13 +269,13 @@ void main() {
   }
 
   /// The caption, the headline and the body of each of the six screens, in the order the flow shows them.
-  List<(String, String, String)> screens(S l10n) => [
-    (l10n.ob1_cap, l10n.ob1_title, l10n.ob1_body),
-    (l10n.ob2_cap('orders-prod'), l10n.ob2_title, l10n.ob2_body),
-    (l10n.ob3_cap('orders-prod'), l10n.ob3_title, l10n.ob3_body),
-    (l10n.ob4_cap, l10n.ob4_title, l10n.ob4_body),
-    (l10n.ob5_cap, l10n.ob5_title, l10n.ob5_body),
-    (l10n.ob6_cap, l10n.ob6_title, l10n.ob6_body),
+  List<(String, String, String)> screens(S l10n, Locale locale) => [
+    (onboardingCapitals(l10n.ob1_cap, locale), l10n.ob1_title, l10n.ob1_body),
+    (onboardingCapitals(l10n.ob2_cap('orders-prod'), locale), l10n.ob2_title, l10n.ob2_body),
+    (onboardingCapitals(l10n.ob3_cap('orders-prod'), locale), l10n.ob3_title, l10n.ob3_body),
+    (onboardingCapitals(l10n.ob4_cap, locale), l10n.ob4_title, l10n.ob4_body),
+    (onboardingCapitals(l10n.ob5_cap, locale), l10n.ob5_title, l10n.ob5_body),
+    (onboardingCapitals(l10n.ob6_cap, locale), l10n.ob6_title, l10n.ob6_body),
   ];
 
   for (final (brightness, dark) in [('light', false), ('dark', true)]) {
@@ -283,7 +285,7 @@ void main() {
           const width = 390.0;
           final l10n = await pumpIntroduction(tester, dark: dark, locale: locale, textScale: scale);
           final page = Theme.of(tester.element(find.byType(OnboardingPage))).colorScheme.surface;
-          final flow = screens(l10n);
+          final flow = screens(l10n, locale);
 
           for (final (index, (caption, title, body)) in flow.indexed) {
             final where = 'screen ${index + 1} of ${flow.length} in $language';
@@ -345,7 +347,7 @@ void main() {
       final l10n = await pumpIntroduction(tester, dark: false, locale: locale, textScale: 3.0);
 
       for (var step = 0; step < onboardingStepCount - 1; step++) {
-        expect(find.text(l10n.ob_next), findsOneWidget, reason: 'screen ${step + 1} still advances');
+        expect(find.text(l10n.ob_next), findsNothing, reason: 'screen ${step + 1} still carries a Next');
         await advance(tester);
       }
 

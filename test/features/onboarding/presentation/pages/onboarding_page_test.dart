@@ -94,6 +94,8 @@ void main() {
   /// Advances to the last screen, where the primary control is the one that leaves.
   Future<void> reachLastScreen(WidgetTester tester) async {
     for (var i = 0; i < 5; i++) {
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
       await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
     }
@@ -147,6 +149,8 @@ void main() {
     await pumpWelcome(tester);
     await reachLastScreen(tester);
 
+    await tester.ensureVisible(find.byKey(onboardingDoneKey));
+    await tester.pump();
     await tester.tap(find.byKey(onboardingDoneKey));
     await tester.pumpAndSettle();
 
@@ -164,14 +168,16 @@ void main() {
   group('the six screens', () {
     /// Every screen's caption and headline, in the order the flow shows them.
     List<(String, String)> screens(WidgetTester tester) {
-      final l10n = S.of(tester.element(find.byKey(onboardingHeadlineKey)));
+      final element = tester.element(find.byKey(onboardingHeadlineKey));
+      final l10n = S.of(element);
+      final locale = Localizations.localeOf(element);
       return [
-        (l10n.ob1_cap, l10n.ob1_title),
-        (l10n.ob2_cap('orders-prod'), l10n.ob2_title),
-        (l10n.ob3_cap('orders-prod'), l10n.ob3_title),
-        (l10n.ob4_cap, l10n.ob4_title),
-        (l10n.ob5_cap, l10n.ob5_title),
-        (l10n.ob6_cap, l10n.ob6_title),
+        (onboardingCapitals(l10n.ob1_cap, locale), l10n.ob1_title),
+        (onboardingCapitals(l10n.ob2_cap('orders-prod'), locale), l10n.ob2_title),
+        (onboardingCapitals(l10n.ob3_cap('orders-prod'), locale), l10n.ob3_title),
+        (onboardingCapitals(l10n.ob4_cap, locale), l10n.ob4_title),
+        (onboardingCapitals(l10n.ob5_cap, locale), l10n.ob5_title),
+        (onboardingCapitals(l10n.ob6_cap, locale), l10n.ob6_title),
       ];
     }
 
@@ -198,7 +204,9 @@ void main() {
           );
         }
         if (index < flow.length - 1) {
-          await tester.tap(find.byKey(onboardingDoneKey));
+          await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+          await tester.pump();
+          await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
           await tester.pumpAndSettle();
         }
       }
@@ -208,7 +216,7 @@ void main() {
       await pumpWelcome(tester);
       final l10n = S.of(tester.element(find.byKey(onboardingHeadlineKey)));
 
-      expect(find.text(l10n.ob_next), findsOneWidget);
+      expect(find.text(l10n.ob_next), findsNothing, reason: 'Next is gone; the deck is turned by dragging it');
       await reachLastScreen(tester);
       expect(find.text(l10n.ob_next), findsNothing);
       expect(find.text(l10n.ob_done), findsOneWidget);
@@ -235,6 +243,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(headline(), all.first, reason: 'the first screen went back past itself');
 
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
       await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
       expect(headline(), all[1], reason: 'a fling to the left did not open the next screen');
@@ -265,30 +275,37 @@ void main() {
     // makes — would pass it and still move. Both directions are thrown, because a pager that refused the forward
     // fling would have taken the backward one. The throw starts from the second screen so that either direction
     // has a screen to land on, and a move in either would be visible.
-    testWidgets('a fling across the page does not move the flow either', (tester) async {
+    // This guard was written against the rule the owner reversed on 2026-10-29, and asserted that a fling moved
+    // nothing. Reversed with the rule: a fling from the middle of the deck turns it both ways.
+    testWidgets('a fling turns the deck from the middle of it, both ways', (tester) async {
       await pumpWelcome(tester);
       final flow = screens(tester);
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
       expect(headline(tester), flow[1].$2, reason: 'the throw starts from the second of the six screens');
 
-      for (final thrown in <Offset>[Offset(-300, 0), Offset(300, 0)]) {
-        await tester.fling(find.byKey(onboardingHeadlineKey), thrown, 800);
-        await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(headline(tester), flow[2].$2, reason: 'a fling to the left did not open the third screen');
 
-        expect(
-          headline(tester),
-          flow[1].$2,
-          reason: 'a fling of $thrown moved the flow, and the primary control is the only way forward',
-        );
-      }
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(300, 0), 800);
+      await tester.pumpAndSettle();
+      expect(headline(tester), flow[1].$2, reason: 'a fling to the right did not go back');
     });
 
     testWidgets('Skip leaves from any screen, not only the first', (tester) async {
       await pumpWelcome(tester);
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.byKey(onboardingSkipKey));
+      await tester.pump();
       await tester.tap(find.byKey(onboardingSkipKey));
       await tester.pumpAndSettle();
 
@@ -305,11 +322,15 @@ void main() {
         await pumpWelcome(tester);
         final flow = screens(tester);
         for (var step = 0; step < start; step++) {
-          await tester.tap(find.byKey(onboardingDoneKey));
+          await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+          await tester.pump();
+          await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
           await tester.pumpAndSettle();
         }
         expect(headline(tester), flow[start].$2, reason: 'the walk did not reach screen ${start + 1}');
 
+        await tester.ensureVisible(find.byKey(onboardingSkipKey));
+        await tester.pump();
         await tester.tap(find.byKey(onboardingSkipKey));
         await tester.pumpAndSettle();
 
@@ -389,7 +410,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(frame.offset, greaterThan(0), reason: 'the reader scrolled down the screen they are on');
 
-      await tester.tap(find.byKey(onboardingDoneKey));
+      await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
+      await tester.pump();
+      await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
       await tester.pumpAndSettle();
 
       expect(frame.offset, 0, reason: 'the new screen opened already scrolled past its own headline');

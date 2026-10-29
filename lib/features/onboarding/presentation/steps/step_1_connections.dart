@@ -212,7 +212,10 @@ class _DemoConnectionRow extends StatelessWidget {
           // The prototype's row is `.crow{display:flex;align-items:center}`: the strip, the engine, the name over
           // the database, and then the badges on the *right*, on the same line. Stacked under the name instead,
           // the row is half again as tall and the badges read as a third line of the connection's name.
-          Expanded(
+          // `Flexible`, not `Expanded`: a tight flex child takes every free pixel of the row, which left the badges
+          // beside it nothing to be laid out in and scaled them down even at the ordinary text size. Loose, the two
+          // share what the row has.
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -228,17 +231,22 @@ class _DemoConnectionRow extends StatelessWidget {
               ],
             ),
           ),
+          // `Flexible`, because the badges sit beside the name rather than under it: without it the `Wrap` asks the
+          // `Row` for its children's full width and the row overflows to the right at an accessibility text size,
+          // which is the defect `scaleDown` below exists for. Bounded, the pills shrink into the slot they have.
           if (badges.isNotEmpty)
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              // A pill is laid out side by side and cannot wrap: `ReadOnlyChip` is a lock and 'Read only' in one
-              // `Row`, so at an accessibility text size it asks for more width than the hero has and the row
-              // overflows to the right — 169pt in Turkish at x3, measured. The hero scrolls vertically, so this is
-              // the one axis nothing absorbs. `scaleDown` draws each pill at its own size whenever that fits, which
-              // it does at every ordinary text size, and shrinks only the pill that would not.
-              children: [for (final badge in badges) FittedBox(fit: BoxFit.scaleDown, child: badge)],
+            Flexible(
+              child: Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                // A pill is laid out side by side and cannot wrap: `ReadOnlyChip` is a lock and 'Read only' in one
+                // `Row`, so at an accessibility text size it asks for more width than the hero has and the row
+                // overflows to the right — 169pt in Turkish at x3, measured. The hero scrolls vertically, so this is
+                // the one axis nothing absorbs. `scaleDown` draws each pill at its own size whenever that fits, which
+                // it does at every ordinary text size, and shrinks only the pill that would not.
+                children: [for (final badge in badges) FittedBox(fit: BoxFit.scaleDown, child: badge)],
+              ),
             ),
         ],
       ),

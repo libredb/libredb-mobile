@@ -218,7 +218,11 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                               children: [
                                 Expanded(
                                   child: _rise(
-                                    Text(_capitals(words.caption, locale), key: onboardingCaptionKey, style: eyebrow),
+                                    Text(
+                                      onboardingCapitals(words.caption, locale),
+                                      key: onboardingCaptionKey,
+                                      style: eyebrow,
+                                    ),
                                   ),
                                 ),
                                 _Counter(step: _step, style: eyebrow),
@@ -591,12 +595,15 @@ class _RenderHeroExtent extends RenderProxyBox {
 
 /// [text] in capitals, by the rules of [locale].
 ///
+/// Public because the tests that read a caption off the screen assert what the reader sees, and what the reader
+/// sees is this. The rule itself is pinned by a test of its own, so a test that uses it is not asserting nothing.
+///
 /// The prototype sets the caption in `text-transform:uppercase`, and a browser applies that by the document's
 /// language: under `lang="tr"` it turns `i` into `İ` and leaves `I` alone. Dart's own `toUpperCase` is the
 /// language-neutral one, so in Turkish it would write `BAGLANTILARINIZ` with a dotless `I` where the prototype
 /// writes `BAĞLANTILARINIZ`. The prototype itself shipped the opposite bug once — its `lang` was pinned to `tr`,
 /// so the English deck read `İT PLAYS İTSELF` — which is why this follows the locale rather than a constant.
-String _capitals(String text, Locale locale) {
+String onboardingCapitals(String text, Locale locale) {
   if (locale.languageCode != 'tr') return text.toUpperCase();
   return text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase();
 }
