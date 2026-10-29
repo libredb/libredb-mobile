@@ -235,10 +235,13 @@ class _DemoConnectionRow extends StatelessWidget {
           // The prototype draws this row as `.crow{display:flex;align-items:center}`, with the badges beside the
           // name. Tried and reverted on 2026-10-29: in that arrangement the name and the badges together want more
           // than the row has at every text size, and the badge that gives way is drawn at 77% of itself in Turkish
-          // — a visibly squeezed mark. The cause is not the arrangement but the chip: this app's `ReadOnlyChip`
-          // carries a lock whose size follows the text scaler, so it is wider than the prototype's 11px pill, and
-          // no split of one row fits both. Until the chip itself is narrowed, the badges keep their own line and
-          // the row is a line taller than the design. Measured, open, and recorded rather than shipped squeezed.
+          // — a visibly squeezed mark. The cause was not the arrangement but the chip: `ReadOnlyChip` carried a
+          // lock whose size followed the text scaler, so its inset was 32 pt at the ordinary text size and 56 pt at
+          // x3 against the 14 pt the prototype's own `.ro` draws.
+          //
+          // That obstacle is gone — the lock is out and the inset is a flat 16 pt at every text size — so the split
+          // is now a change that can fit. It is still a change to *this row*, measured on its own, and not the
+          // chip's; until then the badges keep their own line here and the row is a line taller than the design.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

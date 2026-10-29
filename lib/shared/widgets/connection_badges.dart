@@ -44,7 +44,30 @@ class EnvironmentBadge extends StatelessWidget {
   }
 }
 
-/// Marks a connection Studio refuses every write on, with a lock and the words 'Read only'.
+/// Marks a connection Studio refuses every write on, with the words 'Read only'.
+///
+/// The words and the pill around them, and nothing beside them, because that is all the approved introduction
+/// prototype draws (`scratchpad/ob/ob.html`, screen 1's locked row):
+///
+/// ```css
+/// .ro{font-family:var(--mono);font-size:11px;letter-spacing:.07em;padding:3px 6px;border-radius:999px;
+///  border:1px solid var(--edge);color:var(--quiet)}
+/// ```
+///
+/// Measured in headless Chrome at that file's own 390x844 frame, the pill comes out **80.34 x 22** in English and
+/// **95.08 x 22** in Turkish around a text box of 66.34 x 14 and 81.08 x 14 — identical in light and dark. Its own
+/// contribution is therefore 14 pt across (`6 + 6` of padding, `1 + 1` of border) and 8 pt down, the same number in
+/// both languages, and there is no icon anywhere in the rule.
+///
+/// This chip used to put a lock beside the words, sized `12 * MediaQuery.textScalerOf(context).scale(1)`. That made
+/// its inset 32 pt at the ordinary text size and 56 pt at x3 — measured, against the design's 14 — because the lock
+/// was the one part of the chip that followed the text scaler, so the chip grew faster than the words it marked.
+/// Without it the inset is `AppSpacing.sm` a side at every text size: 16 pt, the nearest the closed spacing scale
+/// comes to the design's 14, and 2 pt of that is the border this filled pill does not draw.
+///
+/// Dropping the lock costs no meaning: [Semantics] reads the whole label to a screen reader and the words say it in
+/// both languages. `connection_badges_test.dart` measures the inset against the chip's own `Text`, so the test
+/// font cancels out of the subtraction and the number means something.
 class ReadOnlyChip extends StatelessWidget {
   const ReadOnlyChip({super.key});
 
@@ -57,14 +80,7 @@ class ReadOnlyChip extends StatelessWidget {
       excludeSemantics: true,
       child: _Pill(
         background: scheme.surfaceContainerHighest,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: AppSpacing.xs,
-          children: [
-            Icon(Icons.lock_outline, size: 12 * MediaQuery.textScalerOf(context).scale(1), color: scheme.onSurface),
-            Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurface)),
-          ],
-        ),
+        child: Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurface)),
       ),
     );
   }
