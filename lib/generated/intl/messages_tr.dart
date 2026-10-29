@@ -119,7 +119,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m43(type) => "Studio\'ya göre bu anahtarın türü: ${type}.";
 
-  static String m44(line) => "Henüz yetki verilmemişse liste boş gelir:\n\"${line}\"";
+  static String m44(line) => "Henüz yetki verilmemişse liste şunu der: \"${line}\"";
 
   static String m45(connection) => "${connection} · gezinme";
 

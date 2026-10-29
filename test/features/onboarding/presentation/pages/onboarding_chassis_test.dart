@@ -217,35 +217,19 @@ void main() {
     );
   });
 
-  /// The same question for the body, and the same answer, against the prototype's own `.body{min-height:62px}` over
-  /// `13.5px/1.5` type — three of its lines, for bodies it authors as two.
+  /// The same question for the body: `.body{min-height:62px}` is a floor, in the prototype's own pixels.
   ///
-  /// Measured with the product font at the body's own 318: of the twelve bodies, ten come to two or three lines and
-  /// only English screen 5 reaches four (88). The box reserves the tallest, so in English it is already 88 and the
-  /// floor is slack — but in Turkish the tallest is 66, three lines by the words' own luck rather than by rule, and
-  /// a body shortened by one clause would drop the block to 44 and take the air out of all six Turkish screens.
-  /// That is the headline's bug (`minLines` was added after the tallest-only block measured 64) with a different
-  /// box around it.
-  ///
-  /// **Why the wide viewport** is the headline test's reason: `flutter test` draws in Ahem, whose every glyph is a
-  /// full em square. Measured in Ahem, at the body's own 318 the six bodies lay out at 88..176 — four to eight
-  /// lines, against the two to four they are on a phone — so there the block clears the floor by itself and no
-  /// floor can be proved. Given room (1328 of body width) the same six come to 22..44, one or two Ahem lines, and
-  /// the floor is the only thing that can lift the block — which is the thing being tested.
-  testWidgets('the body block keeps the three lines the prototype leaves it', (tester) async {
+  /// It used to be three lines of `bodyMedium` and the tallest of the six bodies; the prototype's body is `13.5px/1.5`
+  /// type and its box is 62 until a body needs more (English screen 5, which grows it). **Why the wide viewport** is
+  /// the headline test's reason: `flutter test` draws in Ahem, whose every glyph is a full em square, so at phone
+  /// width the bodies wrap to four to eight lines and clear any floor by themselves. Given room, the same six come to
+  /// one or two Ahem lines, and the floor is the only thing that can lift the block.
+  testWidgets('the body block keeps the 62 the prototype leaves it', (tester) async {
     await pumpFrame(tester, viewport: const Size(1400, 844));
 
-    final style = Theme.of(tester.element(find.byType(OnboardingPage))).textTheme.bodyMedium!;
-    final line = style.fontSize! * style.height!;
     final box = tester.getRect(find.byKey(onboardingBodyKey));
 
-    expect(
-      box.height,
-      greaterThanOrEqualTo(line * 3 - 0.5),
-      reason:
-          'the body block is ${box.height.toStringAsFixed(1)}, under the ${(line * 3).toStringAsFixed(1)} '
-          'that three lines of its own type come to (the prototype reserves 62)',
-    );
+    expect(box.height, closeTo(62, 0.5), reason: 'the body block is ${box.height.toStringAsFixed(1)}, not 62');
   });
 
   /// The measure the approved prototype gives the body, which is narrower than the one it gives the headline.
@@ -276,10 +260,90 @@ void main() {
     );
   });
 
+  /// The prototype stacks the counter above the caption instead of setting them on one row: `.counter{position:
+  /// absolute;right:24px;top:40px}` against a caption in the flow at `padding-top:38px` + `#cap{margin-top:14px}` = 52.
+  /// Measured in headless Chrome, 390x844, both languages and both themes: counter box 40..54, caption box 52..66.
+  ///
+  /// **Top-anchored, and why.** Both live in the header, which the device's own top inset decides, not in the foot
+  /// the 94 dp of a shorter phone is taken out of. The 40 is therefore measured from the top of the page the app is
+  /// given (below the status bar), and the 12 between the two is a difference, which no glyph size touches.
+  group('the counter is stacked above the caption', () {
+    testWidgets('the caption sits 12 below the counter and the counter is on the right', (tester) async {
+      await pumpFrame(tester);
+
+      final counter = tester.getRect(find.byKey(onboardingCounterKey));
+      final caption = tester.getRect(find.byKey(onboardingCaptionKey));
+      final column = tester.getRect(find.byKey(onboardingProgressKey));
+
+      expect(caption.top - counter.top, closeTo(12, 0.5), reason: 'the prototype: counter 40, caption 52');
+      expect(counter.right, closeTo(column.right, 0.5), reason: 'the counter ends at the column\'s right edge');
+      expect(caption.left, closeTo(column.left, 0.5), reason: 'the caption starts at the left edge, 48');
+    });
+
+    /// `.counter{letter-spacing:.16em}` and `.cap{letter-spacing:.14em}`, over 11px: 1.76 and 1.54. The app tracked
+    /// both at 0.1em, which drew `01 / 06` 53.9 wide where the prototype's is 58.5.
+    testWidgets('the counter is tracked .16em and the caption .14em, as the prototype sets them', (tester) async {
+      await pumpFrame(tester);
+
+      expect(tester.widget<Text>(find.byKey(onboardingCounterKey)).style!.letterSpacing, closeTo(1.76, 0.001));
+      expect(tester.widget<Text>(find.byKey(onboardingCaptionKey)).style!.letterSpacing, closeTo(1.54, 0.001));
+    });
+
+    testWidgets('the counter is 40 from the top of the page', (tester) async {
+      await pumpFrame(tester);
+
+      expect(tester.getRect(find.byKey(onboardingCounterKey)).top, closeTo(40, 0.5));
+    });
+  });
+
+  /// `.body{font-size:13.5px;line-height:1.5;max-width:302px;min-height:62px}`, `h2{min-height:98px}` and the 10
+  /// between
+  /// them, then `.foot{margin-top:16px}` to the rule: the headline's top is 98 + 10 + 62 + 16 = 186 above the rule's.
+  ///
+  /// **Bottom-anchored, and why.** The prototype's frame is 844 tall and this phone's page is 94 shorter; the headline
+  /// is a block of the foot, held up from the rule by its own box, so what is preserved is the distance from the
+  /// foot. Everything above it — the hero — is what yields.
+  ///
+  /// **The wide viewport** is the font trap's: in Ahem the bodies wrap to four to eight lines at phone width and
+  /// outgrow any floor, so the floor could not be seen. At 1400 each one is a line or two.
+  group('the words sit where the prototype puts them from the foot', () {
+    testWidgets('the headline top is 186 above the progress rule, the body 78', (tester) async {
+      await pumpFrame(tester, viewport: const Size(1400, 844));
+
+      final rule = tester.getRect(find.byKey(onboardingProgressKey)).top;
+      expect(rule - tester.getRect(find.byKey(onboardingHeadlineKey)).top, closeTo(186, 0.5));
+      expect(rule - tester.getRect(find.byKey(onboardingBodyKey)).top, closeTo(78, 0.5));
+    });
+
+    /// `h2{font-size:30px;line-height:1.08;letter-spacing:-.028em}` measured -0.84px in Chrome. The design system's
+    /// display-m is -0.024em (-0.72), 1.7 wider over `veritabanları.`; the introduction follows the prototype.
+    testWidgets('the headline is tracked -.028em, as the prototype sets it', (tester) async {
+      await pumpFrame(tester);
+
+      final style = tester.widget<Text>(find.byKey(onboardingHeadlineKey)).style!;
+      expect(style.fontSize, 30);
+      expect(style.letterSpacing, closeTo(-0.84, 0.001));
+    });
+
+    testWidgets('the body is drawn at 13.5 over a line of 1.5, which is what keeps it on two lines', (tester) async {
+      await pumpFrame(tester);
+
+      final style = tester.widget<Text>(find.byKey(onboardingBodyKey)).style!;
+      expect(style.fontSize, 13.5);
+      expect(style.height, 1.5);
+      // Material's `bodyMedium` carries 0.25 of tracking and the design system's `_level` keeps it when it is given
+      // none. The prototype's `.body` has none, and 0.25 over a 44-character line is 11 px, which wrapped the first
+      // screen's Turkish body to three lines at 13.5 as well.
+      expect(style.letterSpacing, 0);
+    });
+  });
+
   group('the words and the controls do not move between screens', () {
     for (final (language, locale) in [('English', Locale('en')), ('Turkish', Locale('tr'))]) {
+      // At phone width a body that needs a fourth line grows its block, as the prototype's does on English screen 5;
+      // given room, none does, and the words land where the floor puts them on every screen.
       testWidgets('the words and the foot land at the same y on all six $language screens', (tester) async {
-        await pumpFrame(tester, locale: locale);
+        await pumpFrame(tester, locale: locale, viewport: const Size(1400, 844));
         final anchors = <Key, double>{
           for (final key in [onboardingHeadlineKey, onboardingBodyKey, onboardingProgressKey])
             key: tester.getTopLeft(find.byKey(key)).dy,
@@ -335,6 +399,34 @@ void main() {
         tester.getTopRight(find.byKey(onboardingDoneKey)).dx,
         closeTo(390 - AppSpacing.xl, 1.0),
         reason: 'the control that signs in sits at the opposite end, under the counter',
+      );
+    });
+
+    /// `.skip{font-size:14px;font-weight:600;color:var(--quiet);background:none;border:0}` — a bare word, 26.5 wide in
+    /// Turkish, whose left edge is the content column's 48. The app's `TextButton` carried the theme's 16 of padding
+    /// (the word at 64) and the brand colour. The 48 high hit area stays.
+    testWidgets('Skip is a quiet 14 semibold word on the content edge, in a 48 high target', (tester) async {
+      await pumpFrame(tester);
+
+      final word = find.descendant(of: find.byKey(onboardingSkipKey), matching: find.byType(Text));
+      final style = tester.widget<Text>(word).style ?? DefaultTextStyle.of(tester.element(word)).style;
+      final colors = Theme.of(tester.element(find.byType(OnboardingPage))).colorScheme;
+
+      expect(tester.getTopLeft(word).dx, closeTo(48, 0.5), reason: 'the word, not the button, is on the edge');
+      expect(tester.getSize(find.byKey(onboardingSkipKey)).height, 48);
+      final resolved = tester.widget<TextButton>(find.byKey(onboardingSkipKey)).style!.textStyle!.resolve({});
+      expect(resolved!.fontSize, 14);
+      expect(resolved.fontWeight, FontWeight.w600);
+      expect(
+        tester.widget<TextButton>(find.byKey(onboardingSkipKey)).style!.foregroundColor!.resolve({}),
+        colors.onSurfaceVariant,
+      );
+      expect(style, isNotNull);
+      // `padded` is Material's default and makes the target 48 wide whatever the word, which centres a 26.5 word in it
+      // 11 in from the edge: on a phone the word started at 58.8, not 48. The 48 high comes from the row's constraint.
+      expect(
+        tester.widget<TextButton>(find.byKey(onboardingSkipKey)).style!.tapTargetSize,
+        MaterialTapTargetSize.shrinkWrap,
       );
     });
 

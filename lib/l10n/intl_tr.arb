@@ -1665,7 +1665,7 @@
   "@ob1_accent": {"description": "The run of ob1_title the screen paints in the accent colour; it must appear in ob1_title verbatim."},
   "ob1_body": "PROD, STAGING, DEV — hangisine bağlandığınız rozetten belli. Salt okunur olanlar işaretli.",
   "@ob1_body": {"description": "The body of the first onboarding screen."},
-  "ob1_empty": "Henüz yetki verilmemişse liste boş gelir:\n\"{line}\"",
+  "ob1_empty": "Henüz yetki verilmemişse liste şunu der: \"{line}\"",
   "@ob1_empty": {"description": "Under the demo connection list: what the real list says when nothing has been granted. Pass connection_list_empty_governed as {line} rather than repeating it here.", "placeholders": {"line": {"type": "String", "example": "No databases have been granted to you yet. Ask an administrator for access."}}},
   "ob2_cap": "{connection} · gezinme",
   "@ob2_cap": {"description": "The caption over the second onboarding screen, which browses a demo connection.", "placeholders": {"connection": {"type": "String", "example": "orders-prod"}}},

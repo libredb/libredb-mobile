@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/widgets/engine_mark.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_marks.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
@@ -78,10 +79,28 @@ const _connections = [
   ),
 ];
 
-/// The gap between the two marks on a row: the prototype's `.crow{gap:10px}`, measured at exactly 10 between the
-/// read-only pill and the PROD badge in both languages and both themes. It is not on the closed spacing scale, whose
-/// nearest steps are 8 and 12, and is this row's own.
-const _markGap = 10.0;
+/// The row's own measures, each the prototype's rule as measured in headless Chrome at 390x844 (Turkish and English,
+/// light and dark alike). None is on the closed spacing scale and all are this row's own.
+///
+/// `.crow{display:flex;align-items:center;gap:10px;padding:11px 11px 11px 0}`, `.strip{width:4px;height:30px;
+/// border-radius:0 2px 2px 0}`, `.eng{width:17px;height:17px}`, `.nm{font-size:12.5px;font-weight:600;
+/// letter-spacing:-.01em}` over a 16 line, `.sb{font-family:var(--mono);font-size:11px;margin-top:2px}` over a 14 line.
+const double _markGap = 10;
+const double _rowInset = 11;
+const double _stripWidth = 4;
+const double _stripHeight = 30;
+const double _stripCorner = 2;
+const double _engineSize = 17;
+const double _nameSize = 12.5;
+const double _nameLine = 16 / _nameSize;
+const double _nameTracking = -0.01 * _nameSize;
+const double _subSize = 11;
+const double _subLine = 14 / _subSize;
+const double _subGap = 2;
+
+/// `.empt{font-family:var(--mono);font-size:11px;margin-top:9px;line-height:1.5}`.
+const double _emptyGap = 9;
+const double _emptyLine = 1.5;
 
 /// The row the ring lights: the production one.
 const _litRow = 0;
@@ -131,7 +150,9 @@ class _Step1ConnectionsState extends State<Step1Connections> with SingleTickerPr
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DecoratedBox(
+        // A `Container`, not a `DecoratedBox`: CSS draws the 1px border outside the rows, which only the `Container`
+        // gives (a `DecoratedBox` paints it over the first row's top and the last row's bottom, 2 short of 166).
+        Container(
           key: const ValueKey('ob1-card'),
           decoration: BoxDecoration(
             border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -171,7 +192,7 @@ class _Step1ConnectionsState extends State<Step1Connections> with SingleTickerPr
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: _emptyGap),
         AnimatedBuilder(
           animation: _empty,
           builder: (context, _) => Opacity(
@@ -181,6 +202,9 @@ class _Step1ConnectionsState extends State<Step1Connections> with SingleTickerPr
               l10n.ob1_empty(l10n.connection_list_empty_governed),
               style: theme.textTheme.labelSmall?.copyWith(
                 fontFamily: AppTypography.mono,
+                fontSize: _subSize,
+                height: _emptyLine,
+                letterSpacing: 0,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -212,33 +236,63 @@ class _DemoConnectionRow extends StatelessWidget {
     final secondary = connection.database ?? connection.host;
     // The pill first and the badge last, as the prototype's row writes them.
     final badges = [
-      if (connection.readOnlyForUser) const ReadOnlyChip(),
-      if (EnvironmentBadge.showsFor(environment)) EnvironmentBadge(environment: environment!, color: connection.color),
+      if (connection.readOnlyForUser) const OnboardingReadOnlyPill(),
+      if (EnvironmentBadge.showsFor(environment)) OnboardingBadge(environment: environment!, color: connection.color),
     ];
     final nameBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(connection.name, style: theme.textTheme.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-        if (secondary != null)
+        Text(
+          connection.name,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: _nameSize,
+            height: _nameLine,
+            fontWeight: FontWeight.w600,
+            letterSpacing: _nameTracking,
+            color: theme.colorScheme.onSurface,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (secondary != null) ...[
+          const SizedBox(height: _subGap),
           Text(
             secondary,
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontFamily: AppTypography.mono,
+              fontSize: _subSize,
+              height: _subLine,
+              letterSpacing: 0,
+              fontWeight: FontWeight.w400,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+        ],
       ],
     );
     return Container(
-      key: ValueKey('ob1-strip-$index'),
-      constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: strip ?? Colors.transparent, width: 4)),
-      ),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
+      key: ValueKey('ob1-line-$index'),
+      padding: const EdgeInsets.fromLTRB(0, _rowInset, _rowInset, _rowInset),
       child: Row(
-        spacing: AppSpacing.md,
+        spacing: _markGap,
         children: [
+          // The environment strip is a short bar at the row's left edge, not the row's height: `.strip` is 4 x 30 in a
+          // 54 row, rounded on its right corners only. A row without one keeps the 4 so the marks line up.
+          if (strip != null)
+            Container(
+              key: ValueKey('ob1-strip-$index'),
+              width: _stripWidth,
+              height: _stripHeight,
+              decoration: BoxDecoration(
+                color: strip,
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(_stripCorner)),
+              ),
+            )
+          else
+            const SizedBox(width: _stripWidth),
           // The engine's own mark, named for a test and read aloud as the engine's type. The `Semantics` is outside
           // the key so what the key addresses is the mark alone: two rows of the same engine draw the same thing,
           // and a test that compared the labelled widget would pass on the label and never see the glyph.
@@ -246,31 +300,25 @@ class _DemoConnectionRow extends StatelessWidget {
             label: connection.type,
             child: KeyedSubtree(
               key: ValueKey('ob1-engine-$index'),
-              child: EngineMarkIcon(type: connection.type, color: theme.colorScheme.primary),
+              child: EngineMarkIcon(type: connection.type, color: theme.colorScheme.primary, size: _engineSize),
             ),
           ),
-          // The prototype's row is `.crow{display:flex;align-items:center;gap:10px}`: the name over the database on
-          // the left, the pill and the badge on the right of the same line, 54 high in headless Chrome against the 82
-          // the marks cost when they sat under the name.
-          //
-          // It was tried once and reverted on 2026-10-29, because the badges, then 16 pt wider and carrying a lock that
-          // followed the text scaler, did not fit beside the name at a squeezed Turkish size and one was drawn at 77%
-          // of itself. They fit now. A `Wrap` is the arrangement that keeps both promises: the marks take the right
-          // end of the name's line while the two fit together, and the whole group moves to a line of its own — the
-          // old stacked form — only at the text size where they cannot, rather than being squeezed or clipped.
+          // The name over the database on the left, the pill and the badge on the right of the same line. A `Wrap` is
+          // the arrangement that keeps both promises: the marks take the right end of the name's line while the two
+          // fit together, and the whole group moves to a line of its own — the old stacked form — only at the text
+          // size where they cannot, rather than being squeezed or clipped.
           Expanded(
             child: Wrap(
               alignment: WrapAlignment.spaceBetween,
-              // `.crow{align-items:center}`: the marks centre on the name block, and the gap is the row's 10.
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: _markGap,
               runSpacing: AppSpacing.xs,
               children: [
                 nameBlock,
                 if (badges.isNotEmpty)
-                  // A pill is laid out side by side and cannot wrap: at an accessibility text size `ReadOnlyChip`
-                  // asks for more width than the hero has and the row overflows to the right — 169pt in Turkish at
-                  // x3, measured. The hero scrolls vertically, so this is the one axis nothing absorbs.
+                  // A pill is laid out side by side and cannot wrap: at an accessibility text size it asks for more
+                  // width than the hero has and the row overflows to the right. The hero scrolls vertically, so this
+                  // is the one axis nothing absorbs.
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Row(mainAxisSize: MainAxisSize.min, spacing: _markGap, children: badges),

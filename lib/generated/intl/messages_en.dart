@@ -118,7 +118,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m43(type) => "Studio says this key\'s type is ${type}.";
 
-  static String m44(line) => "Until someone grants you one, the list reads:\n\"${line}\"";
+  static String m44(line) => "Until someone grants you one, the list reads: \"${line}\"";
 
   static String m45(connection) => "${connection} · browse";
 

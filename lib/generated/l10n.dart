@@ -4932,10 +4932,10 @@ class S {
     );
   }
 
-  /// `Until someone grants you one, the list reads:\n"{line}"`
+  /// `Until someone grants you one, the list reads: "{line}"`
   String ob1_empty(String line) {
     return Intl.message(
-      'Until someone grants you one, the list reads:\n"$line"',
+      'Until someone grants you one, the list reads: "$line"',
       name: 'ob1_empty',
       desc: 'Under the demo connection list: what the real list says when nothing has been granted. Pass connection_list_empty_governed as {line} rather than repeating it here.',
       args: [line],

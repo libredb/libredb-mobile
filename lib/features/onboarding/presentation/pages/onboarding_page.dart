@@ -22,30 +22,48 @@ typedef OnboardingHeroBuilder = Widget Function(BuildContext context, int step);
 /// and the step the primary control leaves on are all this one number.
 const int onboardingStepCount = 6;
 
-/// The lines of its own type the headline block is given, whatever the title in it comes to.
-///
-/// The prototype's `h2{min-height:98px}` over `30px/1.08` type is three of its lines, and the app's `displaySmall`
-/// is the same 30/1.08, so the rule carries over as a line count rather than as a pixel count — it then holds at
-/// any text size, which a pixel would not.
-const int _headlineLines = 3;
+/// `h2{letter-spacing:-.028em}`: the prototype's tracking, which is not display-m's -.024.
+const double _headlineTrackingEm = -0.028;
 
-/// The lines of its own type the body block is given, whatever the paragraph in it comes to.
+/// The least the headline block is given, in the prototype's own pixels: `h2{min-height:98px}`.
 ///
-/// The prototype's `.body{min-height:62px}` over `font-size:13.5px;line-height:1.5` type is three of its lines
-/// (60.75), for bodies it authors as two — the same shape of rule as the headline's 98, so it is carried over the
-/// same way, as a line count rather than as a pixel count.
+/// It is the three lines of `30px/1.08` type the prototype leaves a headline it authors as two, so there is air under
+/// it. It is scaled by the text size in force rather than held as a bare pixel count, so at an accessibility size it
+/// grows with the words instead of cutting into them.
+const double _headlineFloor = 98;
+
+/// The least the body block is given: `.body{min-height:62px}`.
 ///
-/// **The box is still the tallest of the six bodies, not this floor alone, and that is deliberate.** Measured with
-/// the product font at the body's own width of 318, `bodyMedium` being 14/1.55: of the twelve bodies ten come to
-/// two or three lines (44 or 66) and only English screen 5 reaches four, at 88. The prototype does the opposite
-/// there — its 62 is a floor, so on that one screen the body grows and the hero yields it 19 (hero 474, not 493, in
-/// 2 of the 24 measurements, the headline 19 higher with it). This chassis keeps the words still instead, which is
-/// what `the words and the foot land at the same y on all six screens` asserts: a reader of six screens should not
-/// have the headline move under their eye to buy one screen's body a line. The floor's job is the other end — the
-/// tallest Turkish body is 66, three lines by the words' own luck, and one clause cut from it would drop the block
-/// to 44 and take the air out of all six Turkish screens, which is exactly what the tallest-only headline block did
-/// at 64 before [_headlineLines].
-const int _bodyLines = 3;
+/// **The box is its floor, and a body that needs more grows it — which is what the prototype does.** Of its twelve
+/// bodies one is longer than the floor, English screen 5, which needs a fourth line: the body grows and the hero
+/// yields the room (hero 474, not 493, and the headline 19 higher, in 2 of the 24 measurements). This chassis used to
+/// reserve the tallest of the six so the words never moved; measured against the prototype that put the headline
+/// 19 above its place on all six English screens to spare one, so the prototype's rule is carried over instead.
+const double _bodyFloor = 62;
+
+/// The body's own type, which is not the design system's `bodyMedium` (14/1.55): `.body{font-size:13.5px;
+/// line-height:1.5}`. At 14 the first screen's Turkish body takes three lines where the prototype takes two.
+const double _bodySize = 13.5;
+const double _bodyLine = 1.5;
+
+/// Skip's own type: `.skip{font-size:14px;font-weight:600}`.
+const double _skipSize = 14;
+
+/// The gap between the headline block and the body: `.body{margin-top:10px}`. Not on the spacing scale, whose nearest
+/// steps are 8 and 12.
+const double _bodyGap = 10;
+
+/// The gap between the caption and the hero: `.cap{margin-bottom:9px}`.
+const double _captionGap = 9;
+
+/// How far the caption sits below the counter, top edge to top edge: the counter is at 40 and the caption at 52 in the
+/// prototype, so the two stack instead of sharing a row.
+const double _captionBelowCounter = AppSpacing.md;
+
+/// The line box of the mono eyebrows, counter and caption alike: 14 in headless Chrome for 11px mono, which is what
+/// puts the counter's bottom 2 below the caption's top.
+const double _eyebrowSize = 11;
+const double _eyebrowLine = 14 / _eyebrowSize;
 
 /// How fast a horizontal drag has to be, in logical pixels a second, before it turns the deck.
 const double _turnVelocity = 200;
@@ -69,13 +87,15 @@ const double _heroFloor = 180;
 /// it is a value the captions take rather than a string either language owns.
 const String _demoConnection = 'orders-prod';
 
-/// The eyebrow tracking of the design system's mono overline, in the system's own unit — a fraction of the size.
+/// The two eyebrows' tracking, in the system's own unit — a fraction of the size — as the prototype sets each:
+/// `.cap{letter-spacing:.14em}` and `.counter{letter-spacing:.16em}`, not the .1em of the system's overline.
 ///
-/// `AppTypography` deliberately leaves `labelSmall` untracked: its own note says the system ties 0.1em to the
+/// `AppTypography` deliberately leaves `labelSmall` untracked: its own note says the system ties its tracking to the
 /// mono eyebrow treatment and that this app's 33 `labelSmall` call sites are ordinary small labels rather than
 /// eyebrows. The caption and the step counter are the two that *are* eyebrows, so they take it here instead of
 /// widening every other label in the app.
-const double _eyebrowTrackingEm = 0.1;
+const double _captionTrackingEm = 0.14;
+const double _counterTrackingEm = 0.16;
 
 /// How wide the counter's numbers are drawn: `01 / 06`, not `1 / 6`. Padding is a drawing decision, so it is made
 /// here rather than in the ARB, whose `ob_step` carries the shape of the line and whose placeholders are numbers.
@@ -198,10 +218,19 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
     final eyebrow = theme.textTheme.labelSmall?.copyWith(
       fontFamily: AppTypography.mono,
       color: colors.onSurfaceVariant,
-      letterSpacing: (theme.textTheme.labelSmall?.fontSize ?? 0) * _eyebrowTrackingEm,
+      height: _eyebrowLine,
     );
-    final headline = theme.textTheme.displaySmall?.copyWith(color: colors.onSurface);
-    final body = theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant);
+    final headline = theme.textTheme.displaySmall?.copyWith(
+      color: colors.onSurface,
+      letterSpacing: (theme.textTheme.displaySmall?.fontSize ?? 0) * _headlineTrackingEm,
+    );
+    final body = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.onSurfaceVariant,
+      fontSize: _bodySize,
+      height: _bodyLine,
+      // Material's `bodyMedium` tracks 0.25 and the design system's level keeps it; `.body` has none.
+      letterSpacing: 0,
+    );
     final words = _words(l10n, _step);
     final locale = Localizations.localeOf(context);
 
@@ -232,21 +261,30 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                         builder: (context, _) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // The counter is in the corner and the caption stacks under it, `_captionBelowCounter`
+                            // lower: top-anchored, because both belong to the header the top inset decides.
+                            Stack(
                               children: [
-                                Expanded(
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: _Counter(
+                                    step: _step,
+                                    style: eyebrow?.copyWith(letterSpacing: _eyebrowSize * _counterTrackingEm),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: _captionBelowCounter),
                                   child: _rise(
                                     Text(
                                       onboardingCapitals(words.caption, locale),
                                       key: onboardingCaptionKey,
-                                      style: eyebrow,
+                                      style: eyebrow?.copyWith(letterSpacing: _eyebrowSize * _captionTrackingEm),
                                     ),
                                   ),
                                 ),
-                                _Counter(step: _step, style: eyebrow),
                               ],
                             ),
+                            const SizedBox(height: _captionGap),
                             Expanded(
                               child: _HeroExtent(
                                 floor: _heroFloor,
@@ -278,7 +316,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                 candidates: _titles(l10n),
                                 style: headline,
                                 width: reserve,
-                                minLines: _headlineLines,
+                                floor: _headlineFloor,
                                 child: Text.rich(
                                   _accented(words.title, words.accent, colors.primary),
                                   key: onboardingHeadlineKey,
@@ -286,7 +324,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                 ),
                               ),
                             ),
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: _bodyGap),
                             _rise(
                               // `.body{…max-width:302px}`, against an `h2` the prototype runs across the whole
                               // 318 its content column is wide. Only the body is capped, and the cap is written as
@@ -301,10 +339,10 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                               SizedBox(
                                 width: measure,
                                 child: _Reserved(
-                                  candidates: _bodies(l10n),
+                                  candidates: const [],
                                   style: body,
                                   width: measure,
-                                  minLines: _bodyLines,
+                                  floor: _bodyFloor,
                                   child: Text(words.body, key: onboardingBodyKey, style: body),
                                 ),
                               ),
@@ -330,6 +368,21 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                     constraints: const BoxConstraints(minHeight: AppSizes.minTapTarget),
                                     child: TextButton(
                                       key: onboardingSkipKey,
+                                      // `.skip{font-size:14px;font-weight:600;color:var(--quiet);background:none;
+                                      // border:0}`: a bare quiet word on the content edge. The theme's button puts 16
+                                      // either side of it and paints it in the brand colour.
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: colors.onSurfaceVariant,
+                                        padding: EdgeInsets.zero,
+                                        alignment: Alignment.centerLeft,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: const Size(0, AppSizes.minTapTarget),
+                                        textStyle: theme.textTheme.labelLarge?.copyWith(
+                                          fontSize: _skipSize,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0,
+                                        ),
+                                      ),
                                       onPressed: _leave,
                                       child: Text(l10n.ob_skip),
                                     ),
@@ -398,7 +451,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
 
 /// The gutters of the frame. The left one is wide on purpose: it is the indent the prototype sets every screen's
 /// words and hero against, and the counter sits in the narrow one opposite it.
-const EdgeInsets _gutter = EdgeInsets.fromLTRB(AppSpacing.xxxxl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xl);
+const EdgeInsets _gutter = EdgeInsets.fromLTRB(AppSpacing.xxxxl, AppSpacing.xxxl, AppSpacing.xl, AppSpacing.xl);
 
 /// The words of one step: everything the chassis draws around that step's hero.
 typedef _Words = ({String caption, String title, String accent, String body});
@@ -420,16 +473,6 @@ List<String> _titles(S l10n) => [
   l10n.ob4_title,
   l10n.ob5_title,
   l10n.ob6_title,
-];
-
-/// Every body of the flow, which is what the body box reserves room for.
-List<String> _bodies(S l10n) => [
-  l10n.ob1_body,
-  l10n.ob2_body,
-  l10n.ob3_body,
-  l10n.ob4_body,
-  l10n.ob5_body,
-  l10n.ob6_body,
 ];
 
 /// The headline, with the one run [accent] names painted in the accent colour and nothing else.
@@ -462,17 +505,13 @@ class _Reserved extends StatelessWidget {
     required this.style,
     required this.width,
     required this.child,
-    this.minLines = 0,
+    required this.floor,
   });
 
   final List<String> candidates;
 
-  /// The least the box is given, counted in lines of [style].
-  ///
-  /// The prototype sets `h2{min-height:98px}` against its own `30px/1.08` type — three of its lines for titles it
-  /// authors as two, so the headline sits in a block with air under it. Measured on the emulator, reserving only
-  /// the tallest of the six titles gave 64, which is the two lines and none of the air.
-  final int minLines;
+  /// The least the box is given, in the prototype's pixels, scaled by the text size in force.
+  final double floor;
   final TextStyle? style;
   final double width;
   final Widget child;
@@ -481,7 +520,7 @@ class _Reserved extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
-    var tallest = scaler.scale((style?.fontSize ?? 0) * (style?.height ?? 1)) * minLines;
+    var tallest = scaler.scale(floor);
     for (final candidate in candidates) {
       final painter = TextPainter(
         text: TextSpan(text: candidate, style: style),

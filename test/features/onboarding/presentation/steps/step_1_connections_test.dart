@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_1_connections.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_marks.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
-import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
-import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 
 /// The first screen of the introduction: the connection list assembling.
 ///
@@ -87,8 +87,9 @@ void main() {
   double opacityOf(WidgetTester tester, String key) => tester.widget<Opacity>(find.byKey(ValueKey(key))).opacity;
 
   Color stripOf(WidgetTester tester, int index) {
-    final decoration = tester.widget<Container>(find.byKey(ValueKey('ob1-strip-$index'))).decoration as BoxDecoration;
-    return (decoration.border! as Border).left.color;
+    final strip = find.byKey(ValueKey('ob1-strip-$index'));
+    if (strip.evaluate().isEmpty) return Colors.transparent;
+    return ((tester.widget<Container>(strip)).decoration as BoxDecoration).color!;
   }
 
   testWidgets('at the end it shows the three connections, their badges and the empty-list line', (tester) async {
@@ -108,6 +109,17 @@ void main() {
 
     final l10n = S.of(tester.element(find.byType(Step1Connections)));
     expect(find.text(l10n.ob1_empty(l10n.connection_list_empty_governed)), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text(l10n.ob1_empty(l10n.connection_list_empty_governed))).style!.letterSpacing,
+      0,
+      reason: 'Material\'s labelSmall tracks 0.5, which wrapped the sentence to four lines where `.empt` takes three',
+    );
+    expect(
+      l10n.ob1_empty(l10n.connection_list_empty_governed),
+      isNot(contains('\n')),
+      reason:
+          'the prototype\'s `.empt` collapses whitespace, so the sentence is one paragraph that wraps, not four lines',
+    );
 
     for (final row in ['ob1-row-0', 'ob1-row-1', 'ob1-row-2']) {
       expect(opacityOf(tester, row), 1.0, reason: '$row should have finished arriving');
@@ -205,7 +217,7 @@ void main() {
       for (final locale in [const Locale('en'), const Locale('tr')]) {
         await showInHero(tester, textScale: 1.0, locale: locale);
 
-        final badges = find.byWidgetPredicate((w) => w is EnvironmentBadge || w is ReadOnlyChip);
+        final badges = find.byWidgetPredicate((w) => w is OnboardingBadge || w is OnboardingReadOnlyPill);
         expect(badges, findsNWidgets(4), reason: 'three environments and one read-only mark');
         for (var i = 0; i < 4; i++) {
           final drawn = tester.getRect(badges.at(i)).size;
@@ -239,13 +251,13 @@ void main() {
       for (final locale in [const Locale('en'), const Locale('tr')]) {
         await showInHero(tester, textScale: 1.0, locale: locale, width: 900);
         for (final index in [0, 1, 2]) {
-          final row = find.byKey(ValueKey('ob1-strip-$index'));
+          final row = find.byKey(ValueKey('ob1-line-$index'));
           final name = rect(tester, find.descendant(of: row, matching: find.text(names[index])));
           final database = rect(tester, find.descendant(of: row, matching: find.text(databases[index])));
           final block = name.expandToInclude(database);
           expect(
             rect(tester, row).height - block.height,
-            2 * AppSpacing.md,
+            22,
             reason:
                 'row $index (${locale.languageCode}) is taller than its name block: the marks are on their own line',
           );
@@ -255,24 +267,119 @@ void main() {
 
     testWidgets('where they fit, the marks stand to the right of the name on its line', (tester) async {
       await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
-      final row = find.byKey(const ValueKey('ob1-strip-0'));
+      final row = find.byKey(const ValueKey('ob1-line-0'));
       final name = rect(tester, find.descendant(of: row, matching: find.text('orders-prod')));
-      final pill = rect(tester, find.descendant(of: row, matching: find.byType(ReadOnlyChip)));
-      final badge = rect(tester, find.descendant(of: row, matching: find.byType(EnvironmentBadge)));
+      final pill = rect(tester, find.descendant(of: row, matching: find.byType(OnboardingReadOnlyPill)));
+      final badge = rect(tester, find.descendant(of: row, matching: find.byType(OnboardingBadge)));
       expect(pill.left, greaterThanOrEqualTo(name.right + 10), reason: 'the pill is beside the name, not under it');
       expect(pill.right, lessThan(badge.left), reason: 'the pill comes first and the badge last');
       expect(badge.center.dy, pill.center.dy);
       expect(badge.center.dy, inInclusiveRange(name.top, name.bottom + 20), reason: 'the marks sit on the name block');
-      expect(rect(tester, row).right - badge.right, AppSpacing.lg, reason: 'the badge ends at the row\'s own inset');
+      expect(rect(tester, row).right - badge.right, 11, reason: 'the badge ends at the row\'s own inset');
     });
 
     testWidgets('where they cannot fit, the marks go under the name and nothing overflows', (tester) async {
       await showInHero(tester, textScale: 3.0, locale: const Locale('tr'));
-      final row = find.byKey(const ValueKey('ob1-strip-0'));
+      final row = find.byKey(const ValueKey('ob1-line-0'));
       final database = rect(tester, find.descendant(of: row, matching: find.text('orders')));
-      final pill = rect(tester, find.descendant(of: row, matching: find.byType(ReadOnlyChip)));
+      final pill = rect(tester, find.descendant(of: row, matching: find.byType(OnboardingReadOnlyPill)));
       expect(pill.top, greaterThanOrEqualTo(database.bottom), reason: 'the stacked form is the fallback at x3');
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  /// The row's geometry, read off the prototype in headless Chrome at 390x844 (Turkish, light; the same in English and
+  /// dark): the row is 54 (`padding:11px 11px 11px 0` around a 16 + 2 + 14 name block), the strip is a 4 x 30 bar with
+  /// its right corners rounded 2 and is not the row's height, the mark is 17, the gaps are 10, PROD is
+  /// `padding:3px 6px;border-radius:4px` around a 14 line (20 tall) and the read-only pill is the same with a 1px
+  /// border
+  /// and a full radius (22 tall).
+  ///
+  /// **The font trap:** every number here is a box this widget draws round a line whose height is set by a multiplier
+  /// (`14/11` for the mono, `16/12.5` for the name), which Ahem lays out at the same height as the product font, and
+  /// every width is read as the box less the text inside it, which cancels the glyph size.
+  group('the row is the prototype\'s row', () {
+    Rect rect(WidgetTester tester, Finder f) => tester.getRect(f);
+
+    testWidgets('the row is 54 high with a 4 x 30 strip, a 17 mark and 10 between them', (tester) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final row = rect(tester, find.byKey(const ValueKey('ob1-line-0')));
+      final strip = rect(tester, find.byKey(const ValueKey('ob1-strip-0')));
+      final mark = rect(tester, find.byKey(const ValueKey('ob1-engine-0')));
+      final name = rect(tester, find.text('orders-prod'));
+
+      expect(row.height, closeTo(54, 0.5));
+      expect(strip.size, const Size(4, 30));
+      expect(strip.left, row.left);
+      expect(strip.center.dy, closeTo(row.center.dy, 0.5));
+      expect(mark.size, const Size(17, 17));
+      expect(mark.left - strip.right, 10);
+      expect(name.left - mark.right, 10);
+    });
+
+    testWidgets('the card is 166 high: three rows, two rules and a border outside them', (tester) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final card = rect(tester, find.byKey(const ValueKey('ob1-card')));
+      final first = rect(tester, find.byKey(const ValueKey('ob1-line-0')));
+      final last = rect(tester, find.byKey(const ValueKey('ob1-line-2')));
+
+      expect(card.height, closeTo(166, 0.5), reason: '54 + 1 + 54 + 1 + 54 inside a 1px border on each side');
+      expect(first.top - card.top, closeTo(1, 0.5), reason: 'the border is outside the first row, not under it');
+      expect(card.bottom - last.bottom, closeTo(1, 0.5));
+    });
+
+    testWidgets('the name is 12.5 semibold and the database is mono, 2 below it', (tester) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final name = tester.widget<Text>(find.text('orders-prod')).style!;
+      final database = tester.widget<Text>(find.text('orders')).style!;
+
+      expect(name.fontSize, 12.5);
+      expect(name.fontWeight, FontWeight.w600);
+      expect(database.fontSize, 11);
+      expect(database.fontFamily, AppTypography.mono);
+      expect(database.letterSpacing, 0, reason: 'Material\'s labelSmall tracks 0.5; `.sb` has none');
+      expect(name.letterSpacing, closeTo(-0.125, 0.001), reason: '`letter-spacing:-.01em` over 12.5');
+      expect(
+        rect(tester, find.text('orders')).top - rect(tester, find.text('orders-prod')).bottom,
+        closeTo(2, 0.5),
+        reason: '`.sb{margin-top:2px}`',
+      );
+    });
+
+    testWidgets('PROD is 3 and 6 round its line with a 4 radius, and the read-only pill is the same with a border', (
+      tester,
+    ) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final prod = find.byType(OnboardingBadge).first;
+      final prodText = find.descendant(of: prod, matching: find.text('PROD'));
+      final pill = find.byType(OnboardingReadOnlyPill);
+      final pillText = find.descendant(of: pill, matching: find.text('Salt okunur'));
+      final row = rect(tester, find.byKey(const ValueKey('ob1-line-0')));
+
+      expect(rect(tester, prod).height, closeTo(20, 0.5));
+      expect(rect(tester, prod).width - rect(tester, prodText).width, closeTo(12, 0.5));
+      expect(rect(tester, pill).height, closeTo(22, 0.5));
+      expect(rect(tester, pill).width - rect(tester, pillText).width, closeTo(14, 0.5));
+      expect(rect(tester, prod).left - rect(tester, pill).right, closeTo(10, 0.5));
+      expect(row.right - rect(tester, prod).right, closeTo(11, 0.5), reason: '`padding:11px 11px 11px 0`');
+
+      final badge = tester.widget<DecoratedBox>(find.descendant(of: prod, matching: find.byType(DecoratedBox)).first);
+      expect((badge.decoration as BoxDecoration).borderRadius, BorderRadius.circular(AppRadius.sm));
+      final style = tester.widget<Text>(prodText).style!;
+      expect(style.fontFamily, AppTypography.mono);
+      expect(style.fontWeight, FontWeight.w700);
+      expect(style.letterSpacing, closeTo(1.1, 0.01));
+    });
+
+    testWidgets('STAGING and DEV are quiet ink on the fill, PROD is black on the production red', (tester) async {
+      await showInHero(tester, textScale: 1.0, locale: const Locale('tr'), width: 900);
+      final scheme = Theme.of(tester.element(find.byType(Step1Connections))).colorScheme;
+      final staging = find.byType(OnboardingBadge).at(1);
+      final text = tester.widget<Text>(find.descendant(of: staging, matching: find.text('STAGING')));
+      final box = tester.widget<DecoratedBox>(find.descendant(of: staging, matching: find.byType(DecoratedBox)).first);
+
+      expect(text.style!.color, scheme.onSurfaceVariant);
+      expect((box.decoration as BoxDecoration).color, scheme.surfaceContainerHighest);
     });
   });
 
@@ -348,9 +455,9 @@ void main() {
     // not come from text, so Ahem does not touch it.
     await show(tester, disableAnimations: true);
 
-    final prodRow = find.byKey(const ValueKey('ob1-strip-0'));
-    final env = tester.getRect(find.descendant(of: prodRow, matching: find.byType(EnvironmentBadge)));
-    final readOnly = tester.getRect(find.descendant(of: prodRow, matching: find.byType(ReadOnlyChip)));
+    final prodRow = find.byKey(const ValueKey('ob1-line-0'));
+    final env = tester.getRect(find.descendant(of: prodRow, matching: find.byType(OnboardingBadge)));
+    final readOnly = tester.getRect(find.descendant(of: prodRow, matching: find.byType(OnboardingReadOnlyPill)));
     expect(env.center.dy, readOnly.center.dy, reason: 'the two marks share a line, so the gap is a horizontal one');
     // The prototype draws the pill first and the badge last: `${r[6]?'<div class="ro">':''}<div class="bdg">`.
     expect(env.left - readOnly.right, 10.0);
@@ -359,17 +466,17 @@ void main() {
   testWidgets('the production row is the read-only one, as the design has it', (tester) async {
     await show(tester, disableAnimations: true);
 
-    final prodRow = find.ancestor(of: find.text('orders-prod'), matching: find.byKey(const ValueKey('ob1-strip-0')));
+    final prodRow = find.ancestor(of: find.text('orders-prod'), matching: find.byKey(const ValueKey('ob1-line-0')));
     expect(prodRow, findsOneWidget);
     expect(
-      find.descendant(of: prodRow, matching: find.byType(ReadOnlyChip)),
+      find.descendant(of: prodRow, matching: find.byType(OnboardingReadOnlyPill)),
       findsOneWidget,
       reason: 'the production row carries the read-only mark in the design',
     );
     expect(
       find.descendant(
-        of: find.ancestor(of: find.text('billing-stage'), matching: find.byKey(const ValueKey('ob1-strip-1'))),
-        matching: find.byType(ReadOnlyChip),
+        of: find.ancestor(of: find.text('billing-stage'), matching: find.byKey(const ValueKey('ob1-line-1'))),
+        matching: find.byType(OnboardingReadOnlyPill),
       ),
       findsNothing,
       reason: 'the staging row carries neither flag in the design',
