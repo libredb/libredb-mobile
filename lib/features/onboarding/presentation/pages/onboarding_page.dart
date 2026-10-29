@@ -197,10 +197,25 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                           Expanded(
                             child: _HeroExtent(
                               floor: _heroFloor,
-                              child: Center(
-                                child: KeyedSubtree(
-                                  key: ValueKey<int>(_step),
-                                  child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                              // `overflow-y:auto`, the prototype's own word for the hero. On a phone every hero
+                              // fits the slack and this scrolls nothing; it is here because `flutter test` draws
+                              // in Ahem, whose square-em glyphs make the same heroes a third taller than they are
+                              // on a device, and a frame that is right on the phone must not be red in CI.
+                              //
+                              // The `LayoutBuilder` is safe under `_HeroExtent`, which answers the page's
+                              // intrinsic question itself and never puts it to its child.
+                              child: LayoutBuilder(
+                                builder: (context, slack) => SingleChildScrollView(
+                                  physics: const ClampingScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(minHeight: slack.maxHeight),
+                                    child: Center(
+                                      child: KeyedSubtree(
+                                        key: ValueKey<int>(_step),
+                                        child: widget.heroBuilder?.call(context, _step) ?? const SizedBox.shrink(),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

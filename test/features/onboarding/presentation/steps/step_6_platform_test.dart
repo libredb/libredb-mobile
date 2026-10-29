@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:libredb_mobile/features/onboarding/presentation/steps/step_6_platform.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
@@ -241,4 +242,33 @@ void main() {
     expect(find.text(s.platform_audit_statement_redacted), findsOneWidget);
     expect(topOf(tester, 'ob6-event-0'), lessThan(topOf(tester, 'ob6-event-2')));
   });
+
+  /// The grant is one row, not a stack.
+  ///
+  /// The prototype draws it as `.g{display:flex;align-items:center}`: the holder and `orders-prod · <when>` in a
+  /// column on the left, the level beside them on the right, 48pt tall. Drawn as four stacked blocks instead it
+  /// comes to about 116 on a real phone, and the two grants plus the three audit rows then overflow the hero by
+  /// 257pt — measured on the emulator, where the overflow stripe lay across the headline and both controls.
+  ///
+  /// The claim is the arrangement, not a height: a height measured under `flutter test` is a claim about Ahem,
+  /// whose glyphs are square ems, rather than about the product font.
+  testWidgets('a grant puts its level beside the holder, not under the whole stack', (tester) async {
+    final l10n = await pumpStep(tester, elapsed: Step6Beats.whole);
+
+    // 'mert' appears twice on this screen — once as the holder of the write grant and once as the user of an
+    // audit line — so the holder is found inside the card the level is in rather than by its text alone.
+    final levelFinder = find.text(l10n.platform_grants_level_write);
+    final card = find.ancestor(of: levelFinder, matching: find.byType(AppCard)).first;
+    final holder = tester.getRect(find.descendant(of: card, matching: find.text('mert')));
+    final level = tester.getRect(levelFinder);
+
+    expect(
+      level.center.dy,
+      closeTo(holder.center.dy, holder.height),
+      reason: 'the level sits at ${level.center.dy.toStringAsFixed(1)} against a holder centred at '
+          '${holder.center.dy.toStringAsFixed(1)} — it is under the holder, not beside it',
+    );
+    expect(level.left, greaterThan(holder.right), reason: 'the level is not to the right of the holder');
+  });
+
 }

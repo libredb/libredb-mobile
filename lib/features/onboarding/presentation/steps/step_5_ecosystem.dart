@@ -171,7 +171,7 @@ class _Ecosystem extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         _Riser(
           phase: _phase(elapsed, Step5Beats.tierStagger, Step5Beats.arrival),
           child: _TierBox(
@@ -183,7 +183,7 @@ class _Ecosystem extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         _Riser(
           phase: _phase(elapsed, Step5Beats.tierStagger * 2, Step5Beats.arrival),
           child: _TierBox(
@@ -240,7 +240,7 @@ class _Ecosystem extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.xs),
         Opacity(
           key: const ValueKey('ob5-modes'),
           opacity: _phase(elapsed, Step5Beats.modes, AppDurations.media),
@@ -276,7 +276,7 @@ class _Ecosystem extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 s.ob5_mode_note,
                 textAlign: TextAlign.center,

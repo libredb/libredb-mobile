@@ -169,7 +169,7 @@ class _Record extends StatelessWidget {
             mine: true,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         _Arriving(
           slotKey: const ValueKey('ob6-grant-1'),
           phase: _phase(elapsed, Step6Beats.grantStagger, Step6Beats.arrival),
@@ -181,7 +181,7 @@ class _Record extends StatelessWidget {
             mine: false,
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.sm),
         // Newest first, the order the Audit tab lists in. Each row is written in on its own beat, and the beats run
         // the other way — the oldest row first — so the line the person just ran lands on top of the others.
         for (var i = 0; i < _events; i++)
@@ -193,7 +193,7 @@ class _Record extends StatelessWidget {
               Step6Beats.arrival,
             ),
             child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: _row(context, i),
             ),
           ),
@@ -302,27 +302,31 @@ class _Grant extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final secondary = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
+    // The prototype sets the grant's own line in `font-family:mono;font-size:11px`, not in the title size the
+    // headline uses; three title-sized lines is what made the card 86pt against its 48.
+    final dense = text.labelLarge?.copyWith(fontFamily: AppTypography.mono);
     return AppCard(
       variant: mine ? AppCardVariant.filled : AppCardVariant.outlined,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // One row, the way the prototype draws it — `.g{display:flex;align-items:center}`, the holder and what is
+      // known about the grant in a column on the left and the level beside them on the right. Stacked instead,
+      // the two grants and the three audit lines overflowed the hero by 257pt on the emulator and drew over the
+      // headline and both controls.
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: Row(
         children: [
-          Text(holder, style: text.titleSmall),
-          const SizedBox(height: AppSpacing.xs),
-          Text(_connection, style: secondary),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              AppStatusBadge(label: level, color: scheme.primary),
-              Text(expiry, style: secondary),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(holder, style: dense, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('$_connection  ·  $expiry', style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(granted, style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(granted, style: secondary),
+          const SizedBox(width: AppSpacing.sm),
+          AppStatusBadge(label: level, color: scheme.primary),
         ],
       ),
     );
@@ -369,17 +373,21 @@ class _Event extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final secondary = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
     final sql = this.sql;
+    // Same as the grant: the audit line's own name is mono and small in the prototype, not title-sized.
+    final dense = text.labelLarge?.copyWith(fontFamily: AppTypography.mono);
     return AppCard(
       variant: mine ? AppCardVariant.filled : AppCardVariant.outlined,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(user, style: text.titleSmall, overflow: TextOverflow.ellipsis),
+                child: Text(user, style: dense, overflow: TextOverflow.ellipsis),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(verb, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
               const SizedBox(width: AppSpacing.sm),
               AppStatusBadge(
                 label: outcome,
@@ -387,18 +395,7 @@ class _Event extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Flexible(
-                child: Text(_connection, style: secondary, overflow: TextOverflow.ellipsis),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(verb, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(details.join('  ·  '), style: secondary),
+          Text([_connection, ...details].join('  ·  '), style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
           if (sql != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
