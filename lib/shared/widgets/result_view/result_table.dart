@@ -7,6 +7,7 @@ import 'package:libredb_mobile/shared/models/vector_column.dart';
 import 'package:libredb_mobile/shared/utils/cell_values.dart';
 import 'package:libredb_mobile/shared/widgets/cells/compact_cell.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/column_sizing.dart';
+import 'package:libredb_mobile/shared/widgets/result_view/press_highlight.dart';
 import 'package:libredb_mobile/shared/widgets/result_view/row_detail_sheet.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 
@@ -298,30 +299,35 @@ class ResultTableRow extends StatelessWidget {
       label: S.of(context).result_row_title(index + 1),
       child: InkWell(
         onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5)),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSizes.minDenseTarget),
-            child: Row(
-              children: [
-                for (final (index, field) in fields.indexed)
-                  GestureDetector(
-                    key: ValueKey('result-cell-$field'),
-                    behavior: HitTestBehavior.opaque,
-                    onLongPress: onCellLongPress == null ? null : () => onCellLongPress!(field),
-                    child: Container(
-                      width: widths[index],
-                      padding: _cellPadding,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: CompactCell(
-                        cell: _cellOf(row, field, vectorColumns),
-                        style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+        // The row's own press tint. Its cells hold the gesture arena open with a long press, so the ink above draws
+        // nothing while the row is held (#417).
+        child: PressHighlight(
+          enabled: onTap != null,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant, width: 0.5)),
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: AppSizes.minDenseTarget),
+              child: Row(
+                children: [
+                  for (final (index, field) in fields.indexed)
+                    GestureDetector(
+                      key: ValueKey('result-cell-$field'),
+                      behavior: HitTestBehavior.opaque,
+                      onLongPress: onCellLongPress == null ? null : () => onCellLongPress!(field),
+                      child: Container(
+                        width: widths[index],
+                        padding: _cellPadding,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: CompactCell(
+                          cell: _cellOf(row, field, vectorColumns),
+                          style: maskedColumns.contains(field) && row[field] != null ? maskedStyle : style,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -28,6 +28,10 @@ import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 /// detector draws nothing at all while held and 53,587 changed bytes the moment the finger lifts. A caller that sets
 /// it passes an `onTap` that does nothing, so the frame can only have changed because of the touch.
 ///
+/// No caller needs it today. The two that did were the result rows, and what they were reading was the splash
+/// confirming on release — which #417 removed app-wide, so they paint their own press tint instead and are measured
+/// while held, like everything else. The exception stays because the arena behaviour it describes has not changed.
+///
 /// [settle] is how long the press is held before the held frame is taken: long enough for a ripple to have grown and
 /// for an implicit animation to have moved, short enough to stay inside a test.
 Future<bool> rendersPressedState(

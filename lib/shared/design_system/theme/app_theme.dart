@@ -27,6 +27,13 @@ class AppTheme {
     return base.copyWith(
       textTheme: textTheme,
       extensions: [semanticColors],
+      // No splash anywhere: Flutter's M3 default grows a circle out of the touch point and over whatever sits behind
+      // the control, which is the shadow on tap the owner asked to be rid of (#417, the app-wide half of #416).
+      // The flat press highlight stays — it is clipped to the control's own shape, and it is what tells a finger the
+      // press landed. Taking that away too would re-create #367, where a control answered a finger with nothing;
+      // `test/support/pressed_frame.dart` measures the floor and `test/architecture/tap_splash_test.dart` pins both
+      // halves. Every M3 control reads this off the theme, `ButtonStyleButton` included.
+      splashFactory: NoSplash.splashFactory,
       iconTheme: IconThemeData(color: colorScheme.onSurface, size: 18),
       iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(foregroundColor: colorScheme.onSurface)),
       appBarTheme: AppBarTheme(
