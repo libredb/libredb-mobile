@@ -1743,8 +1743,6 @@
   "@ob6_body": {"description": "The body of the sixth onboarding screen."},
   "ob6_you": "siz",
   "@ob6_you": {"description": "Names the reader's own row in the demo grant list and the demo audit log of the sixth onboarding screen."},
-  "ob6_redacted": "[maskelendi]",
-  "@ob6_redacted": {"description": "Stands in for the statement text of a demo audit line the connection's capture setting withheld."},
   "ob6_bye": "Giriş sayfasına gidiliyor",
   "@ob6_bye": {"description": "The hand-off panel the onboarding ends on, after the last screen or Skip."},
   "ob6_bye_note": "Tanıtım burada biter; uygulama Keycloak ile açılır.",

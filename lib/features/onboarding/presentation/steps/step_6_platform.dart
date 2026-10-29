@@ -1,18 +1,16 @@
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_type.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
-import 'package:libredb_mobile/shared/design_system/components/app_card.dart';
-import 'package:libredb_mobile/shared/design_system/components/app_status_badge.dart';
+import 'package:libredb_mobile/shared/design_system/theme/environment_colors.dart';
 import 'package:libredb_mobile/shared/design_system/theme/semantic_colors.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
 /// The connection the whole introduction has been standing on.
 const _connection = 'orders-prod';
-
-/// The statement the person watched run on the third screen, as the Audit tab records it.
-const _myStatement = 'select count(*) from orders';
 
 /// The administrator who granted the read, and the colleague whose lines sit under the person's own.
 const _granter = 'ayse';
@@ -36,61 +34,56 @@ const _myRowCount = 1;
 const _colleagueDurationMs = 86;
 const _colleagueRowCount = 3;
 
-/// How long before now the grant was made, and how long from now it runs out. Both are read off the clock rather
-/// than written as dates, so the deck never shows a date in the past as a future expiry.
+/// How long before now the grant was made. Read off the clock rather than written as a date, so the deck says "two
+/// days ago" in whatever month it is shown.
 const _grantedAgo = Duration(days: 2);
-const _expiresIn = Duration(days: 30);
+
+/// The colleague's grant never expires: the infinity sign the prototype writes, a symbol and not a word.
+const _noExpiry = '∞';
 
 /// How many lines the demonstration log holds.
 const _events = 3;
 
-/// When each beat of the sixth screen starts, measured from the frame the step is first shown on.
-///
-/// Every value is a sum of `AppDurations`, so the screen moves at the speeds the rest of the app moves at.
+/// When each beat of the sixth screen starts, measured from the frame the step is first shown on: the prototype's own
+/// `PLAY[5]` schedule, in milliseconds.
 class Step6Beats {
   Step6Beats._();
 
-  /// How long one row takes to arrive once its beat has come.
-  static final Duration arrival = AppDurations.normal;
+  /// How long one row takes to arrive once its beat has come: `.riser{animation:rise .42s}`.
+  static const Duration arrival = Duration(milliseconds: 420);
 
-  /// Between the person's own grant and the one under it.
-  static final Duration grantStagger = AppDurations.normal;
+  /// The person's own grant arrives with the card, and the one under it 220 later.
+  static const Duration grantStagger = Duration(milliseconds: 220);
 
   /// The first line of the audit log is written in — the **oldest** one.
-  static final Duration firstLine = AppDurations.media + AppDurations.normal;
+  static const Duration firstLine = Duration(milliseconds: 650);
 
   /// Between one line being written in and the next.
-  static final Duration lineStagger = AppDurations.slow + AppDurations.instant;
+  static const Duration lineStagger = Duration(milliseconds: 430);
 
-  /// The note that says why one line has no statement.
-  static final Duration note = firstLine + lineStagger * _events + AppDurations.normal;
-
-  /// The whole timeline.
-  static final Duration whole = note + AppDurations.media;
+  /// The whole timeline, long enough for the last line's own arrival to finish inside it.
+  static const Duration whole = Duration(milliseconds: 2000);
 }
 
 /// The sixth screen of the introduction: what Platform decided, and what it wrote down.
 ///
-/// Two halves. Above, the grant that let the person read `orders-prod` — its level, when it runs out and **who
-/// granted it and when**, in `platform_grants_granted_by`, the sentence the real grant list uses. Below, the audit
-/// log, with the statement of the third screen at the top of it: the same `select count(*) from orders`, reading
-/// the product's own relative time, its 41 ms and its one row. That line is the point of the whole deck — the thing
-/// the person just did, in the record, named as theirs.
+/// Two cards. Above, the grants: the one that let the person read `orders-prod` — who granted it and on which day —
+/// and a colleague's write grant. Below, the audit log, with the statement of the third screen at the top of it: the
+/// thing the person just did, in the record, named as theirs.
 ///
 /// **The log reads newest first**, which is the order the real Audit tab lists in (`docs/platform.md`), and it
-/// **writes itself in oldest first**, so each arriving line pushes the older ones down and the newest lands on
-/// top. The two orders are opposites and both are deliberate: an audit caught the prototype this is built from
-/// rendering `Just now → 21 min → 12 min`, the right rows in the wrong order.
+/// **writes itself in oldest first**, so each arriving line pushes the older ones down and the newest lands on top.
+/// The two orders are opposites and both are deliberate: an audit caught the prototype this is built from rendering
+/// `Just now → 21 min → 12 min`, the right rows in the wrong order.
 ///
-/// Three rows, and the third is the one that earns the note under the card: a refused UPDATE whose statement the
-/// connection's capture setting withheld, so the row carries `ob6_redacted` where the statement would be and the
-/// note says why in the app's own `platform_audit_statement_redacted`. The outcome and the level are the app's
-/// words throughout — `platform_audit_status_success`, `platform_audit_status_refused`,
-/// `platform_grants_level_read`, `platform_grants_level_write` — because English literals in a Turkish deck are the
-/// defect this screen is most likely to ship.
+/// The words are the app's own throughout — `platform_audit_status_success`, `platform_audit_status_refused`,
+/// `platform_grants_level_read`, `platform_grants_level_write`, `platform_audit_statement_redacted` — because English
+/// literals in a Turkish deck are the defect this screen is most likely to ship. The two lines whose statement the
+/// connection's capture setting withheld say so in the line under them, as the prototype does.
 ///
-/// Two things the agreed prototype leaves out are left out here rather than invented: the colleague's line shows no
-/// statement text, and the refused line shows no duration, because Platform refused it before the engine saw it.
+/// **The drawing is the prototype's**, measured in headless Chrome at 390x844 and a device scale of 2 (`ob.html`,
+/// screen 6): the grants one card of rows of `padding:9px 11px`, the log another 14 under it whose rows carry a
+/// coloured bar down the leading edge, the time in a column of 74, and the outcome a square outlined tag at the end.
 ///
 /// Nothing here is tappable. Next is the only control, and the chassis draws it.
 class Step6Platform extends StatefulWidget {
@@ -136,15 +129,48 @@ class _Step6PlatformState extends State<Step6Platform> with SingleTickerProvider
   }
 }
 
+/// The prototype's own measures of this hero, none of them on the closed spacing scale:
+/// `.g{padding:9px 11px;gap:9px}`, `.lv{padding:3px 5px}`, `.ev{padding:8px 11px 8px 0;gap:8px}`, `.bar{width:3px}`,
+/// `.ts{flex:0 0 74px}`, `.out{padding:2px 5px}`, the second card's `margin-top:14px` and the rows' `margin-top:2px`.
+const double _cardGap = 14;
+const double _grantPadX = 11;
+const double _grantPadY = 9;
+const double _grantGap = 9;
+const double _eventPadY = 8;
+const double _eventPadRight = 11;
+const double _eventGap = 8;
+const double _barWidth = 3;
+const double _barCorner = 2;
+const double _timeWidth = 74;
+const double _lineGap = 2;
+const double _levelPadX = 5;
+const double _levelPadY = 3;
+const double _outPadX = 5;
+const double _outPadY = 2;
+const double _tagRadius = 4;
+const double _mineRadius = 11;
+const double _arrivesFrom = 13;
+
+/// The type: everything is mono 11, the time over a line of 1.35, the level tracked `.11em`, the outcome `.1em`, the
+/// third line of a row at .85 of its ink.
+const double _small = 11;
+const double _timeLine = 1.35;
+const double _levelTrackingEm = 0.11;
+const double _outTrackingEm = 0.1;
+const double _redactedOpacity = 0.85;
+
+/// How much of a row the outcome tag may take before it is scaled down: at an accessibility text size the tag would
+/// otherwise be wider than the row it ends.
+const double _tagShare = 0.4;
+
+/// The text scale above which a log row stacks its pieces: the ordinary text sizes go to 1.3.
+const double _stackedAbove = 1.3;
+
 /// How far a beat that started at [start] and lasts [span] has come at [elapsed], on the product's entrance curve.
 double _phase(Duration elapsed, Duration start, Duration span) {
   final raw = (elapsed - start).inMicroseconds / span.inMicroseconds;
   return AppDurations.easeOut.transform(raw.clamp(0.0, 1.0));
 }
-
-/// A date and time in the language of the app, the way the grant list writes one.
-String _grantDate(BuildContext context, DateTime value) =>
-    DateFormat.yMMMd(Localizations.localeOf(context).toString()).add_Hm().format(value.toLocal());
 
 class _Record extends StatelessWidget {
   const _Record({required this.elapsed});
@@ -154,294 +180,436 @@ class _Record extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final locale = Localizations.localeOf(context);
     final now = clock.now();
+    final granted = DateFormat('d MMM', locale.toString()).format(now.subtract(_grantedAgo));
+    final grantedBy = s.platform_grants_granted_by(_granter, granted);
+    final theme = Theme.of(context);
+    final success = context.semanticColors.success;
+    final error = theme.colorScheme.error;
+
+    final events = [
+      _EventData(
+        time: s.platform_audit_time_just_now,
+        user: s.ob6_you,
+        verb: _select,
+        facts: '${s.platform_audit_duration(_myDurationMs)} · ${s.platform_audit_row_count(_myRowCount)}',
+        outcome: s.platform_audit_status_success,
+        colour: success,
+        redacted: s.platform_audit_statement_redacted,
+        mine: true,
+      ),
+      _EventData(
+        time: s.platform_audit_time_minutes_ago(_colleagueAge),
+        user: _colleague,
+        verb: _update,
+        facts: '${s.platform_audit_duration(_colleagueDurationMs)} · ${s.platform_audit_row_count(_colleagueRowCount)}',
+        outcome: s.platform_audit_status_success,
+        colour: success,
+      ),
+      _EventData(
+        time: s.platform_audit_time_minutes_ago(_refusedAge),
+        user: _other,
+        verb: _update,
+        outcome: s.platform_audit_status_refused,
+        colour: error,
+        redacted: s.platform_audit_statement_redacted,
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Arriving(
-          slotKey: const ValueKey('ob6-grant-0'),
-          phase: _phase(elapsed, Duration.zero, Step6Beats.arrival),
-          child: _Grant(
-            holder: s.ob6_you,
-            level: s.platform_grants_level_read,
-            expiry: s.platform_grants_expires(_grantDate(context, now.add(_expiresIn))),
-            granted: s.platform_grants_granted_by(_granter, _grantDate(context, now.subtract(_grantedAgo))),
-            mine: true,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _Arriving(
-          slotKey: const ValueKey('ob6-grant-1'),
-          phase: _phase(elapsed, Step6Beats.grantStagger, Step6Beats.arrival),
-          child: _Grant(
-            holder: _colleague,
-            level: s.platform_grants_level_write,
-            expiry: s.platform_grants_no_expiry,
-            granted: s.platform_grants_granted_by(_granter, _grantDate(context, now.subtract(_grantedAgo))),
-            mine: false,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // Newest first, the order the Audit tab lists in. Each row is written in on its own beat, and the beats run
-        // the other way — the oldest row first — so the line the person just ran lands on top of the others.
-        for (var i = 0; i < _events; i++)
-          _Arriving(
-            slotKey: ValueKey('ob6-event-$i'),
-            phase: _phase(
-              elapsed,
-              Step6Beats.firstLine + Step6Beats.lineStagger * (_events - 1 - i),
-              Step6Beats.arrival,
+        _Card(
+          key: const ValueKey('ob6-grants'),
+          children: [
+            _Slot(
+              slotKey: const ValueKey('ob6-grant-0'),
+              phase: _phase(elapsed, Duration.zero, Step6Beats.arrival),
+              present: true,
+              child: _Grant(
+                boxKey: const ValueKey('ob6-grant-box-0'),
+                levelKey: const ValueKey('ob6-level-0'),
+                holder: s.ob6_you,
+                when: '$_connection · $grantedBy',
+                level: onboardingCapitals(s.platform_grants_level_read, locale),
+                colour: theme.colorScheme.primary,
+                ink: theme.colorScheme.onPrimaryContainer,
+                mine: true,
+                first: true,
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: _row(context, i),
+            _Slot(
+              slotKey: const ValueKey('ob6-grant-1'),
+              phase: _phase(elapsed, Step6Beats.grantStagger, Step6Beats.arrival),
+              present: elapsed >= Step6Beats.grantStagger,
+              child: _Grant(
+                boxKey: const ValueKey('ob6-grant-box-1'),
+                levelKey: const ValueKey('ob6-level-1'),
+                holder: _colleague,
+                when: '$_connection · $_noExpiry',
+                level: onboardingCapitals(s.platform_grants_level_write, locale),
+                colour: EnvironmentColors.staging,
+                ink: EnvironmentColors.staging,
+                mine: false,
+                first: false,
+              ),
             ),
-          ),
-        Opacity(
-          opacity: _phase(elapsed, Step6Beats.note, AppDurations.media),
-          child: Text(
-            s.platform_audit_statement_redacted,
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
+          ],
+        ),
+        const SizedBox(height: _cardGap),
+        _Card(
+          key: const ValueKey('ob6-log'),
+          children: [
+            // Newest first, the order the Audit tab lists in. Each row is written in on its own beat, and the beats run
+            // the other way — the oldest row first — so the line the person just ran lands on top of the others.
+            for (var i = 0; i < _events; i++)
+              _Slot(
+                slotKey: ValueKey('ob6-event-$i'),
+                phase: _phase(
+                  elapsed,
+                  Step6Beats.firstLine + Step6Beats.lineStagger * (_events - 1 - i),
+                  Step6Beats.arrival,
+                ),
+                present: elapsed >= Step6Beats.firstLine + Step6Beats.lineStagger * (_events - 1 - i),
+                child: _Event(index: i, data: events[i]),
+              ),
+          ],
         ),
       ],
     );
   }
-
-  /// The log's rows, newest first.
-  Widget _row(BuildContext context, int index) {
-    final s = S.of(context);
-    return switch (index) {
-      0 => _Event(
-        user: s.ob6_you,
-        verb: _select,
-        outcome: s.platform_audit_status_success,
-        succeeded: true,
-        details: [
-          s.platform_audit_time_just_now,
-          s.platform_audit_duration(_myDurationMs),
-          s.platform_audit_row_count(_myRowCount),
-        ],
-        sql: _myStatement,
-        redacted: false,
-        mine: true,
-      ),
-      1 => _Event(
-        user: _colleague,
-        verb: _update,
-        outcome: s.platform_audit_status_success,
-        succeeded: true,
-        details: [
-          s.platform_audit_time_minutes_ago(_colleagueAge),
-          s.platform_audit_duration(_colleagueDurationMs),
-          s.platform_audit_row_count(_colleagueRowCount),
-        ],
-        sql: null,
-        redacted: false,
-        mine: false,
-      ),
-      _ => _Event(
-        user: _other,
-        verb: _update,
-        outcome: s.platform_audit_status_refused,
-        succeeded: false,
-        details: [s.platform_audit_time_minutes_ago(_refusedAge)],
-        sql: null,
-        redacted: true,
-        mine: false,
-      ),
-    };
-  }
 }
 
-/// A row being written in: it unrolls from nothing and fades up as it does, so the rows below it are pushed down
-/// rather than appearing already moved.
-class _Arriving extends StatelessWidget {
-  const _Arriving({required this.slotKey, required this.phase, required this.child});
+/// A card: the border and the corners a list of rows has in the app, with the rows cut to its own corners. The border
+/// is outside the rows, which only a `Container` gives.
+class _Card extends StatelessWidget {
+  const _Card({required this.children, super.key});
 
-  /// The key of the slot, whose height is how far the row has been written in.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    ),
+  );
+}
+
+/// A row being written in: absent until its beat, then there at its whole height — so the rows under it are pushed down
+/// at once, as `insertBefore` does — rising into place as it fades in.
+class _Slot extends StatelessWidget {
+  const _Slot({required this.slotKey, required this.phase, required this.present, required this.child});
+
   final Key slotKey;
   final double phase;
+  final bool present;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
+    if (!present) return SizedBox.shrink(key: slotKey);
+    return Opacity(
       key: slotKey,
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: phase,
-        child: Opacity(opacity: phase, child: child),
-      ),
+      opacity: phase,
+      child: Transform.translate(offset: Offset(0, (1 - phase) * _arrivesFrom), child: child),
     );
   }
 }
 
-/// One grant, drawn the way the real grant list draws one: the holder, the connection, the level and the expiry on
-/// one line, and who granted it under them.
-class _Grant extends StatelessWidget {
-  const _Grant({
-    required this.holder,
-    required this.level,
-    required this.expiry,
-    required this.granted,
-    required this.mine,
+TextStyle? _mono(BuildContext context, {FontWeight weight = FontWeight.w400, double? tracking, Color? color}) =>
+    Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontFamily: AppTypography.mono,
+      fontSize: _small,
+      fontWeight: weight,
+      height: onboardingMonoLine,
+      letterSpacing: tracking ?? 0,
+      color: color ?? Theme.of(context).colorScheme.onSurface,
+    );
+
+/// A square outlined tag: mono 11 bold in [colour], in a border of the same colour and a 4 radius.
+class _Tag extends StatelessWidget {
+  const _Tag({
+    required this.boxKey,
+    required this.label,
+    required this.colour,
+    required this.ink,
+    required this.padX,
+    required this.padY,
+    required this.trackingEm,
   });
 
-  final String holder;
-  final String level;
-  final String expiry;
-  final String granted;
+  final Key boxKey;
+  final String label;
 
-  /// The reader's own grant, which the deck marks so they can find themselves in the list.
+  /// The border, and [ink] the words: `.lv.read` is an accent border round words in the accent ink.
+  final Color colour;
+  final Color ink;
+  final double padX;
+  final double padY;
+  final double trackingEm;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: boxKey,
+    decoration: BoxDecoration(
+      border: Border.all(color: colour),
+      borderRadius: BorderRadius.circular(_tagRadius),
+    ),
+    padding: EdgeInsets.symmetric(horizontal: padX, vertical: padY),
+    child: Text(
+      label,
+      style: _mono(context, weight: FontWeight.w700, tracking: _small * trackingEm, color: ink),
+    ),
+  );
+}
+
+/// [child] at its own size, or scaled down to [share] of the width it is given when it would not fit: a tag at an
+/// accessibility text size is wider than the row it ends.
+class _Capped extends StatelessWidget {
+  const _Capped({required this.width, required this.child});
+
+  final double width;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: BoxConstraints(maxWidth: width * _tagShare),
+    child: FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.topEnd, child: child),
+  );
+}
+
+/// One grant: the holder over `orders-prod` and what is known about the grant, and the level at the end.
+///
+/// `.g{display:flex;align-items:center;gap:9px;padding:9px 11px}`, the reader's own `.me` on the accent fill with an
+/// 11 radius and the holder in the accent ink at 600. The first row has no rule over it and the others have one.
+class _Grant extends StatelessWidget {
+  const _Grant({
+    required this.boxKey,
+    required this.levelKey,
+    required this.holder,
+    required this.when,
+    required this.level,
+    required this.colour,
+    required this.ink,
+    required this.mine,
+    required this.first,
+  });
+
+  final Key boxKey;
+  final Key levelKey;
+  final String holder;
+  final String when;
+  final String level;
+
+  /// The tag's border, and [ink] its words.
+  final Color colour;
+  final Color ink;
   final bool mine;
+  final bool first;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final secondary = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
-    // The prototype sets the grant's own line in `font-family:mono;font-size:11px`, not in the title size the
-    // headline uses; three title-sized lines is what made the card 86pt against its 48.
-    final dense = text.labelLarge?.copyWith(fontFamily: AppTypography.mono);
-    return AppCard(
-      variant: mine ? AppCardVariant.filled : AppCardVariant.outlined,
-      // One row, the way the prototype draws it — `.g{display:flex;align-items:center}`, the holder and what is
-      // known about the grant in a column on the left and the level beside them on the right. Stacked instead,
-      // the two grants and the three audit lines overflowed the hero by 257pt on the emulator and drew over the
-      // headline and both controls.
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(holder, style: dense, maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('$_connection  ·  $expiry', style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(granted, style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ],
+    return Container(
+      key: boxKey,
+      decoration: BoxDecoration(
+        color: mine ? scheme.primaryContainer : null,
+        borderRadius: mine ? BorderRadius.circular(_mineRadius) : null,
+        border: !mine && !first ? Border(top: BorderSide(color: scheme.outlineVariant)) : null,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: _grantPadX, vertical: _grantPadY),
+      child: LayoutBuilder(
+        builder: (context, row) => Row(
+          spacing: _grantGap,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    holder,
+                    style: _mono(
+                      context,
+                      weight: mine ? FontWeight.w600 : FontWeight.w400,
+                      color: mine ? scheme.onPrimaryContainer : null,
+                    ),
+                  ),
+                  const SizedBox(height: _lineGap),
+                  Text(when, style: _mono(context, color: scheme.onSurfaceVariant)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          AppStatusBadge(label: level, color: scheme.primary),
-        ],
+            _Capped(
+              width: row.maxWidth,
+              child: _Tag(
+                boxKey: levelKey,
+                label: level,
+                colour: colour,
+                ink: ink,
+                padX: _levelPadX,
+                padY: _levelPadY,
+                trackingEm: _levelTrackingEm,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// One line of the audit log, drawn the way the real Audit tab draws one: the user and the outcome, the connection
-/// and the statement type, the relative time with the duration and the row count, and the statement — or, when the
-/// connection's capture setting withheld it, the redaction in its place.
-class _Event extends StatelessWidget {
-  const _Event({
+/// What one line of the log says.
+class _EventData {
+  const _EventData({
+    required this.time,
     required this.user,
     required this.verb,
     required this.outcome,
-    required this.succeeded,
-    required this.details,
-    required this.sql,
-    required this.redacted,
-    required this.mine,
+    required this.colour,
+    this.facts,
+    this.redacted,
+    this.mine = false,
   });
 
+  final String time;
   final String user;
 
   /// Platform's statement type, an opaque string: the verb of the statement, not a word of the app.
   final String verb;
+
+  /// The duration and the row count, null on a line Platform refused before the engine saw it.
+  final String? facts;
   final String outcome;
 
-  /// Which semantic colour the outcome badge takes. Refused is the warning colour, as `auditStatusColor` gives it:
-  /// a refusal is governance working, not an error.
-  final bool succeeded;
-  final List<String> details;
+  /// The bar's colour and the outcome tag's: the success ink, or the error ink for a refusal.
+  final Color colour;
 
-  /// The statement text the row shows, null when the deck shows none for that line.
-  final String? sql;
-  final bool redacted;
+  /// The sentence that says the statement was withheld, null where the deck shows none.
+  final String? redacted;
 
   /// The reader's own line, which the deck marks so they can find what they just ran.
   final bool mine;
+}
+
+/// One line of the audit log, drawn the way the prototype draws one: a bar down the leading edge in the outcome's
+/// colour, the time in a column of 74, the user and the statement type over the connection and its figures and — where
+/// the connection's capture setting withheld the statement — the redaction, and the outcome as a tag at the end.
+class _Event extends StatelessWidget {
+  const _Event({required this.index, required this.data});
+
+  final int index;
+  final _EventData data;
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final secondary = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
-    final sql = this.sql;
-    // Same as the grant: the audit line's own name is mono and small in the prototype, not title-sized.
-    final dense = text.labelLarge?.copyWith(fontFamily: AppTypography.mono);
-    return AppCard(
-      variant: mine ? AppCardVariant.filled : AppCardVariant.outlined,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final facts = data.facts;
+    final redacted = data.redacted;
+    final quiet = _mono(context, color: scheme.onSurfaceVariant);
+    return Container(
+      key: ValueKey('ob6-event-box-$index'),
+      decoration: BoxDecoration(
+        color: data.mine ? scheme.primaryContainer : null,
+        borderRadius: data.mine ? BorderRadius.circular(_mineRadius) : null,
+        border: index > 0 ? Border(top: BorderSide(color: scheme.outlineVariant)) : null,
+      ),
+      child: Stack(
         children: [
-          // The name takes the line and the statement type with the outcome sit flush against the end of it. While
-          // the three of them fit, this is the `Row` it has always been and every glyph is where the prototype
-          // puts it: the name yields its width first, down to the ellipsis, exactly as it did before.
-          //
-          // What the `Row` alone could not do is give the line back. A name, `UPDATE` and `Reddedildi` are three
-          // things with no break in them: at the largest accessibility text size they came to 587pt inside a 292pt
-          // card, and the overflow stripe lay across the audit log. So the pair is **bounded by the line it has to
-          // fit in** and parts onto a second run when it no longer does — which, because the bound is the line
-          // less the gap the name needs to have given up by then, is exactly the point at which the `Row` used to
-          // overflow and not one text size earlier. A `Row` cannot bound it: a child of a `Row` with no flex of
-          // its own is measured against infinity, so the pair would never learn that the line had run out.
-          //
-          // The level beside the holder above is left a plain `Row`: one holder and one badge fit that card at
-          // every width and text size measured.
-          //
-          // The builder is safe here, and that is a layout claim rather than a hope: it asks its own child no
-          // intrinsic question, and nothing above asks this line one either — the chassis measures the hero with
-          // an `IntrinsicHeight`, and `_RenderHeroExtent` answers it from its own floor without descending into a
-          // step. `step_5_ecosystem.dart` draws its fan under the same rule.
-          LayoutBuilder(
-            builder: (context, line) => Row(
-              children: [
-                Expanded(
-                  child: Text(user, style: dense, overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: (line.maxWidth - AppSpacing.sm).clamp(0, double.infinity)),
-                  child: Wrap(
-                    alignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.xs,
+          Positioned(
+            left: 0,
+            top: _eventPadY,
+            bottom: _eventPadY,
+            width: _barWidth,
+            child: Container(
+              key: ValueKey('ob6-bar-$index'),
+              decoration: BoxDecoration(
+                color: data.colour,
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(_barCorner)),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(_barWidth + _eventGap, _eventPadY, _eventPadRight, _eventPadY),
+            child: LayoutBuilder(
+              builder: (context, row) {
+                final time = Text(data.time, style: quiet?.copyWith(height: _timeLine));
+                final who = Text.rich(
+                  TextSpan(
                     children: [
-                      Text(verb, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
-                      AppStatusBadge(
-                        label: outcome,
-                        color: succeeded ? context.semanticColors.success : context.semanticColors.warning,
+                      TextSpan(text: '${data.user} '),
+                      TextSpan(
+                        text: data.verb,
+                        style: TextStyle(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  style: _mono(context),
+                );
+                final tag = _Capped(
+                  width: row.maxWidth,
+                  child: _Tag(
+                    boxKey: ValueKey('ob6-out-$index'),
+                    label: data.outcome,
+                    colour: data.colour,
+                    ink: data.colour,
+                    padX: _outPadX,
+                    padY: _outPadY,
+                    trackingEm: _outTrackingEm,
+                  ),
+                );
+                final details = [
+                  Text(facts == null ? _connection : '$_connection · $facts', style: quiet),
+                  if (redacted != null)
+                    Opacity(
+                      opacity: _redactedOpacity,
+                      child: Text(redacted, style: quiet),
+                    ),
+                ];
+                // The prototype's row: the time in a column of 74, the words in the room that is left and the tag at
+                // the end. At an accessibility text size the 74 and the tag leave the words a sliver and the line
+                // becomes a tower, so there the time goes on its own line over the words and the tag beside the
+                // name — the same pieces, stacked, as the chassis does with its two controls.
+                if (MediaQuery.textScalerOf(context).scale(1) > _stackedAbove) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: _lineGap,
+                    children: [
+                      time,
+                      Row(
+                        spacing: _eventGap,
+                        children: [
+                          Expanded(child: who),
+                          tag,
+                        ],
+                      ),
+                      ...details,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: _eventGap,
+                  children: [
+                    SizedBox(key: ValueKey('ob6-time-$index'), width: _timeWidth, child: time),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: _lineGap,
+                        children: [who, ...details],
+                      ),
+                    ),
+                    tag,
+                  ],
+                );
+              },
             ),
           ),
-          Text([_connection, ...details].join('  ·  '), style: secondary, maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (sql != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              sql,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.bodySmall?.copyWith(fontFamily: AppTypography.mono),
-            ),
-          ] else if (redacted) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              s.ob6_redacted,
-              style: text.bodySmall?.copyWith(fontFamily: AppTypography.mono, color: scheme.onSurfaceVariant),
-            ),
-          ],
         ],
       ),
     );

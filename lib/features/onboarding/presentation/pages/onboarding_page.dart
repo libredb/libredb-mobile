@@ -49,6 +49,10 @@ const double _bodyLine = 1.5;
 /// Skip's own type: `.skip{font-size:14px;font-weight:600}`.
 const double _skipSize = 14;
 
+/// The sign-in control's own type and inset: `.next{font-size:15px;font-weight:600;padding:13px 26px}`.
+const double _doneSize = 15;
+const double _doneInsetX = 26;
+
 /// The gap between the headline block and the body: `.body{margin-top:10px}`. Not on the spacing scale, whose nearest
 /// steps are 8 and 12.
 const double _bodyGap = 10;
@@ -393,7 +397,18 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                       child: FilledButton(
                                         key: onboardingDoneKey,
                                         // `.next{border-radius:999px}` — the prototype's primary control is a pill.
-                                        style: FilledButton.styleFrom(shape: const StadiumBorder()),
+                                        //
+                                        // `.next{font-size:15px;font-weight:600;padding:13px 26px}` over a 48 floor.
+                                        style: FilledButton.styleFrom(
+                                          shape: const StadiumBorder(),
+                                          padding: const EdgeInsets.symmetric(horizontal: _doneInsetX),
+                                          minimumSize: const Size(0, AppSizes.minTapTarget),
+                                          textStyle: theme.textTheme.labelLarge?.copyWith(
+                                            fontSize: _doneSize,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0,
+                                          ),
+                                        ),
                                         onPressed: _advance,
                                         child: Text(
                                           _step == onboardingStepCount - 1 ? l10n.ob_done : l10n.ob_next,

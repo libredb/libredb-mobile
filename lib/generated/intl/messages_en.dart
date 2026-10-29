@@ -749,7 +749,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "ob6_bye": MessageLookupByLibrary.simpleMessage("On to the sign-in"),
     "ob6_bye_note": MessageLookupByLibrary.simpleMessage("The introduction ends here; the app opens through Keycloak."),
     "ob6_cap": MessageLookupByLibrary.simpleMessage("platform · access and record"),
-    "ob6_redacted": MessageLookupByLibrary.simpleMessage("[redacted]"),
     "ob6_title": MessageLookupByLibrary.simpleMessage("Platform decides\nwho may reach what."),
     "ob6_you": MessageLookupByLibrary.simpleMessage("you"),
     "ob_done": MessageLookupByLibrary.simpleMessage("Sign in"),

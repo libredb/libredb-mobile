@@ -5325,16 +5325,6 @@ class S {
     );
   }
 
-  /// `[redacted]`
-  String get ob6_redacted {
-    return Intl.message(
-      '[redacted]',
-      name: 'ob6_redacted',
-      desc: 'Stands in for the statement text of a demo audit line the connection\'s capture setting withheld.',
-      args: [],
-    );
-  }
-
   /// `On to the sign-in`
   String get ob6_bye {
     return Intl.message(

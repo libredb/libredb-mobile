@@ -758,7 +758,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "ob6_bye": MessageLookupByLibrary.simpleMessage("Giriş sayfasına gidiliyor"),
     "ob6_bye_note": MessageLookupByLibrary.simpleMessage("Tanıtım burada biter; uygulama Keycloak ile açılır."),
     "ob6_cap": MessageLookupByLibrary.simpleMessage("platform · yetki ve kayıt"),
-    "ob6_redacted": MessageLookupByLibrary.simpleMessage("[maskelendi]"),
     "ob6_title": MessageLookupByLibrary.simpleMessage("Kimin erişeceğine\nPlatform karar verir."),
     "ob6_you": MessageLookupByLibrary.simpleMessage("siz"),
     "ob_done": MessageLookupByLibrary.simpleMessage("Giriş yap"),

@@ -425,6 +425,25 @@ void main() {
     /// `.skip{font-size:14px;font-weight:600;color:var(--quiet);background:none;border:0}` — a bare word, 26.5 wide in
     /// Turkish, whose left edge is the content column's 48. The app's `TextButton` carried the theme's 16 of padding
     /// (the word at 64) and the brand colour. The 48 high hit area stays.
+    /// `.next{font-size:15px;font-weight:600;border-radius:999px;padding:13px 26px}` over `min-height:48px`: measured
+    /// in
+    /// headless Chrome the pill is 114 wide around Turkish "Giriş yap" (a 62 word and 26 either side) and 48 high.
+    /// The app's button took the theme's smaller padding and size, which drew it 88 wide in a lighter weight.
+    testWidgets('the sign-in control is a 48 high pill, a 15 semibold word with 26 either side', (tester) async {
+      await pumpFrame(tester);
+      for (var step = 0; step < onboardingStepCount - 1; step++) {
+        await advance(tester);
+      }
+
+      final button = find.byKey(onboardingDoneKey);
+      final word = find.descendant(of: button, matching: find.byType(Text));
+      expect(tester.getSize(button).height, 48);
+      expect(tester.getSize(button).width - tester.getSize(word).width, closeTo(52, 0.5));
+      final style = tester.widget<FilledButton>(button).style!.textStyle!.resolve({})!;
+      expect(style.fontSize, 15);
+      expect(style.fontWeight, FontWeight.w600);
+    });
+
     testWidgets('Skip is a quiet 14 semibold word on the content edge, in a 48 high target', (tester) async {
       await pumpFrame(tester);
 
