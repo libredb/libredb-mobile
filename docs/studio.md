@@ -365,7 +365,73 @@ was measured rather than assumed, and the first one hid the next three.
 already describes what the lab wants — `mobile.enabled: true`, and `tls.mode: provided` so the owner's own chain is
 served instead of an 825 day internal one — but the installer binary in the VM predates that schema and rejects the
 key `mobile` outright, so the configuration cannot simply be adopted. Upgrading the installer, not patching the
-containers, is what makes this reproducible; until then a `libredb-installer apply` undoes the table above.
+containers, is what makes this reproducible.
+
+### What the installer must do, and whose it is
+
+Read on 2026-10-29 from the installer binary the lab was installed with, `/opt/libredb/bin/libredb-installer`. It is
+a Bun single-file executable that keeps its own sources readable, so every claim below is a quotation from it rather
+than a guess. Nothing on the lab was changed: the commands were `version`, `validate` on a throwaway configuration in
+`/tmp`, `openssl s_client` against the edge, an unauthenticated `GET` of the realm's authorization endpoint, and
+`grep` over the binary's strings.
+
+**The version is the whole of it.** `libredb-installer version` prints `libredb-installer 1.0.0` / `release 1.0.0`.
+`tool/installer-lab/libredb.yaml.example` is written for installer 1.3.0, and 1.0.0 has no `mobile` section in its
+schema at all — not a reserved name, not a validation rule, but a key that does not exist. `src/config/schema.ts`
+builds the root object from `head`, `mode`, `tail` and `docker` and closes it with `.strict()`, and `tail` is
+`endpoints`, `tls`, `postgres`, `keycloak`, `platform`, `images`, `network`, `backups`, `bridge` — no `mobile`. Zod's
+`unrecognized_keys` is what comes back, measured on a configuration that is otherwise the example's:
+
+```
+$ libredb-installer validate -c /tmp/probe.yaml
+invalid configuration:
+  (root): Unrecognized key: "mobile"
+                                     # exit 2; the same file with the mobile block removed validates, exit 0
+```
+
+**What a lab would need at birth.** The working definition is the realm block of `tool/studio-dev/docker-compose.yml`
+and the bearer variables beside it. Against what installer 1.0.0 produces, the difference is:
+
+| What is needed | What installer 1.0.0 does |
+| --- | --- |
+| A public client `libredb-mobile`, standard flow only, PKCE `S256`, `org.libredb.mobile:/oauth2redirect` as redirect and post-logout URI | Creates two clients and no third: `desiredKeycloak` in `src/keycloak/desired.ts` returns `appClients: [libredb-studio, libredb-platform]`. Its one factory, `appClient()`, hard-codes `publicClient: false` with `clientAuthenticatorType: "client-secret"`, so it cannot express a public client even if a third entry were added |
+| Two `oidc-audience-mapper` mappers on that client, for `libredb-studio-api` and `libredb-platform-api` | Has no audience mapper of any kind: `audience`, `oidc-audience-mapper` and `included.custom.audience` appear nowhere in the binary |
+| A `libredb_roles` client-role mapper reaching that client's tokens | Present, but only as the client scope `libredb-roles`, added to each app client's `defaultClientScopes`. A `libredb-mobile` the installer does not create gets no scope, so no `libredb_roles` claim |
+| `OIDC_BEARER_AUDIENCE` and `OIDC_BEARER_CLIENT_IDS` on Studio | Neither string is in the binary. `STUDIO_ENV` in `src/contracts/studio.ts` carries `OIDC_CLIENT_ID` and `OIDC_ROLE_CLAIM` and no bearer key, and `renderEnv` builds the file from `Object.keys(descriptors)`, so an `apply` rewrites `/opt/libredb/env/studio.env` and drops anything added by hand |
+| `PLATFORM_API_AUDIENCE` and `PLATFORM_API_CLIENT_IDS` on Platform | Neither string is in the binary either, and release 1.0.0 pins Platform 1.0.1, which has no `/api/v1` to enable |
+| A leaf certificate a browser accepts, 398 days or fewer | `src/tls/leaf.ts` opens `var LEAF_VALIDITY_DAYS = 825;` — a constant with no configuration path, used by `issueLeaf` for every generated leaf |
+
+**The certificate half is configurable today, the client half is not.** `tls.mode: provided` is already in 1.0.0's
+`tls` enum and validates there, so a lab given the owner's own chain never meets the 825 day leaf. Only
+`tls.mode: generated` is capped at 825, and it is the mode the lab was installed in. A `mobile` client has no such
+escape: no key, no flag, no `--set` reaches it. The one documented path around it is `keycloak.mode: external` with
+`provisioning: manual`, where `libredb-installer keycloak export` hands the site the realm objects and the site
+configures its own realm — which is a different installation, not a lab born working.
+
+**An `apply` would undo less than feared, and it was worth measuring.** The Keycloak planner has no `delete-client`
+and no `delete-user` action; its only removals are `delete-mapper` and `remove-optional-scope`, both scoped to the
+objects it owns. `foreignObjects` walks `[desired.roleClient, ...desired.appClients]` and `desired.users` only, so
+`libredb-mobile` and `mobile-test` are invisible to it and survive. The TLS plan would keep the hand-reissued leaves
+too: `planLeaf` re-issues only when a leaf is missing, uncovered, unreadable, off the CA, or inside
+`RENEW_BEFORE_DAYS = 30` of expiry, and the three edge leaves measured
+`notBefore=Oct 28 14:47:01 2026 GMT`, `notAfter=Nov 29 14:47:01 2027 GMT` — 397 days, 396 of them left. What an
+`apply` does undo is the container half: the rendered `/opt/libredb/compose.yaml` goes back to release 1.0.0's
+digests (Studio `sha256:0cb0177d…`, Platform `sha256:b42e3467…`, against the live `sha256:e91183de…` and
+`sha256:e53ca9b8…`) and loses the `platform: linux/amd64` lines, and the env files lose the four bearer variables.
+
+**This is not ours to fix.** Nothing above is in this repository. The ask, for whoever owns the installer:
+
+1. Keep the `mobile` section of the 1.3.0 schema, and let the installer in a lab be one that has it — the lab's is
+   1.0.0 and rejects the key. For this repository's purposes `mobile.enabled: true` must produce the public client,
+   both audience mappers, the `libredb_roles` claim, and the bearer variables on Studio and Platform, since a phone
+   that gets the client but not the audience is refused by Studio instead of by Keycloak.
+2. Cap `LEAF_VALIDITY_DAYS` at 398 or fewer for `tls.mode: generated`. 825 days was the ceiling before September
+   2020; every browser has enforced 398 since, and installing the CA does not lift it, so a generated lab is unreachable
+   through a browser and therefore unable to carry an OIDC sign-in. `tls.mode: provided` is the only way around it
+   today, and it asks the owner for a chain a lab should not need.
+
+Until a lab is born with both, `docs/studio.md` above is the hand procedure, and this repository can do nothing but
+record it.
 
 ### Results
 
