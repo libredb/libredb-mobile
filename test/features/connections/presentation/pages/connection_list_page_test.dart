@@ -377,7 +377,10 @@ void main() {
       expect(tester.getRect(find.byType(TextField)).right, moreOrLessEquals(829 - 16, epsilon: 1));
     });
 
-    testWidgets('a rotation while typing a search keeps its text and focus', (tester) async {
+    // What makes this size change since #419 is a window the system sizes — a split-screen or free-form window,
+    // which ignores an orientation restriction — not a phone turned sideways, which the build no longer allows. The
+    // state that has to survive it is the same, so the case is kept with its viewports.
+    testWidgets('a resize while typing a search keeps its text and focus', (tester) async {
       answer(_mockAnswer());
       await pumpPage(tester, size: const Size(393, 829));
       await tester.showKeyboard(find.byType(TextField));

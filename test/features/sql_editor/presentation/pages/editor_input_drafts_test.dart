@@ -690,7 +690,10 @@ void main() {
     });
   });
 
-  testWidgets('a rotation keeps the scroll position of a long text', (tester) async {
+  // What makes this size change since #419 is a window the system sizes — a split-screen or free-form window,
+  // which ignores an orientation restriction — not a phone turned sideways, which the build no longer allows. The
+  // state that has to survive it is the same, so the case is kept with its viewports.
+  testWidgets('a resize keeps the scroll position of a long text', (tester) async {
     await pump(tester);
     final text = List.generate(200, (index) => 'select $index;').join('\n');
     await type(tester, text);
