@@ -467,6 +467,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "error_network_offline": MessageLookupByLibrary.simpleMessage(
       "No internet connection. Check your network and try again.",
     ),
+    "error_platform_access_already_granted": MessageLookupByLibrary.simpleMessage("You already have this access."),
+    "error_platform_access_request_decided": MessageLookupByLibrary.simpleMessage(
+      "This request was already answered or withdrawn.",
+    ),
+    "error_platform_access_request_limit": MessageLookupByLibrary.simpleMessage(
+      "You have too many open requests. Wait for an answer or withdraw one.",
+    ),
+    "error_platform_access_request_pending": MessageLookupByLibrary.simpleMessage(
+      "You already have an open request for this connection.",
+    ),
+    "error_platform_access_request_reason_refused": MessageLookupByLibrary.simpleMessage(
+      "Write a reason of at most 500 characters.",
+    ),
+    "error_platform_access_requests_disabled": MessageLookupByLibrary.simpleMessage(
+      "Access requests are turned off on this installation.",
+    ),
     "error_platform_account_refused": MessageLookupByLibrary.simpleMessage(
       "Platform did not accept this sign-in. Ask an administrator to check that this app is set up for Platform, or sign in to Studio.",
     ),
@@ -512,6 +528,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "error_platform_plan_feature_required": MessageLookupByLibrary.simpleMessage(
       "The plan of this Platform install does not include this feature.",
+    ),
+    "error_platform_studio_role_required": MessageLookupByLibrary.simpleMessage(
+      "Your account has no Studio role, so it cannot ask for access.",
     ),
     "error_platform_unreachable": MessageLookupByLibrary.simpleMessage(
       "Platform does not answer. Try again in a moment.",

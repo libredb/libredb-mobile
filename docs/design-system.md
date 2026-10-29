@@ -57,7 +57,8 @@ buttons, with no dark override.
 system does. Every label that used to be `primary` carries it: the SQL keyword in the editor
 (`lib/features/sql_editor/presentation/widgets/highlighting_text_controller.dart:48`) and in the source viewer
 (`lib/features/object_browser/presentation/widgets/object_source_view.dart:254`), the quiet buttons and the
-selected tab (`lib/shared/design_system/theme/app_theme.dart:107-133`), and four labels across the app.
+selected tab (`lib/shared/design_system/theme/app_theme.dart:114-140` — the tab bar, the outlined button and the
+text button, in that order), and four labels across the app.
 
 ### The status group — also shared, and one rule covers all four
 
@@ -86,8 +87,8 @@ in the same file.
 
 ### `classic` — the design system, token for token
 
-`lib/shared/design_system/theme/theme_colors.dart:95-122` (light) and
-`lib/shared/design_system/theme/theme_colors.dart:126-153` (dark). The role on each line
+`lib/shared/design_system/theme/theme_colors.dart:95-129` (light) and
+`lib/shared/design_system/theme/theme_colors.dart:133-166` (dark). The role on each line
 appears in the same order in both.
 
 | role | light | dark | web token |
@@ -123,8 +124,12 @@ appears in the same order in both.
 
 ### `nature` and `sunset` keep their own neutrals
 
-`lib/shared/design_system/theme/theme_colors.dart:159-223` (nature) and
-`lib/shared/design_system/theme/theme_colors.dart:226-290` (sunset). They take the brand group and the status group and
+`lib/shared/design_system/theme/theme_colors.dart:175-208` (nature light),
+`lib/shared/design_system/theme/theme_colors.dart:212-245` (nature dark),
+`lib/shared/design_system/theme/theme_colors.dart:254-287` (sunset light) and
+`lib/shared/design_system/theme/theme_colors.dart:291-324` (sunset dark). Each is a scope on its own, cited the
+same way `classic` is, because a reviewer reads one scheme at a time and a range that spans two of them points at
+neither. They take the brand group and the status group and
 nothing else: their page, their edges, their quiet text and their accent — sage green `#5F7A64` / `#8BA68F` and
 orange `#C2410C` / `#FB923C` — are what these two palettes *are*. Pinned in both directions by the import guard,
 because three palettes that differ only in the name of their action colour are one palette with three names.
@@ -307,6 +312,24 @@ asks for, and an unused curve is a value nobody is holding to anything. It arriv
 * **Elevation.** `tokens/elevation.css` is vendored and unread: this app turns the Material elevation tint off on
   every component theme (`lib/shared/design_system/theme/app_theme.dart`) and draws depth with a border instead.
 
+## Goldens, when a token changes
+
+A token change redraws everything, so the decision is not *whether* the baselines move but *where* they are drawn.
+
+**The decision: every baseline is regenerated, and it is regenerated on CI, never on a maintainer's machine.** A
+token change is expected to move all 19 `*_golden_test.dart` files at once; a change that moves none of them is the
+signal that the token has no caller, and that is worth reading rather than celebrating. Nothing about a token
+change is allowed to weaken, skip or re-scope a golden so the images can stay.
+
+It has to be CI because the images are host-dependent: measured on this repository, the component goldens deviate
+by 0.09–0.15% between a maintainer's machine and the runner even with the pinned toolchain, which is why a
+maintainer sees golden failures against an untouched `main`. A baseline drawn locally is therefore a baseline that
+fails for everyone else. The route is in [`docs/testing-architecture.md`](testing-architecture.md): a temporary workflow job runs
+`flutter test --tags golden --update-goldens`, uploads `**/goldens/ci/*.png`, the artifact is downloaded, the
+images that differ are committed, and the job is deleted in the same pull request.
+
+That is how #384's and #385's baselines were produced, and it is what the next token change does too.
+
 ## The guards, by what they hold
 
 | file | holds |
@@ -318,4 +341,5 @@ asks for, and an unused curve is a value nobody is holding to anything. It arriv
 | `test/architecture/snack_bar_ink_test.dart` | a snack bar's background and its ink move together |
 | `test/architecture/arb_translations_test.dart` | no palette describes itself by a ramp it no longer uses |
 | `test/architecture/design_token_test.dart` | no raw value outside `lib/shared/design_system/` |
-| the 17 `*_golden_test.dart` files | what all of it draws |
+| `test/architecture/design_system_doc_test.dart` | this page: its citations, its colours and its numbers |
+| the 19 `*_golden_test.dart` files | what all of it draws |

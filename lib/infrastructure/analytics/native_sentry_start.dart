@@ -3,33 +3,35 @@ import 'package:flutter/services.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-/// The channel on which `MainActivity.kt` answers whether the host app
-/// started the native Sentry SDK.
+/// The channel on which `MainActivity.kt` and `AppDelegate.swift` answer
+/// whether the host app started the native Sentry SDK.
 const String nativeSentryChannelName = 'org.libredb.mobile/native_sentry';
 
 final _log = AppLogger.getLogger('NativeSentryStart');
 
 /// Whether the host app, not sentry_flutter, starts the native Sentry SDK on
 /// the platform of [options]: on Android `MainApplication.kt` starts
-/// sentry-android with the scrubbing hooks of `NativeSentryScrubber.kt`, so
-/// what the native SDK records itself leaves the device masked too.
+/// sentry-android with the scrubbing hooks of `NativeSentryScrubber.kt`, on
+/// iOS `AppDelegate.swift` starts sentry-cocoa with those of
+/// `NativeSentryScrubber.swift`, so what the native SDK records itself leaves
+/// the device masked too.
 ///
-/// It reads `options.platform`, by which sentry_flutter picks its Java
+/// It reads `options.platform`, by which sentry_flutter picks its native
 /// binding, and not the Flutter target platform, which a test or a debug
-/// session can override. iOS keeps the start by sentry_flutter, and its
-/// native events and breadcrumbs are not scrubbed yet.
-bool hostStartsNativeSdk(SentryOptions options) => options.platform.isAndroid;
+/// session can override.
+bool hostStartsNativeSdk(SentryOptions options) => options.platform.isAndroid || options.platform.isIOS;
 
 /// Turns [SentryFlutterOptions.autoInitializeNativeSdk] off where
 /// [hostStartsNativeSdk], or where [hostStarts] says so, and leaves it on
 /// everywhere else.
 ///
-/// sentry_flutter then no longer passes the Dart options to the native SDK
-/// on Android. Any native option set on the Dart side, such as
+/// sentry_flutter then no longer passes the Dart options to the native SDK.
+/// Any native option set on the Dart side, such as
 /// `enableAutoNativeBreadcrumbs`, `enableNativeCrashHandling`,
 /// `maxBreadcrumbs`, `sendDefaultPii` or the replay options, must be set in
 /// `NativeSentry.kt` of the Android host app (under
-/// `android/app/src/main/kotlin`) as well, or it does nothing there.
+/// `android/app/src/main/kotlin`) and in `NativeSentry.swift` of the iOS one
+/// (under `ios/Runner`) as well, or it does nothing there.
 void configureNativeSdkStart(SentryFlutterOptions options, {bool? hostStarts}) {
   options.autoInitializeNativeSdk = !(hostStarts ?? hostStartsNativeSdk(options));
 }
@@ -38,15 +40,15 @@ void configureNativeSdkStart(SentryFlutterOptions options, {bool? hostStarts}) {
 /// ([hostStarts], by default [hostStartsNativeSdk] of the options
 /// sentry_flutter builds), it asks the host whether it did.
 ///
-/// On Android every Dart event leaves the device through the native SDK, so
-/// a Dart SDK that starts while the host did not start the native one drops
-/// every event while it looks configured. The host starts it only for a
-/// `lib/main/main_prod.dart` build with a `SENTRY_DSN` (the gate in
-/// `android/app/build.gradle.kts`), the Dart side for the prod environment
-/// with one (`AppConfig.sentryDsn`), and the two gates disagree when a change
-/// touches only one of them. A debug or profile build then throws a [StateError]
-/// that names the mismatch; a release build logs it and returns false, so the
-/// app runs without Sentry. A host app that does not answer on
+/// On Android and on iOS every Dart event leaves the device through the
+/// native SDK, so a Dart SDK that starts while the host did not start the
+/// native one drops every event while it looks configured. The host starts it
+/// only for a `lib/main/main_prod.dart` build with a `SENTRY_DSN` (the gate in
+/// `android/app/build.gradle.kts`, and `ios/native_sentry_defines.sh`), the
+/// Dart side for the prod environment with one (`AppConfig.sentryDsn`), and
+/// the two gates disagree when a change touches only one of them. A debug or
+/// profile build then throws a [StateError] that names the mismatch; a release
+/// build logs it and returns false, so the app runs without Sentry. A host app that does not answer on
 /// [nativeSentryChannelName], such as a host without the handler, or whose
 /// handler fails, is treated the same way.
 Future<bool> nativeSdkReady({
@@ -68,7 +70,8 @@ Future<bool> nativeSdkReady({
   }
   final error = StateError(
     'Sentry has a DSN on the Dart side, but $problem, so every Dart event would be dropped. The host starts it only '
-    'for a lib/main/main_prod.dart build with a SENTRY_DSN define: see android/app/build.gradle.kts.',
+    'for a lib/main/main_prod.dart build with a SENTRY_DSN define: see android/app/build.gradle.kts and '
+    'ios/native_sentry_defines.sh.',
   );
   if (!releaseMode) throw error;
   _log.error('Sentry stays off: {}', [error.message]);

@@ -3346,6 +3346,76 @@ class S {
     );
   }
 
+  /// `Your account has no Studio role, so it cannot ask for access.`
+  String get error_platform_studio_role_required {
+    return Intl.message(
+      'Your account has no Studio role, so it cannot ask for access.',
+      name: 'error_platform_studio_role_required',
+      desc: 'Platform refused an access request because the account\'s token carries no Studio role.',
+      args: [],
+    );
+  }
+
+  /// `Access requests are turned off on this installation.`
+  String get error_platform_access_requests_disabled {
+    return Intl.message(
+      'Access requests are turned off on this installation.',
+      name: 'error_platform_access_requests_disabled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have an open request for this connection.`
+  String get error_platform_access_request_pending {
+    return Intl.message(
+      'You already have an open request for this connection.',
+      name: 'error_platform_access_request_pending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You already have this access.`
+  String get error_platform_access_already_granted {
+    return Intl.message(
+      'You already have this access.',
+      name: 'error_platform_access_already_granted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You have too many open requests. Wait for an answer or withdraw one.`
+  String get error_platform_access_request_limit {
+    return Intl.message(
+      'You have too many open requests. Wait for an answer or withdraw one.',
+      name: 'error_platform_access_request_limit',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This request was already answered or withdrawn.`
+  String get error_platform_access_request_decided {
+    return Intl.message(
+      'This request was already answered or withdrawn.',
+      name: 'error_platform_access_request_decided',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Write a reason of at most 500 characters.`
+  String get error_platform_access_request_reason_refused {
+    return Intl.message(
+      'Write a reason of at most 500 characters.',
+      name: 'error_platform_access_request_reason_refused',
+      desc: 'Platform refused an access request create or refuse on the reason field alone.',
+      args: [],
+    );
+  }
+
   /// `Type one or more statements`
   String get sql_editor_hint {
     return Intl.message(

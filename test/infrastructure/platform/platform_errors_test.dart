@@ -32,6 +32,12 @@ void main() {
       (403, 'PLAN_FEATURE_REQUIRED', AuthError, AppErrorCode.platformPlanFeatureRequired),
       (403, 'PERMISSION_DENIED', AuthError, AppErrorCode.platformPermissionDenied),
       (500, 'INTERNAL_ERROR', ServerError, AppErrorCode.platformInternalError),
+      (403, 'STUDIO_ROLE_REQUIRED', AuthError, AppErrorCode.platformStudioRoleRequired),
+      (404, 'ACCESS_REQUESTS_DISABLED', NotFoundError, AppErrorCode.platformAccessRequestsDisabled),
+      (409, 'ACCESS_REQUEST_PENDING', ValidationError, AppErrorCode.platformAccessRequestPending),
+      (409, 'ACCESS_ALREADY_GRANTED', ValidationError, AppErrorCode.platformAccessAlreadyGranted),
+      (409, 'ACCESS_REQUEST_LIMIT', ValidationError, AppErrorCode.platformAccessRequestLimit),
+      (409, 'ACCESS_REQUEST_DECIDED', ValidationError, AppErrorCode.platformAccessRequestDecided),
     ];
     for (final (status, code, type, appCode) in cases) {
       test('$status $code -> $type ${appCode.key}', () {
@@ -81,6 +87,7 @@ void main() {
       (413, null, UnknownError, null),
       (429, null, UnknownError, null),
       (409, 'SOMETHING_NEW', UnknownError, null),
+      (409, null, UnknownError, null),
     ];
     for (final (status, code, type, appCode) in cases) {
       test('$status ${code ?? 'without a code'} -> $type ${appCode?.key}', () {
@@ -88,6 +95,73 @@ void main() {
 
         expect(error.runtimeType, type);
         expect(error.code, appCode?.key);
+      });
+    }
+  });
+
+  group('platformAccessRequestWriteError', () {
+    AppError written(int status, String? code, {List<String> keys = const []}) =>
+        platformAccessRequestWriteError(response(status, code, keys: keys));
+
+    test('maps a refusal on the reason alone to platformAccessRequestReasonRefused', () {
+      final error = written(400, 'VALIDATION_FAILED', keys: ['reason']);
+
+      expect(error, isA<ValidationError>());
+      expect(error.code, AppErrorCode.platformAccessRequestReasonRefused.key);
+      expect(error.message, contains(text));
+    });
+
+    test('maps a refusal on the level alone to the grant level code', () {
+      final error = written(400, 'VALIDATION_FAILED', keys: ['level']);
+
+      expect(error, isA<ValidationError>());
+      expect(error.code, AppErrorCode.platformGrantLevelRefused.key);
+    });
+
+    test('falls back to platformValidationFailed when the reason and the level are both refused', () {
+      final error = written(400, 'VALIDATION_FAILED', keys: ['reason', 'level']);
+
+      expect(error, isA<ValidationError>());
+      expect(error.code, AppErrorCode.platformValidationFailed.key);
+    });
+
+    for (final keys in [
+      <String>[],
+      [''],
+      ['body'],
+      ['connectionId'],
+      ['expiresAt'],
+      ['subject'],
+    ]) {
+      test('falls back to platformValidationFailed on $keys', () {
+        final error = written(400, 'VALIDATION_FAILED', keys: keys);
+
+        expect(error, isA<ValidationError>());
+        expect(error.code, AppErrorCode.platformValidationFailed.key);
+      });
+    }
+
+    test('sends a 400 with another code through platformError', () {
+      final error = written(400, 'SOMETHING_NEW', keys: ['reason']);
+
+      expect(error, isA<ValidationError>());
+      expect(error.code, isNull);
+    });
+
+    for (final (status, code) in <(int, String?)>[
+      (409, 'ACCESS_REQUEST_PENDING'),
+      (409, 'ACCESS_REQUEST_DECIDED'),
+      (403, 'STUDIO_ROLE_REQUIRED'),
+      (404, 'ACCESS_REQUESTS_DISABLED'),
+      (500, 'INTERNAL_ERROR'),
+      (409, null),
+    ]) {
+      test('sends a $status ${code ?? 'without a code'} through platformError', () {
+        final error = written(status, code);
+        final direct = platformError(response(status, code));
+
+        expect(error.runtimeType, direct.runtimeType);
+        expect(error.code, direct.code);
       });
     }
   });
