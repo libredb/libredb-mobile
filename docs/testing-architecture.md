@@ -490,6 +490,17 @@ wrong scope.
   24 guards. So every `test/` path the page names has to exist, every `docs/design-system.md:NNN` citation has to
   resolve to a paragraph that still carries the sentence it is quoted for — the paragraph, not the line, because that
   page wraps at 120 columns — and the guard count the page states has to be the number of `*_test.dart` files here.
+- **`usability_jobs_doc_test.dart`** holds `docs/usability-jobs.md`, the jobs the five personas of M16's usage layer
+  are run against (#285), to the tree and to the finding format beside it. That page is the whole brief of a run that
+  has nobody to ask: a job naming a screen that was renamed, a build file that moved or an environment the app does
+  not have stops the run where it stands. It is also the other half of `docs/usability-findings.md`, which reads
+  `persona`, `job`, `step` and `severity` off it — so a job with no numbered steps makes `step` unwritable, a persona
+  the roster does not hold makes `persona` unwritable, and a severity invented on one page makes two personas
+  incomparable. The guard reads the roster table against the job ids (two or three per persona, numbered from 1
+  without a gap), every block against its keys and their order, every `start:` and `done:` against
+  `ApplicationRoutesConstants`, every `target:` against `lib/main/`, every `environment:` and `session:` against the
+  enums the app ships, every backticked path against the tree, and every severity against the table that defines it.
+  What it does not read is whether a job is a good job; it reads the things that fail quietly.
 - **`android_resource_xml_test.dart`** fails when a comment in an Android resource file holds a double hyphen.
   AAPT parses those files strictly and refuses the whole file over it, and writing `--background` in one — the
   name of a design token, which this repository writes that way everywhere else — took the Android build down
@@ -538,6 +549,12 @@ wrong scope.
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
 - **`installer_lab_config_test.dart`** guards the Platform installer environment used for the full-system check.
+- **`platform_image_pin_test.dart`** guards that the `platform` profile of `tool/studio-dev` names one Platform release
+  everywhere it is named: both `PLATFORM_IMAGE` defaults, the comment that introduces the profile, and the
+  `## Platform` section of `docs/studio.md`. Every answer under `test/fixtures/platform/` was recorded from that one
+  release, so a bump that reaches the image but not the prose leaves the doc describing a Platform that no longer
+  serves the fixtures, and a bump that reaches one service but not the other migrates with one release and serves with
+  another.
 
 The colour has two guards next to the code they guard, and the second exists because the first could not see
 what it was missing:

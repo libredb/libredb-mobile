@@ -43,8 +43,8 @@ evidence:      run-2026-10-28/dba-on-call-2-04-browse-rows.png
 
 | key | what it holds | read from |
 |---|---|---|
-| `persona` | the persona's id, one of the roster the epic fixes | the first child of #285 |
-| `job` | the job's id, `<persona>/<n>`, never a prose retelling | the first child of #285 |
+| `persona` | the persona's id, one of the roster the epic fixes | `docs/usability-jobs.md` |
+| `job` | the job's id, `<persona>/<n>`, never a prose retelling | `docs/usability-jobs.md` |
 | `step` | the ordinal of the step inside that job, from 1 | the job's own steps |
 | `step_action` | one line, what the persona did at that step — an action, not a feeling | the run |
 | `screen` | a constant of `ApplicationRoutesConstants`, by name | `lib/app/router/app_routes_constants.dart` |
@@ -119,7 +119,8 @@ consequence depends on what the person does next and no run can see that. S1 kee
 corrupts it; S3 keeps the outcome and loses the route; S4 keeps both and costs attention.
 
 Reading it off the job is what makes two personas' severities comparable. The level is decided by the job's own
-"what would count as having done it", which the first child of #285 writes down per job — not by how the step felt.
+"what would count as having done it", which `docs/usability-jobs.md` writes down per job as its `done:` and its
+`takeaway:` — not by how the step felt.
 A persona may not raise a level because something annoyed it, and may not lower one because it recovered.
 
 **S2 is about the app's presentation, not the database's answer.** A masked column read as the value, a truncated
@@ -164,7 +165,7 @@ evidence, and the rule below discards it.
 
 ### A class a guard already measures is a test gap, not a usability finding
 
-`test/architecture/` holds 41 guards, and some of them measure, repository-wide, exactly what a persona would
+`test/architecture/` holds 43 guards, and some of them measure, repository-wide, exactly what a persona would
 otherwise report as a finding. When a guard measures the class and is green, the finding is about the guard's reach —
 file it against the guard, not as a usability finding.
 
@@ -240,6 +241,7 @@ the run and named to the owner, and it is not written as a finding, because a se
 | file | holds |
 |---|---|
 | `test/architecture/usability_doc_test.dart` | every `test/` path above, every citation above, and the guard count |
+| `test/architecture/usability_jobs_doc_test.dart` | `docs/usability-jobs.md`, the jobs this format's `persona`, `job`, `step` and `severity` are read off |
 | `test/architecture/design_system_doc_test.dart` | that the page a citation lands on still matches the code |
 | `test/architecture/testing_doc_test.dart` | that every guard, this one included, is named in `docs/testing-architecture.md` |
 
