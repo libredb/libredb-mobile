@@ -1,6 +1,7 @@
 # LibreDB Platform
 
 Platform mode is the sign-in entry for Platform admins: sign-in stays Keycloak, and every call in Platform mode goes to LibreDB Platform's bearer API under `/api/v1`.
+A Studio session reaches that API too, on the requester routes alone, when the user asks for access to a connection ([below](#access-requests-from-a-studio-session)).
 The app still holds no database credential, and it never creates, edits or deletes a connection.
 This page is the contract the app relies on; paths in libredb-platform are given at its `origin/main` `d6ad8f5`, whose `docs/api/v1.md` is the source of truth.
 
@@ -37,6 +38,10 @@ In a build without a Platform target every call fails with `PlatformNotConfigure
 | `PATCH /api/v1/connections/{id}`, body `{active}` | one connection: `{id, name, engine, status, hasWriteCredential}` | `IPlatformConnectionRepository.setActive`, `PlatformConnectionsModel.readOne` |
 | `GET /api/v1/audit?subject=&connectionId=&source=&statementType=&status=&from=&to=&search=&limit=&offset=` | `{events: [{eventId, startedAt, finishedAt, subject, username, sessionRole, connectionId, connectionKnown, connectionName, engine, accessLevel, source, statementType, explain, statementCapture, statement, statementTruncated, rowCount, durationMs, status, errorCode, errorMessage, transactionOutcome}], total}` | `IPlatformAuditRepository.list`, `AuditPageJson` |
 | `GET /api/health/live` | `{status: "live"}` | `IPlatformStatusRepository.liveness`, `PlatformStatusJson` |
+| `GET /api/v1/requester/connections` | `{connections: [{id, name, engine, hasWriteCredential, access: {level, expiresAt} \| null, pendingRequestId}]}` | `IAccessRequestRepository.requestableConnections`, `RequestableConnectionsJson` |
+| `GET /api/v1/requester/access-requests` | `{requests: [AccessRequest]}` | `IAccessRequestRepository.mine`, `AccessRequestJson.readList` |
+| `POST /api/v1/requester/access-requests`, body `{connectionId, level, reason}` | 201 `{request: AccessRequest}` | `IAccessRequestRepository.create`, `AccessRequestCreateBody`, `AccessRequestJson.readOne` |
+| `POST /api/v1/requester/access-requests/{id}/withdraw`, body `{}` | `{request: AccessRequest}` | `IAccessRequestRepository.withdraw`, `AccessRequestJson.readOne` |
 
 - `GET /api/v1/me` answers the caller's Platform user (libredb-platform `src/app/api/v1/me/route.ts`).
   `roles` is always `["PLATFORM_ADMIN"]` and `permissions` every permission (`src/shared/lib/bearer/with-bearer.ts`); `name` is nullable, `email` and the tenant's fields are not (`prisma/schema.prisma`).
@@ -118,6 +123,31 @@ The Audit tab (`/platform/audit`, `AuditLogPage`) shows the events newest first:
 - The event page (`/platform/audit/event`, `AuditEventPage`) lists every field of the event the list holds, a null one as not recorded, with the statement in a selectable monospace block; "Only this user" and "Only this connection" set `subject` or `connectionId` on the list and return to it.
 - The event reaches the page as go_router `extra`, `AuditEventArgs`, whose text names only the event id and status; the location carries no value, and a location without that `extra` opens the list.
 - The list rows, while the list is not empty, and the event's statement and error message are kept out of screenshots while on screen; leaving the tab disposes the bloc and its filters.
+
+## Access requests from a Studio session
+
+A Studio user under governance asks for a connection they do not hold through Platform's requester routes, with the same Keycloak access token the Studio calls carry.
+This is the one place a Studio session talks to Platform; `lib/features/access_requests/` holds it, and it imports `infrastructure/platform/` only, which `test/architecture/import_guard_test.dart` holds it to.
+The feature is named outside `platform_*` for that reason: it serves a Studio session, not Platform mode.
+
+- Every requester route accepts a token holding the Studio user role or the admin role.
+  None of them provisions a Platform user and none takes a license seat, so a Studio user who asks for access stays off the admin seat count.
+- `IAccessRequestRepository` (`lib/features/access_requests/domain/repositories/`) has `requestableConnections`, `mine`, `create` and `withdraw`; `AccessRequestRepository` sends them over `PlatformApiClient` and catches everything.
+  `create` maps through `platformAccessRequestWriteError`, so a 400 refused on exactly `reason` or exactly `level` lands under its field; everything else maps through `platformError`.
+  A code that lands unmapped is given its `AppErrorCode` in `platformError`, never with a switch in the repository.
+- The create and the withdrawal are each a `POST` sent without the client's `idempotent` opt-in, so neither is ever sent twice; both name `reason` in `sensitiveKeys`, so the verbose HTTP log and the dev console mask it.
+  The withdrawal sends `{}`, not a null body: `ApiClient` serializes anything but a `Map`, a `String` or a `List` by calling `toJson()` on it.
+- `MyAccessRequest` holds no requester: the requester is the caller, so Platform's `requester` object, which carries a username and an e-mail address, is never read, and neither is `decidedBy`.
+  `status` is read as `AccessRequestStatus`, with an unknown value kept as `unknown` plus the raw string; `level`, `engine` and the connection's `status` stay opaque strings.
+- The log carries counts, the operation, the level and the mapped code only.
+  No reason, decision reason, username, e-mail address or connection name reaches a line, and neither `MyAccessRequest.toString` nor `RequestableConnection.toString` prints one: they print the id, the status and the level.
+- **A Platform answer to these routes never ends or refuses the Studio session.**
+  A 401 `BEARER_INVALID` starts one refresh and, when it survives it, answers `platform.auth_invalid_access_token` to the screen with the Studio session still signed in (`lib/app/di/app_scope.dart`, `test/app/di/app_scope_test.dart`).
+  A 403 `STUDIO_ROLE_REQUIRED`, `ADMIN_ROLE_REQUIRED` or `LICENSE_ADMIN_SEATS` refuses neither account and opens no refusal page; the screen shows the message of the code.
+  The Platform unreachable gate never covers a Studio session either ([below](#liveness-and-the-two-gates)), so these screens say a transport failure themselves.
+- `MockInterceptor` answers the four routes from `assets/mock/GET_v1_requester_connections.json`, `GET_v1_requester_access_requests.json`, `POST_v1_requester_access_requests.json` and `POST_v1_requester_access_requests_pathParams.json`, the last for every withdrawal; it answers every `POST` with 201, so the readers take any 2xx.
+- No fixture is recorded yet: Platform `origin/main` has no requester route, so nothing can be recorded against the `platform` profile of `tool/studio-dev`.
+  When a Platform image carries them, `test/fixtures/platform/requester_connections.json`, `requester_requests.json`, `requester_create.json`, `requester_create_pending.json` and `requester_withdraw_decided.json` are recorded and read by `test/infrastructure/platform/recorded_platform_answers_test.dart`.
 
 ## Errors
 

@@ -24,6 +24,7 @@ import 'package:libredb_mobile/features/object_browser/domain/repositories/objec
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/sql_editor_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_history_repository.dart';
 import 'package:libredb_mobile/features/sql_editor/domain/repositories/statement_text_store.dart';
+import 'package:libredb_mobile/features/access_requests/domain/repositories/access_request_repository.dart';
 import 'package:libredb_mobile/features/app_lock/application/app_lock_bloc.dart';
 import 'package:libredb_mobile/features/app_lock/domain/repositories/app_lock_settings_repository.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
@@ -274,6 +275,10 @@ class AppScope extends StatelessWidget {
         ),
         RepositoryProvider<IPlatformStatusRepository>(
           create: (context) => dependencies.createPlatformStatusRepository(context.read<PlatformApiClient>()),
+        ),
+        // Platform's requester routes, read under a Studio session: no Platform refusal of them ends or refuses it.
+        RepositoryProvider<IAccessRequestRepository>(
+          create: (context) => dependencies.createAccessRequestRepository(context.read<PlatformApiClient>()),
         ),
         // One set for the app: the managed list fills it, and the statement routes wait for what it holds.
         RepositoryProvider<ConnectionQueryTimeouts>(create: (_) => ConnectionQueryTimeouts()),
