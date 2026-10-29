@@ -64,40 +64,50 @@ class StatementHistorySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    return FractionallySizedBox(
-      heightFactor: 0.85,
-      child: BlocBuilder<StatementHistoryBloc, StatementHistoryState>(
-        builder: (context, state) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(state: state),
-            if (state case StatementHistoryLoaded(:final allConnections)) ...[
-              SwitchListTile(
-                key: allConnectionsKey,
-                title: Text(s.sql_history_all_connections),
-                value: allConnections,
-                onChanged: (value) =>
-                    context.read<StatementHistoryBloc>().add(StatementHistoryScopeChanged(allConnections: value)),
-              ),
-              LocalFilterField(
-                hintText: s.sql_history_search_hint,
-                onChanged: (query) => context.read<StatementHistoryBloc>().add(StatementHistorySearchChanged(query)),
-              ),
-              _StatusFilter(selected: state.statusFilter),
-            ],
-            Expanded(
-              child: switch (state) {
-                StatementHistoryLoading() => const Center(child: CircularProgressIndicator()),
-                StatementHistoryLoaded() => _EntryList(state: state),
-                StatementHistoryUnreadable(:final actionFailure) => _Unreadable(actionFailure: actionFailure),
-                StatementHistoryFailure(:final errorCode) => AppErrorState(
-                  title: errorCode.resolve(context),
-                  retryLabel: s.retry,
-                  onRetry: () => context.read<StatementHistoryBloc>().add(const StatementHistoryLoadRequested()),
+    // Lifted by the keyboard's height, so the list ends at the keyboard's top and the search field stays in view.
+    // The home indicator needs nothing here: the ListView pads by MediaQuery.padding, which is zero while the
+    // keyboard is up (it covers the indicator) and the indicator's height without it.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: FractionallySizedBox(
+        // What is left above the keyboard is all the sheet gets, so it takes all of it rather than 85% of a sliver.
+        heightFactor: keyboard > 0 ? 1 : 0.85,
+        child: BlocBuilder<StatementHistoryBloc, StatementHistoryState>(
+          builder: (context, state) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Header(state: state),
+              if (state case StatementHistoryLoaded(:final allConnections)) ...[
+                SwitchListTile(
+                  key: allConnectionsKey,
+                  title: Text(s.sql_history_all_connections),
+                  value: allConnections,
+                  onChanged: (value) =>
+                      context.read<StatementHistoryBloc>().add(StatementHistoryScopeChanged(allConnections: value)),
                 ),
-              },
-            ),
-          ],
+                LocalFilterField(
+                  hintText: s.sql_history_search_hint,
+                  onChanged: (query) {
+                    context.read<StatementHistoryBloc>().add(StatementHistorySearchChanged(query));
+                  },
+                ),
+                _StatusFilter(selected: state.statusFilter),
+              ],
+              Expanded(
+                child: switch (state) {
+                  StatementHistoryLoading() => const Center(child: CircularProgressIndicator()),
+                  StatementHistoryLoaded() => _EntryList(state: state),
+                  StatementHistoryUnreadable(:final actionFailure) => _Unreadable(actionFailure: actionFailure),
+                  StatementHistoryFailure(:final errorCode) => AppErrorState(
+                    title: errorCode.resolve(context),
+                    retryLabel: s.retry,
+                    onRetry: () => context.read<StatementHistoryBloc>().add(const StatementHistoryLoadRequested()),
+                  ),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
