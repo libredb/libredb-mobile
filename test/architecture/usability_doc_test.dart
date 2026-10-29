@@ -44,15 +44,17 @@ void main() {
 
   test('a citation of the real page moved one line up is named', () {
     final page = _page();
-    expect(page, contains('`$_designSystemPath:272`'));
+    // The tap-target paragraph, which `usability-findings.md` quotes twice. It moved from 272 to 277 when #283's
+    // golden decision was written onto the design-system page; this test moves with it rather than being loosened.
+    expect(page, contains('`$_designSystemPath:277`'));
 
     final broken = brokenCitations(
-      page.replaceFirst('`$_designSystemPath:272`', '`$_designSystemPath:271`'),
+      page.replaceFirst('`$_designSystemPath:277`', '`$_designSystemPath:276`'),
       _designSystemLines(),
     );
 
     expect(broken, hasLength(1));
-    expect(broken.single, contains('$_designSystemPath:271'));
+    expect(broken.single, contains('$_designSystemPath:276'));
   });
 
   test('the page states how many guards test/architecture holds', () {
