@@ -278,6 +278,19 @@ void main() {
   /// strip and the read-only mark, both on the first row — and `[MY,'billing-stage',…,0,0]` carries neither. The
   /// deck built it the other way round, so the screen taught the reader that the staging database is the locked
   /// one and production is not, which is the opposite of what the sentence under it says.
+  testWidgets('the two marks on the production row are ten apart, as the prototype\'s row gap is', (tester) async {
+    // `.crow{display:flex;align-items:center;gap:10px}`: headless Chrome at 390x844 measures the distance between the
+    // read-only pill and the PROD badge as exactly 10 in both languages and both themes. A gap is a number that does
+    // not come from text, so Ahem does not touch it.
+    await show(tester, disableAnimations: true);
+
+    final prodRow = find.byKey(const ValueKey('ob1-strip-0'));
+    final env = tester.getRect(find.descendant(of: prodRow, matching: find.byType(EnvironmentBadge)));
+    final readOnly = tester.getRect(find.descendant(of: prodRow, matching: find.byType(ReadOnlyChip)));
+    expect(env.center.dy, readOnly.center.dy, reason: 'the two marks share a line, so the gap is a horizontal one');
+    expect(readOnly.left - env.right, 10.0);
+  });
+
   testWidgets('the production row is the read-only one, as the design has it', (tester) async {
     await show(tester, disableAnimations: true);
 

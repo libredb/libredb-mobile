@@ -9,6 +9,7 @@ import 'package:libredb_mobile/shared/design_system/components/app_badge.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_radius.dart';
 import 'package:libredb_mobile/shared/design_system/tokens/app_spacing.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/app_typography.dart';
 import 'package:libredb_mobile/shared/widgets/connection_badges.dart';
 
 /// The shape of a badge, which is one shape across the app or it is noise.
@@ -86,9 +87,31 @@ void main() {
     expect(insetOf(tester, find.byType(ReadOnlyChip)), 2 * AppSpacing.sm);
   });
 
-  testWidgets('the environment badge beside it adds the same inset', (tester) async {
+  // The prototype's badge rule is
+  //
+  //     .bdg{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 6px;
+  //      border-radius:4px}
+  //
+  // and measured in headless Chrome at 390x844 it draws 42.81 x 20 for PROD in both languages and both themes, with
+  // no border: 6 + 6 across and 3 + 3 down around a text box of 30.81 x 14. The device drew 50.2 because this badge
+  // set its words in the sans face with no tracking and 8 + 8 of padding. Both insets are read against the badge's
+  // own `Text`, so Ahem cancels out of the subtraction.
+  testWidgets('the environment badge is the prototype\'s 6 across and 3 down around its words', (tester) async {
     await pump(tester, const EnvironmentBadge(environment: 'production'));
-    expect(insetOf(tester, find.byType(EnvironmentBadge)), 2 * AppSpacing.sm);
+    final badge = find.byType(EnvironmentBadge);
+    final text = tester.getSize(find.descendant(of: badge, matching: find.byType(Text)).first);
+    expect(tester.getSize(badge).width - text.width, 12.0);
+    expect(tester.getSize(badge).height - text.height, 6.0);
+  });
+
+  testWidgets('and its words are mono, tracked at a tenth of an em, as the prototype\'s are', (tester) async {
+    await pump(tester, const EnvironmentBadge(environment: 'production'));
+    final text = find.descendant(of: find.byType(EnvironmentBadge), matching: find.byType(Text));
+    final style = tester.widget<Text>(text).style!;
+    expect(style.fontFamily, AppTypography.mono);
+    expect(style.fontSize, 11.0);
+    expect(style.fontWeight, FontWeight.w700);
+    expect(style.letterSpacing, closeTo(1.1, 1e-9));
   });
 
   testWidgets('and that is the same shape AppBadge draws', (tester) async {

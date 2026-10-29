@@ -78,6 +78,11 @@ const _connections = [
   ),
 ];
 
+/// The gap between the two marks on a row: the prototype's `.crow{gap:10px}`, measured at exactly 10 between the
+/// read-only pill and the PROD badge in both languages and both themes. It is not on the closed spacing scale, whose
+/// nearest steps are 8 and 12, and is this row's own.
+const _markGap = 10.0;
+
 /// The row the ring lights: the production one.
 const _litRow = 0;
 
@@ -257,7 +262,9 @@ class _DemoConnectionRow extends StatelessWidget {
                   ),
                 if (badges.isNotEmpty)
                   Wrap(
-                    spacing: AppSpacing.xs,
+                    spacing: _markGap,
+                    // `.crow{align-items:center}`: the 20 pt badge and the 22 pt pill share a centre line.
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     runSpacing: AppSpacing.xs,
                     // A pill is laid out side by side and cannot wrap: at an accessibility text size `ReadOnlyChip`
                     // asks for more width than the hero has and the row overflows to the right — 169pt in Turkish
