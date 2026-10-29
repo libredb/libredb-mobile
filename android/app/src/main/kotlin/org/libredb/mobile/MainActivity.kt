@@ -31,5 +31,6 @@ class MainActivity : FlutterFragmentActivity() {
         SensitiveClipboard.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         RecentsPreview.register(flutterEngine.dartExecutor.binaryMessenger, this)
         SecureWindow.register(flutterEngine.dartExecutor.binaryMessenger, this)
+        BiometricHardware.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
     }
 }

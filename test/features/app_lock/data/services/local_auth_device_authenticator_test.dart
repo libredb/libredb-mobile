@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:libredb_mobile/features/app_lock/data/services/android_biometric_hardware.dart';
 import 'package:libredb_mobile/features/app_lock/data/services/local_auth_device_authenticator.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:local_auth/local_auth.dart';
@@ -63,6 +66,70 @@ void main() {
 
     test('says none when nothing is enrolled', () async {
       expect(await askWith([]), DeviceBiometric.none);
+    });
+
+    group('on Android, which reports only the strong and weak classes', () {
+      Future<DeviceBiometric> askWithHardware(List<BiometricType> types, Set<String>? hardware) {
+        when(() => auth.getAvailableBiometrics()).thenAnswer((_) async => types);
+        return LocalAuthDeviceAuthenticator(auth: auth, hardwareKinds: () async => hardware).availableBiometric();
+      }
+
+      test('names the one kind the hardware has when something is enrolled', () async {
+        expect(await askWithHardware([BiometricType.strong], {'fingerprint'}), DeviceBiometric.fingerprint);
+        expect(await askWithHardware([BiometricType.weak], {'face'}), DeviceBiometric.face);
+        expect(await askWithHardware([BiometricType.strong, BiometricType.weak], {'iris'}), DeviceBiometric.iris);
+      });
+
+      test('stays neutral when the hardware has several kinds, as it cannot tell which is enrolled', () async {
+        expect(await askWithHardware([BiometricType.strong], {'fingerprint', 'face'}), DeviceBiometric.several);
+      });
+
+      test('stays neutral when the hardware check has no answer or names no kind', () async {
+        expect(await askWithHardware([BiometricType.strong], null), DeviceBiometric.several);
+        expect(await askWithHardware([BiometricType.strong], {}), DeviceBiometric.several);
+        expect(await askWithHardware([BiometricType.strong], {'unknown'}), DeviceBiometric.several);
+      });
+
+      test('claims nothing when nothing is enrolled, whatever the hardware', () async {
+        expect(await askWithHardware([], {'fingerprint'}), DeviceBiometric.none);
+      });
+
+      test('stays neutral when the hardware check throws', () async {
+        when(() => auth.getAvailableBiometrics()).thenAnswer((_) async => [BiometricType.strong]);
+        final throwing = LocalAuthDeviceAuthenticator(
+          auth: auth,
+          hardwareKinds: () => throw PlatformException(code: 'x'),
+        );
+        expect(await throwing.availableBiometric(), DeviceBiometric.several);
+      });
+    });
+
+    test('the default hardware check asks the Android channel and is skipped off Android', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final calls = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        AndroidBiometricHardware.channel,
+        (call) async {
+          calls.add(call.method);
+          return ['fingerprint'];
+        },
+      );
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+          AndroidBiometricHardware.channel,
+          null,
+        ),
+      );
+      when(() => auth.getAvailableBiometrics()).thenAnswer((_) async => [BiometricType.strong]);
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(await LocalAuthDeviceAuthenticator(auth: auth).availableBiometric(), DeviceBiometric.fingerprint);
+      expect(calls, ['kinds']);
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      expect(await LocalAuthDeviceAuthenticator(auth: auth).availableBiometric(), DeviceBiometric.several);
+      expect(calls, ['kinds']);
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 
