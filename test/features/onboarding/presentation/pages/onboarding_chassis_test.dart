@@ -217,6 +217,37 @@ void main() {
     );
   });
 
+  /// The same question for the body, and the same answer, against the prototype's own `.body{min-height:62px}` over
+  /// `13.5px/1.5` type — three of its lines, for bodies it authors as two.
+  ///
+  /// Measured with the product font at the body's own 318: of the twelve bodies, ten come to two or three lines and
+  /// only English screen 5 reaches four (88). The box reserves the tallest, so in English it is already 88 and the
+  /// floor is slack — but in Turkish the tallest is 66, three lines by the words' own luck rather than by rule, and
+  /// a body shortened by one clause would drop the block to 44 and take the air out of all six Turkish screens.
+  /// That is the headline's bug (`minLines` was added after the tallest-only block measured 64) with a different
+  /// box around it.
+  ///
+  /// **Why the wide viewport** is the headline test's reason: `flutter test` draws in Ahem, whose every glyph is a
+  /// full em square. Measured in Ahem, at the body's own 318 the six bodies lay out at 88..176 — four to eight
+  /// lines, against the two to four they are on a phone — so there the block clears the floor by itself and no
+  /// floor can be proved. Given room (1328 of body width) the same six come to 22..44, one or two Ahem lines, and
+  /// the floor is the only thing that can lift the block — which is the thing being tested.
+  testWidgets('the body block keeps the three lines the prototype leaves it', (tester) async {
+    await pumpFrame(tester, viewport: const Size(1400, 844));
+
+    final style = Theme.of(tester.element(find.byType(OnboardingPage))).textTheme.bodyMedium!;
+    final line = style.fontSize! * style.height!;
+    final box = tester.getRect(find.byKey(onboardingBodyKey));
+
+    expect(
+      box.height,
+      greaterThanOrEqualTo(line * 3 - 0.5),
+      reason:
+          'the body block is ${box.height.toStringAsFixed(1)}, under the ${(line * 3).toStringAsFixed(1)} '
+          'that three lines of its own type come to (the prototype reserves 62)',
+    );
+  });
+
   group('the words and the controls do not move between screens', () {
     for (final (language, locale) in [('English', Locale('en')), ('Turkish', Locale('tr'))]) {
       testWidgets('the words and the foot land at the same y on all six $language screens', (tester) async {

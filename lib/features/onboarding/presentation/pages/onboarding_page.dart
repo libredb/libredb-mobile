@@ -29,6 +29,24 @@ const int onboardingStepCount = 6;
 /// any text size, which a pixel would not.
 const int _headlineLines = 3;
 
+/// The lines of its own type the body block is given, whatever the paragraph in it comes to.
+///
+/// The prototype's `.body{min-height:62px}` over `font-size:13.5px;line-height:1.5` type is three of its lines
+/// (60.75), for bodies it authors as two — the same shape of rule as the headline's 98, so it is carried over the
+/// same way, as a line count rather than as a pixel count.
+///
+/// **The box is still the tallest of the six bodies, not this floor alone, and that is deliberate.** Measured with
+/// the product font at the body's own width of 318, `bodyMedium` being 14/1.55: of the twelve bodies ten come to
+/// two or three lines (44 or 66) and only English screen 5 reaches four, at 88. The prototype does the opposite
+/// there — its 62 is a floor, so on that one screen the body grows and the hero yields it 19 (hero 474, not 493, in
+/// 2 of the 24 measurements, the headline 19 higher with it). This chassis keeps the words still instead, which is
+/// what `the words and the foot land at the same y on all six screens` asserts: a reader of six screens should not
+/// have the headline move under their eye to buy one screen's body a line. The floor's job is the other end — the
+/// tallest Turkish body is 66, three lines by the words' own luck, and one clause cut from it would drop the block
+/// to 44 and take the air out of all six Turkish screens, which is exactly what the tallest-only headline block did
+/// at 64 before [_headlineLines].
+const int _bodyLines = 3;
+
 /// How fast a horizontal drag has to be, in logical pixels a second, before it turns the deck.
 const double _turnVelocity = 200;
 
@@ -273,6 +291,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                 candidates: _bodies(l10n),
                                 style: body,
                                 width: reserve,
+                                minLines: _bodyLines,
                                 child: Text(words.body, key: onboardingBodyKey, style: body),
                               ),
                             ),
