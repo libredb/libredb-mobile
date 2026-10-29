@@ -600,6 +600,91 @@ class S {
     );
   }
 
+  /// `Day and night`
+  String get brightness {
+    return Intl.message(
+      'Day and night',
+      name: 'brightness',
+      desc: 'The Appearance settings tile that picks whether the app is light, dark or follows the phone.',
+      args: [],
+    );
+  }
+
+  /// `Day and night`
+  String get brightness_dialog_title {
+    return Intl.message('Day and night', name: 'brightness_dialog_title', desc: '', args: []);
+  }
+
+  /// `Choose light, dark, or whatever the phone is set to`
+  String get brightness_dialog_subtitle {
+    return Intl.message(
+      'Choose light, dark, or whatever the phone is set to',
+      name: 'brightness_dialog_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Follow the phone`
+  String get brightness_system {
+    return Intl.message(
+      'Follow the phone',
+      name: 'brightness_system',
+      desc: 'ThemeMode.system: the app is light or dark as the phone\'s own setting says.',
+      args: [],
+    );
+  }
+
+  /// `Light or dark, as the phone's own setting says`
+  String get brightness_system_description {
+    return Intl.message(
+      'Light or dark, as the phone\'s own setting says',
+      name: 'brightness_system_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Light`
+  String get brightness_light {
+    return Intl.message('Light', name: 'brightness_light', desc: '', args: []);
+  }
+
+  /// `Always light, whatever the phone is set to`
+  String get brightness_light_description {
+    return Intl.message(
+      'Always light, whatever the phone is set to',
+      name: 'brightness_light_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Dark`
+  String get brightness_dark {
+    return Intl.message('Dark', name: 'brightness_dark', desc: '', args: []);
+  }
+
+  /// `Always dark, whatever the phone is set to`
+  String get brightness_dark_description {
+    return Intl.message(
+      'Always dark, whatever the phone is set to',
+      name: 'brightness_dark_description',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{mode} applied`
+  String brightness_applied(String mode) {
+    return Intl.message(
+      '$mode applied',
+      name: 'brightness_applied',
+      desc: 'Announced to a screen reader when a mode is applied from the day and night dialog.',
+      args: [mode],
+    );
+  }
+
   /// `{palette} theme applied`
   String theme_palette_applied(String palette) {
     return Intl.message(

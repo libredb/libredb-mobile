@@ -10,6 +10,9 @@ import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 class LoginThemeBadge extends StatelessWidget {
   const LoginThemeBadge({super.key, required this.isDark, this.onToggleTheme});
 
+  /// The side of the switch that is drawn: 36 pt, smaller than the hit area around it.
+  static const double _size = 36;
+
   final bool isDark;
 
   /// Null when the page cannot change the theme, which leaves the badge non-interactive.
@@ -18,48 +21,53 @@ class LoginThemeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(8);
-    final badge = Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: radius,
-        border: Border.all(color: cs.outline),
-      ),
-      child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, size: 18, color: cs.onSurfaceVariant),
-    );
+    final radius = BorderRadius.circular(AppRadius.lg);
+    final glyph = Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, size: 18);
 
     final onToggle = onToggleTheme;
-    if (onToggle == null) return badge;
-
-    // The 36 pt box stays what is drawn; the tap area around it is the minimum. An InkWell does not pad its hit area
-    // the way a ButtonStyleButton's MaterialTapTargetSize.padded does, so before this the drawn box was the whole
-    // target — a 36 pt corner control, which is the hardest kind to hit.
-    return Tooltip(
-      message: isDark ? S.of(context).login_switch_to_light_mode : S.of(context).login_switch_to_dark_mode,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: loginThemeToggleKey,
-          onTap: onToggle,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          child: SizedBox.square(
-            dimension: AppSizes.minTapTarget,
-            child: Center(child: badge),
-          ),
+    if (onToggle == null) {
+      return Container(
+        width: _size,
+        height: _size,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: radius,
+          border: Border.all(color: cs.outline),
         ),
+        child: IconTheme.merge(
+          data: IconThemeData(color: cs.onSurfaceVariant),
+          child: glyph,
+        ),
+      );
+    }
+
+    // The switch is drawn at [_size] while its hit area is [AppSizes.minTapTarget], because a 36 pt control in a
+    // corner is the hardest kind to hit (#357). Those two sizes have to be allowed to differ, which is why this is a
+    // `ButtonStyleButton` and not an `InkWell`: `MaterialTapTargetSize.padded` grows the hit area *around* the button
+    // and leaves the ink on the button's own shape. An `InkWell` inks whatever box it is handed, so when the hit area
+    // grew the splash grew with it — a 48 pt pill drawn behind a 36 pt rounded square, bigger than the control and a
+    // different shape from it (#414).
+    // `IconButton.tooltip` rather than a `Tooltip` around it, because the button builds a semantics node of its own:
+    // a wrapping `Tooltip` leaves its label on the ancestor and the node that carries the tap unnamed, which
+    // `login_screen_a11y_test.dart` reads as an unnamed target.
+    return IconButton(
+      key: loginThemeToggleKey,
+      onPressed: onToggle,
+      icon: glyph,
+      tooltip: isDark ? S.of(context).login_switch_to_light_mode : S.of(context).login_switch_to_dark_mode,
+      style: IconButton.styleFrom(
+        backgroundColor: cs.surfaceContainerHighest,
+        foregroundColor: cs.onSurfaceVariant,
+        elevation: 0,
+        fixedSize: const Size.square(_size),
+        minimumSize: const Size.square(_size),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: cs.outline),
+        ),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     );
   }
-
-  /// Navigates on a sign-in, and says nothing on the other states.
-  ///
-  /// It used to raise a snack bar for each. Two of them said what the page already said: the loading one named a
-  /// wait the button was already showing, and the error one repeated the line at [_errorText] **word for word**, so
-  /// a screen reader read every refusal twice and the suite waited five seconds for the snack bar to go before it
-  /// could assert the message appeared once (`waitForSnackBarToGo`, now gone with its four callers).
-  ///
-  /// The success one stays. It is the only one that says something this page does not, and it is read on the page
-  /// the user has just been sent to.
 }

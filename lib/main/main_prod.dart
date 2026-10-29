@@ -25,7 +25,6 @@ void main() async {
         oidcClientId: String.fromEnvironment('OIDC_CLIENT_ID', defaultValue: 'libredb-mobile'),
       ),
       apiBaseUrl: String.fromEnvironment('PROD_API_URL', defaultValue: 'https://studio-dev.libredb.org/api'),
-      defaultLanguage: 'en',
       defaultPalette: 'classic',
       defaultBrightness: 'dark',
     ),
