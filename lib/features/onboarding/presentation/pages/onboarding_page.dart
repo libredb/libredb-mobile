@@ -201,6 +201,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
           child: LayoutBuilder(
             builder: (context, viewport) {
               final reserve = viewport.maxWidth - _gutter.horizontal;
+              final measure = math.max(0.0, reserve - AppSpacing.lg);
               return SingleChildScrollView(
                 controller: _scroll,
                 child: ConstrainedBox(
@@ -269,11 +270,24 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                             ),
                             const SizedBox(height: AppSpacing.md),
                             _rise(
-                              _Reserved(
-                                candidates: _bodies(l10n),
-                                style: body,
-                                width: reserve,
-                                child: Text(words.body, key: onboardingBodyKey, style: body),
+                              // `.body{…max-width:302px}`, against an `h2` the prototype runs across the whole
+                              // 318 its content column is wide. Only the body is capped, and the cap is written as
+                              // the column less one spacing step rather than as 302, which is the same number on
+                              // the prototype's frame (318 - 16) and still a reading measure on a frame of another
+                              // width — and which asks the design system for a token it has instead of putting a
+                              // raw pixel count under `lib/features/`.
+                              //
+                              // The reserve is measured at the capped width too: a body that needs a line more at
+                              // 302 than at 318 would otherwise outgrow a box measured against the wider one and
+                              // push the controls down on its own screen.
+                              SizedBox(
+                                width: measure,
+                                child: _Reserved(
+                                  candidates: _bodies(l10n),
+                                  style: body,
+                                  width: measure,
+                                  child: Text(words.body, key: onboardingBodyKey, style: body),
+                                ),
                               ),
                             ),
                             const SizedBox(height: AppSpacing.lg),
