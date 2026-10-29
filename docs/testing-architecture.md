@@ -513,6 +513,12 @@ wrong scope.
   ink for. #283 made `primary` the indigo in both scopes, the coincidence ended, and the dark scope's ink landed on
   indigo at 3.08:1. A source guard rather than a widget test, because the rule is about what a call site must
   supply and the next call site does not exist yet.
+- **`bouncing_scroll_physics_test.dart`** fails when a file in `lib/` names `BouncingScrollPhysics`. `AppScrollBehavior`
+  on `MaterialApp.scrollBehavior` answers clamping physics for every scrollable, so the app says, app-wide, that a pull
+  past an end does not stretch; a scrollable handed bouncing physics of its own overrides that for its own screen and
+  nothing else, and the claim stops being true on one screen. Neither a golden nor a release build reports it, because
+  only a finger on a device sees it. A source guard rather than a widget test, because the offending screen does not
+  exist yet (#418).
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,

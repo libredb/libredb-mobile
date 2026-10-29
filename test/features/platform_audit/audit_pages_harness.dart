@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:libredb_mobile/app/app_scroll_behavior.dart';
 import 'package:libredb_mobile/app/router/app_routes_constants.dart';
 import 'package:libredb_mobile/core/result/result.dart';
 import 'package:libredb_mobile/features/platform_audit/domain/entities/audit_event.dart';
@@ -82,6 +83,8 @@ final class AuditPagesHarness {
           child: MaterialApp.router(
             theme: AppTheme.light(),
             locale: locale,
+            // As in the app: no elastic overscroll and no glow, so the pulls below are the pulls a device gets.
+            scrollBehavior: const AppScrollBehavior(),
             localizationsDelegates: const [
               S.delegate,
               GlobalMaterialLocalizations.delegate,
