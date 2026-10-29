@@ -472,7 +472,8 @@ Three defects, each measured on the simulator, and each still to be filed as its
 
 - The top safe area is painted pure black in both shells, which hides the iOS status bar.
   On the Platform home every pixel of the 1206 by 170 band at the top of the screenshot is `#000000`, 205,020 of 205,020, and the band ends at row 185, which is exactly the view's top padding of 186 physical pixels, 62 points, read from the running app.
-  The same band of the login page is `#FFFFFF` with the clock, the Wi-Fi mark and the battery legible, and the Studio shell is as black as the Platform one, on the iPhone 18 Pro and on an iPhone 17 alike.
+  The same band of the login page is `#FFFFFF` with the clock, the Wi-Fi mark and the battery legible, and the Studio shell this run switched into in place is as black as the Platform one, row for row.
+  The screenshots of the iPhone 17 simulator that #91's run left behind hold the same 186 black rows, so it is not this device.
   `ConnectivityBanner` holds that inset with an `AnimatedContainer` that is `Colors.transparent` while the device is online, and both shells sit the banner in a bare `Column` above the `Expanded` that holds `ResponsiveScaffold`, so nothing paints behind it; an unpainted Flutter surface is black on iOS, while on Android the window below it is not.
 - The audit filter sheet's Done button reaches into the home indicator.
   Its fill spans physical rows 2448 to 2555 of a 2622 pixel screen, so 67 pixels, 22 points, are left below it, while the view's bottom padding is 102 pixels, 34 points: the button overlaps the home indicator by 35 pixels, 12 points.
