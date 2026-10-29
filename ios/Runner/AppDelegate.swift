@@ -1,4 +1,5 @@
 import Flutter
+import Sentry
 import UIKit
 
 @main
@@ -7,6 +8,9 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Before the Flutter engine, as sentry_flutter requires when it does not start the native SDK itself; it starts
+    // only in a build that carries a DSN (ios/native_sentry_defines.sh).
+    NativeSentry.start()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -18,6 +22,28 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BackgroundRunTime") {
       BackgroundRunTime.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NativeSentryChannel") {
+      NativeSentryChannel.register(with: registrar)
+    }
+  }
+}
+
+/// The native side of `nativeSdkReady` (lib/infrastructure/analytics/native_sentry_start.dart): whether this host
+/// app started the native Sentry SDK, which the Dart side asks before it starts its own, because every Dart event
+/// leaves the device through this SDK. `MainActivity.kt` answers the same question on Android.
+final class NativeSentryChannel: NSObject, FlutterPlugin {
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(
+      name: NativeSentry.channelName, binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(NativeSentryChannel(), channel: channel)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard call.method == "isEnabled" else {
+      result(FlutterMethodNotImplemented)
+      return
+    }
+    result(SentrySDK.isEnabled)
   }
 }
 
