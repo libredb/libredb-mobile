@@ -19,6 +19,25 @@ class LocalAuthDeviceAuthenticator implements IDeviceAuthenticator {
   Future<bool> canAuthenticate() => _auth.isDeviceSupported();
 
   @override
+  Future<DeviceBiometric> availableBiometric() async {
+    final types = await _auth.getAvailableBiometrics();
+    // Kinds the platform names. Strong and weak are classes, not kinds (Android repeats them beside the kind), so they
+    // count only when no kind is named.
+    final kinds = {
+      for (final type in types)
+        ?switch (type) {
+          BiometricType.face => DeviceBiometric.face,
+          BiometricType.fingerprint => DeviceBiometric.fingerprint,
+          BiometricType.iris => DeviceBiometric.iris,
+          BiometricType.strong || BiometricType.weak => null,
+        },
+    };
+    if (kinds.length == 1) return kinds.single;
+    if (kinds.length > 1 || types.isNotEmpty) return DeviceBiometric.several;
+    return DeviceBiometric.none;
+  }
+
+  @override
   Future<DeviceAuthResult> authenticate(DeviceAuthPrompt prompt) async {
     try {
       final authenticated = await _auth.authenticate(

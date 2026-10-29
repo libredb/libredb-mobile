@@ -13,10 +13,13 @@ import '../support/dart_code.dart';
 /// sign-in password, the OTP and both passwords of a change into the BLoC and Time Travel tabs of the dev console.
 ///
 /// This meta-test reads every class in `lib/` with a `String` field whose name contains one of
-/// [sensitiveBodyKeySubstrings], such as `password`, `otpCode` or `refreshToken`. It fails when the class does not
-/// override `toString`, or when its `toString` prints such a field or the props. A token field may be printed through
-/// `maskToken`, which keeps four characters at each end; a password or an OTP may not, since that would print most of
-/// it.
+/// [sensitiveBodyKeySubstrings] except [privacyOnlyBodyKeySubstrings], such as `password`, `otpCode` or
+/// `refreshToken`. The words left out mask a value for what it can carry, not because they name a credential, so a
+/// field that contains one is an ordinary field here and every exit still masks its value.
+///
+/// It fails when the class does not override `toString`, or when its `toString` prints such a field or the
+/// props. A token field may be printed through `maskToken`, which keeps four characters at each end; a password
+/// or an OTP may not, since that would print most of it.
 void main() {
   test('every class in lib with a credential field leaves it out of toString', () {
     final classes = [
@@ -49,6 +52,9 @@ final _stringField = RegExp(r'\bString\??\s+(\w+)\s*[;=,]');
 
 final _toString = RegExp(r'\bString\s+toString\s*\(\s*\)\s*');
 
+/// The masked key substrings that name a credential, so a field holding one may not reach a `toString`.
+final Set<String> _credentialKeySubstrings = sensitiveBodyKeySubstrings.difference(privacyOnlyBodyKeySubstrings);
+
 /// The classes in the file at [path] that declare a credential field, each with what is wrong with its toString, or
 /// null when nothing is.
 Iterable<({String location, String name, String? problem})> _credentialClasses(String path, String source) sync* {
@@ -58,7 +64,7 @@ Iterable<({String location, String name, String? problem})> _credentialClasses(S
     final members = _membersOnly(body);
     final credentials = [
       for (final field in _stringField.allMatches(members))
-        if (!_isStatic(members, field.start) && sensitiveBodyKeySubstrings.any(field[1]!.toLowerCase().contains))
+        if (!_isStatic(members, field.start) && _credentialKeySubstrings.any(field[1]!.toLowerCase().contains))
           field[1]!,
     ];
     if (credentials.isEmpty) continue;

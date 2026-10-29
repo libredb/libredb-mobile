@@ -36,6 +36,7 @@ import 'package:libredb_mobile/features/connections/presentation/widgets/connect
 import 'package:libredb_mobile/features/studio_status/application/studio_status_bloc.dart';
 import 'package:libredb_mobile/features/studio_status/application/studio_status_state.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
+import 'package:libredb_mobile/infrastructure/config/environment.dart';
 import 'package:libredb_mobile/infrastructure/connectivity/connectivity_service.dart';
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/shared/active_connection/active_connection_cubit.dart';
@@ -85,7 +86,11 @@ void main() {
   late MockIActiveConnectionStore activeStore;
   late ActiveConnectionCubit active;
 
+  /// The build the page runs in: without a Platform target unless a test says otherwise.
+  late AppConfig appConfig;
+
   setUp(() {
+    appConfig = const AppConfig.local();
     outagesReported = 0;
     recoveriesReported = 0;
     refused = ValueNotifier(false);
@@ -189,6 +194,10 @@ void main() {
           path: ApplicationRoutesConstants.browse,
           builder: (context, state) => const Scaffold(body: Text('browse placeholder')),
         ),
+        GoRoute(
+          path: ApplicationRoutesConstants.accessRequestNew,
+          builder: (context, state) => const Scaffold(body: Text('request form placeholder')),
+        ),
       ],
     );
     addTearDown(router.dispose);
@@ -197,6 +206,7 @@ void main() {
         providers: [
           RepositoryProvider<IConnectionRepository>.value(value: repository),
           RepositoryProvider<IProviderMetaRepository>.value(value: providerMeta),
+          RepositoryProvider<AppConfig>.value(value: appConfig),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -1239,6 +1249,37 @@ void main() {
 
       expect(find.text(S.current.connection_list_empty_governed), findsOneWidget);
       expect(find.text(S.current.connection_list_empty), findsNothing);
+    });
+
+    for (final (platform, governed) in [(true, true), (true, false), (false, true), (false, false)]) {
+      final shown = platform && governed;
+      testWidgets('an empty list ${shown ? 'offers' : 'offers no'} Request access with '
+          '${platform ? 'a' : 'no'} Platform target and governance ${governed ? 'on' : 'off'}', (tester) async {
+        appConfig = platform ? const AppConfig.test() : const AppConfig.local();
+        policy(ConnectionPolicy(customConnections: !governed, governance: governed, statementCapture: 'none'));
+        answer(const ManagedConnections(connections: <StudioConnection>[]));
+
+        await pumpPage(tester);
+
+        expect(find.text(S.current.access_requests_empty_action), shown ? findsOneWidget : findsNothing);
+        // The title stays as it is, with or without the action.
+        expect(
+          find.text(governed ? S.current.connection_list_empty_governed : S.current.connection_list_empty),
+          findsOneWidget,
+        );
+      });
+    }
+
+    testWidgets('Request access on the empty list pushes the request form', (tester) async {
+      appConfig = const AppConfig.test();
+      policy(const ConnectionPolicy(customConnections: false, governance: true, statementCapture: 'none'));
+      answer(const ManagedConnections(connections: <StudioConnection>[]));
+      await pumpPage(tester);
+
+      await tester.tap(find.text(S.current.access_requests_empty_action));
+      await tester.pumpAndSettle();
+
+      expect(find.text('request form placeholder'), findsOneWidget);
     });
 
     testWidgets('an empty list without governance says no connections are available', (tester) async {

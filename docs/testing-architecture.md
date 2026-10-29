@@ -392,10 +392,11 @@ for genuine stateful behavior; Dio handlers are always hand-written:
 - **`log_placeholders_test.dart`** fails if the message of an `AppLogger` call in `lib/` has a different number of `{}` than the call has arguments.
   `AppLogger` never prints an argument with no `{}` left and prints a `{}` with no argument as it is, so such a call leaves a value out of the line or shows a bare `{}`, and neither fails at runtime or in `flutter analyze`.
   It reads the calls whose message is a string literal and whose arguments are a list literal.
-- **`log_secrets_test.dart`** fails if an argument of an `AppLogger` call in `lib/`, or an interpolation in its message, names a credential: an identifier that contains one of `sensitiveBodyKeySubstrings`, such as `passwordChangeDTO` or `event.otpCode`.
+- **`log_secrets_test.dart`** fails if an argument of an `AppLogger` call in `lib/`, or an interpolation in its message, names a credential: an identifier that contains one of `sensitiveBodyKeySubstrings` except `privacyOnlyBodyKeySubstrings`, such as `passwordChangeDTO` or `event.otpCode`.
+  The words of `privacyOnlyBodyKeySubstrings`, today `reason`, mask a value for what it can carry, not because they name a credential, so an identifier that holds one is an ordinary name; every exit still masks the value of such a key in the line it prints.
   The console of every build that prints the level keeps the line, so log that the action happened instead.
   A token may still be logged through `maskToken`, which keeps four characters at each end.
-- **`credential_to_string_test.dart`** fails if a class in `lib/` has a `String` field whose name contains one of `sensitiveBodyKeySubstrings`, such as `password`, `otpCode` or `refreshToken`, and its `toString` is not overridden, prints such a field, or prints the props.
+- **`credential_to_string_test.dart`** fails if a class in `lib/` has a `String` field whose name contains one of `sensitiveBodyKeySubstrings` except `privacyOnlyBodyKeySubstrings`, such as `password`, `otpCode` or `refreshToken`, and its `toString` is not overridden, prints such a field, or prints the props.
   A log line, the dev console and a Sentry event print an object through `toString`, and an Equatable prints its props there whenever `stringify` is on, the default of every debug build.
   A token may be printed through `maskToken`; a password or an OTP is printed as `secretMask`.
 - **`oidc_platform_setup_test.dart`** guards the platform setup of the single sign-on ([`docs/oidc.md`](oidc.md)).

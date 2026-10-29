@@ -39,6 +39,33 @@ void main() {
     expect(await authenticator.canAuthenticate(), isFalse);
   });
 
+  group('availableBiometric', () {
+    Future<DeviceBiometric> askWith(List<BiometricType> types) {
+      when(() => auth.getAvailableBiometrics()).thenAnswer((_) async => types);
+      return authenticator.availableBiometric();
+    }
+
+    test('names a single kind', () async {
+      expect(await askWith([BiometricType.face]), DeviceBiometric.face);
+      expect(await askWith([BiometricType.fingerprint]), DeviceBiometric.fingerprint);
+      expect(await askWith([BiometricType.iris]), DeviceBiometric.iris);
+    });
+
+    test('says several for two kinds, and for the unspecific strong or weak classes', () async {
+      expect(await askWith([BiometricType.face, BiometricType.fingerprint]), DeviceBiometric.several);
+      expect(await askWith([BiometricType.strong]), DeviceBiometric.several);
+      expect(await askWith([BiometricType.weak, BiometricType.strong]), DeviceBiometric.several);
+    });
+
+    test('a named kind wins over the strong class that the platform repeats beside it', () async {
+      expect(await askWith([BiometricType.face, BiometricType.strong]), DeviceBiometric.face);
+    });
+
+    test('says none when nothing is enrolled', () async {
+      expect(await askWith([]), DeviceBiometric.none);
+    });
+  });
+
   test('opens the prompt with biometrics and the screen lock as the fallback, in the given texts', () async {
     answer(() async => true);
 

@@ -1,6 +1,6 @@
 # LibreDB Mobile privacy policy
 
-Last updated: October 25, 2026.
+Last updated: October 29, 2026.
 
 This policy describes what LibreDB Mobile for Android does with your data.
 LibreDB Mobile is a client of LibreDB Studio: it signs you in through Keycloak and shows the databases that Studio offers you.
@@ -34,10 +34,12 @@ The app talks to four kinds of servers, and to no others on its own:
   The app sends Studio your Keycloak access token with its requests, so Studio knows who you are and what you may use.
   The access token carries what Keycloak puts into it, such as your username, your e-mail address and your name.
   The app also sends Studio what you ask it to do: the connection you open, the objects you look at and the statements you run.
-- **LibreDB Platform** of the same deployment, but only in a build that includes Platform mode, and only after you pick the Platform entry on the sign-in page or switch to Platform in the profile.
+- **LibreDB Platform** of the same deployment, but only in a build that includes Platform mode.
+  In such a build the app talks to Platform after you pick the Platform entry on the sign-in page or switch to Platform in the profile, and also from Studio, when you ask for access to a connection you do not have.
   The app sends Platform your Keycloak access token with its requests and receives your Platform identity: your Platform user id, e-mail address, name and organisation.
   The app holds that identity in memory while you are signed in and never stores it on the device.
   Platform's first answer to your account creates your Platform user record and takes one of the license's admin seats.
+  That happens when you sign in to Platform; asking for access from Studio creates no Platform user record and takes no seat.
   In Platform mode the app shows who holds access to a connection: their usernames and e-mail addresses, and the name or e-mail address of the admin who granted it.
   It holds them in memory while the page is open and never stores them on the device, and it sends Platform the removals of access you ask for.
   When you search the directory to give someone access, the search text goes to Platform, which searches Keycloak, and the app shows the usernames, names, e-mail addresses, enabled state and Studio role of the users found.
@@ -45,6 +47,9 @@ The app talks to four kinds of servers, and to no others on its own:
   In Platform mode the app also sends Platform the enabling or disabling of a connection that you ask for, and nothing else about that connection.
   In Platform mode the app shows the audit log of the governed queries: the users who ran them (their usernames and Keycloak ids), the connections, the statement text, which can carry data from the databases, the database error messages and the times.
   It holds them in memory while the audit page is open and never stores them on the device, and it sends Platform the filters you set, the statement search text included.
+  When you ask for access to a connection, the app sends Platform the connection, the access level you pick and the reason you write, with your Keycloak access token, which carries your username and e-mail address; Platform admins see the request with your username and e-mail address.
+  The app holds your requests and what became of them in memory while the page is open and never stores them on the device.
+  In Platform mode the app shows admins each request's username, e-mail address and reason, and it sends Platform the decision an admin makes: the level and expiry of an approval, or the reason of a refusal.
 - **Sentry**, a crash reporting service, but only when the build was made with a Sentry project key.
   See the Crash reports section below.
 

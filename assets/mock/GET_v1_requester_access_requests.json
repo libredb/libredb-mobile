@@ -1,0 +1,92 @@
+{
+  "requests": [
+    {
+      "id": "cm0req00000000000000000001",
+      "connection": {
+        "id": "cm0conn0000000000000000003",
+        "name": "Support tickets",
+        "engine": "postgres",
+        "status": "active"
+      },
+      "requester": {
+        "subject": "kc-0000-0000-0001",
+        "username": "jane.doe",
+        "email": "jane.doe@example.org"
+      },
+      "level": "read",
+      "reason": "I am on the support rota this week and need to read the ticket history.",
+      "status": "pending",
+      "createdAt": "2026-10-28T09:12:00.000Z",
+      "decidedAt": null,
+      "decidedBy": null,
+      "decisionReason": null,
+      "grantId": null
+    },
+    {
+      "id": "cm0req00000000000000000002",
+      "connection": {
+        "id": "cm0conn0000000000000000002",
+        "name": "Billing reports",
+        "engine": "mysql",
+        "status": "active"
+      },
+      "requester": {
+        "subject": "kc-0000-0000-0001",
+        "username": "jane.doe",
+        "email": "jane.doe@example.org"
+      },
+      "level": "read",
+      "reason": "The monthly invoice reconciliation needs the billing tables.",
+      "status": "approved",
+      "createdAt": "2026-10-20T07:40:00.000Z",
+      "decidedAt": "2026-10-20T11:05:00.000Z",
+      "decidedBy": null,
+      "decisionReason": null,
+      "grantId": "cm0grant000000000000000001"
+    },
+    {
+      "id": "cm0req00000000000000000003",
+      "connection": {
+        "id": "cm0conn0000000000000000001",
+        "name": "Analytics warehouse",
+        "engine": "postgres",
+        "status": "active"
+      },
+      "requester": {
+        "subject": "kc-0000-0000-0001",
+        "username": "jane.doe",
+        "email": "jane.doe@example.org"
+      },
+      "level": "write",
+      "reason": "I would like to load the October figures myself.",
+      "status": "refused",
+      "createdAt": "2026-10-15T13:22:00.000Z",
+      "decidedAt": "2026-10-16T08:01:00.000Z",
+      "decidedBy": null,
+      "decisionReason": "Loads go through the data team; ask your team lead to schedule one.",
+      "grantId": null
+    },
+    {
+      "id": "cm0req00000000000000000004",
+      "connection": {
+        "id": "cm0conn0000000000000000004",
+        "name": "Archive snapshots",
+        "engine": "sqlite",
+        "status": "inactive"
+      },
+      "requester": {
+        "subject": "kc-0000-0000-0001",
+        "username": "jane.doe",
+        "email": "jane.doe@example.org"
+      },
+      "level": "read",
+      "reason": "Checking an old export; I no longer need this.",
+      "status": "withdrawn",
+      "createdAt": "2026-10-02T06:30:00.000Z",
+      "decidedAt": "2026-10-02T10:44:00.000Z",
+      "decidedBy": null,
+      "decisionReason": null,
+      "grantId": null
+    }
+  ]
+}
