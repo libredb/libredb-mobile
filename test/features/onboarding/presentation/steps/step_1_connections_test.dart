@@ -243,6 +243,35 @@ void main() {
     );
   });
 
+  /// The row draws its engine, not its engine's family.
+  ///
+  /// The prototype's rows are `[[PG,'orders-prod',…],[MY,'billing-stage',…],[PG,'lab',…]]`, and `PG` and `MY` are two
+  /// different marks in its source: `PG` is a database cylinder — `<ellipse cx="12" cy="6" rx="7.5" ry="3"/>` over a
+  /// body with one band — and `MY` is an arc rising to a filled dot, `<path d="M3 18c3-6 6-9 9-9s6 3 9 9"/>` with
+  /// `<circle cx="12" cy="9" r="1.6"/>`. The deck drew the shared `engineIcon` for all three, and that token maps a
+  /// *family*: `postgres` and `mysql` are both relational, so all three rows came out as one table glyph.
+  ///
+  /// **The font trap:** nothing here is a text measurement. The claim is read off the mark widgets themselves and off
+  /// the geometry of the paths they draw, and a path's coordinates are the same under Ahem as on a phone.
+  group('the row draws its engine', () {
+    /// The mark alone. The `Semantics` label sits outside the key on purpose: compared *with* it, `postgres` and
+    /// `mysql` differ for free and the test passes without either row drawing its own glyph.
+    String markOf(WidgetTester tester, int index) =>
+        tester.widget<KeyedSubtree>(find.byKey(ValueKey('ob1-engine-$index'))).child.toString();
+
+    testWidgets('postgres and mysql are two marks, and the two postgres rows share one', (tester) async {
+      await show(tester, disableAnimations: true);
+      await tester.pump();
+
+      expect(markOf(tester, 0), markOf(tester, 2), reason: 'rows 0 and 2 are both postgres, so they draw one mark');
+      expect(
+        markOf(tester, 1),
+        isNot(markOf(tester, 0)),
+        reason: 'row 1 is mysql, which the prototype draws as MY and not as the postgres cylinder',
+      );
+    });
+  });
+
   /// The read-only mark belongs to the production row, as the design puts it.
   ///
   /// The prototype's own data is `[PG,'orders-prod','orders','PROD',var(--prod),1,1]` — the last two flags are the
