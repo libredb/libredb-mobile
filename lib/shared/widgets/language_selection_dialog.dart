@@ -27,12 +27,22 @@ class LanguageSelectionDialog extends StatelessWidget {
         canPop: state is! LocaleChanging,
         child: RadioGroup<Locale>(
           groupValue: state.locale,
-          onChanged: (locale) => context.read<LocaleCubit>().changeLocale(locale!),
+          // A tap on the language already shown answers null, see [RadioListTile.toggleable]; it is a pick of that
+          // same language, so it is stored like any other.
+          onChanged: (locale) => context.read<LocaleCubit>().changeLocale(locale ?? state.locale),
           child: SimpleDialog(
             title: Text(S.of(context).language_select),
             children: [
               for (final locale in S.delegate.supportedLocales)
-                RadioListTile<Locale>(value: locale, title: Text(locale.endonym), enabled: state is! LocaleChanging),
+                RadioListTile<Locale>(
+                  value: locale,
+                  title: Text(locale.endonym),
+                  enabled: state is! LocaleChanging,
+                  // Without this a tap on the language already shown does nothing at all: the dialog stays open and
+                  // nothing is stored, so the phone still moves the app later. That is how a user pins the language
+                  // the app opened in — the one case where the pick changes nothing on screen and everything after.
+                  toggleable: true,
+                ),
             ],
           ),
         ),

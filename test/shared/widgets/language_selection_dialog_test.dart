@@ -99,6 +99,45 @@ void main() {
     expect(find.widgetWithText(RadioListTile<Locale>, 'Türkçe'), findsOneWidget);
   });
 
+  /// A cubit that follows the phone: no language is stored on the device, and the phone speaks English.
+  Future<LocaleCubit> followingPhone() async {
+    final cubit = LocaleCubit(storage: AppLocalStorage(), defaultLocale: const Locale('en'));
+    addTearDown(cubit.close);
+    await cubit.restore();
+    return cubit;
+  }
+
+  testWidgets('picks the language the app already shows, storing it and closing', (tester) async {
+    final cubit = await followingPhone();
+    await openDialog(tester, cubit);
+
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    expect(
+      await AppLocalStorage().read(StorageKeys.language.key),
+      'en',
+      reason: 'tapping the language already shown is a pick, and a pick is stored',
+    );
+    expect(find.byType(LanguageSelectionDialog), findsNothing, reason: 'a pick closes the dialog');
+  });
+
+  testWidgets('the phone no longer moves the language once the user picks the one already shown', (tester) async {
+    final cubit = await followingPhone();
+    await openDialog(tester, cubit);
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    cubit.followDevice(const [Locale('tr')]);
+    await tester.pumpAndSettle();
+
+    expect(
+      cubit.state.locale,
+      const Locale('en'),
+      reason: 'a language the user picked wins over the phone, whatever the phone later says',
+    );
+  });
+
   testWidgets('takes no second pick while the first one is being stored', (tester) async {
     final storage = _HeldWriteStorage();
     final cubit = await restoredCubit(storage);
