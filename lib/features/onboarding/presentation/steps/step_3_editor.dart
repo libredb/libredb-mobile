@@ -100,6 +100,13 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
   /// How deep the Run pill presses itself.
   static const _pressDepth = 0.06;
 
+  /// The most of the run bar the Run pill may take, so the line beside it always keeps the rest.
+  ///
+  /// The prototype's pill is 89.6 pt of the hero's 318 — 28 per cent — so three fifths is more than twice the room
+  /// the pill asks for at the ordinary text size in either language, and nothing there is capped. At an
+  /// accessibility text size the label grows past the whole bar, and this is what holds it inside.
+  static const _pillShare = 0.6;
+
   /// Half a blink. The caret is on for one of these and off for the next.
   static const _blink = AppDurations.media;
 
@@ -222,47 +229,62 @@ class _Step3EditorState extends State<Step3Editor> with SingleTickerProviderStat
     final lit = _eased(at, Step3Editor.runLitAt, AppDurations.normal);
     final fill = Color.lerp(colors.surfaceContainerHighest, colors.primary, lit);
     final ink = Color.lerp(colors.onSurfaceVariant, colors.onPrimary, lit);
-    return Row(
-      children: [
-        Transform.scale(
-          scale: 1 - _pressDepth * _press(at),
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(AppRadius.pill)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              child: Text(
-                s.sql_editor_run,
-                style: mono.copyWith(color: ink, fontWeight: FontWeight.w600),
+    // The bar is measured rather than assumed, because the pill is the one thing on this screen that cannot be
+    // allowed to ask for its natural width. The line beside it already yields — it is `Expanded` and wraps — but
+    // the pill was the row's inflexible child, so `Çalıştır` at a text scale of 3 asked for more than the row had
+    // and overflowed to the right by 13 pt in the hero of a 390 pt phone and by 83 pt in the 248 pt hero of a
+    // 320 pt one. Capping it here is the one way to bound it without taking room from the line: a `Flexible` pill
+    // would split the bar between the two by flex factor, which narrows the line's own box and rewraps it at the
+    // ordinary text size, and the prototype's measurement of this screen does not allow that.
+    //
+    // The `LayoutBuilder` is safe for the same reason the chassis's own one is: `_HeroExtent` answers the page's
+    // intrinsic question itself and never puts it to a step.
+    return LayoutBuilder(
+      builder: (context, bar) => Row(
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: (bar.maxWidth - AppSpacing.sm) * _pillShare),
+            child: Transform.scale(
+              scale: 1 - _pressDepth * _press(at),
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                  child: Text(
+                    s.sql_editor_run,
+                    style: mono.copyWith(color: ink, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        // The line beside the pill takes the room the pill leaves and wraps inside it. A `Spacer` and a bare `Text`
-        // here overflowed the hero by 80 pt at a text scale of 3.
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: switch (at) {
-              _ when at >= Step3Editor.answersAt => Text(
-                s.ob3_meta(
-                  s.sql_history_rows(Step3Editor.answerRows),
-                  s.sql_history_duration(Step3Editor.answerMilliseconds),
+          const SizedBox(width: AppSpacing.sm),
+          // The line beside the pill takes the room the pill leaves and wraps inside it. A `Spacer` and a bare `Text`
+          // here overflowed the hero by 80 pt at a text scale of 3.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: switch (at) {
+                _ when at >= Step3Editor.answersAt => Text(
+                  s.ob3_meta(
+                    s.sql_history_rows(Step3Editor.answerRows),
+                    s.sql_history_duration(Step3Editor.answerMilliseconds),
+                  ),
+                  textAlign: TextAlign.end,
+                  style: mono.copyWith(color: colors.onSurfaceVariant),
                 ),
-                textAlign: TextAlign.end,
-                style: mono.copyWith(color: colors.onSurfaceVariant),
-              ),
-              // A mark rather than a word: the pending state of a demo is not a sentence the app has to translate.
-              _ when at >= Step3Editor.pendingAt => Icon(
-                Icons.more_horiz,
-                size: AppSizes.iconMd,
-                color: colors.onSurfaceVariant,
-              ),
-              _ => const SizedBox.shrink(),
-            },
+                // A mark rather than a word: the pending state of a demo is not a sentence the app has to translate.
+                _ when at >= Step3Editor.pendingAt => Icon(
+                  Icons.more_horiz,
+                  size: AppSizes.iconMd,
+                  color: colors.onSurfaceVariant,
+                ),
+                _ => const SizedBox.shrink(),
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
