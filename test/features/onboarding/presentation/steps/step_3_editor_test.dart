@@ -8,6 +8,7 @@ import 'package:libredb_mobile/features/onboarding/presentation/steps/step_3_edi
 import 'package:libredb_mobile/features/sql_editor/domain/interim_write_check.dart';
 import 'package:libredb_mobile/generated/l10n.dart';
 import 'package:libredb_mobile/shared/design_system/theme/app_theme.dart';
+import 'package:libredb_mobile/shared/design_system/tokens/tokens.dart';
 
 /// The third screen's hero: a statement that types itself, runs, and is then replaced by a delete that raises the
 /// write confirmation.
@@ -209,6 +210,49 @@ void main() {
         await show(tester, textScale: scale);
         await tester.pump(past);
       }
+    });
+
+    testWidgets('lays out in both languages and in the hero a small phone leaves, without overflowing', (tester) async {
+      // The test above asks in English at the hero of a 390 pt phone only, and the overflow it misses is the Run
+      // pill's own label: `Çalıştır` at a text scale of 3 is wider than the row it sits in, which walking the six
+      // screens inside the chassis measured as 13 pt over on a 390 pt phone and 83 pt over on the 248 pt hero a
+      // 320 pt phone leaves. The pill was the row's inflexible child, so it asked for its natural width whatever
+      // the row had to give.
+      for (final locale in [const Locale('en'), const Locale('tr')]) {
+        for (final width in [318.0, 248.0]) {
+          for (final scale in [1.0, 1.5, 2.0, 3.0]) {
+            await show(tester, locale: locale, textScale: scale, heroWidth: width);
+            await tester.pump(past);
+          }
+        }
+      }
+    });
+
+    testWidgets('keeps the pill on the leading edge and the line on the trailing one at the ordinary text size', (
+      tester,
+    ) async {
+      // The prototype's own measurement of this hero: the Run pill starts at the hero's left edge and the line
+      // beside it ends at the hero's right edge (`runb go` l=0, `meta` l=219 w=99 in a 318 pt hero). Whatever the
+      // bar does when the words outgrow it, at the ordinary text size it must still draw exactly this.
+      //
+      // `counted` is the frame the answer is on: the confirmation has not risen yet, so `Run` is the pill's own
+      // label and nothing else on the screen says it.
+      await show(tester);
+      await tester.pump(counted);
+      final s = l10n(tester);
+      final pill = find.text(s.sql_editor_run);
+      final meta = find.text(
+        s.ob3_meta(s.sql_history_rows(Step3Editor.answerRows), s.sql_history_duration(Step3Editor.answerMilliseconds)),
+      );
+      final hero = tester.getRect(find.byType(Step3Editor));
+
+      expect(hero.width, 318, reason: 'the hero of a 390 pt phone, which the numbers below are the prototype of');
+      expect(
+        tester.getRect(pill).left - hero.left,
+        AppSpacing.lg,
+        reason: 'the pill label sits one `lg` inside the hero leading edge, the padding of its own fill',
+      );
+      expect(hero.right - tester.getRect(meta).right, 0, reason: 'the line ends on the hero trailing edge');
     });
 
     testWidgets('holds nothing a finger can press', (tester) async {
