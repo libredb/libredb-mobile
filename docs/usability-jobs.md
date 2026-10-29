@@ -196,18 +196,18 @@ session:       studio
 start:         ApplicationRoutesConstants.connectionList — signed in, Dev Postgres open from job 1's star
 asks:          How many rows public.orders holds now, whether it has a primary key, and whether the column the alert
                blamed is indexed.
-done:          ApplicationRoutesConstants.browseObjects shows the orders tile with a row count or a could-not-count
-               line, and ApplicationRoutesConstants.browseDetail shows its columns with a primary-key marker and its
-               indexes with a named index on the blamed column.
+done:          ApplicationRoutesConstants.browseDetail shows the counted rows of orders, a number or a
+               could-not-count line, its columns with a primary-key marker, and its indexes with a named index on
+               the blamed column.
 takeaway:      orders holds so many rows, its primary key is id, and customer_id carries an index named in the list.
 ```
 
 1. Open `Dev Postgres` in the Browse tab.
 2. Walk down the container level to the schema `public`.
 3. Read the kind screen: which kinds are counted, which say they could not be counted.
-4. Open the tables and find `orders`.
-5. Count its rows from the tile, and read the number or the failure line.
-6. Open its details and read the columns, then the indexes.
+4. Open the tables and find `orders`, whose tile carries the row count Studio listed with it.
+5. Open its details and count its rows there, reading the counted number or the failure line.
+6. Read its columns, then its indexes.
 
 A count that says it could not be counted is a finished job, not an unfinished one: the DBA learned that the number
 is not available, which is an answer. What the takeaway cannot survive is a number that is not the table's.
@@ -302,7 +302,7 @@ session:       studio
 start:         ApplicationRoutesConstants.sql — Dev Postgres active, the editor empty
 asks:          Whether the rows on screen are all the rows the table holds, before the number is passed on.
 done:          ApplicationRoutesConstants.sql shows the result with its row-and-time line and, when Studio bounded
-               the result, the bounded notice, and ApplicationRoutesConstants.browseObjects shows the same table's
+               the result, the bounded notice, and ApplicationRoutesConstants.browseDetail shows the same table's
                own counted rows.
 takeaway:      The result on screen is all of the table's rows, or it is the first so many of so many, and the
                analyst can say which by a number that is on screen.
@@ -312,7 +312,7 @@ takeaway:      The result on screen is all of the table's rows, or it is the fir
 2. Read the row-and-time line under the result.
 3. Read the notices above or below the rows.
 4. Load more rows if the screen offers it, and read the line again.
-5. Open the same table in Browse and count its rows there.
+5. Open the same table in Browse, open its details, and count its rows there.
 6. Compare the two numbers.
 
 This is also run once in `tr`, because the lines that answer it are formatted counts.
@@ -406,7 +406,7 @@ session:       studio
 start:         ApplicationRoutesConstants.connectionList — signed in, no connection open
 asks:          How many rows the loaded tables hold now, and whether the two counts are plausible against each other.
 done:          ApplicationRoutesConstants.browseKinds shows the counted kinds of the schema, and
-               ApplicationRoutesConstants.browseObjects shows a count for each of the two tables, a number or a
+               ApplicationRoutesConstants.browseDetail shows a counted number for each of the two tables, or a
                could-not-count line.
 takeaway:      orders holds so many rows and order_items so many, and the second over the first is a believable
                number of items per order.
@@ -414,8 +414,8 @@ takeaway:      orders holds so many rows and order_items so many, and the second
 
 1. Open `Dev Postgres` in Browse and walk to the schema `public`.
 2. Read the kind screen: how many tables, and which kinds could not be counted.
-3. Open the tables and count the rows of `orders`.
-4. Count the rows of `order_items`.
+3. Open the tables, open the details of `orders`, and count its rows there.
+4. Do the same for `order_items`.
 5. Compare the two counts.
 
 ### data-engineer/2 — The pipeline's role sees less than mine: what, exactly?
@@ -461,7 +461,7 @@ takeaway:      The walk covered so many keys of so many, more remain or they do 
 ```
 
 1. Open the container level and choose the database that holds the pipeline's keys.
-2. Open the key browser and narrow it to a pattern, such as the users prefix.
+2. From that database's kind screen, open the key browser and narrow it to a pattern, such as the users prefix.
 3. Read the line that says how many were scanned or found, and whether more remain.
 4. Load another page, then stop the walk, and read the line again.
 5. Open one key and read its value.
