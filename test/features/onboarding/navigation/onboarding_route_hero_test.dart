@@ -92,8 +92,6 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'step $step did not lay out inside the chassis');
       expect(find.byKey(onboardingProgressKey), findsOneWidget, reason: 'the frame is gone at step $step');
       if (step < 6) {
-        await tester.ensureVisible(find.byKey(onboardingDoneKey));
-        await tester.pump();
         await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
         await tester.pump();
         await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
@@ -115,7 +113,9 @@ void main() {
 
     final offenders = <String>[];
     for (var step = 1; step <= 6; step++) {
-      final acts = tester.getRect(find.byKey(onboardingDoneKey));
+      // Skip is the control every screen carries; the one that signs in joins it on the sixth, and both sit
+      // on the same line, which is the line the prototype pins.
+      final acts = tester.getRect(find.byKey(onboardingSkipKey));
       final scroll = tester.widget<Scrollable>(find.byType(Scrollable).first).controller;
       final scrolls = (scroll?.position.maxScrollExtent ?? 0) > 0.5;
       if ((acts.top - 772).abs() > 0.5 || (acts.bottom - 820).abs() > 0.5 || scrolls) {
@@ -125,8 +125,6 @@ void main() {
         );
       }
       if (step < 6) {
-        await tester.ensureVisible(find.byKey(onboardingDoneKey));
-        await tester.pump();
         await tester.ensureVisible(find.byKey(onboardingHeadlineKey));
         await tester.pump();
         await tester.fling(find.byKey(onboardingHeadlineKey), const Offset(-300, 0), 800);
@@ -135,5 +133,10 @@ void main() {
       }
     }
     expect(offenders, isEmpty, reason: offenders.join('\n'));
+    expect(
+      tester.getRect(find.byKey(onboardingDoneKey)).top,
+      closeTo(772, 0.5),
+      reason: 'the control that signs in joins Skip on the last screen, on the same line',
+    );
   });
 }
