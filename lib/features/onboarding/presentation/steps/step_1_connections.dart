@@ -220,7 +220,18 @@ class _DemoConnectionRow extends StatelessWidget {
                     secondary,
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
-                if (badges.isNotEmpty) Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: badges),
+                if (badges.isNotEmpty)
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    // A pill is laid out side by side and cannot wrap: `ReadOnlyChip` is a lock and 'Read only' in
+                    // one `Row`, so at an accessibility text size it asks for more width than the 318pt hero has and
+                    // the row overflows to the right (169pt in Turkish at x3). The hero scrolls vertically, so this
+                    // is the one axis nothing absorbs. `scaleDown` draws each pill at its own size whenever that
+                    // fits — which it does at every ordinary text size, so nothing here moves — and shrinks only the
+                    // pill that would not, instead of pushing it off the screen.
+                    children: [for (final badge in badges) FittedBox(fit: BoxFit.scaleDown, child: badge)],
+                  ),
               ],
             ),
           ),
