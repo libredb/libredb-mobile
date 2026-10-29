@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:libredb_mobile/core/logging/app_logger.dart';
+import 'package:libredb_mobile/features/app_lock/data/services/android_biometric_hardware.dart';
 import 'package:libredb_mobile/features/app_lock/domain/services/device_authenticator.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
@@ -7,11 +10,19 @@ import 'package:local_auth_darwin/local_auth_darwin.dart';
 /// [IDeviceAuthenticator] over `local_auth`: biometrics with the device credential (PIN, pattern or password) as the
 /// fallback, on Android through `BiometricPrompt`, which needs `MainActivity` to be a `FlutterFragmentActivity`.
 class LocalAuthDeviceAuthenticator implements IDeviceAuthenticator {
-  LocalAuthDeviceAuthenticator({LocalAuthentication? auth}) : _auth = auth ?? LocalAuthentication();
+  /// [hardwareKinds] answers the biometric kinds the device declares (`fingerprint`, `face`, `iris`), or null when it
+  /// cannot say; it defaults to the Android channel and to null elsewhere, as iOS names its kind itself.
+  LocalAuthDeviceAuthenticator({LocalAuthentication? auth, Future<Set<String>?> Function()? hardwareKinds})
+    : _auth = auth ?? LocalAuthentication(),
+      _hardwareKinds = hardwareKinds ?? _defaultHardwareKinds;
 
   static final _log = AppLogger.getLogger('LocalAuthDeviceAuthenticator');
 
   final LocalAuthentication _auth;
+  final Future<Set<String>?> Function() _hardwareKinds;
+
+  static Future<Set<String>?> _defaultHardwareKinds() async =>
+      defaultTargetPlatform == TargetPlatform.android ? AndroidBiometricHardware.kinds() : null;
 
   /// On Android true when the device has a screen lock or enrolled biometrics, which Android allows only with a screen
   /// lock; on iOS when a passcode is set.
@@ -33,8 +44,29 @@ class LocalAuthDeviceAuthenticator implements IDeviceAuthenticator {
         },
     };
     if (kinds.length == 1) return kinds.single;
-    if (kinds.length > 1 || types.isNotEmpty) return DeviceBiometric.several;
-    return DeviceBiometric.none;
+    if (kinds.length > 1) return DeviceBiometric.several;
+    if (types.isEmpty) return DeviceBiometric.none;
+    // Only strong or weak: Android. Something is enrolled; the hardware flags name the kind only when the device has
+    // exactly one, as with several it cannot be told which is enrolled.
+    return await _singleHardwareKind() ?? DeviceBiometric.several;
+  }
+
+  Future<DeviceBiometric?> _singleHardwareKind() async {
+    try {
+      final declared = await _hardwareKinds();
+      if (declared == null || declared.length != 1) return null;
+      return switch (declared.single) {
+        'face' => DeviceBiometric.face,
+        'fingerprint' => DeviceBiometric.fingerprint,
+        'iris' => DeviceBiometric.iris,
+        _ => null,
+      };
+    } on PlatformException catch (e) {
+      _log.warn('the biometric hardware check failed: {}', [e.code]);
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
   }
 
   @override
