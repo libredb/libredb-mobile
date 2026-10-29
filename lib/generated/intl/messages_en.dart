@@ -315,8 +315,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "app_lock_enable_reason": MessageLookupByLibrary.simpleMessage("Confirm it is you to turn on the app lock"),
     "app_lock_failed": MessageLookupByLibrary.simpleMessage("Not recognized. Try again."),
-    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage(
-      "Unlock with your fingerprint, face or screen lock to continue.",
+    "app_lock_locked_message": MessageLookupByLibrary.simpleMessage("Unlock with your screen lock to continue."),
+    "app_lock_locked_message_face": MessageLookupByLibrary.simpleMessage(
+      "Unlock with your face or screen lock to continue.",
+    ),
+    "app_lock_locked_message_fingerprint": MessageLookupByLibrary.simpleMessage(
+      "Unlock with your fingerprint or screen lock to continue.",
+    ),
+    "app_lock_locked_message_iris": MessageLookupByLibrary.simpleMessage(
+      "Unlock with your iris or screen lock to continue.",
+    ),
+    "app_lock_locked_message_several": MessageLookupByLibrary.simpleMessage(
+      "Unlock with your biometrics or screen lock to continue.",
     ),
     "app_lock_locked_out": MessageLookupByLibrary.simpleMessage("Too many attempts. Try again later."),
     "app_lock_locked_title": MessageLookupByLibrary.simpleMessage("LibreDB is locked"),
