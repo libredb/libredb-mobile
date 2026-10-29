@@ -4841,6 +4841,519 @@ class S {
   String get platform_audit_only_this_connection {
     return Intl.message('Only this connection', name: 'platform_audit_only_this_connection', desc: '', args: []);
   }
+
+  /// `Skip`
+  String get ob_skip {
+    return Intl.message(
+      'Skip',
+      name: 'ob_skip',
+      desc: 'Leaves the six onboarding screens for the sign-in page; the word the app\'s older onboarding uses.',
+      args: [],
+    );
+  }
+
+  /// `Next`
+  String get ob_next {
+    return Intl.message(
+      'Next',
+      name: 'ob_next',
+      desc: 'Moves to the next onboarding screen; the word the app\'s older onboarding uses.',
+      args: [],
+    );
+  }
+
+  /// `Sign in`
+  String get ob_done {
+    return Intl.message(
+      'Sign in',
+      name: 'ob_done',
+      desc: 'On the last onboarding screen, in place of Next: ends the introduction and opens the sign-in page.',
+      args: [],
+    );
+  }
+
+  /// `{current} / {total}`
+  String ob_step(int current, int total) {
+    return Intl.message(
+      '$current / $total',
+      name: 'ob_step',
+      desc: 'The step counter in the corner of each onboarding screen, shown as 01 / 06; the widget pads each number to two digits.',
+      args: [current, total],
+    );
+  }
+
+  /// `Step {current} of {total}`
+  String ob_step_semantics(int current, int total) {
+    return Intl.message(
+      'Step $current of $total',
+      name: 'ob_step_semantics',
+      desc: 'What a screen reader says for the step counter, which is drawn as padded digits.',
+      args: [current, total],
+    );
+  }
+
+  /// `your connections`
+  String get ob1_cap {
+    return Intl.message(
+      'your connections',
+      name: 'ob1_cap',
+      desc: 'The caption over the first onboarding screen, which shows the connection list.',
+      args: [],
+    );
+  }
+
+  /// `The databases\nyou've been given.`
+  String get ob1_title {
+    return Intl.message(
+      'The databases\nyou\'ve been given.',
+      name: 'ob1_title',
+      desc: 'The headline of the first onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `been given`
+  String get ob1_accent {
+    return Intl.message(
+      'been given',
+      name: 'ob1_accent',
+      desc: 'The run of ob1_title the screen paints in the accent colour; it must appear in ob1_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `PROD, STAGING, DEV — the badge says which one you are on. The read-only ones are marked.`
+  String get ob1_body {
+    return Intl.message(
+      'PROD, STAGING, DEV — the badge says which one you are on. The read-only ones are marked.',
+      name: 'ob1_body',
+      desc: 'The body of the first onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `Until someone grants you one, the list reads:\n"{line}"`
+  String ob1_empty(String line) {
+    return Intl.message(
+      'Until someone grants you one, the list reads:\n"$line"',
+      name: 'ob1_empty',
+      desc: 'Under the demo connection list: what the real list says when nothing has been granted. Pass connection_list_empty_governed as {line} rather than repeating it here.',
+      args: [line],
+    );
+  }
+
+  /// `{connection} · browse`
+  String ob2_cap(String connection) {
+    return Intl.message(
+      '$connection · browse',
+      name: 'ob2_cap',
+      desc: 'The caption over the second onboarding screen, which browses a demo connection.',
+      args: [connection],
+    );
+  }
+
+  /// `Open it. Read it.\nSome columns are masked.`
+  String get ob2_title {
+    return Intl.message(
+      'Open it. Read it.\nSome columns are masked.',
+      name: 'ob2_title',
+      desc: 'The headline of the second onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `masked`
+  String get ob2_accent {
+    return Intl.message(
+      'masked',
+      name: 'ob2_accent',
+      desc: 'The run of ob2_title the screen paints in the accent colour; it must appear in ob2_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `Schemas, tables, row counts. The rule is Studio's; the phone applies it.`
+  String get ob2_body {
+    return Intl.message(
+      'Schemas, tables, row counts. The rule is Studio\'s; the phone applies it.',
+      name: 'ob2_body',
+      desc: 'The body of the second onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `masked by column name —\nthere is no switch here to turn it off`
+  String get ob2_why {
+    return Intl.message(
+      'masked by column name —\nthere is no switch here to turn it off',
+      name: 'ob2_why',
+      desc:
+          'The note under the demo result grid, once its e-mail column has been masked. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 table} other{{count} tables}}`
+  String ob2_tables(int count) {
+    return Intl.plural(
+      count,
+      one: '1 table',
+      other: '$count tables',
+      name: 'ob2_tables',
+      desc: 'How many tables the demo schema row holds, beside the schema\'s name.',
+      args: [count],
+    );
+  }
+
+  /// `editor · {connection}`
+  String ob3_cap(String connection) {
+    return Intl.message(
+      'editor · $connection',
+      name: 'ob3_cap',
+      desc: 'The caption over the third onboarding screen, which runs a statement on a demo connection.',
+      args: [connection],
+    );
+  }
+
+  /// `Run it.\nThen try a delete.`
+  String get ob3_title {
+    return Intl.message(
+      'Run it.\nThen try a delete.',
+      name: 'ob3_title',
+      desc: 'The headline of the third onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `try a delete`
+  String get ob3_accent {
+    return Intl.message(
+      'try a delete',
+      name: 'ob3_accent',
+      desc: 'The run of ob3_title the screen paints in the accent colour; it must appear in ob3_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `Anything that may change data asks first. On production you type the connection's name.`
+  String get ob3_body {
+    return Intl.message(
+      'Anything that may change data asks first. On production you type the connection\'s name.',
+      name: 'ob3_body',
+      desc: 'The body of the third onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `count`
+  String get ob3_count {
+    return Intl.message(
+      'count',
+      name: 'ob3_count',
+      desc: 'The header of the demo result card, the column name the counting statement answers with.',
+      args: [],
+    );
+  }
+
+  /// `{rows} · {duration}`
+  String ob3_meta(String rows, String duration) {
+    return Intl.message(
+      '$rows · $duration',
+      name: 'ob3_meta',
+      desc: 'Beside the demo Run button once the statement answered: its rows and how long it took. Pass sql_history_rows as {rows} and sql_history_duration as {duration} rather than repeating either here.',
+      args: [rows, duration],
+    );
+  }
+
+  /// `where the password was`
+  String get ob4_cap {
+    return Intl.message(
+      'where the password was',
+      name: 'ob4_cap',
+      desc: 'The caption over the fourth onboarding screen, which shows where a database password lives.',
+      args: [],
+    );
+  }
+
+  /// `Studio holds it.\nYou never do.`
+  String get ob4_title {
+    return Intl.message(
+      'Studio holds it.\nYou never do.',
+      name: 'ob4_title',
+      desc: 'The headline of the fourth onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `Studio`
+  String get ob4_accent {
+    return Intl.message(
+      'Studio',
+      name: 'ob4_accent',
+      desc: 'The run of ob4_title the screen paints in the accent colour; it must appear in ob4_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `No database password is on the phone — only a session that expires. With the app lock on, that session sits behind the lock too.`
+  String get ob4_body {
+    return Intl.message(
+      'No database password is on the phone — only a session that expires. With the app lock on, that session sits behind the lock too.',
+      name: 'ob4_body',
+      desc: 'The body of the fourth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `This app`
+  String get ob4_app {
+    return Intl.message(
+      'This app',
+      name: 'ob4_app',
+      desc: 'The top node of the fourth onboarding screen\'s chain: this phone.',
+      args: [],
+    );
+  }
+
+  /// `LibreDB Studio`
+  String get ob4_studio {
+    return Intl.message(
+      'LibreDB Studio',
+      name: 'ob4_studio',
+      desc: 'The middle node of the fourth onboarding screen\'s chain. A product name, the same in every language.',
+      args: [],
+    );
+  }
+
+  /// `the password stays here`
+  String get ob4_vault {
+    return Intl.message(
+      'the password stays here',
+      name: 'ob4_vault',
+      desc: 'Under the Studio node of the fourth onboarding screen, beside the closing padlock.',
+      args: [],
+    );
+  }
+
+  /// `connects`
+  String get ob4_connects {
+    return Intl.message(
+      'connects',
+      name: 'ob4_connects',
+      desc: 'The label on the wire from Studio down to the database on the fourth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `rows come back to you — the password never does`
+  String get ob4_back {
+    return Intl.message(
+      'rows come back to you — the password never does',
+      name: 'ob4_back',
+      desc: 'The closing note of the fourth onboarding screen, under an arrow pointing back up the chain.',
+      args: [],
+    );
+  }
+
+  /// `the ecosystem`
+  String get ob5_cap {
+    return Intl.message(
+      'the ecosystem',
+      name: 'ob5_cap',
+      desc: 'The caption over the fifth onboarding screen, which draws Platform, the Studios and the databases.',
+      args: [],
+    );
+  }
+
+  /// `Studios connect\nto Platform.`
+  String get ob5_title {
+    return Intl.message(
+      'Studios connect\nto Platform.',
+      name: 'ob5_title',
+      desc: 'The headline of the fifth onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `to Platform`
+  String get ob5_accent {
+    return Intl.message(
+      'to Platform',
+      name: 'ob5_accent',
+      desc: 'The run of ob5_title the screen paints in the accent colour; it must appear in ob5_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `Keycloak knows you once. Your phone talks to a Studio. The connections, the grants and the log live in the Platform above them — the administrator's side.`
+  String get ob5_body {
+    return Intl.message(
+      'Keycloak knows you once. Your phone talks to a Studio. The connections, the grants and the log live in the Platform above them — the administrator\'s side.',
+      name: 'ob5_body',
+      desc: 'The body of the fifth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `Keycloak`
+  String get ob5_keycloak {
+    return Intl.message(
+      'Keycloak',
+      name: 'ob5_keycloak',
+      desc: 'The provider node at the top of the fifth onboarding screen. A product name, the same in every language.',
+      args: [],
+    );
+  }
+
+  /// `knows you once`
+  String get ob5_keycloak_note {
+    return Intl.message(
+      'knows you once',
+      name: 'ob5_keycloak_note',
+      desc: 'Under the Keycloak node of the fifth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `your phone`
+  String get ob5_you {
+    return Intl.message(
+      'your phone',
+      name: 'ob5_you',
+      desc: 'The node for this device on the fifth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `LibreDB Platform`
+  String get ob5_hub {
+    return Intl.message(
+      'LibreDB Platform',
+      name: 'ob5_hub',
+      desc: 'The hub node of the fifth onboarding screen. A product name, the same in every language.',
+      args: [],
+    );
+  }
+
+  /// `Connections`
+  String get ob5_role_connections {
+    return Intl.message(
+      'Connections',
+      name: 'ob5_role_connections',
+      desc: 'One of the three things the Platform hub holds, on a chip of the fifth onboarding screen. Render it as written: Dart\'s toUpperCase turns the Turkish i into I, not İ.',
+      args: [],
+    );
+  }
+
+  /// `Grants`
+  String get ob5_role_grants {
+    return Intl.message(
+      'Grants',
+      name: 'ob5_role_grants',
+      desc: 'One of the three things the Platform hub holds, on a chip of the fifth onboarding screen. Render it as written: Dart\'s toUpperCase turns the Turkish i into I, not İ.',
+      args: [],
+    );
+  }
+
+  /// `Audit log`
+  String get ob5_role_audit {
+    return Intl.message(
+      'Audit log',
+      name: 'ob5_role_audit',
+      desc: 'One of the three things the Platform hub holds, on a chip of the fifth onboarding screen. Render it as written: Dart\'s toUpperCase turns the Turkish i into I, not İ.',
+      args: [],
+    );
+  }
+
+  /// `same session, no second sign-in — the first switch takes an admin seat`
+  String get ob5_mode_note {
+    return Intl.message(
+      'same session, no second sign-in — the first switch takes an admin seat',
+      name: 'ob5_mode_note',
+      desc: 'Under the Studio / Platform admin pills at the foot of the fifth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `platform · access and record`
+  String get ob6_cap {
+    return Intl.message(
+      'platform · access and record',
+      name: 'ob6_cap',
+      desc: 'The caption over the sixth onboarding screen, which shows a grant list and an audit log.',
+      args: [],
+    );
+  }
+
+  /// `Platform decides\nwho may reach what.`
+  String get ob6_title {
+    return Intl.message(
+      'Platform decides\nwho may reach what.',
+      name: 'ob6_title',
+      desc: 'The headline of the sixth onboarding screen. The line break is deliberate.',
+      args: [],
+    );
+  }
+
+  /// `Platform`
+  String get ob6_accent {
+    return Intl.message(
+      'Platform',
+      name: 'ob6_accent',
+      desc: 'The run of ob6_title the screen paints in the accent colour; it must appear in ob6_title verbatim.',
+      args: [],
+    );
+  }
+
+  /// `Platform grants access, ends it and sets when it expires. The statement you ran is in this log too.`
+  String get ob6_body {
+    return Intl.message(
+      'Platform grants access, ends it and sets when it expires. The statement you ran is in this log too.',
+      name: 'ob6_body',
+      desc: 'The body of the sixth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `you`
+  String get ob6_you {
+    return Intl.message(
+      'you',
+      name: 'ob6_you',
+      desc: 'Names the reader\'s own row in the demo grant list and the demo audit log of the sixth onboarding screen.',
+      args: [],
+    );
+  }
+
+  /// `[redacted]`
+  String get ob6_redacted {
+    return Intl.message(
+      '[redacted]',
+      name: 'ob6_redacted',
+      desc: 'Stands in for the statement text of a demo audit line the connection\'s capture setting withheld.',
+      args: [],
+    );
+  }
+
+  /// `On to the sign-in`
+  String get ob6_bye {
+    return Intl.message(
+      'On to the sign-in',
+      name: 'ob6_bye',
+      desc: 'The hand-off panel the onboarding ends on, after the last screen or Skip.',
+      args: [],
+    );
+  }
+
+  /// `The introduction ends here; the app opens through Keycloak.`
+  String get ob6_bye_note {
+    return Intl.message(
+      'The introduction ends here; the app opens through Keycloak.',
+      name: 'ob6_bye_note',
+      desc: 'Under ob6_bye on the hand-off panel.',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
