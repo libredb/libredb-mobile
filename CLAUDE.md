@@ -10,7 +10,7 @@ The app ships on Android and iOS only.
 The plan is in `docs/roadmap.md`, the Studio contract and layers in `docs/architecture.md`.
 The Dart package is `libredb_mobile`.
 
-- **Flutter:** 3.47.7 | **Dart SDK:** ^3.13.5 | **FVM** is used for Flutter version management
+- **Flutter:** 3.47.8 | **Dart SDK:** ^3.13.5 | **FVM** is used for Flutter version management
 - **Line width:** 120 characters (configured in `analysis_options.yaml`)
 
 ## Common Commands
