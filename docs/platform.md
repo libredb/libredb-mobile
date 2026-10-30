@@ -444,6 +444,53 @@ Three things are written down, none filed:
 - The form's connection list is read once, so after a refused 409 the connection that Platform called pending or granted stays selectable until the form is opened again.
 - `AuthInterceptor` logs the first and last four characters of the bearer, as `MOCK…OKEN` for the mock token; the mock token is not a JWT, and a real one would show the first four characters of its header, which carry no claim, but that is the one place where part of a token reaches a log.
 
+## M13-P walk against tool/studio-dev
+
+The access request flow of #313 and #314 was walked on 2026-10-30 on the Android emulator against the `platform` profile of [tool/studio-dev](studio.md#platform), for #318.
+This is not the platform-dev run #318 asks for and does not close it: the walk reached the two requester screens against a real Platform and a real governed Studio, and it reached no request, no approval and no refusal, because **LibreDB Platform 1.3.0 serves no access request route at all**.
+What it adds over the [mock walkthrough](#m13-p-mock-walkthrough) is the one case the mock could not produce: what the two screens do against a Platform that does not carry the requester routes, measured rather than patched.
+
+The build was Flutter 3.47.7, a debug build of `main_prod.dart` from `main` at `93a7e78`, on the AVD `libredb-shots-api30` (Google APIs x86\_64, Android 11, 1080 by 1920), with the app's data cleared before the launch.
+Its defines were `studio-dev-platform.env` with `PROD_API_URL` moved to the governed Studio `https://localhost:9446/api`, because the access request entries exist only while Studio's connection policy carries `governance` true, and the Studio on port 9443 answers `{"customConnections":true}` with no governance.
+The defines file was kept in the scratchpad, never in the repository; the emulator also needs `adb reverse tcp:9446 tcp:9446`, which `tool/studio-dev/trust-android-emulator.sh` does not forward.
+The accounts were the realm's documented `user` and `admin`, and the stack ran on the committed placeholder license, with no `tool/studio-dev/platform-license.local`.
+
+| Step | Result |
+| --- | --- |
+| 1. Platform mode build | Passed: a cold start after the onboarding deck shows "Sign in to Studio" and "Sign in to Platform" with the admin-seat helper text, so `PLATFORM_API_URL` reached the build |
+| 2. Studio sign-in as `user` | Passed: Keycloak opens in a Custom Tab on `https://localhost:8443`, and the sign-in lands on the connection list |
+| 3. The governed empty list | Passed: the governed Studio grants `user` nothing, so the list reads "No databases have been granted to you yet. Ask an administrator for access." and offers "Request access" |
+| 4. The profile sheet | Passed: the sheet reads Studio, the account, "Governed by LibreDB Platform", and an "Access requests" entry between "Switch to Platform" and Settings |
+| 5. "My requests" against Platform 1.3.0 | **Blocked, and the app behaved**: `GET /v1/requester/access-requests` answered 404, and the page shows "Your requests could not be loaded", "Something went wrong" and Retry |
+| 6. The request form against Platform 1.3.0 | **Blocked, and the app behaved**: `GET /v1/requester/connections` answered 404, and the page shows "The connections could not be loaded", "Something went wrong" and Retry |
+| 7. A request, an approval, a refusal with a reason | **Not reachable**: Platform 1.3.0 has no route to send them to, and the app has no admin inbox to decide them in (`lib/features/` holds `access_requests`, the requester side, and no admin counterpart) |
+| 8. Platform sign-in as `admin` | Passed as a refusal: `GET /v1/me` answered 403 `LICENSE_INVALID`, the login page shows "The Platform license is not valid.", and the stored session is cleared (`SignInUseCase`), so the admin half cannot be reached on this stack without a license either |
+| 9. Logs | Passed: the app's logcat for the whole run, 154 lines with 73 of the app's own, holds no JWT, no `Bearer` value and no e-mail address; the two refused reads log the path, the status and `NotFoundError`, and the Platform sign-in logs `platform.license_invalid` and nothing of Platform's message |
+| 10. Teardown | Nothing was created, so nothing was revoked: no request was filed, no grant was given and no connection was changed, on either Studio or Platform |
+
+### Why no request could be filed
+
+Platform 1.3.0, the image `tool/studio-dev` pins, carries exactly six bearer routes.
+Read from the running container, its compiled route tree under `/app/.next/server/app/api/v1` holds `me`, `connections`, `connections/[id]`, `connections/[id]/grants`, `directory/users` and `audit`, and nothing else; the web console has no access request page either.
+Every other `/api/v1` path, `requester/connections` and `requester/access-requests` among them, falls through to the Next.js 404 page, so the app receives an HTML body with no `{"error":{"code"}}` envelope.
+That matches the roadmap, which files M13-P as blocked until a Platform release ships the request API, and #318's own reading of libredb-platform `origin/main`.
+
+### What this measured that the mock could not
+
+- **A Platform without the requester routes reads as "Something went wrong", not as a 404 message.**
+  `platformError` checks the code first and the status second; an uncoded 404 falls to its last row, "any other status with another code or no envelope", which gives a `NotFoundError` with no `AppErrorCode`, and both pages then fall back to their generic description.
+  The sentence in [Access requests from a Studio session](#access-requests-from-a-studio-session) that lists "a 404 from a Platform without the requester routes" among the refusals the pages show themselves is right about where the message appears and silent about which message it is; it is the generic one.
+  Nothing is wrong in the app, and `ACCESS_REQUESTS_DISABLED`, the coded 404, still shows its own text (mock step 15).
+- **Neither refusal touched the Studio session.** The Studio shell stayed signed in through both 404s, and a relaunch was never needed, which is the rule of that same section measured against a real Platform rather than a fixture.
+- **The entries appear on a real governed Studio.** The mock drives `governance` from a fixture; here the governed Studio of the `platform` profile answered `{"customConnections":false,"governance":true,"statementCapture":"redacted"}` and the two entry points appeared off it.
+
+### What still needs the owner
+
+- #318's own run: the two accounts, the admin's approval of A and refusal of B with a reason, A in the Studio list within 30 seconds, `SELECT 1 AS m13p_walkthrough`, the withdrawn request under the inbox's withdrawn filter, and the teardown against the seats of step 0.
+  It needs a Platform release that serves the request routes on Railway platform-dev, and the owner's accounts; none of it can be reached from `tool/studio-dev` today.
+- The admin side of the flow needs a screen that does not exist yet: approve, refuse with a reason, and the inbox its filters belong to.
+- To reach any `/api/v1` success on `tool/studio-dev`, the stack needs a license that lists `localhost` in `tool/studio-dev/platform-license.local` ([The license](studio.md#the-license)); without it every admin route answers 403 `LICENSE_INVALID`.
+
 ## Full-system check
 
 The full-system check of milestone M12-P (#304) was run on 2026-10-26 on the test phone against the Platform installer environment of [studio.md](studio.md) "Platform installer environment" (#303), whose Studio is governed by that Platform at the default governance refresh.
