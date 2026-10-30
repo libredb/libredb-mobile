@@ -26,10 +26,9 @@ import '../../../../support/test_env.dart';
 /// remember that the introduction has been shown, and both hand the pending location to the login page. The six
 /// screens replace the body in the flow's own step and should not have to re-establish any of this.
 ///
-/// **The adoption figures are gone from this file**, not forgotten: the four panels that carried them are replaced
-/// by the six screens the prototype agreed, and none of those six says a number about the product. The page no
-/// longer reads `IAdoptionFiguresSource` at all, so a test that provided one would be providing something nothing
-/// asks for. `adoption_figures_asset_test.dart` still holds the source itself.
+/// **The adoption figures are gone**, not forgotten: the four panels that carried them are replaced by the six
+/// screens the prototype agreed, and none of those six says a number about the product. The source that read them,
+/// its asset and its generator are deleted, so there is nothing left for this page to be given.
 void main() {
   late OnboardingCubit cubit;
 
