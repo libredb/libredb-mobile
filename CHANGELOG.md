@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/libredb/libredb-mobile/compare/v1.0.0...v1.0.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* lift the statement history sheet above the keyboard ([95a8a3c](https://github.com/libredb/libredb-mobile/commit/95a8a3ca96b4ef941d5c146d8ea6cf7563c21493))
+* lift the statement history sheet above the keyboard ([442753f](https://github.com/libredb/libredb-mobile/commit/442753fafd20c63976dc41879310b3adc8dcd6f8))
+
 ## [1.0.0](https://github.com/libredb/libredb-mobile/compare/v1.0.0...v1.0.0) (2026-10-29)
 
 
