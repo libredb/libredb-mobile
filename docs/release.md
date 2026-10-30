@@ -2,7 +2,7 @@
 
 A release is a signed Android App Bundle built for one deployment and uploaded to the Play internal testing track.
 Studio's URL and the Keycloak settings are compiled into the build, so one Play listing serves one deployment; the store build targets the deployment the maintainer runs.
-No key, password or token is ever in the repository: they live in GitHub secrets, and both the signed build and the upload wait for the maintainer's approval.
+No key, password or token is ever in the repository: they live in GitHub secrets, and only a tag an organization admin created reaches them.
 iOS is released separately on macOS (#199).
 
 ## How a release flows
@@ -13,14 +13,15 @@ iOS is released separately on macOS (#199).
 2. Merging the release pull request tags the release (`v1.2.3`) and creates the GitHub release.
 3. The same workflow then calls `.github/workflows/release.yml`, because a tag that a workflow pushes with `GITHUB_TOKEN` starts no other workflow.
 4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
-5. The build job waits for the maintainer's approval of the `release-signing` environment, then checks out the commit the checks ran on.
+5. The build job deploys to the `release-signing` environment, which only `main` and `v*.*.*` tags may use, and checks out the commit the checks ran on.
    It stops when the build would carry a define meant for checks only (see below), or when a release has no `SENTRY_AUTH_TOKEN` (see "Crash symbols").
    It decodes the upload keystore into the runner's temp directory, builds `flutter build appbundle --release --target lib/main/main_prod.dart --obfuscate --split-debug-info=build/debug-info` with the deployment's defines and `-PrequireReleaseSigning=true`, and checks that the bundle's signing certificate has the fingerprint in `ANDROID_UPLOAD_CERT_SHA256`.
    It then uploads the Dart symbols, the obfuscation map and R8's `mapping.txt` to Sentry; a failed upload stops the release.
 6. It keeps the bundle and R8's `mapping.txt` for 7 days as the `release-bundle` workflow artifact, and deletes the keystore and the defines file, also when a step failed.
    The artifact holds exactly those two files: the Dart symbols and the obfuscation map in `build/debug-info` go only to Sentry.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
-7. The upload job waits for the approval of the `play-internal` environment, then uploads the bundle and the mapping to the internal testing track.
+7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping to the internal testing track.
+   Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
 A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
 The build number grows with every release because release-please raises it, and Play refuses a bundle whose version code it already has.
@@ -57,7 +58,7 @@ fvm flutter build appbundle --release --target lib/main/main_prod.dart \
 
 The build job signs in one of two GitHub environments, which hold the same names:
 
-- `release-signing`, for a tag or a release-please release, with the real upload key; only `main` and `v*.*.*` tags may deploy to it, and the maintainer approves each build.
+- `release-signing`, for a tag or a release-please release, with the real upload key; only `main` and `v*.*.*` tags may deploy to it.
 - `release-dry-run`, for a manual run, with a throwaway key made only for dry runs.
 
 Secrets and variable of each signing environment:
@@ -94,7 +95,7 @@ Variables of the repository, or of the build job's environment, which override t
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
 | `PLATFORM_API_URL`, `PLATFORM_CERT_PINS` | No; Platform mode only, set by the owner after approval (#302's checklist) |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
-| `PLAY_RELEASE_STATUS` | No; `completed` by default; set it to `draft` until the app's first publication on Play, then remove it |
+| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers on its own. Set it to `draft` to park a release in the console instead |
 
 A variable set only on the `release-dry-run` environment reaches dry runs only.
 An empty variable is left out of the build, and the build stops when a required one is missing.
@@ -149,31 +150,31 @@ Only the maintainer does these, and no value from them is ever written into an i
 
 1. Create the upload key on your own machine, for example with `keytool -genkeypair -v -keystore <path>/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`, and keep a backup of the keystore and its passwords outside the repository.
 2. In the Play Console, create the app with the package name `org.libredb.mobile` and enroll it in Play App Signing, so Google holds the app signing key and the upload key can be reset if it is lost.
-3. In the repository settings, create the environment `release-signing`, add yourself as its required reviewer, limit its deployment branches and tags to `main` and `v*.*.*`, and add the four signing secrets and `ANDROID_UPLOAD_CERT_SHA256` of the upload key.
-   The reviewer is the control on the upload key: the tag ruleset below does not restrict creating `v*` tags, so a workflow on another branch with `contents: write` could create a tag that passes the branch and tag limit; with the reviewer, every build that reaches the upload key waits for your approval.
+3. In the repository settings, create the environment `release-signing`, limit its deployment branches and tags to `main` and `v*.*.*`, and add the four signing secrets and `ANDROID_UPLOAD_CERT_SHA256` of the upload key.
+   It needs no required reviewer, because the tag ruleset of step 7 refuses a `v*` tag from anyone but an organization admin, so no workflow can start a signed build by pushing a tag.
    `base64 -w0 <path>/upload-keystore.jks` prints the keystore on one line, and `keytool -list -v -keystore <path>/upload-keystore.jks -alias upload` shows the SHA-256 fingerprint.
 4. Create the environment `release-dry-run` with the same names for a throwaway keystore made only for dry runs; never put the upload key there.
-5. Create the environment `play-internal`, add yourself as its required reviewer, and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
+5. Create the environment `play-internal` and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
 6. Add the deployment's variables to the repository.
-   Set `PLAY_RELEASE_STATUS` to `draft` until the app's first publication on Play, and remove it after.
-7. Add a tag ruleset for `refs/tags/v*` that blocks updating and deleting matching tags, with the organization's admins in its bypass list, so only an admin can move or remove a released tag.
-   It does not restrict creating tags: release-please creates `v*` tags with `GITHUB_TOKEN`, and GitHub does not accept the GitHub Actions app as a bypass actor of this ruleset, so a creation rule would block every release.
-   The required reviewer of `release-signing` from step 3 is therefore the control on who can start a signed build, together with that environment's limit to `main` and `v*.*.*` and write access to the repository only for the organization's admins.
+   Leave `PLAY_RELEASE_STATUS` unset, so an upload reaches the testers on its own; set it to `draft` only to park a release in the console.
+7. Add a tag ruleset for `refs/tags/v*` that blocks creating, updating and deleting matching tags, with the organization's admins in its bypass list, so only an admin can cut, move or remove a released tag.
+   The creation rule is what lets both environments run without a reviewer: a workflow on another branch with `contents: write` can no longer push a `v*` tag, so nothing it does reaches the upload key.
+   GitHub does not accept the GitHub Actions app as a bypass actor, so release-please cannot tag with `GITHUB_TOKEN`; it tags with the owner's fine-grained token in `RELEASE_PLEASE_TOKEN`, which bypasses as an organization admin, and `test/architecture/release_tag_creation_test.dart` fails when that input is lost.
 8. In Sentry, open the organization `libredb-org`, go to Settings > Developer Settings > Organization Tokens, and create a token named for this workflow, such as `libredb-mobile release`.
    An organization token can create releases and upload debug files and mappings for the organization's projects, and nothing else.
    Copy it once into the secret `SENTRY_AUTH_TOKEN` of the `release-signing` environment, and never into `release-dry-run`, a file, an issue or a log.
    Without it every release stops before the build; to replace it, create a new token, update the secret, and revoke the old token in Sentry.
 9. In the repository settings, under Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests".
    Without it release-please pushes its branch but fails with `GitHub Actions is not permitted to create or approve pull requests.` and opens no release pull request.
-   It is safe here because a pull request that a workflow opens reaches no key: the signed build still waits for your approval as the required reviewer of `release-signing`, and the upload waits for your approval of `play-internal`.
+   It is safe here because a pull request that a workflow opens reaches no key: a signed build needs a `v*` tag, and the tag ruleset of step 7 refuses one from anything but an organization admin.
 10. Merge the first release pull request, which releases `1.0.0`: `release-please-config.json` sets `"release-as": "1.0.0"` on the `.` package, because the manifest already names `1.0.0` and release-please would otherwise plan the first release as `1.1.0`.
-   Merging it tags `v1.0.0` and starts the release; approve the build job, let it finish, reject the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
+   Merging it tags `v1.0.0` and starts the release; let the build job finish, stop the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
    Do not push the tag `v1.0.0` by hand as well, since release-please then cannot create its release of `1.0.0`.
 11. Once `v1.0.0` is tagged, remove `release-as` from `release-please-config.json` in a follow-up commit, or every later release pull request stays at `1.0.0`.
    Done; `test/architecture/android_release_setup_test.dart` now fails while `release-as` names a version `CHANGELOG.md` already holds a released section for.
 12. In Google Cloud, create a service account, and in the Play Console invite it with release rights on this app only.
 13. Store the service account's JSON key as the `PLAY_SERVICE_ACCOUNT_JSON` secret of the `play-internal` environment.
-14. Approve the build job and then the upload job each time a release waits for them.
+14. Nothing is left to approve: merging a release pull request tags the release, and the build and the upload run on their own.
 
 ## Dry run
 
@@ -216,7 +217,7 @@ They pass in this order, and each one holds before the steps that name it:
 5. Owner, after step 4: move `PLATFORM_API_URL` from `release-dry-run` to the `release-signing` environment or to the repository.
    Leave `PLATFORM_CERT_PINS` unset, as the owner ruled on 2026-10-26, so a certificate renewal cannot break the app; a pin of a default Caddy site breaks at its next renewal ([security.md](security.md#keys-that-outlive-renewals), "Keys that outlive renewals").
 6. Owner, after step 4: publish the privacy policy again ([Privacy policy](#privacy-policy)), fill the Data safety form and the App access entry from this page ([Data safety](#data-safety), [App access](#app-access)), enter the demo Platform admin account in the Play Console only, and paste the listing texts from `android/fastlane/metadata/android/`.
-7. Owner, after steps 5 and 6: merge the release pull request that release-please opens, then approve the build job and, once it has passed, the upload job.
+7. Owner, after steps 5 and 6: merge the release pull request that release-please opens; the build and the upload then run on their own.
 8. Owner, after step 7's upload job has finished: install the build from internal testing on the test phone, because that install uses the phone's Google account, which agents never touch.
 9. Agent, after step 8: run the short smoke check of #306 on the test phone, the Studio entry and the Platform entry each signing in to their shell.
 
