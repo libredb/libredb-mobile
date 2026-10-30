@@ -326,7 +326,7 @@ Also confirmed, outside the numbered steps:
   empty on the rows view and on the editor once it holds a result, and is normal on the connection list and the
   schema page. That is the prod-only `screenCaptureProtection` of step 50, measured rather than argued.
 - **The product's mark ships.** The login screen draws the brand mark of `BrandMark` rather than a Material glyph,
-  and the onboarding flow's four panels render with the adoption figures from `assets/adoption.json`.
+  and the onboarding flow renders as the six-screen deck, which says no number about the product.
 
 ### What this run did not cover, and why
 
