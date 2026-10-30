@@ -390,6 +390,60 @@ Notes:
 - `docs/security.md` says the recent-apps preview is black under `FLAG_SECURE`; on this Samsung phone the card keeps the last snapshot taken while the window was not secure.
 - One Studio sign-out logged a `GET /connections/managed` answered 401 and "No refresh token available" right after the session was cleared, as in the M10-P walkthrough (#277).
 
+## M13-P mock walkthrough
+
+The access request flow of #313 and #314 was walked on 2026-10-30 from `main` at `0273637a`, against the fixtures of `assets/mock/`, for #318.
+What passes here is evidence about the app's own screens and about those fixtures, and evidence about no Platform: #318's lab run on platform-dev with two accounts and the admin's approval is not this run and stays open, because this run used no Platform and no phone.
+The device was the AVD `libredb_lab_api30` on Android 11, 1080 by 2340, started with `-no-snapshot`, so the app's data was empty at the first launch, and the build was Flutter 3.47.7, a debug build of `main_mock.dart`; the phone's own language is Turkish, so the app started in Turkish and the walk switched it to English in Settings.
+The mock answers each route with one fixed file, so a refusal, a slow answer, an empty list or a failed read cannot come from the fixtures.
+Those cases were produced by a local patch of `MockInterceptor` that read a scenario file from the app's data directory and answered the named route with a chosen status, a Platform error body, an empty body file or a delay; the patch was never committed.
+Every refusal body the patch sent carried a marker string and an e-mail address as its `message` and as its `fieldErrors` text, so that the log check below can tell whether any text of a refusal reaches the log.
+A refusal read this way proves how the app maps and shows the code it was given, and nothing about which status or code Platform really sends.
+
+| Step | Result |
+| --- | --- |
+| 1. My requests from the profile sheet | Passed: the Studio shell's profile sheet shows "Governed by LibreDB Platform" and an "Access requests" entry between "Switch to Platform" and Settings, and the entry opens "My requests" with the four requests of the fixture |
+| 2. My requests from the empty governed list | Passed: with `GET /connections/managed` answering no connection, the list says "No databases have been granted to you yet. Ask an administrator for access." under the governance banner, and its "Request access" action opens the request form, from which back returns to the list |
+| 3. Empty state | Passed: with the list answering no request, "My requests" says "No requests yet" and "Ask for access to a connection and follow the answer here.", and its "Request access" action opens the form; a pull on the list moved the four requests to this state, so the pull reads the list again |
+| 4. Four statuses | Passed: Pending, Approved, Refused and Withdrawn each show their own badge, the connection, the level, the time sent in the phone's time zone, and Withdraw on the pending one only |
+| 5. Refused and approved rows | Passed: the refused one reads "Administrator's reason:" followed by the reason the fixture holds, and the approved one reads "The connection appears in your connection list after you refresh it. It can take a moment." |
+| 6. Form: the connection list | Passed: the four connections show; the one already held reads "You already have access" and the one with a pending request "You already have a pending request", both greyed and not selectable |
+| 7. Form: the level | Passed: on a connection without a write credential, Write is greyed and the note reads "This connection has no write credential, so write access cannot be requested."; picking a connection and then another that cannot take the chosen level clears the level instead of keeping a level the new connection refuses |
+| 8. Form: the reason and its counter | Passed: the field shows 0/500, and a reason of two spaces, `walk reason` and two spaces counts 15, so the counter counts what is typed; the trimming itself was not seen on the wire, because the app never logs a body, and rests on `AccessRequestCreateBody.toJson`, which trims, and its test |
+| 9. Form: Send with nothing chosen | Passed: Send with a connection and neither level nor reason shows "Choose an access level." under the level and "Write a reason of 1 to 500 characters." under the reason, and each goes once it is filled |
+| 10. Form: leaving with a reason written | Passed: the back arrow asks "You have unsaved changes. Are you sure you want to leave?" with No and Yes, and No keeps the form as it was; the text is the shared unsaved-changes dialog, titled "Warning" |
+| 11. A 400 on the reason | Reached through the patch only: Platform's `VALIDATION_FAILED` with `fieldErrors` holding exactly `reason` shows "Write a reason of at most 500 characters." under the reason field, and the form keeps the draft |
+| 12. A 400 on the level | Reached through the patch only: the same refusal on exactly `level` shows "Write access needs a connection with a write credential." under the level, below the note, and the reason's message is gone |
+| 13. A 409 pending and a 409 already granted | Reached through the patch only: `ACCESS_REQUEST_PENDING` shows "You already have an open request for this connection." and `ACCESS_ALREADY_GRANTED` "You already have this access.", each above Send with a "My requests" button and no Retry |
+| 14. Another refusal | Reached through the patch only: a 500 `INTERNAL_ERROR` shows "Platform could not complete the request. Try again later." with Retry; with the patch removed, Retry sends the draft again and the app returns to "My requests" under a "Request sent." snackbar |
+| 15. A refusal of the form's own load | Reached through the patch only: `ACCESS_REQUESTS_DISABLED` on `GET /v1/requester/connections` shows "The connections could not be loaded", "Access requests are turned off on this installation." and Retry, which loads the form once the patch is gone |
+| 16. Withdraw | Passed: Withdraw asks "Withdraw request", "Your request for read access to Support tickets will be withdrawn. You can ask again later.", with Cancel and Withdraw; Cancel changes nothing, and Withdraw turns the row to Withdrawn in place, with no reload and with Withdraw gone from it |
+| 17. Withdraw while it runs | Partly passed: with the answer delayed six seconds, the Withdraw button greys at once and the list stays; the fixture holds one pending request, so "disabled on every row" was seen on one row, and the several rows rest on the widget test of `MyAccessRequestsPage` |
+| 18. A failed load | Reached through the patch only: a 503 on `GET /v1/requester/access-requests` on entering the page shows "Your requests could not be loaded", "Something went wrong" and Retry, and Retry loads the list once the patch is gone |
+| 19. A failed refresh | Reached through the patch only: the same 503 during a pull leaves the list as it was and shows a "Something went wrong" snackbar |
+| 20. Dark mode | Passed: the form, its disabled connections and the four status badges of "My requests" are readable in the night theme, and the badges change to their light-on-dark colours |
+| 21. Turkish | Passed: "My requests", its badges, "Sent 28 Oct 2026 12:12", the approved note, "Administrator's reason", Withdraw and the "Request access" button read in Turkish; the connection names and the refusal reason are the fixtures' English data |
+| 22. Logs | Passed: the app's logcat for the whole run, 665 lines of the app's own, holds no JWT, no `Bearer` value, no e-mail address, no reason text of the form or of a request, no marker string of a refusal body and no `subjectEmail`; the five refused calls log the status and the app's own code, such as `platform.access_request_pending`, and nothing of the answer's text |
+
+### What this run could not reach
+
+- The lab run of #318: an approved request that shows in the Studio list within 30 seconds, an admin's refusal with its reason, a withdrawal seen under the inbox's withdrawn filter, and teardown against the baseline of the seats.
+  Neither the Platform release that serves the request routes nor the test phone was used here.
+- A refusal as Platform really sends it: the status and the `fieldErrors` of a 400 on `reason` or `level`, the 409 codes, and `ACCESS_REQUEST_LIMIT`.
+  The patch could send them only as the app expects them, and the mapping was shown, not Platform.
+- A 5xx without Platform's error code on a read.
+  The same 503 shown in step 18 reads "Something went wrong", while `platformError` maps an uncoded 5xx to "Platform does not answer. Try again in a moment."; the log shows `ResilienceInterceptor` retrying the GET and the repository ending on `NetworkError`, so the retry path decided the text, and the mock cannot say what the same answer gives on a real connection.
+- "Withdraw disabled on every row" with several pending requests, and the app's behaviour with the real governance reload delay.
+
+### What the run found
+
+No defect that is the app's own.
+Three things are written down, none filed:
+
+- The pending request's Withdraw greys while the withdrawal runs and nothing else changes, so a six second answer shows no progress.
+- The form's connection list is read once, so after a refused 409 the connection that Platform called pending or granted stays selectable until the form is opened again.
+- `AuthInterceptor` logs the first and last four characters of the bearer, as `MOCK…OKEN` for the mock token; the mock token is not a JWT, and a real one would show the first four characters of its header, which carry no claim, but that is the one place where part of a token reaches a log.
+
 ## Full-system check
 
 The full-system check of milestone M12-P (#304) was run on 2026-10-26 on the test phone against the Platform installer environment of [studio.md](studio.md) "Platform installer environment" (#303), whose Studio is governed by that Platform at the default governance refresh.

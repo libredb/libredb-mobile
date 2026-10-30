@@ -273,4 +273,43 @@ void main() {
     final last = tester.getBottomLeft(find.byType(Dismissible).last).dy;
     expect(last, lessThanOrEqualTo(tester.view.physicalSize.height / tester.view.devicePixelRatio - 34));
   });
+
+  group('with the keyboard up', () {
+    // The keyboard covers the foot of the screen: viewInsets.bottom is its height, padding.bottom shrinks to zero and
+    // viewPadding.bottom keeps the home indicator.
+    const keyboard = 300.0;
+
+    Future<double> openWithKeyboard(WidgetTester tester) async {
+      final dpr = tester.view.devicePixelRatio;
+      tester.view.physicalSize = Size(390 * dpr, 844 * dpr);
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.viewPadding = FakeViewPadding(bottom: 34 * dpr);
+      addTearDown(tester.view.resetViewPadding);
+      answerRead(Success([for (var i = 0; i < 30; i++) _entry('many-$i', 'SELECT $i')]));
+      await open(tester);
+      await tester.tap(find.byType(TextField));
+      tester.view.viewInsets = FakeViewPadding(bottom: keyboard * dpr);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      return tester.view.physicalSize.height / dpr - keyboard;
+    }
+
+    testWidgets('the last entry scrolls above the keyboard', (tester) async {
+      final keyboardTop = await openWithKeyboard(tester);
+
+      final list = find.byType(ListView);
+      for (var i = 0; i < 10; i++) {
+        await tester.drag(list, const Offset(0, -2000));
+        await tester.pumpAndSettle();
+      }
+
+      expect(tester.getBottomLeft(find.byType(Dismissible).last).dy, lessThanOrEqualTo(keyboardTop));
+    });
+
+    testWidgets('the search field stays above the keyboard', (tester) async {
+      final keyboardTop = await openWithKeyboard(tester);
+
+      expect(tester.getBottomLeft(find.byType(TextField)).dy, lessThanOrEqualTo(keyboardTop));
+    });
+  });
 }
