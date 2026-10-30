@@ -544,8 +544,10 @@ wrong scope.
 - **`test_file_naming_test.dart`**, **`mock_asset_naming_test.dart`** and **`feature_generator_test.dart`** guard the
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
-  **`play_listing_metadata_test.dart`** and **`release_docs_test.dart`** guard the release: the signing config, the
-  obfuscation and symbol upload, the store listing, and the labels `docs/release.md` quotes.
+  **`play_listing_metadata_test.dart`**, **`play_screenshot_drafts_test.dart`** and **`release_docs_test.dart`** guard
+  the release: the signing config, the obfuscation and symbol upload, the store listing texts, the phone screenshots of
+  the listing drafts, and the labels `docs/release.md` quotes. The screenshot guard reads each PNG's IHDR header, so an
+  alpha channel or a ratio above 2 fails here rather than silently in the Play Console days later.
 - **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
