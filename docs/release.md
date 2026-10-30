@@ -1,6 +1,6 @@
 # Releasing the Android app
 
-A release is a signed Android App Bundle built for one deployment and uploaded to the Play internal testing track.
+A release is a signed Android App Bundle built for one deployment and uploaded to the Play internal testing and production tracks.
 Studio's URL and the Keycloak settings are compiled into the build, so one Play listing serves one deployment; the store build targets the deployment the maintainer runs.
 No key, password or token is ever in the repository: they live in GitHub secrets, and only a tag an organization admin created reaches them.
 iOS is released separately on macOS (#199).
@@ -20,7 +20,9 @@ iOS is released separately on macOS (#199).
 6. It keeps the bundle and R8's `mapping.txt` for 7 days as the `release-bundle` workflow artifact, and deletes the keystore and the defines file, also when a step failed.
    The artifact holds exactly those two files: the Dart symbols and the obfuscation map in `build/debug-info` go only to Sentry.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
-7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping to the internal testing track.
+7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping to the internal testing track, then the same bundle to the production track.
+   The testers have it as soon as the first upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
+   A production upload replaces whatever is already in review, so the review always runs on the newest release.
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
 A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
@@ -96,7 +98,7 @@ Variables of the repository, or of the build job's environment, which override t
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
 | `PLATFORM_API_URL`, `PLATFORM_CERT_PINS` | No; Platform mode only, set by the owner after approval (#302's checklist) |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
-| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers on its own. Set it to `draft` to park a release in the console instead |
+| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers and Google's review on its own. Set it to `draft` to park both uploads in the console instead |
 
 A variable set only on the `release-dry-run` environment reaches dry runs only.
 An empty variable is left out of the build, and the build stops when a required one is missing.

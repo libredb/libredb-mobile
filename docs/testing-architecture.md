@@ -545,9 +545,10 @@ wrong scope.
   shapes the tree is generated and navigated by.
 - **`android_release_setup_test.dart`**, **`sentry_release_symbols_test.dart`**,
   **`play_listing_metadata_test.dart`**, **`play_screenshot_drafts_test.dart`**, **`release_docs_test.dart`** and
-  **`release_tag_creation_test.dart`** guard the release: the signing config, the obfuscation and symbol upload, the
-  store listing texts, the phone screenshots of the listing drafts, the labels `docs/release.md` quotes, and the owner
-  token release-please tags with, without which the `refs/tags/v*` creation rule refuses every release. The screenshot guard reads each PNG's IHDR header, so an
+  **`release_tag_creation_test.dart`** and **`release_tracks_test.dart`** guard the release: the signing config, the
+  obfuscation and symbol upload, the store listing texts, the phone screenshots of the listing drafts, the labels
+  `docs/release.md` quotes, the owner token release-please tags with, without which the `refs/tags/v*` creation rule
+  refuses every release, and the two Play tracks a release is uploaded to, since dropping either upload is silent. The screenshot guard reads each PNG's IHDR header, so an
   alpha channel or a ratio above 2 fails here rather than silently in the Play Console days later.
 - **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
   settings the lock and the orientation policy need.

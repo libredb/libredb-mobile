@@ -304,7 +304,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/upload-keystore.jks" "$RUNNER_TEMP/dart-defines.json"
 
   upload:
-    name: Upload to Play internal testing
+    name: Upload to Play
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
@@ -318,7 +318,9 @@ jobs:
           name: release-bundle
           path: release-bundle
 
-      - name: Upload to Play
+      # The same bundle goes to both tracks (docs/release.md): the testers have it as soon as this step ends, and
+      # the public waits for Google's review of the production track below.
+      - name: Upload to the internal testing track
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -326,5 +328,17 @@ jobs:
           releaseFiles: release-bundle/bundle/release/app-release.aab
           track: internal
           # Unset today, so a release reaches the testers on its own; set it to draft to park one in the console.
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          mappingFile: release-bundle/mapping/release/mapping.txt
+
+      # Sending a release to production replaces whatever is in review, so the review always runs on the newest
+      # release. A failure here leaves the internal upload above in place, which is why it runs second.
+      - name: Upload to the production track
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: org.libredb.mobile
+          releaseFiles: release-bundle/bundle/release/app-release.aab
+          track: production
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           mappingFile: release-bundle/mapping/release/mapping.txt

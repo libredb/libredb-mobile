@@ -120,10 +120,13 @@ void main() {
       expect(environment is YamlMap ? environment['name'] : environment, 'play-internal');
       expect('${upload['if']}', contains("github.event_name != 'workflow_dispatch'"));
 
-      final step = _steps(jobs, 'upload').singleWhere((step) => '${step['uses']}'.contains('upload-google-play'));
-      final inputs = step['with'] as YamlMap;
-      expect(inputs['packageName'], 'org.libredb.mobile');
-      expect(inputs['track'], 'internal');
+      final steps = _steps(jobs, 'upload').where((step) => '${step['uses']}'.contains('upload-google-play')).toList();
+      final tracks = [for (final step in steps) (step['with'] as YamlMap)['track']];
+      // The owner's ruling on 2026-10-31: every release goes to both tracks, the testers' and the public's.
+      expect(tracks, ['internal', 'production']);
+      for (final step in steps) {
+        expect((step['with'] as YamlMap)['packageName'], 'org.libredb.mobile');
+      }
     });
 
     test('signs only from the release-signing environment, or the dry run environment on a manual run', () {
