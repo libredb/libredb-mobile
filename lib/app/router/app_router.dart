@@ -18,6 +18,7 @@ import 'package:libredb_mobile/features/connections/navigation/connections_route
 import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
 import 'package:libredb_mobile/features/onboarding/application/onboarding_state.dart';
 import 'package:libredb_mobile/features/onboarding/navigation/onboarding_routes.dart';
+import 'package:libredb_mobile/features/onboarding/presentation/widgets/onboarding_replay_tile.dart';
 import 'package:libredb_mobile/features/object_browser/navigation/object_browser_routes.dart';
 import 'package:libredb_mobile/features/settings/navigation/settings_routes.dart';
 import 'package:libredb_mobile/features/platform_audit/navigation/platform_audit_routes.dart';
@@ -93,6 +94,7 @@ class AppRouterFactory {
               path: ApplicationRoutesConstants.settings,
               name: 'settings',
               securitySection: (context) => const AppLockSettingsSection(),
+              introductionTile: (context) => const OnboardingReplayTile(),
             ),
           ],
         ),
@@ -111,6 +113,7 @@ class AppRouterFactory {
               path: ApplicationRoutesConstants.platformSettings,
               name: 'platformSettings',
               securitySection: (context) => const AppLockSettingsSection(),
+              introductionTile: (context) => const OnboardingReplayTile(),
             ),
           ],
         ),

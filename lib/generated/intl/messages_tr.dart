@@ -1181,6 +1181,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "save": MessageLookupByLibrary.simpleMessage("Kaydet"),
     "settings": MessageLookupByLibrary.simpleMessage("Ayarlar"),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Görünüm"),
+    "settings_introduction": MessageLookupByLibrary.simpleMessage("Tanıtım"),
+    "settings_introduction_subtitle": MessageLookupByLibrary.simpleMessage("Altı tanıtım ekranını yeniden izle"),
     "settings_licenses": MessageLookupByLibrary.simpleMessage("Lisanslar"),
     "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
       "LibreDB Mobile\'ın ve içerdiği kodun lisansları",
