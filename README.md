@@ -1,6 +1,6 @@
 # LibreDB Mobile
 
-![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.47.8-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS-2E7D32)
 [![License: Elastic License 2.0](https://img.shields.io/badge/License-Elastic%202.0-005571.svg)](LICENSE)
 

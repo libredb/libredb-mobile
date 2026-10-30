@@ -243,7 +243,7 @@ The `release-bundle` artifact of each run keeps the exact bundle and mapping for
 ## Play requirements
 
 Play requires new apps and app updates to target Android 16 (API level 36) from August 31, 2026 ([Play Console Help, target API level requirements](https://support.google.com/googleplay/android-developer/answer/11926878)).
-The app's `targetSdk` is `flutter.targetSdkVersion`, which is 36 in Flutter 3.47.7, so it meets the requirement; check it again with each Flutter upgrade.
+The app's `targetSdk` is `flutter.targetSdkVersion`, which is 36 in Flutter 3.47.8, so it meets the requirement; check it again with each Flutter upgrade.
 
 ## Store listing
 
