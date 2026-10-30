@@ -136,11 +136,18 @@ const int _counterDigits = 2;
 /// hero the slack above it, and it does that by measuring the column — so a step whose root is a `LayoutBuilder`
 /// cannot be measured. A `Column`, a `Stack`, a `SizedBox` or a `CustomPaint` with a size all can.
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key, this.returnUrl, this.heroBuilder});
+  const OnboardingPage({super.key, this.returnUrl, this.heroBuilder, this.onLeave});
 
   /// Where the first run was going before the introduction took its place, or null when it was going nowhere
   /// special.
   final String? returnUrl;
+
+  /// What the way out does instead of marking the introduction seen and going to the sign-in.
+  ///
+  /// Null on the first run, which is the route's own case. A replay opened from the settings passes one that closes
+  /// the deck and leaves the user where they were: the introduction has long been seen by then, and a signed-in user
+  /// sent to [onboardingDestination] would land on the sign-in page they are already past (#129).
+  final VoidCallback? onLeave;
 
   /// The animated hero of each step. Null draws no hero, which is what the chassis's own tests pump: every claim
   /// the frame makes holds whatever the six steps paint inside it.
@@ -177,6 +184,11 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
   /// Marks the introduction seen and leaves. The cubit emits before it stores, so the redirect has the new answer
   /// by the time [GoRouter.go] runs even on a device that refuses the write.
   void _leave() {
+    final onLeave = widget.onLeave;
+    if (onLeave != null) {
+      onLeave();
+      return;
+    }
     context.read<OnboardingCubit>().markSeen();
     context.go(onboardingDestination(returnUrl: widget.returnUrl));
   }
