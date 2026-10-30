@@ -17,8 +17,10 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// The listing for an upcoming feature is drafted under `android/fastlane/drafts/<feature>/`, in the same layout, until
 /// the pull request that ships the feature moves it into the live listing (issue #301). Each draft passes the same
-/// checks and holds the same files as the live `en-US`, so it can replace the live directories whole. No listing text,
-/// live or draft, holds an en dash or an em dash.
+/// checks and holds the same texts as the live `en-US`, so it can replace the live directories whole. Its screenshots
+/// are its own, because a draft shows the feature's own pages rather than the live ones (issue #309, the Platform mode
+/// draft); `test/architecture/play_screenshot_drafts_test.dart` guards those against Play's graphic requirements. No
+/// listing text, live or draft, holds an en dash or an em dash.
 void main() {
   test('each locale has the three listing texts within Play\'s lengths', () {
     final problems = [for (final locale in _locales) ...listingProblems(Directory('$_metadataRoot/$locale'))];
@@ -39,11 +41,11 @@ void main() {
     expect(turkish, english, reason: 'en-US and tr-TR must hold the same files');
   });
 
-  test('each draft has exactly the en-US and tr-TR locales, within Play\'s lengths and with the live files', () {
+  test('each draft has exactly the en-US and tr-TR locales, within Play\'s lengths and with the live texts', () {
     final root = Directory(_draftsRoot);
     expect(root.existsSync(), isTrue, reason: '$_draftsRoot does not exist');
 
-    final live = relativeFiles(Directory('$_metadataRoot/en-US'));
+    final live = _textFiles(Directory('$_metadataRoot/en-US'));
     final drafts = root.listSync().whereType<Directory>().toList();
     expect(drafts, isNotEmpty, reason: '$_draftsRoot holds no draft');
 
@@ -54,8 +56,10 @@ void main() {
       for (final locale in _locales) {
         final directory = Directory('${draft.path}/$locale');
         problems.addAll(listingProblems(directory));
-        final files = relativeFiles(directory);
-        if (!_listEquals(files, live)) problems.add('${directory.path} holds $files, the live en-US holds $live');
+        final texts = _textFiles(directory);
+        if (!_listEquals(texts, live)) {
+          problems.add('${directory.path} holds the texts $texts, the live en-US holds $live');
+        }
       }
     }
 
@@ -154,6 +158,16 @@ List<String> relativeFiles(Directory locale) {
       file.path.replaceAll('\\', '/').substring(prefix.length),
   ]..sort();
 }
+
+/// The listing texts under [locale], as a sorted list of paths relative to it, leaving the `images/` tree out.
+///
+/// A draft holds the same texts as the live listing, so it can replace a live locale directory whole, but it holds its
+/// own screenshots: the Platform mode draft shows the Platform pages, not the live Studio ones.
+/// `test/architecture/play_screenshot_drafts_test.dart` guards the screenshots themselves.
+List<String> _textFiles(Directory locale) => [
+  for (final path in relativeFiles(locale))
+    if (!path.startsWith('images/')) path,
+];
 
 bool _listEquals(List<String> a, List<String> b) => a.length == b.length && a.indexed.every((e) => e.$2 == b[e.$1]);
 

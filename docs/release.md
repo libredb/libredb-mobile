@@ -256,10 +256,12 @@ The App Store listing reuses them (#199).
 `test/architecture/play_listing_metadata_test.dart` fails when a text is missing, empty or longer than Play allows (30, 80 and 4000 characters), or when the two locales do not hold the same files.
 The texts say only what the app does today, and that it signs in to the deployment it was built for; change them in the same pull request as a feature they name.
 
-The listing for an upcoming feature is drafted under `android/fastlane/drafts/<feature>/`, in the same layout, and passes the same test, which also requires both locales to hold the same files as the live `en-US`.
+The listing for an upcoming feature is drafted under `android/fastlane/drafts/<feature>/`, in the same layout, and passes the same test, which also requires both locales to hold the same listing texts as the live `en-US`.
 `android/fastlane/drafts/platform-mode/` holds the listing for the release that turns Platform mode on.
 #306 moves it into `android/fastlane/metadata/android/` in that pull request and deletes the draft directory.
-A file the feature does not change is a copy of the live one, so the move replaces whole locale directories.
+A text the feature does not change is a copy of the live one, so the move replaces whole locale directories.
+Its phone screenshots are its own, because a draft shows the feature's own pages: the eight under `android/fastlane/drafts/platform-mode/<locale>/images/phoneScreenshots/` are captured from the `main_mock.dart` fixtures, so they carry demo data only (Platform Admin, Example Org, `@example.org` users), and their names carry the order Play shows them in (#309).
+`test/architecture/play_screenshot_drafts_test.dart` pins Play's format rules on every draft screenshot, so an alpha channel, a bit depth other than 8, a side outside 320 to 3840 px, a longest side below 1080 or a long-to-short ratio above 2 fails in the repository instead of being refused in the Console.
 
 The release notes of each version come from the generated `CHANGELOG.md` and are never written by hand.
 The screenshots, the 512 px icon and the 1024 by 500 feature graphic are added during the phone walkthrough (#196), from the tool/studio-dev sample data only.
