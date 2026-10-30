@@ -105,45 +105,8 @@
   "@login_switch_to_light_mode": {},
   "login_switch_to_dark_mode": "Switch to dark mode",
   "@login_switch_to_dark_mode": {},
-  "onboarding_platform_title": "LibreDB Platform governs",
-  "@onboarding_platform_title": {},
-  "onboarding_platform_body": "Platform owns the connections, decides who may reach which database, and keeps a record of every statement that runs.",
-  "@onboarding_platform_body": {},
-  "onboarding_studio_title": "LibreDB Studio runs them",
-  "@onboarding_studio_title": {},
-  "onboarding_studio_body": "Studio holds every credential and opens every connection. It runs what you ask against the databases Platform has granted you, and this app never sees a password.",
-  "@onboarding_studio_body": {},
-  "onboarding_mobile_title": "This app is the window",
-  "@onboarding_mobile_title": {},
-  "onboarding_mobile_body": "Browse the databases you have been granted, read a table, run a statement and see the answer, from your phone.",
-  "@onboarding_mobile_body": {},
-  "onboarding_listings_title": "Where you already look",
-  "@onboarding_listings_title": {},
-  "onboarding_listings_body": "LibreDB is listed on {listings} official vendor and project sites.",
-  "@onboarding_listings_body": {
-    "placeholders": {
-      "listings": {
-        "type": "int"
-      }
-    }
-  },
-  "onboarding_next": "Next",
-  "@onboarding_next": {},
-  "onboarding_panel_position": "Panel {index} of {total}",
-  "@onboarding_panel_position": {
-    "placeholders": {
-      "index": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "onboarding_skip": "Skip",
   "@onboarding_skip": {},
-  "onboarding_done": "Get started",
-  "@onboarding_done": {},
   "community_source_available": "Source Available",
   "@community_source_available": {},
   "settings_subtitle": "Manage your account preferences",
@@ -1762,10 +1725,6 @@
   "@ob6_body": {"description": "The body of the sixth onboarding screen."},
   "ob6_you": "you",
   "@ob6_you": {"description": "Names the reader's own row in the demo grant list and the demo audit log of the sixth onboarding screen."},
-  "ob6_bye": "On to the sign-in",
-  "@ob6_bye": {"description": "The hand-off panel the onboarding ends on, after the last screen or Skip."},
-  "ob6_bye_note": "The introduction ends here; the app opens through Keycloak.",
-  "@ob6_bye_note": {"description": "Under ob6_bye on the hand-off panel."},
   "access_requests_title": "My requests",
   "@access_requests_title": {},
   "access_requests_new_title": "Request access",

@@ -105,45 +105,8 @@
   "@login_switch_to_light_mode": {},
   "login_switch_to_dark_mode": "Koyu temaya geç",
   "@login_switch_to_dark_mode": {},
-  "onboarding_platform_title": "LibreDB Platform yönetir",
-  "@onboarding_platform_title": {},
-  "onboarding_platform_body": "Bağlantıların sahibi Platform'dur; kimin hangi veritabanına erişeceğine karar verir ve çalışan her ifadenin kaydını tutar.",
-  "@onboarding_platform_body": {},
-  "onboarding_studio_title": "LibreDB Studio çalıştırır",
-  "@onboarding_studio_title": {},
-  "onboarding_studio_body": "Her kimlik bilgisini Studio tutar ve her bağlantıyı Studio açar. Platform'un sana verdiği veritabanlarında istediğini çalıştırır; bu uygulama hiçbir parolayı görmez.",
-  "@onboarding_studio_body": {},
-  "onboarding_mobile_title": "Bu uygulama penceredir",
-  "@onboarding_mobile_title": {},
-  "onboarding_mobile_body": "Sana verilen veritabanlarına göz at, bir tabloyu oku, bir ifade çalıştır ve cevabı gör; hepsi telefonundan.",
-  "@onboarding_mobile_body": {},
-  "onboarding_listings_title": "Zaten baktığın yerlerde",
-  "@onboarding_listings_title": {},
-  "onboarding_listings_body": "LibreDB, {listings} resmî üretici ve proje sitesinde listeleniyor.",
-  "@onboarding_listings_body": {
-    "placeholders": {
-      "listings": {
-        "type": "int"
-      }
-    }
-  },
-  "onboarding_next": "İleri",
-  "@onboarding_next": {},
-  "onboarding_panel_position": "{total} panelden {index}.",
-  "@onboarding_panel_position": {
-    "placeholders": {
-      "index": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "onboarding_skip": "Atla",
   "@onboarding_skip": {},
-  "onboarding_done": "Başlayalım",
-  "@onboarding_done": {},
   "community_source_available": "Kaynak Kodu Erişilebilir",
   "@community_source_available": {},
   "settings_subtitle": "Hesap tercihlerinizi yönetin",
@@ -1752,10 +1715,6 @@
   "@ob6_body": {"description": "The body of the sixth onboarding screen."},
   "ob6_you": "siz",
   "@ob6_you": {"description": "Names the reader's own row in the demo grant list and the demo audit log of the sixth onboarding screen."},
-  "ob6_bye": "Giriş sayfasına gidiliyor",
-  "@ob6_bye": {"description": "The hand-off panel the onboarding ends on, after the last screen or Skip."},
-  "ob6_bye_note": "Tanıtım burada biter; uygulama Keycloak ile açılır.",
-  "@ob6_bye_note": {"description": "Under ob6_bye on the hand-off panel."},
   "access_requests_title": "Taleplerim",
   "@access_requests_title": {},
   "access_requests_new_title": "Erişim iste",
