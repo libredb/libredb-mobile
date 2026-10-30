@@ -95,5 +95,4 @@ flutter:
   assets:
     - assets/mock/
     - assets/fonts/OFL.txt
-    - assets/adoption.json
     - NOTICE

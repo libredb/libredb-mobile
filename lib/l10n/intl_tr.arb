@@ -105,17 +105,6 @@
   "@login_switch_to_light_mode": {},
   "login_switch_to_dark_mode": "Koyu temaya geç",
   "@login_switch_to_dark_mode": {},
-  "onboarding_studio_figures": "{engines} veritabanı motoru, {channels} kanalda yayımlanıyor",
-  "@onboarding_studio_figures": {
-    "placeholders": {
-      "engines": {
-        "type": "int"
-      },
-      "channels": {
-        "type": "int"
-      }
-    }
-  },
   "onboarding_skip": "Atla",
   "@onboarding_skip": {},
   "community_source_available": "Kaynak Kodu Erişilebilir",
