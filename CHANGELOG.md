@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/libredb/libredb-mobile/compare/v1.1.0...v1.1.1) (2026-10-30)
+
+
+### Documentation
+
+* **release:** say who may push a version tag by hand ([b72c581](https://github.com/libredb/libredb-mobile/commit/b72c58131d2af37e9c81d9383279094123f2093c))
+
 ## [1.1.0](https://github.com/libredb/libredb-mobile/compare/v1.0.2...v1.1.0) (2026-10-30)
 
 
