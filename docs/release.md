@@ -24,6 +24,7 @@ iOS is released separately on macOS (#199).
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
 A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
+Only an organization admin can push it: the `refs/tags/v*` ruleset refuses a matching tag from anyone else, which is what lets the build and the upload run without a reviewer.
 The build number grows with every release because release-please raises it, and Play refuses a bundle whose version code it already has.
 
 Release pull requests that release-please opens with `GITHUB_TOKEN` start no CI run of their own.
