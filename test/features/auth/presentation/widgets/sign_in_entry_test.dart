@@ -38,6 +38,7 @@ void main() {
     String? helper = 'Sign in to Studio',
     SessionTarget target = SessionTarget.studio,
     LoginState state = const LoginInitialState(),
+    SignInEmphasis emphasis = SignInEmphasis.primary,
   }) {
     when(() => bloc.state).thenReturn(state);
     return MaterialApp(
@@ -62,6 +63,7 @@ void main() {
               label: 'Sign in',
               helper: helper,
               showsReachability: showsReachability,
+              emphasis: emphasis,
               onTap: (_) {},
             ),
           ),
@@ -70,8 +72,42 @@ void main() {
     );
   }
 
+  // ButtonStyleButton, not FilledButton: an entry is drawn by whichever of the theme's buttons its emphasis picks,
+  // and being enabled is the same question for both.
   bool buttonIsEnabled(WidgetTester tester) =>
-      tester.widget<FilledButton>(find.byKey(loginButtonSsoKey)).onPressed != null;
+      tester.widget<ButtonStyleButton>(find.byKey(loginButtonSsoKey)).onPressed != null;
+
+  group('emphasis', () {
+    testWidgets('a primary entry is drawn by the filled button', (tester) async {
+      await tester.pumpWidget(buildEntry(showsReachability: false, emphasis: SignInEmphasis.primary));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget(find.byKey(loginButtonSsoKey)), isA<FilledButton>());
+    });
+
+    testWidgets('a secondary entry is drawn by the outlined button, which paints no primary fill', (tester) async {
+      await tester.pumpWidget(buildEntry(showsReachability: false, emphasis: SignInEmphasis.secondary));
+      await tester.pumpAndSettle();
+
+      final button = find.byKey(loginButtonSsoKey);
+      expect(tester.widget(button), isA<OutlinedButton>());
+      expect(tester.widget(button), isNot(isA<FilledButton>()));
+      expect(
+        tester.widget<Material>(find.descendant(of: button, matching: find.byType(Material)).first).color,
+        isNot(Theme.of(tester.element(button)).colorScheme.primary),
+      );
+    });
+
+    testWidgets('a secondary entry still spans its column and stays enabled', (tester) async {
+      await tester.pumpWidget(
+        buildEntry(showsReachability: false, studio: TargetReachability.reachable, emphasis: SignInEmphasis.secondary),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.getSize(find.byKey(loginButtonSsoKey)).width, tester.getSize(find.byType(SignInEntry)).width);
+      expect(buttonIsEnabled(tester), isTrue, reason: 'stepping back is a treatment, not a restriction');
+    });
+  });
 
   group('an entry that does not gate itself', () {
     testWidgets('keeps its button enabled while its server does not answer', (tester) async {
