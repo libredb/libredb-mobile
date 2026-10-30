@@ -113,17 +113,6 @@
   "@onboarding_studio_title": {},
   "onboarding_studio_body": "Her kimlik bilgisini Studio tutar ve her bağlantıyı Studio açar. Platform'un sana verdiği veritabanlarında istediğini çalıştırır; bu uygulama hiçbir parolayı görmez.",
   "@onboarding_studio_body": {},
-  "onboarding_studio_figures": "{engines} veritabanı motoru, {channels} kanalda yayımlanıyor",
-  "@onboarding_studio_figures": {
-    "placeholders": {
-      "engines": {
-        "type": "int"
-      },
-      "channels": {
-        "type": "int"
-      }
-    }
-  },
   "onboarding_mobile_title": "Bu uygulama penceredir",
   "@onboarding_mobile_title": {},
   "onboarding_mobile_body": "Sana verilen veritabanlarına göz at, bir tabloyu oku, bir ifade çalıştır ve cevabı gör; hepsi telefonundan.",

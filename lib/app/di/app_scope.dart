@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
-import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
 import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/app/connectivity/connectivity_cubit.dart';
 import 'package:libredb_mobile/features/object_browser/application/session_default_entry.dart';
@@ -127,9 +126,6 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<ProjectLinks>.value(value: dependencies.projectLinks),
         // A device preference that belongs to no session, beside the other values that do not.
         RepositoryProvider<IOnboardingSeenStore>(create: (_) => dependencies.createOnboardingSeenStore()),
-        // Beside it, for the same reason: the introduction runs before anyone signs in, and these figures belong to
-        // the build rather than to a session.
-        RepositoryProvider<IAdoptionFiguresSource>(create: (_) => dependencies.createAdoptionFiguresSource()),
         RepositoryProvider<AuthMode>.value(value: dependencies.authMode),
         // Provided above SessionCubit and IAuthRepository, which clear the stored session when they end one.
         RepositoryProvider<IAuthSessionRepository>(

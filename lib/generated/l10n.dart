@@ -493,16 +493,6 @@ class S {
     );
   }
 
-  /// `{engines} database engines, published on {channels} channels`
-  String onboarding_studio_figures(int engines, int channels) {
-    return Intl.message(
-      '$engines database engines, published on $channels channels',
-      name: 'onboarding_studio_figures',
-      desc: '',
-      args: [engines, channels],
-    );
-  }
-
   /// `This app is the window`
   String get onboarding_mobile_title {
     return Intl.message('This app is the window', name: 'onboarding_mobile_title', desc: '', args: []);

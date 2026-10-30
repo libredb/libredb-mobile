@@ -1,6 +1,4 @@
-import 'package:libredb_mobile/features/onboarding/data/repositories/adoption_figures_asset.dart';
 import 'package:libredb_mobile/features/onboarding/data/repositories/onboarding_seen_preferences.dart';
-import 'package:libredb_mobile/features/onboarding/domain/repositories/adoption_figures_source.dart';
 import 'package:libredb_mobile/features/onboarding/domain/repositories/onboarding_seen_store.dart';
 import 'package:libredb_mobile/features/app_lock/data/repositories/app_lock_settings_preferences.dart';
 import 'package:libredb_mobile/features/app_lock/data/services/channel_recents_preview.dart';
@@ -265,12 +263,6 @@ class AppDependencies {
   /// runs before anyone signs in. Deliberately absent from [createUserDataRegistry] — "remove my data" must not make
   /// the app re-introduce itself to someone who has used it for months.
   IOnboardingSeenStore createOnboardingSeenStore() => OnboardingSeenPreferences();
-
-  /// The adoption figures the introduction shows. They are baked in at build time, so this opens no connection: it
-  /// reads the asset `scripts/generate_adoption.sh` writes and commits, and falls back to the figures in the source
-  /// when it cannot. Deliberately not a network repository — the app talks to Studio and Platform and to nothing
-  /// else, which `import_guard_test.dart` holds it to.
-  IAdoptionFiguresSource createAdoptionFiguresSource() => const AdoptionFiguresAsset();
 
   /// Studio's session endpoint: who the signed-in user is.
   IStudioIdentityRepository createStudioIdentityRepository(ApiClient apiClient) => StudioIdentityRepository(apiClient);

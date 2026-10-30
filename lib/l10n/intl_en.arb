@@ -113,17 +113,6 @@
   "@onboarding_studio_title": {},
   "onboarding_studio_body": "Studio holds every credential and opens every connection. It runs what you ask against the databases Platform has granted you, and this app never sees a password.",
   "@onboarding_studio_body": {},
-  "onboarding_studio_figures": "{engines} database engines, published on {channels} channels",
-  "@onboarding_studio_figures": {
-    "placeholders": {
-      "engines": {
-        "type": "int"
-      },
-      "channels": {
-        "type": "int"
-      }
-    }
-  },
   "onboarding_mobile_title": "This app is the window",
   "@onboarding_mobile_title": {},
   "onboarding_mobile_body": "Browse the databases you have been granted, read a table, run a statement and see the answer, from your phone.",
