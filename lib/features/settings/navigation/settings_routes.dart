@@ -7,14 +7,19 @@ class SettingsFeatureRoutes {
   /// The settings route at [path] under [name], one per shell: go_router wants every route name once, and analytics
   /// logs a page by its name. [securitySection] builds the rows of its Security section, which the app composes from
   /// another feature (see [SettingsPage.securitySection]).
-  static List<GoRoute> routes({required String path, required String name, WidgetBuilder? securitySection}) => [
+  static List<GoRoute> routes({
+    required String path,
+    required String name,
+    WidgetBuilder? securitySection,
+    WidgetBuilder? introductionTile,
+  }) => [
     GoRoute(
       name: name,
       path: path,
       pageBuilder: (context, state) => appTransitionPage(
         state: state,
         type: AppPageTransitionType.fade,
-        child: SettingsPage(securitySection: securitySection),
+        child: SettingsPage(securitySection: securitySection, introductionTile: introductionTile),
       ),
     ),
   ];
