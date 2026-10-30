@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/libredb/libredb-mobile/compare/v1.0.2...v1.1.0) (2026-10-30)
+
+
+### Features
+
+* **auth:** Studio is the primary sign-in, Platform steps back ([3f2a3ee](https://github.com/libredb/libredb-mobile/commit/3f2a3ee55315b0f9870496319dd27d124434cedf))
+* **auth:** Studio is the primary sign-in, Platform steps back ([90826fe](https://github.com/libredb/libredb-mobile/commit/90826fef246b60364079c142ca3c5cc2f2ae05c5))
+* **settings:** play the introduction again from Help & Resources ([4931ba7](https://github.com/libredb/libredb-mobile/commit/4931ba70d5f5c05a6d4daa2caece196da7b49df6))
+
 ## [1.0.2](https://github.com/libredb/libredb-mobile/compare/v1.0.1...v1.0.2) (2026-10-30)
 
 
