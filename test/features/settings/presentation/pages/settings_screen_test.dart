@@ -185,6 +185,59 @@ void main() {
       expect(find.text('Read the documentation and guides on GitHub'), findsOneWidget);
     });
 
+    // The introduction is shown once, on the first run, and until now there was no way back to it: a user who
+    // skipped it, or who wanted to read a screen again, had nowhere to go. Settings is where a user looks for
+    // something they saw once, so Help & Resources offers it (#129).
+    group('the introduction', () {
+      testWidgets('Help & Resources offers to watch the introduction again', (tester) async {
+        await pumpAppOnSettings(tester);
+
+        expect(find.byKey(settingsIntroductionButtonKey), findsOneWidget);
+        expect(
+          find.descendant(of: find.byKey(settingsIntroductionButtonKey), matching: find.text('Introduction')),
+          findsOneWidget,
+        );
+        expect(find.text('Watch the six introduction screens again'), findsOneWidget);
+      });
+
+      testWidgets('tapping it plays the deck, and leaving it comes back to settings', (tester) async {
+        await pumpAppOnSettings(tester);
+
+        await tester.ensureVisible(find.byKey(settingsIntroductionButtonKey));
+        await tester.tap(find.byKey(settingsIntroductionButtonKey));
+        await tester.pumpAndSettle();
+        expect(find.byKey(onboardingSkipKey), findsOneWidget, reason: 'the introduction plays over the settings');
+
+        await tester.tap(find.byKey(onboardingSkipKey));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(onboardingSkipKey), findsNothing);
+        expect(
+          find.byKey(settingsIntroductionButtonKey),
+          findsOneWidget,
+          reason: 'a replay ends on settings, not on the sign-in the first run leads to',
+        );
+      });
+
+      testWidgets('names it in Turkish', (tester) async {
+        await pumpAppOnSettings(tester);
+        final router = tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig! as GoRouter;
+        router.go(ApplicationRoutesConstants.settings);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(settingsChangeLanguageButtonKey));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Türkçe').last);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(of: find.byKey(settingsIntroductionButtonKey), matching: find.text('Tanıtım')),
+          findsOneWidget,
+        );
+        expect(find.text('Altı tanıtım ekranını yeniden izle'), findsOneWidget);
+      });
+    });
+
     // The licences page shows the NOTICE that carries the MIT notice of the template the app grew from.
     testWidgets('opens the licences page from Help & Resources', (WidgetTester tester) async {
       TestEnv.authenticate();

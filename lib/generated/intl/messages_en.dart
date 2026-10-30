@@ -1171,6 +1171,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "save": MessageLookupByLibrary.simpleMessage("Save"),
     "settings": MessageLookupByLibrary.simpleMessage("Settings"),
     "settings_appearance": MessageLookupByLibrary.simpleMessage("Appearance"),
+    "settings_introduction": MessageLookupByLibrary.simpleMessage("Introduction"),
+    "settings_introduction_subtitle": MessageLookupByLibrary.simpleMessage("Watch the six introduction screens again"),
     "settings_licenses": MessageLookupByLibrary.simpleMessage("Licenses"),
     "settings_licenses_subtitle": MessageLookupByLibrary.simpleMessage(
       "The licenses of LibreDB Mobile and the code it includes",

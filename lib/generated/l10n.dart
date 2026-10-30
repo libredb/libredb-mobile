@@ -248,6 +248,21 @@ class S {
     );
   }
 
+  /// `Introduction`
+  String get settings_introduction {
+    return Intl.message('Introduction', name: 'settings_introduction', desc: '', args: []);
+  }
+
+  /// `Watch the six introduction screens again`
+  String get settings_introduction_subtitle {
+    return Intl.message(
+      'Watch the six introduction screens again',
+      name: 'settings_introduction_subtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Documentation`
   String get documentation {
     return Intl.message('Documentation', name: 'documentation', desc: '', args: []);

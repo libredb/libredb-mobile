@@ -36,6 +36,8 @@
   "community_docs": "Dokümantasyon",
   "help_resources": "Yardım ve Kaynaklar",
   "help_resources_subtitle": "GitHub'daki dokümantasyonu ve rehberleri okuyun",
+  "settings_introduction": "Tanıtım",
+  "settings_introduction_subtitle": "Altı tanıtım ekranını yeniden izle",
   "documentation": "Dokümantasyon",
   "error_auth_invalid_access_token": "Geçersiz erişim belirteci",
   "error_auth_session_persist_failed": "Oturum kaydedilemedi",
