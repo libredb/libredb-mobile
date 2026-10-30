@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/libredb/libredb-mobile/compare/v1.0.1...v1.0.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* **theme:** put back the previewed mode on every way out but Apply ([d20a0a3](https://github.com/libredb/libredb-mobile/commit/d20a0a3a7e4774e1ac80f0da92ad2b2bfe078076))
+* **theme:** put back the previewed mode on every way out but Apply ([a546fb6](https://github.com/libredb/libredb-mobile/commit/a546fb6fd906f3e16e7a8d428fc99cd79bd315a9)), closes [#412](https://github.com/libredb/libredb-mobile/issues/412)
+
 ## [1.0.1](https://github.com/libredb/libredb-mobile/compare/v1.0.0...v1.0.1) (2026-10-30)
 
 
