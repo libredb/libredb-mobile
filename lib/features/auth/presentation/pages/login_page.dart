@@ -220,8 +220,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   /// The sign-in: the error line and the sign-in buttons, which a misconfigured build leaves out. A build without a
-  /// Platform target shows the single sign-on button; one with a Platform target shows a Studio and a Platform button
-  /// of equal weight, each with its helper text.
+  /// Platform target shows the single sign-on button; one with a Platform target shows Studio as the primary action
+  /// and Platform, the admin path, as a quiet one below it, each with its helper text.
   Widget _ssoFormBody(BuildContext context, AuthMode mode, {required bool showCommunity}) {
     final l10n = S.of(context);
     return Column(
@@ -240,6 +240,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 label: l10n.login_sso_button,
                 helper: null,
                 showsReachability: false,
+                emphasis: SignInEmphasis.primary,
                 onTap: (target) => _onSsoTapped(context, target),
               ),
             ),
@@ -253,6 +254,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   label: l10n.login_studio_button,
                   helper: l10n.login_studio_helper,
                   showsReachability: true,
+                  emphasis: SignInEmphasis.primary,
                   onTap: (target) => _onSsoTapped(context, target),
                 ),
                 const SizedBox(height: 20),
@@ -262,6 +264,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   label: l10n.login_platform_button,
                   helper: l10n.login_platform_helper,
                   showsReachability: true,
+                  emphasis: SignInEmphasis.secondary,
                   onTap: (target) => _onSsoTapped(context, target),
                 ),
               ],
