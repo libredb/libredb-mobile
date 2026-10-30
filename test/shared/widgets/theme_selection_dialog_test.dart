@@ -81,6 +81,52 @@ void main() {
       await tester.pumpAndSettle();
       expect(paletteNow(tester), other);
     });
+
+    // Cancel was taught to put back what the dialog opened on (#371); the X, the barrier and the back gesture were
+    // not, so the same "nothing committed" gesture committed or did not depending on which one the user reached for
+    // (#412). Apply is the only action that keeps a palette.
+    Future<void> previewAnother(WidgetTester tester, AppThemePalette opened) async {
+      final other = AppThemePalette.values.firstWhere((palette) => palette != opened);
+      await tester.tap(find.text(other.name[0].toUpperCase() + other.name.substring(1)));
+      await tester.pumpAndSettle();
+      expect(paletteNow(tester), other, reason: 'the card has to apply at once, or there is nothing to put back');
+    }
+
+    testWidgets('closing with the X puts back the palette the dialog opened on', (tester) async {
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      await previewAnother(tester, opened);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(paletteNow(tester), opened);
+      expect(find.byType(ThemeSelectionDialog), findsNothing, reason: 'the X closes the dialog');
+    });
+
+    testWidgets('tapping outside the dialog puts back the palette the dialog opened on', (tester) async {
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      await previewAnother(tester, opened);
+
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+
+      expect(paletteNow(tester), opened);
+      expect(find.byType(ThemeSelectionDialog), findsNothing, reason: 'the barrier closes the dialog');
+    });
+
+    testWidgets('the back gesture puts back the palette the dialog opened on', (tester) async {
+      await openDialog(tester, const Size(412, 915));
+      final opened = paletteNow(tester);
+      await previewAnother(tester, opened);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(paletteNow(tester), opened);
+      expect(find.byType(ThemeSelectionDialog), findsNothing, reason: 'the back gesture closes the dialog');
+    });
   });
 
   // A palette card applies at once and the dialog stays open, so nothing on screen moves enough for a screen reader
