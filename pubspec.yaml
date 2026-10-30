@@ -1,7 +1,7 @@
 name: libredb_mobile
 description: "LibreDB Mobile, the Android and iOS client of LibreDB Studio"
 publish_to: 'none'
-version: 1.0.2+4
+version: 1.1.0+5
 
 # fvm flutter --version
 # Flutter 3.47.8 • channel stable • https://github.com/flutter/flutter.git
