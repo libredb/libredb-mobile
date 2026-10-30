@@ -19,10 +19,14 @@ import '../../../../generated/l10n.dart';
 import '../../../../infrastructure/config/project_links.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, this.securitySection});
+  const SettingsScreen({super.key, this.securitySection, this.introductionTile});
 
   /// The rows of the Security section, which the app composes from the app lock feature; null shows no such section.
   final WidgetBuilder? securitySection;
+
+  /// The Help & Resources row that plays the introduction again, composed by the app from the onboarding feature;
+  /// null leaves the section as it was (#129).
+  final WidgetBuilder? introductionTile;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +100,7 @@ class SettingsScreen extends StatelessWidget {
               _SettingsSection(
                 title: S.of(context).help_resources,
                 children: [
+                  if (introductionTile != null) introductionTile!(context),
                   _SettingsTile(
                     key: settingsWebsiteButtonKey,
                     icon: Icons.language,

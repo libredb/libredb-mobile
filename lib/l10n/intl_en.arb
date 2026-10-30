@@ -36,6 +36,8 @@
   "community_docs": "Documentation",
   "help_resources": "Help & Resources",
   "help_resources_subtitle": "Read the documentation and guides on GitHub",
+  "settings_introduction": "Introduction",
+  "settings_introduction_subtitle": "Watch the six introduction screens again",
   "documentation": "Documentation",
   "error_auth_invalid_access_token": "Invalid access token",
   "error_auth_session_persist_failed": "Could not save the session",
