@@ -123,15 +123,50 @@ void main() {
       expect(find.text('Day and night'), findsNothing, reason: 'Apply closes the dialog');
     });
 
-    testWidgets('closing with the X keeps the mode the user picked', (tester) async {
+    // The X sits one tap from Cancel and reads as the same gesture — "I am done here, nothing committed". Leaving the
+    // previewed mode in force, and in storage across restarts, made one of the two commit and the other not (#412).
+    testWidgets('closing with the X puts back the mode the dialog opened on', (tester) async {
       await openDialog(tester, seed: ThemeMode.system);
 
       await tester.tap(find.text('Light'));
       await tester.pumpAndSettle();
+      expect(
+        modeNow(tester),
+        ThemeMode.light,
+        reason: 'the card has to apply at once, or there is nothing to put back',
+      );
+
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
 
-      expect(modeNow(tester), ThemeMode.light);
+      expect(modeNow(tester), ThemeMode.system);
+      expect(find.text('Day and night'), findsNothing, reason: 'the X closes the dialog');
+    });
+
+    testWidgets('tapping outside the dialog puts back the mode the dialog opened on', (tester) async {
+      await openDialog(tester, seed: ThemeMode.system);
+
+      await tester.tap(find.text('Dark'));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+
+      expect(modeNow(tester), ThemeMode.system);
+      expect(find.text('Day and night'), findsNothing, reason: 'the barrier closes the dialog');
+    });
+
+    testWidgets('the back gesture puts back the mode the dialog opened on', (tester) async {
+      await openDialog(tester, seed: ThemeMode.system);
+
+      await tester.tap(find.text('Dark'));
+      await tester.pumpAndSettle();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(modeNow(tester), ThemeMode.system);
+      expect(find.text('Day and night'), findsNothing, reason: 'the back gesture closes the dialog');
     });
 
     testWidgets('names the modes in Turkish', (tester) async {

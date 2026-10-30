@@ -9,20 +9,29 @@ import 'package:libredb_mobile/shared/design_system/theme/app_theme_palette.dart
 /// Lets the user try the palettes and keep one.
 ///
 /// A tapped card applies at once, which is what makes the dialog a preview rather than a form — and which is why
-/// Cancel has to put back the palette the dialog opened on. Both buttons used to do nothing but pop, so a user who
-/// tried one, disliked it and pressed Cancel kept what they had just rejected (#371).
+/// every way out but Apply puts back the palette the dialog opened on. Both buttons used to do nothing but pop, so a
+/// user who tried one, disliked it and pressed Cancel kept what they had just rejected (#371); the X, the barrier and
+/// the back gesture read as the same "nothing committed" gesture and kept it too until [show] started restoring
+/// whatever the dialog did not commit (#412).
 class ThemeSelectionDialog extends StatelessWidget {
   const ThemeSelectionDialog({super.key, required this.openedOn});
 
-  /// What the app was wearing when the dialog opened, and what Cancel goes back to.
+  /// What the app was wearing when the dialog opened, and what every way out but Apply goes back to.
   final AppThemePalette openedOn;
 
-  static Future<void> show(BuildContext context) {
-    final openedOn = context.read<ThemeBloc>().state.palette;
-    return showDialog(
+  /// Opens the dialog and puts back [openedOn] unless Apply closed it — the one action that keeps a tried palette.
+  static Future<void> show(BuildContext context) async {
+    final theme = context.read<ThemeBloc>();
+    final openedOn = theme.state.palette;
+    final kept = await showDialog<bool>(
       context: context,
       builder: (context) => ThemeSelectionDialog(openedOn: openedOn),
     );
+    if (kept == true || theme.state.palette == openedOn) return;
+    theme.add(ChangeThemePalette(palette: openedOn));
+    // The dialog is gone, so the only thing that moved is the tile behind it. Announce the palette that is back, as
+    // the card taps announce the ones the user tried (#375).
+    if (context.mounted) _announce(context, openedOn);
   }
 
   static String _title(S l10n, AppThemePalette palette) => switch (palette) {
@@ -111,8 +120,8 @@ class ThemeSelectionDialog extends StatelessWidget {
                     spacing: 12,
                     runSpacing: 8,
                     children: [
-                      TextButton(onPressed: () => _cancel(context), child: Text(l10n.cancel)),
-                      FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.apply)),
+                      TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                      FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.apply)),
                     ],
                   ),
                 ),
@@ -285,17 +294,16 @@ class ThemeSelectionDialog extends StatelessWidget {
 
   void _applyTheme(BuildContext context, AppThemePalette palette) {
     context.read<ThemeBloc>().add(ChangeThemePalette(palette: palette));
-    // The dialog stays open and only its colours change, which moves nothing a screen reader reports. Without this a
-    // blind user taps a card and hears nothing at all (#375).
+    _announce(context, palette);
+  }
+
+  /// Says which palette is in force now. The dialog stays open on a card tap and only its colours change, which moves
+  /// nothing a screen reader reports; without this a blind user taps a card and hears nothing at all (#375).
+  static void _announce(BuildContext context, AppThemePalette palette) {
     SemanticsService.sendAnnouncement(
       View.of(context),
       S.of(context).theme_palette_applied(_title(S.of(context), palette)),
       Directionality.of(context),
     );
-  }
-
-  void _cancel(BuildContext context) {
-    _applyTheme(context, openedOn);
-    Navigator.of(context).pop();
   }
 }

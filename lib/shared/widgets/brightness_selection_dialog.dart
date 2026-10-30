@@ -10,21 +10,29 @@ import 'package:libredb_mobile/generated/l10n.dart';
 /// login page only ever stores 'light' or 'dark', so until this dialog existed one tap there left the app unable to
 /// follow the phone again (#410).
 ///
-/// A tapped card applies at once, which makes the dialog a preview rather than a form — and which is why Cancel has
-/// to put back the mode the dialog opened on, the rule the palette dialog carries since #371: a user who tries dark,
-/// dislikes it and presses Cancel must not be left in dark.
+/// A tapped card applies at once, which makes the dialog a preview rather than a form — and which is why every way
+/// out but Apply puts back the mode the dialog opened on: a user who tries dark, dislikes it and leaves must not be
+/// left in dark. Cancel has done that since #371; the X, the barrier and the back gesture read as the same "nothing
+/// committed" gesture and now do the same ([show] restores whatever the dialog did not commit, #412).
 class BrightnessSelectionDialog extends StatelessWidget {
   const BrightnessSelectionDialog({super.key, required this.openedOn});
 
-  /// What the app was on when the dialog opened, and what Cancel goes back to.
+  /// What the app was on when the dialog opened, and what every way out but Apply goes back to.
   final ThemeMode openedOn;
 
-  static Future<void> show(BuildContext context) {
-    final openedOn = context.read<ThemeBloc>().state.themeMode;
-    return showDialog(
+  /// Opens the dialog and puts back [openedOn] unless Apply closed it — the one action that keeps a previewed mode.
+  static Future<void> show(BuildContext context) async {
+    final theme = context.read<ThemeBloc>();
+    final openedOn = theme.state.themeMode;
+    final kept = await showDialog<bool>(
       context: context,
       builder: (context) => BrightnessSelectionDialog(openedOn: openedOn),
     );
+    if (kept == true || theme.state.themeMode == openedOn) return;
+    theme.add(SelectBrightness(themeMode: openedOn));
+    // The dialog is gone, so the only thing that moved is the tile behind it. Announce the mode that is back, as the
+    // card taps announce the ones the user tried (#375).
+    if (context.mounted) _announce(context, openedOn);
   }
 
   /// The modes in the order they are offered: the phone's setting first, because it is the one a user comes back to.
@@ -100,8 +108,8 @@ class BrightnessSelectionDialog extends StatelessWidget {
                     spacing: 12,
                     runSpacing: 8,
                     children: [
-                      TextButton(onPressed: () => _cancel(context), child: Text(l10n.cancel)),
-                      FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.apply)),
+                      TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+                      FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.apply)),
                     ],
                   ),
                 ),
@@ -160,18 +168,17 @@ class BrightnessSelectionDialog extends StatelessWidget {
 
   void _apply(BuildContext context, ThemeMode mode) {
     context.read<ThemeBloc>().add(SelectBrightness(themeMode: mode));
-    // The dialog stays open and only its colours change, which moves nothing a screen reader reports. Without this a
-    // blind user taps a card and hears nothing at all (#375).
+    _announce(context, mode);
+  }
+
+  /// Says which mode is in force now. The dialog stays open on a card tap and only its colours change, which moves
+  /// nothing a screen reader reports; without this a blind user taps a card and hears nothing at all (#375).
+  static void _announce(BuildContext context, ThemeMode mode) {
     SemanticsService.sendAnnouncement(
       View.of(context),
       S.of(context).brightness_applied(_title(S.of(context), mode)),
       Directionality.of(context),
     );
-  }
-
-  void _cancel(BuildContext context) {
-    _apply(context, openedOn);
-    Navigator.of(context).pop();
   }
 }
 
