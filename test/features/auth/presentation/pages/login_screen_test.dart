@@ -247,7 +247,7 @@ void main() {
 
         expect(client.signIns, 1);
         expect(find.text(message), findsOneWidget);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
         expect(location(tester), ApplicationRoutesConstants.login);
       });
     }
@@ -273,7 +273,7 @@ void main() {
 
         expect(client.signIns, 1);
         expect(find.text(message), findsOneWidget);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
         expect(location(tester), ApplicationRoutesConstants.login);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.jwtToken.key), isNull);
         expect(await FlutterSecureStorageAdapter().read(SecureStorageKeys.refreshToken.key), isNull);
@@ -300,7 +300,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(_failedMessage), findsNothing);
-      expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+      expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
     });
 
     testWidgets('a misconfigured build announces its error to a screen reader', (tester) async {
@@ -400,13 +400,43 @@ void main() {
     group('two entries', () {
       final platformButton = find.byKey(loginButtonPlatformKey);
 
+      /// The fill the button actually paints, read off the `Material` a `ButtonStyleButton` builds, so the
+      /// assertion survives the theme resolving the style rather than the widget carrying it.
+      Color paintedFill(WidgetTester tester, Finder button) =>
+          tester.widget<Material>(find.descendant(of: button, matching: find.byType(Material)).first).color!;
+
+      // The two ways in used to be the same FilledButton, so nothing on the page said which one an ordinary user
+      // wants. Studio is the ordinary way in and keeps the filled, primary treatment; Platform is for admins and
+      // steps back to the quiet outlined one. Both still sign in, and both still span the column.
+      testWidgets('Studio reads as the primary action and Platform steps back to a quiet button', (tester) async {
+        await pumpOidcApp(tester, OidcDependencies(ScriptedOidcClient(), platform: _withPlatform));
+
+        final cs = Theme.of(tester.element(find.byType(LoginScreen))).colorScheme;
+
+        expect(tester.widget(ssoButton), isA<FilledButton>(), reason: 'Studio is the page primary action');
+        expect(
+          tester.widget(platformButton),
+          isA<OutlinedButton>(),
+          reason: 'Platform is the admin path and must not carry the primary weight',
+        );
+        expect(tester.widget(platformButton), isNot(isA<FilledButton>()));
+        expect(paintedFill(tester, ssoButton), cs.primary, reason: 'the primary fill comes from the scheme');
+        expect(
+          paintedFill(tester, platformButton),
+          isNot(cs.primary),
+          reason: 'equal fills are exactly what made the two buttons indistinguishable',
+        );
+        expect(find.widgetWithText(FilledButton, 'Sign in to Platform'), findsNothing);
+        expect(tester.getSize(ssoButton).width, tester.getSize(platformButton).width);
+      });
+
       testWidgets('a build with a Platform target shows Studio, then Platform, each with its helper text', (
         tester,
       ) async {
         await pumpOidcApp(tester, OidcDependencies(ScriptedOidcClient(), platform: _withPlatform));
 
         expect(find.widgetWithText(FilledButton, 'Sign in to Studio'), findsOneWidget);
-        expect(find.widgetWithText(FilledButton, 'Sign in to Platform'), findsOneWidget);
+        expect(find.widgetWithText(OutlinedButton, 'Sign in to Platform'), findsOneWidget);
         expect(find.text('Sign in with SSO'), findsNothing);
         expect(find.text(_studioHelper), findsOneWidget);
         expect(find.text(_platformHelper), findsOneWidget);
@@ -418,7 +448,7 @@ void main() {
         await pumpOidcApp(tester, OidcDependencies(ScriptedOidcClient(), platform: _withPlatform), language: 'tr');
 
         expect(find.widgetWithText(FilledButton, "Studio'ya giriş yap"), findsOneWidget);
-        expect(find.widgetWithText(FilledButton, "Platform'a giriş yap"), findsOneWidget);
+        expect(find.widgetWithText(OutlinedButton, "Platform'a giriş yap"), findsOneWidget);
         expect(
           find.text('Platform yöneticileri için. İlk Platform girişiniz lisansın bir yönetici koltuğunu kullanır.'),
           findsOneWidget,
@@ -464,14 +494,14 @@ void main() {
 
         expect(find.descendant(of: platformButton, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
         expect(find.descendant(of: ssoButton, matching: find.byType(CircularProgressIndicator)), findsNothing);
-        expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
+        expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNull);
 
         answer.complete(const OidcSignInCancelled());
         await tester.pumpAndSettle();
 
-        expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
         expect(client.signIns, 1);
       });
 
@@ -502,8 +532,8 @@ void main() {
         ]) {
           expect(await FlutterSecureStorageAdapter().read(key.key), isNull, reason: key.key);
         }
-        expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
       });
 
       for (final (signIn, returnUrl, landing) in [
@@ -547,10 +577,10 @@ void main() {
 
           expect(find.byType(StudioUnreachablePage), findsNothing);
           expect(find.byType(LoginScreen), findsOneWidget);
-          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
+          expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNull);
           expect(find.text(studioDownMessage), findsOneWidget);
           expect(studioRetry, findsOneWidget);
-          expect(tester.widget<FilledButton>(platformButton).onPressed, isNotNull);
+          expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNotNull);
           expect(find.text(platformDownMessage), findsNothing);
           expect(platformRetry, findsNothing);
           expect(platform.checks, 1);
@@ -573,10 +603,10 @@ void main() {
             ),
           );
 
-          expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
+          expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNull);
           expect(find.text(platformDownMessage), findsOneWidget);
           expect(platformRetry, findsOneWidget);
-          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+          expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
           expect(find.text(studioDownMessage), findsNothing);
           expect(studioRetry, findsNothing);
           expect(find.byType(PlatformUnreachablePage), findsNothing);
@@ -593,8 +623,8 @@ void main() {
             ),
           );
 
-          expect(tester.widget<FilledButton>(ssoButton).onPressed, isNull);
-          expect(tester.widget<FilledButton>(platformButton).onPressed, isNull);
+          expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNull);
+          expect(tester.widget<ButtonStyleButton>(platformButton).onPressed, isNull);
           expect(find.text(studioDownMessage), findsOneWidget);
           expect(find.text(platformDownMessage), findsOneWidget);
           expect(tester.getTopLeft(find.text(studioDownMessage)).dy, lessThan(tester.getTopLeft(platformButton).dy));
@@ -631,8 +661,8 @@ void main() {
             final (button, otherButton) = retried == SessionTarget.studio
                 ? (ssoButton, platformButton)
                 : (platformButton, ssoButton);
-            expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
-            expect(tester.widget<FilledButton>(otherButton).onPressed, isNull);
+            expect(tester.widget<ButtonStyleButton>(button).onPressed, isNotNull);
+            expect(tester.widget<ButtonStyleButton>(otherButton).onPressed, isNull);
             expect(find.text(retried == SessionTarget.studio ? studioDownMessage : platformDownMessage), findsNothing);
             expect(
               find.text(retried == SessionTarget.studio ? platformDownMessage : studioDownMessage),
@@ -761,7 +791,7 @@ void main() {
         await pumpOidcApp(tester, OidcDependencies(client, autoRedirect: true));
         expect(client.signIns, 1);
         expect(gate(tester).isOpen, isFalse);
-        expect(tester.widget<FilledButton>(ssoButton).onPressed, isNotNull);
+        expect(tester.widget<ButtonStyleButton>(ssoButton).onPressed, isNotNull);
 
         await tester.tap(ssoButton);
         await tester.pumpAndSettle();
