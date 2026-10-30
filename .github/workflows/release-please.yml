@@ -31,6 +31,11 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
+          # A pull request opened with GITHUB_TOKEN starts no workflow of its own, so every release pull request sat
+          # at "action_required" until a human pressed Approve — six times on 2026-10-30 alone. Opened under a
+          # fine-grained token of the repository's owner instead, the pull request is an ordinary one and CI runs by
+          # itself. The token carries Contents and Pull requests write on this repository only, and nothing else.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
