@@ -7,8 +7,22 @@ import 'package:libredb_mobile/shared/models/session_target.dart';
 import 'package:libredb_mobile/shared/models/target_reachability.dart';
 import 'package:libredb_mobile/shared/widgets/target_reachability_scope.dart';
 
+/// How much weight an entry's button carries. The page offers Studio and Platform, and they are not the same
+/// offer: Studio is the ordinary way in, Platform is for the admins of a licensed deployment. Two filled buttons
+/// said nothing about which one a user wants, so the quiet entry steps back to the outlined treatment.
+enum SignInEmphasis {
+  /// The page's primary action: the theme's filled button, on `primary`.
+  primary,
+
+  /// A secondary way in: the theme's outlined button, which paints no fill.
+  secondary,
+}
+
 /// One way into the app: a full-width button, an optional helper line, and — while that target's server does not
 /// answer and this entry gates itself on it — a notice with a Retry that asks the server again.
+///
+/// [emphasis] is passed by the caller for the same reason [showsReachability] is: an entry must not read its own
+/// weight off how many siblings it happens to have.
 ///
 /// [showsReachability] is passed rather than worked out here. The button used to decide it from
 /// `_entries.length > 1`, which made one entry's behaviour depend on how many siblings it happened to have: a build
@@ -25,12 +39,16 @@ class SignInEntry extends StatelessWidget {
     required this.label,
     required this.helper,
     required this.showsReachability,
+    required this.emphasis,
     required this.onTap,
   });
 
   final SessionTarget target;
   final Key buttonKey;
   final String label;
+
+  /// How loudly this entry's button is drawn.
+  final SignInEmphasis emphasis;
 
   /// The line under the button, or null for an entry that carries none.
   final String? helper;
@@ -94,27 +112,31 @@ class SignInEntry extends StatelessWidget {
 
   /// Every button is disabled while a sign-in runs, and only the one of the running sign-in's target shows the
   /// spinner. Where [showsReachability] is set, the button is also disabled while its own server does not answer.
+  /// [emphasis] picks which of the theme's buttons draws it; neither names a colour of its own.
   Widget _button(BuildContext context, TargetReachability reachability) {
+    final cs = Theme.of(context).colorScheme;
     final unreachable = showsReachability && reachability.blocksSignIn;
     return BlocBuilder<LoginBloc, LoginState>(
       buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
       builder: (context, state) {
         final isLoading = state is LoginLoadingState;
         final showsSpinner = state is LoginLoadingState && state.target == target;
-        return FilledButton(
-          key: buttonKey,
-          onPressed: isLoading || unreachable ? null : () => onTap(target),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: showsSpinner
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
-                  )
-                : Text(label),
-          ),
+        final onPressed = isLoading || unreachable ? null : () => onTap(target);
+        // The spinner sits on whatever the button paints: the filled one's fill, the outlined one's page.
+        final spinnerColor = switch (emphasis) {
+          SignInEmphasis.primary => cs.onPrimary,
+          SignInEmphasis.secondary => cs.onPrimaryContainer,
+        };
+        final child = Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: showsSpinner
+              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: spinnerColor))
+              : Text(label),
         );
+        return switch (emphasis) {
+          SignInEmphasis.primary => FilledButton(key: buttonKey, onPressed: onPressed, child: child),
+          SignInEmphasis.secondary => OutlinedButton(key: buttonKey, onPressed: onPressed, child: child),
+        };
       },
     );
   }

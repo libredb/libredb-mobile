@@ -38,7 +38,7 @@ A file of `KEY=value` lines works too, through `--dart-define-from-file=oidc.env
 Every value is compiled in, so a change needs a new build.
 
 The login page then shows a single "Sign in with SSO" button.
-A build that also sets `PLATFORM_API_URL` ([platform.md](platform.md)) shows two buttons of equal weight instead, "Sign in to Studio" and "Sign in to Platform", each with a helper text.
+A build that also sets `PLATFORM_API_URL` ([platform.md](platform.md)) shows two buttons instead, each with a helper text: "Sign in to Studio" as the page's primary action, and "Sign in to Platform" — the admin path — as a quiet outlined button under it.
 Registration, forgot password and change password belong to the provider, so the app has no page for them.
 
 ### Redirect URI
