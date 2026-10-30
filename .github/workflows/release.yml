@@ -2,9 +2,9 @@ name: Release
 
 # Builds a signed Android App Bundle for one deployment and puts it on the Play internal testing track
 # (docs/release.md).
-# A version tag pushed by hand, or a release-please release (release-please.yml calls this workflow), builds and then
-# waits for the user's approval of the play-internal environment before the upload. A manual run is a dry run: it
-# builds and signs the bundle and never uploads.
+# A version tag pushed by hand, or a release-please release (release-please.yml calls this workflow), builds and
+# uploads without waiting for anyone: the refs/tags/v* ruleset refuses a tag from anything but an organization admin,
+# so nothing else reaches the upload key (docs/release.md). A manual run is a dry run: it signs and never uploads.
 on:
   push:
     tags:
@@ -119,8 +119,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: verify
-    # The upload key's secrets live in release-signing, which only main and v*.*.* tags may use and whose required
-    # reviewer approves each signed build; a dry run signs with the throwaway key of release-dry-run (docs/release.md).
+    # The upload key's secrets live in release-signing, which only main and v*.*.* tags may use, and a v* tag comes
+    # only from an organization admin; a dry run signs with the throwaway key of release-dry-run (docs/release.md).
     environment: ${{ github.event_name == 'workflow_dispatch' && 'release-dry-run' || 'release-signing' }}
     steps:
       - name: Checkout
@@ -308,7 +308,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
-    # Never on a dry run; the play-internal environment's required reviewer approves each upload.
+    # Never on a dry run; play-internal holds the Play service account and takes only main and v*.*.* tags.
     if: github.event_name != 'workflow_dispatch' && (inputs.tag || github.ref_type == 'tag')
     environment: play-internal
     steps:
@@ -325,5 +325,6 @@ jobs:
           packageName: org.libredb.mobile
           releaseFiles: release-bundle/bundle/release/app-release.aab
           track: internal
+          # Unset today, so a release reaches the testers on its own; set it to draft to park one in the console.
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           mappingFile: release-bundle/mapping/release/mapping.txt
