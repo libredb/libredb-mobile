@@ -463,16 +463,6 @@ class S {
     return Intl.message('Switch to dark mode', name: 'login_switch_to_dark_mode', desc: '', args: []);
   }
 
-  /// `{engines} database engines, published on {channels} channels`
-  String onboarding_studio_figures(int engines, int channels) {
-    return Intl.message(
-      '$engines database engines, published on $channels channels',
-      name: 'onboarding_studio_figures',
-      desc: '',
-      args: [engines, channels],
-    );
-  }
-
   /// `Skip`
   String get onboarding_skip {
     return Intl.message('Skip', name: 'onboarding_skip', desc: '', args: []);
