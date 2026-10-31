@@ -290,7 +290,8 @@ Each sentence states something the app does, with its source in [security.md](se
 Update both files and their date in the pull request that changes what the app keeps or sends, and publish them again before that version ships, for example:
 
 - when #202 removes the temporary file of a shared source, drop the sentence that says it can stay;
-- when the iOS build ships (#199), the policy has to cover iOS, whose backups and crash reports differ.
+The policy covers both platforms and says where they differ: the Keystore against the Keychain, and Android's cloud backup being off against iOS keeping the default, where a backup can carry the files but never the key that opens them.
+`test/architecture/privacy_policy_platforms_test.dart` fails when a platform-specific passage answers for one platform only, in either language.
 
 ### Data safety
 
