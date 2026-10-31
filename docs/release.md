@@ -14,6 +14,7 @@ iOS is released separately on macOS (#199).
 3. That tag starts `.github/workflows/release.yml` on its own, because release-please pushes it with `RELEASE_PLEASE_TOKEN`, a user token, and a user token's push does start other workflows.
    Nothing calls `release.yml`; it has one entry point for a release, the `v*.*.*` tag, so one tag makes one run.
    It used to be called from `release-please.yml` as well, which built and signed the same version twice and uploaded two sets of symbols for one Sentry release; `v1.1.3` ran it both ways before that was removed.
+   `test/architecture/android_release_setup_test.dart` fails when `release-please.yml` names `release.yml` again, or when `release.yml` grows back the `workflow_call` entry point that second path needed.
 4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
 5. The build job deploys to the `release-signing` environment, which only `main` and `v*.*.*` tags may use, and checks out the commit the checks ran on.
    It stops when the build would carry a define meant for checks only (see below), or when a release has no `SENTRY_AUTH_TOKEN` (see "Crash symbols").
@@ -26,6 +27,7 @@ iOS is released separately on macOS (#199).
    The testers have it as soon as the upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
    A production release replaces whatever is already in review, so the review always runs on the newest release.
    It has to be one upload: Play refuses a second upload of the same bundle with "Version code has already been used", which is how the v1.1.2 release failed before `tracks` replaced two `track` steps.
+   `test/architecture/release_tracks_test.dart` fails when a second upload step appears, or when either track is dropped from `tracks`.
    The upload carries no release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
@@ -33,8 +35,9 @@ A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `
 Only an organization admin can push it: the `refs/tags/v*` ruleset refuses a matching tag from anyone else, which is what lets the build and the upload run without a reviewer.
 The build number grows with every release because release-please raises it, and Play refuses a bundle whose version code it already has.
 
-Release pull requests that release-please opens with `GITHUB_TOKEN` start no CI run of their own.
-Their checks run again in `release.yml` before anything is built, and closing and reopening the pull request starts the usual CI run when a branch rule asks for it.
+A release pull request is an ordinary pull request, because release-please opens it with `RELEASE_PLEASE_TOKEN`, the owner's fine-grained token, so CI runs on it by itself, as it does on any pull request to `main` (`.github/workflows/build_and_test.yml`).
+Opened with `GITHUB_TOKEN`, as it was until 2026-10-30, it started no run of its own and sat at "action_required" until a human pressed Approve, six times on that day alone.
+Its branch matches no push trigger of that workflow, so CI runs once, as the pull request's checks; `release.yml` runs the same checks again on the tag before anything is built.
 
 ## Release signing
 
@@ -65,7 +68,7 @@ fvm flutter build appbundle --release --target lib/main/main_prod.dart \
 
 The build job signs in one of two GitHub environments, which hold the same names:
 
-- `release-signing`, for a tag or a release-please release, with the real upload key; only `main` and `v*.*.*` tags may deploy to it.
+- `release-signing`, for every run a `v*.*.*` tag starts, which is how a release-please release arrives too, with the real upload key; only `main` and `v*.*.*` tags may deploy to it.
 - `release-dry-run`, for a manual run, with a throwaway key made only for dry runs.
 
 Secrets and variable of each signing environment:
@@ -85,10 +88,11 @@ Secret of the `play-internal` environment:
 | --- | --- |
 | `PLAY_SERVICE_ACCOUNT_JSON` | The JSON key of the Play service account |
 
-Repository secret:
+Repository secrets:
 
 | Name | What it holds |
 | --- | --- |
+| `RELEASE_PLEASE_TOKEN` | The owner's fine-grained token, which release-please opens the release pull request and pushes the tag with (step 9 of [One-time steps in outside accounts](#one-time-steps-in-outside-accounts)) |
 | `SENTRY_DSN` | Optional; the build reports crashes only with it ([crash-reporting.md](crash-reporting.md)) |
 
 Variables of the repository, or of the build job's environment, which override the repository's, name the deployment the build signs in to ([studio.md](studio.md), [oidc.md](oidc.md), [security.md](security.md)):
@@ -102,7 +106,7 @@ Variables of the repository, or of the build job's environment, which override t
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
 | `PLATFORM_API_URL`, `PLATFORM_CERT_PINS` | No; Platform mode only, set by the owner after approval (#302's checklist) |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
-| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers and Google's review on its own. Set it to `draft` to park both uploads in the console instead |
+| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers and Google's review on its own. Set it to `draft` to park that one upload's release on both tracks in the console instead |
 
 A variable set only on the `release-dry-run` environment reaches dry runs only.
 An empty variable is left out of the build, and the build stops when a required one is missing.
@@ -139,7 +143,7 @@ The Sentry wizard writes such a file with a token in it, so do not run it in thi
 
 Before the build, `tool/release/check_sentry_upload.sh` decides; it is told only whether the secret is set, never its value:
 
-- a release (a tag or a release-please release) without the secret fails with `The secret SENTRY_AUTH_TOKEN of the release-signing environment is not set`, before anything is built or signed;
+- a release, which is any run a `v*.*.*` tag started, without the secret fails with `The secret SENTRY_AUTH_TOKEN of the release-signing environment is not set`, before anything is built or signed;
 - a dry run never uploads, with or without the secret, and says `Dry run: the Dart symbols and the R8 mapping are not uploaded to Sentry` in the log.
 
 To read a crash from a build whose symbols never reached Sentry, such as a dry run's bundle, keep its `build/debug-info` and run `flutter symbolize -i <stack trace file> -d build/debug-info/app.android-arm64.symbols`.
@@ -171,9 +175,10 @@ Only the maintainer does these, and no value from them is ever written into an i
    An organization token can create releases and upload debug files and mappings for the organization's projects, and nothing else.
    Copy it once into the secret `SENTRY_AUTH_TOKEN` of the `release-signing` environment, and never into `release-dry-run`, a file, an issue or a log.
    Without it every release stops before the build; to replace it, create a new token, update the secret, and revoke the old token in Sentry.
-9. In the repository settings, under Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests".
-   Without it release-please pushes its branch but fails with `GitHub Actions is not permitted to create or approve pull requests.` and opens no release pull request.
-   It is safe here because a pull request that a workflow opens reaches no key: a signed build needs a `v*` tag, and the tag ruleset of step 7 refuses one from anything but an organization admin.
+9. Create a fine-grained personal access token of the repository's owner, carrying Contents and Pull requests write on this repository and nothing else, and store it as the repository secret `RELEASE_PLEASE_TOKEN`.
+   release-please opens the release pull request and pushes the tag with it: the tag is what the creation rule of step 7 lets an organization admin through with, and the pull request is an ordinary one whose CI runs by itself.
+   `test/architecture/release_tag_creation_test.dart` fails when that input is lost, which would leave release-please on `GITHUB_TOKEN`, whose tag the ruleset refuses and whose pull request starts no CI run.
+   A signed build still needs a `v*` tag, so no pull request, however it was opened, reaches the upload key.
 10. Merge the first release pull request, which releases `1.0.0`: `release-please-config.json` sets `"release-as": "1.0.0"` on the `.` package, because the manifest already names `1.0.0` and release-please would otherwise plan the first release as `1.1.0`.
    Merging it tags `v1.0.0` and starts the release; let the build job finish, stop the upload job, download the `release-bundle` artifact, and upload its `app-release.aab` to the internal testing track by hand, because Play accepts no upload through its API before the first one.
    Do not push the tag `v1.0.0` by hand as well, since release-please then cannot create its release of `1.0.0`.
@@ -193,7 +198,7 @@ It never reaches the upload key, so its bundle cannot go to Play.
 
 This is the ordered checklist that takes the store build from Studio-only to Platform mode (epic #298).
 Every step says who does it, the owner or an agent, and the gate that has to pass before it.
-An agent never sets a variable, starts a workflow, approves an environment, signs, tags, merges a release pull request, uploads, installs from Play or fills a store form; those steps are the owner's.
+An agent never sets a variable, starts a workflow, signs, tags, merges a release pull request, uploads, installs from Play or fills a store form; those steps are the owner's.
 
 ### What the store build needs
 
@@ -236,7 +241,7 @@ They pass in this order, and each one holds before the steps that name it:
    Its squash commit is a Conventional Commit that release-please lists, such as `fix(release): ship the store build without Platform mode`, so release-please has a commit to release from in step 6.
 4. Owner, after step 3's checks are green: review the rollback pull request and merge it.
 5. Owner, after step 4: fill the Data safety form and the App access entry with the answers for a build without Platform mode, paste the listing texts from `android/fastlane/metadata/android/` and replace the Play screenshots with the Studio-only ones from its `images/phoneScreenshots/`.
-6. Owner, after steps 2 and 5: merge the release pull request that release-please opens, then approve the build job and, once it has passed, the upload job; the release has a higher build number and is Studio-only.
+6. Owner, after steps 2 and 5: merge the release pull request that release-please opens; the build and the upload then run on their own, and the release has a higher build number and is Studio-only.
 
 On a device that updates to that build, a stored Platform session is cleared, and the login page shows only the Studio entry with the `platform.not_configured` message (`lib/app/session/session_cubit.dart`; [platform.md](platform.md), M10-P walkthrough step 10).
 A stored Studio session is kept.
