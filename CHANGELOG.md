@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/libredb/libredb-mobile/compare/v1.2.0...v1.2.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **security:** mask sql and connectionString in every scrubber exit ([d00433c](https://github.com/libredb/libredb-mobile/commit/d00433cec21456fd6c63cc4cdba87800445cc41b))
+* **security:** mask sql and connectionString in every scrubber exit ([8422a14](https://github.com/libredb/libredb-mobile/commit/8422a1470ba39fb00efb83cee1509f06bcb0f6ad))
+
 ## [1.2.0](https://github.com/libredb/libredb-mobile/compare/v1.1.3...v1.2.0) (2026-10-31)
 
 
