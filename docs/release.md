@@ -23,6 +23,7 @@ iOS is released separately on macOS (#199).
 7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping to the internal testing track, then the same bundle to the production track.
    The testers have it as soon as the first upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
    A production upload replaces whatever is already in review, so the review always runs on the newest release.
+   Neither upload carries release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
 A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
