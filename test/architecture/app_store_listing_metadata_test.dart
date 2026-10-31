@@ -37,6 +37,28 @@ void main() {
     expect(turkish, english, reason: 'en-US and tr must hold the same files');
   });
 
+  test('the app lock is described as a setting, because it ships off', () {
+    // `AppLockSettings.defaults` is `enabled: false`, and the release workflow never passes `APP_LOCK_REQUIRED`
+    // (`test/architecture/android_release_setup_test.dart` pins that), so a reader who installs the store build and
+    // comes back to it is not asked for Face ID until they turn the lock on. A description that states the lock
+    // flatly, beside the properties that do hold on their own, promises behaviour the build does not have.
+    final problems = <String>[];
+    for (final MapEntry(key: locale, value: marker) in _optInMarkers.entries) {
+      final text = File('$_metadataRoot/$locale/description.txt').readAsStringSync();
+      for (final line in text.split('\n')) {
+        if (!_biometricWords.any(line.contains)) continue;
+        if (!marker.any(line.contains)) {
+          problems.add(
+            '$_metadataRoot/$locale/description.txt names a biometric lock without saying it is a '
+            'setting: "${line.trim()}"',
+          );
+        }
+      }
+    }
+
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
   test('no listing text holds an en dash or an em dash', () {
     final offending = [
       for (final file in Directory(_metadataRoot).listSync(recursive: true).whereType<File>())
@@ -106,6 +128,15 @@ void main() {
 
 const _metadataRoot = 'ios/fastlane/metadata';
 const _locales = ['en-US', 'tr'];
+
+/// The words that name the biometric lock, in either locale.
+const _biometricWords = ['Face ID', 'Touch ID'];
+
+/// What a line naming the lock must also say, per locale, so the reader learns it is theirs to turn on.
+const _optInMarkers = {
+  'en-US': ['Settings', 'optional'],
+  'tr': ['Ayarlar', 'isteğe bağlı'],
+};
 
 /// App Store Connect's limit for each listing text, in characters.
 const appStoreListingLimits = {
