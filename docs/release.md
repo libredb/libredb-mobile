@@ -15,7 +15,12 @@ iOS is released separately on macOS (#199).
    Nothing calls `release.yml`; it has one entry point for a release, the `v*.*.*` tag, so one tag makes one run.
    It used to be called from `release-please.yml` as well, which built and signed the same version twice and uploaded two sets of symbols for one Sentry release; `v1.1.3` ran it both ways before that was removed.
    `test/architecture/android_release_setup_test.dart` fails when `release-please.yml` names `release.yml` again, or when `release.yml` grows back the `workflow_call` entry point that second path needed.
-4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
+4. `release.yml` checks that the tagged commit is on `main`, that the tag equals the version name in `pubspec.yaml`, and that the build number behind the `+` is above every build number a released tag carries (`tool/release/check_release_version.sh`); it then runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
+   That build number is Play's version code (`android/app/build.gradle.kts`: `versionCode = flutter.versionCode`), and Play refuses a bundle whose version code it already holds.
+   Checked in the first minute of the run, the refusal costs nothing; unchecked, it arrives at the upload step, with the suite run, the bundle signed with the upload key and the Sentry release already created, which is how `v1.1.2` died.
+   The check asks Play nothing, because the Play service account lives in the `play-internal` environment and the verify job does not deploy to it; it compares the tag's build number with the build numbers of the other `v*.*.*` tags, which the verify checkout has because it uses `fetch-depth: 0`.
+   So it catches a build number that was never raised, one a merge lowered again, and a tag pushed by hand on a commit that still carries a released build number; it does not catch a full re-run of a release whose upload already succeeded, or a version code uploaded from the Play Console by hand, because neither leaves a tag.
+   On a dry run there is no tag: the check only reports what a release of that version would run into, and never fails.
 5. The build job deploys to the `release-signing` environment, which only `main` and `v*.*.*` tags may use, and checks out the commit the checks ran on.
    It stops when the build would carry a define meant for checks only (see below), or when a release has no `SENTRY_AUTH_TOKEN` (see "Crash symbols").
    It decodes the upload keystore into the runner's temp directory, builds `flutter build appbundle --release --target lib/main/main_prod.dart --obfuscate --split-debug-info=build/debug-info` with the deployment's defines and `-PrequireReleaseSigning=true`, and checks that the bundle's signing certificate has the fingerprint in `ANDROID_UPLOAD_CERT_SHA256`.
@@ -31,13 +36,15 @@ iOS is released separately on macOS (#199).
    The upload carries no release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
-A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
+A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version and carries a build number above the last release's, since step 4 refuses the tag otherwise.
 Only an organization admin can push it: the `refs/tags/v*` ruleset refuses a matching tag from anyone else, which is what lets the build and the upload run without a reviewer.
-The build number grows with every release because release-please raises it, and Play refuses a bundle whose version code it already has.
+The build number grows with every release because release-please raises it, and Play refuses a bundle whose version code it already has; a tag that does not raise it never reaches the signing key.
 
 A release pull request is an ordinary pull request, because release-please opens it with `RELEASE_PLEASE_TOKEN`, the owner's fine-grained token, so CI runs on it by itself, as it does on any pull request to `main` (`.github/workflows/build_and_test.yml`).
 Opened with `GITHUB_TOKEN`, as it was until 2026-10-30, it started no run of its own and sat at "action_required" until a human pressed Approve, six times on that day alone.
 Its branch matches no push trigger of that workflow, so CI runs once, as the pull request's checks; `release.yml` runs the same checks again on the tag before anything is built.
+Every job of CI declares a `timeout-minutes` and checks out with `persist-credentials: false`, as the release workflows do: CI runs the branch's own Gradle and shell scripts, and nothing in it pushes, tags or calls the API.
+`test/architecture/android_release_setup_test.dart` keeps both rules over every workflow file of the repository, so a new workflow is guarded without a change there.
 
 ## Release signing
 

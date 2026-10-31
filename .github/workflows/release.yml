@@ -51,15 +51,12 @@ jobs:
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-      - name: Check the tag against pubspec.yaml
-        run: |
-          version=$(sed -n 's/^version: *\([^+ ]*\).*$/\1/p' pubspec.yaml)
-          if [ -z "$RELEASE_TAG" ]; then
-            echo "Dry run of version $version: no tag to check."
-          elif [ "$RELEASE_TAG" != "v$version" ]; then
-            echo "The tag $RELEASE_TAG does not match version $version in pubspec.yaml."
-            exit 1
-          fi
+      # The tag must name the version of pubspec.yaml, and the build number behind its `+` must be above every build
+      # number a released tag carries: that number is Play's version code, and Play refuses a bundle whose version
+      # code it already holds. Checked here, from the tags alone, so the refusal no longer arrives at the upload step
+      # with the suite run, the bundle signed and the Sentry release created (docs/release.md, v1.1.2).
+      - name: Check the tag and the build number against pubspec.yaml
+        run: tool/release/check_release_version.sh
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
