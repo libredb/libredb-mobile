@@ -1,0 +1,1 @@
+veritabanı,sql,postgres,mysql,redis,sorgu,yönetim,studio,devops

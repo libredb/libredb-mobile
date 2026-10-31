@@ -1,0 +1,1 @@
+Browse your databases and run SQL from your phone, through LibreDB Studio. Your organisation keeps every database credential; the app holds none.

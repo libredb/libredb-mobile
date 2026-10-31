@@ -254,7 +254,7 @@ The app's `targetSdk` is `flutter.targetSdkVersion`, which is 36 in Flutter 3.47
 ## Store listing
 
 The texts the Play Console asks for live in the repository, in English and Turkish, so the maintainer copies them instead of writing them.
-The App Store listing reuses them (#199).
+The App Store listing has its own copies under `ios/fastlane/metadata/`, because App Store Connect asks for different fields, different lengths and a different Turkish locale code ([App Store listing texts](#app-store-listing-texts)).
 
 ### Listing texts
 
@@ -268,6 +268,17 @@ The listing for an upcoming feature is drafted under `android/fastlane/drafts/<f
 A text the feature does not change is a copy of the live one, so the move replaces whole locale directories.
 Its phone screenshots are its own, because a draft shows the feature's own pages: the eight under `android/fastlane/drafts/platform-mode/<locale>/images/phoneScreenshots/` are captured from the `main_mock.dart` fixtures, so they carry demo data only (Platform Admin, Example Org, `@example.org` users), and their names carry the order Play shows them in (#309).
 `test/architecture/play_screenshot_drafts_test.dart` pins Play's format rules on every draft screenshot, so an alpha channel, a bit depth other than 8, a side outside 320 to 3840 px, a longest side below 1080 or a long-to-short ratio above 2 fails in the repository instead of being refused in the Console.
+
+### App Store listing texts
+
+`ios/fastlane/metadata/en-US/` and `tr/` hold `name.txt`, `subtitle.txt`, `description.txt`, `keywords.txt` and `promotional_text.txt` in the fastlane deliver layout, so a later pipeline step can upload them.
+`test/architecture/app_store_listing_metadata_test.dart` fails when a text is missing, empty or longer than App Store Connect allows (30, 30, 4000, 100 and 170 characters), or when the two locales do not hold the same files.
+
+The App Store texts are not a copy of the Play ones, for three reasons.
+Connect asks for a subtitle, keywords and a promotional text that Play has no field for, and has no equivalent of Play's short description.
+Its Turkish locale is `tr`, where Play says `tr-TR`, so one directory cannot serve both stores.
+And the security section differs because the platform does: iOS offers no API to block a screenshot, so the App Store description says that the app switcher preview is blurred and that a screenshot the reader takes still succeeds, while the Play description says the screens are kept out of screenshots ([`docs/security.md`](security.md), "Screen capture").
+A claim that holds on one platform and not the other is a false claim in that store, so each listing says only what its own platform does.
 
 The release notes of each version come from the generated `CHANGELOG.md` and are never written by hand.
 The screenshots, the 512 px icon and the 1024 by 500 feature graphic are added during the phone walkthrough (#196), from the tool/studio-dev sample data only.
