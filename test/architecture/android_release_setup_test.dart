@@ -91,7 +91,27 @@ void main() {
       final on = workflow['on'] as YamlMap;
       expect((on['push'] as YamlMap)['tags'], contains('v*.*.*'), reason: '$_releasePath does not run on v*.*.* tags');
       expect(on.containsKey('workflow_dispatch'), isTrue, reason: '$_releasePath has no workflow_dispatch dry run');
-      expect(on.containsKey('workflow_call'), isTrue, reason: 'release-please cannot call $_releasePath');
+    });
+
+    test('one tag makes one release run', () {
+      // release-please pushes the tag with the owner's token, and a token push triggers `push: tags`, so the tag
+      // alone starts this workflow. A second path that calls it for the same tag builds and signs the bundle twice
+      // with the real upload key and uploads two sets of symbols for one Sentry release. v1.1.3 proved it: run
+      // 41161096358 came from the tag push and run 41161081626 ran `Release / Build signed App Bundle` again inside
+      // Release Please. The concurrency group does not help, because `cancel-in-progress` is false, so the second
+      // run waits and then does the work.
+      final releasePlease = File(_releasePleasePath).readAsStringSync();
+
+      expect(
+        releasePlease,
+        isNot(contains('.github/workflows/release.yml')),
+        reason: '$_releasePleasePath calls $_releasePath, which the tag it pushes already starts',
+      );
+      expect(
+        (workflow['on'] as YamlMap).containsKey('workflow_call'),
+        isFalse,
+        reason: '$_releasePath offers a workflow_call entry point that nothing may use',
+      );
     });
 
     test('builds the bundle with a required release signing and deletes the keystore also on failure', () {
@@ -145,8 +165,13 @@ void main() {
       expect((checkout['with'] as YamlMap)['ref'], r'${{ needs.verify.outputs.sha }}');
     });
 
-    test('one concurrency group for a hand-pushed tag and a release-please release of it', () {
-      expect((workflow['concurrency'] as YamlMap)['group'], r'release-${{ inputs.tag || github.ref_name }}');
+    test('one concurrency group per tag, so two pushes of it never build at once', () {
+      expect((workflow['concurrency'] as YamlMap)['group'], r'release-${{ github.ref_name }}');
+      expect(
+        (workflow['concurrency'] as YamlMap)['cancel-in-progress'],
+        isFalse,
+        reason: 'a release that is already signing must finish rather than be cancelled half-way',
+      );
     });
 
     test('checkouts keep no credentials, nothing is cached, and every job has a timeout', () {

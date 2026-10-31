@@ -1,8 +1,10 @@
 name: Release Please
 
 # Keeps a release pull request open that bumps pubspec.yaml (the version name and the build number) and writes
-# CHANGELOG.md from the Conventional Commits on main (docs/release.md). Merging it tags the release, and the release
-# job builds and uploads it through release.yml, since a tag pushed with GITHUB_TOKEN starts no other workflow.
+# CHANGELOG.md from the Conventional Commits on main (docs/release.md). Merging it tags the release, and that tag is
+# all this workflow does: release.yml runs on `push: tags`, and the tag is pushed with RELEASE_PLEASE_TOKEN, a user
+# token, whose pushes do start other workflows. Calling release.yml from here as well would build and sign the same
+# version twice (docs/release.md, "One tag, one release run").
 on:
   push:
     branches:
@@ -39,13 +41,3 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  release:
-    name: Release
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/release.yml
-    with:
-      tag: ${{ needs.release-please.outputs.tag_name }}
-    secrets: inherit
