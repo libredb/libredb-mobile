@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.3](https://github.com/libredb/libredb-mobile/compare/v1.2.2...v1.2.3) (2026-10-31)
+
+
+### Bug Fixes
+
+* **auth:** open the provider's sign-in page in the app's language ([#493](https://github.com/libredb/libredb-mobile/issues/493)) ([24be1c1](https://github.com/libredb/libredb-mobile/commit/24be1c1a012726008ab91e0332d1d4a974a14c8c))
+* **release:** check the version code early, guard every workflow ([#491](https://github.com/libredb/libredb-mobile/issues/491)) ([eb6d7c5](https://github.com/libredb/libredb-mobile/commit/eb6d7c5ad8fcbf5607d2fa79eb4743dae0af13ff))
+* **release:** state the cancel, the write check and the mask as the code measures them ([#490](https://github.com/libredb/libredb-mobile/issues/490)) ([49d6d49](https://github.com/libredb/libredb-mobile/commit/49d6d49f9f14bd9801a1892017db3961cf1ed357))
+
 ## [1.2.2](https://github.com/libredb/libredb-mobile/compare/v1.2.1...v1.2.2) (2026-10-31)
 
 
