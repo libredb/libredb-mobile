@@ -14,12 +14,12 @@ Browse
 
 Rows
 • Preview the rows of a table as cards or as a compact table, load more, and open a row's detail.
-• Columns whose names look sensitive, such as email, password or card number, are masked on screen with the same default rules as Studio's web grid.
+• Columns whose names look sensitive, such as email, password or card number, are masked on screen. Studio's default rules pick the columns; for a token or key, an email missing a part and a date that is not a plain year-month-day value, the mask hides more than Studio's web grid does.
 
 SQL editor
-• Type and run a statement, a script or a selection, in the database you pick, and cancel a statement that is running.
+• Type and run a statement, a script or a selection, in the database you pick. On a database that can cancel, Cancel asks Studio to stop the statement; on one that cannot, Stop waiting drops the answer and the statement keeps running on the server.
 • Your draft and your statement history stay on the phone, and a statement from the history or from Browse opens in the editor.
-• Before a statement that may change data runs, the app shows it in full and asks you to confirm; on a production connection you type the connection's name first.
+• When a statement looks like it may change data, the app shows it in full and asks you to confirm before it runs; on a production connection you type the connection's name first. The check reads the statement's words, so a write inside a function that a read calls is not caught.
 
 Privacy and security
 • Single sign-on through your organisation's Keycloak; the tokens are kept in the device's Keychain, reachable only after the first unlock and only on this device, so a backup or iCloud Keychain never carries them to another one.

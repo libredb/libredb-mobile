@@ -13,6 +13,10 @@ part 'studio_identity_state.dart';
 /// The role lives here only, from Studio's latest `GET /api/auth/me` answer or a mode switch's ([signedIn]), and is
 /// never stored. A failure never ends the session: only the ApiClient does that, for a 401 `AUTH_REQUIRED` that
 /// survives the token refresh.
+///
+/// A Cubit, not a Bloc: the identity is one idempotent GET, with nothing to debounce or replay. [_generation] drops
+/// an answer about a user who signed out while it was on its way, and because [clear] and [signedIn] are
+/// interactions of their own, no `EventTransformer` spans them — it would stay this counter in a Bloc too.
 class StudioIdentityCubit extends Cubit<StudioIdentityState> {
   StudioIdentityCubit({required this._repository}) : super(const StudioIdentityInitial());
 

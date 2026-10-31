@@ -174,22 +174,66 @@ void main() {
       );
     });
 
-    test('checkouts keep no credentials, nothing is cached, and every job has a timeout', () {
-      for (final path in [_releasePath, _releasePleasePath]) {
+    // Every workflow, not only the release ones: CI runs the repository's own Gradle and shell scripts from a pull
+    // request's branch, and a checkout that leaves the GITHUB_TOKEN in `.git/config` hands it to whatever they run.
+    // A job without `timeout-minutes` holds its runner for six hours instead of failing. build_and_test.yml stood
+    // outside both guards until this list became every workflow file.
+    test('no checkout of any workflow keeps credentials, and every job has a timeout', () {
+      final paths = _workflowPaths();
+      expect(paths, containsAll([_releasePath, _releasePleasePath, _buildAndTestPath, _sonarPath]));
+      for (final path in paths) {
         final all = _loadYaml(path)['jobs'] as YamlMap;
         for (final entry in all.entries) {
           final job = entry.value as YamlMap;
           if (job['uses'] != null) continue;
           expect(job['timeout-minutes'], isA<int>(), reason: 'job ${entry.key} in $path has no timeout-minutes');
           for (final step in _steps(all, entry.key as String)) {
+            if (!'${step['uses']}'.startsWith('actions/checkout@')) continue;
             final inputs = step['with'] as YamlMap?;
-            if ('${step['uses']}'.startsWith('actions/checkout@')) {
-              expect(inputs?['persist-credentials'], isFalse, reason: 'a checkout in ${entry.key} keeps credentials');
-            }
-            expect(inputs?['cache'], isNot(isTrue), reason: 'a step in ${entry.key} of $path restores a cache');
+            expect(
+              inputs?['persist-credentials'],
+              isFalse,
+              reason: 'a checkout in ${entry.key} of $path keeps credentials',
+            );
           }
         }
       }
+    });
+
+    // Only the release workflows: a restored cache is a path into the job that signs the bundle, while CI's own jobs
+    // do cache the Flutter SDK.
+    test('a release workflow restores no cache', () {
+      for (final path in [_releasePath, _releasePleasePath]) {
+        final all = _loadYaml(path)['jobs'] as YamlMap;
+        for (final entry in all.entries) {
+          if ((entry.value as YamlMap)['uses'] != null) continue;
+          for (final step in _steps(all, entry.key as String)) {
+            final cache = (step['with'] as YamlMap?)?['cache'];
+            expect(cache, isNot(isTrue), reason: 'a step in ${entry.key} of $path restores a cache');
+          }
+        }
+      }
+    });
+
+    // Play's version code is the `+N` of pubspec.yaml (android/app/build.gradle.kts: `versionCode =
+    // flutter.versionCode`), and Play refuses a bundle whose code it already holds. Without this check that refusal
+    // arrives at the upload step, after the suite has run, the upload key has signed a bundle and Sentry already
+    // holds the release, which is how v1.1.2 died. The check reads every tag, so verify must fetch the whole history.
+    test('verify checks the tag and the build number before the suite runs', () {
+      final steps = _steps(jobs, 'verify');
+      final checkout = steps.firstWhere((step) => '${step['uses']}'.startsWith('actions/checkout@'));
+      expect((checkout['with'] as YamlMap)['fetch-depth'], 0, reason: 'verify needs every tag to read its +N');
+
+      final check = steps.indexWhere((step) => '${step['run']}'.contains(_versionScriptPath));
+      expect(check, isNonNegative, reason: 'the verify job never runs $_versionScriptPath');
+      final suite = steps.indexWhere((step) => '${step['run']}'.contains('flutter test --coverage'));
+      expect(suite, isNonNegative, reason: 'the verify job never runs the suite');
+      expect(check, lessThan(suite), reason: '$_versionScriptPath must run before the suite, not after it');
+      expect(
+        '${workflow['env']}',
+        contains('RELEASE_TAG'),
+        reason: '$_versionScriptPath reads RELEASE_TAG from the workflow env',
+      );
     });
 
     test('keeps the bundle briefly and logs no certificate owner', () {
@@ -528,6 +572,142 @@ void main() {
     });
   });
 
+  // The release's last line of defence against a version code Play already holds. Every released version code is the
+  // `+N` of a `v*.*.*` tag, so the highest `+N` of the other tags is the highest code Play was given, and this
+  // release has to be above it. The script reads pubspec.yaml and the tags of the working directory, nothing else.
+  group('check_release_version.sh', () {
+    late Directory dir;
+    late String script;
+
+    setUpAll(() => script = File(_versionScriptPath).absolute.path);
+
+    void git(List<String> args) {
+      final result = Process.runSync('git', args, workingDirectory: dir.path);
+      expect(result.exitCode, 0, reason: 'git ${args.join(' ')}: ${result.stdout}${result.stderr}');
+    }
+
+    /// Writes [version] into pubspec.yaml, commits it and, with a [tag], tags that commit.
+    void commit(String version, {String? tag}) {
+      File('${dir.path}/pubspec.yaml').writeAsStringSync('name: libredb_mobile\nversion: $version\n');
+      git(['add', 'pubspec.yaml']);
+      git(['commit', '--quiet', '--no-gpg-sign', '-m', 'release $version']);
+      if (tag != null) git(['tag', tag]);
+    }
+
+    /// Runs the script in [dir] as the release workflow does, with [tag] empty on a dry run.
+    Future<ProcessResult> check(String tag) =>
+        Process.run('bash', [script], workingDirectory: dir.path, environment: {'RELEASE_TAG': tag});
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('check_release_version');
+      git(['init', '--quiet', '--initial-branch=main']);
+      git(['config', 'user.email', 'release@example.com']);
+      git(['config', 'user.name', 'Release']);
+      git(['config', 'commit.gpgsign', 'false']);
+      git(['config', 'tag.gpgsign', 'false']);
+    });
+
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('passes a tag whose build number is above every released one', () async {
+      commit('1.0.0+1', tag: 'v1.0.0');
+      commit('1.1.0+5', tag: 'v1.1.0');
+      commit('1.2.0+6', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('6'));
+    });
+
+    // The v1.1.2 failure: the bundle was built and signed, and Play refused it with "Version code has already been
+    // used" only at the upload.
+    test('fails when the build number is one Play already holds, and names both numbers', () async {
+      commit('1.0.0+1', tag: 'v1.0.0');
+      commit('1.1.0+5', tag: 'v1.1.0');
+      commit('1.2.0+5', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('v1.1.0'));
+      expect(result.stdout, contains('version code'));
+    });
+
+    // A merge that reverts the release-please bump, or a tag pushed by hand on a commit that never raised it.
+    test('fails when the build number fell below a released one', () async {
+      commit('1.1.0+5', tag: 'v1.1.0');
+      commit('1.2.0+4', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('v1.1.0'));
+    });
+
+    // The highest code Play holds is not the newest tag's: an earlier release may have raised the number further.
+    test('compares against the highest build number of all tags, not the newest tag', () async {
+      commit('1.0.0+9', tag: 'v1.0.0');
+      commit('1.1.0+3', tag: 'v1.1.0');
+      commit('1.2.0+8', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('v1.0.0'));
+    });
+
+    test('passes the first release, when no other tag has a build number', () async {
+      commit('1.0.0+1', tag: 'v1.0.0');
+      final result = await check('v1.0.0');
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('no other'));
+    });
+
+    test('fails when the tag does not name the version of pubspec.yaml', () async {
+      commit('1.1.0+5', tag: 'v1.1.0');
+      commit('1.2.0+6', tag: 'v1.2.1');
+      final result = await check('v1.2.1');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('1.2.0'));
+    });
+
+    test('fails when pubspec.yaml names no build number', () async {
+      commit('1.2.0', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('build number'));
+    });
+
+    test('fails when the build number is not a number', () async {
+      commit('1.2.0+beta', tag: 'v1.2.0');
+      final result = await check('v1.2.0');
+      expect(result.exitCode, 1, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('build number'));
+    });
+
+    // A dry run builds from a branch that release-please has not bumped yet, so it only says what a release would
+    // refuse; it never stops the run.
+    test('a dry run checks nothing and never fails', () async {
+      commit('1.1.0+5', tag: 'v1.1.0');
+      commit('1.2.0+5');
+      final result = await check('');
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('Dry run'));
+      expect(result.stdout, contains('5'));
+    });
+
+    test('fails with 2 outside the repository root and outside a repository', () async {
+      commit('1.2.0+6', tag: 'v1.2.0');
+      File('${dir.path}/pubspec.yaml').deleteSync();
+      final missing = await check('v1.2.0');
+      expect(missing.exitCode, 2, reason: 'a missing pubspec.yaml was not a usage error');
+
+      final plain = Directory.systemTemp.createTempSync('check_release_version_plain');
+      addTearDown(() => plain.deleteSync(recursive: true));
+      File('${plain.path}/pubspec.yaml').writeAsStringSync('name: libredb_mobile\nversion: 1.2.0+6\n');
+      final outside = await Process.run(
+        'bash',
+        [script],
+        workingDirectory: plain.path,
+        environment: {'RELEASE_TAG': 'v1.2.0', 'GIT_CEILING_DIRECTORIES': plain.parent.path},
+      );
+      expect(outside.exitCode, 2, reason: 'a directory that is no repository was not a usage error');
+    });
+  });
+
   group('workflow actions', () {
     late final workflows = _workflowPaths();
 
@@ -648,6 +828,7 @@ const _buildAndTestPath = '.github/workflows/build_and_test.yml';
 const _sonarPath = '.github/workflows/sonar_scanner.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
 const _checkScriptPath = 'tool/release/check_defines.sh';
+const _versionScriptPath = 'tool/release/check_release_version.sh';
 const _nativeSentryPath = 'android/app/src/main/kotlin/org/libredb/mobile/NativeSentry.kt';
 
 /// Defines the app reads that the release never sets, so a store build keeps their defaults:

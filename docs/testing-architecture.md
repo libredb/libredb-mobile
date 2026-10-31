@@ -59,6 +59,7 @@ test/
 │   ├── android_manifest_test.dart    # Android INTERNET, backup off
 │   ├── arb_translations_test.dart    # every English message has a Turkish one with the same placeholders, no ARB key twice
 │   ├── credential_to_string_test.dart # a class with a credential field keeps it out of toString
+│   ├── cubit_over_bloc_test.dart     # a feature Cubit holding a repository says why it is not a Bloc
 │   ├── feature_generator_test.dart   # tool/generate_feature.dart output is clean and passes its tests
 │   ├── import_guard_test.dart        # layer dependency rules, url_launcher only in external_link.dart
 │   ├── log_lazy_arguments_test.dart  # AppLogger arguments are not turned into text before the level check
@@ -374,6 +375,17 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   shrink over time, not grow.
   It also fails if a file other than `lib/shared/utils/external_link.dart` imports `url_launcher`.
   Links go through `openExternalLink`, which tells the user when a link does not open and never asks `canLaunchUrl`, so the Android manifest needs no `<queries>` intent for them.
+  The cross-feature and `features → app` checks are the pure functions `crossFeatureViolations` and
+  `featureAppViolations`, each with unit tests of its own in the same file, because the directory check passes on a
+  clean tree whether or not it can see the import it is meant to catch. The first used to skip any import whose path
+  held a `/shared/` segment, meant for `lib/shared/` — a path no `/features/` import can reach — so what it exempted
+  was another feature's own `shared` folder; the second matched the waived module as a substring, so every path it is
+  a prefix of came in with it. Both are closed, and both holes are now a named failing case.
+- **`cubit_over_bloc_test.dart`** fails if a `Cubit` under `lib/features/` holds an `I…Repository`/`Client`/`Gateway`/
+  `Api` field and is not one of the five the guard names, or if one of those five does not carry a
+  `A Cubit, not a Bloc:` line in its class doc. CLAUDE.md defaults a feature touching network requests to `Bloc`, for
+  the `EventTransformer` that a `Cubit` otherwise writes by hand; three of these do write one by hand, so the guard
+  makes each say what makes it the exception instead of leaving a reader to guess whether it is a decision or a drift.
 - **`test_file_naming_test.dart`** fails if any file is named `*.test.dart`
   (a dot instead of `_test.dart`) — such files compile and pass `analyze` but
   are silently never executed by `flutter test`.
@@ -559,6 +571,14 @@ wrong scope.
   100, a promotional text of 170, and `tr` where Play says `tr-TR`. The privacy guard pairs phrases rather than
   counting mentions: saying "Android Keystore" obliges the page to say "Keychain" as well, in both languages, because
   one policy URL serves both stores and a reader on either platform has to find their own device described there.
+- **`store_listing_claims_test.dart`** guards three listing claims against what the code measures, across all six
+  listing texts at once: the live Play listing, every Play draft and the App Store listing, in both languages. Cancel
+  belongs to the engine (`ProviderMeta.supportsQueryCancel`); without it Stop waiting drops only the app's own request
+  while the statement runs on, which the app's own `sql_editor_stopped_waiting` says. The write confirmation is a
+  keyword scan that does not see what a function an allowed statement calls does (`docs/security.md`). The mask hides
+  more than Studio's grid for a token or key, an email with an empty part and a date that is not a bare calendar date
+  (`docs/security.md`), although the columns it masks are still Studio's. A phrase guard rather than a prose review,
+  because six copies of one sentence drift apart one file at a time, and an audit is the only thing that notices.
 - **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.

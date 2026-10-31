@@ -1,5 +1,11 @@
 name: CI
 
+# Analyze, test and build the Android artifacts of a branch or a pull request (docs/release.md).
+# Every job declares a timeout, so a hung step fails instead of holding a runner for the six-hour default, and every
+# checkout drops the GITHUB_TOKEN rather than leaving it in `.git/config`: these jobs run the branch's own Gradle and
+# shell scripts, and nothing here pushes, tags or calls the API.
+# `test/architecture/android_release_setup_test.dart` keeps both rules over every workflow of this repository.
+
 on:
   push:
     branches:
@@ -24,9 +30,12 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -59,9 +68,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -84,10 +96,13 @@ jobs:
   build:
     name: Build Android
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: [analyze, test]
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
