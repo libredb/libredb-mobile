@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/libredb/libredb-mobile/compare/v1.1.2...v1.1.3) (2026-10-31)
+
+
+### Bug Fixes
+
+* **release:** upload once to both tracks, not once per track ([173aa59](https://github.com/libredb/libredb-mobile/commit/173aa59c8472422146145b416c2bac6b37af3320))
+* **release:** upload once to both tracks, not once per track ([3c97687](https://github.com/libredb/libredb-mobile/commit/3c976870f482b5b421b9101f1616a7d43419140e))
+
 ## [1.1.2](https://github.com/libredb/libredb-mobile/compare/v1.1.1...v1.1.2) (2026-10-31)
 
 
