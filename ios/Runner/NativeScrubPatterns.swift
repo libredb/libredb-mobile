@@ -18,7 +18,7 @@ enum NativeScrubPatterns {
   // Comma-separated, compared as sets by the guard test.
   static let sensitiveHeaderNames = "authorization,cookie,set-cookie"
   static let sensitiveHeaderNameSubstrings = "authorization,api-key,api_key,apikey"
-  static let sensitiveBodyKeySubstrings = "password,otp,token,refreshtoken,secret,subjectemail,requesteremail,reason,statement,errormessage"
+  static let sensitiveBodyKeySubstrings = "password,otp,token,refreshtoken,secret,subjectemail,requesteremail,reason,statement,sql,connectionstring,errormessage"
   static let sensitiveExactKeys = "code,code_verifier,state,nonce,session_state,id_token_hint"
   static let navigationTypes = "didPush,didPop,didReplace"
 

@@ -61,6 +61,23 @@ void main() {
       );
     });
 
+    // Studio's wire name for a statement is `sql`, not `statement`: `POST /db/query`, `POST /db/multi-query` and
+    // `POST /db/transaction` all send the text the user typed under that key.
+    test('masks the sql of a statement request in a log line', () {
+      expect(
+        maskSecrets('{"connectionId":"seed:payroll","sql":"SELECT salary FROM payroll","queryId":"q-1"}'),
+        '{"connectionId":"seed:payroll","sql":"[REDACTED]","queryId":"q-1"}',
+      );
+      expect(maskSecrets('connectionId=seed:payroll&sql=SELECT+1'), 'connectionId=seed:payroll&sql=[REDACTED]');
+    });
+
+    test('masks the connectionString of a seed in a log line', () {
+      expect(
+        maskSecrets('{"id":"seed:payroll","connectionString":"postgres://app:hunter2@db.internal/payroll"}'),
+        '{"id":"seed:payroll","connectionString":"[REDACTED]"}',
+      );
+    });
+
     test('masks the reason and the requester e-mail of an access request in a log line', () {
       expect(
         maskSecrets(
@@ -253,6 +270,48 @@ void main() {
         'errorMessage': '[REDACTED]',
         'statementType': '[REDACTED]',
         'errorCode': '42501',
+      });
+    });
+
+    // The statement the app sends travels under Studio's name for it, `sql`: `POST /db/query`,
+    // `POST /db/multi-query` and `POST /db/transaction` all carry the text the user typed under that key.
+    test('masks sql at any depth, and keeps the connection, the catalog and the page it travels with', () {
+      final result = scrubBodyKeys({
+        'connectionId': 'seed:payroll',
+        'sql': 'SELECT salary FROM payroll',
+        'catalog': 'main',
+        'options': {'limit': 100, 'sql': 'SELECT * FORM orders'},
+        'ran': [
+          {'index': 0, 'sql': "UPDATE orders SET status = 'paid'", 'status': 'success'},
+        ],
+      });
+      expect(result, {
+        'connectionId': 'seed:payroll',
+        'sql': '[REDACTED]',
+        'catalog': 'main',
+        'options': {'limit': 100, 'sql': '[REDACTED]'},
+        'ran': [
+          {'index': 0, 'sql': '[REDACTED]', 'status': 'success'},
+        ],
+      });
+    });
+
+    // A Studio before libredb-studio#1922 sends an unmanaged seed's own credentials to a bearer client, and a
+    // connection string carries the user and the password inside it, where no shape rule finds them.
+    test('masks connectionString, and keeps the host, the port and the database of a seed', () {
+      final result = scrubBodyKeys({
+        'id': 'seed:payroll',
+        'connectionString': 'postgres://app:hunter2@db.internal:5432/payroll',
+        'host': 'db.internal',
+        'port': 5432,
+        'database': 'payroll',
+      });
+      expect(result, {
+        'id': 'seed:payroll',
+        'connectionString': '[REDACTED]',
+        'host': 'db.internal',
+        'port': 5432,
+        'database': 'payroll',
       });
     });
 

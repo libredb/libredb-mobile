@@ -75,12 +75,14 @@ That Sentry receives the timer's error comes from the #191 device check on the t
 `sentryBeforeSend` (`lib/infrastructure/analytics/sentry_scrub.dart`) changes every event before it leaves the device:
 
 - The `Authorization`, `Cookie` and `Set-Cookie` headers are dropped, whatever their case.
-- Any other header whose name contains `password`, `otp`, `token`, `secret`, `subjectemail`, `requesteremail`, `reason`, `statement`, `errormessage`, `authorization` or an api-key name (`api-key`, `api_key`, `apikey`), or is an OpenID Connect key, such as `X-Auth-Token`, `Proxy-Authorization` or `X-Api-Key`, keeps its name and has its whole value replaced with `[REDACTED]`.
+- Any other header whose name contains `password`, `otp`, `token`, `secret`, `subjectemail`, `requesteremail`, `reason`, `statement`, `sql`, `connectionstring`, `errormessage`, `authorization` or an api-key name (`api-key`, `api_key`, `apikey`), or is an OpenID Connect key, such as `X-Auth-Token`, `Proxy-Authorization` or `X-Api-Key`, keeps its name and has its whole value replaced with `[REDACTED]`.
 - A tag named like a credential body key has its whole value masked, and every other tag value has its email addresses, JWTs and the secrets `maskSecrets` finds masked.
 - The user's id, username, email, IP address and name have their email addresses, JWTs and secrets masked, and the user's data is masked like a breadcrumb's data.
 - Every other request header value and every `request.env` value has its email addresses, JWTs and secrets masked; the header names are kept.
-- The values of body keys whose names contain `password`, `otp`, `token`, `secret`, `subjectemail`, `requesteremail`, `reason`, `statement` or `errormessage` (case-insensitive substring) are replaced with `[REDACTED]` at any depth.
+- The values of body keys whose names contain `password`, `otp`, `token`, `secret`, `subjectemail`, `requesteremail`, `reason`, `statement`, `sql`, `connectionstring` or `errormessage` (case-insensitive substring) are replaced with `[REDACTED]` at any depth.
   `statement` and `errormessage` keep the statement and the database's error text of a Platform audit event out; as substrings they also mask keys such as `statementType`, `statementCapture` and `fixStatement`, which is accepted for logs and crash reports.
+  `sql` is the same rule under Studio's name for it: `POST /db/query`, `POST /db/multi-query` and `POST /db/transaction` send the text the user typed under that key, and a script's answer repeats it per statement; as a substring it also masks `sqlState` and a key such as `mysql`.
+  `connectionstring` keeps a seed's DSN out, since `postgres://user:password@host/db` hides the password inside a value where no shape rule finds it.
   `requesteremail` and `reason` keep the requester and the free text of an access request out; as a substring `reason` also masks `decisionReason`, Studio's `endReason` and the `reason` of a truncated source, which is accepted for logs and crash reports.
 - Email addresses and JWT-shaped strings (three base64url segments) in exception values, the event message and the request body are replaced with `[REDACTED_EMAIL]` and `[REDACTED_JWT]`.
   Only an HTTP integration such as `sentry_dio` attaches a request body; the app has none today.
