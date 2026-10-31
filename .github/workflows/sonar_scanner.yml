@@ -20,11 +20,15 @@ jobs:
   sonarcloud:
     name: Analyze
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          # The whole history, which SonarCloud reads for blame, but no GITHUB_TOKEN left in .git/config: the scan
+          # authenticates with SONAR_TOKEN and nothing here pushes.
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
