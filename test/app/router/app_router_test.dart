@@ -62,7 +62,7 @@ class _OidcDependencies extends AppDependencies {
       );
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => _IdleOidcClient();
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => _IdleOidcClient();
 }
 
 void main() {

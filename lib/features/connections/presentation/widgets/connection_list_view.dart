@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:libredb_mobile/features/connections/application/collapsed_sections_cubit.dart';
 import 'package:libredb_mobile/features/connections/application/connection_list_bloc.dart';
 import 'package:libredb_mobile/features/connections/application/connection_sections.dart';
@@ -282,7 +283,10 @@ class ConnectionSectionHeader extends StatelessWidget {
                 Expanded(
                   child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                 ),
-                Text('$count', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                Text(
+                  NumberFormat.decimalPattern(Localizations.localeOf(context).toString()).format(count),
+                  style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
               ],
             ),
           ),

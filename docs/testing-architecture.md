@@ -68,6 +68,7 @@ test/
 │   ├── mock_asset_coverage_test.dart # every repository method succeeds on the mock
 │   ├── mock_asset_naming_test.dart   # mock asset names use '_', never '-'
 │   ├── oidc_platform_setup_test.dart # OIDC scheme placeholder, no client secret
+│   ├── security_doc_test.dart        # docs/security.md describes the app lock's clock and the idle one as they run
 │   ├── sentry_native_scrub_patterns_test.dart # Kotlin scrub patterns equal the Dart ones, Gradle DSN gate
 │   ├── test_file_naming_test.dart    # forbids *.test.dart (dot) files
 │   └── ui_text_localized_test.dart   # widgets show ARB text through S, not string literals
@@ -581,6 +582,10 @@ wrong scope.
 - **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
+- **`security_doc_test.dart`** holds the "App lock" section of `docs/security.md` to the two clocks the app runs. The
+  page said the lock measures the time away as `IdleTimeoutObserver` measures it and reasoned from that; the lock's
+  clock starts when the app leaves the screen and the observer's at the last input. The guard runs both — the pure
+  `isInBackground` and the observer under `fake_async` — and fails when the page claims they are one clock.
 - **`installer_lab_config_test.dart`** guards the Platform installer environment used for the full-system check.
 - **`platform_image_pin_test.dart`** guards that the `platform` profile of `tool/studio-dev` names one Platform release
   everywhere it is named: both `PLATFORM_IMAGE` defaults, the comment that introduces the profile, and the

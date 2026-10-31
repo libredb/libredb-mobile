@@ -936,7 +936,7 @@ class _OidcDependencies extends AppDependencies {
   final IOidcClient client;
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => client;
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => client;
 }
 
 /// Leaves a cached response as a GET outside Studio's live endpoints does. Since the app config check is gone, the app

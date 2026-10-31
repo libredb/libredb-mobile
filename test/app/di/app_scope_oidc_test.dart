@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:libredb_mobile/app/di/app_dependencies.dart';
 import 'package:libredb_mobile/app/di/app_scope.dart';
+import 'package:libredb_mobile/app/localization/locale_cubit.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
 import 'package:libredb_mobile/core/errors/app_error_code.dart';
 import 'package:libredb_mobile/features/auth/domain/services/sso_auto_redirect_gate.dart';
@@ -45,6 +46,10 @@ class _OidcDependencies extends AppDependencies {
   final apiClientRotations = <TokenRotation>[];
   final platformApiClientRotations = <TokenRotation>[];
 
+  /// The language source the scope gave the provider client, read whenever a test wants to know what the next
+  /// sign-in would ask the provider's page for.
+  List<String> Function()? uiLocales;
+
   @override
   PlatformApiClient createPlatformApiClient(
     ISecureStorage secureStorage, {
@@ -66,7 +71,10 @@ class _OidcDependencies extends AppDependencies {
   }
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => client;
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) {
+    this.uiLocales = uiLocales;
+    return client;
+  }
 
   @override
   ApiClient createApiClient(
@@ -194,6 +202,24 @@ void main() {
 
       expect(dependencies.apiClientRotations, hasLength(1));
       expect(dependencies.apiClientRotations.single, same(scope.read<TokenRotation>()));
+    });
+
+    testWidgets('the provider client asks the provider page for the language the app shows', (tester) async {
+      final dependencies = _OidcDependencies(_IdleOidcClient());
+      final scope = await _pumpScope(tester, dependencies);
+
+      scope.read<IOidcClient>();
+
+      final uiLocales = dependencies.uiLocales;
+      expect(uiLocales, isNotNull, reason: 'the scope gave the provider client no language to ask the page for');
+      expect(uiLocales!(), ['en'], reason: 'the app starts in the scope\'s default language');
+
+      await scope.read<LocaleCubit>().changeLocale(const Locale('tr'));
+      await tester.pump();
+
+      expect(uiLocales(), [
+        'tr',
+      ], reason: 'the language the user picked in Settings is what the provider page must open in');
     });
 
     testWidgets('the Platform client refreshes through the same TokenRotation as the Studio client', (tester) async {

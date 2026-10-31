@@ -159,8 +159,10 @@ final class OidcClient implements IOidcClient {
     http.Client? httpClient,
     OidcPlatformKind? platform,
     Future<void> Function()? cancelAndroidFlow,
+    List<String> Function()? uiLocales,
     @visibleForTesting this._onManagerCreated,
-  }) : _store = store ?? OidcTransactionStore(),
+  }) : _uiLocales = uiLocales ?? _noUiLocales,
+       _store = store ?? OidcTransactionStore(),
        _http = _ProviderHttpClient(
          httpClient ?? http.Client(),
          discoveryUri: OidcUtils.getOpenIdConfigWellKnownUri(_settings.issuer),
@@ -174,6 +176,14 @@ final class OidcClient implements IOidcClient {
   static const _platformOptions = OidcPlatformSpecificOptions(
     android: OidcNativeOptionsAndroid(useAuthTab: OidcAuthTabMode.never),
   );
+
+  static List<String> _noUiLocales() => const [];
+
+  /// The language tags of the page the provider shows, most preferred first.
+  ///
+  /// Read at each sign-in and each logout rather than once, because the user may change the app's language between
+  /// them; for the same reason it is not put into [OidcUserManagerSettings], which one manager keeps for the whole run.
+  final List<String> Function() _uiLocales;
 
   final OidcSettings _settings;
   final OidcTransactionStore _store;
@@ -194,6 +204,13 @@ final class OidcClient implements IOidcClient {
     final result = _idle.then((_) => operation());
     _idle = result.then<void>((_) {}, onError: (Object _) {});
     return result;
+  }
+
+  /// The `ui_locales` of a request, or null when the app names no language, which leaves the choice to the provider
+  /// and the browser as it was before.
+  List<String>? _requestedUiLocales() {
+    final locales = _uiLocales();
+    return locales.isEmpty ? null : locales;
   }
 
   @override
@@ -217,6 +234,7 @@ final class OidcClient implements IOidcClient {
     try {
       final user = await manager.loginAuthorizationCodeFlow(
         includeIdTokenHintFromCurrentUser: false,
+        uiLocalesOverride: _requestedUiLocales(),
         options: _platformOptions,
       );
       if (user == null) {
@@ -332,6 +350,7 @@ final class OidcClient implements IOidcClient {
             clientId: _settings.clientId,
             postLogoutRedirectUri: _settings.redirectUri,
             idTokenHint: idTokenHint,
+            uiLocales: _requestedUiLocales(),
             extra: endpoint.extra,
           ),
           options: _platformOptions,

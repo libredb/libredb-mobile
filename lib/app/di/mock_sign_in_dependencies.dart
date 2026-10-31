@@ -23,5 +23,6 @@ class MockSignInDependencies extends AppDependencies {
   static final issuer = Uri.parse('https://local-sign-in.invalid');
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => MockOidcClient(issuer: settings.issuer);
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) =>
+      MockOidcClient(issuer: settings.issuer);
 }

@@ -227,9 +227,17 @@ class AppDependencies {
   /// The OpenID Connect client, which talks to the identity provider. With `OIDC_CERT_PINS` set, discovery, the key
   /// set, the token exchange and the refresh go through a client pinned to them; the sign-in page itself opens in the
   /// system browser, which the app cannot pin.
-  IOidcClient createOidcClient(OidcSettings settings) {
+  ///
+  /// [uiLocales] answers the language tags the provider's own pages must be shown in, most preferred first, and is
+  /// asked again at each sign-in and logout. Without it the browser's `Accept-Language` decides, which is the phone's
+  /// language rather than the one the user picked in the app.
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) {
     final pins = appConfig.oidcCertificatePins;
-    return OidcClient(settings: settings, httpClient: pins.isEmpty ? null : pinnedHttpClient(pins));
+    return OidcClient(
+      settings: settings,
+      httpClient: pins.isEmpty ? null : pinnedHttpClient(pins),
+      uiLocales: uiLocales,
+    );
   }
 
   /// The single sign-on, which removes the files a share left and then stores the session through [sessionRepository].

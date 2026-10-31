@@ -239,7 +239,7 @@ class _CountingDependencies extends AppDependencies {
   int sessionExpiredCalls = 0;
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => client;
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => client;
 
   @override
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) => rotation;
@@ -456,7 +456,7 @@ class _OidcClientDependencies extends AppDependencies {
   }
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) {
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) {
     oidcClientsCreated++;
     return client;
   }
@@ -525,7 +525,7 @@ class _StudioIdentityDependencies extends AppDependencies {
   late final studioIdentity = _CountingStudioIdentity(events);
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => _NoLogoutOidcClient();
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => _NoLogoutOidcClient();
 
   @override
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>

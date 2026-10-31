@@ -412,11 +412,13 @@ When it locks:
   A session that the restore's late answer brings back after its time limit (`SessionExpiredReason.storageTimeout`) counts as a restore and locks.
   A restore that arrives while the settings are still read locks with no open state between, and no signed-in page shows until the lock has decided.
 - A return after at least the chosen time in the background locks: immediately, 1, 5 (the default) or 15 minutes.
-  The time away is measured by the wall clock from the moment the app leaves the screen (`hidden` or `paused`) to its return, as `IdleTimeoutObserver` measures it, since a timer does not run while the phone suspends the app.
-  A system sheet over the app, which only makes it `inactive`, is not time away.
+  The time away is measured by the wall clock from the moment the app leaves the screen (`hidden` or `paused`) to its return, since a timer does not run while the phone suspends the app.
+  That is not the clock the inactivity sign-out runs. `IdleTimeoutObserver` reads the same wall clock, but its window starts at the last input, so the app leaving the screen neither starts it nor restarts it, and by then it is usually part spent. The two answer different questions: how long the app was away, and how long nobody has touched it.
+  A system sheet over the app, which only makes it `inactive`, is not time away for the lock: `isInBackground` counts only `hidden` and `paused`. For the idle period it changes nothing either way, since that clock never stopped.
   The PIN screen that the prompt opens is not time away either, so unlocking with the PIN does not lock again on the return.
 - It never locks while nobody is signed in, and a sign-out removes the lock screen.
-- When the time away also reaches the idle period of the inactivity sign-out (15 minutes in prod), the idle sign-out wins: the pages stay hidden behind a spinner until the session has ended, and no lock shows over the login page.
+- When the time away alone reaches the idle period of the inactivity sign-out (15 minutes in prod), `AppLockBloc` puts up no lock and leaves the resume to the observer: the pages stay hidden behind a spinner until the session has ended, and no lock shows over the login page.
+  That is the case the lock can see for itself, not the only case the sign-out arrives in. Because the observer's window began at the last input, a return from a stay away shorter than the idle period — a minute, say, after fourteen untouched in the foreground — still signs the user out, and the lock screen the same return put up is removed when the session ends behind it (`AppLockSignedOut`).
 
 The lock screen:
 

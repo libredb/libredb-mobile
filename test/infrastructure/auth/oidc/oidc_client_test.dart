@@ -43,6 +43,7 @@ void main() {
     FakeProvider? at,
     Future<void> Function()? cancelAndroidFlow,
     void Function(AppOidcUserManager manager)? onManagerCreated,
+    List<String> Function()? uiLocales,
   }) {
     final idp = at ?? provider;
     return OidcClient(
@@ -52,6 +53,7 @@ void main() {
       platform: platformKind,
       cancelAndroidFlow: cancelAndroidFlow ?? () async => fail('cancelAndroidFlow was not expected'),
       onManagerCreated: onManagerCreated,
+      uiLocales: uiLocales,
     );
   }
 
@@ -360,6 +362,30 @@ void main() {
       await signIn(newClient());
 
       expect(platform.lastAuthorizeUri.queryParameters['redirect_uri'], 'org.libredb.mobile:/oauth2redirect');
+    });
+
+    test('the authorization URL asks for the provider page in the language the app shows', () async {
+      await signIn(newClient(uiLocales: () => ['tr']));
+
+      expect(platform.lastAuthorizeUri.queryParameters['ui_locales'], 'tr');
+    });
+
+    test('the language is read at each sign-in, so a change in the app reaches the next one', () async {
+      var language = 'en';
+      final client = newClient(uiLocales: () => [language]);
+
+      await signIn(client);
+      expect(platform.lastAuthorizeUri.queryParameters['ui_locales'], 'en');
+
+      language = 'tr';
+      await signIn(client);
+      expect(platform.lastAuthorizeUri.queryParameters['ui_locales'], 'tr');
+    });
+
+    test('the authorization URL carries no ui_locales when the app names no language', () async {
+      await signIn(newClient(uiLocales: () => const []));
+
+      expect(platform.lastAuthorizeUri.queryParameters, isNot(contains('ui_locales')));
     });
   });
 
@@ -764,6 +790,13 @@ void main() {
         'post_logout_redirect_uri': 'org.libredb.mobile:/oauth2redirect',
         'id_token_hint': 'id-token-value',
       });
+    });
+
+    test('the end-session URL asks for the provider page in the language the app shows', () async {
+      final outcome = await newClient(uiLocales: () => ['tr']).endProviderSession(idTokenHint: 'id-token-value');
+
+      expect(outcome, isA<ProviderSessionEnded>());
+      expect(platform.lastEndSessionUri.queryParameters['ui_locales'], 'tr');
     });
 
     test('the provider logout keeps the Custom Tab and the shared Apple session', () async {
