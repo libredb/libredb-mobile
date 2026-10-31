@@ -20,10 +20,11 @@ iOS is released separately on macOS (#199).
 6. It keeps the bundle and R8's `mapping.txt` for 7 days as the `release-bundle` workflow artifact, and deletes the keystore and the defines file, also when a step failed.
    The artifact holds exactly those two files: the Dart symbols and the obfuscation map in `build/debug-info` go only to Sentry.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
-7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping to the internal testing track, then the same bundle to the production track.
-   The testers have it as soon as the first upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
-   A production upload replaces whatever is already in review, so the review always runs on the newest release.
-   Neither upload carries release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
+7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping once, assigned to both the internal testing and the production tracks.
+   The testers have it as soon as the upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
+   A production release replaces whatever is already in review, so the review always runs on the newest release.
+   It has to be one upload: Play refuses a second upload of the same bundle with "Version code has already been used", which is how the v1.1.2 release failed before `tracks` replaced two `track` steps.
+   The upload carries no release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
    Neither environment has a required reviewer: the `refs/tags/v*` ruleset refuses a tag created by anyone but an organization admin, so nothing a workflow pushes reaches the upload key, and a release runs end to end without a human.
 
 A version tag pushed by hand (`git tag v1.2.3 && git push origin v1.2.3`) runs `release.yml` the same way; use it only on a commit of `main` whose `pubspec.yaml` already names that version.
