@@ -41,6 +41,19 @@ const Set<String> sensitiveHeaderNameSubstrings = {'authorization', 'api-key', '
 /// they also mask `statementType`, `statementCapture`, `fixStatement` and
 /// the like, which is accepted for logs and crash reports.
 ///
+/// `sql` is the same rule under Studio's name for it: `POST /db/query`,
+/// `POST /db/multi-query` and `POST /db/transaction` send the text the user
+/// typed under that key, and a script's answer repeats it for every
+/// statement it ran. A statement carries customer data and credentials in
+/// its literals (`docs/security.md`), so `statement` alone left the one key
+/// the app actually sends unmasked. As a substring it also masks `sqlState`
+/// and a key such as `mysql`, which is accepted for logs and crash reports.
+///
+/// `connectionstring` keeps a seed's DSN out of every exit: a Studio before
+/// libredb-studio#1922 sends an unmanaged seed's own credentials to a bearer
+/// client, and `postgres://user:password@host/db` hides the password inside
+/// a value where no shape rule finds it.
+///
 /// `requesteremail` and `reason` keep an access request's requester and the
 /// free text they wrote out of every exit, since a reason can name anyone;
 /// as a substring `reason` also masks `decisionReason`, the text an admin
@@ -56,6 +69,8 @@ const Set<String> sensitiveBodyKeySubstrings = {
   'requesteremail',
   'reason',
   'statement',
+  'sql',
+  'connectionstring',
   'errormessage',
 };
 

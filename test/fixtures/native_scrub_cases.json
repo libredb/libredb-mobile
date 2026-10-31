@@ -28,6 +28,18 @@
     "expected": "{\"statementType\":\"[REDACTED]\",\"status\":\"error\"}"
   },
   {
+    "input": "{\"connectionId\":\"seed:payroll\",\"sql\":\"SELECT salary FROM payroll\",\"queryId\":\"q-1\"}",
+    "expected": "{\"connectionId\":\"seed:payroll\",\"sql\":\"[REDACTED]\",\"queryId\":\"q-1\"}"
+  },
+  {
+    "input": "connectionId=seed:payroll&sql=SELECT+1",
+    "expected": "connectionId=seed:payroll&sql=[REDACTED]"
+  },
+  {
+    "input": "{\"connectionString\":\"postgres://app:not-a-real-password@db.internal/payroll\",\"port\":5432}",
+    "expected": "{\"connectionString\":\"[REDACTED]\",\"port\":5432}"
+  },
+  {
     "input": "{\"reason\":\"I need the payroll table\",\"level\":\"read\"}",
     "expected": "{\"reason\":\"[REDACTED]\",\"level\":\"read\"}"
   },

@@ -52,4 +52,10 @@ class StatementResult extends Equatable {
 
   @override
   List<Object?> get props => [index, sql, startLine, executionTime, rowCount, result, error];
+
+  /// Prints neither the statement nor the database's own words: an Equatable prints its props whenever `stringify` is
+  /// on, the default of every debug build, so the bloc observer and the dev console would hold the text of every
+  /// statement a script ran.
+  @override
+  String toString() => 'StatementResult($index, failed: ${error != null}, rows: $rowCount)';
 }
