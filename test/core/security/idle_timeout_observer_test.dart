@@ -140,12 +140,45 @@ void main() {
         now = now.add(const Duration(minutes: 3));
         observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
 
-        // After resume, remaining is 5 - 3 = 2 minutes from the resume instant.
+        // Four of the five minutes have passed without input: one in the foreground and three away. The window is
+        // measured from the last input, so one minute is left, not the two a background-only measure would give.
         expect(fired, 0);
-        async.elapse(const Duration(minutes: 1, seconds: 59));
+        async.elapse(const Duration(seconds: 59));
         expect(fired, 0);
         async.elapse(const Duration(seconds: 2));
         expect(fired, 1);
+
+        observer.stop();
+      });
+    });
+
+    test('a lifecycle blip does not extend the window: an untouched phone still signs out on time', () {
+      fakeAsync((async) {
+        var fired = 0;
+        var now = DateTime(2026, 5, 21, 12);
+        final observer = IdleTimeoutObserver(
+          idleThreshold: const Duration(minutes: 15),
+          onTimeout: () => fired++,
+          clock: () => now,
+        );
+        observer.start();
+
+        // The phone lies untouched. Every few minutes a notification banner, a system sheet or the control centre
+        // makes the app inactive for a moment and then resumed, with no input at all in between.
+        for (var minute = 3; minute <= 12; minute += 3) {
+          async.elapse(const Duration(minutes: 3));
+          now = now.add(const Duration(minutes: 3));
+          observer.didChangeAppLifecycleState(AppLifecycleState.inactive);
+          async.elapse(const Duration(seconds: 2));
+          now = now.add(const Duration(seconds: 2));
+          observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        }
+
+        // Twelve minutes and eight seconds of no input have passed. The window is measured from the last input, so
+        // the remaining time is what is left of the fifteen minutes, not a fresh fifteen.
+        expect(fired, 0, reason: 'the threshold has not been reached yet');
+        async.elapse(const Duration(minutes: 2, seconds: 53));
+        expect(fired, 1, reason: 'fifteen minutes without input must sign the user out, blips or not');
 
         observer.stop();
       });
