@@ -11,7 +11,9 @@ iOS is released separately on macOS (#199).
    It reads the Conventional Commits merged since the last release, picks the next version, raises the build number in `pubspec.yaml` by one, and writes `CHANGELOG.md`.
    Never edit `CHANGELOG.md` or the version in `pubspec.yaml` by hand; `.release-please-manifest.json` holds the last released version and must equal the version name in `pubspec.yaml`.
 2. Merging the release pull request tags the release (`v1.2.3`) and creates the GitHub release.
-3. The same workflow then calls `.github/workflows/release.yml`, because a tag that a workflow pushes with `GITHUB_TOKEN` starts no other workflow.
+3. That tag starts `.github/workflows/release.yml` on its own, because release-please pushes it with `RELEASE_PLEASE_TOKEN`, a user token, and a user token's push does start other workflows.
+   Nothing calls `release.yml`; it has one entry point for a release, the `v*.*.*` tag, so one tag makes one run.
+   It used to be called from `release-please.yml` as well, which built and signed the same version twice and uploaded two sets of symbols for one Sentry release; `v1.1.3` ran it both ways before that was removed.
 4. `release.yml` checks that the tagged commit is on `main` and that the tag equals the version name in `pubspec.yaml`, runs the localization, format and analyze checks, the full test suite with the coverage gate, and the Android JVM tests.
 5. The build job deploys to the `release-signing` environment, which only `main` and `v*.*.*` tags may use, and checks out the commit the checks ran on.
    It stops when the build would carry a define meant for checks only (see below), or when a release has no `SENTRY_AUTH_TOKEN` (see "Crash symbols").
