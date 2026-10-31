@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0](https://github.com/libredb/libredb-mobile/compare/v1.1.3...v1.2.0) (2026-10-31)
+
+
+### Features
+
+* **release:** App Store listing texts in English and Turkish ([46c5692](https://github.com/libredb/libredb-mobile/commit/46c569230173efb725a902e69235407289e1ea03))
+* **release:** App Store listing texts in English and Turkish ([6ef6f2c](https://github.com/libredb/libredb-mobile/commit/6ef6f2ccb4874223e67cfe05f7dfb60a8fbb0ff6))
+
+
+### Bug Fixes
+
+* **release:** one tag, one release run ([87c20fe](https://github.com/libredb/libredb-mobile/commit/87c20fea30bdc1c291f1eecbfef308fe159f50f5))
+* **release:** one tag, one release run ([897e576](https://github.com/libredb/libredb-mobile/commit/897e576304a71038bb9cec95ae60f02152e126d0))
+* **release:** say the App Store app lock is a setting, because it ships off ([423f5cd](https://github.com/libredb/libredb-mobile/commit/423f5cdfb47cc2b2789b8ecf497c93815406d610))
+* **release:** say the App Store app lock is a setting, because it ships off ([4ef0ef7](https://github.com/libredb/libredb-mobile/commit/4ef0ef7ecbd72d564c678cb3823e1caf6822e343))
+* **security:** measure the idle window from the last input, not from the pause ([5b0f84b](https://github.com/libredb/libredb-mobile/commit/5b0f84b08bfba379155c320d8f5045f2acba7d7e))
+* **security:** measure the idle window from the last input, not from the pause ([f737402](https://github.com/libredb/libredb-mobile/commit/f737402895e88b8d3cd7841a9e3eaa1890a81899))
+
 ## [1.1.3](https://github.com/libredb/libredb-mobile/compare/v1.1.2...v1.1.3) (2026-10-31)
 
 
