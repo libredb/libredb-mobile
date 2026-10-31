@@ -390,6 +390,9 @@ The sheet answers confirmed or cancelled and keeps no statement after it closes;
 - `main_local.dart` is the weakest profile on purpose: no certificate pinning, no screen-capture protection and no idle timeout. It exists for hand testing against a development stack on a developer's own machine, never for a build anyone else installs; only `main_prod.dart` is shipped.
 - Every entry point shares one `applicationId`, `org.libredb.mobile`, so installing the local build replaces the prod build **and inherits its secure storage**. A session stored by a `main_prod.dart` build is therefore reachable from a build that never times out idle and allows screenshots, screen recordings and the recent-apps preview of every data screen. Sign out before switching between the two, or clear the app's data.
 - On iOS a Dart `Timer` pauses while the app is suspended, so the observer also records the wall-clock time on each lifecycle change; a resume past the period signs out at once.
+- The period is measured from the last input, not from the moment the app went away, so time spent idle in the foreground counts too.
+  Measuring only the time away would hand back a fresh period on every lifecycle blip: a phone lying untouched gets an `inactive` and a `resumed` whenever a notification banner, a system sheet or the control centre appears, and the sign-out would never arrive.
+  `idle_timeout_observer_test.dart` holds that case, with no input and a blip every three minutes.
 - When the period ends, the user sees a translated snackbar ("You were signed out due to inactivity.") and the router goes to the sign-in page.
   The session ends with `SessionExpiredReason.idleTimeout`, so the log and the UI can tell it from a sign-out the user chose.
 - A touch or drag, mouse wheel and trackpad scrolling, and hardware key presses reset the timer, so a user who only scrolls a long page stays signed in.

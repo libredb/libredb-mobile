@@ -23,10 +23,18 @@ typedef OnIdleTimeout = void Function();
 /// **Background timing.** Dart [Timer]s pause on iOS while the app is
 /// backgrounded. Relying on the timer alone would let a 12-hour
 /// background pass and the user would still be logged in on resume.
-/// The lifecycle callback captures `_backgroundedAt = clock()` on
-/// pause and computes elapsed wall time on resume — if the elapsed
+/// The lifecycle callback cancels the timer on pause and, on resume,
+/// compares the wall clock against [_windowStartedAt] — if the elapsed
 /// time exceeds [idleThreshold], it fires immediately; otherwise it
 /// resumes the timer with the remaining duration.
+///
+/// **The window is anchored on the last input, not on the pause.** The
+/// promise is "signed out after [idleThreshold] without input", so the
+/// time already spent idle in the foreground counts. Measuring only the
+/// background stretch would hand back a fresh window on every lifecycle
+/// blip: a phone lying untouched gets an `inactive`/`resumed` pair
+/// whenever a notification banner, a system sheet or the control centre
+/// appears, and the sign-out would never arrive.
 ///
 /// **Disabled mode.** Passing `idleThreshold: null` makes every method
 /// a no-op, so a build whose config sets no idle timeout (every environment
@@ -59,7 +67,10 @@ class IdleTimeoutObserver with WidgetsBindingObserver {
   static const Duration _activityThrottle = Duration(seconds: 1);
 
   Timer? _timer;
-  DateTime? _backgroundedAt;
+
+  /// The instant the current idle window began: [start], or the last [recordActivity] that got past the throttle.
+  /// Every remaining-time answer is measured from here, so foreground and background time count the same.
+  DateTime? _windowStartedAt;
   DateTime? _lastActivity;
   bool _started = false;
 
@@ -78,7 +89,7 @@ class IdleTimeoutObserver with WidgetsBindingObserver {
   void stop() {
     if (!_started) return;
     _cancelTimer();
-    _backgroundedAt = null;
+    _windowStartedAt = null;
     _lastActivity = null;
     WidgetsBinding.instance.removeObserver(this);
     _started = false;
@@ -100,6 +111,7 @@ class IdleTimeoutObserver with WidgetsBindingObserver {
   void _resetTimer() {
     final threshold = idleThreshold;
     if (threshold == null) return;
+    _windowStartedAt = _clock();
     _scheduleTimeout(threshold);
   }
 
@@ -125,19 +137,16 @@ class IdleTimeoutObserver with WidgetsBindingObserver {
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.inactive:
-        // Capture background instant once. The first pause-style
-        // transition wins; subsequent ones do not re-anchor (e.g.
-        // hidden after paused). We only care about the earliest
-        // moment of no-foreground.
-        _backgroundedAt ??= _clock();
+        // A Dart Timer does not run while the app is away, so it would fire late by the time spent there. Cancel it
+        // and let the resume branch do the arithmetic against the wall clock. The window anchor is left alone: time
+        // away is idle time like any other.
         _cancelTimer();
       case AppLifecycleState.resumed:
-        final backgroundedAt = _backgroundedAt;
-        _backgroundedAt = null;
-        if (backgroundedAt == null) return;
-        final elapsed = _clock().difference(backgroundedAt);
+        final windowStartedAt = _windowStartedAt;
+        if (windowStartedAt == null) return;
+        final elapsed = _clock().difference(windowStartedAt);
         if (elapsed >= idleThreshold!) {
-          _log.info('resumed after {}s of background, past the {}s threshold', [
+          _log.info('resumed {}s after the last input, past the {}s threshold', [
             elapsed.inSeconds,
             idleThreshold!.inSeconds,
           ]);
