@@ -2,13 +2,14 @@
 
 Son güncelleme: 29 Ekim 2026.
 
-Bu politika, Android için LibreDB Mobile'ın verilerinizle ne yaptığını anlatır.
+Bu politika, LibreDB Mobile'ın Android ve iOS üzerinde verilerinizle ne yaptığını anlatır.
+İki platformun davranışı ayrıldığı yerde bu sayfa bunu söyler; birini anlatıp ötekini sessiz geçmez.
 LibreDB Mobile, LibreDB Studio'nun bir istemcisidir: Keycloak üzerinden oturumunuzu açar ve Studio'nun size sunduğu veritabanlarını gösterir.
 Bu politikayla ilgili sorularınızı [info@libredb.org](mailto:info@libredb.org) adresine yazabilirsiniz.
 
 ## Uygulamayı kim yayınlıyor
 
-LibreDB Mobile'ı Google Play'de **Sekoya Tech** yayınlar; bu, Türkiye'de kayıtlı **Sekoya Grup Bilişim ve Teknoloji Ltd. Şti.**'nin ticari adıdır ve burada anlatılan işleme faaliyetinin veri sorumlusudur.
+LibreDB Mobile'ı Google Play ve App Store'da **Sekoya Tech** yayınlar; bu, Türkiye'de kayıtlı **Sekoya Grup Bilişim ve Teknoloji Ltd. Şti.**'nin ticari adıdır ve burada anlatılan işleme faaliyetinin veri sorumlusudur.
 
 | | |
 | --- | --- |
@@ -68,7 +69,7 @@ Uygulama Keycloak'a, Studio'ya, Platform'a ve Sentry'ye trafiği şifreleyen HTT
 
 ## Uygulamanın cihazda tuttukları
 
-- **Oturum belirteçleriniz**, Android'in güvenli depolamasında, Android Keystore'un tuttuğu bir anahtarla şifrelenmiş olarak.
+- **Oturum belirteçleriniz**, cihazın güvenli depolamasında: Android'de Android Keystore'un tuttuğu bir anahtarla şifrelenmiş olarak, iOS'ta Keychain'de, yalnızca cihazın ilk kilit açımından sonra okunabilecek ve bu cihazdan hiç çıkmayacak biçimde işaretlenmiş olarak.
   Oturumu kapatmak onları siler.
 - **Taslaklarınız ve deyim geçmişiniz**: düzenleyicinin her bağlantı için taslağı ve çalıştırdığınız deyimler, cihazda yalnızca hesabınıza ait bir anahtarla şifrelenmiş olarak.
   Oturumu kapattıktan sonra da kalırlar; böylece aynı hesapla yeniden oturum açtığınızda onları bulursunuz ve cihazdaki başka bir hesap onları okuyamaz.
@@ -78,19 +79,21 @@ Uygulama Keycloak'a, Studio'ya, Platform'a ve Sentry'ye trafiği şifreleyen HTT
 Uygulama kapandıktan sonra sorgu sonuçlarının hiçbir satırını tutmaz.
 Uygulama çalışırken bir bağlantının nesnelerinin listelerini, sayılarını ve tanımlarını, geri dönüldüğünde Studio'ya yeniden sorulmasın diye en çok 10 dakika bellekte tutar.
 Nesne aramasına yazdıklarınız yalnızca Studio'ya gider ve uygulama arama geçmişi tutmaz.
-Uygulamanın Android bulut yedeklemesi kapalıdır; tercihleri, taslakları ve geçmişi cihazdan cihaza aktarımların dışında bırakılır.
+Android'de uygulamanın bulut yedeklemesi kapalıdır; tercihleri, taslakları ve geçmişi cihazdan cihaza aktarımların dışında bırakılır.
+iOS'ta uygulama varsayılanı korur; bu yüzden bir yedek, taslaklarınızı ve geçmişinizi tutan dosyaları taşıyabilir, ama onları açan anahtarı asla taşımaz: o anahtar Keychain'dedir ve cihazdan çıkmaz.
+Başka bir cihaza geri yüklendiğinde o dosyalar ne sizin ne de bir başkasının okuyabileceği hâldedir.
 
 ## Paylaşma ve kopyalama
 
 Uygulama veriyi başka bir uygulamaya yalnızca siz istediğinizde verir.
 Bir sonucun bir değerini kopyaladığınızda uygulama ekranda görüneni kopyalar; maskelenmiş bir değer maskesiyle kopyalanır.
 Bir nesnenin kaynağını, örneğin bir görünümün tanımını paylaştığınızda sistemin paylaşım penceresi onu seçtiğiniz uygulamaya gönderir.
-100.000 karakterden uzun bir kaynak dosya olarak paylaşılır ve bu dosya, Android temizleyene ya da uygulamayı kaldırana kadar uygulamanın geçici depolamasında kalabilir.
+100.000 karakterden uzun bir kaynak dosya olarak paylaşılır ve bu dosya, sistem temizleyene ya da uygulamayı kaldırana kadar uygulamanın geçici depolamasında kalabilir.
 
 ## Çökme raporları
 
 Bir Sentry proje anahtarıyla derlenmiş uygulama, bir hatayla karşılaştığında Sentry'ye bir rapor gönderir.
-Bir rapor şunları içerir: hatayı ve uygulamanın neresinde olduğunu, uygulamanın sürümünü, cihazın modeli, Android sürümü, dili, boş belleği ve pil düzeyi gibi teknik ayrıntılarını, kuruluma ait rastgele bir tanımlayıcıyı ve hatadan önceki olayların bir izini, örneğin açtığınız ekranları ve uygulamanın arka plana geçişini.
+Bir rapor şunları içerir: hatayı ve uygulamanın neresinde olduğunu, uygulamanın sürümünü, cihazın modeli, işletim sistemi sürümü, dili, boş belleği ve pil düzeyi gibi teknik ayrıntılarını, kuruluma ait rastgele bir tanımlayıcıyı ve hatadan önceki olayların bir izini, örneğin açtığınız ekranları ve uygulamanın arka plana geçişini.
 Bir Sentry proje anahtarıyla derlenmiş uygulama ayrıca uygulamayı her kullanışınızda bir oturum kaydı gönderir: oturumun ne zaman başlayıp bittiği, ne kadar sürdüğü, bir çökmeyle bitip bitmediği ve kurulum tanımlayıcısı.
 Ayrıca, uygulamanın nerede yavaş olduğunu göstermek için uygulama açılışlarının ve ekran değişikliklerinin yaklaşık beşte biri için süre bilgisi gönderir.
 Bir rapor cihazdan çıkmadan önce uygulama içinden e-posta adreslerini, belirteçleri, parolaları ve diğer kimlik bilgilerini çıkarır.
