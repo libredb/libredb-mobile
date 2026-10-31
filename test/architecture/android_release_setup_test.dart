@@ -623,9 +623,13 @@ void main() {
       );
     });
 
-    test('the docs name the Actions setting release-please needs to open its pull request', () {
-      expect(releaseDocs, contains('Allow GitHub Actions to create and approve pull requests'));
-      expect(releaseDocs, contains('Workflow permissions'));
+    // Until 2026-10-30 this step named the repository's "Allow GitHub Actions to create and approve pull requests"
+    // setting, which governs `GITHUB_TOKEN` alone. release-please acts as the owner now, so the one-time step is the
+    // token itself: it opens the pull request, which makes CI run on it, and pushes the tag the `refs/tags/v*`
+    // creation rule lets only an organization admin through with.
+    test('the docs name the token release-please opens its pull request and tags with', () {
+      expect(releaseDocs, contains('repository secret `RELEASE_PLEASE_TOKEN`'));
+      expect(releaseDocs, contains('fine-grained personal access token'));
     });
 
     test('the docs say to remove release-as after the first release', () {
