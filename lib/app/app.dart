@@ -13,6 +13,7 @@ import 'package:libredb_mobile/app/lock/app_lock_gate.dart';
 import 'package:libredb_mobile/app/theme/theme_bloc.dart';
 import 'package:libredb_mobile/app/router/app_router.dart';
 import 'package:libredb_mobile/app/session/session_cubit.dart';
+import 'package:libredb_mobile/app/system_bars.dart';
 import 'package:libredb_mobile/core/analytics/analytics_service.dart';
 import 'package:libredb_mobile/core/analytics/log_analytics_service.dart';
 import 'package:libredb_mobile/features/onboarding/application/onboarding_cubit.dart';
@@ -193,30 +194,34 @@ class _AppViewState extends State<_AppView> with WidgetsBindingObserver {
             // gate also covers the restore and the login page.
             // AppLockGate covers all of it, the unreachable page included, with the lock screen while the app is
             // locked.
-            builder: (context, router) => AppLockGate(
-              router: _router!,
-              child: RepositoryProvider<UnsavedChangesRegistry>.value(
-                value: _unsavedChanges!,
-                child: AppStatusGate(
-                  child: AppTargetReachability(
-                    child: BlocBuilder<SessionCubit, SessionState>(
-                      buildWhen: (previous, current) => previous is SessionUnknown,
-                      builder: (context, session) => switch (session) {
-                        SessionUnknown() => const _RestoreView(),
-                        SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
-                          LocaleRestoring() => const _RestoreView(),
-                          LocaleReady() ||
-                          LocaleChanging() ||
-                          LocaleChangeFailure() => BlocBuilder<OnboardingCubit, OnboardingState>(
-                            // The end of restore, which lets the router in. Nothing later changes what it shows.
-                            buildWhen: (previous, current) => previous is OnboardingRestoring,
-                            builder: (context, onboarding) => switch (onboarding) {
-                              OnboardingRestoring() => const _RestoreView(),
-                              OnboardingRequired() || OnboardingSeen() => router!,
-                            },
-                          ),
+            // AppSystemBars is above even that, so the one annotation it puts in the layer tree draws the system
+            // bars against this theme on every page, dialog and sheet the app can be on.
+            builder: (context, router) => AppSystemBars(
+              child: AppLockGate(
+                router: _router!,
+                child: RepositoryProvider<UnsavedChangesRegistry>.value(
+                  value: _unsavedChanges!,
+                  child: AppStatusGate(
+                    child: AppTargetReachability(
+                      child: BlocBuilder<SessionCubit, SessionState>(
+                        buildWhen: (previous, current) => previous is SessionUnknown,
+                        builder: (context, session) => switch (session) {
+                          SessionUnknown() => const _RestoreView(),
+                          SessionAuthenticated() || SessionUnauthenticated() => switch (localeState) {
+                            LocaleRestoring() => const _RestoreView(),
+                            LocaleReady() ||
+                            LocaleChanging() ||
+                            LocaleChangeFailure() => BlocBuilder<OnboardingCubit, OnboardingState>(
+                              // The end of restore, which lets the router in. Nothing later changes what it shows.
+                              buildWhen: (previous, current) => previous is OnboardingRestoring,
+                              builder: (context, onboarding) => switch (onboarding) {
+                                OnboardingRestoring() => const _RestoreView(),
+                                OnboardingRequired() || OnboardingSeen() => router!,
+                              },
+                            ),
+                          },
                         },
-                      },
+                      ),
                     ),
                   ),
                 ),
