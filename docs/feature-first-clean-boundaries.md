@@ -37,7 +37,16 @@ features -> core
 
 shared -> core
 infrastructure -> core
+
+features -> app/router/app_routes_constants.dart   # the route vocabulary only, see Routing Rules
+shared -> app/theme/theme_bloc.dart                # the three settings dialogs only, see Shared vs Core
+shared -> app/localization/locale_cubit.dart       # the three settings dialogs only, see Shared vs Core
 ```
+
+These are the whole of what `features/` and `shared/` may read from `app/`, and
+`test/architecture/import_guard_test.dart` holds them: the route vocabulary is matched whole, so a path that merely
+starts with it does not come in with it, and each `shared/` dialog is waived by name, so the waiver covers those three
+files and no other.
 
 Forbidden imports:
 
@@ -103,10 +112,25 @@ Use `core/` only for primitives that should not depend on Flutter UI concerns:
 
 Do not place theme, routes, widgets, or screens under `core/`.
 
+Three dialogs under `shared/widgets/` read an app-level BLoC, and they stay there on purpose:
+`language_selection_dialog.dart` (`LocaleCubit`), `theme_selection_dialog.dart` and
+`brightness_selection_dialog.dart` (`ThemeBloc`). What they change — the app's language, palette and day/night mode —
+is app-level state by this document's own State Management Rules, and the settings feature is only where it is shown
+from. Holding them in `shared/` keeps the import at three files that the guard names; moving them into the feature
+that opens them would put the same import in a feature instead, which is the direction with no waiver at all. The
+same reasoning is why `BrightnessModeInForce` lives beside its dialog rather than in the feature whose tile shows it.
+
 ## Routing Rules
 
 - `app/router` owns route composition.
 - Each feature exposes its own routes from `features/<feature>/navigation/`.
+- `app/router/app_routes_constants.dart` owns the route *vocabulary*, and a feature may read it. The paths are one
+  composed namespace rather than a per-feature list — `accessRequests` is `'$connectionList/requests'`,
+  `platformConnectionGrants` is built from `platformConnections`, and `belongsTo`, `tabsFor` and `homeFor` decide over
+  all of them at once — so a feature that owned its own paths would have to import another feature's to build its own.
+  That is the import this document forbids outright, which makes reading the app-owned vocabulary the smaller
+  dependency, not an oversight. Composition still belongs to `app/router`: a feature hands it `GoRoute`s and reads
+  paths, never the router.
 - Redirect functions must stay pure and free of data loading side effects.
 - Route builders must not create repositories directly.
 

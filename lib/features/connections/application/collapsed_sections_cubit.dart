@@ -6,6 +6,9 @@ import 'package:libredb_mobile/features/connections/domain/repositories/collapse
 /// The sections of the connection list the user collapsed, kept on the device as a convenience only: a stored state
 /// that cannot be read means every section is expanded, and a change the device refuses to store still applies on
 /// screen.
+///
+/// A Cubit, not a Bloc: its repository is this device's storage and not a server, and a tap applies on screen
+/// whatever that storage answers, so there is nothing to debounce, drop or replay.
 class CollapsedSectionsCubit extends Cubit<CollapsedSectionsState> {
   CollapsedSectionsCubit({required this._repository}) : super(const CollapsedSectionsState());
 

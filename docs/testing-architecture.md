@@ -59,6 +59,7 @@ test/
 │   ├── android_manifest_test.dart    # Android INTERNET, backup off
 │   ├── arb_translations_test.dart    # every English message has a Turkish one with the same placeholders, no ARB key twice
 │   ├── credential_to_string_test.dart # a class with a credential field keeps it out of toString
+│   ├── cubit_over_bloc_test.dart     # a feature Cubit holding a repository says why it is not a Bloc
 │   ├── feature_generator_test.dart   # tool/generate_feature.dart output is clean and passes its tests
 │   ├── import_guard_test.dart        # layer dependency rules, url_launcher only in external_link.dart
 │   ├── log_lazy_arguments_test.dart  # AppLogger arguments are not turned into text before the level check
@@ -373,6 +374,17 @@ for genuine stateful behavior; Dio handlers are always hand-written:
   shrink over time, not grow.
   It also fails if a file other than `lib/shared/utils/external_link.dart` imports `url_launcher`.
   Links go through `openExternalLink`, which tells the user when a link does not open and never asks `canLaunchUrl`, so the Android manifest needs no `<queries>` intent for them.
+  The cross-feature and `features → app` checks are the pure functions `crossFeatureViolations` and
+  `featureAppViolations`, each with unit tests of its own in the same file, because the directory check passes on a
+  clean tree whether or not it can see the import it is meant to catch. The first used to skip any import whose path
+  held a `/shared/` segment, meant for `lib/shared/` — a path no `/features/` import can reach — so what it exempted
+  was another feature's own `shared` folder; the second matched the waived module as a substring, so every path it is
+  a prefix of came in with it. Both are closed, and both holes are now a named failing case.
+- **`cubit_over_bloc_test.dart`** fails if a `Cubit` under `lib/features/` holds an `I…Repository`/`Client`/`Gateway`/
+  `Api` field and is not one of the five the guard names, or if one of those five does not carry a
+  `A Cubit, not a Bloc:` line in its class doc. CLAUDE.md defaults a feature touching network requests to `Bloc`, for
+  the `EventTransformer` that a `Cubit` otherwise writes by hand; three of these do write one by hand, so the guard
+  makes each say what makes it the exception instead of leaving a reader to guess whether it is a decision or a drift.
 - **`test_file_naming_test.dart`** fails if any file is named `*.test.dart`
   (a dot instead of `_test.dart`) — such files compile and pass `analyze` but
   are silently never executed by `flutter test`.

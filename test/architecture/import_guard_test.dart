@@ -33,10 +33,14 @@ const _knownSharedExceptions = {
 /// features/ importing other features' internals. None today.
 const _knownCrossFeatureExceptions = <String>{};
 
-/// features/ importing app/ (route constants used for navigation)
-const _knownFeatureAppExceptions = {
-  'app/router/app_routes_constants', // all features may import this for now
-};
+/// The app-owned modules a feature may import, matched whole.
+///
+/// One entry, and it is a decision rather than debt: `docs/feature-first-clean-boundaries.md` puts routes in `app/`
+/// ("Do not place theme, routes, widgets, or screens under `core/`") and has each feature expose its own routes from
+/// `navigation/`. Both together can only mean a feature reads the app-owned route vocabulary — the paths are one
+/// composed namespace (`accessRequests` is built from `connectionList`), so the alternative is a feature importing
+/// another feature's path, which the same document forbids outright.
+const _knownFeatureAppExceptions = {'app/router/app_routes_constants'};
 
 void main() {
   group('studioPlatformViolations', () {
@@ -68,6 +72,93 @@ void main() {
         expect(studioPlatformViolations([(path, imports)]), isEmpty);
       });
     }
+  });
+
+  group('crossFeatureViolations', () {
+    const bar = 'package:libredb_mobile/features/bar';
+
+    test('catches a feature reaching into another feature', () {
+      expect(
+        crossFeatureViolations([
+          ('lib/features/foo/presentation/pages/foo_page.dart', ['$bar/presentation/widgets/bar_card.dart']),
+        ]),
+        hasLength(1),
+      );
+    });
+
+    // The check used to skip any import whose path held a '/shared/' segment, which was meant for lib/shared/ — a path
+    // no '/features/' import can reach. What it actually exempted was a `shared` folder *inside* another feature,
+    // which is that feature's own code and is exactly the reach this rule exists to stop.
+    test('catches a feature reaching into another feature\'s own shared folder', () {
+      expect(
+        crossFeatureViolations([
+          ('lib/features/foo/presentation/pages/foo_page.dart', ['$bar/presentation/shared/bar_card.dart']),
+        ]),
+        hasLength(1),
+      );
+    });
+
+    test('allows a feature importing its own files', () {
+      expect(
+        crossFeatureViolations([
+          ('lib/features/bar/presentation/pages/bar_page.dart', ['$bar/application/bar_bloc.dart']),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('allows a feature importing lib/shared/', () {
+      expect(
+        crossFeatureViolations([
+          ('lib/features/foo/presentation/pages/foo_page.dart', ['package:libredb_mobile/shared/widgets/card.dart']),
+        ]),
+        isEmpty,
+      );
+    });
+  });
+
+  group('featureAppViolations', () {
+    const routes = 'package:libredb_mobile/app/router/app_routes_constants.dart';
+
+    test('allows a feature reading the route vocabulary', () {
+      expect(
+        featureAppViolations([
+          ('lib/features/foo/navigation/foo_routes.dart', [routes]),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('catches a feature reading any other app/ file', () {
+      expect(
+        featureAppViolations([
+          ('lib/features/foo/presentation/pages/foo_page.dart', ['package:libredb_mobile/app/theme/theme_bloc.dart']),
+        ]),
+        hasLength(1),
+      );
+    });
+
+    // The waiver used to be a substring match, so every path the waived one is a prefix of came in with it.
+    test('catches an app/ file whose path merely starts with the waived one', () {
+      expect(
+        featureAppViolations([
+          (
+            'lib/features/foo/navigation/foo_routes.dart',
+            ['package:libredb_mobile/app/router/app_routes_constants_extra.dart'],
+          ),
+        ]),
+        hasLength(1),
+      );
+    });
+
+    test('leaves app/ itself alone', () {
+      expect(
+        featureAppViolations([
+          ('lib/app/router/app_router.dart', [routes]),
+        ]),
+        isEmpty,
+      );
+    });
   });
 
   group('Architecture Guard Tests', () {
@@ -136,47 +227,17 @@ void main() {
     });
 
     test('features/ must not import from other features/ internals', () {
-      final violations = <String>[];
-      final featureFiles = dartFiles.where((f) => f.path.contains('/features/'));
-
-      for (final file in featureFiles) {
-        final featureName = _extractFeatureName(file.path);
-        if (featureName == null) continue;
-
-        final imports = _getImports(file);
-        for (final import in imports) {
-          if (!import.contains('/features/')) continue;
-
-          final importedFeature = _extractFeatureNameFromImport(import);
-          if (importedFeature != null && importedFeature != featureName) {
-            if (!import.contains('/shared/')) {
-              final key = '${_relative(file.path)} → ${_importFragment(import)}';
-              if (!_isKnownException(key, _knownCrossFeatureExceptions)) {
-                violations.add('${_relative(file.path)} ($featureName) imports from $importedFeature: $import');
-              }
-            }
-          }
-        }
-      }
+      final violations = crossFeatureViolations([
+        for (final file in dartFiles) (_relative(file.path), _getImports(file)),
+      ]);
 
       expect(violations, isEmpty, reason: 'features must not import from other features:\n${violations.join('\n')}');
     });
 
     test('features/ must not import from app/', () {
-      final violations = <String>[];
-      final featureFiles = dartFiles.where((f) => f.path.contains('/features/'));
-
-      for (final file in featureFiles) {
-        final imports = _getImports(file);
-        for (final import in imports) {
-          if (import.contains('/app/')) {
-            final fragment = _importFragment(import);
-            if (!_knownFeatureAppExceptions.any((e) => fragment.contains(e))) {
-              violations.add('${_relative(file.path)}: imports $import');
-            }
-          }
-        }
-      }
+      final violations = featureAppViolations([
+        for (final file in dartFiles) (_relative(file.path), _getImports(file)),
+      ]);
 
       expect(violations, isEmpty, reason: 'features/ must not import from app/:\n${violations.join('\n')}');
     });
@@ -227,6 +288,50 @@ void main() {
       );
     });
   });
+}
+
+/// The violations of the rule that a feature may not reach into another feature's internals, over (file path, imports)
+/// pairs with paths relative to the repository and imports in `package:libredb_mobile/...` form.
+///
+/// Cross-feature code belongs under `lib/shared/` (CLAUDE.md, "Strict Isolation"), so the only thing that makes an
+/// import of another feature legal is being named in [_knownCrossFeatureExceptions].
+List<String> crossFeatureViolations(Iterable<(String, List<String>)> files) {
+  final violations = <String>[];
+  for (final (path, imports) in files) {
+    final featureName = _extractFeatureName(path);
+    if (featureName == null) continue;
+
+    for (final import in imports) {
+      final importedFeature = _extractFeatureNameFromImport(import);
+      if (importedFeature == null || importedFeature == featureName) continue;
+      // Reusable code moves to lib/shared/, which no `/features/` import can point at. A `shared` folder *inside*
+      // another feature is that feature's own code, and reaching into it is the import this rule exists to stop.
+      final key = '$path → ${_importFragment(import)}';
+      if (_isKnownException(key, _knownCrossFeatureExceptions)) continue;
+      violations.add('$path ($featureName) imports from $importedFeature: $import');
+    }
+  }
+  return violations;
+}
+
+/// The violations of the rule that a feature may not import `lib/app/`, over (file path, imports) pairs with paths
+/// relative to the repository and imports in `package:libredb_mobile/...` form.
+///
+/// The app layer composes features; a feature that reads it points the dependency back up. The one module features may
+/// read is named in [_knownFeatureAppExceptions], matched whole so the waiver covers that module and nothing whose
+/// path merely starts with it.
+List<String> featureAppViolations(Iterable<(String, List<String>)> files) {
+  final violations = <String>[];
+  for (final (path, imports) in files) {
+    if (!path.contains('/features/')) continue;
+
+    for (final import in imports) {
+      if (!import.contains('/app/')) continue;
+      if (_knownFeatureAppExceptions.contains(_importFragment(import))) continue;
+      violations.add('$path: imports $import');
+    }
+  }
+  return violations;
 }
 
 /// The violations of the rules that keep LibreDB Studio and LibreDB Platform code apart, over (file path, imports)
