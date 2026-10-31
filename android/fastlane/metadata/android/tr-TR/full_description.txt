@@ -14,12 +14,12 @@ Gözat
 
 Satırlar
 • Bir tablonun satırlarını kartlar ya da sıkışık bir tablo olarak önizleyin, daha fazlasını yükleyin, bir satırın ayrıntısını açın.
-• Adı hassas görünen sütunlar, örneğin e-posta, parola ya da kart numarası, ekranda Studio'nun web tablosundaki varsayılan kurallarla maskelenir.
+• Adı hassas görünen sütunlar, örneğin e-posta, parola ya da kart numarası, ekranda maskelenir. Sütunları Studio'nun varsayılan kuralları seçer; belirteç ya da anahtar, bir parçası eksik e-posta ve yıl-ay-gün biçiminde olmayan tarih değerlerinde maske, Studio'nun web tablosundakinden daha fazlasını gizler.
 
 SQL düzenleyici
-• Seçtiğiniz veritabanında bir deyimi, bir betiği ya da bir seçimi yazıp çalıştırın, çalışan bir deyimi iptal edin.
+• Seçtiğiniz veritabanında bir deyimi, bir betiği ya da bir seçimi yazıp çalıştırın. İptali destekleyen bir veritabanında İptal et, Studio'dan deyimi durdurmasını ister; desteklemeyenlerde Beklemeyi bırak yalnızca yanıtı beklemeyi bırakır, deyim sunucuda çalışmaya devam eder.
 • Taslağınız ve deyim geçmişiniz telefonda kalır; geçmişteki ya da Gözat'taki bir deyim düzenleyicide açılır.
-• Veriyi değiştirebilecek bir deyim çalışmadan önce uygulama onu eksiksiz gösterir ve onayınızı ister; üretim bağlantısında önce bağlantının adını yazarsınız.
+• Bir deyim veriyi değiştirebilecek gibi göründüğünde uygulama onu çalıştırmadan önce eksiksiz gösterir ve onayınızı ister; üretim bağlantısında önce bağlantının adını yazarsınız. Denetim deyimin sözcüklerini okur; bir okumanın çağırdığı fonksiyonun içindeki yazma yakalanmaz.
 
 Gizlilik ve güvenlik
 • Kuruluşunuzun Keycloak'u üzerinden tek oturum açma; belirteçler cihazın güvenli depolamasında tutulur.

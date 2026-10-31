@@ -558,6 +558,14 @@ wrong scope.
   100, a promotional text of 170, and `tr` where Play says `tr-TR`. The privacy guard pairs phrases rather than
   counting mentions: saying "Android Keystore" obliges the page to say "Keychain" as well, in both languages, because
   one policy URL serves both stores and a reader on either platform has to find their own device described there.
+- **`store_listing_claims_test.dart`** guards three listing claims against what the code measures, across all six
+  listing texts at once: the live Play listing, every Play draft and the App Store listing, in both languages. Cancel
+  belongs to the engine (`ProviderMeta.supportsQueryCancel`); without it Stop waiting drops only the app's own request
+  while the statement runs on, which the app's own `sql_editor_stopped_waiting` says. The write confirmation is a
+  keyword scan that does not see what a function an allowed statement calls does (`docs/security.md`). The mask hides
+  more than Studio's grid for a token or key, an email with an empty part and a date that is not a bare calendar date
+  (`docs/security.md`), although the columns it masks are still Studio's. A phrase guard rather than a prose review,
+  because six copies of one sentence drift apart one file at a time, and an audit is the only thing that notices.
 - **`app_lock_platform_setup_test.dart`** and **`orientation_platform_setup_test.dart`** guard the Android and iOS
   settings the lock and the orientation policy need.
 - **`session_target_test.dart`** guards that a stored session carries the target it belongs to.
