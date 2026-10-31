@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/libredb/libredb-mobile/compare/v1.1.1...v1.1.2) (2026-10-31)
+
+
+### Documentation
+
+* **release:** say that an upload carries no release notes ([752650a](https://github.com/libredb/libredb-mobile/commit/752650aba6198ee0d217818fab1607ebb9d2bd74))
+
 ## [1.1.1](https://github.com/libredb/libredb-mobile/compare/v1.1.0...v1.1.1) (2026-10-30)
 
 
