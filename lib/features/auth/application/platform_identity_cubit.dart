@@ -13,6 +13,10 @@ part 'platform_identity_state.dart';
 /// The identity lives here only, from Platform's latest `GET /api/v1/me` answer or the sign-in gate's ([signedIn]), and
 /// is never stored. A failure never ends the session: only the Platform client does that, for a 401 `BEARER_INVALID`
 /// that survives the token refresh.
+///
+/// A Cubit, not a Bloc: the identity is one idempotent GET, with nothing to debounce or replay. [_generation] drops
+/// an answer about an admin who signed out while it was on its way, and because [clear] is an interaction of its own,
+/// no `EventTransformer` spans it and [load] — it would stay this counter in a Bloc too.
 class PlatformIdentityCubit extends Cubit<PlatformIdentityState> {
   PlatformIdentityCubit({required this._repository}) : super(const PlatformIdentityInitial());
 

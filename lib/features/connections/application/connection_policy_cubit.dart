@@ -9,6 +9,13 @@ import 'package:libredb_mobile/features/connections/domain/repositories/connecti
 part 'connection_policy_state.dart';
 
 /// What Studio allows for connections and whether Platform governs it, for the signed-in user's session.
+///
+/// A Cubit, not a Bloc: the policy is one idempotent GET, with no payload to carry and nothing to debounce or replay.
+/// The two guards below read like the drop-concurrent policy `EventTransformer` exists for, and one of them is —
+/// `droppable()` would cover a second [load] or [refresh] while an answer is awaited. The one that matters would not
+/// move: [_generation] drops an answer about a user who signed out while it was on its way, and [clear] is a
+/// different interaction from [load], so no transformer spans the two. In a Bloc it would still be this counter,
+/// written by hand, next to an event stream nothing else uses.
 class ConnectionPolicyCubit extends Cubit<ConnectionPolicyState> {
   ConnectionPolicyCubit({required this._repository}) : super(const ConnectionPolicyInitial());
 
