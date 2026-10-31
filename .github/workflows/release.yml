@@ -305,6 +305,12 @@ jobs:
     # Never on a dry run; play-internal holds the Play service account and takes only main and v*.*.* tags.
     if: github.event_name != 'workflow_dispatch' && github.ref_type == 'tag'
     environment: play-internal
+    env:
+      # How the release opens on Play. Unset, it opens as a staged release at a fifth of the users and stays there
+      # until someone raises it in the console; set PLAY_RELEASE_STATUS to draft to park a release, or to completed
+      # to send it to everyone at once. A fraction is between 0 and 1, exclusive on both ends.
+      PLAY_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'inProgress' }}
+      PLAY_FRACTION: ${{ vars.PLAY_ROLLOUT_FRACTION || '0.2' }}
     steps:
       - name: Download the bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -316,6 +322,13 @@ jobs:
       # review of the production release, which replaces whatever was already in review. It must stay one upload —
       # a second upload of the same bundle fails with "Version code has already been used", which is how v1.1.2
       # died. `tracks` is the comma-separated input that `track` deprecates.
+      #
+      # The release is staged, not finished: it opens at PLAY_FRACTION of the users and stops there until someone
+      # raises it in the console, so a crash spike can halt it while most users are still on the version before.
+      # The action sends one status and one fraction to every track of the upload, so the internal testers are
+      # inside the same stage; raise PLAY_ROLLOUT_FRACTION, or set PLAY_RELEASE_STATUS to completed, for a release
+      # that has to reach every tester at once. Halting is console work, not a variable: halting from here would
+      # re-upload a version code Play already has (docs/release.md, "Rolling back").
       - name: Upload to Play
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
@@ -323,6 +336,8 @@ jobs:
           packageName: org.libredb.mobile
           releaseFiles: release-bundle/bundle/release/app-release.aab
           tracks: internal,production
-          # Unset today, so a release reaches the testers on its own; set it to draft to park one in the console.
-          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          status: ${{ env.PLAY_STATUS }}
+          # The action refuses a completed or a draft release that carries a fraction, and an inProgress one that
+          # carries none, so the fraction goes out only while the release is staged.
+          userFraction: ${{ env.PLAY_STATUS == 'inProgress' && env.PLAY_FRACTION || '' }}
           mappingFile: release-bundle/mapping/release/mapping.txt

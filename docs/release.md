@@ -23,7 +23,9 @@ iOS is released separately on macOS (#199).
    The artifact holds exactly those two files: the Dart symbols and the obfuscation map in `build/debug-info` go only to Sentry.
    The bundle holds the deployment's URLs and the Sentry DSN compiled in, so anyone who can read the workflow artifacts can read them.
 7. The upload job deploys to the `play-internal` environment and uploads the bundle and the mapping once, assigned to both the internal testing and the production tracks.
-   The testers have it as soon as the upload ends; the public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
+   The release goes up staged, not finished: the upload sends the status `inProgress` with a user fraction, so the production release opens at a fifth of the users and stays there until someone raises it in the console ([Staged rollout](#staged-rollout)).
+   The testers have it as soon as the upload ends, inside that same stage, because the action sends one status and one fraction to every track of the one upload.
+   The public waits for Google's review of the production release, which the console shows under Publishing overview and which typically takes a few days.
    A production release replaces whatever is already in review, so the review always runs on the newest release.
    It has to be one upload: Play refuses a second upload of the same bundle with "Version code has already been used", which is how the v1.1.2 release failed before `tracks` replaced two `track` steps.
    The upload carries no release notes: the workflow sends no `whatsNewDirectory`, so Play shows a release with no notes and `CHANGELOG.md` stays the record of what changed.
@@ -102,7 +104,8 @@ Variables of the repository, or of the build job's environment, which override t
 | `STUDIO_CERT_PINS`, `OIDC_CERT_PINS` | No; pinning ships off |
 | `PLATFORM_API_URL`, `PLATFORM_CERT_PINS` | No; Platform mode only, set by the owner after approval (#302's checklist) |
 | `SENTRY_ENVIRONMENT`, `SENTRY_DIST` | No; the native Sentry SDK picks them from the build when unset |
-| `PLAY_RELEASE_STATUS` | No, and unset today; `completed` by default, so a release reaches the testers and Google's review on its own. Set it to `draft` to park both uploads in the console instead |
+| `PLAY_RELEASE_STATUS` | No, and unset today; `inProgress` by default, so a release goes up staged and reaches Google's review on its own ([Staged rollout](#staged-rollout)). Set it to `draft` to park both uploads in the console instead, or to `completed` to send the release to everyone at once |
+| `PLAY_ROLLOUT_FRACTION` | No, and unset today; `0.2` by default, the share of users a staged release opens at. Between 0 and 1, exclusive on both ends ([Staged rollout](#staged-rollout)) |
 
 A variable set only on the `release-dry-run` environment reaches dry runs only.
 An empty variable is left out of the build, and the build stops when a required one is missing.
@@ -163,7 +166,8 @@ Only the maintainer does these, and no value from them is ever written into an i
 4. Create the environment `release-dry-run` with the same names for a throwaway keystore made only for dry runs; never put the upload key there.
 5. Create the environment `play-internal` and limit its deployment branches and tags to `main` and `v*.*.*`; GitHub would otherwise create it without protection on the first upload job.
 6. Add the deployment's variables to the repository.
-   Leave `PLAY_RELEASE_STATUS` unset, so an upload reaches the testers on its own; set it to `draft` only to park a release in the console.
+   Leave `PLAY_RELEASE_STATUS` and `PLAY_ROLLOUT_FRACTION` unset, so a release goes up staged at a fifth of the users on its own ([Staged rollout](#staged-rollout)); set `PLAY_RELEASE_STATUS` to `draft` only to park a release in the console.
+   Should the first release of a brand-new Play app fail to commit with `Precondition check failed`, set `PLAY_RELEASE_STATUS` to `completed` for that one release and remove the variable again afterwards; a staged release needs a production release to stage against, and this deployment already has one.
 7. Add a tag ruleset for `refs/tags/v*` that blocks creating, updating and deleting matching tags, with the organization's admins in its bypass list, so only an admin can cut, move or remove a released tag.
    The creation rule is what lets both environments run without a reviewer: a workflow on another branch with `contents: write` can no longer push a `v*` tag, so nothing it does reaches the upload key.
    GitHub does not accept the GitHub Actions app as a bypass actor, so release-please cannot tag with `GITHUB_TOKEN`; it tags with the owner's fine-grained token in `RELEASE_PLEASE_TOKEN`, which bypasses as an organization admin, and `test/architecture/release_tag_creation_test.dart` fails when that input is lost.
@@ -241,11 +245,41 @@ They pass in this order, and each one holds before the steps that name it:
 On a device that updates to that build, a stored Platform session is cleared, and the login page shows only the Studio entry with the `platform.not_configured` message (`lib/app/session/session_cubit.dart`; [platform.md](platform.md), M10-P walkthrough step 10).
 A stored Studio session is kept.
 
+## Staged rollout
+
+A release does not reach everyone at once.
+The upload sends Play the release status `inProgress` together with a user fraction, so the production release opens at that share of the users and stops there; Google's review still decides when that share starts to receive it.
+Nothing raises the share afterwards: the release stays at it until someone moves it in the Play Console, under Release > Production > the release > Edit rollout, or until a later release replaces it.
+That is the percentage at which a crash spike can stop a release before the rest of the users have it.
+
+| Variable | What it does |
+| --- | --- |
+| `PLAY_ROLLOUT_FRACTION` | The share the release opens at, between 0 and 1, exclusive on both ends. Unset, it is `0.2`: four fifths of the users keep the version before while the first crash reports come in, and a deployment with few users still reaches enough devices for a spike to show in Sentry, which `0.05` would not |
+| `PLAY_RELEASE_STATUS` | `inProgress` when unset, which is what stages the release. `draft` parks it in the console; `completed` sends it to everyone at once |
+
+Play takes a fraction only on a staged release, so the workflow sends `userFraction` only while the status is `inProgress`: `r0adkll/upload-google-play` refuses a `completed` or a `draft` release that carries a fraction, and an `inProgress` one that carries none.
+`test/architecture/release_tracks_test.dart` fails when the upload stops staging, when the default holds nobody back, or when the fraction is no longer tied to the status.
+
+One upload serves both tracks and the action sends it one status and one fraction, so the internal testing release is staged at the same share.
+The testers are invited and few; raise `PLAY_ROLLOUT_FRACTION`, or set `PLAY_RELEASE_STATUS` to `completed`, for a release that has to reach every tester at once, such as one a tester is waiting to install on the test phone.
+
+Raising a rollout:
+
+1. Watch Sentry and the Play Console's Android vitals over the release's first day.
+2. With no crash spike, open the production release in the console and raise the rollout, for example to 50 and then to 100 percent.
+3. With a spike, halt it, as [Rolling back](#rolling-back) says.
+
 ## Rolling back
 
-Play never accepts a version code lower than one it has, so a bad build is replaced, not taken back.
-In the Play Console, open the internal testing track and halt or pause the release so no further tester receives it.
-Then fix the problem on `main` and release again; the next release has a higher build number.
+Play never accepts a version code lower than one it has, so a bad build is replaced, not taken back; halting only stops a release reaching anyone else, and the users already on it keep it.
+The public is on the **production** track, so that is the track to halt first:
+
+1. In the Play Console, open Release > Production, open the release and choose Halt rollout, so the staged release reaches no further user.
+2. Halt the internal testing release as well, under Release > Testing > Internal testing, so no further tester receives it.
+3. Fix the problem on `main` and release again; the next release has a higher build number and replaces the halted one.
+
+Halting is console work, not a variable: the workflow would have to upload a bundle to send Play a `halted` release, and Play refuses a second upload of a version code it already has.
+A halted rollout can be resumed in the console, at the same share or a smaller one, once the cause is understood.
 The `release-bundle` artifact of each run keeps the exact bundle and mapping for 7 days; Play keeps every uploaded bundle and its mapping after that, and Sentry keeps the release's symbols and mapping.
 
 ## Play requirements

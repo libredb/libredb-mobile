@@ -550,7 +550,8 @@ wrong scope.
   obfuscation and symbol upload, the Play listing texts, the phone screenshots of the listing drafts, the App Store
   listing texts, the labels
   `docs/release.md` quotes, the owner token release-please tags with, without which the `refs/tags/v*` creation rule
-  refuses every release, and the two Play tracks a release is uploaded to, since dropping either upload is silent. The screenshot guard reads each PNG's IHDR header, so an
+  refuses every release, and the two Play tracks a release is uploaded to and the user fraction it is staged at, since
+  dropping either upload is silent and so is a release that opens at every user. The screenshot guard reads each PNG's IHDR header, so an
   alpha channel or a ratio above 2 fails here rather than silently in the Play Console days later. The App Store guard
   holds Connect's own limits and locales, which are not Play's: a name and a subtitle of 30 characters, keywords of
   100, a promotional text of 170, and `tr` where Play says `tr-TR`. The privacy guard pairs phrases rather than
