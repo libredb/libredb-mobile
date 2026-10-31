@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/libredb/libredb-mobile/compare/v1.2.1...v1.2.2) (2026-10-31)
+
+
+### Bug Fixes
+
+* **app:** draw the navigation bar against the theme, not against black ([f7fb64f](https://github.com/libredb/libredb-mobile/commit/f7fb64fc74795da205bd78e20dda34d10e6addf6))
+* **app:** draw the navigation bar against the theme, not against black ([64fc7d9](https://github.com/libredb/libredb-mobile/commit/64fc7d9a126ca5bf6f669d38be1836eed6048dfc))
+
 ## [1.2.1](https://github.com/libredb/libredb-mobile/compare/v1.2.0...v1.2.1) (2026-10-31)
 
 
