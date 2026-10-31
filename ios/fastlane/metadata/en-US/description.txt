@@ -25,7 +25,7 @@ Privacy and security
 • Single sign-on through your organisation's Keycloak; the tokens are kept in the device's Keychain, reachable only after the first unlock and only on this device, so a backup or iCloud Keychain never carries them to another one.
 • Drafts and history are encrypted on the device, separately for each account.
 • The app preview in the app switcher is blurred, so a result never shows there. iOS offers no way to block a screenshot you take yourself, and the app does not claim to.
-• Face ID, with your passcode as the fallback, locks the app again when you come back to it.
+• An app lock you turn on in Settings: Face ID or Touch ID, with your passcode as the fallback, locks the app again when you come back to it.
 • The app signs you out after 15 minutes without input.
 • Remove my data, in Settings, deletes what the app keeps for your account.
 

@@ -25,7 +25,7 @@ Gizlilik ve güvenlik
 • Kuruluşunuzun Keycloak'u üzerinden tek oturum açma; belirteçler cihazın Keychain'inde, yalnızca ilk kilit açımından sonra ve yalnızca bu cihazda okunabilecek biçimde tutulur; yedek ya da iCloud Keychain onları başka bir cihaza taşımaz.
 • Taslaklar ve geçmiş cihazda, her hesap için ayrı şifrelenir.
 • Uygulama değiştiricideki önizleme bulanıklaştırılır, böylece orada hiçbir sonuç görünmez. iOS, sizin kendi aldığınız ekran görüntüsünü engellemeye izin vermez; uygulama da engellediğini söylemez.
-• Face ID, yedeği parolanız olmak üzere, uygulamaya geri döndüğünüzde onu yeniden kilitler.
+• Ayarlar'dan açtığınız bir uygulama kilidi: Face ID ya da Touch ID, yedeği parolanız olmak üzere, uygulamaya geri döndüğünüzde onu yeniden kilitler.
 • Uygulama 15 dakika işlem yapılmadığında oturumu kapatır.
 • Ayarlar'daki Verilerimi sil, uygulamanın hesabınız için tuttuklarını siler.
 
