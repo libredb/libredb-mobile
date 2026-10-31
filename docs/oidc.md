@@ -360,7 +360,8 @@ Only `OidcAuthMode` builds the OIDC pieces: `IOidcClient`, `ISsoAuthRepository`,
 
 1. The SSO button, the Studio or Platform button, or the automatic redirect, adds `SsoSignInRequested` with the entry's session target to `LoginBloc`, whose handler drops a second request for either target while one runs.
 2. `SignInUseCase` calls `SsoAuthRepository.signIn` with the target, which calls `OidcClient.signIn`.
-3. `OidcClient` fetches discovery (cached for 5 minutes, failures never cached), and the package builds the request with a PKCE S256 challenge, `state`, `nonce`, the redirect URI `<scheme>:/oauth2redirect`, the scope, `prompt` unless it is `omit`, and `audience` when it is set.
+3. `OidcClient` fetches discovery (cached for 5 minutes, failures never cached), and the package builds the request with a PKCE S256 challenge, `state`, `nonce`, the redirect URI `<scheme>:/oauth2redirect`, the scope, `prompt` unless it is `omit`, `audience` when it is set, and `ui_locales` with the language the app is showing.
+   That language is `LocaleCubit`'s, read at the moment of the call so a change in Settings reaches the next sign-in, and it is the app's pick rather than the phone's: without `ui_locales` the provider falls back to the browser's `Accept-Language`, so a user who set the app to Turkish on an English phone would get an English sign-in page — the one page in the product where they type. The end-session request carries it too.
 4. The platform opens the provider's page: a Custom Tab on Android, `ASWebAuthenticationSession` on iOS.
 5. On return the package checks `state`, exchanges the code with the verifier, and validates the ID token: its signature against the JWKS, `iss`, `aud`, `exp` and `nonce`.
 6. `OidcClient` requires an access token, an ID token and `expires_in`, and strips `nonce`, `at_hash` and `c_hash` from the claims it hands on.

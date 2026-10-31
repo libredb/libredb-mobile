@@ -20,8 +20,14 @@ part 'app_lock_state.dart';
 /// resume after at least the chosen time in the background, and never while nobody is signed in.
 ///
 /// The time in the background is measured by the wall clock between the app leaving the screen (`hidden` or `paused`)
-/// and its return, as `IdleTimeoutObserver` measures it, since a timer does not run while the phone suspends the app.
-/// When that time also reaches [idleTimeout], the idle sign-out that the same resume fires wins and no lock shows.
+/// and its return, since a timer does not run while the phone suspends the app. `IdleTimeoutObserver` reads the same
+/// clock but anchors its window on the last input rather than on the app going away, so the two measure different
+/// stretches of time and this one is the shorter.
+///
+/// When the time away alone reaches [idleTimeout], the idle sign-out that the same resume fires is left to end the
+/// session and no lock shows. That is the case this bloc can see; the observer may fire on a resume from a far shorter
+/// stay away, because its window began at the last input, and the lock put up by that resume is then removed by the
+/// `AppLockSignedOut` of the session ending behind it.
 ///
 /// While the lock is on, the recent-apps preview hides the app: through [IRecentsPreview] where the platform has a
 /// switch (Android 13 and later), else through a lease of the screen capture protection held while the app is away.

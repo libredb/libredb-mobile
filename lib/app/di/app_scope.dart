@@ -126,6 +126,17 @@ class AppScope extends StatelessWidget {
         RepositoryProvider<ProjectLinks>.value(value: dependencies.projectLinks),
         // A device preference that belongs to no session, beside the other values that do not.
         RepositoryProvider<IOnboardingSeenStore>(create: (_) => dependencies.createOnboardingSeenStore()),
+        // The language is a device preference too, and it is provided here, above IOidcClient, rather than with the
+        // other blocs: the provider's sign-in page is asked for the language the app shows (`ui_locales`), and
+        // without that the browser's Accept-Language decides it, which is the phone's language and not the user's
+        // pick in Settings.
+        BlocProvider<LocaleCubit>(
+          create: (_) => LocaleCubit(
+            storage: dependencies.createLocalStorage(),
+            defaultLocale: defaultLocale,
+            followsDevice: followsDeviceLanguage,
+          )..restore(),
+        ),
         RepositoryProvider<AuthMode>.value(value: dependencies.authMode),
         // Provided above SessionCubit and IAuthRepository, which clear the stored session when they end one.
         RepositoryProvider<IAuthSessionRepository>(
@@ -134,7 +145,16 @@ class AppScope extends StatelessWidget {
         // Only a correctly configured build can reach the provider. These come before SessionCubit, which refreshes the
         // session at startup, and the one TokenRotation is shared with the ApiClient.
         if (oidcSettings != null) ...[
-          RepositoryProvider<IOidcClient>(create: (_) => dependencies.createOidcClient(oidcSettings)),
+          RepositoryProvider<IOidcClient>(
+            create: (context) {
+              // Read at each sign-in and logout, not once: the user may change the language in Settings between them.
+              final locale = context.read<LocaleCubit>();
+              return dependencies.createOidcClient(
+                oidcSettings,
+                uiLocales: () => [locale.state.locale.toLanguageTag()],
+              );
+            },
+          ),
           RepositoryProvider<ISsoAuthRepository>(
             create: (context) => dependencies.createSsoAuthRepository(
               context.read<IOidcClient>(),
@@ -422,13 +442,6 @@ class AppScope extends StatelessWidget {
             create: (context) => PlatformStatusBloc(
               checkLivenessUseCase: CheckPlatformLivenessUseCase(context.read<IPlatformStatusRepository>()),
             ),
-          ),
-          BlocProvider<LocaleCubit>(
-            create: (_) => LocaleCubit(
-              storage: dependencies.createLocalStorage(),
-              defaultLocale: defaultLocale,
-              followsDevice: followsDeviceLanguage,
-            )..restore(),
           ),
           // Beside the language, and started the same way: both are device preferences the first frame waits on,
           // and App holds the router back until each has answered (see app.dart).

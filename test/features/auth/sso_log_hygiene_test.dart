@@ -49,7 +49,7 @@ class _OidcDependencies extends AppDependencies {
   final FakeProvider provider;
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => OidcClient(
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => OidcClient(
     settings: settings,
     store: OidcTransactionStore(),
     httpClient: provider.client,
@@ -366,7 +366,7 @@ class _SwitchDependencies extends MockSignInDependencies {
       _CountingStudioIdentity(super.createStudioIdentityRepository(apiClient), () => signOutRecords++);
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) =>
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) =>
       _CountingOidcClient(super.createOidcClient(settings), () => providerLogouts++);
 }
 

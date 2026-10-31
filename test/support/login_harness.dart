@@ -147,7 +147,7 @@ class OidcDependencies extends AppDependencies {
       platformStatus ?? super.createPlatformStatusRepository(apiClient);
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => client;
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => client;
 
   @override
   TokenRotation createOidcTokenRotation(IOidcClient client, ISecureStorage secureStorage) =>

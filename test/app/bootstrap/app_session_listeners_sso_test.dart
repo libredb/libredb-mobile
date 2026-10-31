@@ -83,7 +83,7 @@ class _OidcDependencies extends AppDependencies {
   final IOidcClient client;
 
   @override
-  IOidcClient createOidcClient(OidcSettings settings) => client;
+  IOidcClient createOidcClient(OidcSettings settings, {List<String> Function()? uiLocales}) => client;
 }
 
 /// The secure store of the session in memory, whose reads of the access token wait until the test completes
