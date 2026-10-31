@@ -2,13 +2,14 @@
 
 Last updated: October 29, 2026.
 
-This policy describes what LibreDB Mobile for Android does with your data.
+This policy describes what LibreDB Mobile, on Android and on iOS, does with your data.
+Where the two platforms behave differently, this page says so rather than describing one of them.
 LibreDB Mobile is a client of LibreDB Studio: it signs you in through Keycloak and shows the databases that Studio offers you.
 Questions about this policy go to [info@libredb.org](mailto:info@libredb.org).
 
 ## Who publishes the app
 
-LibreDB Mobile is published on Google Play by **Sekoya Tech**, the trade name of **Sekoya Grup Bilisim ve Teknoloji Ltd. Sti.**, a limited liability company registered in Turkiye and the data controller for the processing described here.
+LibreDB Mobile is published on Google Play and on the App Store by **Sekoya Tech**, the trade name of **Sekoya Grup Bilisim ve Teknoloji Ltd. Sti.**, a limited liability company registered in Turkiye and the data controller for the processing described here.
 
 | | |
 | --- | --- |
@@ -68,7 +69,7 @@ The app reaches Keycloak, Studio, Platform and Sentry over HTTPS, which encrypts
 
 ## What the app keeps on the device
 
-- **Your session tokens**, in Android's secure storage, encrypted with a key held by the Android Keystore.
+- **Your session tokens**, in the device's secure storage: on Android encrypted with a key held by the Android Keystore, on iOS in the Keychain, reachable only after the first unlock of the device and marked so that it never leaves this device.
   Signing out deletes them.
 - **Your drafts and statement history**: the editor's draft for each connection and the statements you ran, encrypted on the device with a key for your account alone.
   They stay after you sign out, so you find them again when you sign in with the same account, and another account on the device cannot read them.
@@ -78,19 +79,21 @@ The app reaches Keycloak, Studio, Platform and Sentry over HTTPS, which encrypts
 The app keeps no rows of query results after it closes.
 While it runs, it keeps the lists, counts and descriptions of a connection's objects in memory for up to 10 minutes, so going back does not ask Studio again.
 What you type into the object search goes only to Studio, and the app keeps no search history.
-Android's cloud backup is turned off for the app, and its preferences, drafts and history are left out of device-to-device transfers.
+On Android, the cloud backup is turned off for the app, and its preferences, drafts and history are left out of device-to-device transfers.
+On iOS the app keeps the default, so a backup can carry the files that hold your drafts and history, but never the key that opens them: that key is in the Keychain and does not leave the device.
+Restored on another device, those files cannot be read, by you or by anyone else.
 
 ## Sharing and copying
 
 The app passes data to another app only when you ask it to.
 When you copy a value of a result, the app copies what the screen shows, so a masked value is copied as its mask.
 When you share an object's source, such as a view's definition, the system's share sheet sends it to the app you choose.
-A source longer than 100,000 characters is shared as a file, and that file can stay in the app's temporary storage until Android clears it or you uninstall the app.
+A source longer than 100,000 characters is shared as a file, and that file can stay in the app's temporary storage until the system clears it or you uninstall the app.
 
 ## Crash reports
 
 A build made with a Sentry project key sends a report to Sentry when the app runs into an error.
-A report holds the error and where in the app it happened, the app's version, technical details of the device such as its model, Android version, language, free memory and battery level, a random identifier of the installation, and a trail of the events before the error, such as the screens you opened and the app going to the background.
+A report holds the error and where in the app it happened, the app's version, technical details of the device such as its model, operating system version, language, free memory and battery level, a random identifier of the installation, and a trail of the events before the error, such as the screens you opened and the app going to the background.
 A build with a Sentry project key also sends a session record each time you use the app: when the session started and ended, how long it lasted, whether it ended in a crash, and the installation identifier.
 It also sends timing information for about one in five app starts and screen changes, to show where the app is slow.
 Before a report leaves the device, the app removes e-mail addresses, tokens, passwords and other credentials from it.
