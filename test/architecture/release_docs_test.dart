@@ -12,6 +12,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// A reviewer follows those instructions word by word, so every double-quoted string inside a `text` code block of the
 /// "App access" section must be a value of `lib/l10n/intl_en.arb`. A pull request that renames a quoted label, such as
 /// the login page copy of M15, then fails here until it updates `docs/release.md` in the same change.
+///
+/// It also guards what the page may no longer promise the owner. `3f7da92` dropped the required reviewers of
+/// `release-signing` and `play-internal`, because the `refs/tags/v*` creation rule now guards the upload key instead,
+/// so a release runs end to end without a human. A page that still says to approve a job or an environment sends the
+/// owner looking for an Approve button that no longer exists, and the release looks stuck while it is already running.
 void main() {
   test('every App access text block fits the 500 characters Play gives the field', () {
     final long = appAccessBlocksOverLimit(_releaseDoc());
@@ -29,6 +34,27 @@ void main() {
     final problems = appAccessIntroductionProblems(_releaseDoc());
 
     expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
+  test('the page sends the owner at no Approve button', () {
+    final problems = approvalGateProblems(_releaseDoc());
+
+    expect(problems, isEmpty, reason: problems.join('\n'));
+  });
+
+  test('a step that tells the owner to approve a job is named', () {
+    const markdown = '6. Owner: merge the release pull request, then approve the build job and then the upload job.\n';
+
+    expect(approvalGateProblems(markdown), [
+      'Line 1 of $_releasePath tells the reader to approve a job or an environment, but no environment of this '
+          'repository has a required reviewer: "approve the build"',
+    ]);
+  });
+
+  test('a line about an approval that is not an environment gate passes', () {
+    const markdown = '5. Gate 5: the owner approves a Platform target, and that approval is recorded.\n';
+
+    expect(approvalGateProblems(markdown), isEmpty);
   });
 
   test('every label quoted in the App access instructions is a value of intl_en.arb', () {
@@ -150,6 +176,22 @@ List<String> appAccessLabelProblems(String markdown, Map<String, Object?> arb) {
       for (final quoted in RegExp('"([^"\n]*)"').allMatches(block.group(1)!))
         if (!values.contains(quoted.group(1)))
           '"${quoted.group(1)}" in the App access instructions is not a value of $_arbPath',
+  ];
+}
+
+/// The lines of [markdown] that tell the reader to approve a job, an environment or a deployment, which no release
+/// waits for since the required reviewers were dropped. An approval that is not an environment gate, such as the
+/// owner's recorded approval to ship Platform mode, is not one of them.
+List<String> approvalGateProblems(String markdown) {
+  final gate = RegExp(
+    r'\bapprov(?:e|es|ed|ing)\s+(?:the\s+|a\s+|an\s+)?(?:build|upload|signing|deployment|environment)\b',
+    caseSensitive: false,
+  );
+  return [
+    for (final (index, line) in markdown.split('\n').indexed)
+      if (gate.firstMatch(line) case final match?)
+        'Line ${index + 1} of $_releasePath tells the reader to approve a job or an environment, but no environment '
+            'of this repository has a required reviewer: "${match.group(0)}"',
   ];
 }
 
