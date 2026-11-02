@@ -541,6 +541,25 @@ known and the statement ran anyway. The table was dropped again and the sample i
 This is Studio's behaviour, not the app's: the app showed the connection as "Read only", which is what Studio's own
 `access: read` told it. It is written down here because the walkthrough is what found it.
 
+### Re-confirmed on 1.2.3 against `tool/studio-dev` (2026-11-02)
+
+The lab run above is the full record; this is a shorter re-run on the shipped build, taken because 1.2.3 changed the
+sign-in page — #493 opens the provider's form in the app's language — so the end-to-end sign-in was worth seeing
+again. A debug APK of `main_local.dart` pointed at `tool/studio-dev` with `studio-dev.env` (so
+`https://localhost:9443/api` and the realm on `localhost:8443`, reached over `adb reverse`), app `1.2.3+12`, on the
+same `libredb_lab_api30` emulator, signed in as the stack's seeded `user`. The target is the Docker stack, not the
+Lima VM, so the connections are its own seed rather than the lab's DVD Rental.
+
+| Step | Result |
+| --- | --- |
+| 1. Sign in; role | Passed: the custom tab loaded Keycloak on `localhost:8443`, the form signed in, and the app landed on the connection list. The profile sheet shows the identity, the role **User**, and the Platform-switch, settings and sign-out entries. The six seeded connections list under their group, with the environment filter (PROD / STAGING / DEV), search, recents and stars |
+| 7. Editor | Passed: `SELECT id, name FROM customers ORDER BY id LIMIT 3` ran to **3 rows, 2 ms** in both the list and the table view (the table view naming `id bigint`, `name text`). `UPDATE customers SET name = name WHERE id = 1` raised the typed confirmation — "May change data: UPDATE on line 1" — and Cancel left the text as it was; the draft also survived the app being reinstalled under it. `SELECT * FROM no_such_table` showed "Query failed" with the engine's `relation "no_such_table" does not exist` in the sheet, while logcat carried only `studio.query_error` and a masked bearer, never the statement or the database text |
+| 2. The app lock | Passed: Settings shows the switch disabled with "set a screen lock on this device to turn this on" and a five-minute background timeout, the device having no credential this run |
+| 9. "Remove my data" and the sign-out | Passed: the dialog names what goes and what stays and says the sign-out follows; confirming cleared the tokens and redirected to `/login` with `SessionUnauthenticated` |
+| 9. The screenshot step | Passed, from a release `main_prod.dart` build against the same stack: a result screen wrote a **0-byte** `screencap` and the window carried `FLAG_SECURE`, while the login page captured normally at ~128 KB |
+
+Nothing behaved differently from the lab run; the sign-in change is visible only in the Keycloak form's language.
+
 ## The mock walkthrough
 
 Run once, on 2026-10-28, as a debug APK of `main_mock.dart` on the same emulator. It is written down because it is
