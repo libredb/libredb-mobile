@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap.dart';
 import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
+import 'package:libredb_mobile/app/bootstrap/debug_session_seed.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
 
@@ -15,6 +17,16 @@ import 'package:libredb_mobile/infrastructure/config/environment.dart';
 /// The VM is reachable from the Mac only: `lab.test` resolves through `/etc/hosts`, so a device needs its own route
 /// to it. Start the stack with `limactl start libredb-lab`.
 void main() async {
+  // On-device local twin only: when `--dart-define=SEED_SESSION=true` carries a session from a one-time host sign-in
+  // (scripts/on-device-local-twin.sh), write it into secure storage before the app reads it, so the test lands on
+  // the connection list without the Keycloak Custom Tab that integration_test cannot drive. A no-op in a normal run,
+  // and compiled into this entry point only (test/architecture/debug_session_seed_isolation_test.dart).
+  final seed = DebugSessionSeed.fromEnvironment();
+  if (seed != null) {
+    WidgetsFlutterBinding.ensureInitialized();
+    await seed.seed();
+  }
+
   await AppBootstrap.run(
     const AppBootstrapConfig(
       environment: Environment.local,

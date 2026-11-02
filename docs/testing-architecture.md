@@ -323,8 +323,65 @@ routing + DI + BLoCs + the mock HTTP layer together. It is a full-app widget tes
 `flutter test` — no device, no `integration_test` package, no CI changes. The
 global bootstrap supplies the secure-storage mock + a clean storage reset, so the
 app starts unauthenticated and lands on login. Scope is one happy-path smoke — not
-multi-flow e2e. (For real on-device e2e later, add `integration_test` back and a
-device-targeted CI job.)
+multi-flow e2e. The on-device twins below cover what a headless widget test cannot —
+real rendering, hit-testing and platform channels on a device.
+
+---
+
+## On-device twin tests (`integration_test/`)
+
+The headless layers above never touch a device, so they cannot catch layout and
+lifecycle bugs that only surface under real rendering (Hero-tag collisions, hit-test
+occlusion, a surface that freezes under Impeller). The `integration_test/` layer runs
+the real app on an emulator or device, asserts on screen-unique data, and — for the
+local twins — leaves a numbered screenshot. **It is never gated in CI** (emulators are
+slow and flaky; the headless suite is the gate). Run it by hand for evidence. The
+design is `docs/superpowers/specs/2026-11-02-on-device-test-architecture-design.md`.
+
+**Twin shape — one flow, up to two files:**
+
+- **mock twin** `integration_test/app_<flow>_test.dart`: pumps `App` with
+  `MockSignInDependencies` (as `main_mock` does), so the mocked API of `assets/mock/`
+  and the mock sign-in make the whole app drivable without a backend. The flow is the
+  product; screenshots are optional.
+- **local twin** `integration_test/app_local_<flow>_test.dart`: delegates to
+  `main_local.main()`, so the real bootstrap runs against `tool/studio-dev` over
+  `adb reverse`. It lands signed in without the Keycloak Custom Tab (which
+  `integration_test` cannot drive) through `DebugSessionSeed`
+  (`lib/app/bootstrap/debug_session_seed.dart`): `main_local` seeds the session carried
+  in `--dart-define=SEED_SESSION` into secure storage before the app reads it. The
+  seeded access token is already expired, so the app refreshes it at startup from the
+  seeded refresh token — the seed never calls Keycloak. The seed is `main_local`-only
+  and debug-only (`test/architecture/debug_session_seed_isolation_test.dart`). The
+  screenshot is the product.
+
+**The assertion is the proof; the screenshot is secondary.** An LLM does not see pixels,
+so every screen asserts a datum true only on that screen with that data (the managed
+connection names, a masked `a**@e***` cell), then takes the screenshot.
+
+**Preconditions:** `EnableImpeller="false"` in the Android manifest (guarded by
+`test/architecture/android_manifest_test.dart`); a booted emulator on a Google APIs image
+at API ≤ 33 (needs `adb root`); for a local twin, `tool/studio-dev` up.
+
+**Running them:**
+
+```bash
+# mock twin — fast, no backend, no screenshot
+fvm flutter test integration_test/app_connections_test.dart -d emulator-5554
+
+# local twin — real studio-dev backend, seeded session, writes build/screenshots/
+docker compose -f tool/studio-dev/docker-compose.yml up -d --wait
+scripts/on-device-local-twin.sh integration_test/app_local_connections_test.dart
+
+# any twin with screenshots, by hand
+fvm flutter drive --driver test_driver/integration_test.dart \
+  --target integration_test/app_connections_test.dart -d emulator-5554
+```
+
+`scripts/on-device-local-twin.sh` signs in once to the studio-dev Keycloak, hands the
+tokens to `main_local` as `--dart-define=SEED_SESSION`, trusts the CA, forwards the
+ports, and drives the test. `test_driver/integration_test.dart` is the screenshot sink
+for `flutter drive`.
 
 ---
 
@@ -444,6 +501,9 @@ wrong scope.
   stores a key. The first version of the rule read every key and the bootstrap writes the default palette, so no new
   user would have seen the introduction — with the suite green, because every other test starts on a device that has
   already seen it.
+- **`on_device_twin_symmetry_test.dart`** guards the on-device twin files: every local twin
+  (`integration_test/app_local_<flow>_test.dart`) must have a mock twin (`app_<flow>_test.dart`), so a flow verified
+  against studio-dev is also verified the fast way. It fails when a local twin is added without its mock counterpart.
 - **`touch_feedback_test.dart`** guards that a control answers a finger. Every other guard reads the code or one
   resting frame, so an app whose whole interaction state came from `MouseRegion` — a callback that never fires on a
   phone — stayed green while a card used on eight screens was inert under a finger. One half fails on a widget that
@@ -690,9 +750,11 @@ The single sign-on has more guards next to the code they guard:
   sub-widgets are already covered by the component/widget goldens).
 - **Tags:** `dart_test.yaml` declares `widget` (applied to all `testWidgets`
   files via `@Tags(['widget'])`) and `golden` (auto-applied by alchemist). An
-  `integration` tag is declared but reserved for a possible future on-device
-  (`flutter drive`) suite — the current e2e smoke is a `test/integration/` widget
-  test (tagged `widget`). Slice the suite with `flutter test --tags widget` /
+  `integration` tag is declared but unused: the on-device twins live in their own
+  `integration_test/` root (see "On-device twin tests" above) and are run by hand with
+  `flutter test -d <device>` / `flutter drive`, never selected by tag under
+  `flutter test`. The `test/integration/` e2e smoke is a headless widget test (tagged
+  `widget`). Slice the headless suite with `flutter test --tags widget` /
   `--exclude-tags widget`.
   The per-test timeout (30s) lives in `dart_test.yaml` and applies to `testWidgets` too (see "Timeouts" above).
 - **Pumping:** use `pumpAndSettle()` only when all animations are expected to **finish** (route/page transitions, one-shot reveals).

@@ -104,6 +104,21 @@ void main() {
           'would carry the session tokens as soon as backup is turned back on',
     );
   });
+
+  test('the main manifest turns Impeller off, the precondition for the on-device integration tests', () {
+    final manifest = _readWithoutXmlComments(manifestPath);
+
+    expect(
+      RegExp(
+        r'<meta-data\s+android:name="io\.flutter\.embedding\.android\.EnableImpeller"\s+android:value="false"\s*/>',
+      ).hasMatch(manifest),
+      isTrue,
+      reason:
+          '$manifestPath does not set EnableImpeller=false. Impeller freezes rendering on some emulators, so the '
+          'on-device integration-test layer (docs/superpowers/specs/2026-11-02-on-device-test-architecture-design.md) '
+          'cannot run a `flutter drive` without it',
+    );
+  });
 }
 
 /// Reads [path] without its XML comments.
