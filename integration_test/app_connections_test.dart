@@ -52,16 +52,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // Data true only on this screen: the managed connections from GET_connections_managed.json, grouped and sorted by
-    // group name. Reporting sorts to the top; Sales is further down, so it has to be scrolled into view.
-    expect(find.text('Reporting (SQL Server)'), findsOneWidget);
+    // group name. Reporting sorts to the top; Sales is further down, so it has to be scrolled into view. The finds are
+    // scoped to the sections list, because a connection also appears in the recent strip once it has been opened, and
+    // that strip's presence depends on device state and screen height — scoping keeps the twin stable across devices.
+    final sections = find.byKey(const ValueKey('connection-sections'));
+    expect(find.descendant(of: sections, matching: find.text('Reporting (SQL Server)')), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Sales (PostgreSQL)'),
+      find.descendant(of: sections, matching: find.text('Sales (PostgreSQL)')),
       200,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('connection-sections')),
-        matching: find.byType(Scrollable),
-      ),
+      scrollable: find.descendant(of: sections, matching: find.byType(Scrollable)),
     );
-    expect(find.text('Sales (PostgreSQL)'), findsOneWidget);
+    expect(find.descendant(of: sections, matching: find.text('Sales (PostgreSQL)')), findsOneWidget);
   });
 }

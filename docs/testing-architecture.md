@@ -383,6 +383,15 @@ tokens to `main_local` as `--dart-define=SEED_SESSION`, trusts the CA, forwards 
 ports, and drives the test. `test_driver/integration_test.dart` is the screenshot sink
 for `flutter drive`.
 
+**iOS.** The mock twins run on an iOS simulator too — boot one (`xcrun simctl boot "iPhone 17"`)
+and pass its id to `-d`. Twin assertions are scoped to on-screen widgets (e.g. the
+connection-list finds are scoped to `connection-sections`, not the whole tree), so the
+larger simulator viewport and its own device state do not make a datum match more than once.
+The **local twin on iOS is not wired yet**: `scripts/on-device-local-twin.sh` is
+Android-only (`adb reverse`, `trust-android-emulator.sh`); an iOS simulator reaches the
+Mac's `localhost` directly but still needs the studio-dev CA trusted on it, so that runner
+is a follow-up.
+
 ---
 
 ## Mocks and fakes
