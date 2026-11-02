@@ -43,6 +43,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Impeller is off so the on-device integration tests render deterministically: on some emulators
+             convertFlutterSurfaceToImage, which the integration binding uses to screenshot, freezes under
+             Impeller. See docs/testing-architecture.md and the on-device test architecture spec. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
