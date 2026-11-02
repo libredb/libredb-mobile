@@ -737,7 +737,7 @@ void main() {
           final match = _usesLine.firstMatch(line);
           if (match == null || match.group(1)!.startsWith('./')) continue;
           found.add(line);
-          if (!RegExp(r'@[0-9a-f]{40} # v\d+(\.\d+){0,2}$').hasMatch(line.trimRight())) {
+          if (!_versionComment.hasMatch(line.trimRight())) {
             offenders.add('$path: ${line.trim()}');
           }
         }
@@ -760,6 +760,25 @@ void main() {
         expect(_pinnedAction.hasMatch(action), isFalse, reason: '$action passed the pin check');
       }
       expect(_pinnedAction.hasMatch('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'), isTrue);
+    });
+
+    test('the version-comment guard accepts a line Dependabot writes (#239)', () {
+      // Dependabot moves the SHA and the "# vX.Y.Z" comment together; these are the shapes it writes, and the guard
+      // above reads the same [_versionComment], so a Dependabot pull request passes the comment check.
+      for (final line in [
+        'uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0',
+        '        uses: actions/setup-java@0123456789abcdef0123456789abcdef01234567 # v5.7.0',
+        '        uses: subosito/flutter-action@00112233445566778899aabbccddeeff00112233 # v2',
+      ]) {
+        expect(
+          _versionComment.hasMatch(line.trimRight()),
+          isTrue,
+          reason: 'the guard rejects a Dependabot line: $line',
+        );
+      }
+      // A bare tag or a comment-less SHA is still refused, so relaxing for Dependabot did not open the guard.
+      expect(_versionComment.hasMatch('uses: actions/checkout@v6.1.0'), isFalse);
+      expect(_versionComment.hasMatch('uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'), isFalse);
     });
   });
 
@@ -817,6 +836,23 @@ void main() {
       expect(releaseDocs, matches(RegExp(r'remove `release-as`', caseSensitive: false)));
     });
   });
+
+  group('Dependabot', () {
+    test('keeps the SHA-pinned GitHub Actions current, weekly (#239)', () {
+      final config = _loadYaml(_dependabotPath);
+      expect(config['version'], 2, reason: '$_dependabotPath must be a version 2 config');
+      final updates = config['updates'] as YamlList;
+      final actions = updates.cast<YamlMap>().firstWhere(
+        (entry) => entry['package-ecosystem'] == 'github-actions',
+        orElse: () => fail('$_dependabotPath does not update the github-actions ecosystem'),
+      );
+      expect(
+        (actions['schedule'] as YamlMap)['interval'],
+        'weekly',
+        reason: 'the github-actions update must run weekly',
+      );
+    });
+  });
 }
 
 const _gradlePath = 'android/app/build.gradle.kts';
@@ -826,6 +862,7 @@ const _releasePath = '.github/workflows/release.yml';
 const _releasePleasePath = '.github/workflows/release-please.yml';
 const _buildAndTestPath = '.github/workflows/build_and_test.yml';
 const _sonarPath = '.github/workflows/sonar_scanner.yml';
+const _dependabotPath = '.github/dependabot.yml';
 const _checkOnlyPath = 'tool/release/check_only_defines.txt';
 const _checkScriptPath = 'tool/release/check_defines.sh';
 const _versionScriptPath = 'tool/release/check_release_version.sh';
@@ -899,6 +936,10 @@ Map<String, Object?> _loadJson(String path) => jsonDecode(File(path).readAsStrin
 
 final _pinnedAction = RegExp(r'^[\w.-]+/[\w./-]+@[0-9a-f]{40}$');
 final _usesLine = RegExp(r'^\s*(?:-\s+)?uses:\s*(\S+)');
+
+/// The version comment a pinned action ends with: a 40-hex SHA, then "# vX.Y.Z". Dependabot writes and
+/// keeps this shape when it moves a pin (#239), so the guard and the Dependabot pull requests agree.
+final _versionComment = RegExp(r'@[0-9a-f]{40} # v\d+(\.\d+){0,2}$');
 
 /// Every workflow file, sorted, so a new workflow is guarded without a change here.
 List<String> _workflowPaths() =>

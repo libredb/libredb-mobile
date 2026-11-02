@@ -1,0 +1,16 @@
+# Keeps the SHA-pinned GitHub Actions current (#239). Dependabot opens a weekly pull request that moves the commit SHA
+# and the "# vX.Y.Z" version comment together; the guard in test/architecture/android_release_setup_test.dart accepts
+# that comment format. Dependabot only opens the pull request — CI runs on it and a human merges it, as for any change.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
