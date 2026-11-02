@@ -4,7 +4,6 @@ import 'package:libredb_mobile/app/bootstrap/app_bootstrap_config.dart';
 import 'package:libredb_mobile/app/bootstrap/debug_session_seed.dart';
 import 'package:libredb_mobile/infrastructure/config/auth_config.dart';
 import 'package:libredb_mobile/infrastructure/config/environment.dart';
-import 'package:libredb_mobile/infrastructure/storage/secure_storage.dart';
 
 /// Entry point for the LibreDB stack in the Lima VM `libredb-lab`: a real Studio, a real Platform and a real Keycloak
 /// on the developer's own machine. Nothing is mocked, so this is where a change meets a server that answers like
@@ -25,7 +24,7 @@ void main() async {
   final seed = DebugSessionSeed.fromEnvironment();
   if (seed != null) {
     WidgetsFlutterBinding.ensureInitialized();
-    await seed.seedInto(FlutterSecureStorageAdapter());
+    await seed.seed();
   }
 
   await AppBootstrap.run(

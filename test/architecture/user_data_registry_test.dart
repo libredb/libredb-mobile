@@ -100,6 +100,7 @@ const _storageUsers = <String, _Keeps>{
     'connection_sections_collapsed',
   ),
   'lib/features/auth/data/repositories/auth_session_repository_impl.dart': _Session(),
+  'lib/app/bootstrap/debug_session_seed.dart': _Session(),
   'lib/features/auth/data/repositories/sso_sign_out_auth_repository.dart': _Session(),
   'lib/features/auth/data/services/sso_session_startup_impl.dart': _Session(),
   'lib/app/session/session_cubit.dart': _Session(),

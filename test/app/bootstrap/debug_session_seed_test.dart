@@ -17,7 +17,13 @@ void main() {
 
     test('throws when enabled without an access token to seed', () {
       expect(
-        () => DebugSessionSeed.parse(enabled: true, target: 'studio', accessToken: '', refreshToken: 'r', oidcIdToken: ''),
+        () => DebugSessionSeed.parse(
+          enabled: true,
+          target: 'studio',
+          accessToken: '',
+          refreshToken: 'r',
+          oidcIdToken: '',
+        ),
         throwsArgumentError,
       );
     });
@@ -25,7 +31,13 @@ void main() {
     test('throws when enabled without a refresh token (the seeded access token is always expired, so a refresh is the '
         'only way the session survives startup)', () {
       expect(
-        () => DebugSessionSeed.parse(enabled: true, target: 'studio', accessToken: 'a', refreshToken: '', oidcIdToken: ''),
+        () => DebugSessionSeed.parse(
+          enabled: true,
+          target: 'studio',
+          accessToken: 'a',
+          refreshToken: '',
+          oidcIdToken: '',
+        ),
         throwsArgumentError,
       );
     });
@@ -73,8 +85,11 @@ void main() {
 
       final expiry = readAccessTokenExpiry(await storage.read(SecureStorageKeys.accessTokenExpiresAt.key));
       expect(expiry, isNotNull);
-      expect(expiry!.isBefore(DateTime.now().toUtc()), isTrue,
-          reason: 'the seeded expiry must be in the past so SsoSessionStartup refreshes the token');
+      expect(
+        expiry!.isBefore(DateTime.now().toUtc()),
+        isTrue,
+        reason: 'the seeded expiry must be in the past so SsoSessionStartup refreshes the token',
+      );
     });
 
     test('omits the ID token when none was seeded', () async {

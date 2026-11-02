@@ -49,7 +49,9 @@ class DebugSessionSeed {
   }) {
     if (!enabled) return null;
     if (accessToken.isEmpty) throw ArgumentError('SEED_SESSION needs a SEED_ACCESS_TOKEN to seed');
-    if (refreshToken.isEmpty) throw ArgumentError('SEED_SESSION needs a SEED_REFRESH_TOKEN; the access token is seeded expired');
+    if (refreshToken.isEmpty) {
+      throw ArgumentError('SEED_SESSION needs a SEED_REFRESH_TOKEN; the access token is seeded expired');
+    }
     return DebugSessionSeed(
       target: SessionTarget.fromStoredValue(target) ?? SessionTarget.studio,
       accessToken: accessToken,
@@ -67,6 +69,11 @@ class DebugSessionSeed {
     oidcIdToken: const String.fromEnvironment('SEED_ID_TOKEN'),
   );
 
+  /// Seeds into the device's real secure storage. The `main_local` entry point calls this; [seedInto] takes an
+  /// [ISecureStorage] for the tests. Keeping the adapter here leaves `main_local` free of a secure-store import, which
+  /// the per-account data registry (`test/architecture/user_data_registry_test.dart`) would otherwise flag.
+  Future<void> seed() => seedInto(FlutterSecureStorageAdapter());
+
   /// Writes the session into [storage] in the same key order [AuthSessionRepository.persist] uses — the target first,
   /// so a process killed mid-seed leaves a target without a token, which restores as signed out. The expiry is set to
   /// the epoch, so the stored access token always reads as expired and the startup rotation replaces it.
@@ -81,4 +88,9 @@ class DebugSessionSeed {
       encodeAccessTokenExpiry(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)),
     );
   }
+
+  /// Leaves the tokens out: this object carries an access and a refresh token, which a log line, the dev console or a
+  /// Sentry event would otherwise print (`test/architecture/credential_to_string_test.dart`).
+  @override
+  String toString() => 'DebugSessionSeed(target: ${target.storedValue})';
 }

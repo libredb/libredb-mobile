@@ -16,7 +16,7 @@ import 'package:libredb_mobile/main/main_local.dart' as app;
 /// It only runs green with studio-dev up and a seeded session, so it is never gated in CI. Run it with:
 ///   `scripts/on-device-local-twin.sh integration_test/app_local_connections_test.dart`
 /// which fetches the tokens, sets up `adb reverse`, and drives it via `flutter drive` so the screenshot is written to
-/// `build/screenshots/`. Add `--dart-define=SKIP_SHOTS=true` to assert without a screenshot (e.g. under `flutter test`).
+/// `build/screenshots/`. Add `--dart-define=SKIP_SHOTS=true` to assert without a screenshot.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   // Configure logging before the body touches AppLocalStorage, whose constructor logs. main_local.main() configures it

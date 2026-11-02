@@ -4,3 +4,11 @@
 
 # Crashes the app on purpose to prove the Sentry scrubber on a device (#191).
 SENTRY_DEVICE_CHECK
+
+# Seed a signed-in session into main_local for the on-device local twin (lib/app/bootstrap/debug_session_seed.dart).
+# Debug + main_local only; a store build must never carry them.
+SEED_SESSION
+SEED_SESSION_TARGET
+SEED_ACCESS_TOKEN
+SEED_REFRESH_TOKEN
+SEED_ID_TOKEN
