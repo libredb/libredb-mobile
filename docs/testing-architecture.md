@@ -387,10 +387,12 @@ for `flutter drive`.
 and pass its id to `-d`. Twin assertions are scoped to on-screen widgets (e.g. the
 connection-list finds are scoped to `connection-sections`, not the whole tree), so the
 larger simulator viewport and its own device state do not make a datum match more than once.
-The **local twin on iOS is not wired yet**: `scripts/on-device-local-twin.sh` is
-Android-only (`adb reverse`, `trust-android-emulator.sh`); an iOS simulator reaches the
-Mac's `localhost` directly but still needs the studio-dev CA trusted on it, so that runner
-is a follow-up.
+The **local twin runs on iOS** through `scripts/on-device-local-twin-ios.sh`: an iOS
+simulator shares the Mac's network, so the stack's `127.0.0.1` ports need no forwarding — it
+only trusts the studio-dev CA (`tool/studio-dev/trust-ios-simulator.sh`, via
+`simctl keychain add-root-cert`, which the app's Dart HTTPS requests honour), then drives the
+same twin. The twin names its screenshot for the platform (`01_connections_local_ios.png`) and
+skips the Android-only `convertFlutterSurfaceToImage` on iOS.
 
 ---
 

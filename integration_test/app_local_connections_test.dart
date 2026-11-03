@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -7,16 +8,17 @@ import 'package:libredb_mobile/features/connections/presentation/pages/connectio
 import 'package:libredb_mobile/infrastructure/storage/local_storage.dart';
 import 'package:libredb_mobile/main/main_local.dart' as app;
 
-/// On-device **local twin** of the connection-list flow, against the real `tool/studio-dev` backend over `adb reverse`.
-/// Unlike the mock twin, nothing here is faked: it delegates to `main_local.main()`, so the real `DebugSessionSeed`
-/// hook writes the session carried in `--dart-define=SEED_SESSION`, the real bootstrap runs, and the app signs in to
-/// studio-dev without the Keycloak Custom Tab. The committed screenshot is this twin's product; the assertion is still
-/// the proof.
+/// On-device **local twin** of the connection-list flow, against the real `tool/studio-dev` backend. Unlike the mock
+/// twin, nothing here is faked: it delegates to `main_local.main()`, so the real `DebugSessionSeed` hook writes the
+/// session carried in `--dart-define=SEED_SESSION`, the real bootstrap runs, and the app signs in to studio-dev
+/// without the Keycloak Custom Tab. The committed screenshot is this twin's product; the assertion is still the proof.
 ///
 /// It only runs green with studio-dev up and a seeded session, so it is never gated in CI. Run it with:
-///   `scripts/on-device-local-twin.sh integration_test/app_local_connections_test.dart`
-/// which fetches the tokens, sets up `adb reverse`, and drives it via `flutter drive` so the screenshot is written to
-/// `build/screenshots/`. Add `--dart-define=SKIP_SHOTS=true` to assert without a screenshot.
+///   Android:  `scripts/on-device-local-twin.sh integration_test/app_local_connections_test.dart`
+///   iOS:      `scripts/on-device-local-twin-ios.sh integration_test/app_local_connections_test.dart`
+/// Each fetches the tokens, trusts the studio-dev CA (Android also forwards its ports over `adb reverse`; the iOS
+/// simulator reaches the stack as `localhost`), and drives it via `flutter drive` so the screenshot — named for the
+/// platform — is written to `build/screenshots/`. Add `--dart-define=SKIP_SHOTS=true` to assert without a screenshot.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   // Configure logging before the body touches AppLocalStorage, whose constructor logs. main_local.main() configures it
@@ -50,11 +52,16 @@ void main() {
     );
     expect(find.text('Dev Postgres'), findsOneWidget);
 
-    // The screenshot is unconditional for the local twin (its product), skippable only when a run cannot sink one.
+    // The screenshot is unconditional for the local twin (its product), skippable only when a run cannot sink one. Its
+    // name carries the platform, and convertFlutterSurfaceToImage is an Android-only prerequisite for takeScreenshot —
+    // the iOS simulator captures the live surface without it.
     if (!const bool.fromEnvironment('SKIP_SHOTS')) {
-      await binding.convertFlutterSurfaceToImage();
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await binding.convertFlutterSurfaceToImage();
+      }
       await tester.pumpAndSettle();
-      await binding.takeScreenshot('01_connections_local_android');
+      final platform = defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+      await binding.takeScreenshot('01_connections_local_$platform');
     }
   });
 }
