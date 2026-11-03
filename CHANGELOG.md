@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/libredb/libredb-mobile/compare/v1.2.3...v1.2.4) (2026-11-03)
+
+
+### Miscellaneous Chores
+
+* cut maintenance release 1.2.4 ([#501](https://github.com/libredb/libredb-mobile/issues/501)) ([3ecef70](https://github.com/libredb/libredb-mobile/commit/3ecef7084e872cbc4d1b93be983dcceaa3144e70))
+
 ## [1.2.3](https://github.com/libredb/libredb-mobile/compare/v1.2.2...v1.2.3) (2026-10-31)
 
 
