@@ -1,4 +1,4 @@
-# Releasing the Android app
+# Releasing the apps
 
 A release is a signed Android App Bundle built for one deployment and uploaded to the Play internal testing and production tracks.
 Studio's URL and the Keycloak settings are compiled into the build, so one Play listing serves one deployment; the store build targets the deployment the maintainer runs.
@@ -200,6 +200,32 @@ Only the maintainer does these, and no value from them is ever written into an i
 Start `release.yml` by hand (Actions, Release, Run workflow) on any branch, or run `gh workflow run release.yml --ref <branch>`.
 A dry run checks, tests and builds an obfuscated bundle signed with the throwaway key of the `release-dry-run` environment, keeps it as the `release-bundle` artifact, and never uploads, neither to Play nor to Sentry.
 It never reaches the upload key, so its bundle cannot go to Play.
+
+## iOS release
+
+The `ios-build` job builds and uploads the iOS app alongside the Android `build`/`upload` jobs, from the same commit and the same dart-defines. It runs on a macOS runner, and its gates mirror the Android build's:
+
+- A **dry run** (`workflow_dispatch`) runs under `release-dry-run`: it writes the defines, builds the Flutter iOS product and archives it unsigned — proving the app compiles and archives for the device — and stops. It never signs and never uploads.
+- A **release** (a `v*.*.*` tag) runs under `release-signing`: it imports the Apple Distribution certificate and the App Store provisioning profile into a throwaway keychain, exports the signed IPA with `ios/ExportOptions.plist`, and uploads it to App Store Connect with the App Store Connect API key. Everything sensitive is deleted afterwards.
+
+The archive is built with `CODE_SIGNING_ALLOWED=NO` and signed only at export, because the plugin Swift Packages reject a provisioning profile and the export signs the app alone. The app is **iPhone-only** (`TARGETED_DEVICE_FAMILY = 1` in the project): it is portrait-locked with no iPad layout, and a universal build is rejected for the missing iPad multitasking orientations (error 90474).
+
+### iOS signing material and secrets
+
+The Apple Distribution certificate (with its private key), the `org.libredb.mobile` App Store provisioning profile and the App Store Connect API key were created once (SEKOYA GRUP, Team `N4HFYSV9M3`). Their files are kept off the repo; the `release-signing` environment carries them as:
+
+| Secret | What it is |
+| --- | --- |
+| `APP_STORE_CONNECT_API_KEY_ID` | the App Store Connect API key id |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | the key's issuer id |
+| `APP_STORE_CONNECT_API_KEY_P8` | the `.p8` private key, verbatim |
+| `IOS_DIST_CERTIFICATE_P12_BASE64` | the Apple Distribution certificate and key as a base64 `.p12` |
+| `IOS_DIST_CERTIFICATE_PASSWORD` | the `.p12` password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | the App Store `.mobileprovision`, base64 |
+
+### What is not in the workflow
+
+The App Store Connect app record, the screenshots, the listing texts, the App Privacy answers, the age rating, the pricing and the submission for review are console steps, not this workflow's; the upload only makes a build available there. The store screenshots are captured with `integration_test/store_screenshots_test.dart` run through `flutter drive` on a 6.9" iPhone simulator (`build/screenshots/*.png`).
 
 ## Platform mode
 

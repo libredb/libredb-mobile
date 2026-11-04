@@ -323,3 +323,151 @@ jobs:
           # Unset today, so a release reaches the testers on its own; set it to draft to park one in the console.
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           mappingFile: release-bundle/mapping/release/mapping.txt
+
+  ios-build:
+    name: Build and upload iOS
+    runs-on: macos-latest
+    timeout-minutes: 60
+    needs: verify
+    # The same gate as the Android build: a dry run (workflow_dispatch) uses release-dry-run and stops after the
+    # unsigned archive, having proven the app compiles and archives for the device; a v*.*.* tag uses release-signing,
+    # whose secrets hold the Apple Distribution certificate, the App Store provisioning profile and the App Store
+    # Connect API key, and only then is the app signed and uploaded (docs/release.md, "iOS").
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'release-dry-run' || 'release-signing' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # One deployment's values, the same set and the same file the Android build writes, so the iOS build carries the
+      # same Studio, Keycloak, Sentry and (optional) Platform configuration. No value appears on a command line.
+      - name: Write the deployment's dart-defines
+        env:
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          OIDC_ISSUER: ${{ vars.OIDC_ISSUER }}
+          OIDC_CLIENT_ID: ${{ vars.OIDC_CLIENT_ID }}
+          OIDC_SCOPE: ${{ vars.OIDC_SCOPE }}
+          OIDC_AUDIENCE: ${{ vars.OIDC_AUDIENCE }}
+          OIDC_PROMPT: ${{ vars.OIDC_PROMPT }}
+          OIDC_AUTO_REDIRECT: ${{ vars.OIDC_AUTO_REDIRECT }}
+          OIDC_LOGOUT_HINT: ${{ vars.OIDC_LOGOUT_HINT }}
+          STUDIO_CERT_PINS: ${{ vars.STUDIO_CERT_PINS }}
+          OIDC_CERT_PINS: ${{ vars.OIDC_CERT_PINS }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
+          SENTRY_DIST: ${{ vars.SENTRY_DIST }}
+          PLATFORM_API_URL: ${{ vars.PLATFORM_API_URL }}
+          PLATFORM_CERT_PINS: ${{ vars.PLATFORM_CERT_PINS }}
+        run: |
+          for name in PROD_API_URL OIDC_ISSUER OIDC_CLIENT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "The repository variable $name is not set (docs/release.md)."
+              exit 1
+            fi
+          done
+          jq -n 'env | with_entries(select(.value != "" and (.key | IN(
+            "PROD_API_URL", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_SCOPE", "OIDC_AUDIENCE", "OIDC_PROMPT",
+            "OIDC_AUTO_REDIRECT", "OIDC_LOGOUT_HINT", "STUDIO_CERT_PINS", "OIDC_CERT_PINS", "SENTRY_DSN",
+            "SENTRY_ENVIRONMENT", "SENTRY_DIST", "PLATFORM_API_URL", "PLATFORM_CERT_PINS"))))' \
+            > "$RUNNER_TEMP/dart-defines.json"
+          echo "Defines set: $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/dart-defines.json")"
+
+      - name: Refuse check-only defines
+        env:
+          RELEASE_VARS: ${{ toJSON(vars) }}
+        run: tool/release/check_defines.sh "$RUNNER_TEMP/dart-defines.json"
+
+      # config-only writes ios/Flutter/Generated.xcconfig and the prod entry point; the archive below is built with
+      # CODE_SIGNING_ALLOWED=NO so the plugin Swift Packages, which reject a provisioning profile, build, and the
+      # signing is applied at export to the app alone (ios/ExportOptions.plist).
+      - name: Prepare the Flutter iOS build
+        run: >-
+          flutter build ios --config-only --release --no-codesign --target lib/main/main_prod.dart
+          --dart-define-from-file="$RUNNER_TEMP/dart-defines.json"
+
+      - name: Install the pods
+        run: cd ios && pod install
+
+      # TARGETED_DEVICE_FAMILY=1 (iPhone only) lives in the project: the app is portrait-locked and has no iPad layout,
+      # and a universal build is rejected for the missing iPad multitasking orientations (error 90474).
+      - name: Build the unsigned archive
+        run: >-
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos
+          -archivePath "$RUNNER_TEMP/Runner.xcarchive" archive
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      # The signing and the upload run only for a real release; a dry run has nothing beyond this point.
+      - name: Import the signing certificate and profile
+        if: github.ref_type == 'tag'
+        env:
+          CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          for name in CERT_P12_BASE64 CERT_PASSWORD PROFILE_BASE64; do
+            if [ -z "${!name}" ]; then
+              echo "The secret $name is not set (docs/release.md)."
+              exit 1
+            fi
+          done
+          keychain="$RUNNER_TEMP/ios-signing.keychain-db"
+          kpw=$(openssl rand -base64 24)
+          security create-keychain -p "$kpw" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$kpw" "$keychain"
+          printf '%s' "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign -A
+          security set-key-partition-list -S apple-tool:,apple: -k "$kpw" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/dist.p12"
+          profiles="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$profiles"
+          printf '%s' "$PROFILE_BASE64" | base64 --decode > "$profiles/LibreDB-AppStore.mobileprovision"
+          echo "IOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Export the signed IPA
+        if: github.ref_type == 'tag'
+        run: >-
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive"
+          -exportPath "$RUNNER_TEMP/ipa" -exportOptionsPlist ios/ExportOptions.plist
+
+      # altool reads the key from ~/.appstoreconnect/private_keys/AuthKey_<KeyID>.p8. The upload sends the build to App
+      # Store Connect; TestFlight and a submission for review are a console step, not this workflow's.
+      - name: Upload to App Store Connect
+        if: github.ref_type == 'tag'
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          for name in KEY_ID ISSUER_ID API_KEY_P8; do
+            if [ -z "${!name}" ]; then
+              echo "The secret $name is not set (docs/release.md)."
+              exit 1
+            fi
+          done
+          keydir="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$keydir"
+          printf '%s' "$API_KEY_P8" > "$keydir/AuthKey_$KEY_ID.p8"
+          xcrun altool --upload-app -f "$RUNNER_TEMP"/ipa/*.ipa -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+          rm -f "$keydir/AuthKey_$KEY_ID.p8"
+
+      # Nothing sensitive is left on disk, whatever the outcome.
+      - name: Clean up the signing material and defines
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/dart-defines.json" "$RUNNER_TEMP/dist.p12"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/LibreDB-AppStore.mobileprovision" || true
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_"*.p8 || true
+          if [ -n "${IOS_KEYCHAIN:-}" ]; then security delete-keychain "$IOS_KEYCHAIN" || true; fi
