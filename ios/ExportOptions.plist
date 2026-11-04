@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- App Store distribution with the manual Apple Distribution signing the release workflow installs.
+       The archive is built unsigned (CODE_SIGNING_ALLOWED=NO) so the Swift Package plugins, which reject a
+       provisioning profile, build; the signing is applied here, at export, to the app alone. -->
+  <key>method</key><string>app-store</string>
+  <key>teamID</key><string>N4HFYSV9M3</string>
+  <key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>Apple Distribution</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>org.libredb.mobile</key><string>LibreDB Mobile App Store</string>
+  </dict>
+  <key>destination</key><string>export</string>
+  <key>uploadSymbols</key><true/>
+</dict>
+</plist>
