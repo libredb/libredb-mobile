@@ -105,7 +105,8 @@ void main() {
       expect(
         (255 - r) + (255 - g) + (255 - b) < 24,
         isTrue,
-        reason: 'the ground of $path is ($r,$g,$b), not the design system\'s white; '
+        reason:
+            'the ground of $path is ($r,$g,$b), not the design system\'s white; '
             're-run `fvm flutter test tool/generate_app_icons.dart` after the mark\'s ground is set to white',
       );
     }
