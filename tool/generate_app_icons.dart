@@ -19,12 +19,14 @@ import 'package:libredb_mobile/shared/design_system/brand/brand_mark.dart';
 /// shipping on both platforms since the project began, because nothing in the repository could draw anything else
 /// (#390).
 void main() {
-  /// The ground the mark sits on: the design system's dark page. An icon has to be opaque on iOS — the review
-  /// rejects alpha — and a mark floating on white would be the mark, not the product.
-  const ground = Color(0xFF0B0D18);
+  /// The ground the mark sits on: white, the design system's own store icon — the one icon uploaded to the Play
+  /// listing, which every other surface now matches so the two stores stop showing two different icons for the
+  /// same mark. An icon has to be opaque on iOS anyway (review rejects alpha), and white is opaque.
+  const ground = Color(0xFFFFFFFF);
 
-  /// How much of the icon the mark takes. The rest is the margin every platform's mask eats into.
-  const markShare = 0.62;
+  /// How much of the icon the mark takes. Measured off the design system's store icon (markH ≈ 0.74); the rest is
+  /// the margin every platform's mask eats into.
+  const markShare = 0.74;
 
   /// The share for the adaptive foreground, which is drawn on a 108dp canvas of which only the middle 72dp is
   /// guaranteed to be visible: the mark has to live inside that circle whatever the launcher's mask is.
